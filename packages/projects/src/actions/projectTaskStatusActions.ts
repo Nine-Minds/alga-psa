@@ -8,21 +8,13 @@ import type { DeletionValidationResult, IProjectStatusMapping, IStatus } from '@
 import type { IUserWithRoles } from '@alga-psa/types';
 import ProjectModel, { statusMappingSemanticKey } from '@alga-psa/projects/models/project';
 import {
-  BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-  type AuthorizationRecord,
-  type AuthorizationSubject,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import {
   actionError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import { assertProjectMutationAllowed, assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
 import {
   bucketProjectStatusRenameImpact,
@@ -232,111 +224,6 @@ export async function buildTenantProjectStatusDeletionValidation(
   };
 }
 
-function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  const [teamRows, managedRows] = await Promise.all([
-    tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-  ]);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
-}
-
-function toProjectAuthorizationRecord(project: {
-  project_id?: string | null;
-  client_id?: string | null;
-  assigned_to?: string | null;
-}): AuthorizationRecord {
-  const assignedUserIds =
-    typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-
-  return {
-    id: project.project_id ?? null,
-    ownerUserId: project.assigned_to ?? null,
-    assignedUserIds,
-    clientId: project.client_id ?? null,
-  };
-}
-
-async function assertProjectReadAllowed(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles,
-  projectId: string
-): Promise<void> {
-  const project = await ProjectModel.getById(trx, tenant, projectId);
-  if (!project) {
-    throw new Error('Project not found');
-  }
-
-  const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const requestCache = new RequestLocalAuthorizationCache();
-
-  const decision = await authorizationKernel.authorizeResource({
-    subject,
-    resource: { type: 'project', action: 'read', id: projectId },
-    record: toProjectAuthorizationRecord(project),
-    requestCache,
-    knex: trx,
-  });
-
-  if (!decision.allowed) {
-    throw new Error('Permission denied: Cannot read project');
-  }
-}
-
 function resolveReplacementStatusMapping(
   sourceMapping: ProjectStatusMappingDetails,
   targetMappings: ProjectStatusMappingDetails[]
@@ -396,7 +283,7 @@ export const addStatusToProject = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+      await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
       // When adding the first phase-scoped mapping, the phase is about to move
       // from "defaults" (phase_id IS NULL) to "custom" (phase-scoped) scope.
@@ -590,7 +477,7 @@ export const copyProjectStatusesToPhase = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+      await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
       // Clone project defaults into the phase and remap existing phase tasks by
       // stable semantic identity (never nullable status_id alone, which
@@ -629,7 +516,7 @@ export const removePhaseStatuses = withAuth(async (
     if (!phase) {
       throw new Error('Project phase not found');
     }
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, phase.project_id);
+    await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, phase.project_id, 'update');
 
     const phaseMappings = await getScopedProjectStatusMappings(trx, tenant, phase.project_id, phaseId);
     if (phaseMappings.length === 0) {
@@ -706,7 +593,7 @@ export const updateProjectStatusMapping = withAuth(async (
       throw new Error('Status mapping not found');
     }
 
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id);
+    await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id, 'update');
 
       await tenantScopedTable(trx, 'project_status_mappings', tenant)
         .where({ project_status_mapping_id: mappingId })
@@ -784,7 +671,7 @@ export const deleteProjectStatusMapping = withAuth(async (
     if (!mapping) {
       throw new Error('Status mapping not found');
     }
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);
+    await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id, 'update');
 
     // Move tasks if a target mapping is provided
     if (moveTasksToMappingId) {
@@ -862,7 +749,7 @@ export const reorderProjectStatuses = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+      await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
     for (const { mapping_id, display_order } of statusOrder) {
       const query = tenantScopedTable(trx, 'project_status_mappings', tenant)

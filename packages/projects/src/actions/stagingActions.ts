@@ -48,7 +48,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
+import { assertProjectMutationAllowed, assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 
 /**
  * Project staging actions (alga-2026-0002683 C6, design D12). Thin wrappers over the inventory staging
@@ -74,6 +74,9 @@ function stagingActionErrorFrom(error: unknown): StagingActionError | StockConfl
     return actionError(error.message);
   }
   if (error instanceof Error) {
+    if (error.message === 'Permission denied: Cannot update project') {
+      return permissionError(UPDATE_DENIED, 'projects:staging.errors.permission.update');
+    }
     if (error.message === 'Project not found' || error.message === 'Permission denied: Cannot read project') {
       // Missing and forbidden look the same.
       return actionError('Project not found', 'projects:staging.errors.notFound');
@@ -103,7 +106,11 @@ async function gate(
     return permissionError(action === 'read' ? READ_DENIED : UPDATE_DENIED, `projects:staging.errors.permission.${action}`);
   }
   const { knex: db } = await createTenantKnex();
-  await assertProjectReadAllowed(db, tenant, user, projectId);
+  if (action === 'update') {
+    await assertProjectMutationAllowed(db, tenant, user, projectId, 'update');
+  } else {
+    await assertProjectReadAllowed(db, tenant, user, projectId);
+  }
   return { db };
 }
 

@@ -12,7 +12,7 @@ import ProjectTaskModel from '../models/projectTask';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { IProjectPhase } from '@alga-psa/types';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
+import { assertProjectMutationAllowed, assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCreatedPayload,
@@ -705,7 +705,7 @@ export const importPhasesAndTasks = withAuth(async (
 
     // Verify the project exists and this caller may reach that specific project —
     // project:update alone does not grant access to every project in the tenant.
-    const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    const project = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
     // Get existing status mappings
     let statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);

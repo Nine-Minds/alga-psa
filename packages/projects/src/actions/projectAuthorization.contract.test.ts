@@ -28,17 +28,21 @@ describe('project authorization kernel contracts', () => {
 
   it('T038: narrows project tree/phase/detail/status mutation surfaces through shared project read authorization helpers', () => {
     expect(projectReadAuthorizationSource).toContain('export async function createProjectReadAuthorizer(');
-    expect(projectActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
-    expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
+    expect(projectActionsSource).toContain("from '../lib/projectReadAuthorization';");
+    expect(projectActionsSource).toContain('assertProjectMutationAllowed,');
+    expect(projectTaskActionsSource).toContain("from '../lib/projectReadAuthorization';");
+    expect(projectTaskActionsSource).toContain('assertProjectMutationAllowed,');
+    expect(projectTaskActionsSource).toContain('createProjectMutationAuthorizer,');
     expect(projectActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectTaskActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectActionsSource).toContain('async function filterAuthorizedProjects<T extends Partial<IProject>>(');
-    expect(projectActionsSource).toContain('async function assertProjectReadAllowed(');
+    expect(projectActionsSource).not.toContain('async function assertProjectReadAllowed(');
     expect(projectActionsSource).toContain('async function resolveProjectIdForPhase(');
     expect(projectActionsSource).toContain('async function resolveProjectIdsForStatus(');
     expect(projectActionsSource).toContain('return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);');
     expect(projectActionsSource).toContain('const authorizedProjects = await filterAuthorizedProjects(');
     expect(projectActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectActionsSource).toContain("const beforeProject = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');");
     expect(projectActionsSource).toContain('const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);');
     expect(projectActionsSource).toContain('const projectIds = await resolveProjectIdsForStatus(trx, tenant, statusId);');
   });
@@ -50,15 +54,16 @@ describe('project authorization kernel contracts', () => {
     expect(projectActionsSource).toContain('export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string');
     expect(projectActionsSource).toContain('export const updateProjectStatus = withAuth(async (');
     expect(projectActionsSource).toContain('export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string)');
-    expect(projectActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, phase.project_id);');
+    expect(projectActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, phase.project_id, 'update');");
     expect(projectActionsSource).toContain('const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);');
-    expect(projectActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, project.project_id);');
+    expect(projectActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, project.project_id, 'update');");
+    expect(projectActionsSource).toContain("await assertProjectMutationAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId, 'delete');");
     expect(projectActionsSource).toContain('const relatedProjectIds = await resolveProjectIdsForStatus(trx, tenant, statusId);');
     expect(projectActionsSource).toContain('await Promise.all(');
   });
 
   it('T020: task/checklist/dependency/resource/ticket-link actions enforce reusable parent-project gating', () => {
-    expect(projectTaskActionsSource).toContain('async function assertProjectReadAllowedById(');
+    expect(projectTaskActionsSource).not.toContain('async function assertProjectReadAllowedById(');
     expect(projectTaskActionsSource).toContain('async function resolveProjectIdForTask(');
     expect(projectTaskActionsSource).toContain('async function resolveProjectIdForChecklistItem(');
     expect(projectTaskActionsSource).toContain('async function resolveProjectIdForTaskResourceAssignment(');
@@ -74,14 +79,15 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain('export const removeTaskResourceAction = withAuth(async (');
     expect(projectTaskActionsSource).toContain('export const addTicketLinkAction = withAuth(async (');
     expect(projectTaskActionsSource).toContain('export const deleteTaskTicketLinkAction = withAuth(async (');
-    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectTaskActionsSource).toContain("await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);");
     expect(projectTaskActionsSource).toContain('const sourceProjectId = await resolveProjectIdForPhase(trx, tenant, existingTask.phase_id);');
     expect(projectTaskActionsSource).toContain('const projectId = await resolveProjectIdForChecklistItem(trx, tenant, checklistItemId);');
     expect(projectTaskActionsSource).toContain('const projectIds = await resolveProjectIdsForTicket(trx, tenant, ticketId);');
   });
 
   it('T021: status/phase mapping actions enforce parent-project narrowing and close prior zero-check count surfaces', () => {
-    expect(projectTaskStatusActionsSource).toContain('async function assertProjectReadAllowed(');
+    expect(projectTaskStatusActionsSource).toContain("import { assertProjectMutationAllowed, assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
+    expect(projectTaskStatusActionsSource).not.toContain('async function assertProjectReadAllowed(');
     expect(projectTaskStatusActionsSource).toContain('export const getProjectStatusMappings = withAuth(async (');
     expect(projectTaskStatusActionsSource).toContain('export const copyProjectStatusesToPhase = withAuth(async (');
     expect(projectTaskStatusActionsSource).toContain('export const removePhaseStatuses = withAuth(async (');
@@ -89,8 +95,8 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskStatusActionsSource).toContain('export const getStatusMappingTaskCount = withAuth(async (');
     expect(projectTaskStatusActionsSource).toContain('export const deleteProjectStatusMapping = withAuth(async (');
     expect(projectTaskStatusActionsSource).toContain('export const reorderProjectStatuses = withAuth(async (');
-    expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
-    expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id);');
+    expect(projectTaskStatusActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');");
+    expect(projectTaskStatusActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id, 'update');");
     expect(projectTaskStatusActionsSource).toContain('if (!await hasPermission(user, \'project\', \'read\', trx)) {');
     expect(projectTaskStatusActionsSource).toContain('if (!await hasPermission(user, \'project\', \'read\', knex)) {');
   });
@@ -98,7 +104,8 @@ describe('project authorization kernel contracts', () => {
   it('T022: project task/status count helpers require parent-project authorization before returning cardinalities', () => {
     expect(projectTaskActionsSource).toContain('export const getPhaseTaskCounts = withAuth(async (');
     expect(projectTaskActionsSource).toContain('export const getProjectTaskData = withAuth(async (');
-    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectTaskActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');");
+    expect(projectTaskActionsSource).toContain("createProjectMutationAuthorizer(trx, tenant, user as IUserWithRoles, 'update')");
     expect(projectTaskStatusActionsSource).toContain('export const getStatusMappingTaskCount = withAuth(async (');
     expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);');
   });
@@ -108,9 +115,10 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain('export const duplicateTaskToPhase = withAuth(async (');
     expect(projectTaskActionsSource).toContain('export const addTicketLinkAction = withAuth(async (');
     expect(projectTaskActionsSource).toContain('const sourceProjectId = await resolveProjectIdForPhase(trx, tenant, existingTask.phase_id);');
-    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);');
-    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);');
-    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectTaskActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, sourceProjectId, 'update');");
+    expect(projectTaskActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, newPhase.project_id, 'update');");
+    expect(projectTaskActionsSource).toContain("await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');");
+    expect(projectTaskActionsSource).toContain("createProjectMutationAuthorizer(trx, tenant, user as IUserWithRoles, 'update')");
     expect(projectTaskActionsSource).toContain('const allowedTicketIds = await filterAuthorizedTicketIds(');
     expect(projectTaskActionsSource).toContain('originalTicketLinks.map((link) => link.ticket_id)');
     expect(projectTaskActionsSource).toContain('if (!allowedTicketIds.has(link.ticket_id)) {');
@@ -125,18 +133,26 @@ describe('project authorization kernel contracts', () => {
     const exportActionsSource = readSource('projectTaskExportActions.ts');
 
     expect(sharedAuthorizationSource).toContain('export async function assertProjectReadAllowed(');
+    expect(sharedAuthorizationSource).toContain('export async function assertProjectMutationAllowed(');
+    expect(sharedAuthorizationSource).toContain('export async function createProjectMutationAuthorizer(');
+    expect(sharedAuthorizationSource).toContain("authorizeRecord(project, 'read')");
+    expect(sharedAuthorizationSource).toContain('authorizeRecord(project, action)');
     expect(sharedAuthorizationSource).toContain("resource: { type: 'project', action, id: projectId },");
     expect(sharedAuthorizationSource).toContain("throw new Error('Permission denied: Cannot read project');");
 
-    expect(importActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
+    expect(importActionsSource).toContain("import { assertProjectMutationAllowed, assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
     expect(importActionsSource).toContain('export const importPhasesAndTasks = withAuth(async (');
-    expect(importActionsSource).toContain('const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(importActionsSource).toContain("const project = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');");
     expect(importActionsSource).toContain('export const getImportReferenceData = withAuth(async (');
     expect(importActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
 
     expect(exportActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
     expect(exportActionsSource).toContain('export const exportProjectTasksToCSV = withAuth(async (');
     expect(exportActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, _user as IUserWithRoles, projectId);');
+    const stagingActionsSource = readSource('stagingActions.ts');
+    expect(stagingActionsSource).toContain("if (action === 'update') {");
+    expect(stagingActionsSource).toContain("await assertProjectMutationAllowed(db, tenant, user, projectId, 'update');");
+    expect(stagingActionsSource).toContain('await assertProjectReadAllowed(db, tenant, user, projectId);');
   });
 
   it('F033: linked ticket payloads in project structural surfaces apply assignee-set restriction semantics', () => {

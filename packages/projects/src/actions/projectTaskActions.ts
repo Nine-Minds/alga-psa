@@ -62,7 +62,12 @@ import {
   buildProjectTaskUpdatedPayload,
   buildProjectTaskAdditionalAgentAssignedPayload,
 } from '@alga-psa/workflow-streams';
-import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import {
+  assertProjectMutationAllowed,
+  assertProjectReadAllowed,
+  createProjectMutationAuthorizer,
+  createProjectReadAuthorizer,
+} from '../lib/projectReadAuthorization';
 import {
   actionError,
   actionErrorFromValidationIssue,
@@ -501,23 +506,6 @@ async function assertTicketReadAllowedById(
     }
 }
 
-async function assertProjectReadAllowedById(
-    trx: Knex.Transaction,
-    tenant: string,
-    user: IUserWithRoles,
-    projectId: string
-): Promise<void> {
-    const project = await ProjectModel.getById(trx, tenant, projectId);
-    if (!project) {
-        throw new Error('Project not found');
-    }
-
-    const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-    if (!await authorizeProjectRead(project)) {
-        throw new Error('Permission denied: Cannot read project');
-    }
-}
-
 async function resolveProjectIdForPhase(
     trx: Knex.Transaction,
     tenant: string,
@@ -621,7 +609,7 @@ export const updateTaskWithChecklist = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             // Remove tenant field if present in taskData
             const { checklist_items, tenant: _, ...taskUpdateData } = taskData;
@@ -755,7 +743,7 @@ export const addTaskToPhase = withAuth(async (
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             const newTask = await ProjectTaskModel.addTask(trx, tenant, phaseId, taskData);
 
@@ -844,7 +832,7 @@ export const updateTaskStatus = withAuth(async (
             if (!sourceProjectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, sourceProjectId, 'update');
 
             // Validate the target status exists in the same project
             const targetStatus = await tenantScopedTable(trx, 'project_status_mappings', tenant)
@@ -855,7 +843,7 @@ export const updateTaskStatus = withAuth(async (
                 throw new Error('Target status not found');
             }
             if (targetStatus.project_id) {
-                await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, targetStatus.project_id);
+                await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, targetStatus.project_id, 'update');
             }
 
             // Get order keys for positioning
@@ -983,7 +971,7 @@ export const addChecklistItemToTask = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             return await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, validatedData as Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
     } catch (error) {
@@ -1012,7 +1000,7 @@ export const updateChecklistItem = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for checklist item');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             return await ProjectTaskModel.updateChecklistItem(trx, tenant, checklistItemId, validatedData);
         });
     } catch (error) {
@@ -1038,7 +1026,7 @@ export const deleteChecklistItem = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for checklist item');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             await ProjectTaskModel.deleteChecklistItem(trx, tenant, checklistItemId);
         });
     } catch (error) {
@@ -1064,7 +1052,7 @@ export const getTaskChecklistItems = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             return await ProjectTaskModel.getChecklistItems(trx, tenant, taskId);
         });
     } catch (error) {
@@ -1092,7 +1080,7 @@ export const deleteTask = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             // Check for associated time entries before proceeding
             const timeEntryCount = await tenantScopedTable(trx, 'time_entries', tenant)
@@ -1157,13 +1145,13 @@ export const addTicketLinkAction = withAuth(async (
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
             await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             if (taskId) {
                 const taskProjectId = await resolveProjectIdForTask(trx, tenant, taskId);
                 if (!taskProjectId) {
                     throw new Error('Project not found for task');
                 }
-                await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, taskProjectId);
+                await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, taskProjectId, 'update');
             }
             return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId, billUnderProject);
         });
@@ -1191,7 +1179,7 @@ export const setTicketLinkBillingAction = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task ticket link');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             await ProjectTaskModel.setTicketLinkBilling(trx, tenant, linkId, billUnderProject);
         });
     } catch (error) {
@@ -1217,7 +1205,7 @@ export const getTaskTicketLinksAction = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             const links = await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
             const allowedTicketIds = await filterAuthorizedTicketIds(
                 trx,
@@ -1307,7 +1295,7 @@ export const getTasksForPhase = withAuth(async (
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
             // Get phase to get its WBS code
             const phase = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -1468,7 +1456,7 @@ export const addTaskResourceAction = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             await ProjectTaskModel.addTaskResource(trx, tenant, taskId, userId, role);
 
             // When adding additional resource, publish task additional agent assigned event
@@ -1522,7 +1510,7 @@ export const addTaskResourcesAction = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             const task = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where({ task_id: taskId })
@@ -1612,7 +1600,7 @@ export const assignTeamToProjectTask = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             const team = await tenantScopedTable(trx, 'teams', tenant)
                 .where({ team_id: teamId })
@@ -1755,7 +1743,7 @@ export const removeTeamFromProjectTask = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             // Resolve the team's lead so we know whether removing the team should
             // also vacate the primary agent slot it filled.
@@ -1829,7 +1817,7 @@ export const removeTaskResourceAction = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task resource assignment');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             await ProjectTaskModel.removeTaskResource(trx, tenant, assignmentId);
         });
     } catch (error) {
@@ -1855,7 +1843,7 @@ export const getTaskResourcesAction = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             return await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
         });
     } catch (error) {
@@ -1881,7 +1869,7 @@ export const deleteTaskTicketLinkAction = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task ticket link');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             await ProjectTaskModel.deleteTaskTicketLink(trx, tenant, linkId);
         });
     } catch (error) {
@@ -1907,7 +1895,7 @@ export const deleteTaskTicketLinksByTicketIdAction = withAuth(async (
             const projectIds = await resolveProjectIdsForTicket(trx, tenant, ticketId);
             if (projectIds.length > 0) {
                 await Promise.all(projectIds.map((projectId) =>
-                    assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId)
+                    assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update')
                 ));
             }
             await ProjectTaskModel.deleteTaskTicketLinksByTicketId(trx, tenant, ticketId);
@@ -1948,14 +1936,14 @@ export const moveTaskToPhase = withAuth(async (
             if (!sourceProjectId) {
                 throw new Error('Project not found for source task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, sourceProjectId, 'update');
 
             // Get the new phase to access its project and WBS code
             const newPhase = await ProjectModel.getPhaseById(trx, tenant, newPhaseId);
             if (!newPhase) {
                 throw new Error('Target phase not found');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, newPhase.project_id, 'update');
 
             // Get the current phase to check if this is a cross-project move
             const currentPhase = await ProjectModel.getPhaseById(trx, tenant, existingTask.phase_id);
@@ -2196,13 +2184,13 @@ export const duplicateTaskToPhase = withAuth(async (
             if (!sourceProjectId) {
                 throw new Error('Project not found for source task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, sourceProjectId, 'update');
 
             const newPhase = await ProjectModel.getPhaseById(trx, tenant, newPhaseId);
             if (!newPhase) {
                 throw new Error('Target phase not found');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, newPhase.project_id, 'update');
 
             const currentPhase = await ProjectModel.getPhaseById(trx, tenant, originalTask.phase_id);
             if (!currentPhase) {
@@ -2441,7 +2429,7 @@ export const getTaskWithDetails = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
             // Example of proper tenant handling in JOINs:
             // Each JOIN includes an andOn clause to match tenants across tables,
@@ -2531,7 +2519,7 @@ export const reorderTask = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             const loadNeighborKey = async (neighborId?: string | null) => {
                 if (!neighborId) return null;
@@ -2584,7 +2572,7 @@ export const reorderTasksInStatus = withAuth(async (
                 );
                 const uniqueProjectIds = Array.from(new Set(projectIds.filter((value): value is string => Boolean(value))));
                 await Promise.all(uniqueProjectIds.map((projectId) =>
-                    assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId)
+                    assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update')
                 ));
             }
 
@@ -2635,7 +2623,7 @@ export const cleanupOrderKeysForStatus = withAuth(async (
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             const wasFixed = await repairTaskOrderKeys(trx, tenant, phaseId, statusId);
 
@@ -2731,8 +2719,8 @@ export const addTaskDependency = withAuth(async (
             if (!predecessorProjectId || !successorProjectId) {
                 throw new Error('Project not found for dependency task');
             }
-            await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId);
-            await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId);
+            await assertProjectMutationAllowed(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId, 'update');
+            await assertProjectMutationAllowed(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId, 'update');
 
         // Handle 'blocked_by' by swapping the tasks and using 'blocks' instead
         let actualPredecessorId = predecessorTaskId;
@@ -2829,7 +2817,7 @@ export const getTaskDependencies = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
             return TaskDependencyModel.getTaskDependencies(trx, tenant, taskId);
         });
@@ -2862,8 +2850,8 @@ export const removeTaskDependency = withAuth(async (
         if (!predecessorProjectId || !successorProjectId) {
             throw new Error('Project not found for dependency task');
         }
-        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId);
-        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId);
+        await assertProjectMutationAllowed(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId, 'update');
+        await assertProjectMutationAllowed(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId, 'update');
 
         await TaskDependencyModel.removeDependency(trx, tenant, dependencyId);
 
@@ -2927,8 +2915,8 @@ export const updateTaskDependency = withAuth(async (
             if (!predecessorProjectId || !successorProjectId) {
                 throw new Error('Project not found for dependency task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, predecessorProjectId);
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, successorProjectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, predecessorProjectId, 'update');
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, successorProjectId, 'update');
 
             return TaskDependencyModel.updateDependency(trx, tenant, dependencyId, data);
         });
@@ -2948,7 +2936,7 @@ export const getTaskById = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
             const task = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('project_tasks.task_id', taskId)
@@ -2985,7 +2973,7 @@ export const getAllProjectTasksForListView = withAuth(async (
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all phases for this project
         const phases = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -3125,7 +3113,7 @@ export const getPhaseTaskCounts = withAuth(async (
         const { knex: db } = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
         const countsQuery = tenantScopedTable(trx, 'project_tasks as pt', tenant);
         tenantDb(trx, tenant).tenantJoin(countsQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
@@ -3162,7 +3150,7 @@ export const getEffectiveTaskService = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
             const scoped = tenantDb(trx, tenant);
             const query = tenantScopedTable(trx, 'project_tasks as pt', tenant);
@@ -3242,7 +3230,7 @@ export const getProjectTaskData = withAuth(async (
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all tasks across all phases for this project
         const phases = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -3434,13 +3422,13 @@ export const bulkAddTagsToTasks = withAuth(async (
         .select<Array<{ task_id: string; project_id: string }>>('pt.task_id', 'pp.project_id');
       const projectIdByTask = new Map(taskProjectRows.map((row) => [row.task_id, row.project_id]));
 
-      const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+      const authorizeProjectMutation = await createProjectMutationAuthorizer(trx, tenant, user as IUserWithRoles, 'update');
       const projectAllowed = new Map<string, boolean>();
       const isProjectAllowed = async (projectId: string): Promise<boolean> => {
         const cached = projectAllowed.get(projectId);
         if (cached !== undefined) return cached;
         const project = await ProjectModel.getById(trx, tenant, projectId);
-        const allowed = !!project && (await authorizeProjectRead(project));
+        const allowed = !!project && (await authorizeProjectMutation(project));
         projectAllowed.set(projectId, allowed);
         return allowed;
       };
@@ -3480,7 +3468,7 @@ export const bulkAddTagsToTasks = withAuth(async (
 
   for (const taskId of validIds) {
     if (unauthorizedIds.has(taskId)) {
-      failed.push({ taskId, message: 'Permission denied: Cannot read project' });
+      failed.push({ taskId, message: 'Permission denied: Cannot update project tasks' });
       continue;
     }
     const existingLower = new Set((existingByTask.get(taskId) ?? []).map((t) => t.toLowerCase()));

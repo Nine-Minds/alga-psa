@@ -55,7 +55,11 @@ import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
-import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import {
+  assertProjectMutationAllowed,
+  assertProjectReadAllowed,
+  createProjectReadAuthorizer,
+} from '../lib/projectReadAuthorization';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -320,25 +324,6 @@ async function filterAuthorizedProjects<T extends Partial<IProject>>(
   const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
   const decisions = await Promise.all(projects.map((project) => authorizeProjectRead(project)));
   return projects.filter((_, index) => decisions[index]);
-}
-
-async function assertProjectReadAllowed(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles,
-  projectId: string
-): Promise<IProject> {
-  const project = await ProjectModel.getById(trx, tenant, projectId);
-  if (!project) {
-    throw new Error('Project not found');
-  }
-
-  const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-  if (!await authorizeProjectRead(project)) {
-    throw new Error('Permission denied: Cannot read project');
-  }
-
-  return project;
 }
 
 async function resolveProjectIdForPhase(
@@ -921,7 +906,7 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             return await ProjectModel.updatePhase(trx, tenant, phaseId, {
                 ...phaseData,
@@ -969,7 +954,7 @@ export const markPhaseComplete = withAuth(async (
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
         const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
         if (!projectId) throw new Error('Project phase not found');
-        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+        await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
         const completedAt = new Date().toISOString();
         const [updatedPhase] = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -1090,7 +1075,7 @@ export const reopenPhase = withAuth(async (
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
         const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
         if (!projectId) throw new Error('Project phase not found');
-        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+        await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
         const reopenedAt = new Date().toISOString();
         const [phase] = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -1129,7 +1114,7 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             projectIdForEvent = projectId;
             await ProjectModel.deletePhase(trx, tenant, phaseId);
         });
@@ -1176,7 +1161,7 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
             if (!project) {
                 throw new Error('Project not found');
             }
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, project.project_id);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, project.project_id, 'update');
 
             const phases = await ProjectModel.getPhases(trx, tenant, phaseData.project_id);
             const nextOrderNumber = phases.length + 1;
@@ -1260,7 +1245,7 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
         if (!phase) {
             throw new Error('Phase not found');
         }
-        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, phase.project_id);
+        await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, phase.project_id, 'update');
 
         // Get order keys for positioning
         let beforeKey: string | null = null;
@@ -1687,7 +1672,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         if (denied) return denied;
 
         const { beforeProject, updatedProject, billingCloseResult, activeStagingClaims } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            const beforeProject = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
             // If status was updated, fetch the status details
@@ -1820,7 +1805,7 @@ export const deleteProject = withAuth(async (
         if (denied) return denied;
 
         const result = await deleteEntityWithValidation('project', projectId, knex, tenant, async (trx, tenantId) => {
-            await assertProjectReadAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId, 'delete');
 
             await deleteEntityTags(trx, projectId, 'project');
 
@@ -2209,7 +2194,7 @@ export const updateProjectStructure = withAuth(async (user, { tenant }, projectI
         if (denied) return denied;
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             await ProjectModel.updateStructure(trx, tenant, projectId, updates);
         });
     } catch (error) {
@@ -2337,7 +2322,7 @@ export const addStatusToProject = withAuth(async (user, { tenant }, projectId: s
         if (denied) return denied;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             return await ProjectModel.addStatusToProject(trx, tenant, projectId, statusData);
         });
     } catch (error) {
@@ -2364,13 +2349,13 @@ export const updateProjectStatus = withAuth(async (
         if (denied) return denied;
 
         const updatedStatus = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
 
             const relatedProjectIds = await resolveProjectIdsForStatus(trx, tenant, statusId);
             if (relatedProjectIds.length > 0) {
                 await Promise.all(
                     relatedProjectIds.map((relatedProjectId) =>
-                        assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, relatedProjectId)
+                        assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, relatedProjectId, 'update')
                     )
                 );
             }
@@ -2416,7 +2401,7 @@ export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: s
             if (projectIds.length > 0) {
                 await Promise.all(
                     projectIds.map((projectId) =>
-                        assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId)
+                        assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update')
                     )
                 );
             }

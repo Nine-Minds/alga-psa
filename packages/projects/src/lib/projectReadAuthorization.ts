@@ -1,13 +1,13 @@
 /**
- * Record-level project read authorization, shared by surfaces that take a
- * project id from the caller.
+ * Record-level project authorization, shared by surfaces that take a project
+ * id from the caller.
  *
  * The coarse `project:read` / `project:update` RBAC check says the user may
  * work with projects at all; it says nothing about *this* project. Bundle
  * narrowing can restrict a user to a subset of the tenant's projects, so any
  * action that accepts a projectId has to run the kernel decision for that
- * record too. This module is the one implementation: the project, task, staging,
- * import and export actions all decide through it.
+ * record too. Mutations require both read and write scope. This module is the
+ * one implementation used by project, task, staging, import, and export actions.
  */
 
 import type { Knex } from 'knex';
@@ -23,6 +23,8 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+
+export type ProjectRecordAction = 'read' | 'update' | 'delete';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -96,15 +98,15 @@ function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): Auth
 }
 
 /**
- * The record-level project read decision for one user, reusable across many projects in one request
- * (subject and kernel are resolved once). Returns false for a row without a project id.
+ * Builds a request-local record authorizer. The same subject, kernel, and cache
+ * can evaluate multiple project actions without resolving authorization state
+ * separately for each decision.
  */
-export async function createProjectReadAuthorizer(
+async function createProjectRecordAuthorizer(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  action: 'read' | 'update' = 'read'
-): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
+): Promise<(project: ProjectAuthorizationFields, action: ProjectRecordAction) => Promise<boolean>> {
   const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
@@ -121,7 +123,7 @@ export async function createProjectReadAuthorizer(
   });
   const requestCache = new RequestLocalAuthorizationCache();
 
-  return async (project: ProjectAuthorizationFields): Promise<boolean> => {
+  return async (project: ProjectAuthorizationFields, action: ProjectRecordAction): Promise<boolean> => {
     const projectId = project.project_id;
     if (!projectId) {
       return false;
@@ -136,6 +138,51 @@ export async function createProjectReadAuthorizer(
     });
 
     return decision.allowed;
+  };
+}
+
+/**
+ * The record-level project read decision for one user, reusable across many projects in one request.
+ * Returns false for a row without a project id.
+ */
+export async function createProjectReadAuthorizer(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  action: ProjectRecordAction = 'read'
+): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
+  const authorizeRecord = await createProjectRecordAuthorizer(conn, tenant, user);
+  return (project) => authorizeRecord(project, action);
+}
+
+/**
+ * Builds a reusable project mutation decision for batch operations. Each row
+ * must pass both its read scope and the requested write scope.
+ */
+export async function createProjectMutationAuthorizer(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  action: 'update' | 'delete',
+): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
+  const decideMutation = await createProjectMutationDecisionAuthorizer(conn, tenant, user, action);
+  return async (project) => {
+    const decision = await decideMutation(project);
+    return decision.readAllowed && decision.actionAllowed;
+  };
+}
+
+async function createProjectMutationDecisionAuthorizer(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  action: 'update' | 'delete',
+): Promise<(project: ProjectAuthorizationFields) => Promise<{ readAllowed: boolean; actionAllowed: boolean }>> {
+  const authorizeRecord = await createProjectRecordAuthorizer(conn, tenant, user);
+  return async (project) => {
+    const readAllowed = await authorizeRecord(project, 'read');
+    const actionAllowed = readAllowed ? await authorizeRecord(project, action) : false;
+    return { readAllowed, actionAllowed };
   };
 }
 
@@ -157,6 +204,34 @@ export async function assertProjectReadAllowed(
   const authorize = await createProjectReadAuthorizer(conn, tenant, user);
   if (!(await authorize(project))) {
     throw new Error('Permission denied: Cannot read project');
+  }
+
+  return project;
+}
+
+/**
+ * Loads a project and requires both its read scope and the requested mutation scope.
+ * Keeping both decisions preserves existing record-level read restrictions.
+ */
+export async function assertProjectMutationAllowed(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  projectId: string,
+  action: 'update' | 'delete',
+): Promise<IProject> {
+  const project = await ProjectModel.getById(conn, tenant, projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const decideMutation = await createProjectMutationDecisionAuthorizer(conn, tenant, user, action);
+  const decision = await decideMutation(project);
+  if (!decision.readAllowed) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+  if (!decision.actionAllowed) {
+    throw new Error(`Permission denied: Cannot ${action} project`);
   }
 
   return project;
