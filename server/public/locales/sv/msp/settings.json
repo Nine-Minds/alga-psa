@@ -4528,5 +4528,27 @@
       "title": "E-post- och identitetsleverantörer",
       "description": "Registrera din egen Google- eller Microsoft-applikation för inkommande e-post och inloggning för personal. Dessa autentiseringsuppgifter tillhör din arbetsyta."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Tillgångsnumrering",
+      "description": "En gemensam nummerserie för klientorganisationen formateras med varje kunds prefix. Förhandsgranskning och utskrift tilldelar inga nummer. Utfärdade nummer som överges lämnar luckor och återanvänds aldrig.",
+      "clientPrefixes": "Kundprefix",
+      "noPrefix": "Inget prefix",
+      "prefixSaved": "Kundprefix sparat",
+      "uniquenessEnabled": "Unika inventarienummer är aktiverade",
+      "legacyAudit": "Granskning av befintliga inventarienummer",
+      "legacyAuditHelp": "Befintliga inventarienummer bevaras. Åtgärda dubbletter genom att redigera berörda tillgångars inventarienummer. Granska tomma inventarienummer utan att ändra dem om de avsiktligt är tomma.",
+      "reconciliationNote": "Anteckning om manuell avstämning",
+      "markReviewed": "Markera som granskad",
+      "noLegacyIssues": "Inga tomma eller dubbla inventarienummer hittades vid migreringen.",
+      "activate": "Aktivera unika inventarienummer",
+      "saveFailed": "Det gick inte att spara prefixet",
+      "activationFailed": "Åtgärda dubbla inventarienummer före aktivering",
+      "continuationReview": "Granskningen av befintliga data omfattade {{scanned}} sparade inventarienummer; {{numeric}} har numeriska suffix. Det högsta suffixet är {{maximum}}; granska startvärdet {{next}}. Detta är endast ett förslag. Ange och spara det godkända fortsättningsvärdet ovan. Granskningen förbrukar inget värde i nummerserien.",
+      "continuationExamples": "Exempel: {{examples}}",
+      "blankTag": "(tomt inventarienummer)",
+      "normalizedTag": "Normaliserat: {{tag}}"
+    }
   }
 }

@@ -145,8 +145,19 @@ function createFakeKnex(state: DbState) {
   const knex = ((table: string) => new QB(table)) as any;
   knex.fn = { now: () => now };
   knex.raw = (sql: string, bindings: any[]) => ({ __raw: sql, bindings });
+  knex.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knex);
   return knex;
 }
+
+// This smoke test exercises vendor pagination and sync persistence. Identity allocation
+// has its own database-backed coverage; supply its returned identity at this boundary.
+vi.mock('@alga-psa/shared/services/assetNumbering', () => ({
+  prepareAssetIdentity: vi.fn(async () => {
+    const number = ++nextAssetId;
+    const tag = String(number).padStart(5, '0');
+    return { asset_id: `asset_${number}`, asset_tag: tag, asset_tag_normalized: tag, asset_tag_legacy_exempt: false };
+  }),
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,

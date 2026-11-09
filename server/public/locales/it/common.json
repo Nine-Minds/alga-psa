@@ -1666,7 +1666,9 @@
       "ticketTitle": "Stampa etichette di lavoro",
       "tooMany": "Puoi stampare al massimo {{max}} etichette alla volta.",
       "unnamedAsset": "Asset senza nome",
-      "useTemplate": "Usa {{template}}"
+      "useTemplate": "Usa {{template}}",
+      "copiesPerAsset": "Copie per asset",
+      "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme."
     }
   },
   "deleteEntity": {

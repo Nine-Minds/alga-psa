@@ -38,10 +38,17 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder(TENANT_TABLE_MANIFEST)).toEqual(literal);
   });
 
-  it('has 612 unique ordered names', () => {
+  it('has 617 unique ordered names', () => {
     const order = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
-    expect(order).toHaveLength(612);
-    expect(new Set(order).size).toBe(612);
+    expect(order).toHaveLength(617);
+    expect(new Set(order).size).toBe(617);
+  });
+
+  it('deletes asset numbering dependents before assets and their immutable claims', () => {
+    const order = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
+    const tables = ['asset_tag_audit', 'asset_tag_activation', 'asset_number_reservations', 'assets', 'asset_tag_legacy_bindings', 'asset_tag_claims'];
+    expect(order.filter(table => tables.includes(table))).toEqual(tables);
+    expect(order.indexOf('asset_number_reservations')).toBeLessThan(order.indexOf('clients'));
   });
 
   it('deletes time sheet notes before their parent time sheets', () => {

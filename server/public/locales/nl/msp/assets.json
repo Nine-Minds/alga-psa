@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Eigendom van klant",
       "msp": "Eigendom van MSP"
+    },
+    "create": {
+      "success": "Asset {{tag}} aangemaakt",
+      "autoTag": "Volgende automatische label toewijzen",
+      "preview": "Voorbeeld van het volgende label: {{tag}} (het voorbeeld reserveert geen nummer)",
+      "selectClient": "Selecteer een klant voor het voorbeeld",
+      "addAnother": "Opslaan en nog een toevoegen",
+      "submit": "Asset aanmaken"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Leverancier",
       "purchaseCost": "Aanschafkosten",
       "orderNumber": "Ordernr.",
-      "ownership": "Eigendom"
+      "ownership": "Eigendom",
+      "autoAssetTag": "Automatisch toewijzen",
+      "assetTagPreviewLoading": "Selecteer een klant om het volgende label te bekijken",
+      "previewNotReserved": "Alleen voorbeeld; toegewezen bij opslaan"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Toegang geweigerd: assets kunnen niet worden bijgewerkt"
     },
     "asset": {
+      "tagAlreadyExists": "Deze assettag is al in gebruik of gereserveerd. Scan de tag om de bestaande asset te vinden of voer een andere tag in.",
       "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "clientNotFound": "Klant niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "maintenanceNotFound": "Onderhoudsplanning niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Assetlabel scannen",
+    "input": "Scan of voer een label in",
+    "loading": "Bezig met zoeken…",
+    "find": "Asset zoeken",
+    "ambiguous": "Meerdere zichtbare assets hebben dit label. Vraag een beheerder om de dubbele labels op te lossen.",
+    "notFound": "Geen zichtbare asset komt exact overeen met dit label.",
+    "failed": "Dit label kon niet worden opgezocht. Controleer uw toegangsrechten en probeer het opnieuw."
+  },
+  "fullIntake": {
+    "title": "Asset toevoegen",
+    "description": "Kies een tenantnummer of behoud een bestaand afgedrukt label.",
+    "back": "Terug naar assets"
+  },
+  "labelFirstIntake": {
+    "start": "Inname met vooraf gedrukt label",
+    "title": "Inname met vooraf gedrukt label starten",
+    "help": "Maak een blijvend assetrecord met de minimale gegevens en druk twee exemplaren van het label af. Scan later een van de exemplaren om hetzelfde record aan te vullen.",
+    "client": "Klant",
+    "clientRequired": "Kies een klant om door te gaan.",
+    "createFailed": "Het innamerecord kon niet worden gemaakt.",
+    "name": "Korte beschrijving (optioneel)",
+    "creating": "Bezig met aanmaken…",
+    "createPrint": "Aanmaken en paar afdrukken"
   }
 }

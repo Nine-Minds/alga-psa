@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * Integration test for the optional create extras on addTicket: linked assets, and watchers
  * are written in the ticket's own transaction, and an invalid one rolls the whole
@@ -78,7 +79,7 @@ describe.sequential('addTicket create extras (integration)', () => {
 
   async function insertAsset(forClientId: string, tag: string) {
     const assetId = uuidv4();
-    await tt('assets').insert({
+    await insertTestAssets(context.db, {
       tenant: tenantId,
       asset_id: assetId,
       client_id: forClientId,

@@ -1666,7 +1666,9 @@
       "ticketTitle": "Skriv ut arbetsetiketter",
       "tooMany": "Du kan skriva ut högst {{max}} etiketter åt gången.",
       "unnamedAsset": "Namnlös tillgång",
-      "useTemplate": "Använd {{template}}"
+      "useTemplate": "Använd {{template}}",
+      "copiesPerAsset": "Exemplar per tillgång",
+      "adjacentCopies": "Exemplaren för varje tillgång skrivs ut tillsammans."
     }
   },
   "deleteEntity": {

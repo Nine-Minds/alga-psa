@@ -1666,7 +1666,9 @@
       "ticketTitle": "Imprimir etiquetas de trabajo",
       "tooMany": "Puede imprimir como máximo {{max}} etiquetas a la vez.",
       "unnamedAsset": "Activo sin nombre",
-      "useTemplate": "Usar {{template}}"
+      "useTemplate": "Usar {{template}}",
+      "copiesPerAsset": "Copias por activo",
+      "adjacentCopies": "Las copias de cada activo se imprimen juntas."
     }
   },
   "deleteEntity": {

@@ -1,6 +1,16 @@
 [
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetCreateRequest/properties/asset_tag/minLength",
+    "reason": "PR 4210: omitted or empty asset tags request automatic tenant-wide numbering. Removing the nonempty constraint expands accepted requests; existing explicit tags remain supported."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetCreateRequest/properties/asset_tag/minLength",
+    "reason": "PR 4210: omitted or empty asset tags request automatic tenant-wide numbering. Removing the nonempty constraint expands accepted requests; existing explicit tags remain supported."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1schedules/get/parameters",
     "reason": "alga-2026-0002797: GET /api/v1/schedules documented the generic WorkV1ListQuery placeholders (page, limit, sort, order, fields, search, query), which listScheduleEntries() never read; the spec now documents the parsed filters (start_date, end_date, user_id). Clients sending the old params still get 200 (they were and remain ignored)."
   },

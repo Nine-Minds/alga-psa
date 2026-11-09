@@ -1666,7 +1666,9 @@
       "ticketTitle": "Werklabels afdrukken",
       "tooMany": "U kunt maximaal {{max}} labels tegelijk afdrukken.",
       "unnamedAsset": "Naamloze asset",
-      "useTemplate": "{{template}} gebruiken"
+      "useTemplate": "{{template}} gebruiken",
+      "copiesPerAsset": "Exemplaren per asset",
+      "adjacentCopies": "De exemplaren van elke asset worden samen afgedrukt."
     }
   },
   "deleteEntity": {

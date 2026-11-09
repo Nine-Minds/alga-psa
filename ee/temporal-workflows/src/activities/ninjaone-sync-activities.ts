@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/db/admin.js';
 import { tenantDb, isReadOnlyError } from '@alga-psa/db';
 import { getRedisStreamClient } from '@alga-psa/workflow-streams';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 import { createNinjaOneClient, NinjaOneClient } from '@ee/lib/integrations/ninjaone/ninjaOneClient';
 import {
@@ -568,13 +569,14 @@ class NinjaOneSyncWorker {
 
     return await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
+      const identity = await prepareAssetIdentity(trx, { tenant: this.tenantId, clientId: createRequest.client_id });
 
       const [asset] = await tenantDb(trx, this.tenantId).table('assets')
         .insert({
           tenant: this.tenantId,
           asset_type: createRequest.asset_type,
           client_id: createRequest.client_id,
-          asset_tag: createRequest.asset_tag,
+          ...identity,
           name: createRequest.name,
           status: createRequest.status,
           location: createRequest.location || '',

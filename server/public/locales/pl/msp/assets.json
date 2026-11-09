@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Własność klienta",
       "msp": "Własność MSP"
+    },
+    "create": {
+      "success": "Utworzono zasób {{tag}}",
+      "autoTag": "Przypisz następną automatyczną etykietę",
+      "preview": "Podgląd następnej etykiety: {{tag}} (podgląd nie rezerwuje numeru)",
+      "selectClient": "Wybierz klienta, aby wyświetlić podgląd",
+      "addAnother": "Zapisz i dodaj kolejny",
+      "submit": "Utwórz zasób"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Dostawca",
       "purchaseCost": "Koszt zakupu",
       "orderNumber": "Nr zamówienia",
-      "ownership": "Własność"
+      "ownership": "Własność",
+      "autoAssetTag": "Przypisz automatycznie",
+      "assetTagPreviewLoading": "Wybierz klienta, aby wyświetlić podgląd następnej etykiety",
+      "previewNotReserved": "Tylko podgląd; przypisanie przy zapisie"
     },
     "placeholders": {
       "workstationOsType": "np. Windows, macOS, Linux",
@@ -1953,6 +1964,7 @@
       "updateAssets": "Brak uprawnień: nie można aktualizować zasobów"
     },
     "asset": {
+      "tagAlreadyExists": "Ten identyfikator zasobu jest już używany lub zarezerwowany. Zeskanuj go, aby znaleźć istniejący zasób, albo wprowadź inny identyfikator.",
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "clientNotFound": "Nie znaleziono klienta. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "maintenanceNotFound": "Nie znaleziono harmonogramu konserwacji. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -2325,5 +2337,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Skanuj etykietę zasobu",
+    "input": "Zeskanuj lub wpisz etykietę",
+    "loading": "Wyszukiwanie…",
+    "find": "Znajdź zasób",
+    "ambiguous": "Więcej niż jeden widoczny zasób ma tę etykietę. Poproś administratora o usunięcie duplikatów etykiet.",
+    "notFound": "Żaden widoczny zasób nie odpowiada dokładnie tej etykiecie.",
+    "failed": "Nie udało się wyszukać tej etykiety. Sprawdź uprawnienia dostępu i spróbuj ponownie."
+  },
+  "fullIntake": {
+    "title": "Dodaj zasób",
+    "description": "Wybierz numer organizacji lub zachowaj istniejącą wydrukowaną etykietę.",
+    "back": "Powrót do zasobów"
+  },
+  "labelFirstIntake": {
+    "start": "Przyjęcie z etykietą wstępną",
+    "title": "Rozpocznij przyjęcie z etykietą wstępną",
+    "help": "Utwórz trwały rekord zasobu z minimalnymi danymi, a następnie wydrukuj dwie kopie jego etykiety. Zeskanuj później dowolną kopię, aby uzupełnić ten sam rekord.",
+    "client": "Klient",
+    "clientRequired": "Wybierz klienta, aby kontynuować.",
+    "createFailed": "Nie udało się utworzyć rekordu przyjęcia.",
+    "name": "Krótki opis (opcjonalnie)",
+    "creating": "Tworzenie…",
+    "createPrint": "Utwórz i wydrukuj parę"
   }
 }

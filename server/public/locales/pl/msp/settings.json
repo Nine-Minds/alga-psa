@@ -4536,5 +4536,27 @@
       "title": "Dostawcy poczty e-mail i tożsamości",
       "description": "Zarejestruj własną aplikację Google lub Microsoft do obsługi przychodzących wiadomości e-mail i logowania pracowników. Te poświadczenia należą do Twojego obszaru roboczego."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numeracja zasobów",
+      "description": "Jedna sekwencja dla całej organizacji jest formatowana z prefiksem każdego klienta. Podgląd i drukowanie nie przydzielają numerów. Porzucone wydane numery pozostawiają luki i nigdy nie są ponownie używane.",
+      "clientPrefixes": "Prefiksy klientów",
+      "noPrefix": "Brak prefiksu",
+      "prefixSaved": "Zapisano prefiks klienta",
+      "uniquenessEnabled": "Unikalność etykiet zasobów jest aktywna",
+      "legacyAudit": "Audyt istniejących etykiet",
+      "legacyAuditHelp": "Istniejące etykiety są zachowywane. Usuń duplikaty, edytując etykiety odpowiednich zasobów; sprawdź puste etykiety bez ich zmieniania, jeśli są celowo puste.",
+      "reconciliationNote": "Notatka z ręcznego uzgodnienia",
+      "markReviewed": "Oznacz jako sprawdzone",
+      "noLegacyIssues": "Podczas migracji nie znaleziono pustych ani zduplikowanych etykiet.",
+      "activate": "Aktywuj unikalne etykiety zasobów",
+      "saveFailed": "Nie udało się zapisać prefiksu",
+      "activationFailed": "Usuń duplikaty etykiet przed aktywacją",
+      "continuationReview": "Przegląd istniejących danych objął {{scanned}} zapisanych etykiet; {{numeric}} ma sufiksy numeryczne. Najwyższy sufiks to {{maximum}}; sprawdź wartość początkową {{next}}. To tylko sugestia. Wprowadź i zapisz powyżej zatwierdzoną wartość kontynuacji; ten przegląd nie zużywa żadnej wartości sekwencji.",
+      "continuationExamples": "Przykłady: {{examples}}",
+      "blankTag": "(pusta etykieta)",
+      "normalizedTag": "Znormalizowana: {{tag}}"
+    }
   }
 }

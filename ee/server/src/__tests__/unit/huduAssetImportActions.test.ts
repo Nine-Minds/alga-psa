@@ -64,7 +64,7 @@ const knexCallableMock = vi.fn((_table: string) => {
   });
   qb.select = vi.fn(async () => assetsRows);
   // findSerialConflict: where({ tenant }).whereRaw(lower(trim(...))).first(...)
-  // deriveHuduAssetTag's collision pre-check: where({ tenant, asset_tag }).first(...)
+  // Hudu external identity never supplies a physical tag.
   qb.first = vi.fn(async () => {
     if (whereRawArgs) {
       const needle = String(whereRawArgs.bindings[0]);
@@ -73,7 +73,7 @@ const knexCallableMock = vi.fn((_table: string) => {
       );
       return hit ? { asset_id: hit.asset_id, name: hit.name, client_id: hit.client_id } : undefined;
     }
-    return typeof whereArg?.asset_tag === 'string' && takenAssetTags.includes(whereArg.asset_tag as string)
+    return typeof whereArg?.asset_tag_normalized === 'string' && takenAssetTags.some((tag) => tag.trim().toUpperCase() === whereArg?.asset_tag_normalized)
       ? { asset_id: 'asset-owning-tag' }
       : undefined;
   });
@@ -233,6 +233,7 @@ beforeEach(() => {
   createAssetMock.mockImplementation(async (data: { name: string }) => ({
     asset_id: `created-${data.name}`,
     ...data,
+    asset_tag: `ALLOC-${data.name}`,
   }));
   deleteAssetMock.mockResolvedValue({ success: true, deleted: true });
   getHuduAssetMappingRowsMock.mockResolvedValue([]);
@@ -258,7 +259,7 @@ describe('T218: importHuduAsset', () => {
     expect(createAssetMock).toHaveBeenCalledWith({
       asset_type: 'workstation',
       client_id: CLIENT_1,
-      asset_tag: 'SN-EC-1001',
+      asset_tag: '',
       name: 'EC-WS-001',
       status: huduImportAssetStatus(),
       serial_number: 'SN-EC-1001',
@@ -291,7 +292,7 @@ describe('T218: importHuduAsset', () => {
       data: {
         asset_id: 'created-EC-WS-001',
         mapping_id: 'map-1',
-        asset_tag: 'SN-EC-1001',
+        asset_tag: 'ALLOC-EC-WS-001',
         asset_type: 'workstation',
         status: huduImportAssetStatus(),
       },
@@ -376,36 +377,34 @@ describe('T218: importHuduAsset', () => {
 // ============================================================================
 
 describe('T219: asset_tag derivation', () => {
-  it('uses primary_serial when no asset in the tenant already carries it as a tag', async () => {
+  it('keeps Hudu serial numbers separate from physical asset tags', async () => {
+    expect(await deriveHuduAssetTag(knexCallableMock as any, TENANT, { huduAssetId: 1, primarySerial: 'SN-EC-1001' })).toBe('');
+
+    const { importHuduAsset } = await importActions();
+    await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+    expect(createAssetMock).toHaveBeenCalledWith(expect.objectContaining({ asset_tag: '' }));
+  });
+
+  it('uses shared numbering when serial matches an existing physical tag', async () => {
+    takenAssetTags = ['sn-ec-1001'];
+
     expect(await deriveHuduAssetTag(knexCallableMock as any, TENANT, { huduAssetId: 1, primarySerial: 'SN-EC-1001' })).toBe(
-      'SN-EC-1001'
+      ''
     );
 
     const { importHuduAsset } = await importActions();
     await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
-    expect(createAssetMock).toHaveBeenCalledWith(expect.objectContaining({ asset_tag: 'SN-EC-1001' }));
+    expect(createAssetMock).toHaveBeenCalledWith(expect.objectContaining({ asset_tag: '' }));
   });
 
-  it('falls back to hudu-<id> when the serial is already used as another asset_tag', async () => {
-    takenAssetTags = ['SN-EC-1001'];
-
-    expect(await deriveHuduAssetTag(knexCallableMock as any, TENANT, { huduAssetId: 1, primarySerial: 'SN-EC-1001' })).toBe(
-      'hudu-1'
-    );
-
-    const { importHuduAsset } = await importActions();
-    await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
-    expect(createAssetMock).toHaveBeenCalledWith(expect.objectContaining({ asset_tag: 'hudu-1' }));
-  });
-
-  it('falls back to hudu-<id> for missing or blank serials', async () => {
+  it('uses automatic shared numbering for missing or blank serials', async () => {
     const { importHuduAsset } = await importActions();
 
     await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 2 }); // primary_serial null
-    expect(createAssetMock).toHaveBeenLastCalledWith(expect.objectContaining({ asset_tag: 'hudu-2' }));
+    expect(createAssetMock).toHaveBeenLastCalledWith(expect.objectContaining({ asset_tag: '' }));
 
     await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 3 }); // primary_serial blank
-    expect(createAssetMock).toHaveBeenLastCalledWith(expect.objectContaining({ asset_tag: 'hudu-3' }));
+    expect(createAssetMock).toHaveBeenLastCalledWith(expect.objectContaining({ asset_tag: '' }));
   });
 });
 

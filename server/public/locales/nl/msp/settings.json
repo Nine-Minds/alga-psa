@@ -4528,5 +4528,27 @@
       "title": "E-mail- en identiteitsproviders",
       "description": "Registreer uw eigen Google- of Microsoft-applicatie voor inkomende e-mail en aanmelding door medewerkers. Deze inloggegevens horen bij uw werkruimte."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Assetnummering",
+      "description": "Eén tenantbrede reeks wordt opgemaakt met het voorvoegsel van elke klant. Voorbeelden en afdrukken wijzen geen nummers toe. Uitgegeven nummers die worden verlaten, laten gaten achter en worden nooit hergebruikt.",
+      "clientPrefixes": "Klantvoorvoegsels",
+      "noPrefix": "Geen voorvoegsel",
+      "prefixSaved": "Klantvoorvoegsel opgeslagen",
+      "uniquenessEnabled": "Unieke assetlabels zijn geactiveerd",
+      "legacyAudit": "Controle van bestaande labels",
+      "legacyAuditHelp": "Bestaande labels blijven behouden. Los duplicaten op door de labels van de betrokken assets te bewerken; controleer lege labels zonder ze te wijzigen als ze bewust leeg zijn.",
+      "reconciliationNote": "Notitie voor handmatige afstemming",
+      "markReviewed": "Markeren als gecontroleerd",
+      "noLegacyIssues": "Bij de migratie zijn geen lege of dubbele labels gevonden.",
+      "activate": "Unieke assetlabels activeren",
+      "saveFailed": "Voorvoegsel kon niet worden opgeslagen",
+      "activationFailed": "Los dubbele labels op vóór activering",
+      "continuationReview": "De controle van bestaande gegevens heeft {{scanned}} opgeslagen labels onderzocht; {{numeric}} hebben numerieke achtervoegsels. Het hoogste achtervoegsel is {{maximum}}; controleer een beginwaarde van {{next}}. Dit is alleen een advies. Voer hierboven de goedgekeurde vervolgwaarde in en sla deze op; deze controle verbruikt geen waarde uit de reeks.",
+      "continuationExamples": "Voorbeelden: {{examples}}",
+      "blankTag": "(leeg label)",
+      "normalizedTag": "Genormaliseerd: {{tag}}"
+    }
   }
 }

@@ -4528,5 +4528,27 @@
       "title": "Email and identity providers",
       "description": "Register your own Google or Microsoft application for inbound email, and staff sign-in. These credentials belong to your workspace."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Asset numbering",
+      "description": "One tenant-wide sequence is formatted with each client’s prefix. Previewing and printing do not allocate numbers. Abandoned issued numbers leave gaps and are never reused.",
+      "clientPrefixes": "Client prefixes",
+      "noPrefix": "No prefix",
+      "prefixSaved": "Client prefix saved",
+      "uniquenessEnabled": "Asset tag uniqueness is active",
+      "legacyAudit": "Legacy tag audit",
+      "legacyAuditHelp": "Existing tags are preserved. Reconcile duplicates by editing the affected asset tags; review blank tags without changing them if they are intentionally blank.",
+      "reconciliationNote": "Human reconciliation note",
+      "markReviewed": "Mark reviewed",
+      "noLegacyIssues": "No blank or duplicate tags were found at migration time.",
+      "activate": "Activate unique asset tags",
+      "saveFailed": "Could not save prefix",
+      "activationFailed": "Resolve duplicate tags before activation",
+      "continuationReview": "Legacy review scanned {{scanned}} stored tags; {{numeric}} have numeric suffixes. The highest suffix is {{maximum}}; review a starting value of {{next}}. This is an advisory only. Enter and save the approved continuation value above; no sequence value is consumed by this review.",
+      "continuationExamples": "Examples: {{examples}}",
+      "blankTag": "(blank tag)",
+      "normalizedTag": "Normalized: {{tag}}"
+    }
   }
 }

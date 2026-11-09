@@ -116,7 +116,8 @@ import {
     type AssetAuthorizationAction,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
-import { getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
+import { prepareAssetIdentity, claimAssetTag, normalizeAssetTag, assetTagClaimsRequired } from '../lib/assetNumbering';
+import { getAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
     assertBillingProfileForClient,
@@ -1152,12 +1153,18 @@ export async function createAssetInTransaction(
                 await applyPurchaseCostCurrency(trx, tenant, procurement);
             }
 
+            const identity = await prepareAssetIdentity(trx, {
+                tenant, clientId: validatedData.client_id,
+                assetTag: validatedData.asset_tag,
+                reservationId: validatedData.asset_number_reservation_id,
+            });
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
                 asset_type: validatedData.asset_type,
                 client_id: validatedData.client_id,
-                asset_tag: validatedData.asset_tag,
+                ...identity,
                 name: validatedData.name,
                 status: validatedData.status,
                 ownership: validatedData.ownership ?? 'client',
@@ -1330,7 +1337,7 @@ export const createAsset = withAuth(async (
         throw new Error('Permission denied: Cannot create assets');
     }
 
-    return createAssetRecord(knex, tenant, user.user_id, data, options);
+    return await createAssetRecord(knex, tenant, user.user_id, data, options);
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -1524,6 +1531,17 @@ export async function updateAssetRecord(
                     baseUpdateData[key] = value;
                 }
             });
+
+            if (Object.prototype.hasOwnProperty.call(baseUpdateData, 'asset_tag')) {
+                const nextTag = String(baseUpdateData.asset_tag ?? '');
+                const normalizedTag = normalizeAssetTag(nextTag);
+                baseUpdateData.asset_tag_normalized = normalizedTag || null;
+                if (normalizedTag !== normalizeAssetTag(asset.asset_tag ?? '')) {
+                    baseUpdateData.asset_tag_legacy_exempt = false;
+                    baseUpdateData.asset_tag_managed = await assetTagClaimsRequired(trx, tenant);
+                    await claimAssetTag(trx, { tenant, assetTag: nextTag, ownerKind: 'asset', ownerId: asset_id });
+                }
+            }
 
             if (attributesPayload !== undefined) {
                 // jsonb merge (not replace) so sibling namespaces like

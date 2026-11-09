@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -220,7 +221,7 @@ describe('recurring tickets on ticket templates (integration)', () => {
       const locationAcme = await createClientLocation(db, f.clientId, f.tenant);
       const locationBeta = await createClientLocation(db, betaClientId, f.tenant);
       const [assetAcme1, assetAcme2, assetBeta] = [uuidv4(), uuidv4(), uuidv4()];
-      await scoped.table('assets').insert([
+      await insertTestAssets(db, [
         { tenant: f.tenant, asset_id: assetAcme1, asset_type: 'workstation', client_id: f.clientId, asset_tag: 'AC1', name: 'Acme 1', status: 'active' },
         { tenant: f.tenant, asset_id: assetAcme2, asset_type: 'workstation', client_id: f.clientId, asset_tag: 'AC2', name: 'Acme 2', status: 'active' },
         { tenant: f.tenant, asset_id: assetBeta, asset_type: 'workstation', client_id: betaClientId, asset_tag: 'BE1', name: 'Beta 1', status: 'active' },
