@@ -267,9 +267,9 @@ const Comment = {
         // {} with zero SQL for internal notes, plain authors and PSA tenants; fails closed in a
         // co-managed workspace when staff post a requester-visible comment without an audience.
         await insertCommentThread(trx, tenant, {
-          threadId,
-          ticketId: comment.ticket_id,
-          rootCommentId: commentId,
+          threadId: threadId as string,
+          ticketId: comment.ticket_id as string,
+          rootCommentId: commentId as string,
           isInternal: Boolean(comment.is_internal),
           createdBy: comment.user_id || null,
           at: now,
