@@ -43,6 +43,40 @@
           "body": "{{client}} wordt niet meer geëxporteerd naar QuickBooks-klant {{customer}}. In QuickBooks verandert niets en u kunt de klant op elk moment opnieuw koppelen via deze lijst.",
           "confirm": "Ontkoppelen",
           "cancel": "Koppeling behouden"
+        },
+        "linkFailed": "Koppelen mislukt.",
+        "unlinkFailed": "Ontkoppelen mislukt.",
+        "createFailed": "Aanmaken mislukt.",
+        "createFailedInQbo": "Aanmaken in QuickBooks mislukt.",
+        "loadFailed": "Klanttoewijzingen laden mislukt.",
+        "relink": "Opnieuw koppelen",
+        "exact": "Exacte overeenkomst: {{name}}",
+        "suggestion": "Suggestie: {{name}}",
+        "linking": "Koppelen…",
+        "accept": "Accepteren",
+        "confirm": "Bevestigen",
+        "search": "Zoeken",
+        "searchPlaceholder": "QBO-klanten zoeken…",
+        "linkToCustomer": "Koppelen aan QBO-klant",
+        "creating": "Aanmaken…",
+        "createInQbo": "Aanmaken in QuickBooks",
+        "leave": "Zo laten",
+        "noCustomers": "Geen QBO-klanten gevonden.",
+        "noClients": "Geen klanten gevonden.",
+        "notMapped": "Niet toegewezen",
+        "subCustomer": "subklant",
+        "bulkLinked_one": "{{count}} exacte overeenkomst gekoppeld.",
+        "bulkLinked_other": "{{count}} exacte overeenkomsten gekoppeld.",
+        "bulkFailed": "In bulk accepteren mislukt.",
+        "exactReady_one": "{{count}} exacte naamovereenkomst gereed om te accepteren",
+        "exactReady_other": "{{count}} exacte naamovereenkomsten gereed om te accepteren",
+        "accepting": "Accepteren…",
+        "acceptExact_one": "{{count}} exacte overeenkomst accepteren",
+        "acceptExact_other": "{{count}} exacte overeenkomsten accepteren",
+        "columns": {
+          "client": "Klant",
+          "customer": "QBO-klant",
+          "action": "Actie"
         }
       },
       "dialog": {
@@ -2435,6 +2469,42 @@
           "title": "Onderhoudsvensters",
           "description": "Waarschuwingen die tijdens een actief venster binnenkomen, worden onderdrukt en maken geen tickets aan.",
           "empty": "Geen onderhoudsvensters geconfigureerd."
+        },
+        "predicate": {
+          "matchAll": "Overeenkomst",
+          "all": "Alle voorwaarden",
+          "any": "Een van de voorwaarden",
+          "add": "Voorwaarde toevoegen",
+          "remove": "Verwijderen",
+          "value": "Waarde",
+          "nestedGroup": "Geneste groep",
+          "legacyRegex": "Verouderde reguliere expressie voor bericht",
+          "and": "en",
+          "or": "of",
+          "fields": {
+            "severity": "Ernst",
+            "alertClass": "Waarschuwingsklasse",
+            "activityType": "Activiteitstype",
+            "sourceType": "Brontype",
+            "organizationId": "Organisatie-ID",
+            "text": "Bericht en details",
+            "deviceName": "Apparaatnaam",
+            "externalDeviceId": "Externe apparaat-ID",
+            "message": "Bericht",
+            "details": "Details"
+          },
+          "operators": {
+            "equals": "is",
+            "not_equals": "is niet",
+            "in": "is een van",
+            "not_in": "is geen van",
+            "contains": "bevat",
+            "not_contains": "bevat niet",
+            "contains_ci": "bevat, hoofdletterongevoelig",
+            "not_contains_ci": "bevat niet, hoofdletterongevoelig"
+          },
+          "addGroup": "Groep toevoegen",
+          "removeGroup": "Groep verwijderen"
         }
       },
       "ninjaOne": {
@@ -3084,6 +3154,138 @@
           "showSecret": "Geheim tonen",
           "title": "Waarschuwingswebhook",
           "url": "Webhook-URL"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "De UniFi-integratie is beschikbaar in AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Configuratie opslaan",
+          "testConnection": "Alle sleutels opnieuw controleren",
+          "disconnect": "Verbinding verbreken",
+          "discoverSites": "Sites ontdekken",
+          "runDeviceSync": "Apparaatsynchronisatie uitvoeren",
+          "checkOfflineNow": "Offline apparaten nu controleren",
+          "saveAlerting": "Meldingsinstellingen opslaan"
+        },
+        "alerting": {
+          "title": "Offline-meldingen",
+          "description": "Een apparaat dat langer offline blijft dan de respijtperiode genereert een melding en, als uw meldingsregels dat bepalen, een ticket. De melding wordt opgelost zodra het apparaat weer online is.",
+          "graceMinutes": "Offline-respijtperiode (minuten)",
+          "graceHelp": "Hoe lang een apparaat onafgebroken offline moet zijn voordat een melding wordt gegenereerd. Gebruik 0 om direct te melden.",
+          "rulesNote": "Ticketaanmaak, prioriteiten en automatisch oplossen stelt u in bij de meldingsregels hieronder."
+        },
+        "connection": {
+          "title": "UniFi-verbinding",
+          "description": "Verbind met een of meer UniFi-API-sleutels. Een Site Manager-sleutel onder Independent bereikt uw onafhankelijke consoles; een sleutel onder een fabric bereikt alleen die fabric, dus voeg één sleutel per fabric toe. Sleutels voor lokale controllers werken voor een controller die u rechtstreeks kunt bereiken. Geadopteerde gateways, switches en access points worden gesynchroniseerd.",
+          "syncLabel": "Synchronisatie: {{status}}",
+          "syncLabelWithError": "Synchronisatie: {{status}} ({{error}})",
+          "connectedAt": "Verbonden: {{time}}",
+          "never": "nooit"
+        },
+        "errors": {
+          "loadSettings": "UniFi-instellingen laden mislukt",
+          "loadMappings": "UniFi-sitekoppelingen laden mislukt",
+          "loadSummary": "UniFi-verbindingsoverzicht laden mislukt",
+          "loadState": "UniFi-integratiestatus laden mislukt",
+          "saveConfiguration": "UniFi-configuratie opslaan mislukt",
+          "testConnectionFailed": "Verbindingstest mislukt",
+          "disconnectFailed": "UniFi-integratie verbreken mislukt",
+          "siteSyncFailed": "Sites ontdekken mislukt",
+          "deviceSyncFailed": "Apparaatsynchronisatie mislukt",
+          "updateMappingFailed": "Koppeling bijwerken mislukt",
+          "reconnectRequired": "UniFi heeft alle opgeslagen API-sleutels geweigerd. Vervang hieronder een sleutel om de synchronisatie te hervatten.",
+          "alertCheckFailed": "Offline-controle mislukt",
+          "saveAlertingFailed": "Meldingsinstellingen opslaan mislukt",
+          "invalidGraceMinutes": "Voer een geheel aantal minuten in tussen 0 en 1440."
+        },
+        "fields": {
+          "apiKey": "API-sleutel ({{state}})",
+          "apiKeyStateSaved": "opgeslagen",
+          "apiKeyStateRequired": "vereist",
+          "apiKeyPlaceholderExisting": "Sleutel opgeslagen. Voer een nieuwe sleutel in om deze te vervangen",
+          "apiKeyPlaceholderNew": "Plak uw UniFi-API-sleutel",
+          "connectionMode": "Verbindingsmodus",
+          "modeSiteManager": "Site Manager (in de cloud)",
+          "modeLocal": "Lokale controller",
+          "localBaseUrl": "Controller-URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi-site",
+          "reachedBy": "Bereikt via",
+          "mappedClient": "Gekoppelde klant",
+          "defaultContact": "Standaardcontact",
+          "selectContact": "Contact selecteren",
+          "autoSync": "Automatisch synchroniseren",
+          "autoSyncEnabled": "Ingeschakeld",
+          "autoSyncDisabled": "Uitgeschakeld"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden",
+          "reconnectRequired": "Opnieuw verbinden vereist"
+        },
+        "success": {
+          "configurationSaved": "UniFi-configuratie opgeslagen",
+          "connectionTestSucceeded": "Verbinding met UniFi geslaagd",
+          "disconnected": "UniFi-integratie losgekoppeld",
+          "siteSyncCompleted": "Sites ontdekken voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt",
+          "deviceSyncCompleted": "Apparaatsynchronisatie voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt",
+          "alertCheckCompleted": "Offline-controle voltooid",
+          "alertingSaved": "Meldingsinstellingen opgeslagen"
+        },
+        "sync": {
+          "title": "Synchronisatie en sitekoppelingen",
+          "description": "Ontdek UniFi-sites en koppel elke site aan een klant. Apparaten op niet-gekoppelde sites worden overgeslagen.",
+          "summary": "{{mappedSites}} gekoppelde sites · {{devices}} apparaten · {{activeAlerts}} actieve meldingen"
+        },
+        "credentials": {
+          "columns": {
+            "label": "Sleutel",
+            "type": "Type",
+            "status": "Status",
+            "consoles": "Bereikte consoles",
+            "lastError": "Laatste fout",
+            "lastChecked": "Laatst gecontroleerd",
+            "actions": "Acties"
+          },
+          "statusActive": "Actief",
+          "statusReconnect": "Sleutel geweigerd",
+          "statusDisabled": "Uitgeschakeld",
+          "noConsoles": "Nog geen",
+          "unreachableTitle": "Sommige consoles zijn zichtbaar, maar geen van uw sleutels heeft er toegang toe.",
+          "unreachableAction": "Hoort een console bij een fabric, voeg dan een sleutel toe die onder die fabric is aangemaakt. Maak hem aan in UniFi Site Manager terwijl die fabric is geselecteerd.",
+          "firstKeyHelp": "Plak een UniFi-API-sleutel om te verbinden. U kunt later meer sleutels toevoegen, bijvoorbeeld één per fabric.",
+          "addHelp": "Een sleutel die onder Independent is aangemaakt, bereikt uw onafhankelijke consoles. Een sleutel onder een fabric bereikt alleen die fabric, dus voeg er één per fabric toe.",
+          "labelField": "Label",
+          "labelPlaceholderFirst": "Standaard",
+          "labelPlaceholder": "Bijvoorbeeld: Acme-fabric",
+          "keyField": "API-sleutel",
+          "addKey": "Sleutel toevoegen",
+          "addAnother": "Nog een sleutel toevoegen",
+          "cancel": "Annuleren",
+          "replaceKey": "Sleutel vervangen",
+          "replaceTitle": "Sleutel vervangen: {{label}}",
+          "replaceHelp": "De nieuwe sleutel wordt gecontroleerd voordat hij de opgeslagen sleutel vervangt. De oude sleutel wordt verwijderd.",
+          "replaceUrlField": "Controller-URL (laat leeg om de opgeslagen URL te behouden)",
+          "newKeyField": "Nieuwe API-sleutel",
+          "rename": "Hernoemen",
+          "renameTitle": "Sleutel hernoemen",
+          "remove": "Verwijderen",
+          "actionsMenu": "Acties voor {{label}}",
+          "removeTitle": "Sleutel verwijderen: {{label}}",
+          "removeWarning": "Deze gekoppelde sites gebruiken deze sleutel. Ze behouden hun klantkoppeling en assets, maar synchroniseren niet meer totdat een andere sleutel hun console bereikt.",
+          "added": "API-sleutel toegevoegd",
+          "replaced": "API-sleutel vervangen",
+          "renamed": "Label bijgewerkt",
+          "removed": "API-sleutel verwijderd",
+          "addFailed": "API-sleutel toevoegen mislukt",
+          "replaceFailed": "API-sleutel vervangen mislukt",
+          "renameFailed": "Label bijwerken mislukt",
+          "removeFailed": "API-sleutel verwijderen mislukt"
         }
       },
       "huntress": {

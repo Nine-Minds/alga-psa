@@ -15,6 +15,9 @@ const getAllPrioritiesMock = vi.fn();
 const getAllUsersMock = vi.fn();
 const getSlaPoliciesMock = vi.fn();
 const getTeamsMock = vi.fn();
+const checkCurrentUserPermissionsMock = vi.fn(async (checks: Array<{ resource: string; action: string }>) =>
+  checks.map((c) => ({ ...c, granted: true }))
+);
 const useFeatureFlagMock = vi.fn(() => ({ enabled: false }));
 
 vi.mock('@alga-psa/tickets/actions', () => ({
@@ -75,6 +78,11 @@ vi.mock('../../actions/close-rules/closeRuleActions', () => ({
   deleteBoardAutoCloseRule: vi.fn(),
 }));
 
+vi.mock('../../actions/board-actions/boardNotificationActions', () => ({
+  getBoardNotificationSettings: vi.fn().mockResolvedValue({ rules: [], default_watcher_user_ids: [] }),
+  saveBoardNotificationSettings: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@alga-psa/reference-data/actions', () => ({
   getAvailableReferenceData: vi.fn().mockResolvedValue([]),
   importReferenceData: vi.fn(),
@@ -124,6 +132,11 @@ vi.mock('@alga-psa/teams/actions/team-actions/avatarActions', () => ({
 
 vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
   isTeamActionError: () => false,
+}));
+
+vi.mock('@alga-psa/auth/actions/permissionActions', () => ({
+  checkCurrentUserPermissions: (...args: [Array<{ resource: string; action: string }>]) =>
+    checkCurrentUserPermissionsMock(...args),
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
@@ -302,6 +315,9 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     });
     vi.clearAllMocks();
+    checkCurrentUserPermissionsMock.mockImplementation(async (checks) =>
+      checks.map((check) => ({ ...check, granted: true }))
+    );
     useFeatureFlagMock.mockReturnValue({ enabled: false });
     getAllBoardsMock.mockResolvedValue([
       {
@@ -559,6 +575,9 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
     });
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    });
 
     expandSection('display');
     expect(screen.getByTestId('enable_live_ticket_timer')).toBeChecked();
@@ -719,6 +738,9 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
     });
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    });
 
     // Editor opened in edit mode with the clicked board's name loaded.
     expect(screen.getByDisplayValue('Support')).toBeInTheDocument();
@@ -815,6 +837,43 @@ describe('BoardsSettings ticket status copy flow', () => {
     // so the name now appears more than once. The assertion is still "the saved
     // name is reflected in the editor".
     expect(screen.getAllByText('Support Renamed').length).toBeGreaterThan(0);
+  });
+
+  it('keeps save disabled until the existing board editor data has loaded', async () => {
+    let resolveStatuses!: (statuses: Array<{
+      status_id: string;
+      name: string;
+      is_closed: boolean;
+      is_default: boolean;
+      order_number: number;
+    }>) => void;
+    getBoardTicketStatusesMock.mockReturnValueOnce(new Promise((resolve) => {
+      resolveStatuses = resolve;
+    }));
+
+    renderBoardsSettings();
+
+    await waitFor(() => {
+      expect(document.getElementById('board-row-board-source')).toBeTruthy();
+    });
+    fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
+
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+    expect(screen.getByTestId('save-board-button')).toBeDisabled();
+
+    resolveStatuses([{
+      status_id: 'status-open',
+      name: 'Support Open',
+      is_closed: false,
+      is_default: true,
+      order_number: 10,
+    }]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    });
   });
 
   it('shows an incomplete auto-close rule error inside the Automation section, not a top banner', async () => {
@@ -931,5 +990,55 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     expect(document.getElementById('board-row-board-11')).toBeInTheDocument();
     expect(document.getElementById('board-row-board-15')).toBeInTheDocument();
+  });
+});
+
+describe('BoardsSettings permission gating (ticket_settings)', () => {
+  const grant = (...actions: string[]) =>
+    checkCurrentUserPermissionsMock.mockImplementation(async (checks) =>
+      checks.map((c) => ({ ...c, granted: c.resource === 'ticket_settings' && actions.includes(c.action) }))
+    );
+
+  beforeEach(() => {
+    getAllBoardsMock.mockResolvedValue([
+      { board_id: 'board-a', board_name: 'Support', display_order: 10, is_inactive: false, is_default: false },
+      { board_id: 'board-b', board_name: 'Field Ops', display_order: 20, is_inactive: false, is_default: false },
+    ]);
+    getAllPrioritiesMock.mockResolvedValue([]);
+    getAllUsersMock.mockResolvedValue([]);
+    getSlaPoliciesMock.mockResolvedValue([]);
+    getTeamsMock.mockResolvedValue([]);
+  });
+
+  it('hides Add Board, Edit and Delete when the user has no ticket_settings permissions', async () => {
+    grant();
+    renderBoardsSettings();
+    await waitFor(() => expect(checkCurrentUserPermissionsMock).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getAllByText('Support').length).toBeGreaterThan(0));
+    expect(checkCurrentUserPermissionsMock).toHaveBeenCalledWith([
+      { resource: 'ticket_settings', action: 'create' },
+      { resource: 'ticket_settings', action: 'update' },
+      { resource: 'ticket_settings', action: 'delete' },
+    ]);
+    expect(screen.queryByTestId('add-board-button')).toBeNull();
+    expect(screen.queryByTestId('board-actions-menu-board-a')).toBeNull();
+    expect(screen.queryByText('ticketing.boards.actions.edit')).toBeNull();
+    expect(screen.queryByText('ticketing.boards.actions.delete')).toBeNull();
+  });
+
+  it('shows each control only for the action the user holds', async () => {
+    grant('update');
+    renderBoardsSettings();
+    await waitFor(() => expect(screen.getAllByText('ticketing.boards.actions.edit').length).toBe(2));
+    expect(screen.queryByTestId('add-board-button')).toBeNull();
+    expect(screen.queryByText('ticketing.boards.actions.delete')).toBeNull();
+  });
+
+  it('shows Add Board and Delete (but not Edit) for create+delete', async () => {
+    grant('create', 'delete');
+    renderBoardsSettings();
+    await waitFor(() => expect(screen.getByTestId('add-board-button')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText('ticketing.boards.actions.delete').length).toBe(2));
+    expect(screen.queryByText('ticketing.boards.actions.edit')).toBeNull();
   });
 });

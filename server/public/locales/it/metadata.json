@@ -521,7 +521,10 @@
       "defaultTitle": "Dashboard | AlgaPSA"
     },
     "coManaged": {
-      "title": "IT cogestita"
+      "title": "IT cogestita",
+      "archive": {
+        "title": "Archivio IT co-gestita"
+      }
     },
     "coManagement": {
       "title": "Accesso cogestito",
@@ -542,8 +545,17 @@
         "taskTitle": "Attività condivisa",
         "projectTitle": "Progetto condiviso"
       },
+      "departure": {
+        "title": "Termina l’IT co-gestita"
+      },
+      "sla": {
+        "title": "Priorità SLA cogestite"
+      },
       "export": {
         "title": "Esporta area di lavoro"
+      },
+      "upgrade": {
+        "title": "Passa ad AlgaPSA"
       }
     }
   },

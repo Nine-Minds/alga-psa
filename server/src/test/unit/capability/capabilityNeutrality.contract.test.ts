@@ -51,6 +51,8 @@ import {
   capabilityServedBootstrapKey,
   evaluateCapability,
   filterServed,
+  registerCapabilityEligibility,
+  registerCapabilityParticipation,
   resolveClientCapability,
   serves,
 } from '@alga-psa/core/capability';
@@ -102,6 +104,30 @@ describe('capability neutrality on the real evaluator path', () => {
     expect(d.reasons).toEqual({ admitted: 'resolver-unregistered', served: 'resolver-unregistered' });
     expect(posthogNode.isFeatureEnabled).not.toHaveBeenCalled();
     expect(sqlCalls()).toBe(0);
+  });
+
+  it('bounds unavailable flag calls across page bootstraps without turning fallback into flag-off', async () => {
+    // The production checker preserves availability for lifecycle admission.
+    registerFeatureFlagChecker((flag, ctx) => featureFlags.evaluate(flag, ctx));
+    registerCapabilityEligibility('co-managed', async () => true);
+    registerCapabilityParticipation('co-managed', async ({ tenantIds }) => tenantIds);
+    // posthog-node returns undefined when its remote evaluation fails.
+    posthogNode.isFeatureEnabled.mockResolvedValue(undefined);
+    for (let request = 0; request < 5; request++) {
+      const bootstrap = await resolveCapabilityBootstrap('emerald');
+      expect(bootstrap).not.toHaveProperty(FLAG);
+      expect(resolveClientCapability({ capability: 'co-managed', bootstrap })).toMatchObject({ enabled: true, admitted: false });
+      expect((await admits('co-managed', 'emerald')).reasons.admitted).toBe('flag-unavailable');
+    }
+    expect(posthogNode.isFeatureEnabled).toHaveBeenCalledTimes(1);
+    expect(tenantReads()).toBe(1);
+
+    posthogNode.isFeatureEnabled.mockResolvedValue(true);
+    await vi.advanceTimersByTimeAsync(60_001);
+    const recovered = await resolveCapabilityBootstrap('emerald');
+    expect(recovered[FLAG]).toBe(true);
+    expect(resolveClientCapability({ capability: 'co-managed', bootstrap: recovered })).toMatchObject({ enabled: true, admitted: true });
+    expect(posthogNode.isFeatureEnabled).toHaveBeenCalledTimes(2);
   });
 
   it('admits, serves and filterServed are individually free', async () => {

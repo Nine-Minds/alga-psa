@@ -603,7 +603,10 @@
       "defaultTitle": "Översikt | AlgaPSA"
     },
     "coManaged": {
-      "title": "Samhanterad IT"
+      "title": "Samhanterad IT",
+      "archive": {
+        "title": "Arkiv för samhanterad IT"
+      }
     },
     "coManagement": {
       "title": "Samhanterad åtkomst",
@@ -624,8 +627,17 @@
         "taskTitle": "Delad uppgift",
         "projectTitle": "Delat projekt"
       },
+      "departure": {
+        "title": "Avsluta samhanterad IT"
+      },
+      "sla": {
+        "title": "Samhanterade SLA-prioriteter"
+      },
       "export": {
         "title": "Exportera arbetsyta"
+      },
+      "upgrade": {
+        "title": "Byt till AlgaPSA"
       }
     }
   },

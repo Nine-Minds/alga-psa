@@ -196,6 +196,7 @@
     "fileError": "Det gick inte att ladda upp filen"
   },
   "folders": {
+    "show": "Visa mappar",
     "root": "Rot",
     "loadFailed": "Det gick inte att läsa in mappträdet",
     "deleteConfirm": "Är du säker på att du vill radera mappen ”{{name}}”? Det går bara om mappen är tom.",
@@ -304,6 +305,11 @@
   },
   "ticketDocuments": "Ärendedokument",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Skriv ut",
+    "edit": "Redigera",
+    "upload": "Ladda upp",
+    "closePreview": "Stäng förhandsvisning",
     "save": "Spara",
     "saving": "Sparar…",
     "cancel": "Avbryt"
@@ -376,6 +382,18 @@
     "altVideoThumbnail": "Miniatyrbild av {{name}}",
     "pageCount_one": "{{count}} sida",
     "pageCount_other": "{{count}} sidor"
+  },
+  "fallbackUserName": "Användare",
+  "selectOrCreate": "Välj ett dokument eller skapa ett nytt.",
+  "viewMode": {
+    "grid": "Rutnät",
+    "list": "Lista"
+  },
+  "unsavedChanges": {
+    "title": "Osparade ändringar",
+    "message": "Är du säker på att du vill avbryta? Alla osparade ändringar går förlorade.",
+    "confirm": "Kasta ändringar",
+    "cancel": "Fortsätt redigera"
   },
   "skeleton": {
     "cardLabel": "Platshållare för dokumentkort"

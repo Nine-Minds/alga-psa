@@ -508,7 +508,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return {
       search: debouncedSearchTerm || undefined,
       status: statusFilters.length > 0 ? statusFilters[0] : undefined,
-      asset_type: typeFilters.length > 0 ? typeFilters[0] : undefined,
+      asset_types: typeFilters.length > 0 ? typeFilters : undefined,
       client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,

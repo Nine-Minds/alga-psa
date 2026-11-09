@@ -96,6 +96,7 @@ vi.mock('../../actions/ticketFormActions', () => ({
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientLocations: vi.fn().mockResolvedValue([]),
+  getContactEffectiveLocation: vi.fn().mockResolvedValue({ locationId: null, locations: [], workArrangement: null }),
   searchClientsForPicker: vi.fn().mockResolvedValue({ clients: [], total: 0 }),
 }));
 
@@ -630,6 +631,12 @@ describe('QuickAddTicket duplicate mode dismiss guard', () => {
       itil_urgency: null,
       assigned_to: null,
       assigned_team_id: null,
+      board_name: null,
+      category_name: null,
+      subcategory_name: null,
+      priority_name: null,
+      assignee_name: null,
+      assigned_team_name: null,
       additional_agents: [],
       tags: [],
       checklist: [],

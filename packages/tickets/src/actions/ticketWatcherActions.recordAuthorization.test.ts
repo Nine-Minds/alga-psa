@@ -45,8 +45,21 @@ vi.mock('@alga-psa/db', () => ({
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => bundleRules),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [],
+    rules: bundleRules.map((r: any) => ({
+      rule_id: r.id, resource_type: r.resource, action: r.action, template_key: r.templateKey,
+      constraint_key: r.constraintKey ?? null,
+      config: {
+        constraints: r.constraints ?? [],
+        selectedClientIds: r.selectedClientIds,
+        selectedBoardIds: r.selectedBoardIds,
+      },
+    })),
+  })),
 }));
 vi.mock('./clientPortalVisibility.server', () => ({ getClientContactVisibilityContext: vi.fn() }));
 vi.mock('../lib/clientPortalVisibility.server', () => ({ getClientContactVisibilityContext: vi.fn() }));

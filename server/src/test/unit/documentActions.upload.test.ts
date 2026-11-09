@@ -12,10 +12,30 @@ vi.mock('@alga-psa/storage/StorageService', () => {
   };
 });
 
+vi.mock('../lib/documentPermissions', () => ({
+  applyDocumentProductReadScope: vi.fn(),
+  canReadDocument: vi.fn(async () => true),
+  canReadTicketDocuments: vi.fn(async () => true),
+  canUploadDocument: vi.fn(async () => true),
+}));
+
+vi.mock('@shared/lib/documentAuthorization', () => ({
+  authorizeAndRedactDocuments: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => documents,
+}));
+
+vi.mock('../lib/meetingDocumentAdmission', () => ({
+  admitMeetingDocumentsForBrowser: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => ({ documents }),
+}));
+
+vi.mock('../cache/CacheFactory', () => ({
+  CacheFactory: { getPreviewCache: () => ({ delete: vi.fn(async () => undefined) }) },
+}));
+
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({
     table: (tableExpr: string) => {
       const builder = conn(tableExpr);
+      if (tableExpr === 'external_files') builder.tenant = tenant;
       if (!builder || typeof builder.where !== 'function') {
         return builder;
       }
@@ -197,6 +217,47 @@ describe('uploadDocument', () => {
     ]);
   });
 
+  it('keeps the existing thumbnail reference when updateDocument receives a client supplied reference', async () => {
+    const existingDocument = {
+      tenant: 'tenant-123',
+      document_id: 'doc-existing',
+      document_name: 'Before',
+      thumbnail_file_id: 'trusted-thumbnail',
+      created_by: 'user-1',
+      is_client_visible: false,
+    };
+    knexStub.documents.push(existingDocument);
+
+    await documentActions.updateDocument('doc-existing', {
+      document_name: 'After',
+      thumbnail_file_id: 'attacker-file',
+    } as Partial<IDocument>);
+
+    expect(knexStub.updateArgs).toHaveLength(1);
+    expect(knexStub.updateArgs[0]).toMatchObject({ document_name: 'After' });
+    expect(knexStub.updateArgs[0]).not.toHaveProperty('thumbnail_file_id');
+    expect(existingDocument).toMatchObject({
+      document_name: 'After',
+      thumbnail_file_id: 'trusted-thumbnail',
+    });
+  });
+
+  it('does not persist any generated references when a derivative has invalid provenance', async () => {
+    const thumbnailRecord = knexStub.externalFileRows.find(({ file_id }) => file_id === 'thumb-123')!;
+    thumbnailRecord.metadata = { context: 'document_thumbnail', source_document_id: 'another-document' };
+
+    const formData = new FormData();
+    formData.set('file', new File([Buffer.from('hello world')], 'example.png', { type: 'image/png' }));
+
+    const result = await documentActions.uploadDocument(formData, { userId: 'user-1' });
+
+    expect(result.success).toBe(true);
+    expect(knexStub.inserts).toHaveLength(1);
+    expect(knexStub.updateArgs).toEqual([]);
+    expect(knexStub.documents[0]).not.toHaveProperty('thumbnail_file_id');
+    expect(knexStub.documents[0]).not.toHaveProperty('preview_file_id');
+  });
+
   it('prefers the ticket attachments system folder when it exists', async () => {
     knexStub.folderRows.push(
       {
@@ -294,18 +355,26 @@ function createKnexStub() {
   const whereArgs: any[] = [];
   const folderRows: any[] = [];
   const defaultFolderRows: any[] = [];
+  const externalFileRows = [
+    { tenant: 'tenant-123', is_deleted: false, file_id: 'thumb-123', metadata: { context: 'document_thumbnail', source_document_id: 'doc-123' } },
+    { tenant: 'tenant-123', is_deleted: false, file_id: 'preview-456', metadata: { context: 'document_preview', source_document_id: 'doc-123' } },
+  ];
+  const documents: any[] = [];
 
-  const documentsBuilder = {
+  const documentsBuilder: any = {
     insert: vi.fn(async (record: any) => {
       inserts.push(record);
+      documents.push({ ...record });
     }),
     where: vi.fn((conditions: any) => {
       whereArgs.push(conditions);
-      return {
-        update: vi.fn(async (payload: any) => {
-          updateArgs.push(payload);
-        }),
-      };
+      return documentsBuilder;
+    }),
+    modify: vi.fn(() => documentsBuilder),
+    first: vi.fn(async () => documents[0] ?? null),
+    update: vi.fn(async (payload: any) => {
+      updateArgs.push(payload);
+      if (documents[0]) Object.assign(documents[0], payload);
     }),
   };
 
@@ -319,6 +388,24 @@ function createKnexStub() {
     where: vi.fn((_conditions: any) => ({
       first: vi.fn(async () => null),
     })),
+  };
+
+  const externalFilesBuilder: any = {
+    tenant: null as string | null,
+    filters: {} as Record<string, unknown>,
+    requestedIds: [] as string[],
+    where: vi.fn((conditions: Record<string, unknown>) => {
+      Object.assign(externalFilesBuilder.filters, conditions);
+      return externalFilesBuilder;
+    }),
+    whereIn: vi.fn((_column: string, fileIds: string[]) => {
+      externalFilesBuilder.requestedIds = fileIds;
+      return externalFilesBuilder;
+    }),
+    select: vi.fn(async () => externalFileRows.filter((row) =>
+      row.tenant === externalFilesBuilder.tenant
+      && Object.entries(externalFilesBuilder.filters).every(([key, value]) => (row as any)[key] === value)
+      && externalFilesBuilder.requestedIds.includes(row.file_id))),
   };
 
   const defaultBuilder = {
@@ -449,6 +536,7 @@ function createKnexStub() {
     if (table === 'document_default_folders') return createDefaultDocumentFoldersBuilder();
     if (table === 'document_types') return documentTypesBuilder;
     if (table === 'shared_document_types') return sharedDocumentTypesBuilder;
+    if (table === 'external_files') return externalFilesBuilder;
     return defaultBuilder;
   });
   knexFn.fn = { now: () => new Date() };
@@ -463,6 +551,8 @@ function createKnexStub() {
     whereArgs,
     folderRows,
     defaultFolderRows,
+    documents,
+    externalFileRows,
   };
 }
 

@@ -1,9 +1,7 @@
 import dns from 'node:dns/promises';
 import { isIP } from 'node:net';
-import { isGlobalUnicastAddress } from '../net/addressPolicy';
-
-// The webhook and document fetch transports share one address policy.
-export { isGlobalUnicastAddress } from '../net/addressPolicy';
+export { isGlobalUnicastAddress } from '../net/publicAddress';
+import { isGlobalUnicastAddress } from '../net/publicAddress';
 
 export class UnsafeWebhookTargetError extends Error {
   constructor(message: string) {

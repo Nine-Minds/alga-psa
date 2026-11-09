@@ -1,5 +1,18 @@
 version: '3.8'
 
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — YAML anchors are file-local, so this policy is repeated per compose file
+  # Replace the policy when merging files and resolving extends: appending can
+  # duplicate inherited options before Compose validates the service. Requires Compose >= 2.24.4.
+  security_opt: !override
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
+# Non-root long-running services: no capabilities are needed once nothing runs as root.
+x-hardening-nonroot: &hardening-nonroot
+  <<: *hardening
+  cap_drop:
+    - ALL
+
 x-environment: &shared-environment
   # ---- APP -------
   VERSION: ${VERSION}
@@ -94,6 +107,7 @@ secrets:
 
 services:
   postgres:
+    <<: *hardening
     extends:
       file: ./docker-compose.images.yaml
       service: pgvector
@@ -113,11 +127,13 @@ services:
   # One-shot reconciliation of an existing bundled data directory with the pinned
   # image; defined once in docker-compose.base.yaml.
   postgres-extension-update:
+    <<: *hardening
     extends:
       file: ./docker-compose.base.yaml
       service: postgres-extension-update
 
   redis:
+    <<: *hardening-nonroot
     build:
       context: .
       dockerfile: redis/Dockerfile

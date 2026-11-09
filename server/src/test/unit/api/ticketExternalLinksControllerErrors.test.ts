@@ -10,7 +10,7 @@ import { ExternalLinkValidationError } from '@alga-psa/tickets/actions/externalL
 
 const throwState = vi.hoisted(() => ({ error: null as unknown }));
 
-const authorizeReadMock = vi.hoisted(() => vi.fn(async () => true));
+const authorizeReadMock = vi.hoisted(() => vi.fn(async () => ({ allowed: true, redactedFields: [] })));
 
 const linkActionState = vi.hoisted(() => ({
   findResult: null as unknown,
@@ -76,7 +76,8 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({
 
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
   authorizeApiResourceRead: authorizeReadMock,
-  authorizeApiResource: authorizeReadMock,
+  authorizeApiResource: vi.fn(async (input: any) => (input.action === 'read' ? authorizeReadMock(input) : true)),
+  authorizeApiResourceAction: vi.fn(async (input: any) => (input.action === 'read' ? authorizeReadMock(input) : true)),
   buildAuthorizationPrincipalSubject: vi.fn(() => ({})),
 }));
 
@@ -122,7 +123,7 @@ describe('external-link validation failures map to structured API errors', () =>
   beforeEach(() => {
     throwState.error = null;
     authorizeReadMock.mockReset();
-    authorizeReadMock.mockResolvedValue(true);
+    authorizeReadMock.mockResolvedValue({ allowed: true, redactedFields: [] });
     linkActionState.findResult = null;
   });
 
@@ -257,7 +258,7 @@ describe('external-link validation failures map to structured API errors', () =>
       ticket_id: TICKET,
       link: { link_id: 'link-1', system: 'github', external_id: '1' },
     };
-    authorizeReadMock.mockResolvedValue(false);
+    authorizeReadMock.mockResolvedValue({ allowed: false, redactedFields: [] });
 
     const request = new NextRequest(
       'http://localhost/api/v1/tickets/by-external-link?system=github&external_id=1',
@@ -273,7 +274,7 @@ describe('external-link validation failures map to structured API errors', () =>
       ticket_id: TICKET,
       link: { link_id: 'link-1', system: 'github', external_id: '1' },
     };
-    authorizeReadMock.mockResolvedValue(true);
+    authorizeReadMock.mockResolvedValue({ allowed: true, redactedFields: [] });
 
     const request = new NextRequest(
       'http://localhost/api/v1/tickets/by-external-link?system=github&external_id=1',

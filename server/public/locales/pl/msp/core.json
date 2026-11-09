@@ -108,9 +108,11 @@
     "ticketsTemplates": "Szablony zgłoszeń",
     "assetsCustody": "Sprzęt w przechowaniu",
     "ticketsCannedResponses": "Gotowe odpowiedzi",
+    "ticketsCustomer": "Zgłoszenia klientów",
     "profile": "Profil",
     "signOut": "Wyloguj się",
     "coManaged": "IT w współzarządzaniu",
+    "coManagedArchive": "Archiwum współzarządzania",
     "coManagedAdministration": "Dostęp i administracja"
   },
   "sidebar": {

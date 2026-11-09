@@ -12,7 +12,10 @@ import { huduAutoSyncHandler } from './handlers/huduAutoSyncHandler';
 import { reconcileScheduledCommentPublications } from './handlers/publishScheduledCommentHandler';
 import { createClientContractLineCyclesForAllTenants, createNextTimePeriodForTenant } from './tenantPeriodMaintenance';
 import { generateRecurringTicketsHandler, tenantsWithActiveRecurringTickets } from './handlers/generateRecurringTicketsHandler';
+import { wireJobCapabilityFilter } from './capabilityJobFilter';
+import { defineCoManagedSlaObservationJob } from './handlers/coManagedSlaObservationJob';
 import { initializeJobRunner } from './initializeJobRunner';
+import { registerCoManagedUploadCleanup } from './handlers/coManagedUploadCleanupHandler';
 import { SERVER_MAINTENANCE_JOBS } from './serverMaintenanceJobNames';
 
 // The Temporal worker's maintenance-fanout:<jobName> schedules name these jobs
@@ -33,6 +36,10 @@ export function registerServerMaintenanceJobs(): void {
   if (registered) {
     return;
   }
+
+  // Descriptor-declared jobs (capability-gated; idempotent) resolve in the same registry as the maintenance map.
+  wireJobCapabilityFilter();
+  defineCoManagedSlaObservationJob();
 
   registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.recoverFileUploads, {
     scope: 'tenant',
@@ -102,6 +109,9 @@ export function registerServerMaintenanceJobs(): void {
       return reconcileRmmPollingSchedules(await initializeJobRunner());
     },
   });
+
+  // Co-managed upload cleanup: descriptor + schedule + capability filter (gated on `co-managed`).
+  registerCoManagedUploadCleanup();
 
   registered = true;
 }

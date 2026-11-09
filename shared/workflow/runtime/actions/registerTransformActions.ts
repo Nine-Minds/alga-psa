@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
-import { compileExpression } from '../expressionEngine';
+import { EvaluationBusyError, compileExpression, evaluateWorkflowExpression } from '../expressionEngine';
 import { withWorkflowJsonSchemaMetadata } from '@alga-psa/event-schemas';
 import {
   COMPOSE_TEXT_ACTION_ID,
@@ -351,9 +351,10 @@ export function registerTransformActionsV2(): void {
       }
 
       try {
-        const value = await compiled.evaluate(evaluationContext);
+        const value = await evaluateWorkflowExpression(compiled, evaluationContext);
         return { value };
       } catch (error) {
+        if (error instanceof EvaluationBusyError) throw error;
         throw new Error(`JSON query expression evaluation failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }

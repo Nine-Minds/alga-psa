@@ -1,4 +1,9 @@
-import { admitOperationalWrite } from '@alga-psa/db';
+import {
+  admitOperationalWrite,
+  registerAfterCommit,
+  registerAfterCommitWithConnection,
+  withTransaction,
+} from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   IProjectMaterial,
@@ -13,17 +18,12 @@ import { collectDefaultLocationStockLowSignalAfterConsume, collectStockLowSignal
 import { resolveTenantCurrency } from './tenantCurrency';
 
 /**
- * Lib-layer transaction helper (this file must stay importable without the
- * server-action stack, so no @alga-psa/db here). Reuses a passed-in transaction
- * (savepoint-free, caller owns commit) or opens one on a plain knex handle —
- * the same reuse semantics as @alga-psa/db withTransaction.
+ * Reuse a caller-owned transaction or open one through the shared DB helper.
+ * Using the shared helper is required so after-commit effects registered by
+ * material operations flush only after the owning transaction commits.
  */
 function runInTransaction<T>(db: Knex, fn: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
-  const maybe = db as unknown as { commit?: unknown; rollback?: unknown };
-  if (typeof maybe.commit === 'function' && typeof maybe.rollback === 'function') {
-    return fn(db as unknown as Knex.Transaction);
-  }
-  return db.transaction(fn);
+  return withTransaction(db, fn);
 }
 
 /**
@@ -198,7 +198,7 @@ export async function addMaterial(
     throw new MaterialValidationError('rate must be 0 or greater', 'rate');
   }
 
-  const { row, pendingAsset, pendingStockLow } = await runInTransaction(db, async (trx: Knex.Transaction) => {
+  const row = await runInTransaction(db, async (trx: Knex.Transaction) => {
     await admitOperationalWrite(trx, tenant, cfg.table, 'add-material');
     const parent = await trx(cfg.parentTable)
       .where({ tenant, [cfg.parentPk]: input.parent_id })
@@ -347,6 +347,7 @@ export async function addMaterial(
       allow_reserved_override: input.allow_reserved_override === true,
       ...(claimant ? { claimant, location_id: claimLocationId } : {}),
     });
+    const pendingAsset = consumption.pending_asset_link ?? null;
 
     if (fromStagingLineId) {
       await trx('project_staging_lines')
@@ -368,23 +369,24 @@ export async function addMaterial(
         : await collectDefaultLocationStockLowSignalAfterConsume(trx, tenant, row.service_id, row.quantity))
       : null;
 
-    return { row, pendingAsset: consumption.pending_asset_link ?? null, pendingStockLow };
-  });
-
-  // F044: a serialized install creates the managed asset like SO fulfillment does —
-  // after commit (F029), and never failing the material itself. Lazy import: assetLink
-  // pulls the assets-actions stack, which must not load at lib import time (vitest).
-  if (pendingAsset) {
-    try {
-      const { createAndLinkDeliveredAsset } = await import('./assetLink');
-      await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
-    } catch (e) {
-      console.error(`Asset creation for delivered ${cfg.label}-material unit failed:`, e);
+    if (pendingAsset) {
+      // F029: delivered assets commit independently, so link them only after this transaction commits.
+      registerAfterCommitWithConnection(trx, async (rootConnection) => {
+        try {
+          const { createAndLinkDeliveredAsset } = await import('./assetLink');
+          await createAndLinkDeliveredAsset(rootConnection, tenant, pendingAsset);
+        } catch (e) {
+          console.error(`Asset creation for delivered ${cfg.label}-material unit failed:`, e);
+        }
+      }, `delivered-${cfg.label}-material-asset`);
     }
-  }
-  if (pendingStockLow) {
-    await publishInventoryEvent('INVENTORY_STOCK_LOW', pendingStockLow);
-  }
+    if (pendingStockLow) {
+      registerAfterCommit(trx, () => publishInventoryEvent('INVENTORY_STOCK_LOW', pendingStockLow),
+        `stock-low-after-${cfg.label}-material`);
+    }
+
+    return row;
+  });
   return row as MaterialRow;
 }
 

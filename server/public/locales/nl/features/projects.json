@@ -2274,5 +2274,6 @@
         "inventoryStock": "U heeft toegang tot de voorraad nodig om voorraadniveaus te zien."
       }
     }
-  }
+  },
+  "backToSharedTasks": "← Terug naar gedeelde taken"
 }

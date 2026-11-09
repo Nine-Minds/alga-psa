@@ -20,7 +20,7 @@
  */
 import dns from 'node:dns/promises';
 import { isIP } from 'node:net';
-import { isGlobalUnicastAddress } from './addressPolicy';
+import { isGlobalUnicastAddress } from './publicAddress';
 import { domainToASCII } from 'node:url';
 import { Agent, fetch as undiciFetch } from 'undici';
 
@@ -129,7 +129,7 @@ export const SAFE_FETCH_DEFAULTS = {
 // Address policy
 // ---------------------------------------------------------------------------
 
-/** True unless `address` is a globally routable unicast address. */
+/** True when an IP literal or DNS answer is outside globally routable unicast. */
 export function isBlockedAddress(address: string): boolean {
   return !isGlobalUnicastAddress(address);
 }
@@ -303,6 +303,13 @@ async function resolveVettedAddress(
     throw new UnsafeUrlError('URL resolved to a private or reserved address');
   }
   return addresses[0]!;
+}
+
+/** Validate a provider URL and its current DNS answers without opening a connection. */
+export async function assertSafeHttpsUrl(rawUrl: string, deps: Pick<SafeFetchDeps, 'lookup'> = {}): Promise<URL> {
+  const url = parseAndCheckUrl(rawUrl);
+  await resolveVettedAddress(url, deps.lookup ?? defaultLookup);
+  return url;
 }
 
 // ---------------------------------------------------------------------------

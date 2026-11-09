@@ -3,13 +3,26 @@ type PageResult<T> = {
   total: number;
 };
 
-export async function buildAuthorizationAwarePage<T>(input: {
+type ReadDecision = { allowed: boolean; redactedFields: readonly string[] };
+
+function isAllowed(decision: boolean | ReadDecision): boolean {
+  return typeof decision === 'boolean' ? decision : decision.allowed;
+}
+
+type AuthorizedPageInput<T> = {
   page: number;
   limit: number;
   fetchPage: (page: number, limit: number) => Promise<PageResult<T>>;
-  authorizeRecord: (record: T) => Promise<boolean>;
   scanLimit?: number;
-}): Promise<PageResult<T>> {
+} & (
+  | { authorizeRecord: (record: T) => Promise<boolean>; projectRecord?: never }
+  | {
+      authorizeRecord: (record: T) => Promise<ReadDecision>;
+      projectRecord: (record: T, redactedFields: readonly string[]) => T | null;
+    }
+);
+
+export async function buildAuthorizationAwarePage<T>(input: AuthorizedPageInput<T>): Promise<PageResult<T>> {
   const requestedPage = Number.isFinite(input.page) && input.page > 0 ? Math.floor(input.page) : 1;
   const requestedLimit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 25;
   const scanLimit = Math.max(requestedLimit, input.scanLimit ?? 100);
@@ -29,15 +42,24 @@ export async function buildAuthorizationAwarePage<T>(input: {
       break;
     }
 
-    const allowedByRow = await Promise.all(pageResult.data.map((row) => input.authorizeRecord(row)));
+    const decisions = await Promise.all(pageResult.data.map((row) => input.authorizeRecord(row)));
 
     for (let index = 0; index < pageResult.data.length; index += 1) {
-      if (!allowedByRow[index]) {
+      const decision = decisions[index];
+      if (!isAllowed(decision)) {
         continue;
       }
 
+      if (typeof decision !== 'boolean' && !input.projectRecord) {
+        throw new Error('Authorization decisions with field policies require a record projector');
+      }
+      const projected = typeof decision !== 'boolean'
+        ? input.projectRecord!(pageResult.data[index], decision.redactedFields)
+        : pageResult.data[index];
+      if (projected === null) continue;
+
       if (authorizedTotal >= pageOffset && authorizedTotal < pageUpperBoundExclusive) {
-        authorizedRowsForPage.push(pageResult.data[index] as T);
+        authorizedRowsForPage.push(projected as T);
       }
       authorizedTotal += 1;
     }
