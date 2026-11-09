@@ -65,7 +65,7 @@ import {
   getStoredTicketConversationNewestFirst,
   setStoredTicketConversationNewestFirst,
 } from './ticketConversationOrderPreference';
-import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
+import { buildThreadTabs, NATIVE_THREAD_TABS } from './ticketConversationThreadTabs';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -149,7 +149,6 @@ interface TicketConversationProps {
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
-const CLIENT_TAB_ID = 'client';
 const INTERNAL_TAB_ID = 'internal';
 const RESOLUTION_TAB_ID = 'resolution';
 
@@ -673,9 +672,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     [visibleConversations]
   );
 
-  const threadTabState = useMemo(
-    () => buildTicketThreadTabState(threadGroups, hideInternalTab),
-    [threadGroups, hideInternalTab]
+  const threadTabDefinitions = dataSource.conversation.threadTabs ?? NATIVE_THREAD_TABS;
+  const builtThreadTabs = useMemo(
+    () => buildThreadTabs(threadGroups, threadTabDefinitions, { hideInternal: hideInternalTab }),
+    [threadGroups, threadTabDefinitions, hideInternalTab]
   );
   const openPanelThreadGroup = openPanelCommentId
     ? threadGroups.find((group) =>
@@ -732,65 +732,27 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     );
   };
 
-  // Build tab content array based on hideInternalTab
-  const baseTabs = [
-    {
-      id: ALL_COMMENTS_TAB_ID,
-      label: `${t('conversation.allComments', 'All Comments')} (${threadTabState.counts.all})`,
+  // Tab content from the data-driven tab list; the portal subset is already applied by `buildThreadTabs`.
+  const trailingBlocks: Record<string, () => React.JSX.Element | null> = {
+    'external-comments': renderExternalComments,
+  };
+  const tabContent = builtThreadTabs.map((built) => {
+    const tab = threadTabDefinitions.find((candidate) => candidate.id === built.id)!;
+    const containerLabel = tab.containerLabelKey
+      ? t(tab.containerLabelKey, tab.containerLabelDefault ?? tab.labelDefault)
+      : t(tab.labelKey, tab.labelDefault);
+    return {
+      id: tab.id,
+      label: `${t(tab.labelKey, tab.labelDefault)} (${built.count})`,
       content: (
-        <ReflectionContainer id={`${id}-all-comments`} label={t('conversation.allComments', 'All Comments')}>
-          {renderComments(hideInternalTab
-            // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
-            ? threadTabState.allTabComments
-            // For MSP portal, "All Comments" includes all comments
-            : threadTabState.allTabComments)}
+        <ReflectionContainer id={`${id}-${tab.containerId}`} label={containerLabel}>
+          {tab.heading && <h3 className="text-lg font-medium mb-4">{containerLabel}</h3>}
+          {renderComments(built.comments)}
+          {tab.trailing ? trailingBlocks[tab.trailing]?.() : null}
         </ReflectionContainer>
-      )
-    },
-    {
-      id: CLIENT_TAB_ID,
-      label: `${t('conversation.client', 'Client')} (${threadTabState.counts.client})`,
-      content: (
-        <ReflectionContainer id={`${id}-client-visible-comments`} label={t('conversation.clientComments', 'Client Comments')}>
-          {renderComments(threadTabState.clientTabComments)}
-          {renderExternalComments()}
-        </ReflectionContainer>
-      )
-    },
-    {
-      id: INTERNAL_TAB_ID,
-      label: `${t('conversation.internal', 'Internal')} (${threadTabState.counts.internal})`,
-      content: (
-        <ReflectionContainer id={`${id}-internal-comments`} label={t('conversation.internalComments', 'Internal Comments')}>
-          <h3 className="text-lg font-medium mb-4">{t('conversation.internalComments', 'Internal Comments')}</h3>
-          {renderComments(threadTabState.internalTabComments)}
-        </ReflectionContainer>
-      )
-    },
-    {
-      id: RESOLUTION_TAB_ID,
-      label: `${t('conversation.resolution', 'Resolution')} (${threadTabState.counts.resolution})`,
-      content: (
-        <ReflectionContainer id={`${id}-resolution-comments`} label={t('conversation.resolutionComments', 'Resolution Comments')}>
-          <h3 className="text-lg font-medium mb-4">{t('conversation.resolutionComments', 'Resolution Comments')}</h3>
-          {renderComments(threadTabState.resolutionTabComments)}
-        </ReflectionContainer>
-      )
-    }
-  ];
-
-  // Filter and order tabs based on hideInternalTab
-  let tabContent;
-  if (hideInternalTab) {
-    // For client portal, only show "All Comments" (index 0) and "Resolution" (index 3) tabs
-    tabContent = [
-      baseTabs[0], // All Comments
-      baseTabs[3]  // Resolution
-    ];
-  } else {
-    // For MSP portal, show all tabs
-    tabContent = baseTabs;
-  }
+      ),
+    };
+  });
 
   const tabStyles = {
     trigger: "px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 border-b-2 border-transparent",

@@ -25,6 +25,7 @@
  *   `{...base, ...overrides}` also works but replaces whole groups.
  */
 import type React from 'react';
+import type { TicketThreadTabDefinition } from '../components/ticket/ticketConversationThreadTabs';
 import type { CommentAudience, ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
 
 // Types only: `typeof` on a type-only import erases at runtime, so this
@@ -368,6 +369,11 @@ export interface TicketConversationConfig {
    * resolution flow never offers it.
    */
   audiences?: readonly CommentAudience[];
+  /**
+   * The thread tabs the conversation shows, in order. Absent (native default): `NATIVE_THREAD_TABS`
+   * (All Comments, Client, Internal, Resolution). The client portal shows only `portal` tabs.
+   */
+  threadTabs?: readonly TicketThreadTabDefinition[];
 }
 
 // ---------------------------------------------------------------------------
