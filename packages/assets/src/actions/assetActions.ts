@@ -1770,6 +1770,10 @@ export async function deleteAssetRecord(
                 throw new Error('Asset not found');
             }
 
+            // Serialize asset deletion with group mutations and membership writers before
+            // removing anything that belongs to this asset.
+            await removeAssetFromAnyGroup(trx as Knex.Transaction, tenantId, asset_id, { actorUserId });
+
             // C4: custody is a chain of custody, so an asset that is physically here cannot be deleted, and
             // closed episodes (append-only events with FKs to the asset) keep the row alive as history.
             const custodyRows = await tenantScopedTable(trx as Knex.Transaction, 'asset_custody', tenantId)
@@ -1802,7 +1806,6 @@ export async function deleteAssetRecord(
             // FR-C1 / FR-E6: the assignment history and group membership point
             // at the asset row, so both go before it.
             await tenantScopedTable(trx as Knex.Transaction, 'asset_assignments', tenantId).where({ asset_id }).delete();
-            await tenantScopedTable(trx as Knex.Transaction, 'asset_group_members', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_schedules', tenantId).where({ asset_id }).delete();

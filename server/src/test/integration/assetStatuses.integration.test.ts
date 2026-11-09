@@ -138,7 +138,7 @@ describe('asset statuses', () => {
   beforeAll(async () => {
     wireLocalTestDbEnv();
     process.env.APP_ENV = process.env.APP_ENV || 'test';
-    db = await createTestDbConnection({ runSeeds: false });
+    db = await createTestDbConnection();
     for (const name of ['tenants', 'users', 'clients', 'asset_statuses']) {
       columns[name] = await tenantDb(db, '__asset_status_schema__').unscoped(name, 'schema introspection').columnInfo();
     }
