@@ -417,6 +417,7 @@
       "helpText": "Pozostaw puste, aby nie wygasać lub użyć domyślnego okresu wygaśnięcia"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "Wybrana umowa nie należy do klienta tej faktury.",
       "selectClient": "Proszę wybrać klienta",
       "invoiceNumberUnique": "Ten numer faktury jest już używany.",
       "noTaxRateConfigured": "Dla regionu nie skonfigurowano stawki podatku.",
@@ -441,6 +442,7 @@
       "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "To okno fakturowania zawiera pozycje do rozliczenia, ale dla {{services}} nie zgłoszono użycia za okres rozliczeniowy od {{periodStart}} do {{periodEnd}}. Najpierw zarejestruj użycie albo wyraźnie potwierdź wygenerowanie bez niego — niezgłoszone usługi pozostaną rozliczalne później.",
       "USAGE_PERIOD_TOTAL_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć aktualne wartości, a następnie wygeneruj fakturę jeszcze raz.",
+      "RECURRING_PRICING_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć bieżące wartości, a następnie wygeneruj ponownie.",
       "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego.",
       "RECURRING_PERIODS_NOT_MATERIALIZED": "Okresy usługi dla tego okna rozliczeniowego nie zostały jeszcze wygenerowane. Użyj opcji Napraw wszystko na stronie Faktury automatyczne lub wygeneruj je ponownie w Rozliczenia > Okresy usługi, a następnie ponów podgląd.",
       "NO_ACTIVE_CONTRACT_LINES": "Żadna pozycja umowy nie jest aktywna w tym okresie rozliczeniowym. Sprawdź daty rozpoczęcia i zakończenia umowy oraz to, czy umowa jest aktywna.",
@@ -450,9 +452,7 @@
       "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
       "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
       "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Wybrana umowa nie należy do klienta tej faktury.",
       "SERVICE_REQUIRED": "Przypisz usługę do tej pozycji przed zapisaniem.",
-      "RECURRING_PRICING_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć bieżące wartości, a następnie wygeneruj ponownie.",
       "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie.",
       "sessionExpired": "Sesja wygasła. Twoje zmiany nadal są tutaj, ale nie zostały zapisane. Zaloguj się ponownie w nowej karcie, a następnie ponów zapis.",
       "saveRefreshFailed": "Zmiany zostały zapisane, ale strona faktury nie odświeżyła się w pełni. Odśwież stronę, aby wyświetlić zapisaną fakturę."
@@ -478,6 +478,9 @@
       "increase": "Zwiększenie",
       "decrease": "Zmniejszenie (kredyt)",
       "units": "Jednostki",
+      "source": "Wybierz zafakturowaną usługę",
+      "effectiveDate": "Data obowiązywania",
+      "sourceRate": "Stawka {{rate}}",
       "unitPrice": "Cena jednostkowa",
       "coveredDays": "Dni objęte",
       "fullPeriodDays": "Dni pełnego okresu",
@@ -488,14 +491,11 @@
       "addCharge": "Dodaj opłatę",
       "creditDescription": "Kredyt: {{proration}}",
       "errors": {
+        "source": "Wybierz zafakturowaną usługę z jednoznacznym okresem świadczenia.",
         "units": "Jednostki muszą być większe od zera.",
         "unitPrice": "Cena jednostkowa musi być liczbą.",
-        "invalid": "Wprowadź prawidłowy częściowy okres.",
-        "source": "Wybierz zafakturowaną usługę z jednoznacznym okresem świadczenia."
+        "invalid": "Wprowadź prawidłowy częściowy okres."
       },
-      "source": "Wybierz zafakturowaną usługę",
-      "effectiveDate": "Data obowiązywania",
-      "sourceRate": "Stawka {{rate}}",
       "permanentChangeNudge": "Czy to trwała zmiana? Zapisz ją zamiast tego w umowie.",
       "overlapConfirm": "Automatyczna korekta umowy nakłada się już na ten okres. Czy mimo to dodać tę oddzielną korektę ręczną?",
       "invoiceDescription": {
@@ -1536,14 +1536,244 @@
       "barcodeCode128": "Code 128",
       "barcodeValue": "Wartość",
       "barcodeHintWorkTag": "Tekst lub pole, np. {{example}} (link do rekordu). Kod powinien mieć co najmniej około 20 mm szerokości, aby dał się zeskanować.",
-      "barcodeHint": "Tekst do zakodowania. Kod powinien mieć co najmniej około 20 mm szerokości, aby dał się zeskanować."
+      "barcodeHint": "Tekst do zakodowania. Kod powinien mieć co najmniej około 20 mm szerokości, aby dał się zeskanować.",
+      "binding": {
+        "noFieldSelected": "Nie wybrano pola",
+        "customHint": "Wpisz dowolną ścieżkę powiązania, jeśli potrzebnego pola nie ma na liście.",
+        "useFieldPicker": "Użyj selektora pól",
+        "current": "Bieżące powiązanie",
+        "unbound": "Bez powiązania",
+        "searchFields": "Szukaj pól…",
+        "noMatches": "Brak pasujących pól.",
+        "useCustomPath": "Użyj niestandardowej ścieżki"
+      },
+      "customCssPreserved": "Niestandardowa wartość CSS zachowana do czasu edycji:",
+      "pickField": "Wybierz pole: {{field}}"
     },
     "shell": {
       "selectedLabel": "Wybrano:",
       "selectedNone": "Brak",
       "clickBlockHint": "Kliknij blok na kanwie",
       "orUse": "lub użyj",
-      "plusInLeftPanelHint": "+ w lewym panelu"
+      "plusInLeftPanelHint": "+ w lewym panelu",
+      "sectionAlreadyFitted": "Sekcja jest już dopasowana.",
+      "unbound": "Bez powiązania",
+      "layoutMode": {
+        "flex": {
+          "label": "Stos",
+          "tooltip": "Stos (Flex)"
+        },
+        "grid": {
+          "label": "Siatka",
+          "tooltip": "Układ siatki"
+        }
+      },
+      "direction": {
+        "column": {
+          "label": "Pionowo",
+          "tooltip": "Układ pionowy"
+        },
+        "row": {
+          "label": "Poziomo",
+          "tooltip": "Układ poziomy"
+        }
+      },
+      "alignItems": {
+        "stretch": {
+          "label": "Rozciągnij",
+          "tooltip": "Rozciągnij elementy podrzędne"
+        },
+        "start": {
+          "label": "Początek",
+          "tooltip": "Wyrównaj do początku"
+        },
+        "center": {
+          "label": "Środek",
+          "tooltip": "Wyrównaj do środka"
+        },
+        "end": {
+          "label": "Koniec",
+          "tooltip": "Wyrównaj do końca"
+        }
+      },
+      "justify": {
+        "start": {
+          "label": "Początek",
+          "tooltip": "Zgrupuj na początku"
+        },
+        "center": {
+          "label": "Środek",
+          "tooltip": "Zgrupuj na środku"
+        },
+        "end": {
+          "label": "Koniec",
+          "tooltip": "Zgrupuj na końcu"
+        },
+        "between": {
+          "label": "Między",
+          "tooltip": "Rozmieść z odstępami między elementami"
+        },
+        "around": {
+          "label": "Wokół",
+          "tooltip": "Rozmieść z odstępami wokół elementów"
+        },
+        "evenly": {
+          "label": "Równomiernie",
+          "tooltip": "Rozmieść z równymi odstępami"
+        }
+      },
+      "mediaHorizontal": {
+        "left": {
+          "label": "Lewo",
+          "tooltip": "Wyrównaj obraz do lewej"
+        },
+        "center": {
+          "label": "Środek",
+          "tooltip": "Wyśrodkuj obraz w poziomie"
+        },
+        "right": {
+          "label": "Prawo",
+          "tooltip": "Wyrównaj obraz do prawej"
+        }
+      },
+      "mediaVertical": {
+        "top": {
+          "label": "Góra",
+          "tooltip": "Wyrównaj obraz do góry"
+        },
+        "center": {
+          "label": "Środek",
+          "tooltip": "Wyśrodkuj obraz w pionie"
+        },
+        "bottom": {
+          "label": "Dół",
+          "tooltip": "Wyrównaj obraz do dołu"
+        }
+      },
+      "objectFit": {
+        "contain": {
+          "label": "Dopasuj",
+          "tooltip": "Przeskaluj obraz, aby mieścił się w ramce"
+        },
+        "cover": {
+          "label": "Pokryj",
+          "tooltip": "Wypełnij ramkę i przytnij wystające części"
+        },
+        "fill": {
+          "label": "Wypełnij",
+          "tooltip": "Rozciągnij obraz, aby wypełnić ramkę"
+        },
+        "none": {
+          "label": "Brak",
+          "tooltip": "Zachowaj oryginalny rozmiar obrazu"
+        },
+        "scaleDown": {
+          "label": "Zmniejsz",
+          "tooltip": "Zachowaj oryginalny rozmiar, chyba że obraz wymaga zmniejszenia"
+        }
+      },
+      "widthMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Decyduje kontener (rozciąga się w stosie pionowym)"
+        },
+        "fill": {
+          "label": "Wypełnij",
+          "tooltip": "Wypełnij całą szerokość kontenera"
+        },
+        "fit": {
+          "label": "Dopasuj",
+          "tooltip": "Zmniejsz do rozmiaru zawartości"
+        },
+        "fixed": {
+          "label": "Stały",
+          "tooltip": "Użyj dokładnej szerokości wpisanej poniżej"
+        }
+      },
+      "heightMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Rośnie wraz z zawartością"
+        },
+        "fixed": {
+          "label": "Stały",
+          "tooltip": "Użyj dokładnej wysokości wpisanej poniżej"
+        }
+      },
+      "flexPreset": {
+        "natural": {
+          "label": "Naturalny",
+          "description": "Użyj rozmiaru zawartości elementu, ale pozwól mu się zmniejszyć, gdy zabraknie miejsca."
+        },
+        "fill": {
+          "label": "Wypełnij",
+          "description": "Zajmij pozostałe miejsce, zachowując preferowany rozmiar elementu."
+        },
+        "share": {
+          "label": "Podziel",
+          "description": "Podziel dostępne miejsce równo między elementy z tym ustawieniem."
+        },
+        "fixed": {
+          "label": "Stały",
+          "description": "Zachowaj rozmiar elementu i nie pozwól, by układ flexbox go zmniejszył."
+        }
+      },
+      "groups": {
+        "layout": "Układ",
+        "direction": "Kierunek",
+        "alignItems": "Wyrównanie elementów",
+        "justifyContent": "Rozmieszczenie zawartości",
+        "objectFit": "Dopasowanie obrazu",
+        "horizontalAlign": "Wyrównanie w poziomie",
+        "verticalAlign": "Wyrównanie w pionie",
+        "columns": "Kolumny"
+      },
+      "columnsAria": "Kolumny: {{preset}}",
+      "axis": {
+        "width": "Szerokość",
+        "height": "Wysokość",
+        "widthLower": "szerokość",
+        "heightLower": "wysokość"
+      },
+      "flexItemHint": "Te ustawienia określają, jak element dzieli miejsce z pozostałymi elementami stosu (kierunek: {{direction}}, wymiar: {{axis}}).",
+      "flexBehavior": "{{axis}} — zachowanie",
+      "flexBehaviorAria": "{{axis}} — zachowanie: {{preset}}",
+      "flexCustomNotice": "Ten element ma niestandardowe wartości flex. Wybierz preset, aby uprościć konfigurację, lub zmień wartości zaawansowane poniżej.",
+      "advancedFlexValues": "Zaawansowane wartości flex",
+      "flexGrow": "Zajmowanie dodatkowego miejsca",
+      "flexShrink": "Zezwalanie na zmniejszanie",
+      "flexBasis": "Preferowany rozmiar ({{axis}})",
+      "displayFormat": {
+        "singleLine": {
+          "label": "Jeden wiersz",
+          "description": "Umieść cały adres w jednym wierszu."
+        },
+        "multiline": {
+          "label": "Wiele wierszy",
+          "description": "Podziel adres na wiele wierszy."
+        },
+        "raw": {
+          "label": "Bez formatowania",
+          "description": "Użyj zapisanej wartości bez zmian."
+        },
+        "onlyDataField": "Dotyczy tylko węzłów typu Pole danych.",
+        "aria": "Format wyświetlania: {{format}}"
+      },
+      "attachments": {
+        "defaultLabel": "Załącznik",
+        "title": "Tytuł",
+        "items": "Elementy",
+        "add": "Dodaj",
+        "empty": "Nie zdefiniowano załączników."
+      },
+      "media": {
+        "altText": "Tekst alternatywny",
+        "aspectRatio": "Proporcje",
+        "fitParentSection": "Dopasuj sekcję nadrzędną do multimediów",
+        "reflowsPrefix": "Dostosowuje układ sekcji",
+        "reflowsSuffix": "w celu usunięcia zbędnego pustego miejsca.",
+        "notInSection": "Ten blok multimediów nie znajduje się wewnątrz sekcji."
+      }
     },
     "pageSetup": {
       "title": "Ustawienia strony",
@@ -2158,7 +2388,23 @@
       "cannotInsert": "{{block}}: nie można dodać w tym miejscu.",
       "insertedOnPage": "Dodano {{block}} do strony.",
       "insertedInto": "Dodano {{block}} do: {{parent}}.",
-      "fieldRebound": "{{name}} wyświetla teraz {{path}}."
+      "fieldRebound": "{{name}} wyświetla teraz {{path}}.",
+      "dropIncompatibleComponent": "Miejsce docelowe nie obsługuje tego komponentu.",
+      "dropIncompatible": "Miejsce docelowe nie obsługuje tego elementu.",
+      "dropIncompatiblePreset": "Miejsce docelowe nie obsługuje tego presetu.",
+      "dropOnCanvas": "Upuść na kanwie, aby dodać ten komponent.",
+      "addComponentFailed": "Nie można dodać tego komponentu w bieżącym kontekście.",
+      "presetUnavailable": "Definicja presetu jest niedostępna.",
+      "presetPlacementUnresolved": "Nie można ustalić, gdzie umieścić ten preset.",
+      "addPresetFailed": "Nie można dodać tego presetu w bieżącym kontekście.",
+      "inserted": "Wstawiono: {{value}}.",
+      "insertedWithDiagnostic": "Wstawiono: {{value}}. {{diagnostic}}",
+      "selectTextBlock": "Wybierz blok tekstu, a następnie kliknij pole tekstowe, aby wstawić zmienne.",
+      "focusTextField": "Kliknij pole tekstowe w inspektorze, aby wstawić tę zmienną.",
+      "selectSectionToFit": "Wybierz sekcję do dopasowania.",
+      "sectionNoChildren": "Sekcja nie ma zawartości do dopasowania.",
+      "sectionFitted": "Dopasowano sekcję do zawartości.",
+      "sectionFittedFixed": "Ustawiono stały rozmiar sekcji i dopasowano ją do zawartości."
     },
     "translation": {
       "translatedAs": "Etykieta standardowa „{{name}}”, tłumaczona dla każdego odbiorcy",

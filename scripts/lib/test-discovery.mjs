@@ -76,6 +76,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (/^ee\/temporal-workflows\/src\/activities\/__tests__\/(defaultTaxRate|workSchedule|teamsObservability|coManaged|servicePrincipals)TenantDeletionOrder\.test\.ts$/.test(file)) return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/coManagedTenantDeletion.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/activities/__tests__/quote-acceptance-finalization-forwarding.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/maintenance-fanout-activities.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/scripts/__tests__/upgrade-tenant-product.test.ts') return true;

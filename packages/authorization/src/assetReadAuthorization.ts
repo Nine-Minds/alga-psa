@@ -8,6 +8,7 @@ import {
   type AuthorizationRecord,
   type AuthorizationSubject,
 } from './kernel';
+import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 
 /**
@@ -24,6 +25,8 @@ export type AssetAuthUser = {
   user_id: string;
   user_type: AuthorizationSubject['userType'];
   clientId?: string | null;
+  /** Verified API-key principal used by bundle target narrowing. */
+  apiKeyId?: string | null;
   client_id?: string | null;
   role_ids?: string[];
   portfolio_client_ids?: string[];
@@ -85,7 +88,7 @@ export async function resolveAuthorizationSubjectForUser(
       ...(user.portfolioClientIds ?? []),
       ...((user.clientId ?? user.client_id) ? [user.clientId ?? user.client_id!] : []),
     ])),
-    ...(apiKeyId ? { apiKeyId } : {}),
+    ...((apiKeyId ?? user.apiKeyId) ? { apiKeyId: apiKeyId ?? user.apiKeyId } : {}),
   };
 }
 
@@ -157,6 +160,25 @@ export async function createAssetReadContext(
   };
 }
 
+/** Build an asset authorization context from one already-resolved policy snapshot. */
+export async function createAssetReadContextWithRules(
+  trx: Knex | Knex.Transaction,
+  subject: AuthorizationSubject,
+  rules: readonly BundleNarrowingRule[]
+): Promise<AssetReadAuthorizationContext> {
+  return {
+    subject,
+    authorizationKernel: createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider(),
+      bundleProvider: new BundleAuthorizationKernelProvider({
+        resolveRules: async () => [...rules],
+      }),
+      rbacEvaluator: async () => true,
+    }),
+    requestCache: new RequestLocalAuthorizationCache(),
+  };
+}
+
 export type AssetAuthorizationAction = 'read' | 'update' | 'delete';
 
 /**
@@ -190,6 +212,42 @@ export async function isAssetActionAllowed(
   return actionDecision.allowed;
 }
 
+const CLIENT_SCOPE_TEMPLATES = new Set(['same_client', 'client_portfolio', 'selected_clients']);
+
+/**
+ * Evaluate only client-level asset restrictions for a client record. Asset
+ * relationship rules such as same_team and assigned are evaluated against each
+ * real asset separately; applying them to a client would lose the asset's
+ * relationships and incorrectly deny otherwise authorized group operations.
+ */
+export async function isAssetClientActionAllowed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  clientId: string,
+  action: AssetAuthorizationAction
+): Promise<boolean> {
+  const input = {
+    subject: context.subject,
+    resource: { type: 'asset', action },
+    record: { clientId },
+    requestCache: context.requestCache,
+    knex: trx as Knex,
+  };
+  const clientKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (evaluation) => {
+        const rules = await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, evaluation);
+        return rules.filter((rule) => rule.templateKey && CLIENT_SCOPE_TEMPLATES.has(rule.templateKey));
+      },
+    }),
+    // Coarse asset RBAC is checked by the action boundary before this function.
+    rbacEvaluator: async () => true,
+  });
+  return (await clientKernel.authorizeResource(input)).allowed;
+}
+
 /** True when the caller's per-record kernel decision allows reading the asset. */
 export function isAssetReadAllowed(
   trx: Knex | Knex.Transaction,
@@ -198,6 +256,41 @@ export function isAssetReadAllowed(
   asset: AssetAuthorizationInput
 ): Promise<boolean> {
   return isAssetActionAllowed(trx, tenant, context, asset, 'read');
+}
+
+/** Mutations require both visibility of the asset and permission for the requested operation. */
+export async function isAssetMutationAllowed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  asset: AssetAuthorizationInput,
+  action: 'update' | 'delete'
+): Promise<boolean> {
+  return await isAssetReadAllowed(trx, tenant, context, asset) &&
+    await isAssetActionAllowed(trx, tenant, context, asset, action);
+}
+
+/**
+ * Load an asset and enforce its record-level read decision using the same
+ * transaction the caller will use for the protected operation. A null result
+ * deliberately combines missing and unreadable assets to avoid an existence
+ * oracle at ID-based action boundaries.
+ */
+export async function loadReadableAssetById(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  assetId: string
+): Promise<AssetAuthorizationInput | null> {
+  const asset = await tenantDb(trx, tenant)
+    .table('assets')
+    .where({ asset_id: assetId })
+    .select('asset_id', 'client_id')
+    .first() as AssetAuthorizationInput | undefined;
+
+  if (!asset) return null;
+  const context = await createAssetReadContext(trx, tenant, user);
+  return await isAssetReadAllowed(trx, tenant, context, asset) ? asset : null;
 }
 
 /**

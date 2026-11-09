@@ -196,6 +196,7 @@
     "fileError": "Impossibile caricare il file"
   },
   "folders": {
+    "show": "Mostra cartelle",
     "root": "Radice",
     "loadFailed": "Impossibile caricare la struttura delle cartelle",
     "deleteConfirm": "Sei sicuro di voler eliminare la cartella \"{{name}}\"? Funzionerà solo se la cartella è vuota.",
@@ -304,6 +305,11 @@
   },
   "ticketDocuments": "Documenti del ticket",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Stampa",
+    "edit": "Modifica",
+    "upload": "Carica",
+    "closePreview": "Chiudi anteprima",
     "save": "Salva",
     "saving": "Salvataggio...",
     "cancel": "Annulla"
@@ -376,6 +382,18 @@
     "altVideoThumbnail": "Miniatura di {{name}}",
     "pageCount_one": "{{count}} pagina",
     "pageCount_other": "{{count}} pagine"
+  },
+  "fallbackUserName": "Utente",
+  "selectOrCreate": "Seleziona un documento o creane uno nuovo.",
+  "viewMode": {
+    "grid": "Griglia",
+    "list": "Elenco"
+  },
+  "unsavedChanges": {
+    "title": "Modifiche non salvate",
+    "message": "Vuoi davvero annullare? Tutte le modifiche non salvate andranno perse.",
+    "confirm": "Scarta modifiche",
+    "cancel": "Continua a modificare"
   },
   "skeleton": {
     "cardLabel": "Scheda di caricamento del documento"

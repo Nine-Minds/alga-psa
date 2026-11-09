@@ -397,6 +397,7 @@
       "helpText": "Laissez vide pour aucune expiration ou pour utiliser la période d'expiration par défaut"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
       "selectClient": "Veuillez sélectionner un client",
       "invoiceNumberUnique": "Ce numéro de facture est déjà utilisé.",
       "noTaxRateConfigured": "Aucun taux de taxe configuré pour la région.",
@@ -421,6 +422,7 @@
       "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Cette fenêtre de facturation comporte des éléments facturables, mais {{services}} n'a aucune utilisation déclarée pour la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez d'abord l'utilisation, ou confirmez explicitement la génération sans elle — les services non déclarés resteront facturables plus tard.",
       "USAGE_PERIOD_TOTAL_STALE": "L'aperçu est obsolète : {{details}}. Relancez l'aperçu pour voir les chiffres actuels, puis générez à nouveau.",
+      "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
       "USAGE_CALCULATION_ERROR": "L'utilisation de {{services}} sur la période de service du {{periodStart}} au {{periodEnd}} est enregistrée mais n'a pas pu être tarifée. Corrigez la tarification du service (prix catalogue dans la devise du contrat, tarif personnalisé ou paliers de tarifs), puis réessayez. N'enregistrez pas d'utilisation de remplacement.",
       "RECURRING_PERIODS_NOT_MATERIALIZED": "Les périodes de service de cette fenêtre de facturation n'ont pas encore été générées. Utilisez Tout corriger sur la page des factures automatiques, ou régénérez-les dans Facturation > Périodes de service, puis relancez l'aperçu.",
       "NO_ACTIVE_CONTRACT_LINES": "Aucune ligne de contrat n'est active pour cette période de facturation. Vérifiez les dates de début et de fin du contrat et que le contrat est actif.",
@@ -430,9 +432,7 @@
       "SOURCE_ALREADY_BILLED": "Certains éléments sélectionnés ne sont plus facturables (déjà facturés, non approuvés ou supprimés). Actualisez et réessayez.",
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
       "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",
-      "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
       "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez.",
       "sessionExpired": "Votre session a expiré. Vos modifications sont toujours ici, mais elles n’ont pas été enregistrées. Reconnectez-vous dans un nouvel onglet, puis réessayez l’enregistrement.",
       "saveRefreshFailed": "Vos modifications ont été enregistrées, mais la page de la facture n’a pas pu s’actualiser complètement. Rechargez la page pour afficher la facture enregistrée."
@@ -458,6 +458,9 @@
       "increase": "Augmentation",
       "decrease": "Diminution (crédit)",
       "units": "Unités",
+      "source": "Sélectionner un service facturé",
+      "effectiveDate": "Date d’effet",
+      "sourceRate": "Tarif {{rate}}",
       "unitPrice": "Prix unitaire",
       "coveredDays": "Jours couverts",
       "fullPeriodDays": "Jours de la période complète",
@@ -468,14 +471,11 @@
       "addCharge": "Ajouter des frais",
       "creditDescription": "Crédit : {{proration}}",
       "errors": {
+        "source": "Choisissez un service facturé dont la période de service est sans ambiguïté.",
         "units": "Les unités doivent être supérieures à zéro.",
         "unitPrice": "Le prix unitaire doit être un nombre.",
-        "invalid": "Saisissez une période partielle valide.",
-        "source": "Choisissez un service facturé dont la période de service est sans ambiguïté."
+        "invalid": "Saisissez une période partielle valide."
       },
-      "source": "Sélectionner un service facturé",
-      "effectiveDate": "Date d’effet",
-      "sourceRate": "Tarif {{rate}}",
       "permanentChangeNudge": "S’agit-il d’un changement permanent ? Enregistrez-le plutôt dans le contrat.",
       "overlapConfirm": "Un ajustement automatique de contrat chevauche déjà cette période. Ajouter quand même cet ajustement manuel distinct ?",
       "invoiceDescription": {
@@ -1484,14 +1484,244 @@
       "barcodeCode128": "Code 128",
       "barcodeValue": "Valeur",
       "barcodeHintWorkTag": "Du texte, ou un champ tel que {{example}} (le lien vers l’enregistrement). Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible.",
-      "barcodeHint": "Le texte à encoder. Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible."
+      "barcodeHint": "Le texte à encoder. Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible.",
+      "binding": {
+        "noFieldSelected": "Aucun champ sélectionné",
+        "customHint": "Saisissez un chemin de liaison personnalisé si le champ souhaité ne figure pas dans la liste.",
+        "useFieldPicker": "Utiliser le sélecteur de champs",
+        "current": "Actuel",
+        "unbound": "Sans liaison",
+        "searchFields": "Rechercher des champs…",
+        "noMatches": "Aucun champ correspondant.",
+        "useCustomPath": "Utiliser un chemin personnalisé"
+      },
+      "customCssPreserved": "Valeur CSS personnalisée conservée jusqu’à modification :",
+      "pickField": "Sélectionner : {{field}}"
     },
     "shell": {
       "selectedLabel": "Sélectionné :",
       "selectedNone": "Aucun",
       "clickBlockHint": "Cliquez sur un bloc du canevas",
       "orUse": "ou utilisez",
-      "plusInLeftPanelHint": "+ dans le panneau gauche"
+      "plusInLeftPanelHint": "+ dans le panneau gauche",
+      "sectionAlreadyFitted": "La section est déjà ajustée.",
+      "unbound": "Sans liaison",
+      "layoutMode": {
+        "flex": {
+          "label": "Empiler",
+          "tooltip": "Empiler (Flex)"
+        },
+        "grid": {
+          "label": "Grille",
+          "tooltip": "Mise en page en grille"
+        }
+      },
+      "direction": {
+        "column": {
+          "label": "Vertical",
+          "tooltip": "Disposition verticale"
+        },
+        "row": {
+          "label": "Horizontal",
+          "tooltip": "Disposition horizontale"
+        }
+      },
+      "alignItems": {
+        "stretch": {
+          "label": "Étirer",
+          "tooltip": "Étirer les éléments enfants"
+        },
+        "start": {
+          "label": "Début",
+          "tooltip": "Aligner au début"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Aligner au centre"
+        },
+        "end": {
+          "label": "Fin",
+          "tooltip": "Aligner à la fin"
+        }
+      },
+      "justify": {
+        "start": {
+          "label": "Début",
+          "tooltip": "Regrouper au début"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Regrouper au centre"
+        },
+        "end": {
+          "label": "Fin",
+          "tooltip": "Regrouper à la fin"
+        },
+        "between": {
+          "label": "Espacement",
+          "tooltip": "Répartir avec un espace entre les éléments"
+        },
+        "around": {
+          "label": "Autour",
+          "tooltip": "Répartir avec un espace autour des éléments"
+        },
+        "evenly": {
+          "label": "Uniforme",
+          "tooltip": "Répartir avec un espacement uniforme"
+        }
+      },
+      "mediaHorizontal": {
+        "left": {
+          "label": "Gauche",
+          "tooltip": "Aligner l’image à gauche"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Centrer l’image horizontalement"
+        },
+        "right": {
+          "label": "Droite",
+          "tooltip": "Aligner l’image à droite"
+        }
+      },
+      "mediaVertical": {
+        "top": {
+          "label": "Haut",
+          "tooltip": "Aligner l’image en haut"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Centrer l’image verticalement"
+        },
+        "bottom": {
+          "label": "Bas",
+          "tooltip": "Aligner l’image en bas"
+        }
+      },
+      "objectFit": {
+        "contain": {
+          "label": "Contenir",
+          "tooltip": "Redimensionner pour tenir dans le cadre"
+        },
+        "cover": {
+          "label": "Couvrir",
+          "tooltip": "Remplir le cadre et rogner ce qui dépasse"
+        },
+        "fill": {
+          "label": "Remplir",
+          "tooltip": "Étirer pour remplir le cadre"
+        },
+        "none": {
+          "label": "Aucun",
+          "tooltip": "Conserver la taille d’origine de l’image"
+        },
+        "scaleDown": {
+          "label": "Réduire",
+          "tooltip": "Conserver la taille d’origine, sauf si une réduction est nécessaire"
+        }
+      },
+      "widthMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Laisser le conteneur décider (s’étire dans un empilement vertical)"
+        },
+        "fill": {
+          "label": "Remplir",
+          "tooltip": "Occuper toute la largeur du conteneur"
+        },
+        "fit": {
+          "label": "Ajuster",
+          "tooltip": "Réduire pour s’ajuster au contenu"
+        },
+        "fixed": {
+          "label": "Fixe",
+          "tooltip": "Utiliser la largeur exacte saisie ci-dessous"
+        }
+      },
+      "heightMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "S’agrandir avec le contenu"
+        },
+        "fixed": {
+          "label": "Fixe",
+          "tooltip": "Utiliser la hauteur exacte saisie ci-dessous"
+        }
+      },
+      "flexPreset": {
+        "natural": {
+          "label": "Naturel",
+          "description": "Utiliser la taille du contenu de l’élément, tout en autorisant sa réduction si l’espace manque."
+        },
+        "fill": {
+          "label": "Remplir",
+          "description": "Occuper l’espace restant tout en conservant la taille préférée de l’élément."
+        },
+        "share": {
+          "label": "Partager",
+          "description": "Partager équitablement l’espace disponible avec les autres éléments utilisant ce mode."
+        },
+        "fixed": {
+          "label": "Fixe",
+          "description": "Conserver la taille de l’élément et empêcher sa réduction par flexbox."
+        }
+      },
+      "groups": {
+        "layout": "Mise en page",
+        "direction": "Direction",
+        "alignItems": "Aligner les éléments",
+        "justifyContent": "Justifier le contenu",
+        "objectFit": "Ajustement de l’image",
+        "horizontalAlign": "Alignement horizontal",
+        "verticalAlign": "Alignement vertical",
+        "columns": "Colonnes"
+      },
+      "columnsAria": "Colonnes : {{preset}}",
+      "axis": {
+        "width": "Largeur",
+        "height": "Hauteur",
+        "widthLower": "largeur",
+        "heightLower": "hauteur"
+      },
+      "flexItemHint": "Dans cet empilement {{direction}}, ces paramètres déterminent comment l’élément partage la {{axis}} avec les autres éléments du même niveau.",
+      "flexBehavior": "Comportement selon l’axe {{axis}}",
+      "flexBehaviorAria": "Comportement selon l’axe {{axis}} : {{preset}}",
+      "flexCustomNotice": "Cet élément utilise des valeurs flex personnalisées. Choisissez un préréglage pour simplifier sa configuration ou ajustez les valeurs avancées ci-dessous.",
+      "advancedFlexValues": "Valeurs flex avancées",
+      "flexGrow": "Occuper l’espace supplémentaire",
+      "flexShrink": "Autoriser la réduction",
+      "flexBasis": "Taille préférée selon l’axe {{axis}}",
+      "displayFormat": {
+        "singleLine": {
+          "label": "Une seule ligne",
+          "description": "Regrouper l’adresse sur une seule ligne."
+        },
+        "multiline": {
+          "label": "Plusieurs lignes",
+          "description": "Répartir l’adresse sur plusieurs lignes."
+        },
+        "raw": {
+          "label": "Brut",
+          "description": "Utiliser la valeur enregistrée telle quelle."
+        },
+        "onlyDataField": "Ce réglage s’applique uniquement aux nœuds « Champ de données ».",
+        "aria": "Format d’affichage : {{format}}"
+      },
+      "attachments": {
+        "defaultLabel": "Pièce jointe",
+        "title": "Titre",
+        "items": "Éléments",
+        "add": "Ajouter",
+        "empty": "Aucune pièce jointe définie."
+      },
+      "media": {
+        "altText": "Texte alternatif",
+        "aspectRatio": "Rapport largeur/hauteur",
+        "fitParentSection": "Ajuster la section parente au média",
+        "reflowsPrefix": "Réorganise",
+        "reflowsSuffix": "pour supprimer les espaces vides superflus.",
+        "notInSection": "Ce bloc média ne se trouve pas dans une section."
+      }
     },
     "pageSetup": {
       "title": "Mise en page",
@@ -2106,7 +2336,23 @@
       "cannotInsert": "Impossible d'ajouter {{block}} ici.",
       "insertedOnPage": "{{block}} ajouté à la page.",
       "insertedInto": "{{block}} ajouté à {{parent}}.",
-      "fieldRebound": "{{name}} affiche désormais {{path}}."
+      "fieldRebound": "{{name}} affiche désormais {{path}}.",
+      "dropIncompatibleComponent": "La zone de dépôt n’est pas compatible avec ce composant.",
+      "dropIncompatible": "La zone de dépôt n’est pas compatible.",
+      "dropIncompatiblePreset": "La zone de dépôt n’est pas compatible avec ce préréglage.",
+      "dropOnCanvas": "Déposez ce composant sur le canevas pour l’ajouter.",
+      "addComponentFailed": "Impossible d’ajouter ce composant dans le contexte actuel.",
+      "presetUnavailable": "La définition du préréglage n’est pas disponible.",
+      "presetPlacementUnresolved": "Impossible de déterminer où placer ce préréglage.",
+      "addPresetFailed": "Impossible d’ajouter ce préréglage dans le contexte actuel.",
+      "inserted": "Insertion de {{value}} effectuée.",
+      "insertedWithDiagnostic": "Insertion de {{value}} effectuée. {{diagnostic}}",
+      "selectTextBlock": "Sélectionnez un bloc de texte, puis cliquez dans un champ de texte pour insérer des variables.",
+      "focusTextField": "Cliquez dans un champ de texte de l’inspecteur pour insérer cette variable.",
+      "selectSectionToFit": "Sélectionnez une section à ajuster.",
+      "sectionNoChildren": "La section ne contient aucun élément enfant à ajuster.",
+      "sectionFitted": "La section a été ajustée au contenu.",
+      "sectionFittedFixed": "La section est passée en mode de taille fixe et a été ajustée au contenu."
     },
     "translation": {
       "translatedAs": "Libellé standard « {{name}} », traduit pour chaque destinataire",

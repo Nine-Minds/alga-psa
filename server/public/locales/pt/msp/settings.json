@@ -816,6 +816,9 @@
         "inactivityDaysLabel": "Dias de inatividade",
         "warningDaysLabel": "Avisar dias antes de fechar",
         "warningDaysPlaceholder": "Sem aviso",
+        "suppressContactNotificationsLabel": "Não notificar o cliente",
+        "suppressContactNotificationsHelp": "Ignora o e-mail de aviso, o e-mail de fechamento, o convite de pesquisa e a notificação do portal do cliente.",
+        "suppressInternalNotificationsLabel": "Também não notificar agentes e observadores",
         "ruleEnabledLabel": "Habilitado",
         "removeRule": "Remover",
         "messages": {
@@ -824,10 +827,7 @@
           "autoCloseDaysInvalid": "Os dias de inatividade com fechamento automático precisam ser um número inteiro positivo",
           "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade",
           "autoCloseSuppressionInvalid": "As notificações de agentes e observadores só podem ser ignoradas quando as notificações do cliente forem ignoradas."
-        },
-        "suppressContactNotificationsLabel": "Não notificar o cliente",
-        "suppressContactNotificationsHelp": "Ignora o e-mail de aviso, o e-mail de fechamento, o convite de pesquisa e a notificação do portal do cliente.",
-        "suppressInternalNotificationsLabel": "Também não notificar agentes e observadores"
+        }
       },
       "editor": {
         "sections": {
@@ -900,14 +900,14 @@
       "empty": "Nenhum quadro encontrado.",
       "searchPlaceholder": "Pesquisar quadros…",
       "emailSender": {
-        "useDefault": "Usar padrão do chamado",
-        "duplicateRoute": "Esta rota de remetente já existe.",
-        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente.",
         "label": "Remetente de saída",
         "inboundWarning": "Este remetente é usado para e-mails enviados sobre tickets. As configurações de e-mail recebido não são alteradas.",
         "displayName": "Nome de exibição",
         "save": "Guardar remetente",
-        "saved": "Remetente guardado"
+        "saved": "Remetente guardado",
+        "useDefault": "Usar padrão do chamado",
+        "duplicateRoute": "Esta rota de remetente já existe.",
+        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente."
       },
       "deleteDependencies": {
         "categories_one": "categoria",
@@ -1882,7 +1882,8 @@
         "loading": "Carregando modelos de e-mail...",
         "templateCount": "({{templateCount}} modelos)",
         "usingCustom": "Usando modelo personalizado",
-        "usingStandard": "Usando modelo padrão"
+        "usingStandard": "Usando modelo padrão",
+        "notCurrentlySent": "Não enviado no momento"
       },
       "columns": {
         "name": "Nome",
@@ -1906,7 +1907,8 @@
         "close": "Fechar",
         "cancel": "Cancelar",
         "saving": "Salvando...",
-        "save": "Salvar"
+        "save": "Salvar",
+        "variableReference": "Referência de variáveis"
       },
       "description": "Cada tipo de evento tem um modelo padrão que pode ser personalizado. Você pode usar o modelo padrão ou criar uma versão personalizada.",
       "filter": {
@@ -1929,7 +1931,8 @@
         "notAvailable": "N/D"
       },
       "edit": {
-        "title": "Editar modelo personalizado: {{name}}"
+        "title": "Editar modelo personalizado: {{name}}",
+        "variableSuggestions": "Sugestões de variáveis do modelo"
       },
       "languages": {
         "en": "Inglês",
@@ -1939,7 +1942,8 @@
         "nl": "Holandês",
         "it": "Italiano",
         "pl": "Polonês",
-        "pt": "Português"
+        "pt": "Português",
+        "sv": "Sueco"
       }
     },
     "emailBranding": {
@@ -2508,7 +2512,9 @@
       },
       "actions": {
         "back": "Voltar para migrações",
-        "upload": "Enviar pacote"
+        "upload": "Enviar pacote",
+        "close": "Fechar",
+        "cancel": "Cancelar"
       },
       "errors": {
         "noImportableRecords": "Este pacote não continha registros importáveis.",
@@ -2521,10 +2527,48 @@
         "storageRejected": "O servidor rejeitou este upload. Peça ao administrador para verificar a configuração de tipos de arquivo do armazenamento.",
         "spreadsheetFailed": "Não foi possível importar a planilha. Tente novamente.",
         "uploadFailed": "Não foi possível enviar o pacote. Tente novamente.",
-        "unknown": "O upload falhou. Tente novamente."
+        "unknown": "O upload falhou. Tente novamente.",
+        "loadJobs": "Não foi possível carregar os trabalhos de migração.",
+        "loadJob": "Não foi possível carregar o trabalho de migração.",
+        "jobNotFound": "Trabalho de migração não encontrado."
       },
       "preflight": {
-        "title": "Verificação prévia"
+        "title": "Verificação prévia",
+        "description": "Uma simulação que valida cada registro preparado em relação a este tenant e à sua configuração. A verificação prévia não cria nada.",
+        "errors": {
+          "loadReport": "Não foi possível carregar o relatório da verificação prévia.",
+          "runFailed": "Não foi possível executar a verificação prévia.",
+          "startMigration": "Não foi possível iniciar a migração.",
+          "downloadCsv": "Não foi possível baixar o CSV da verificação prévia.",
+          "downloadJson": "Não foi possível baixar o JSON da verificação prévia."
+        },
+        "running": "Verificação prévia em execução…",
+        "runAgain": "Executar a verificação prévia novamente",
+        "run": "Executar verificação prévia",
+        "empty": "Nenhuma verificação prévia foi executada para esta configuração. Execute a verificação prévia para ver o plano por entidade e eventuais problemas.",
+        "plan": "Plano",
+        "preflightedAt": "Verificação prévia realizada em {{timestamp}}",
+        "downloadCsv": "Baixar CSV",
+        "downloadJson": "Baixar JSON",
+        "columns": {
+          "entity": "Entidade",
+          "staged": "Preparados",
+          "toCreate": "A criar",
+          "toSkip": "A ignorar (já migrados)",
+          "blocked": "Bloqueados"
+        },
+        "noStagedRecords": "Nenhum registro foi preparado a partir do pacote.",
+        "blockingIssues": "Problemas impeditivos ({{count}})",
+        "warnings": "Avisos ({{count}})",
+        "blockedWithIssues_one": "A migração não pode ser executada: {{count}} problema impeditivo precisa ser resolvido primeiro.",
+        "blockedWithIssues_other": "A migração não pode ser executada: {{count}} problemas impeditivos precisam ser resolvidos primeiro.",
+        "blockedNoPreflight": "A migração só pode ser executada após uma verificação prévia sem problemas impeditivos.",
+        "needsConfiguration": "A migração poderá ser executada assim que a configuração salva passar pela verificação prévia.",
+        "starting": "Iniciando…",
+        "runMigration": "Executar migração",
+        "recordsAffected_one": "{{count}} registro afetado",
+        "recordsAffected_other": "{{count}} registros afetados",
+        "sampleRecords": "Exemplos de registros:"
       },
       "run": {
         "queued": "Migração na fila",
@@ -2542,14 +2586,58 @@
         "claimedBySamePackage": "Já migrado por este pacote",
         "claimedByOtherPackage": "Já migrado por {{file}}",
         "claimedByExistingEntity": "Corresponde a uma entidade existente",
-        "matchedBySku": "Associado a um produto existente por SKU"
+        "matchedBySku": "Associado a um produto existente por SKU",
+        "title": "Resultados",
+        "errors": {
+          "loadSummary": "Não foi possível carregar o resumo dos resultados.",
+          "loadRecords": "Não foi possível carregar os registros de resultados.",
+          "downloadCsv": "Não foi possível baixar o CSV dos resultados."
+        },
+        "actions": {
+          "created": "Criado",
+          "skipped": "Ignorado",
+          "failed": "Falhou"
+        },
+        "counts": {
+          "created": "criados",
+          "skipped": "ignorados",
+          "failed": "com falha"
+        },
+        "finishedAt": "Concluído em {{timestamp}}.",
+        "noLongerRunning": "O trabalho não está mais em execução.",
+        "preparing": "Preparando…",
+        "downloadCsv": "Baixar CSV dos resultados",
+        "failedLabel": "A migração falhou:",
+        "cancelled": "A migração foi cancelada em um ponto de controle. Os registros aplicados antes do cancelamento foram mantidos e estão listados abaixo.",
+        "noRecordsWritten": "Nenhum registro de resultado foi gravado para este trabalho.",
+        "noRecordsMatch": "Nenhum registro de resultado corresponde a estes filtros.",
+        "columns": {
+          "entity": "Entidade",
+          "sourceRecord": "Registro de origem",
+          "action": "Ação",
+          "result": "Resultado",
+          "at": "Data e hora"
+        },
+        "filters": {
+          "allEntities": "Todas as entidades",
+          "allActions": "Todas as ações"
+        },
+        "unknownError": "Erro desconhecido",
+        "recordLimitNotice": "Exibindo os primeiros {{count}} registros correspondentes. Baixe o CSV dos resultados para obter a lista completa."
       },
       "spreadsheet": {
         "entities": {
           "products": "Produtos (catálogo / lista de preços)",
-          "vendorProducts": "Lista de preços de fornecedores (custos do distribuidor)"
+          "vendorProducts": "Lista de preços de fornecedores (custos do distribuidor)",
+          "assets": "Ativos (importação legada de ativos)",
+          "organizations": "Organizações",
+          "locations": "Locais",
+          "contacts": "Contatos",
+          "tickets": "Tickets",
+          "ticketComments": "Comentários de tickets"
         },
-        "productsHint": "Preços e custos são lidos como valores decimais (por exemplo 1,299.50) usando a coluna de moeda, se existir; caso contrário, a moeda do locatário. Valores negativos, não numéricos ou com precisão excessiva são descartados e reportados; a linha é importada mesmo assim. Os produtos são associados aos existentes por SKU; as linhas da lista de fornecedores referenciam um produto por SKU e criam ou associam o fornecedor pelo nome."
+        "productsHint": "Preços e custos são lidos como valores decimais (por exemplo 1,299.50) usando a coluna de moeda, se existir; caso contrário, a moeda do locatário. Valores negativos, não numéricos ou com precisão excessiva são descartados e reportados; a linha é importada mesmo assim. Os produtos são associados aos existentes por SKU; as linhas da lista de fornecedores referenciam um produto por SKU e criam ou associam o fornecedor pelo nome.",
+        "headersHint": "Os cabeçalhos canônicos são reconhecidos automaticamente. Outras colunas podem ser mapeadas para campos personalizados do tipo de ativo na etapa de configuração. Os contatos aceitam nomes comuns de colunas, como Name, First Name, Last Name, Email, Phone, Title e Client; nomes legados de ativos, como Asset Name, Asset Type e Serial Number, são preservados no fluxo AMP."
       },
       "configure": {
         "products": {
@@ -2557,7 +2645,92 @@
           "serviceType": "Tipo de serviço para novos produtos",
           "serviceTypePlaceholder": "Selecione um tipo de serviço",
           "serviceTypeHelp": "Produtos cujo SKU já existe são associados e mantidos sem alterações; apenas produtos novos são arquivados neste tipo de serviço."
+        },
+        "title": "Configurar a migração",
+        "description": "Mapeie os dados de referência do pacote para este tenant. A verificação prévia valida cada mapeamento antes de permitir a execução.",
+        "errors": {
+          "loadOptions": "Não foi possível carregar as opções de configuração.",
+          "save": "Não foi possível salvar a configuração.",
+          "optionsUnavailable": "As opções de configuração estão indisponíveis."
+        },
+        "clientPlaceholder": "Selecione um cliente",
+        "mappingPlaceholder": "Selecione um mapeamento",
+        "tickets": {
+          "title": "Tickets",
+          "board": "Quadro",
+          "boardPlaceholder": "Selecione um quadro",
+          "defaultRequester": "Cliente solicitante padrão",
+          "defaultRequesterHelp": "Usado quando não é possível identificar a organização de um ticket.",
+          "defaultAssignee": "Responsável padrão",
+          "defaultAssigneePlaceholder": "Deixar tickets sem responsável"
+        },
+        "statusMapping": {
+          "title": "Mapeamento de status",
+          "description": "Cada nome de status no pacote deve ser mapeado para um status de ticket neste tenant.",
+          "empty": "Os tickets do pacote não têm nomes de status."
+        },
+        "priorityMapping": {
+          "title": "Mapeamento de prioridades",
+          "description": "Cada nome de prioridade no pacote deve ser mapeado para uma prioridade neste tenant.",
+          "empty": "Os tickets do pacote não têm nomes de prioridades."
+        },
+        "assets": {
+          "title": "Ativos"
+        },
+        "assetTypeMapping": {
+          "title": "Mapeamento de tipos de ativo",
+          "description": "Cada nome de tipo de ativo no pacote deve ser mapeado para um tipo de ativo neste tenant.",
+          "empty": "Os ativos do pacote não têm nomes de tipos de ativo."
+        },
+        "general": {
+          "title": "Geral",
+          "defaultClient": "Cliente padrão para registros órfãos",
+          "defaultClientHelp": "Contatos e ativos cuja organização não pode ser identificada são vinculados a este cliente."
+        },
+        "saved": "Configuração salva. Execute a verificação prévia para validá-la em relação aos registros preparados.",
+        "saving": "Salvando…",
+        "save": "Salvar configuração"
+      },
+      "home": {
+        "title": "Migrações",
+        "description": "Traga dados de outro PSA para o Alga enviando um pacote AMP ou uma planilha CSV/XLSX. Cada arquivo enviado passa por inspeção, configuração e verificação prévia antes que qualquer registro seja criado.",
+        "columns": {
+          "package": "Pacote",
+          "sourceSystem": "Sistema de origem",
+          "state": "Estado",
+          "progress": "Progresso",
+          "created": "Criado"
+        },
+        "empty": {
+          "title": "Nenhuma migração ainda",
+          "descriptionPrefix": "Um pacote de migração do Alga (",
+          "descriptionSuffix": ") é um arquivo portátil e validado com organizações, locais, contatos, tickets, comentários e ativos exportados de outro sistema. Envie um pacote para inspecionar seu conteúdo, mapear seus dados de referência para este tenant e executar uma importação com verificação prévia que pode ser repetida com segurança.",
+          "docsLink": "Ler a referência do pacote AMP"
         }
+      },
+      "upload": {
+        "title": "Enviar pacote de migração",
+        "tooLarge": "Os pacotes de migração devem ter no máximo {{megabytes}} MB.",
+        "fileLabel": "Pacote ou planilha",
+        "fileHint": "AMP (.amp) ou CSV/XLSX, até {{megabytes}} MB. As planilhas são convertidas em um pacote AMP antes da preparação dos registros; nada é importado até você executar a migração.",
+        "entityLabel": "Os registros da planilha representam",
+        "rejected": "O pacote foi rejeitado e nenhum registro foi preparado. Corrija estes problemas no pacote de origem e envie-o novamente:",
+        "stagedWithDiagnostics": "Os registros do pacote foram preparados, mas alguns dados de origem precisam de atenção antes de executar a importação:",
+        "continueToConfigure": "Continuar para a configuração",
+        "uploading": "Enviando…",
+        "submit": "Enviar"
+      },
+      "detail": {
+        "source": "Origem: {{system}}",
+        "sourceNotDeclared": "Sistema de origem não informado",
+        "producer": "Produtor: {{producer}}",
+        "uploaded": "Enviado em {{timestamp}}",
+        "lifecycleAria": "Ciclo de vida da migração",
+        "inspecting": "O pacote está sendo inspecionado e seus registros estão sendo preparados",
+        "packageSuffix": "(pacote {{packageId}})",
+        "inspectingRefresh": ". Esta visualização é atualizada automaticamente.",
+        "rejectedBody": "Este pacote foi rejeitado durante a inspeção; nenhum registro foi preparado e nada será importado dele. Corrija o pacote no sistema de origem e envie um novo.",
+        "rejectionDetails": "Detalhes da rejeição"
       }
     },
     "jobDetails": {
@@ -3018,7 +3191,8 @@
     "rmmEnterpriseNote": "As integrações RMM estão disponíveis no Pro.",
     "categoryHeading": "Integrações {{label}}",
     "loading": {
-      "payments": "Carregando configurações de pagamento..."
+      "payments": "Carregando configurações de pagamento...",
+      "hudu": "Carregando configurações da integração com o Hudu..."
     },
     "categories": {
       "accounting": {
@@ -3110,6 +3284,11 @@
         "name": "Telefonia",
         "description": "Registre chamadas como interações, reconheça quem liga e transforme uma chamada em chamado"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} requer o complemento {{addOnName}}",
+      "manageAddOns": "Gerenciar complementos",
+      "entraDescription": "Adquira o complemento Enterprise para ativar o Microsoft Entra Sync, incluindo descoberta de tenants, mapeamento de clientes, sincronização de contatos e fluxos de trabalho de reconciliação."
     }
   },
   "orgChart": {
@@ -3127,6 +3306,54 @@
     "messages": {
       "adminLocked": "As permissões da função de administrador não podem ser modificadas",
       "permissionsUpdated": "Permissões atualizadas com sucesso"
+    },
+    "title": "Gerenciar permissões",
+    "description": "Configure permissões de acesso para diferentes funções e recursos",
+    "selectPrompt": "Selecione uma função ou um recurso para gerenciar as permissões",
+    "unsavedChanges": "Você tem alterações não salvas",
+    "adminLockedTooltip": "As permissões da função de administrador são definidas pelo sistema e não podem ser alteradas",
+    "none": "Nenhuma",
+    "actionCount_one": "{{count}} ação",
+    "actionCount_other": "{{count}} ações",
+    "views": {
+      "clientPortal": "Portal do cliente"
+    },
+    "filters": {
+      "allResources": "Todos os recursos",
+      "allRoles": "Todas as funções",
+      "selectRole": "Selecione uma função",
+      "filterByResource": "Filtrar por recurso"
+    },
+    "columns": {
+      "resource": "Recurso",
+      "role": "Função",
+      "create": "Criar",
+      "read": "Ler",
+      "update": "Atualizar",
+      "delete": "Excluir",
+      "specialActions": "Ações especiais"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando..."
+    },
+    "confirm": {
+      "title": "Confirmar alterações de permissões",
+      "message": "Tem certeza de que deseja salvar estas alterações de permissões?",
+      "confirmLabel": "Salvar alterações"
+    },
+    "stats": {
+      "empty": "Selecione uma função ou um recurso para visualizar as permissões",
+      "rolesForResource_one": "{{count}} função para {{resource}}",
+      "rolesForResource_other": "{{count}} funções para {{resource}}",
+      "resourcesAndPermissions": "{{count}} recursos • {{assigned}}/{{total}} permissões"
+    },
+    "errors": {
+      "fetchPermissions": "Não foi possível carregar as permissões",
+      "fetchRoles": "Não foi possível carregar as funções",
+      "fetchRolePermissions": "Não foi possível carregar as permissões da função",
+      "savePermissions": "Não foi possível salvar as permissões"
     }
   },
   "sla": {
@@ -3415,6 +3642,91 @@
         "timerPaused": "Temporizador de SLA: pausado"
       },
       "unknown": "Desconhecido"
+    },
+    "businessHours": {
+      "title": "Agendas do horário comercial",
+      "description": "Defina quando sua equipe de suporte está disponível para os cálculos de SLA",
+      "loading": "Carregando agendas do horário comercial...",
+      "default": "Padrão",
+      "recurring": "Recorrente",
+      "openMenu": "Abrir menu",
+      "workingHours": "Horário de trabalho",
+      "dailyHours": "Horários diários",
+      "closed": "Fechado",
+      "alwaysOpen": "Esta é uma agenda 24/7 - disponível o dia todo, todos os dias.",
+      "holidays": "Feriados",
+      "noHolidays": "Nenhum feriado definido para esta agenda.",
+      "timezoneLabel": "Fuso horário: {{timezone}}",
+      "days": {
+        "0": "Domingo",
+        "1": "Segunda-feira",
+        "2": "Terça-feira",
+        "3": "Quarta-feira",
+        "4": "Quinta-feira",
+        "5": "Sexta-feira",
+        "6": "Sábado"
+      },
+      "columns": {
+        "name": "Nome",
+        "timezone": "Fuso horário",
+        "actions": "Ações",
+        "holidayName": "Nome do feriado",
+        "date": "Data",
+        "day": "Dia",
+        "enabled": "Habilitado",
+        "startTime": "Hora de início",
+        "endTime": "Hora de término"
+      },
+      "empty": {
+        "title": "Nenhuma agenda do horário comercial",
+        "description": "Crie sua primeira agenda do horário comercial para começar a calcular os tempos de SLA."
+      },
+      "actions": {
+        "edit": "Editar",
+        "viewDetails": "Ver detalhes",
+        "delete": "Excluir",
+        "cancel": "Cancelar",
+        "close": "Fechar",
+        "create": "Criar",
+        "update": "Atualizar",
+        "saving": "Salvando...",
+        "adding": "Adicionando...",
+        "createDefault": "Criar agenda padrão",
+        "createCustom": "Criar agenda personalizada",
+        "addSchedule": "Adicionar agenda",
+        "addHoliday": "Adicionar feriado"
+      },
+      "fields": {
+        "scheduleName": "Nome da agenda *",
+        "scheduleNamePlaceholder": "Ex.: Horário comercial padrão",
+        "timezone": "Fuso horário *",
+        "is24x7": "Agenda 24/7 (sempre disponível)",
+        "isDefault": "Definir como agenda padrão",
+        "holidayName": "Nome do feriado *",
+        "holidayNamePlaceholder": "Ex.: Natal",
+        "holidayDate": "Data *",
+        "holidayDatePlaceholder": "Selecione a data",
+        "isRecurring": "Repetir anualmente"
+      },
+      "dialog": {
+        "editTitle": "Editar agenda",
+        "createTitle": "Criar agenda",
+        "deleteScheduleTitle": "Excluir agenda",
+        "deleteScheduleMessage": "Tem certeza de que deseja excluir \"{{name}}\"? Isso também excluirá todos os feriados associados. Esta ação não pode ser desfeita.",
+        "deleteHolidayTitle": "Excluir feriado",
+        "deleteHolidayMessage": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
+      },
+      "errors": {
+        "loadSchedules": "Não foi possível carregar as agendas do horário comercial",
+        "loadScheduleDetails": "Não foi possível carregar os detalhes da agenda",
+        "nameRequired": "O nome da agenda é obrigatório",
+        "invalidTimeRange": "Intervalo de horário inválido para {{day}}: a hora de término deve ser posterior à hora de início",
+        "saveSchedule": "Não foi possível salvar a agenda",
+        "deleteSchedule": "Não foi possível excluir a agenda",
+        "createDefaultSchedule": "Não foi possível criar a agenda padrão",
+        "addHoliday": "Não foi possível adicionar o feriado",
+        "deleteHoliday": "Não foi possível excluir o feriado"
+      }
     }
   },
   "clientPortalLanguage": {

@@ -146,6 +146,7 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/authorization": "*",
     "@alga-psa/licensing": "*",
     "@alga-psa/ui": "*",
     "jose": "^6.1.3",
