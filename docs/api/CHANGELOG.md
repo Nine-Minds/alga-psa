@@ -2,6 +2,20 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-09 — Inbound webhook receiver: `429 evaluator_busy` and mapping limits
+
+**Affected endpoint:** `POST /api/inbound/{tenantSlug}/{webhookSlug}`
+
+The workflow expression engine evaluates inbound webhook idempotency expressions and field mappings. It now has hard resource limits and a shared admission queue, so a flood of requests or one runaway expression can no longer exhaust the server. Senders can see two new receiver responses.
+
+**Changes:**
+
+- **`429` with `Retry-After`.** When every expression slot is busy and the request cannot get one in time, the receiver returns `429` with body `{"error": "evaluator_busy"}`, plus `delivery_id` once the delivery has been recorded. This error is retryable. Senders should wait the number of seconds in `Retry-After` and resend the same payload. A `429` delivery is recorded as failed, so the duplicate check does not block the retry, even when it carries the same idempotency key.
+- **Per-delivery mapping budget.** All expression work for one delivery, including idempotency-key extraction and every field mapping, is capped at about 3 seconds of CPU time and 15 seconds of elapsed time. Each single evaluation is also capped (250 ms CPU, 2 s elapsed). A delivery that exceeds a cap returns `400` with `{"error": "mapping_failed"}` and is recorded as a failed delivery. Retrying it does not help; simplify the mapping instead.
+- **Expression size limits.** Workflow and mapping expressions are now limited to 8 KB of source, 1,024 syntax nodes, nesting depth 64, 4,096 evaluation steps, 4,096 items for range expressions, 4 MB of intermediate data and 256 KB of output. Expressions over these limits are rejected when a workflow is validated or published. At runtime they fail like any other expression error. The old configurable wall-clock timeout for expressions was removed.
+
+Self-hosted operators can tune the shared admission queue with `WORKFLOW_EVAL_MAX_CONCURRENCY` (default 6, range 1–64) and `WORKFLOW_EVAL_QUEUE_TIMEOUT_MS` (default 2000).
+
 ## 2026-11-09 — Quote status can no longer be set with PUT; new cancel command
 
 **Affected endpoints:** `PUT /api/v1/quotes/{id}`, new `POST /api/v1/quotes/{id}/cancel`
