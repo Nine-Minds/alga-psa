@@ -94,11 +94,18 @@ describe('Stripe payments webhook routes', () => {
     expect((await tenantPOST(req(body(), SECRETS[A]), tenantCtx(A))).status).toBe(404);
   });
 
-  it('legacy route: platform-signed non-license event is acked and ignored', async () => {
+  it('legacy route: platform-signed untagged non-license event is acked and ignored', async () => {
     const res = await legacyPOST(req(body(), PLATFORM));
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: 'ignored' });
     expect(createdFor).toEqual([]);
+  });
+
+  it('legacy route: platform-signed tenant-tagged event is dispatched to the tagged tenant', async () => {
+    const res = await legacyPOST(req(body({ tenant_id: B }), PLATFORM));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ processed: true });
+    expect(createdFor).toEqual([B]);
   });
 
   it('legacy route: platform-signed license order is still routed to the license handler', async () => {

@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
 import type { WebhookProcessingResult } from '@alga-psa/types';
 import {
+  extractTenantId,
   peekTenantId,
   resolveSignatureCandidates,
   verifyStripeSignature,
@@ -101,7 +102,11 @@ function logDelivery(fields: {
  *   are dispatched too because several handled types (payment_method.*,
  *   setup_intent.*, charge.refunded) are matched by Stripe IDs in T's own
  *   tables, not by metadata; T's dispatcher ignores what it cannot match.
- * - signed by the platform secret and not a license order: 200 ignored.
+ * - signed by the platform secret (legacy route only; the platform secret is
+ *   trusted, as before): license order -> license handler; carries
+ *   metadata.tenant_id -> dispatched to that tenant (single-account and
+ *   dev/e2e emulator deployments); no tenant_id -> 200 ignored.
+ * The per-tenant route accepts only that tenant's own secret.
  */
 export async function handlePaymentsWebhookDelivery(
   req: NextRequest,
@@ -172,8 +177,9 @@ export async function handlePaymentsWebhookDelivery(
       return NextResponse.json({ received: true, processed: false, status: 'ignored', reason: result.reason });
     }
 
-    // License orders are signed by the platform account (legacy route only).
-    if (result.tenantId === null) {
+    // Platform-secret deliveries (legacy route only; the platform secret is trusted).
+    let dispatchTenantId = result.tenantId;
+    if (dispatchTenantId === null) {
       if (isLicenseOrderEvent(event)) {
         const licenseResult = await handleLicenseOrderWebhook(event);
         logDelivery({ route, tenantId: null, secretSource, outcome: 'license_order', eventId, eventType });
@@ -185,14 +191,17 @@ export async function handlePaymentsWebhookDelivery(
           ...(licenseResult.error ? { error: licenseResult.error } : {}),
         });
       }
-      logDelivery({ route, tenantId: null, secretSource, outcome: 'ignored_platform_event', eventId, eventType });
-      return NextResponse.json({ received: true, processed: false, status: 'ignored', reason: 'no_tenant' });
+      dispatchTenantId = extractTenantId(event);
+      if (!dispatchTenantId) {
+        logDelivery({ route, tenantId: null, secretSource, outcome: 'ignored_platform_event', eventId, eventType });
+        return NextResponse.json({ received: true, processed: false, status: 'ignored', reason: 'no_tenant_id' });
+      }
     }
 
-    const processed = await processStripePaymentWebhookPayload(result.tenantId, body);
+    const processed = await processStripePaymentWebhookPayload(dispatchTenantId, body);
     const processingTimeMs = Date.now() - startTime;
     if (processed.success) {
-      logDelivery({ route, tenantId: result.tenantId, secretSource, outcome: 'dispatched', eventId, eventType });
+      logDelivery({ route, tenantId: dispatchTenantId, secretSource, outcome: 'dispatched', eventId, eventType });
       return NextResponse.json({
         received: true,
         processed: true,
@@ -202,9 +211,9 @@ export async function handlePaymentsWebhookDelivery(
       });
     }
     logger.error('[Stripe Payment Webhook] Event processing failed', {
-      eventId, eventType, tenantId: result.tenantId, error: processed.error, processingTimeMs,
+      eventId, eventType, tenantId: dispatchTenantId, error: processed.error, processingTimeMs,
     });
-    logDelivery({ route, tenantId: result.tenantId, secretSource, outcome: 'dispatch_failed', eventId, eventType }, 'error');
+    logDelivery({ route, tenantId: dispatchTenantId, secretSource, outcome: 'dispatch_failed', eventId, eventType }, 'error');
     // 200 so Stripe does not retry immediately; the failure is logged.
     return NextResponse.json({ received: true, processed: false, error: 'Processing failed (logged)' });
   } catch (error) {
