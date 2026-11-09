@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { builtWorkflowPayload } from '@alga-psa/event-schemas';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';

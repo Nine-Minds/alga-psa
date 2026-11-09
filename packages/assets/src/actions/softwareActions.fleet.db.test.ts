@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';

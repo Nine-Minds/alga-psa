@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5: warranty review and RMA for client-owned equipment (real DB). The Dell flow end to end, the approve and
  * deny paths, permission and state refusals, and the hard invariant: no stock or billing row ever changes.

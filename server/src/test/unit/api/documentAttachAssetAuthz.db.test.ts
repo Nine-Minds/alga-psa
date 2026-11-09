@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * POST /api/v1/documents -> asset attach must run the same record-level read
  * authorization as the asset routes (alga-2026-0002947). A denied asset answers

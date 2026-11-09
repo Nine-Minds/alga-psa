@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5 T020 / T021 (real DB): the warranty permission is granted to existing tenants by the migration and to new ones
  * by the catalog; refusals happen before any write; a hidden asset reads as not found; rows without an asset keep

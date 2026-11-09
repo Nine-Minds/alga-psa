@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C6 project staging engine against the isolated migrated test DB. Every case runs in a transaction that
  * is always rolled back, except the concurrency case, which commits its own fixture and removes it.

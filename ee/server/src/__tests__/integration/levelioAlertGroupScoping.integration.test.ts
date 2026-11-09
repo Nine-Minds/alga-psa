@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Level.io alert → group-scoped rule integration coverage.
  *

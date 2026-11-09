@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5 T024 (real DB): the RMA label view-model provider.
  */

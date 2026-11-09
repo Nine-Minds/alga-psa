@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';

@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { insertTestAssets } from '../../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { getCurrentUser } from '@alga-psa/auth';
 
 const mockedTenantConnection = vi.hoisted(() => ({

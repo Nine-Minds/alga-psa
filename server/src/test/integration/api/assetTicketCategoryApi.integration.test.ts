@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Regression coverage for the customer-reported API fixes on this branch:
  *

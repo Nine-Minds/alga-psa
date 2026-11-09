@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Native credentials store integration tests against the REAL dev DB:
  * CRUD round-trip, tenant isolation, restricted-row hiding in list for

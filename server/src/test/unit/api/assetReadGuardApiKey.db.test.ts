@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Route-level regression for the asset notes/software GETs on the x-api-key path
  * (C3 / alga-2026-0002683).

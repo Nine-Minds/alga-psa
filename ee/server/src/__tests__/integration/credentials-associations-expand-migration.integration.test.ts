@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Migration regression test for the 20260812110000 down path (Defect 2).
  *

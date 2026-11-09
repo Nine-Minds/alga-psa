@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * The dashboard's "Assets by type" facet uses the list's filters and
  * transaction. This test drives the real list action against a database:

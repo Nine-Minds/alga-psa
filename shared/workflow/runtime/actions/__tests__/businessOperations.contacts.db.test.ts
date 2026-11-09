@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../test-utils/assetFixtures';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knex, type Knex } from 'knex';
 import path from 'node:path';

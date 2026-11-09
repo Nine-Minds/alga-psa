@@ -15,7 +15,7 @@ import { activateAssetTagUniquenessForTenant } from '@alga-psa/shared/services/a
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { insertTestAssets } from '../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { AssetService } from '../../lib/api/services/AssetService';
 import { createAssetInTransaction } from '@alga-psa/assets/actions/assetActions';
 import { updateNumberSettings } from '../../../../packages/reference-data/src/actions/number-actions/numberingActions';

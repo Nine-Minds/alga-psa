@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';

@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5 T023 (real DB): asset provenance for an asset with no service and no stock unit still returns its RMA
  * history; rma_number is reported separately from the vendor rma_reference.

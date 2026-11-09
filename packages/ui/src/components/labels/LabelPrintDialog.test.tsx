@@ -4,7 +4,12 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createInstance, type TFunction } from 'i18next';
-import frCommon from '../../../../../server/public/locales/fr/common.json';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const frCommon = JSON.parse(readFileSync(
+  resolve(__dirname, '../../../../../server/public/locales/fr/common.json'), 'utf8',
+));
 
 const translation = vi.hoisted(() => ({ t: null as TFunction | null }));
 

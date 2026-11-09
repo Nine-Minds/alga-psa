@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * Advance-replacement dead-unit leg (alga-2026-0002683, real DB). The Dell advance flow through shipping the
  * dead unit to the vendor and the vendor's receipt, the guard matrix, the shared `dead_unit_owed` status told

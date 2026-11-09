@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
-import { claimAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { claimAssetTag, normalizeAssetTag } from '../services/assetNumbering';
 
 type AssetFixture = Record<string, unknown> & { tenant: string; asset_tag: string; asset_id?: string };
 type PersistedAssetFixture<T> = T & { asset_id: string; asset_tag_normalized: string };

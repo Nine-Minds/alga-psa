@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * Integration test for the optional create extras on addTicket: linked assets, and watchers
  * are written in the ticket's own transaction, and an invalid one rolls the whole

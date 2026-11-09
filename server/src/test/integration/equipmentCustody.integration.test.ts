@@ -1,5 +1,5 @@
 import { clientAssetPrefix, formatAssetTag, previewNextAssetTag } from '@alga-psa/shared/services/assetNumbering';
-import { insertTestAssets } from '../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * alga-2026-0002683 C4 - equipment custody and ticket intake (real DB).
  *

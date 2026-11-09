@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../../../server/test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * pollHuntressIncidents end to end: the real poller, the real incident
  * processor and a real migrated database, with the algasim Huntress emulator

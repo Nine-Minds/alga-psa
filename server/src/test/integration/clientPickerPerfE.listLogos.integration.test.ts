@@ -1,4 +1,4 @@
-import { insertTestAssets } from '../../../test-utils/assetFixtures';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * Client picker perf E: projects and assets lists carry `client_logo_url`, batched for the
  * distinct clients on the page, so the screens no longer fetch every client for logos.
