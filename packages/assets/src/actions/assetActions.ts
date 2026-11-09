@@ -574,18 +574,7 @@ async function authorizeAssetDecision(
     asset: AssetAuthorizationInput,
     action: AssetAction
 ) {
-    const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
-    return context.authorizationKernel.authorizeResource({
-        subject: context.subject,
-        resource: {
-            type: 'asset',
-            action,
-            id: asset.asset_id,
-        },
-        record: assetRecords.get(asset.asset_id),
-        requestCache: context.requestCache,
-        knex: trx,
-    });
+    return { allowed: await isSharedAssetActionAllowed(trx, tenant, context, asset, action) };
 }
 
 async function authorizeAssetReadDecision(
@@ -3802,7 +3791,7 @@ export const removeAssetAssociation = withAuth(async (
 
     try {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'update');
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'delete');
 
             await tenantScopedTable(trx, 'asset_associations', tenant)
                 .where({

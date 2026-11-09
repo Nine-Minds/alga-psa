@@ -558,7 +558,7 @@ export class TicketService extends BaseService<ITicket> {
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
-    const user = context.user as IUserWithRoles | undefined;
+    const user = context.user as TicketServiceUser | undefined;
     if (!user) {
       throw new ForbiddenError('Authenticated user context is required to delete tickets');
     }

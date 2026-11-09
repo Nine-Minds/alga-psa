@@ -134,6 +134,7 @@ describe('isAssetActionAllowed', () => {
   const rules = [
     { id: 'r1', resource: 'asset', action: 'read', templateKey: 'selected_clients' as const, selectedClientIds: ['client-a'] },
     { id: 'r2', resource: 'asset', action: 'update', templateKey: 'same_team' as const },
+    { id: 'r3', resource: 'asset', action: 'delete', templateKey: 'same_team' as const },
   ];
   const context = (bundleRules = rules) => ({
     subject: {
@@ -155,6 +156,7 @@ describe('isAssetActionAllowed', () => {
 
     expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, asset, 'read')).toBe(true);
     expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, asset, 'update')).toBe(false);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, asset, 'delete')).toBe(false);
     expect(await isAssetReadAllowed({} as any, 'tenant-a', ctx, asset)).toBe(true);
   });
 
@@ -163,6 +165,12 @@ describe('isAssetActionAllowed', () => {
     const asset = { asset_id: 'asset-2', client_id: 'client-a' };
 
     expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'update')).toBe(true);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'delete')).toBe(true);
+  });
+
+  it('applies the explicit delete scope to restricted asset operators', async () => {
+    h.dbState.asset_associations = [{ asset_id: 'asset-3', entity_type: 'team', entity_id: 'team-ops' }];
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
   });
 
   it('requires the update team restriction for delete when no exact delete rule exists', async () => {
@@ -170,10 +178,11 @@ describe('isAssetActionAllowed', () => {
     const asset = { asset_id: 'asset-3', client_id: 'client-a' };
 
     expect(await isAssetReadAllowed({} as any, 'tenant-a', context(), asset)).toBe(true);
-    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'delete')).toBe(false);
+    const withoutExactDelete = rules.filter((rule) => rule.action !== 'delete');
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(withoutExactDelete), asset, 'delete')).toBe(false);
 
     h.dbState.asset_associations = [{ asset_id: 'asset-3', entity_type: 'team', entity_id: 'team-ops' }];
-    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'delete')).toBe(true);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(withoutExactDelete), asset, 'delete')).toBe(true);
   });
 
   it('still requires read visibility when delete satisfies the update team restriction', async () => {
@@ -188,7 +197,7 @@ describe('isAssetActionAllowed', () => {
 
   it('uses an exact delete rule instead of the update alias', async () => {
     h.dbState.asset_associations = [];
-    const ctx = context([...rules, { id: 'r3', resource: 'asset', action: 'delete', templateKey: 'selected_clients', selectedClientIds: ['client-a'] }]);
+    const ctx = context([...rules.filter((rule) => rule.action !== 'delete'), { id: 'r4', resource: 'asset', action: 'delete', templateKey: 'selected_clients', selectedClientIds: ['client-a'] }]);
     expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
   });
 });
