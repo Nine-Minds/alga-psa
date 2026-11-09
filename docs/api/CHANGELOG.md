@@ -2,6 +2,22 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-09 — Bulk invoice operations limited to finalize and cancel
+
+**Affected endpoint:** `POST /api/v1/financial/bulk/invoices`
+
+The bulk invoice endpoint now runs each invoice through the same service operation and permission checks as the single-invoice endpoints. Before this change, the bulk path wrote invoice status directly and bypassed those checks.
+
+**Changes:**
+
+- `operation` accepts only `finalize` and `cancel`. Any other value returns `400` before an invoice is processed.
+  - `finalize` runs the normal finalize operation and requires `invoice:finalize`.
+  - `cancel` voids each invoice through the normal void operation. When an accounting integration is connected, the void also requires `accounting_integrations:remote_mutate`.
+- The caller also needs `invoice:update`. Permissions are checked once, before any invoice in the batch is processed.
+- `send` was removed. Requests with `operation: "send"`, including those that pass `email_addresses`, now fail validation. Bulk invoice email will return once it uses the same recipient delivery as single invoices. Until then, send invoices one at a time.
+- `apply_credit` is still unsupported, because the earlier bulk command reported success without applying credit. Apply credit per invoice with `POST /api/v1/financial/invoices/{id}/credit`.
+- `invoice_ids` must contain 1 to 50 IDs. Each invoice is processed independently. Each entry in `results` reports `success` and `error`, plus an `outcome` of `finalized` or `voided` when the operation succeeds.
+
 ## 2026-11-09 — Time-sheet status changes through PUT follow the approval rules
 
 **Affected endpoint:** `PUT /api/v1/time-sheets/{id}`
