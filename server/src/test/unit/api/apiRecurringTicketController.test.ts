@@ -292,6 +292,7 @@ describe('reads', () => {
     const res = await makeController().upcoming()(req(`${BASE}/${DEF}/upcoming`));
     expect(actions.previewRecurringTicketOccurrences).toHaveBeenCalledWith({
       ticket_template_id: TEMPLATE,
+      sample_client_name: 'Joymode',
       recurrence: definition().recurrence,
       start_date: '2027-03-01',
       create_time: '08:00',
@@ -300,6 +301,23 @@ describe('reads', () => {
       non_business_day_policy: 'previous',
     });
     expect((await res.json()).data.definition_status).toBe('paused');
+  });
+
+  it('upcoming renders the sample title for an active client, and for none when there are no clients', async () => {
+    actions.getRecurringTicketDefinition.mockResolvedValueOnce({
+      ...detail(),
+      clients: [
+        { definition_client_id: DEF_CLIENT, definition_id: DEF, client_id: CLIENT, client_name: 'Paused Co', is_active: false },
+        { definition_client_id: DEF_CLIENT, definition_id: DEF, client_id: CLIENT, client_name: 'Active Co', is_active: true },
+      ],
+    });
+    actions.previewRecurringTicketOccurrences.mockResolvedValue({ occurrences: [] });
+    await makeController().upcoming()(req(`${BASE}/${DEF}/upcoming`));
+    expect(actions.previewRecurringTicketOccurrences).toHaveBeenLastCalledWith(expect.objectContaining({ sample_client_name: 'Active Co' }));
+
+    actions.getRecurringTicketDefinition.mockResolvedValueOnce({ ...detail(), clients: [] });
+    await makeController().upcoming()(req(`${BASE}/${DEF}/upcoming`));
+    expect(actions.previewRecurringTicketOccurrences).toHaveBeenLastCalledWith(expect.objectContaining({ sample_client_name: null }));
   });
 
   it('upcoming reports archived definitions as archived', async () => {

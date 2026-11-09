@@ -302,9 +302,12 @@ export class ApiRecurringTicketController extends ApiBaseController {
       const detail = await this.readDefinition(this.extractDefinitionId(apiRequest));
       if (detail instanceof NextResponse) return detail;
       const { definition } = detail;
+      // Render `{{client}}` in sample_title with a real client of this definition, not an empty string.
+      const sampleClient = detail.clients.find((client) => client.is_active) ?? detail.clients[0];
 
       const preview = await previewRecurringTicketOccurrences({
         ticket_template_id: definition.ticket_template_id,
+        sample_client_name: sampleClient?.client_name ?? null,
         recurrence: definition.recurrence,
         start_date: definition.start_date,
         create_time: definition.create_time,
