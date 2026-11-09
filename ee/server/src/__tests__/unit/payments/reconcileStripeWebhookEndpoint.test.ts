@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const T = '0ad8e710-13bc-4e01-a6ca-3f8992978ae8';
 const TENANT_URL = `https://app.example.com/api/webhooks/stripe/payments/${T}`;
@@ -10,7 +10,8 @@ const stripeMock = {
 const dbUpdate = vi.fn();
 
 vi.mock('stripe', () => ({ default: vi.fn().mockImplementation(function () { return stripeMock; }) }));
-vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
+const loggerMock = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }));
+vi.mock('@alga-psa/core/logger', () => ({ default: loggerMock }));
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({ getTenantSecret: vi.fn(async () => 'sk_test') })),
 }));
@@ -29,6 +30,8 @@ vi.mock('@alga-psa/db', () => ({
 import {
   reconcileAllStripeWebhookEndpoints,
   reconcileStripeWebhookEvents,
+  migrateStripeWebhookEndpointOnDemand,
+  resetOnDemandMigrationState,
   STRIPE_WEBHOOK_EVENTS,
 } from '../../../lib/payments/stripeWebhookEvents';
 
@@ -68,4 +71,78 @@ describe('reconcileStripeWebhookEvents URL migration', () => {
     const r = await reconcileAllStripeWebhookEndpoints({ ...opts, tenants: [T] });
     expect(r).toEqual({ total: 1, reconciled: 0, skipped: 0, failed: [T] });
   });
+});
+
+describe('URL-only scope', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('updates with { url } only and does not rewrite webhook_events', async () => {
+    stripeMock.webhookEndpoints.retrieve.mockResolvedValue({ id: 'we_1', url: LEGACY_URL, enabled_events: ['charge.refunded'] });
+    stripeMock.webhookEndpoints.update.mockResolvedValue({});
+    expect(await reconcileStripeWebhookEvents(T, { ...opts, scope: 'url' })).toBe(true);
+    expect(stripeMock.webhookEndpoints.update).toHaveBeenCalledTimes(1);
+    expect(stripeMock.webhookEndpoints.update).toHaveBeenCalledWith('we_1', { url: TENANT_URL });
+    expect(dbUpdate).not.toHaveBeenCalled();
+  });
+
+  it('endpoint already at the tenant URL: no update even when events differ', async () => {
+    stripeMock.webhookEndpoints.retrieve.mockResolvedValue({ id: 'we_1', url: TENANT_URL, enabled_events: ['charge.refunded'] });
+    expect(await reconcileStripeWebhookEvents(T, { ...opts, scope: 'url' })).toBe(true);
+    expect(stripeMock.webhookEndpoints.update).not.toHaveBeenCalled();
+    expect(dbUpdate).not.toHaveBeenCalled();
+  });
+
+  it('full mode still passes enabled_events and writes the config', async () => {
+    stripeMock.webhookEndpoints.retrieve.mockResolvedValue({ id: 'we_1', url: LEGACY_URL, enabled_events: ['charge.refunded'] });
+    stripeMock.webhookEndpoints.update.mockResolvedValue({ enabled_events: STRIPE_WEBHOOK_EVENTS });
+    await reconcileStripeWebhookEvents(T, opts);
+    expect(stripeMock.webhookEndpoints.update).toHaveBeenCalledWith('we_1', { url: TENANT_URL, enabled_events: STRIPE_WEBHOOK_EVENTS });
+    expect(dbUpdate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('migrateStripeWebhookEndpointOnDemand', () => {
+  const env = { ...process.env };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetOnDemandMigrationState();
+    process.env.STRIPE_WEBHOOK_BASE_URL = 'https://app.example.com';
+    (process.env as any).NODE_ENV = 'production';
+  });
+  afterEach(() => { process.env = { ...env }; });
+
+  it('a burst of concurrent calls makes one retrieve and one update', async () => {
+    stripeMock.webhookEndpoints.retrieve.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return { id: 'we_1', url: LEGACY_URL, enabled_events: [] };
+    });
+    stripeMock.webhookEndpoints.update.mockResolvedValue({});
+    await Promise.all(Array.from({ length: 10 }, () => migrateStripeWebhookEndpointOnDemand(T)));
+    expect(stripeMock.webhookEndpoints.retrieve).toHaveBeenCalledTimes(1);
+    expect(stripeMock.webhookEndpoints.update).toHaveBeenCalledTimes(1);
+    expect(stripeMock.webhookEndpoints.update).toHaveBeenCalledWith('we_1', { url: TENANT_URL });
+    // TTL marker: steady traffic afterwards does not retrieve again.
+    await migrateStripeWebhookEndpointOnDemand(T);
+    expect(stripeMock.webhookEndpoints.retrieve).toHaveBeenCalledTimes(1);
+  });
+
+  it('swallows a failing update and retries on the next call', async () => {
+    stripeMock.webhookEndpoints.retrieve.mockResolvedValue({ id: 'we_1', url: LEGACY_URL, enabled_events: [] });
+    stripeMock.webhookEndpoints.update.mockRejectedValueOnce(new Error('stripe down'));
+    await expect(migrateStripeWebhookEndpointOnDemand(T)).resolves.toBeUndefined();
+    expect(loggerMock.error).toHaveBeenCalled();
+    stripeMock.webhookEndpoints.update.mockResolvedValueOnce({});
+    await migrateStripeWebhookEndpointOnDemand(T);
+    expect(stripeMock.webhookEndpoints.retrieve).toHaveBeenCalledTimes(2);
+    expect(stripeMock.webhookEndpoints.update).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['http://localhost:3000', 'http://127.0.0.1:3000', 'http://[::1]:3000', 'http://app.example.com'])(
+    'guard: %s in production makes no Stripe calls and warns', async (base) => {
+      process.env.STRIPE_WEBHOOK_BASE_URL = base;
+      await migrateStripeWebhookEndpointOnDemand(T);
+      expect(stripeMock.webhookEndpoints.retrieve).not.toHaveBeenCalled();
+      expect(stripeMock.webhookEndpoints.update).not.toHaveBeenCalled();
+      expect(loggerMock.warn).toHaveBeenCalledWith(expect.stringContaining('On-demand migration skipped'), expect.objectContaining({ tenantId: T }));
+    });
 });

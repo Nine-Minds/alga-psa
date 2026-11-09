@@ -72,6 +72,13 @@ export const getStripeBaseUrl = (): string => {
  * Brings an existing tenant's Stripe webhook endpoint up to date: the per-tenant
  * URL and STRIPE_WEBHOOK_EVENTS.
  *
+ * `options.scope` (default 'full'):
+ * - 'full': URL + events, and the stored `webhook_events` is refreshed.
+ * - 'url': only the URL is moved (`update(id, { url })`, no `enabled_events`).
+ *   Event differences are ignored and the stored config is not rewritten.
+ *   Used by the on-demand legacy-route migration, which must not alter what a
+ *   tenant's endpoint subscribes to.
+ *
  * Idempotent: when the URL and events already match, no Stripe update is made.
  * A missing/deleted endpoint is logged and skipped; endpoints are never created
  * and signing secrets are never rotated (update does not change the secret).
@@ -81,8 +88,9 @@ export const getStripeBaseUrl = (): string => {
  */
 export async function reconcileStripeWebhookEvents(
   tenant: string,
-  options: { baseUrl?: string } = {}
+  options: { baseUrl?: string; scope?: 'url' | 'full' } = {}
 ): Promise<boolean> {
+  const urlOnly = options.scope === 'url';
   const knex = await getConnection(tenant);
   const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
     .where({ provider_type: 'stripe', is_enabled: true }).first();
@@ -109,6 +117,12 @@ export async function reconcileStripeWebhookEvents(
     return false;
   }
   const live = current as Stripe.WebhookEndpoint;
+  if (urlOnly) {
+    if (live.url === tenantUrl) return true;
+    await stripe.webhookEndpoints.update(endpointId, { url: tenantUrl });
+    logger.info('[StripeWebhookReconcile] Webhook endpoint URL moved to per-tenant route', { tenantId: tenant, endpointId });
+    return true;
+  }
   const eventsMatch =
     JSON.stringify([...live.enabled_events].sort()) === JSON.stringify([...STRIPE_WEBHOOK_EVENTS].sort());
   if (live.url === tenantUrl && eventsMatch) return true;
@@ -154,4 +168,70 @@ export async function reconcileAllStripeWebhookEndpoints(
     }
   }
   return result;
+}
+
+// ── On-demand migration (triggered by legacy-route deliveries) ───────────────
+
+/** How long a tenant is left alone after a completed (non-failed) attempt. */
+export const ON_DEMAND_MIGRATION_TTL_MS = 10 * 60 * 1000;
+
+// LEVERAGE: pattern fire-dedupe-swallow — single-flight + TTL marker + swallow-errors shape; check other fire-and-forget background triggers before adding a third copy.
+const inFlight = new Set<string>();
+const recentlyDone = new Map<string, number>();
+
+/** Test hook: clears single-flight and TTL state. */
+export function resetOnDemandMigrationState(): void {
+  inFlight.clear();
+  recentlyDone.clear();
+}
+
+/**
+ * Base-URL guard. Returns a reason to skip, or null when the URL is safe to
+ * register with Stripe. "Production" is NODE_ENV === 'production'.
+ */
+function baseUrlSkipReason(baseUrl: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return 'unparseable base URL';
+  }
+  const host = parsed.hostname.replace(/^\[|\]$/g, '');
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return 'base URL host is loopback';
+  if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') return 'base URL is not https in production';
+  return null;
+}
+
+/**
+ * Moves tenant's Stripe webhook endpoint to the per-tenant URL (URL only).
+ * Fire-and-forget: never throws. Single-flight per tenant; completed attempts
+ * (including "nothing to do") are remembered in-process for
+ * ON_DEMAND_MIGRATION_TTL_MS so steady legacy traffic does not retrieve on
+ * every delivery; failed attempts are not remembered, so the next legacy
+ * delivery retries. In-process only: each replica may do one attempt per TTL,
+ * which is harmless because the update is idempotent.
+ */
+export async function migrateStripeWebhookEndpointOnDemand(tenantId: string): Promise<void> {
+  if (inFlight.has(tenantId)) return;
+  const doneAt = recentlyDone.get(tenantId);
+  if (doneAt !== undefined && Date.now() - doneAt < ON_DEMAND_MIGRATION_TTL_MS) return;
+  inFlight.add(tenantId);
+  try {
+    const baseUrl = getStripeBaseUrl();
+    const skip = baseUrlSkipReason(baseUrl);
+    if (skip) {
+      logger.warn('[StripeWebhookReconcile] On-demand migration skipped', { tenantId, reason: skip });
+    } else {
+      const moved = await reconcileStripeWebhookEvents(tenantId, { baseUrl, scope: 'url' });
+      logger.info('[StripeWebhookReconcile] On-demand migration attempt finished', { tenantId, endpointFound: moved });
+    }
+    recentlyDone.set(tenantId, Date.now());
+  } catch (error) {
+    logger.error('[StripeWebhookReconcile] On-demand migration failed', {
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    inFlight.delete(tenantId);
+  }
 }

@@ -34,3 +34,24 @@ No generic multi-provider webhook router. Identifying the reporter's tenant is a
 - Payload `metadata.tenant_id = B` signed by A → 200 ignored, no B-side effect.
 - Tampered signature → 401, no candidate leak. Unknown tenant route → 404. Platform license-order event → still handled.
 - Migration idempotent (run twice = no-op); endpoint missing in Stripe → logged, skipped.
+
+## Item 6 repair: on-demand endpoint migration from the legacy route
+When a delivery on the legacy route (`POST /api/webhooks/stripe/payments`) verifies against tenant T's own endpoint
+secret (`secretSource` `hint-tenant` | `tenant`, non-null tenantId), T's Stripe endpoint is moved to
+`<base>/api/webhooks/stripe/payments/<T>` in the background. Response is unchanged.
+- **Trigger site**: one place in `handlePaymentsWebhookDelivery`, right after signature verification, before any outcome
+  branch. Fires for dispatched, dispatch_failed, ignored_tenant_mismatch and malformed-but-verified (decision: the move is
+  URL-only and the signature proves the endpoint belongs to T, so payload shape is irrelevant). Never for platform,
+  per-tenant route, invalid, missing header or 404. Not awaited; the dynamic import is part of the background work.
+- **URL-only mode**: `reconcileStripeWebhookEvents(tenant, { scope: 'url' })` (default `'full'`, unchanged). Retrieve; if URL
+  already matches, no update; else `update(id, { url })` with no `enabled_events`; config `webhook_events` untouched.
+- **Entry point**: `migrateStripeWebhookEndpointOnDemand(tenantId)` in `ee/server/src/lib/payments/stripeWebhookEvents.ts`,
+  exported from the EE payments index; no-op in the CE stub `packages/ee/src/lib/payments/index.ts`. Never throws; logs tenantId/endpointId only.
+- **Single-flight**: in-process `Set` of in-flight tenants; cleared when the attempt ends. A completed attempt (including
+  "endpoint missing") sets an in-process marker for 10 minutes; failures set none so the next delivery retries. No Redis
+  (no readily available helper; each replica may attempt once per TTL, harmless since the update is idempotent).
+- **Base-URL guard** (no Stripe calls, `logger.warn`): host `localhost`/`127.0.0.1`/`::1`, or non-https when
+  `NODE_ENV === 'production'`.
+- **Testing limits**: unit-tested only. The emulator does not model `webhookEndpoints`, so Prepare Human Review cannot show a
+  live endpoint URL move unless the emulator gains that API. Recommended canary: run the ops script with `--tenant` on one
+  tenant, then watch Loki for `On-demand migration` log lines.

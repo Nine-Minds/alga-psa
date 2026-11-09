@@ -13,12 +13,22 @@ import {
 } from './paymentsSignature';
 import { isStripeTenantEnabled, listEnabledStripeTenants } from './paymentsTenants';
 
+// One shared dynamic import for the dispatch path and the background migration trigger.
+let enterprisePaymentsModule: Promise<any> | null = null;
+function importEnterprisePayments(): Promise<any> {
+  enterprisePaymentsModule ??= import('@enterprise/lib/payments').catch((error) => {
+    enterprisePaymentsModule = null; // do not cache a failed import
+    throw error;
+  });
+  return enterprisePaymentsModule;
+}
+
 async function loadEnterprisePayments(): Promise<{
   PaymentService: any;
   createStripePaymentProvider: any;
 } | null> {
   try {
-    const mod = await import('@enterprise/lib/payments');
+    const mod = await importEnterprisePayments();
     return {
       PaymentService: (mod as any).PaymentService,
       createStripePaymentProvider: (mod as any).createStripePaymentProvider,
@@ -27,6 +37,26 @@ async function loadEnterprisePayments(): Promise<{
     logger.debug('[Stripe Payment Webhook] enterprise payments module not available', { error });
     return null;
   }
+}
+
+/**
+ * Fire-and-forget: ask the EE module to move tenant T's Stripe endpoint to the
+ * per-tenant URL. Never awaited by the caller and never throws; the dynamic
+ * import is part of the background work. The handler knows nothing about
+ * Stripe endpoint APIs.
+ */
+function scheduleEndpointMigration(tenantId: string): void {
+  void (async () => {
+    try {
+      const mod = await importEnterprisePayments();
+      await (mod as any).migrateStripeWebhookEndpointOnDemand?.(tenantId);
+    } catch (error) {
+      logger.warn('[Stripe Payment Webhook] on-demand endpoint migration trigger failed', {
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  })();
 }
 
 /**
@@ -160,6 +190,19 @@ export async function handlePaymentsWebhookDelivery(
     if (result.kind === 'invalid') {
       logDelivery({ route, tenantId: tenantIdFromRoute ?? null, secretSource: null, outcome: 'invalid_signature' }, 'error');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // Single trigger site, before any outcome branch. Legacy route only, and only
+    // when a tenant's own endpoint secret verified (so the endpoint provably
+    // belongs to that tenant): covers dispatched, dispatch_failed,
+    // ignored_tenant_mismatch and malformed-but-verified (the move is URL-only
+    // and independent of the payload). Never for platform / route-tenant secrets.
+    if (
+      route === 'legacy' &&
+      result.tenantId &&
+      (result.secretSource === 'hint-tenant' || result.secretSource === 'tenant')
+    ) {
+      scheduleEndpointMigration(result.tenantId);
     }
 
     const event: Stripe.Event = result.event;

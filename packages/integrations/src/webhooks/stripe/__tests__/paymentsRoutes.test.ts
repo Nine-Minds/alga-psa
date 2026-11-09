@@ -9,6 +9,7 @@ const PLATFORM = 'whsec_platform';
 const enabled = new Set<string>([A, B]);
 const processWebhookEvent = vi.fn(async () => ({ success: true, paymentRecorded: false }));
 const createdFor: string[] = [];
+const migrate = vi.fn(async (_t: string) => {});
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -26,6 +27,7 @@ vi.mock('../paymentsTenants', () => ({
 vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn() }));
 vi.mock('@enterprise/lib/payments', () => ({
   PaymentService: { create: async (t: string) => { createdFor.push(t); return { processWebhookEvent }; } },
+  migrateStripeWebhookEndpointOnDemand: (t: string) => migrate(t),
   createStripePaymentProvider: () => ({ parseWebhookEvent: (p: string) => JSON.parse(p) }),
 }));
 
@@ -46,6 +48,7 @@ describe('Stripe payments webhook routes', () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     processWebhookEvent.mockClear();
+    migrate.mockReset(); migrate.mockImplementation(async () => {});
     createdFor.length = 0;
     enabled.clear(); enabled.add(A); enabled.add(B);
   });
@@ -123,5 +126,72 @@ describe('Stripe payments webhook routes', () => {
   it('verified but malformed event is 400', async () => {
     const raw = JSON.stringify({ id: 'evt_x', object: 'event' });
     expect((await legacyPOST(req(raw, SECRETS[A]))).status).toBe(400);
+  });
+
+  describe('on-demand endpoint migration trigger', () => {
+    const flush = () => new Promise((r) => setTimeout(r, 0));
+
+    it('legacy delivery verified by a tenant secret triggers exactly once with unchanged response', async () => {
+      const res = await legacyPOST(req(body(), SECRETS[A]));
+      await flush();
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ received: true, processed: true });
+      expect(migrate).toHaveBeenCalledTimes(1);
+      expect(migrate).toHaveBeenCalledWith(A);
+    });
+
+    it('tenant-mismatch (ignored) and malformed-but-verified legacy deliveries also trigger', async () => {
+      await legacyPOST(req(body({ tenant_id: B }), SECRETS[A]));
+      await legacyPOST(req(JSON.stringify({ id: 'evt_x', object: 'event' }), SECRETS[A]));
+      await flush();
+      expect(migrate).toHaveBeenCalledTimes(2);
+      expect(migrate).toHaveBeenNthCalledWith(1, A);
+      expect(migrate).toHaveBeenNthCalledWith(2, A);
+    });
+
+    it('platform-verified legacy deliveries (license order, untagged, tagged) trigger nothing', async () => {
+      const lic = JSON.stringify({
+        id: 'evt_lic', object: 'event', type: 'checkout.session.completed',
+        data: { object: { id: 'cs_1', metadata: { is_license_order: 'true' } } },
+      });
+      await legacyPOST(req(lic, PLATFORM));
+      await legacyPOST(req(body(), PLATFORM));
+      await legacyPOST(req(body({ tenant_id: B }), PLATFORM));
+      await flush();
+      expect(migrate).not.toHaveBeenCalled();
+    });
+
+    it('per-tenant route delivery triggers nothing', async () => {
+      expect((await tenantPOST(req(body(), SECRETS[A]), tenantCtx(A))).status).toBe(200);
+      await flush();
+      expect(migrate).not.toHaveBeenCalled();
+    });
+
+    it('invalid signature and missing header trigger nothing', async () => {
+      expect((await legacyPOST(req(body(), null, 't=1,v1=deadbeef'))).status).toBe(401);
+      expect((await legacyPOST(req(body(), null))).status).toBe(400);
+      await flush();
+      expect(migrate).not.toHaveBeenCalled();
+    });
+
+    it('a trigger that throws or rejects does not change status or body', async () => {
+      const baseline = await (await legacyPOST(req(body(), SECRETS[A]))).json();
+      migrate.mockImplementationOnce(() => { throw new Error('boom'); });
+      const r1 = await legacyPOST(req(body(), SECRETS[A]));
+      migrate.mockImplementationOnce(async () => { throw new Error('reject'); });
+      const r2 = await legacyPOST(req(body(), SECRETS[A]));
+      await flush();
+      for (const r of [r1, r2]) {
+        expect(r.status).toBe(200);
+        expect({ ...(await r.json()), processingTimeMs: 0 }).toEqual({ ...baseline, processingTimeMs: 0 });
+      }
+    });
+
+    it('the response does not wait on the trigger', async () => {
+      migrate.mockImplementation(() => new Promise<void>(() => {}));
+      const res = await legacyPOST(req(body(), SECRETS[A]));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ processed: true });
+    });
   });
 });
