@@ -1,8 +1,8 @@
-import { Agent, fetch } from 'undici';
 import type { LookupFunction } from 'node:net';
+import { Agent, fetch } from 'undici';
+import { isGlobalUnicastAddress } from '../net/publicAddress';
 import {
   assertSafeWebhookUrl,
-  isGlobalUnicastAddress,
   isPrivateWebhookTargetAllowed,
   resolveValidatedAddresses,
   UnsafeWebhookTargetError,
