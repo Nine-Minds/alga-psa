@@ -3,7 +3,15 @@ import type { Expr } from './types';
 import { WORKFLOW_EXPRESSION_FUNCTIONS, WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from './expressionFunctions';
 import {
   EvaluationBudgetExceededError,
+  beginRequestEvaluation,
+  chargeRequestCpu,
+  endRequestEvaluation,
+  getEvaluationRequestDeadline,
   getExpressionAdmissionStats,
+  processCpuClock,
+  requestCpuMessage,
+  requestWallMessage,
+  type EvaluationRequestDeadline,
   isExpressionAdmissionActive,
   reportExpressionAdmissionEvent,
   runWithAdmission,
@@ -19,7 +27,9 @@ export {
   setExpressionAdmissionSink,
   reportExpressionAdmissionEvent,
   runWithAdmission,
+  runWithEvaluationRequestBudget,
 } from './expressionAdmission';
+export type { EvaluationRequestBudgetOptions } from './expressionAdmission';
 export type { ExpressionAdmissionEvent, ExpressionAdmissionStats } from './expressionAdmission';
 
 const MAX_SOURCE_LENGTH = 8 * 1024;
@@ -63,6 +73,8 @@ export type EvaluationLimits = {
   /** Clock seams for tests. */
   now?: () => number;
   cpuNow?: () => number;
+  /** @internal shared request-scope deadline; set by the funnel, never by callers. */
+  request?: EvaluationRequestDeadline;
 };
 
 type DeadlineState = {
@@ -75,6 +87,7 @@ type DeadlineState = {
   now: () => number;
   cpuNow: (() => number) | null;
   signal?: AbortSignal;
+  request?: EvaluationRequestDeadline;
 };
 
 type EvaluationBudget = {
@@ -156,6 +169,7 @@ async function runWithDeadline(
   callerSignal: AbortSignal | undefined
 ): Promise<unknown> {
   const admitted = isExpressionAdmissionActive();
+  const request = getEvaluationRequestDeadline();
   // Outside Node (Temporal sandbox, browser) only explicit limits apply: no
   // timers or clocks are introduced into deterministic workflow code.
   if (!admitted && !requested && !callerSignal) return raw(ctx, undefined);
@@ -165,10 +179,12 @@ async function runWithDeadline(
     wallBudgetMs: requested?.wallBudgetMs ?? (admitted ? DEFAULT_WALL_BUDGET_MS : undefined),
     now: requested?.now,
     cpuNow: requested?.cpuNow,
+    request,
   };
   const controller = new AbortController();
-  const onCallerAbort = () => controller.abort(callerSignal?.reason ?? requested?.signal?.reason);
-  const linked = [callerSignal, requested?.signal].filter((signal): signal is AbortSignal => Boolean(signal));
+  const onCallerAbort = () =>
+    controller.abort((callerSignal?.aborted ? callerSignal : requested?.signal?.aborted ? requested.signal : request?.controller.signal)?.reason);
+  const linked = [callerSignal, requested?.signal, request?.controller.signal].filter((signal): signal is AbortSignal => Boolean(signal));
   for (const signal of linked) {
     if (signal.aborted) controller.abort(signal.reason);
     else signal.addEventListener('abort', onCallerAbort, { once: true });
@@ -187,6 +203,13 @@ async function runWithDeadline(
     (timer as { unref?: () => void }).unref?.();
   }
 
+  if (request) {
+    // Refuse to start another evaluation once the request is already over.
+    if (request.controller.signal.aborted) throw abortError(request.controller.signal);
+    if (request.now() - request.startedAt > request.wallBudgetMs) throw new EvaluationBudgetExceededError(requestWallMessage(request.wallBudgetMs), 'wall');
+    if (request.cpuSpentMs > request.cpuBudgetMs) throw new EvaluationBudgetExceededError(requestCpuMessage(request.cpuBudgetMs), 'cpu');
+    beginRequestEvaluation(request);
+  }
   try {
     const evaluation = raw(ctx, limits);
     evaluation.catch(() => undefined); // abandoned evaluations must not become unhandled rejections
@@ -203,6 +226,7 @@ async function runWithDeadline(
     }
     throw error;
   } finally {
+    if (request) endRequestEvaluation(request);
     if (timer) clearTimeout(timer);
     for (const signal of linked) signal.removeEventListener('abort', onCallerAbort);
   }
@@ -625,17 +649,11 @@ function createDeadline(environment: JsonataEnvironment): DeadlineState | undefi
     now,
     cpuNow,
     signal: limits.signal,
+    request: limits.request,
   };
 }
 
-function defaultCpuClock(): (() => number) | null {
-  const proc = (globalThis as { process?: { cpuUsage?: () => { user: number; system: number } } }).process;
-  if (!isExpressionAdmissionActive() || typeof proc?.cpuUsage !== 'function') return null;
-  return () => {
-    const usage = proc.cpuUsage!();
-    return (usage.user + usage.system) / 1000;
-  };
-}
+const defaultCpuClock = processCpuClock;
 
 function throwBudget(message: string, kind: EvaluationBudgetKind): never {
   throw new EvaluationBudgetExceededError(message, kind);
@@ -661,6 +679,21 @@ function checkDeadline(budget: EvaluationBudget): void {
     deadline.lastCpuSample = sample;
     if (deadline.cpuSpentMs > deadline.cpuBudgetMs) {
       throwBudget(`Expression execution budget exceeded (${deadline.cpuBudgetMs}ms CPU budget)`, 'cpu');
+    }
+  }
+  const request = deadline.request;
+  if (request) {
+    if (request.now() - request.startedAt > request.wallBudgetMs) {
+      throwBudget(requestWallMessage(request.wallBudgetMs), 'wall');
+    }
+    // The per-evaluation sample counter can be skipped entirely by cheap
+    // evaluations, so the request keeps its own counter across all of them.
+    request.checks += 1;
+    if (request.checks % CPU_SAMPLE_INTERVAL === 0) {
+      chargeRequestCpu(request);
+      if (request.cpuSpentMs > request.cpuBudgetMs) {
+        throwBudget(requestCpuMessage(request.cpuBudgetMs), 'cpu');
+      }
     }
   }
 }

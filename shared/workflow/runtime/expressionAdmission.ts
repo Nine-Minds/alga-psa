@@ -306,16 +306,18 @@ type AsyncLocalStorageLike = {
 
 let storage: AsyncLocalStorageLike | null | undefined;
 
+function createAsyncLocalStorage<T>(): { run<R>(store: T, callback: () => R): R; getStore(): T | undefined } | null {
+  const getBuiltinModule = (globalThis as { process?: { getBuiltinModule?: (id: string) => unknown } }).process?.getBuiltinModule;
+  const hooks = typeof getBuiltinModule === 'function'
+    ? (getBuiltinModule.call((globalThis as { process?: unknown }).process, 'node:async_hooks') as
+        | { AsyncLocalStorage?: new () => { run<R>(store: T, callback: () => R): R; getStore(): T | undefined } }
+        | undefined)
+    : undefined;
+  return hooks?.AsyncLocalStorage ? new hooks.AsyncLocalStorage() : null;
+}
+
 function getStorage(): AsyncLocalStorageLike | null {
-  if (storage === undefined) {
-    const getBuiltinModule = (globalThis as { process?: { getBuiltinModule?: (id: string) => unknown } }).process?.getBuiltinModule;
-    const hooks = typeof getBuiltinModule === 'function'
-      ? (getBuiltinModule.call((globalThis as { process?: unknown }).process, 'node:async_hooks') as
-          | { AsyncLocalStorage?: new () => AsyncLocalStorageLike }
-          | undefined)
-      : undefined;
-    storage = hooks?.AsyncLocalStorage ? new hooks.AsyncLocalStorage() : null;
-  }
+  if (storage === undefined) storage = createAsyncLocalStorage<AdmissionToken>();
   return storage;
 }
 
@@ -353,5 +355,139 @@ export async function runWithAdmission<T>(options: AdmissionOptions, fn: () => P
     return await als.run({ lease }, fn);
   } finally {
     gate.release(lease);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Per-request ceiling
+// ---------------------------------------------------------------------------
+
+/**
+ * The per-evaluation budgets bound ONE evaluation. A single request (a draft
+ * simulation, a webhook delivery) can run hundreds of them, so a request scope
+ * carries one shared deadline - start time, accumulated CPU and one wall timer
+ * - that every evaluation inside it charges through the existing evaluate hooks.
+ */
+export type EvaluationRequestBudgetOptions = {
+  cpuBudgetMs: number;
+  wallBudgetMs: number;
+  signal?: AbortSignal;
+  /** Clock seams for tests. */
+  now?: () => number;
+  cpuNow?: () => number;
+};
+
+export type EvaluationRequestDeadline = {
+  readonly startedAt: number;
+  readonly cpuBudgetMs: number;
+  readonly wallBudgetMs: number;
+  readonly now: () => number;
+  readonly cpuNow: (() => number) | null;
+  readonly controller: AbortController;
+  cpuSpentMs: number;
+  lastCpuSample: number | null;
+  inFlight: number;
+  checks: number;
+  finished: boolean;
+};
+
+let requestStorage: { run<R>(store: EvaluationRequestDeadline, callback: () => R): R; getStore(): EvaluationRequestDeadline | undefined } | null | undefined;
+
+function getRequestStorage() {
+  if (requestStorage === undefined) requestStorage = createAsyncLocalStorage<EvaluationRequestDeadline>();
+  return requestStorage;
+}
+
+export function requestWallMessage(wallBudgetMs: number): string {
+  return `Request expression budget exceeded (${wallBudgetMs}ms wall-clock for all evaluations in this request)`;
+}
+
+export function requestCpuMessage(cpuBudgetMs: number): string {
+  return `Request expression budget exceeded (${cpuBudgetMs}ms CPU for all evaluations in this request)`;
+}
+
+export function processCpuClock(): (() => number) | null {
+  const proc = (globalThis as { process?: { cpuUsage?: () => { user: number; system: number } } }).process;
+  if (!isExpressionAdmissionActive() || typeof proc?.cpuUsage !== 'function') return null;
+  return () => {
+    const usage = proc.cpuUsage!();
+    return (usage.user + usage.system) / 1000;
+  };
+}
+
+/** The deadline of the enclosing request scope, if any and still open. */
+export function getEvaluationRequestDeadline(): EvaluationRequestDeadline | undefined {
+  const active = getRequestStorage()?.getStore();
+  return active && !active.finished ? active : undefined;
+}
+
+/** Charge process CPU since the last sample to the request (fair-shared across active slots). */
+export function chargeRequestCpu(request: EvaluationRequestDeadline): void {
+  if (!request.cpuNow) return;
+  const sample = request.cpuNow();
+  const inFlight = Math.max(1, getSemaphore().active);
+  request.cpuSpentMs += (sample - (request.lastCpuSample ?? sample)) / inFlight;
+  request.lastCpuSample = sample;
+}
+
+/** Called as an evaluation starts/ends so CPU spent between evaluations (I/O, other work) is not charged. */
+export function beginRequestEvaluation(request: EvaluationRequestDeadline): void {
+  if (request.inFlight === 0 && request.cpuNow) request.lastCpuSample = request.cpuNow();
+  request.inFlight += 1;
+}
+
+export function endRequestEvaluation(request: EvaluationRequestDeadline): void {
+  request.inFlight = Math.max(0, request.inFlight - 1);
+  chargeRequestCpu(request);
+}
+
+/**
+ * Run `fn` inside a request scope. Every evaluation started within it (through
+ * evaluateWorkflowExpression) is charged against one shared CPU and wall budget.
+ * A nested scope reuses the outer one so it cannot be used to reset the ceiling.
+ * Where no AsyncLocalStorage exists (sandbox, browser) this is a passthrough.
+ */
+export async function runWithEvaluationRequestBudget<T>(
+  options: EvaluationRequestBudgetOptions,
+  fn: () => Promise<T>
+): Promise<T> {
+  const als = getRequestStorage();
+  if (!als) return fn();
+  if (getEvaluationRequestDeadline()) return fn();
+
+  const now = options.now ?? Date.now;
+  const cpuNow = options.cpuNow ?? processCpuClock();
+  const controller = new AbortController();
+  const request: EvaluationRequestDeadline = {
+    startedAt: now(),
+    cpuBudgetMs: options.cpuBudgetMs,
+    wallBudgetMs: options.wallBudgetMs,
+    now,
+    cpuNow,
+    controller,
+    cpuSpentMs: 0,
+    lastCpuSample: cpuNow ? cpuNow() : null,
+    inFlight: 0,
+    checks: 0,
+    finished: false,
+  };
+  const onCallerAbort = () => controller.abort(options.signal?.reason);
+  if (options.signal?.aborted) controller.abort(options.signal.reason);
+  else options.signal?.addEventListener('abort', onCallerAbort, { once: true });
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  if (!options.now) {
+    timer = setTimeout(
+      () => controller.abort(new EvaluationBudgetExceededError(requestWallMessage(options.wallBudgetMs), 'wall')),
+      options.wallBudgetMs
+    );
+    (timer as { unref?: () => void }).unref?.();
+  }
+  try {
+    return await als.run(request, fn);
+  } finally {
+    request.finished = true;
+    if (timer) clearTimeout(timer);
+    options.signal?.removeEventListener('abort', onCallerAbort);
   }
 }

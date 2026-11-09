@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { registerDefaultNodes } from '../../nodes/registerDefaultNodes';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getNodeTypeRegistry } from '../../registries/nodeTypeRegistry';
+import { runWithEvaluationRequestBudget } from '../../expressionEngine';
 import { applyTriggerPayloadMapping, simulateWorkflowDefinition } from '../simulator';
 import { buildSampleFromJsonSchema } from '../samplePayload';
 import type { WorkflowDefinition } from '../../types';
@@ -524,5 +525,33 @@ describe('simulateWorkflowDefinition expression admission', () => {
     expect(result.status).toBe('completed');
     expect(result.finalVars).toMatchObject({ x: 2, y: 3 });
     expect(getExpressionAdmissionStats().active).toBe(0);
+  });
+});
+
+describe('simulateWorkflowDefinition request-level expression ceiling', () => {
+  afterEach(() => resetExpressionAdmission());
+
+  it('ends a simulation that loops over many cheap expressions with an ExpressionError step failure (not a 429)', async () => {
+    let cpu = 0;
+    const result = await runWithEvaluationRequestBudget(
+      { cpuBudgetMs: 100, wallBudgetMs: 60_000, cpuNow: () => (cpu += 10) },
+      () =>
+        simulateWorkflowDefinition({
+          definition: baseDefinition([
+            {
+              id: 'loop',
+              type: 'control.forEach',
+              items: { $expr: 'payload.items' },
+              itemVar: 'item',
+              body: [{ id: 'assign', type: 'transform.assign', config: { assign: { 'vars.x': { $expr: '1 + 1' } } } }],
+            },
+          ]),
+          payload: { items: Array.from({ length: 90 }, (_, i) => i) },
+        })
+    );
+    expect(result.status).toBe('failed');
+    // surfaced as a failed step with the budget message, exactly like any other expression error
+    expect(result.errors[0]?.message).toMatch(/Request expression budget exceeded/);
+    expect(result.trace.some((entry: any) => entry.outcome === 'error')).toBe(true);
   });
 });

@@ -7,6 +7,7 @@ import {
   getExpressionAdmissionStats,
   resetExpressionAdmission,
   runWithAdmission,
+  runWithEvaluationRequestBudget,
   setExpressionAdmissionSink,
   type ExpressionAdmissionEvent,
 } from '../expressionEngine';
@@ -187,6 +188,77 @@ describe('expression admission', () => {
       }).catch(() => undefined);
       expect(getExpressionAdmissionStats().deadlineExceeded).toBe(1);
       await expect(evaluateWorkflowExpression('1 + 1', {})).resolves.toBe(2);
+    });
+  });
+
+  describe('request-scope ceiling', () => {
+    const cheap = '1 + 1'; // far under every per-evaluation budget
+
+    it('many cheap evaluations that are each under budget but together over the request CPU budget throw kind cpu', async () => {
+      let cpu = 0;
+      let completed = 0;
+      const error: any = await runWithEvaluationRequestBudget(
+        { cpuBudgetMs: 100, wallBudgetMs: 60_000, cpuNow: () => (cpu += 10) },
+        async () => {
+          for (let i = 0; i < 200; i += 1) {
+            await evaluateWorkflowExpression(cheap, {});
+            completed += 1;
+          }
+        }
+      ).catch((e: any) => e);
+      expect(error).toBeInstanceOf(EvaluationBudgetExceededError);
+      expect(error.kind).toBe('cpu');
+      expect(error.message).toMatch(/Request expression budget exceeded/);
+      expect(completed).toBeGreaterThan(0);
+      expect(completed).toBeLessThan(200);
+      expect(getExpressionAdmissionStats().active).toBe(0);
+    });
+
+    it('likewise for the request wall budget', async () => {
+      let clock = 0;
+      let completed = 0;
+      const error: any = await runWithEvaluationRequestBudget(
+        { cpuBudgetMs: 60_000, wallBudgetMs: 50, now: () => (clock += 1) },
+        async () => {
+          for (let i = 0; i < 200; i += 1) {
+            await evaluateWorkflowExpression(cheap, {});
+            completed += 1;
+          }
+        }
+      ).catch((e: any) => e);
+      expect(error).toBeInstanceOf(EvaluationBudgetExceededError);
+      expect(error.kind).toBe('wall');
+      expect(completed).toBeLessThan(200);
+    });
+
+    it('the real wall timer ends a request parked between evaluations and aborts the next one', async () => {
+      const error: any = await runWithEvaluationRequestBudget({ cpuBudgetMs: 60_000, wallBudgetMs: 20 }, async () => {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        await evaluateWorkflowExpression(cheap, {});
+      }).catch((e: any) => e);
+      expect(error).toBeInstanceOf(EvaluationBudgetExceededError);
+      expect(error.kind).toBe('wall');
+    });
+
+    it('evaluations outside any request scope behave exactly as before', async () => {
+      let cpu = 0;
+      // Same shape of work, no scope: no ceiling applies, per-evaluation limits only.
+      for (let i = 0; i < 200; i += 1) {
+        await expect(evaluateWorkflowExpression(cheap, {}, { limits: { cpuNow: () => (cpu += 10) } })).resolves.toBe(2);
+      }
+    });
+
+    it('a nested scope cannot reset the ceiling, and the scope is closed afterwards', async () => {
+      let cpu = 0;
+      const error: any = await runWithEvaluationRequestBudget(
+        { cpuBudgetMs: 100, wallBudgetMs: 60_000, cpuNow: () => (cpu += 10) },
+        () =>
+          runWithEvaluationRequestBudget({ cpuBudgetMs: 1e9, wallBudgetMs: 1e9 }, async () => {
+            for (let i = 0; i < 200; i += 1) await evaluateWorkflowExpression(cheap, {});
+          })
+      ).catch((e: any) => e);
+      expect(error.kind).toBe('cpu');
+      await expect(evaluateWorkflowExpression(cheap, {})).resolves.toBe(2);
     });
   });
 

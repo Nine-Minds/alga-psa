@@ -115,6 +115,7 @@ import {
   buildWorkflowAuditCsvRows
 } from './workflow-audit-csv';
 import { workflowTenantDb, workflowTenantTable } from '../lib/workflowTenantDb';
+import { runWithEvaluationRequestBudget } from '@alga-psa/workflows/runtime/expressionEngine';
 import { installExpressionAdmissionTelemetry } from '../runtime/expressionAdmissionTelemetry';
 import { consumeWorkflowSimulationQuota, WorkflowSimulationRateLimitError } from '../lib/workflowSimulationRateLimit';
 import { describeManualRunPayloadFailure, type WorkflowPayloadValidationFailure } from '../authoring/payloadIssues';
@@ -1771,6 +1772,8 @@ async function replayStoredEventAgainstDefinition(params: {
   return { kind: 'ok', payload: mapped.payload, mappingApplied: mapped.mappingApplied, event: ref };
 }
 
+const SIMULATION_REQUEST_BUDGET = { cpuBudgetMs: 5_000, wallBudgetMs: 20_000 } as const;
+
 export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = SimulateWorkflowDefinitionInput.parse(input);
@@ -1921,15 +1924,20 @@ export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
     };
   }
 
-  const result = await simulateWorkflowDefinition({
-    definition,
-    payload,
-    fixtures: parsed.fixtures,
-    options: {
-      ...parsed.options,
-      tenantId: tenant ?? null
-    }
-  });
+  // One simulation's total expression work is capped as a whole (per-evaluation limits still apply):
+  // 5s CPU is 20 worst-case evaluations or thousands of ordinary ones; 20s wall stays under the
+  // typical 30s HTTP timeout so the caller gets the step error instead of a gateway timeout.
+  const result = await runWithEvaluationRequestBudget(SIMULATION_REQUEST_BUDGET, () =>
+    simulateWorkflowDefinition({
+      definition,
+      payload,
+      fixtures: parsed.fixtures,
+      options: {
+        ...parsed.options,
+        tenantId: tenant ?? null
+      }
+    })
+  );
 
   return {
     ...result,
