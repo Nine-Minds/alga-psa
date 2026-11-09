@@ -82,6 +82,13 @@ previously failed consoles.
 For example, `console-1:123456:site-1` identifies console `console-1:123456` and site
 `site-1`.
 
+Credential removal does not guess the console for a malformed mapped-site scope
+(for example, `console-1:` or `console-1:123456:`). If a key has console routes and
+the integration contains an invalid client-mapped scope, removal fails before
+deleting anything, even after confirmation. Repair or unmap the invalid site mapping
+before trying again. The failure is logged without key material. Valid legacy
+`console-1:site-1` and migrated `local:site-1` mappings still require confirmation.
+
 ## Related topics
 
 - [Provider setup order](provider-setup-order.md) — the order in which to connect integrations

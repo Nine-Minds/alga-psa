@@ -143,6 +143,29 @@ describe('UniFiCredentialsPanel', () => {
     expect(m.removeUniFiCredential).toHaveBeenCalledTimes(1);
   });
 
+  it.each([false, true])('surfaces invalid mappings without reporting removal success (confirmed=%s)', async (confirmed) => {
+    const error = 'A mapped UniFi site has an invalid stored scope. Repair or unmap invalid site mappings in this integration before removing this key.';
+    if (confirmed) {
+      m.removeUniFiCredential.mockResolvedValueOnce({
+        success: true, requiresConfirmation: true, affectedSites: ['Branch Site'],
+      });
+    }
+    m.removeUniFiCredential.mockResolvedValueOnce({ success: false, error });
+    const onChanged = vi.fn();
+    const onError = vi.fn();
+    const { container } = render(
+      <UniFiCredentialsPanel items={[item()]} unreachableConsoles={[]} onChanged={onChanged} onError={onError} />
+    );
+    fireEvent.click(container.querySelector('#unifi-remove-key-cred-uuid-1111')!);
+    if (confirmed) {
+      await waitFor(() => expect(screen.getByText('Branch Site')).toBeTruthy());
+      fireEvent.click(container.querySelector('#confirm-yes')!);
+    }
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(error));
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(m.removeUniFiCredential).toHaveBeenCalledTimes(confirmed ? 2 : 1);
+  });
+
   it('surfaces a rejected add through onError and keeps the form', async () => {
     m.addUniFiCredential.mockResolvedValue({ success: false, error: 'UniFi rejected this key' });
     const onError = vi.fn();
