@@ -1,6 +1,36 @@
 import jsonata from 'jsonata';
 import type { Expr } from './types';
 import { WORKFLOW_EXPRESSION_FUNCTIONS, WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from './expressionFunctions';
+import {
+  EvaluationBudgetExceededError,
+  beginRequestEvaluation,
+  chargeRequestCpu,
+  endRequestEvaluation,
+  getEvaluationRequestDeadline,
+  getExpressionAdmissionStats,
+  evaluationCpuClock,
+  requestCpuMessage,
+  requestWallMessage,
+  type EvaluationRequestDeadline,
+  isExpressionAdmissionActive,
+  reportExpressionAdmissionEvent,
+  runWithAdmission,
+  type AdmissionOptions,
+  type EvaluationBudgetKind,
+} from './expressionAdmission';
+
+export {
+  EvaluationBudgetExceededError,
+  EvaluationBusyError,
+  getExpressionAdmissionStats,
+  resetExpressionAdmission,
+  setExpressionAdmissionSink,
+  reportExpressionAdmissionEvent,
+  runWithAdmission,
+  runWithEvaluationRequestBudget,
+} from './expressionAdmission';
+export type { EvaluationRequestBudgetOptions } from './expressionAdmission';
+export type { ExpressionAdmissionEvent, ExpressionAdmissionStats } from './expressionAdmission';
 
 const MAX_SOURCE_LENGTH = 8 * 1024;
 const MAX_PARSE_DEPTH = 64;
@@ -15,6 +45,12 @@ const MAX_INPUT_BYTES = 1024 * 1024;
 const MAX_INPUT_NODES = 65_536;
 const MAX_INTERMEDIATE_BYTES = 4 * 1024 * 1024;
 const MAX_OUTPUT_BYTES = 256 * 1024;
+export const DEFAULT_CPU_BUDGET_MS = 250;
+export const DEFAULT_WALL_BUDGET_MS = 2_000;
+// Sampling thread CPU costs a syscall; wall/abort checks (cheap) run on every hook.
+const CPU_SAMPLE_INTERVAL = 16;
+// String-named so JSONata source cannot address it ($-variables cannot contain spaces).
+const LIMITS_BINDING = 'workflow evaluation limits';
 const RANGE_FUNCTION = 'workflowBoundedRange';
 const CONCAT_FUNCTION = 'workflowBoundedConcat';
 const EVALUATE_ENTRY_HOOK = Symbol.for('jsonata.__evaluate_entry');
@@ -23,10 +59,42 @@ const EVALUATE_EXIT_HOOK = Symbol.for('jsonata.__evaluate_exit');
 const allowedFunctions = new Set<string>(WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS);
 const budgetsByEnvironment = new WeakMap<object, EvaluationBudget>();
 
+/**
+ * Per-evaluation time limits. Enforced cooperatively at the same hook points
+ * that consume steps (AST entry/exit, helper calls), not by interrupting
+ * running code: a single native operation cannot be cut short.
+ */
+export type EvaluationLimits = {
+  /** Approximate CPU budget (CPU of the evaluating thread, fair-shared across in-flight evaluations). */
+  cpuBudgetMs?: number;
+  /** Wall-clock budget, measured from when the evaluation holds its slot. */
+  wallBudgetMs?: number;
+  signal?: AbortSignal;
+  /** Clock seams for tests. */
+  now?: () => number;
+  cpuNow?: () => number;
+  /** @internal shared request-scope deadline; set by the funnel, never by callers. */
+  request?: EvaluationRequestDeadline;
+};
+
+type DeadlineState = {
+  startedAt: number;
+  wallBudgetMs: number;
+  cpuBudgetMs: number;
+  cpuSpentMs: number;
+  lastCpuSample: number | null;
+  checks: number;
+  now: () => number;
+  cpuNow: (() => number) | null;
+  signal?: AbortSignal;
+  request?: EvaluationRequestDeadline;
+};
+
 type EvaluationBudget = {
   steps: number;
   rangeItems: number;
   intermediateBytes: number;
+  deadline?: DeadlineState;
 };
 
 type AstNode = Record<string, unknown> & { type?: string; value?: unknown };
@@ -44,14 +112,134 @@ export type ExpressionContext = {
   [key: string]: unknown;
 };
 
+export type EvaluateWorkflowExpressionOptions = AdmissionOptions & {
+  limits?: EvaluationLimits;
+};
+
 export type CompiledExpression = {
-  evaluate: (ctx: ExpressionContext) => Promise<unknown>;
+  evaluate: (ctx: ExpressionContext, options?: EvaluateWorkflowExpressionOptions) => Promise<unknown>;
   source: string;
 };
 
-export async function evaluateExpressionSource(source: string, ctx: ExpressionContext): Promise<unknown> {
-  const compiled = compileExpression({ $expr: source });
-  return compiled.evaluate(ctx);
+type RawEvaluator = (ctx: ExpressionContext, limits: EvaluationLimits | undefined) => Promise<unknown>;
+const rawEvaluators = new WeakMap<CompiledExpression, RawEvaluator>();
+
+export async function evaluateExpressionSource(
+  source: string,
+  ctx: ExpressionContext,
+  options?: EvaluateWorkflowExpressionOptions
+): Promise<unknown> {
+  return evaluateWorkflowExpression({ $expr: source }, ctx, options);
+}
+
+/**
+ * The single funnel for evaluating a workflow expression. Order matters:
+ *  1. the parent fail-closed guard (ensureBudgetHooksActive) runs first;
+ *  2. admission (process-wide weighted semaphore, reentrant) is acquired;
+ *  3. only then does the budgeted evaluation run, under a per-request deadline
+ *     (CPU + wall + AbortSignal) wired into the existing evaluate hooks.
+ * The slot is released in a `finally`, including after budget/deadline errors.
+ * `EvaluationBusyError` propagates to the caller (fail closed).
+ */
+export async function evaluateWorkflowExpression(
+  target: Expr | string | CompiledExpression,
+  ctx: ExpressionContext,
+  options: EvaluateWorkflowExpressionOptions = {}
+): Promise<unknown> {
+  const compiled = typeof target === 'string'
+    ? compileExpression({ $expr: target })
+    : 'evaluate' in target
+      ? target
+      : compileExpression(target);
+  const raw = rawEvaluators.get(compiled);
+  if (!raw) throw new Error('Expression was not produced by compileExpression');
+
+  // Fail closed: the budget counters only fire if JSONata still invokes the
+  // evaluate hooks and exposes the `base` frame. If that contract broke
+  // (e.g. a jsonata upgrade), refuse to evaluate rather than run unbounded.
+  await ensureBudgetHooksActive();
+
+  return runWithAdmission(options, () => runWithDeadline(raw, ctx, options.limits, options.signal));
+}
+
+async function runWithDeadline(
+  raw: RawEvaluator,
+  ctx: ExpressionContext,
+  requested: EvaluationLimits | undefined,
+  callerSignal: AbortSignal | undefined
+): Promise<unknown> {
+  const admitted = isExpressionAdmissionActive();
+  const request = getEvaluationRequestDeadline();
+  // Outside Node (Temporal sandbox, browser) only explicit limits apply: no
+  // timers or clocks are introduced into deterministic workflow code.
+  if (!admitted && !requested && !callerSignal) return raw(ctx, undefined);
+
+  const limits: EvaluationLimits = {
+    cpuBudgetMs: requested?.cpuBudgetMs ?? (admitted ? DEFAULT_CPU_BUDGET_MS : undefined),
+    wallBudgetMs: requested?.wallBudgetMs ?? (admitted ? DEFAULT_WALL_BUDGET_MS : undefined),
+    now: requested?.now,
+    cpuNow: requested?.cpuNow,
+    request,
+  };
+  const controller = new AbortController();
+  const onCallerAbort = () =>
+    controller.abort((callerSignal?.aborted ? callerSignal : requested?.signal?.aborted ? requested.signal : request?.controller.signal)?.reason);
+  const linked = [callerSignal, requested?.signal, request?.controller.signal].filter((signal): signal is AbortSignal => Boolean(signal));
+  for (const signal of linked) {
+    if (signal.aborted) controller.abort(signal.reason);
+    else signal.addEventListener('abort', onCallerAbort, { once: true });
+  }
+  limits.signal = controller.signal;
+
+  // The wall deadline frees the slot even if the evaluation is parked at an
+  // await: the race settles, `finally` in runWithAdmission releases the slot,
+  // and the abandoned evaluation dies at its next hook check.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  if (admitted && limits.wallBudgetMs !== undefined && !requested?.now) {
+    timer = setTimeout(
+      () => controller.abort(new EvaluationBudgetExceededError(wallMessage(limits.wallBudgetMs!), 'wall')),
+      limits.wallBudgetMs
+    );
+    (timer as { unref?: () => void }).unref?.();
+  }
+
+  if (request) {
+    // Refuse to start another evaluation once the request is already over.
+    if (request.controller.signal.aborted) throw abortError(request.controller.signal);
+    if (request.now() - request.startedAt > request.wallBudgetMs) throw new EvaluationBudgetExceededError(requestWallMessage(request.wallBudgetMs), 'wall');
+    if (request.cpuSpentMs > request.cpuBudgetMs) throw new EvaluationBudgetExceededError(requestCpuMessage(request.cpuBudgetMs), 'cpu');
+    beginRequestEvaluation(request);
+  }
+  try {
+    const evaluation = raw(ctx, limits);
+    evaluation.catch(() => undefined); // abandoned evaluations must not become unhandled rejections
+    const aborted = new Promise<never>((_resolve, reject) => {
+      const fail = () => reject(abortError(controller.signal));
+      if (controller.signal.aborted) fail();
+      else controller.signal.addEventListener('abort', fail, { once: true });
+    });
+    aborted.catch(() => undefined);
+    return await Promise.race([evaluation, aborted]);
+  } catch (error) {
+    if (error instanceof EvaluationBudgetExceededError && (error.kind === 'cpu' || error.kind === 'wall' || error.kind === 'aborted')) {
+      reportExpressionAdmissionEvent({ type: 'deadline_exceeded', kind: error.kind, message: error.message });
+    }
+    throw error;
+  } finally {
+    if (request) endRequestEvaluation(request);
+    if (timer) clearTimeout(timer);
+    for (const signal of linked) signal.removeEventListener('abort', onCallerAbort);
+  }
+}
+
+function wallMessage(wallBudgetMs: number): string {
+  return `Expression execution budget exceeded (${wallBudgetMs}ms wall-clock deadline)`;
+}
+
+function abortError(signal: AbortSignal): Error {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new EvaluationBudgetExceededError('Expression execution aborted', 'aborted');
 }
 
 // jsonata parse errors are plain objects ({ code, position, message }), not Error instances.
@@ -78,20 +266,25 @@ export function compileExpression(expr: Expr): CompiledExpression {
   compiledWithOptions.assign(EVALUATE_ENTRY_HOOK, (_node: unknown, _input: unknown, environment: JsonataEnvironment) => {
     let budget = budgetsByEnvironment.get(getExecutionRoot(environment));
     if (!budget) {
-      budget = { steps: 0, rangeItems: 0, intermediateBytes: 0 };
+      budget = { steps: 0, rangeItems: 0, intermediateBytes: 0, deadline: createDeadline(environment) };
       budgetsByEnvironment.set(getExecutionRoot(environment), budget);
     }
     budget.steps += 1;
     if (budget.steps > MAX_EVALUATION_STEPS) {
-      throw new Error(`Expression execution budget exceeded (${MAX_EVALUATION_STEPS} AST steps)`);
+      throw new EvaluationBudgetExceededError(`Expression execution budget exceeded (${MAX_EVALUATION_STEPS} AST steps)`, 'steps');
     }
+    checkDeadline(budget);
   });
 
   // Bound expanded intermediate trees before the next native operator can
   // compare, coerce or clone them. Charging every occurrence also bounds the
   // guard's own traversal work, including shared subtrees.
   compiledWithOptions.assign(EVALUATE_EXIT_HOOK, (_node: unknown, _input: unknown, environment: JsonataEnvironment, result: unknown) => {
-    reserveIntermediateBytes(getEvaluationBudget(environment), measureValueBytes(result, MAX_INTERMEDIATE_BYTES));
+    const budget = getEvaluationBudget(environment);
+    reserveIntermediateBytes(budget, measureValueBytes(result, MAX_INTERMEDIATE_BYTES));
+    // A single native operator cannot be interrupted; this is the first point
+    // after it where an overrun can be noticed.
+    checkDeadline(budget);
   });
 
   compiled.registerFunction(RANGE_FUNCTION, function (this: JsonataFocus, lhs: unknown, rhs: unknown) {
@@ -147,22 +340,22 @@ export function compileExpression(expr: Expr): CompiledExpression {
     });
   }
 
-  return {
+  const compiledExpression: CompiledExpression = {
     source: expr.$expr,
-    evaluate: async (ctx: ExpressionContext) => {
-      // Fail closed: the budget counters only fire if JSONata still invokes the
-      // evaluate hooks and exposes the `base` frame. If that contract broke
-      // (e.g. a jsonata upgrade), refuse to evaluate rather than run unbounded.
-      await ensureBudgetHooksActive();
-      measureValueBytes(ctx, MAX_INPUT_BYTES, MAX_INPUT_NODES);
-      // Passing bindings creates a fresh JSONata execution frame. Its `base` is
-      // inherited by every nested frame, so a cached compiled expression has
-      // one budget per invocation, including concurrent invocations.
-      const result = await compiled.evaluate(ctx, {});
-      assertOutputWithinLimit(result);
-      return result;
-    }
+    evaluate: (ctx: ExpressionContext, options?: EvaluateWorkflowExpressionOptions) =>
+      evaluateWorkflowExpression(compiledExpression, ctx, options),
   };
+  rawEvaluators.set(compiledExpression, async (ctx: ExpressionContext, limits: EvaluationLimits | undefined) => {
+    measureValueBytes(ctx, MAX_INPUT_BYTES, MAX_INPUT_NODES);
+    // Passing bindings creates a fresh JSONata execution frame. Its `base` is
+    // inherited by every nested frame, so a cached compiled expression has
+    // one budget per invocation, including concurrent invocations. The limits
+    // ride on the same frame so the existing hooks can find them.
+    const result = await compiled.evaluate(ctx, limits ? { [LIMITS_BINDING]: limits } : {});
+    assertOutputWithinLimit(result);
+    return result;
+  });
+  return compiledExpression;
 }
 
 export function normalizeExpressionSource(source: string): string {
@@ -427,14 +620,81 @@ function getEvaluationBudget(environment: JsonataEnvironment): EvaluationBudget 
 function reserveIntermediateBytes(budget: EvaluationBudget, bytes: number): void {
   budget.intermediateBytes += bytes;
   if (budget.intermediateBytes > MAX_INTERMEDIATE_BYTES) {
-    throw new Error(`Expression allocation budget exceeded (${MAX_INTERMEDIATE_BYTES} bytes)`);
+    throw new EvaluationBudgetExceededError(`Expression allocation budget exceeded (${MAX_INTERMEDIATE_BYTES} bytes)`, 'bytes');
   }
 }
 
 function consumeEvaluationSteps(budget: EvaluationBudget, steps: number): void {
   budget.steps += steps;
   if (budget.steps > MAX_EVALUATION_STEPS) {
-    throw new Error(`Expression execution budget exceeded (${MAX_EVALUATION_STEPS} AST and helper steps)`);
+    throw new EvaluationBudgetExceededError(`Expression execution budget exceeded (${MAX_EVALUATION_STEPS} AST and helper steps)`, 'steps');
+  }
+  checkDeadline(budget);
+}
+
+function createDeadline(environment: JsonataEnvironment): DeadlineState | undefined {
+  const limits = (environment as JsonataEnvironment & { lookup: (name: string) => unknown }).lookup(LIMITS_BINDING) as
+    | EvaluationLimits
+    | undefined;
+  if (!limits) return undefined;
+  const now = limits.now ?? Date.now;
+  const cpuNow = limits.cpuNow ?? defaultCpuClock();
+  return {
+    startedAt: now(),
+    wallBudgetMs: limits.wallBudgetMs ?? Number.POSITIVE_INFINITY,
+    cpuBudgetMs: limits.cpuBudgetMs ?? Number.POSITIVE_INFINITY,
+    cpuSpentMs: 0,
+    lastCpuSample: cpuNow ? cpuNow() : null,
+    checks: 0,
+    now,
+    cpuNow,
+    signal: limits.signal,
+    request: limits.request,
+  };
+}
+
+const defaultCpuClock = evaluationCpuClock;
+
+function throwBudget(message: string, kind: EvaluationBudgetKind): never {
+  throw new EvaluationBudgetExceededError(message, kind);
+}
+
+// Cooperative deadline: called from every place steps are consumed.
+function checkDeadline(budget: EvaluationBudget): void {
+  const deadline = budget.deadline;
+  if (!deadline) return;
+  if (deadline.signal?.aborted) {
+    const reason = deadline.signal.reason;
+    throw reason instanceof Error ? reason : new EvaluationBudgetExceededError('Expression execution aborted', 'aborted');
+  }
+  if (deadline.now() - deadline.startedAt > deadline.wallBudgetMs) {
+    throwBudget(wallMessage(deadline.wallBudgetMs), 'wall');
+  }
+  deadline.checks += 1;
+  if (deadline.cpuNow && deadline.checks % CPU_SAMPLE_INTERVAL === 0) {
+    const sample = deadline.cpuNow();
+    // The thread is shared by every in-flight evaluation; charge a fair share.
+    const inFlight = Math.max(1, getExpressionAdmissionStats().active);
+    deadline.cpuSpentMs += (sample - (deadline.lastCpuSample ?? sample)) / inFlight;
+    deadline.lastCpuSample = sample;
+    if (deadline.cpuSpentMs > deadline.cpuBudgetMs) {
+      throwBudget(`Expression execution budget exceeded (${deadline.cpuBudgetMs}ms CPU budget)`, 'cpu');
+    }
+  }
+  const request = deadline.request;
+  if (request) {
+    if (request.now() - request.startedAt > request.wallBudgetMs) {
+      throwBudget(requestWallMessage(request.wallBudgetMs), 'wall');
+    }
+    // The per-evaluation sample counter can be skipped entirely by cheap
+    // evaluations, so the request keeps its own counter across all of them.
+    request.checks += 1;
+    if (request.checks % CPU_SAMPLE_INTERVAL === 0) {
+      chargeRequestCpu(request);
+      if (request.cpuSpentMs > request.cpuBudgetMs) {
+        throwBudget(requestCpuMessage(request.cpuBudgetMs), 'cpu');
+      }
+    }
   }
 }
 
