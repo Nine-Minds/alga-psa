@@ -11,8 +11,9 @@ import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
-  assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
+  assertReplyAudience, lockLabelledThreadAudience, type NativeCommentAudience,
 } from '../lib/commentAudience';
+import { commentThreadPayloadLabel, insertCommentThread, resolveThreadAudience } from '../lib/commentThreadInsert';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
@@ -1749,11 +1750,11 @@ export class TicketModel {
 
     // Audience of a NEW thread: {} (no SQL) for internal notes, plain authors and PSA tenants;
     // fails closed in a co-managed workspace when a staff comment names no audience.
-    // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
-    const threadAudience = parentCommentId ? {} : await nativeThreadAudience(trx, tenant, {
+    const threadAudience = parentCommentId ? {} : await resolveThreadAudience(trx, tenant, {
+      kind: 'native',
       isInternal: commentIsInternal,
       authorType: dbAuthorType,
-      audience: validatedData.collaboration_audience,
+      requested: validatedData.collaboration_audience,
     });
     labelledAudience ??= threadAudience.collaboration_audience;
 
@@ -1787,18 +1788,14 @@ export class TicketModel {
     };
 
     if (!parentCommentId) {
-      await db.table('comment_threads').insert({
-        tenant,
-        thread_id: threadId,
-        ticket_id: validatedData.ticket_id,
-        project_task_id: null,
-        root_comment_id: commentId,
-        is_internal: commentIsInternal,
-        ...threadAudience,
-        reply_count: 0,
-        last_activity_at: now,
-        created_at: now,
-        created_by: validatedData.author_id || null,
+      await insertCommentThread(trx, tenant, {
+        threadId,
+        ticketId: validatedData.ticket_id,
+        rootCommentId: commentId,
+        isInternal: commentIsInternal,
+        createdBy: validatedData.author_id || null,
+        at: now,
+        audience: { kind: 'resolved', audience: threadAudience },
       });
     }
 
@@ -1878,7 +1875,7 @@ export class TicketModel {
               tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
               comment: { content: validatedData.content, author: authorName,
                 isInternal: commentIsInternal, authorType: dbAuthorType },
-              ...(labelledAudience ? { collaboration_audience: labelledAudience as NativeCommentAudience, thread_id: threadId } : {}),
+              ...commentThreadPayloadLabel({ collaboration_audience: labelledAudience }, threadId),
             }) });
           }
         });
