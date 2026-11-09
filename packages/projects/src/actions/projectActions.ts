@@ -1810,6 +1810,11 @@ export const deleteProject = withAuth(async (
         const denied = await checkPermission(user, 'project', 'delete', knex);
         if (denied) return denied;
 
+        // Hide dependency details for projects the caller cannot read/delete.
+        // Keep the callback check too so validation and deletion stay guarded
+        // inside the wrapper's transaction.
+        await assertProjectMutationAllowed(knex, tenant, user as IUserWithRoles, projectId, 'delete');
+
         const result = await deleteEntityWithValidation('project', projectId, knex, tenant, async (trx, tenantId) => {
             await assertProjectMutationAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId, 'delete');
 
