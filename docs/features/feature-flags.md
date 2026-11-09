@@ -256,15 +256,19 @@ Controls discovery of the Contract Simulator while it is being rolled out.
   flag controls only the Contract Details tab and is not an authorization boundary.
 
 ### 14. `release-v2-0-feature`
-Gates the project Timeline (Gantt) view while the 2.0 release is prepared. It has two
-consumers: the Timeline view (below) and the `co-managed` capability gate (see
-[Capabilities](#capabilities)), which admits a tenant only when this flag is on **and** the
-tenant is eligible.
+Gates the project Timeline (Gantt) view while the 2.0 release is prepared. It has three
+consumers: the Timeline view (below), the `co-managed` capability gate, which admits a tenant
+only when this flag is on **and** the tenant is eligible, and the `ticket-conversations`
+capability gate, which every tenant is eligible for, so the flag alone admits it (see
+[Capabilities](#capabilities)). **Turning the flag on for a tenant therefore also turns on the
+projects Timeline.**
 
 **Affected Areas:**
 - **MSP Portal:**
   - Project Details → view switcher → Timeline
 - **Capability `co-managed`:** flag term of the admission decision. No co-managed UI exists yet.
+- **Capability `ticket-conversations`:** flag term of the admission decision. Admitted by the flag
+  alone; not served until its participation resolver is registered. No conversation UI exists yet.
 
 **Behavior:**
 - When disabled (default): The Timeline option is not offered in the project view switcher.
@@ -281,11 +285,18 @@ tenant is eligible.
 
 ## Capabilities
 
-`@alga-psa/core/capability` is a registry of capability gates. `co-managed` is keyed on
-`release-v2-0-feature`.
+`@alga-psa/core/capability` is a registry of capability gates. The keys are listed once in
+`CAPABILITY_KEYS`; the bootstrap, the probe route and the middleware exemption all derive from it,
+so adding a capability is one key plus one row in the seed table. Both current capabilities are
+keyed on `release-v2-0-feature`:
+
+| Key | Eligibility | Participation (serves) | Consequence |
+| --- | --- | --- | --- |
+| `co-managed` | registered by `@alga-psa/co-managed` (durable entitlement) | registered by `@alga-psa/co-managed` | The flag alone never admits it. |
+| `ticket-conversations` | every tenant (a constant `true` seeded in core, no SQL, same answer in every process) | unregistered until the conversations package registers it | The flag alone admits it. Until participation exists, an admitted tenant is not served (`resolver-unregistered`). |
 
 - `admits(capability, tenantId)`: may start new state. Forced value, else flag AND eligibility.
-  Eligibility defaults to false until a resolver is registered.
+  Eligibility defaults to false until a resolver is registered (or the key's seed supplies one).
 - `serves(capability, tenantId)` / `filterServed`: keep serving existing state (workers,
   reads, inbound). Forced value, else participation. Never evaluates the flag.
 - Every branch fails closed; errors never escape the gate. Decisions are cached for
@@ -294,7 +305,7 @@ tenant is eligible.
   `NotFoundError` body), RSC (`notFound()`), job (`job_skipped_capability_closed`), subscriber
   (fall-through), Temporal (`CapabilitySkip`). Next-bound adapters are in
   `@alga-psa/core/capability/server`; workers import only `@alga-psa/core/capability`.
-- Browser: `useCapability('co-managed')` reads the server bootstrap and never evaluates
+- Browser: `useCapability('<key>')` (e.g. `'co-managed'`, `'ticket-conversations'`) reads the server bootstrap and never evaluates
   anything itself.
 - `registerCapabilityGate` merges into the existing definition; resolvers registered
   separately survive a re-declaration. Remove one explicitly with
@@ -313,14 +324,17 @@ Cost per server process: one PostHog evaluation per tenant per 60 s (flag cache)
 every server flag evaluation sends). The capability decision itself makes no query and no
 PostHog call until resolvers are registered.
 
-**Probe:** `GET /api/v1/capabilities/co-managed` (authenticated MSP session; the probe path is exempted from the middleware API-key check by exact match (`exactApiKeySkipPaths`) because the route authenticates the session itself; other paths under `/api/v1/capabilities/` still need an API key) returns the
+**Probe:** `GET /api/v1/capabilities/<key>` for each key in `CAPABILITY_KEYS` (authenticated MSP session; each probe path is exempted from the middleware API-key check by exact match, generated from `CAPABILITY_KEYS` in `exactApiKeySkipPaths`, because the route authenticates the session itself; other paths under `/api/v1/capabilities/` still need an API key) returns the
 caller's own tenant decision and reasons with `Cache-Control: no-store`, or the standard 404
-while the gate is closed. It accepts no parameters.
+while the gate is closed. An unknown key gets the same 404, so the probe cannot be used to list
+capabilities. It accepts no parameters. With the flag on, `/api/v1/capabilities/ticket-conversations`
+answers `admitted: true, served: false` (`reasons.served: resolver-unregistered`).
 
 **Kill switch `FORCE_CAPABILITIES`** (server env): comma-separated `key:on|off`, e.g.
-`co-managed:off`. A malformed value on a known key forces that capability off. It overrides
-the flag and resolvers for that capability only; `release-v2-0-feature` and the Timeline are
-unaffected. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
+`co-managed:off` or `ticket-conversations:off`. A malformed value on a known key forces that capability off. It overrides
+the flag and resolvers for that capability only: `ticket-conversations:off` closes ticket
+conversations everywhere without touching `co-managed`, any other tenant's flag, or the Timeline;
+`release-v2-0-feature` and the Timeline are unaffected. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
 the bootstrap key is absent, and is ignored in production builds.
 
 ## Implementation Details
