@@ -84,6 +84,21 @@ describe('TicketService.delete authorization', () => {
     expect(deleteTicketChildRecordsMock).not.toHaveBeenCalled();
   });
 
+  it('rejects a delete without an authenticated user before touching the ticket', async () => {
+    const service = new TicketService();
+    const db = fakeKnex(ticketRow());
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+
+    await expect(service.delete('retained-ticket-id', {
+      tenant: 'tenant-1', userId: 'anonymous', user: undefined,
+    })).rejects.toThrow('Authenticated user context is required to delete tickets');
+
+    expect(deleteEntityWithValidationMock).not.toHaveBeenCalled();
+    expect(deleteTicketChildRecordsMock).not.toHaveBeenCalled();
+    expect(db.ticketDelete).not.toHaveBeenCalled();
+    expect(db.getTicket()).toMatchObject({ ticket_id: 'retained-ticket-id' });
+  });
+
   it('blocks dependency validation and deletion when policy resolution fails', async () => {
     const service = new TicketService();
     const db = fakeKnex(ticketRow());
