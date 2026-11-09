@@ -71,6 +71,14 @@ the other keys again when:
 One rejected key does not stop the others. AlgaPSA asks you to reconnect only when every
 key has been rejected.
 
+## Composite console IDs
+
+Site Manager can return console IDs containing a colon. AlgaPSA preserves that complete
+ID when addressing the Cloud Connector; only the final colon in a stored
+`<consoleId>:<siteId>` mapping separates the site ID. Existing client and asset mappings
+do not need to be recreated after a scope-parsing fix. Run a full device sync to retry
+previously failed consoles.
+
 ## Related topics
 
 - [Provider setup order](provider-setup-order.md) — the order in which to connect integrations
