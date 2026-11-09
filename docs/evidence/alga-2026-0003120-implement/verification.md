@@ -33,3 +33,22 @@ The draft's PostgreSQL/Citus migration and service harness results remain in `..
 No application server, new infrastructure service, production database, or customer inventory was started or changed. The existing app port 3578 has no listener. Live browser/session flows, hardware scanner input, and physical printer alignment/copies remain unverified under the server-off requirement. Offline PDF decoding verifies the tag content and adjacent sheet placement, not printer scaling or scanner hardware. The Ryan smoke procedure and unsent response for existing ticket `8ea5fb98-0142-429d-9896-14e510033663` remain in `../alga-2026-0003120-draft/verification-and-customer-drafts.md`.
 
 The pre-existing `package-lock.json` modification is deliberately excluded from this repair. No branch was pushed, merged, deployed, or published.
+
+## Repair round verification — 2026-11-09
+
+This round started from the published branch head `1acfec1d492d796084c6f31c627f5f6d624991a5`. The repair addressed the only PR review finding (`pg_constraint` checked without a tenant predicate) by removing the catalog precheck and performing idempotent constraint DDL with `duplicate_object` handling. Since `pg_constraint` is database-wide metadata, it has no tenant key. Migration lint's main audit also found four unbounded claim/audit upgrade backfills; each now advances in resumable 1,000-row batches and excludes completed rows.
+
+Checks completed after that repair:
+
+- The focused component/action/numbering set passed: 55 tests across eight files.
+- `npm run lint:migrations`: zero violations across the four changed migration files.
+- `npm run test:migration-lint -- --test-reporter=spec`: 51 passed. The first run before batching failed the main-branch audit on the four unbounded DML sites; the final run passed.
+- Builds passed for `@alga-psa/db`, `clients`, `assets`, `inventory`, `billing`, and `reference-data`.
+- Typechecks passed for `assets`, `clients`, `inventory`, `integrations`, `reference-data`, and `ui`. The full server check passed separately with `NODE_OPTIONS=--max-old-space-size=14336`.
+- A transaction-scoped PostgreSQL check on a temporary table executed the new duplicate-safe constraint DDL twice and confirmed one `NOT VALID` constraint remained; the transaction was rolled back.
+- A rollback-only PostgreSQL exercise ran each changed batch statement over more than 1,000 rows and verified the reservation-origin update, singleton claim seed, duplicate holding-claim seed, and audit backfill all drained without duplicate work.
+- The paired-label renderer test passed one selected case with 32 unrelated cases deselected. It rasterized and decoded the Code 128 and QR values; the PDF was also inspected visually and shows adjacent FTS/FTS and NORTH/NORTH labels. The current PDF remains at `../alga-2026-0003120-draft/paired-asset-labels.pdf`.
+
+The PostgreSQL integration suite could not provision its dedicated scratch database. The direct card-scoped connection to `server_card_ee4611c9` at `127.0.0.1:5474` works, but the card role cannot create databases; bootstrap also logged a shared-memory allocation failure. No database or role was created by the failed attempt, and no shared test service, pooler, or credential file was changed. The migration repair therefore has lint/build coverage but has not been rerun through the PostgreSQL/Citus disposable migration harness in this round. Earlier PostgreSQL 15 and Citus 12.1 harness evidence remains under the draft evidence directory and predates this migration-only repair.
+
+The card-owned app server had been auto-healed before this round began. The service manager restarted it once after an initial stop, so the card service was concluded through Alga Dev; port 3578 is now closed. The CLI refused the persistent enabled/disabled switch because only the captain or XO may change service power. Live browser/login, scanner hardware, and physical printer verification remain outstanding. The database/pooler owner should restore the card's isolated scratch-database and canonical login path before Prepare Human Review runs the recorded Ryan walkthrough. The design packet named by the card dossier is not available in the local worktree or local Alga Dev cache; no missing design decisions were inferred. The pre-existing `package-lock.json` change remains unstaged.

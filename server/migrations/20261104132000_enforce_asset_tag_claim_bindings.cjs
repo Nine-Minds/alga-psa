@@ -8,8 +8,20 @@
 const { ensureConcurrentIndex } = require('./utils/ensureConcurrentIndex.cjs');
 
 async function addConstraint(knex, table, name, definition) {
-  const exists = await knex.raw('SELECT 1 FROM pg_constraint WHERE conrelid = ?::regclass AND conname = ?', [table, name]);
-  if (!exists.rows.length) await knex.raw(`ALTER TABLE ${table} ADD CONSTRAINT ${name} ${definition} NOT VALID`);
+  // Let PostgreSQL serialize the DDL and handle retries atomically. The
+  // catalog is database-wide metadata, so a tenant predicate cannot scope
+  // this existence check for a tenant-distributed relation.
+  await knex.raw(`DO $migration$ BEGIN
+    ALTER TABLE ${table} ADD CONSTRAINT ${name} ${definition} NOT VALID;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END $migration$`);
+}
+
+async function runBatch(knex, sql) {
+  while (true) {
+    const result = await knex.raw(sql);
+    if (result.rowCount < 1000) break;
+  }
 }
 
 exports.up = async function up(knex) {
@@ -47,25 +59,40 @@ exports.up = async function up(knex) {
 
   // Capture the reservation's immutable origin before ownership can transfer
   // to an asset. The reservation FK keeps referring to this origin afterwards.
-  await knex.raw(`UPDATE asset_tag_claims c SET reservation_id = r.reservation_id
-    FROM asset_number_reservations r
-    WHERE c.tenant = r.tenant AND c.normalized_tag = r.normalized_tag
-      AND c.reservation_id IS NULL
-      AND ((c.owner_kind = 'reservation' AND c.owner_id = r.reservation_id)
-        OR (c.owner_kind = 'asset' AND c.owner_id = r.asset_id))`);
+  await runBatch(knex, `WITH batch AS (
+    SELECT c.tenant, c.normalized_tag, r.reservation_id FROM asset_tag_claims c
+      JOIN asset_number_reservations r ON c.tenant = r.tenant AND c.normalized_tag = r.normalized_tag
+     WHERE c.reservation_id IS NULL
+       AND ((c.owner_kind = 'reservation' AND c.owner_id = r.reservation_id)
+         OR (c.owner_kind = 'asset' AND c.owner_id = r.asset_id))
+     LIMIT 1000
+  ) UPDATE asset_tag_claims c SET reservation_id = batch.reservation_id FROM batch
+     WHERE c.tenant = batch.tenant AND c.normalized_tag = batch.normalized_tag`);
 
-  await knex.raw(`INSERT INTO asset_tag_claims (tenant, normalized_tag, asset_tag, owner_kind, owner_id)
-    SELECT a.tenant, a.asset_tag_normalized, a.asset_tag, 'asset', a.asset_id
-      FROM assets a WHERE a.asset_tag_normalized IS NOT NULL AND NOT EXISTS (
-        SELECT 1 FROM assets other WHERE other.tenant = a.tenant
-          AND other.asset_tag_normalized = a.asset_tag_normalized AND other.asset_id <> a.asset_id)
+  await runBatch(knex, `WITH batch AS (
+    SELECT a.tenant, a.asset_id, a.asset_tag_normalized, a.asset_tag FROM assets a
+     WHERE a.asset_tag_normalized IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM assets other WHERE other.tenant = a.tenant
+         AND other.asset_tag_normalized = a.asset_tag_normalized AND other.asset_id <> a.asset_id)
+       AND NOT EXISTS (SELECT 1 FROM asset_tag_claims c
+         WHERE c.tenant = a.tenant AND c.normalized_tag = a.asset_tag_normalized)
+     LIMIT 1000
+  ) INSERT INTO asset_tag_claims (tenant, normalized_tag, asset_tag, owner_kind, owner_id)
+    SELECT tenant, asset_tag_normalized, asset_tag, 'asset', asset_id FROM batch
     ON CONFLICT (tenant, normalized_tag) DO NOTHING`);
   // Duplicate groups also occupy the namespace. Without a holding claim, a
   // SQL writer could claim a legacy duplicate tag for a new asset ID.
-  await knex.raw(`INSERT INTO asset_tag_claims (tenant, normalized_tag, asset_tag, owner_kind, owner_id)
-    SELECT tenant, asset_tag_normalized, min(asset_tag), 'legacy', gen_random_uuid()
+  await runBatch(knex, `WITH duplicate_tags AS (
+    SELECT tenant, asset_tag_normalized, min(asset_tag) AS asset_tag
       FROM assets WHERE asset_tag_normalized IS NOT NULL
      GROUP BY tenant, asset_tag_normalized HAVING count(*) > 1
+  ), batch AS (
+    SELECT d.tenant, d.asset_tag_normalized, d.asset_tag FROM duplicate_tags d
+     WHERE NOT EXISTS (SELECT 1 FROM asset_tag_claims c
+       WHERE c.tenant = d.tenant AND c.normalized_tag = d.asset_tag_normalized)
+     LIMIT 1000
+  ) INSERT INTO asset_tag_claims (tenant, normalized_tag, asset_tag, owner_kind, owner_id)
+    SELECT tenant, asset_tag_normalized, asset_tag, 'legacy', gen_random_uuid() FROM batch
     ON CONFLICT (tenant, normalized_tag) DO NOTHING`);
 
   // Preserve duplicates, blanks, and any previously inconsistent ownership.
@@ -88,12 +115,15 @@ exports.up = async function up(knex) {
       WHERE a.tenant = batch.tenant AND a.asset_id = batch.asset_id`);
     if (updated.rowCount < 1000) break;
   }
-  await knex.raw(`INSERT INTO asset_tag_audit (tenant, asset_id, asset_tag, normalized_tag, reason)
-    SELECT a.tenant, a.asset_id, a.asset_tag, a.asset_tag_normalized, 'claim_conflict'
+  await runBatch(knex, `WITH batch AS (
+    SELECT a.tenant, a.asset_id, a.asset_tag, a.asset_tag_normalized
       FROM assets a JOIN asset_tag_claims c ON c.tenant = a.tenant AND c.normalized_tag = a.asset_tag_normalized
      WHERE (c.owner_kind = 'reservation' OR (c.owner_kind = 'asset' AND c.owner_id <> a.asset_id))
        AND NOT EXISTS (SELECT 1 FROM asset_tag_audit audit WHERE audit.tenant = a.tenant
-         AND audit.asset_id = a.asset_id AND audit.reason = 'claim_conflict')`);
+         AND audit.asset_id = a.asset_id AND audit.reason = 'claim_conflict')
+     LIMIT 1000
+  ) INSERT INTO asset_tag_audit (tenant, asset_id, asset_tag, normalized_tag, reason)
+    SELECT tenant, asset_id, asset_tag, asset_tag_normalized, 'claim_conflict' FROM batch`);
 
   await ensureConcurrentIndex(knex, 'asset_tag_claims_asset_owner_uq', `CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS asset_tag_claims_asset_owner_uq
     ON asset_tag_claims (tenant, normalized_tag, asset_id)`);
