@@ -38,8 +38,9 @@ import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/lo
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
 import type { IUserWithRoles as TicketServiceUser } from '@alga-psa/types';
-import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
@@ -65,7 +66,6 @@ import {
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '@alga-psa/tickets/lib/bundleWorkflowLock';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
-import { authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import {
   ticketLatestActivitySql,
 } from '@alga-psa/tickets/actions/ticketListSortSql';
