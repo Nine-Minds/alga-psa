@@ -21,6 +21,7 @@ Behavioral coverage is in `packages/integrations/src/actions/email-actions/email
 ## Verification recorded for this draft
 
 - Affected Vitest batch: 8 files, 143 tests passed. This includes the database-backed issuer merge regression and existing webhook delivery and safe-fetch suites.
+- Vulnerable-baseline check: the new authorization and outbound-target suites were copied into an isolated worktree at plan revision `e54c9397a9401fbfac40d2e2d2d6afcebc469732`; 9 tests failed and 1 passed, exposing the original authorization, private-target, and redirect behavior.
 - `npm run typecheck --workspace shared`: passed.
 - `npm run typecheck --workspace packages/integrations` with `NODE_OPTIONS=--max-old-space-size=8192`: passed.
 - Targeted ESLint over changed TypeScript files: passed with 0 errors and 77 warnings (existing `any`/unused/global-process warnings plus test-mock `any`s).
