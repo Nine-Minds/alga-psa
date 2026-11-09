@@ -29,14 +29,12 @@ These change the shape of the work and need a decision from the captain where ma
    `attributes.due_date`; the UI, SLA, the generator and every report read the column. A workflow-set due
    date is therefore invisible everywhere except to another workflow reading attributes. The trigger and
    the new read fields must use the column, so `update_fields` must be changed to write the column (§5).
-2. **The done-when only holds for definitions with `lead_days >= 57`.** A recurring ticket does not exist
-   until `lead_days` before its due date. With an offset of -60 the fire date is due - 60; the launcher's
-   lookback is 3 days, so the ticket must exist by due - 57. With the default `lead_days = 0` a -60 trigger
-   never fires for a recurring ticket. This is window-mode behaviour working as designed, not a bug in the
-   new source. Joymode's schedule must create renewal tickets at least 60 days ahead (lead_days 60), or the
-   requirement moves to a trigger keyed on the recurring schedule's upcoming occurrences, before any
-   ticket exists. That second source is out of scope here (§9). **Decision for the captain:** accept
-   "configure lead_days >= offset" as the answer for Joymode, or scope the occurrence-keyed source in.
+2. **Resolved (XO ruling, 2026-11-09): the trigger does not depend on `lead_days`.** A recurring ticket
+   does not exist until `lead_days` before its due date, and window mode only catches up 3 days, so a
+   ticket-only source would need `lead_days >= 57` for a -60 reminder. Instead the source also projects
+   the recurring schedule's upcoming occurrences that the generator has not created yet (§6.5). The
+   scheduled occurrence and the ticket it becomes share one fire key, so the reminder fires once whether
+   the ticket exists on the fire date or not. Joymode does not need to change `lead_days`.
 3. **Recurring ids cannot be read back at TICKET_CREATED time.** The generator writes `ticket_id` onto
    the occurrence row *after* the ticket (and its TICKET_CREATED payload) is built. A lookup by ticket id
    inside the create path finds nothing. The ids must be passed down from the generator (§4.2).
@@ -144,7 +142,9 @@ the right field. `due_date` does **not** fall back to `attributes.due_date`: one
 ### 5.2 `tickets.update_fields`
 
 - `patch.due_date` writes the column: pass `due_date` to `TicketModel.updateTicket` (which already accepts
-  it, `ticketModel.ts:271`) and stop writing `mergedAttributes.due_date`. Note that `update_fields` calls
+  it, `ticketModel.ts:271`). The same value is mirrored into `attributes.due_date` while workflows written
+  before the backfill may still read it through `tickets.find` `include.attributes`; nothing else reads
+  the attribute, and the mirror can be dropped once those workflows are migrated. Note that `update_fields` calls
   `updateTicket` with no event publisher (`tickets.ts:886-894`), so it emits status/assignment transitions
   through `publishTicketTransitionsAfterCommit` but no TICKET_UPDATED. That is true of every field it
   patches today, and this card leaves it as is (§9).
@@ -265,6 +265,38 @@ CREATE INDEX IF NOT EXISTS idx_tickets_tenant_due_date
   ON tickets (tenant, due_date) WHERE due_date IS NOT NULL;
 ```
 
+### 6.5 Recurring occurrences before the ticket exists
+
+`findOccurrences` returns the union of two paths:
+
+- **Tickets** (§6.3): open tickets whose due date is in the window.
+- **Scheduled occurrences** (`listScheduledRecurringOccurrences`,
+  `packages/tickets/src/lib/recurring/scheduledOccurrences.ts`): occurrences of active schedules, for
+  active definition-clients and active clients, whose adjusted due date is in the window, whose due time
+  is after both the client row's watermark and the scan clock, and which have no occurrence row other
+  than `failed`. These are exactly the occurrences the generator will still try to create. The dates come
+  from the generator's own enumeration (`enumerateScheduleOccurrences` in `candidateOccurrences.ts`, now
+  shared by the generator, the schedule preview and this projection) via `listOccurrencesDueBetween`.
+
+**Identity.** A recurring occurrence's `entityId` is `recurring:{definition_client_id}:{occurrence_date}`
+(the generator's idempotency key), on both paths; other tickets use the ticket id. The launcher's fire
+key is `date:{workflow}:{source}:{entityId}:{occursOn}:{offset}`, so a reminder fired from the schedule is
+not fired again when the ticket appears inside the same catch-up window, and an edited due date on the
+created ticket is still a new occurrence.
+
+**Payload.** `ticketExists: boolean` is required. When false the ticket fields (`ticketId`,
+`ticketNumber`, `title`, `statusId`, `statusName`, `boardId`, `boardName`) are absent; `clientId`,
+`clientName`, `contactId` (the client row's contact), `dueDate`, `dueAt`, `ticketOrigin: 'recurring'` and
+`recurrence.{definitionId, definitionClientId, definitionName, occurrenceDate}` are present.
+`recurrence.occurrenceId` is present only once an occurrence row exists.
+
+**Scan clock.** The launcher now passes the scan context (`today`, `timezone`, `now`) to window sources
+as well as condition sources; this source uses `now` to drop occurrences already due (the generator
+records those as missed).
+
+**Known limit.** "Skip while the previous ticket is open" is decided when the generator runs and cannot be
+predicted, so a reminder can fire for an occurrence that later ends `skipped`.
+
 ## 7. Consuming it in workflows
 
 Recurring-only reminder, 60 days out (trigger `{ type: 'date', source: 'ticket.due_date', offsetDays: -60 }`):
@@ -283,7 +315,8 @@ From any workflow holding a ticket id: `tickets.find` → `vars.ticket.due_date`
 `vars.ticket.ticket_origin`, `vars.ticket.recurrence.definition_id`.
 
 Multi-stage (Joymode): three published workflows with offsets -60, -30 and -7, each with its own
-condition and message. The recurring schedule must have `lead_days >= 60` (§2.2).
+condition and message. Any `lead_days` works (§6.5). A step that needs the ticket itself (comment,
+update) must branch on `payload.ticketExists`, because an early reminder can fire before the ticket exists.
 
 Expressions are JSONata (`shared/workflow/runtime/expressionEngine.ts`): equality is `=`, conjunction is
 `and`, and `$exists()` tests for an absent optional field.
@@ -299,16 +332,14 @@ Expressions are JSONata (`shared/workflow/runtime/expressionEngine.ts`): equalit
 | Emitter contract | `server/src/test/unit/workflow-event-contracts` | `TicketModel` path, REST path and inbound path TICKET_CREATED payloads validate and, for a recurring create, `expectFields` pins `ticketOrigin = 'recurring'` and `recurrence.occurrenceId`. |
 | Generator | `packages/tickets` recurring generator integration test | Generated ticket has `due_date = dueAt`, `ticket_origin = 'recurring'`; captured TICKET_CREATED carries `recurrence.{definitionId, occurrenceId, occurrenceDate}` matching the occurrence row. |
 | `tickets.find` | runtime action tests | Returns `due_date`, `ticket_origin`; `recurrence` set for a generated ticket, `null` otherwise. |
-| `tickets.update_fields` | runtime action tests | `patch.due_date` updates the column, not attributes; output and audit show it; `null` clears it. |
+| `tickets.update_fields` | runtime action tests | `patch.due_date` updates the column and mirrors `attributes.due_date`; output and audit show it; `null` clears both. |
 | Backfill | migration unit test | Copies a valid `attributes.due_date` only where the column is null; leaves unparsable values. |
 | Trigger query | `ee/server/src/__tests__/integration/dateTriggerSources.integration.test.ts` | Open ticket due inside the window is found with the tenant-local `occursOn`; closed-status ticket excluded; ticket without due date excluded; due date at 23:30 in a non-UTC tenant lands on the local date; recurring ticket carries `recurrence`, others do not. |
 | Launcher | `ee/packages/workflows/src/lib/dateTriggerLauncher.test.ts` | Same ticket/date/offset fires once across repeated ticks; changing the due date to a later day fires again; fire date 4+ days in the past does not fire. |
-| End to end | new integration test (`ee/server/src/__tests__/integration/ticketDueDateTrigger.integration.test.ts`) | Recurring definition with `lead_days = 60`; generator creates the ticket; workflows at -60 and -30 with `payload.ticketOrigin = 'recurring'` condition; run `dateTriggerScanHandler` with `now` at due-60 → one -60 run whose payload has `recurrence.definitionId`; again at due-30 → one -30 run; close the ticket, scan at due-7 for a -7 workflow → no run. A second definition with `lead_days = 0` and a -60 workflow → no run (documents §2.2). |
+| End to end | new integration test (`ee/server/src/__tests__/integration/ticketDueDateTrigger.integration.test.ts`) | Real generator and scan: `lead_days = 60` ticket picked up at due-60 with its schedule ids; `lead_days = 0` schedule fires its -60 reminder from the schedule (`ticketExists: false`) and a due-day workflow later sees the created ticket; `lead_days = 59` fires once across the schedule-to-ticket handover; inactive client, paused schedule and already-due occurrences are not projected; a closed-status ticket does not fire and fires once reopened; an SLA resume (`resumeSla`) that moves the due date fires again for the new date. |
 
 ## 9. Not in this card
 
-- A trigger keyed on a recurring schedule's upcoming occurrences, before a ticket exists (the
-  `lead_days < |offset|` case).
 - Several offsets on one date trigger (multi-stage in one workflow).
 - Back-filling missed fire dates beyond the 3-day lookback, or firing immediately for a ticket created
   after its fire date.
