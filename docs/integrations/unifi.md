@@ -79,6 +79,9 @@ ID when addressing the Cloud Connector; only the final colon in a stored
 do not need to be recreated after a scope-parsing fix. Run a full device sync to retry
 previously failed consoles.
 
+For example, `console-1:123456:site-1` identifies console `console-1:123456` and site
+`site-1`.
+
 ## Related topics
 
 - [Provider setup order](provider-setup-order.md) — the order in which to connect integrations
