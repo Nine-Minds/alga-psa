@@ -1,6 +1,7 @@
 'use server'
 
 import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
+import { applyAssociationTargetSearchScope, assertAuthorizedAssociationTarget } from '@shared/lib/documentAssociationTargetAuthorization';
 import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments, canUploadDocument } from '../lib/documentPermissions';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -1957,11 +1958,14 @@ export const searchDocumentAssociationEntities = withAuth(async (
     };
 
     const db = tenantDb(trx, tenant);
+    const scoped = async (query: Knex.QueryBuilder, alias: string) =>
+      applyAssociationTargetSearchScope(query, trx, tenant, user, entityType, alias);
 
     if (entityType === 'client') {
       let query = tenantScopedTable(trx, 'clients', tenant)
         .select('client_id as value', 'client_name as label')
         .orderBy('client_name', 'asc');
+      if (!await scoped(query, 'clients')) return { options: [], total: 0 };
       query = applySearch(query, ['client_name']);
       const total = await countRows(query, 'client_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -1983,6 +1987,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('c.full_name', 'asc');
+      if (!await scoped(query, 'c')) return { options: [], total: 0 };
       query = applySearch(query, ['c.full_name', 'c.email', 'cl.client_name']);
       const total = await countRows(query, 'c.contact_name_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2009,6 +2014,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('t.updated_at', 'desc');
+      if (!await scoped(query, 't')) return { options: [], total: 0 };
       query = applySearch(query, ['t.ticket_number', 't.title', 'cl.client_name']);
       const total = await countRows(query, 't.ticket_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2038,6 +2044,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('a.name', 'asc');
+      if (!await scoped(query, 'a')) return { options: [], total: 0 };
       query = applySearch(query, ['a.name', 'a.serial_number', 'cl.client_name']);
       const total = await countRows(query, 'a.asset_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2069,6 +2076,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('pt.updated_at', 'desc');
+      if (!await scoped(query, 'pt')) return { options: [], total: 0 };
       query = applySearch(query, ['pt.task_name', 'p.project_name', 'cl.client_name']);
       const total = await countRows(query, 'pt.task_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2086,6 +2094,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
         )
         .orderBy('c.contract_name', 'asc')
         .distinct('c.contract_id', 'c.contract_name');
+      if (!await scoped(query, 'c')) return { options: [], total: 0 };
       query = applySearch(query, ['c.contract_name', 'cl.client_name']);
       const total = await countRows(query, 'c.contract_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2112,6 +2121,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('o.updated_at', 'desc');
+      if (!await scoped(query, 'o')) return { options: [], total: 0 };
       query = applySearch(query, ['o.opportunity_number', 'o.title', 'cl.client_name']);
       const total = await countRows(query, 'o.opportunity_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2137,6 +2147,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
         `)
       )
       .orderBy('q.updated_at', 'desc');
+    if (!await scoped(quoteQuery, 'q')) return { options: [], total: 0 };
     quoteQuery = applySearch(quoteQuery, ['q.quote_number', 'q.title', 'cl.client_name']);
     const total = await countRows(quoteQuery, 'q.quote_id');
     const rows = await quoteQuery.limit(safeLimit).offset(offset);
@@ -2169,6 +2180,9 @@ export const createDocumentAssociations = withAuth(async (
     }));
 
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entity_type, entity_id, 'update')) {
+        return permissionError('Permission denied: Cannot access association target');
+      }
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
         trx,
         tenant,
@@ -2254,6 +2268,9 @@ export const removeDocumentAssociations = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entity_type, entity_id, 'update')) {
+        return permissionError('Permission denied: Cannot access association target');
+      }
       let query = tenantScopedTable(trx, 'document_associations', tenant)
         .where('entity_id', entity_id)
         .andWhere('entity_type', entity_type);
@@ -2366,6 +2383,31 @@ export const uploadDocument = withAuth(async (
     }
 
     const { knex } = await createTenantKnex();
+
+    const requestedTargets: Array<{ entityType: string; entityId: string }> = [
+      ['ticket', options.ticketId],
+      ['client', options.clientId],
+      ['contact', options.contactNameId],
+      ['asset', options.assetId],
+      ['project_task', options.projectTaskId],
+      ['contract', options.contractId],
+      ['opportunity', options.opportunityId],
+    ].flatMap(([entityType, entityId]) => entityId ? [{ entityType: entityType!, entityId }] : []);
+
+    // Validate every requested association before storage or folder side effects.
+    const targetAuthorized = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      for (const target of requestedTargets) {
+        if (!await assertAuthorizedAssociationTarget(trx, tenant, user, target.entityType, target.entityId, 'update')) return false;
+      }
+      if (options.parentDocumentId) {
+        const parent = await assertAuthorizedDocumentSetForMutation(trx, tenant, user, [options.parentDocumentId], 'Permission denied: Cannot access parent document');
+        if (isActionPermissionErrorResult(parent)) return false;
+      }
+      return true;
+    });
+    if (!targetAuthorized) {
+      return permissionError('Permission denied: Cannot access association target');
+    }
 
       let createdAssociations: Array<{
         associationId: string;
@@ -2534,7 +2576,16 @@ export const uploadDocument = withAuth(async (
       };
 
       // Use transaction for document creation and associations
-      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const result: { success: true; document: IDocument } | ActionPermissionError = await withTransaction(knex, async (trx: Knex.Transaction): Promise<{ success: true; document: IDocument } | ActionPermissionError> => {
+        for (const target of requestedTargets) {
+          if (!await assertAuthorizedAssociationTarget(trx, tenant, user, target.entityType, target.entityId, 'update')) {
+            return permissionError('Permission denied: Cannot access association target');
+          }
+        }
+        if (options.parentDocumentId) {
+          const parent = await assertAuthorizedDocumentSetForMutation(trx, tenant, user, [options.parentDocumentId], 'Permission denied: Cannot access parent document');
+          if (isActionPermissionErrorResult(parent)) return parent;
+        }
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
         if (options.commentAttachmentDraft) {
           await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
@@ -2641,6 +2692,7 @@ export const uploadDocument = withAuth(async (
         };
       });
 
+      if (isActionPermissionErrorResult(result)) return result;
       unclaimedStorageFileId = undefined; // The document transaction committed; never remove shared storage.
 
       if (createdAssociations.length > 0) {

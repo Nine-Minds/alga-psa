@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { checkMultiplePermissions } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
+import { assertAuthorizedAssociationTarget } from '@shared/lib/documentAssociationTargetAuthorization';
 
 /** Byte-serving routes already load a document before authorization. Embed the
  * customer product restriction in that existing read instead of adding a
@@ -86,9 +87,25 @@ export interface DocumentUploadTarget {
 
 export async function canUploadDocument(user: IUser, target: DocumentUploadTarget): Promise<boolean> {
   const grants = await ticketDocumentGrants(user, 'create');
-  if (grants.general) return true;
-  if (!grants.scoped || !target.ticketId || target.clientId || target.contactNameId || target.assetId ||
-      target.projectTaskId || target.contractId || target.opportunityId || target.parentDocumentId) return false;
   const { knex } = await createTenantKnex(user.tenant);
-  return canAccessAttachmentTicket(knex, user.tenant, user.user_id, target.ticketId);
+  const targets: Array<[string, string | undefined]> = [
+    ['ticket', target.ticketId], ['client', target.clientId], ['contact', target.contactNameId],
+    ['asset', target.assetId], ['project_task', target.projectTaskId], ['contract', target.contractId],
+    ['opportunity', target.opportunityId],
+  ];
+  const hasAssociationTarget = targets.some(([, id]) => Boolean(id)) || Boolean(target.parentDocumentId);
+  if (!grants.general && (!grants.scoped || !target.ticketId || hasAssociationTarget &&
+    targets.some(([type, id]) => id && type !== 'ticket'))) return false;
+  if (!hasAssociationTarget) return grants.general;
+
+  return knex.transaction(async (trx) => {
+    for (const [entityType, entityId] of targets) {
+      if (entityId && !await assertAuthorizedAssociationTarget(trx, user.tenant, user, entityType, entityId, 'update')) return false;
+    }
+    if (target.parentDocumentId) {
+      // Parent documents are checked by the document mutation authorization in uploadDocument.
+      return grants.general;
+    }
+    return true;
+  });
 }
