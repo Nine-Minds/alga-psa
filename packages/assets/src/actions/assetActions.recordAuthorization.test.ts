@@ -88,6 +88,8 @@ const h = vi.hoisted(() => {
     join(_table: any, _fn: any) { return this; }
     leftJoin(_table: any, _fn: any) { return this; }
     orderBy() { return this; }
+    // Single-threaded fixture queries do not contend for row locks.
+    forUpdate() { return this; }
 
     private filtered(): Row[] {
       let rows = [...this.rows];
@@ -366,7 +368,7 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
       document_id: 'e0000000-0000-4000-8000-00000000000e',
     } as any)) as any;
 
-    expect(result.permissionError).toContain('Permission denied: Cannot update assets');
+    expect(result.permissionError).toBe('Permission denied: Cannot associate documents with assets');
     expect(h.dbState.document_associations).toEqual([]);
     expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'update']);
   });
@@ -384,7 +386,7 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
 
     const result = (await removeDocumentFromAsset('e0000000-0000-4000-8000-00000000000e')) as any;
 
-    expect(result.permissionError).toContain('Permission denied: Cannot delete assets');
+    expect(result.permissionError).toBe('Permission denied: Cannot remove documents from assets');
     expect(h.dbState.document_associations).toHaveLength(1);
     expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'delete']);
   });

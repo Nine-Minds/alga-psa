@@ -190,10 +190,11 @@ describe('restricted asset operator starter bundle upgrade', () => {
   it('publishes same-team delete narrowing for the old bundle without changing its existing configuration', async () => {
     const asset = { asset_id: 'asset-outside-team', client_id: 'client-b', teamIds: ['team-asset'] };
 
-    // The old published rules deny read/update here, but no asset:delete rule means delete is allowed.
+    // Without an explicit delete rule, delete inherits the existing same-team update rule.
     expect(await actionAllowed(OLD_REVISION, 'read', asset, ['team-subject'])).toBe(false);
     expect(await actionAllowed(OLD_REVISION, 'update', asset, ['team-subject'])).toBe(false);
-    expect(await actionAllowed(OLD_REVISION, 'delete', asset, ['team-subject'])).toBe(true);
+    expect(await actionAllowed(OLD_REVISION, 'delete', asset, ['team-subject'])).toBe(false);
+    expect(await actionAllowed(OLD_REVISION, 'delete', asset, ['team-asset'])).toBe(true);
 
     await migration.up(db as any);
 
@@ -233,6 +234,30 @@ describe('restricted asset operator starter bundle upgrade', () => {
     expect(state.tables.authorization_bundle_rules
       .filter(row => row.tenant === OTHER_TENANT && row.bundle_id === OTHER_BUNDLE_ID)
       .some(row => row.config?.selectedClientIds?.includes('client-a'))).toBe(false);
+  });
+
+  it('narrows deletion independently of a customized client-scoped update rule', async () => {
+    const updateRule = state.tables.authorization_bundle_rules.find(row =>
+      row.tenant === TENANT && row.revision_id === OLD_REVISION && row.action === 'update')!;
+    updateRule.template_key = 'selected_clients';
+    updateRule.config = { ...updateRule.config, selectedClientIds: ['client-a'] };
+    const asset = { asset_id: 'asset-outside-team', client_id: 'client-a', teamIds: ['team-asset'] };
+    state.tables.assets = [{ tenant: TENANT, ...asset, name: 'Original name' }];
+
+    expect(await actionAllowed(OLD_REVISION, 'read', asset, ['team-subject'])).toBe(true);
+    expect(await actionAllowed(OLD_REVISION, 'update', asset, ['team-subject'])).toBe(true);
+    expect(await actionAllowed(OLD_REVISION, 'delete', asset, ['team-subject'])).toBe(true);
+
+    await migration.up(db as any);
+
+    const revision = state.tables.authorization_bundles.find(row =>
+      row.tenant === TENANT && row.bundle_id === BUNDLE_ID)!.published_revision_id;
+    expect(await actionAllowed(revision, 'read', asset, ['team-subject'])).toBe(true);
+    expect(await actionAllowed(revision, 'update', asset, ['team-subject'])).toBe(true);
+    expect(await deleteAssetUnderBundle(revision, asset.asset_id, ['team-subject'])).toBe(false);
+    expect(state.tables.assets).toEqual([{ tenant: TENANT, ...asset, name: 'Original name' }]);
+    expect(await deleteAssetUnderBundle(revision, asset.asset_id, ['team-asset'])).toBe(true);
+    expect(state.tables.assets).toEqual([]);
   });
 
   it('is idempotent through the deployment migration entry point', async () => {
