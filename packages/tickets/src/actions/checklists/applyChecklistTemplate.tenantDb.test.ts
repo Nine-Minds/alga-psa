@@ -30,10 +30,29 @@ vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: vi.fn(),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action,
+    templateKey: rule.template_key, constraintKey: rule.constraint_key,
+    constraints: [], redactedFields: [], ...rule.config,
+  }),
   resolveBundleNarrowingRulesForEvaluation: async () => [
     { id: 'client-rule', resource: 'ticket', action: 'update', templateKey: 'selected_clients', selectedClientIds: ['client-1'] },
     { id: 'board-rule', resource: 'ticket', action: 'update', templateKey: 'selected_boards', selectedBoardIds: ['board-1'] },
   ],
+  loadAuthorizationEvaluationSnapshot: async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: [
+      {
+        rule_id: 'client-rule', resource_type: 'ticket', action: 'update',
+        template_key: 'selected_clients', constraint_key: null,
+        config: { selectedClientIds: ['client-1'] },
+      },
+      {
+        rule_id: 'board-rule', resource_type: 'ticket', action: 'update',
+        template_key: 'selected_boards', constraint_key: null,
+        config: { selectedBoardIds: ['board-1'] },
+      },
+    ],
+  }),
 }));
 vi.mock('@alga-psa/shared/lib/ticketChecklists', async (importOriginal) => ({
   ...await importOriginal<typeof import('@alga-psa/shared/lib/ticketChecklists')>(),

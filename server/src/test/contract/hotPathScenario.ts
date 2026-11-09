@@ -948,6 +948,9 @@ export async function runHotPathScenarioOnce(connection: Knex): Promise<Scenario
         },
       };
       await STEPS[name](ctx);
+      if (process.env.HOT_PATH_BUDGET_TRACE === '1') {
+        console.info(`[hot-path SQL] ${name}`, captured.map((s, i) => `${i + 1}. ${s.sql}`).join('\n'));
+      }
       if (captured.length === 0) {
         throw new Error(`hot-path scenario: step ${name} executed no statements`);
       }

@@ -9,7 +9,10 @@ import {
 
 const getVisibilityMock = vi.fn<(...args: any[]) => Promise<any>>();
 const hasPermissionMock = vi.hoisted(() => vi.fn<(...args: any[]) => Promise<boolean>>(async () => true));
-const resolveBundleRulesMock = vi.hoisted(() => vi.fn<typeof import('@alga-psa/authorization/bundles/service').resolveBundleNarrowingRulesForEvaluation>(async () => []));
+const resolveBundleRulesMock = vi.hoisted(() => vi.fn<(
+  trx: unknown,
+  subject: { tenant: string; userId: string; apiKeyId: string | null },
+) => Promise<any[]>>(async () => []));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t) }),
@@ -19,7 +22,22 @@ vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityMock(...args),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  // LEVERAGE: pattern authorization-snapshot-test-fixture — repeated bundle snapshot adapters can move to a shared test helper.
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action,
+    templateKey: rule.template_key, constraintKey: rule.constraint_key,
+    constraints: rule.config.constraints ?? [], redactedFields: rule.config.redactedFields ?? [],
+    selectedBoardIds: rule.config.selectedBoardIds, selectedClientIds: rule.config.selectedClientIds,
+  }),
   resolveBundleNarrowingRulesForEvaluation: resolveBundleRulesMock,
+  loadAuthorizationEvaluationSnapshot: async (trx: unknown, subject: { tenant: string; userId: string; apiKeyId: string | null }) => ({
+    roleIds: [], teamIds: [], managedUserIds: [],
+    rules: (await resolveBundleRulesMock(trx, subject)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action,
+      template_key: rule.templateKey, constraint_key: rule.constraintKey ?? null,
+      config: { selectedBoardIds: rule.selectedBoardIds, selectedClientIds: rule.selectedClientIds },
+    })),
+  }),
 }));
 
 function fakeTrx(ticket: Record<string, unknown> | null = null) {
@@ -133,10 +151,9 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
     await expect(authorizeTicketRecordAccess({
       trx, tenant: 'tenant-1', user: internal, ticketId: 't1', action: 'delete',
     })).rejects.toThrow('bundle policy database unavailable');
-    expect(resolveBundleRulesMock).toHaveBeenCalledExactlyOnceWith(trx, expect.objectContaining({
-      subject: expect.objectContaining({ tenant: 'tenant-1', userId: 'internal-1' }),
-      resource: { type: 'ticket', action: 'delete', id: 't1' },
-    }));
+    expect(resolveBundleRulesMock).toHaveBeenCalledExactlyOnceWith(trx, {
+      tenant: 'tenant-1', userId: 'internal-1', apiKeyId: null,
+    });
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 

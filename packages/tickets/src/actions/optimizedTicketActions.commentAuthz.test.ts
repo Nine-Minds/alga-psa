@@ -124,6 +124,18 @@ vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: (...args: any[]) => resolveBundleRulesMock(...args),
+  authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async (_trx: any, input: any) => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: (await resolveBundleRulesMock(input)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action, template_key: rule.templateKey,
+      constraint_key: rule.constraintKey ?? null, config: { selectedBoardIds: rule.selectedBoardIds },
+    })),
+  })),
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action, templateKey: rule.template_key,
+    constraintKey: rule.constraint_key ?? null, constraints: rule.config?.constraints ?? [],
+    selectedBoardIds: rule.config?.selectedBoardIds ?? [],
+  }),
 }));
 
 const CONTENT = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'hi' }] }]);

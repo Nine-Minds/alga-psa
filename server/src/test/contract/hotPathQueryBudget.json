@@ -25,32 +25,32 @@
     },
     {
       "name": "ticket.update",
-      "statements": 20,
+      "statements": 16,
       "locks": 0
     },
     {
       "name": "ticket.boardMove",
-      "statements": 35,
+      "statements": 31,
       "locks": 0
     },
     {
       "name": "comment.add",
-      "statements": 23,
+      "statements": 22,
       "locks": 3
     },
     {
       "name": "comment.edit",
-      "statements": 12,
+      "statements": 13,
       "locks": 2
     },
     {
       "name": "comment.delete",
-      "statements": 11,
+      "statements": 12,
       "locks": 0
     },
     {
       "name": "comment.scheduledEnqueue",
-      "statements": 14,
+      "statements": 15,
       "locks": 2
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 504,
+    "statements": 498,
     "locks": 17
   },
   "denylist": [
