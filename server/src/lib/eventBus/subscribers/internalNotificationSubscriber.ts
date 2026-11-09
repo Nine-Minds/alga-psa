@@ -33,6 +33,7 @@ import { resolveBoardNotificationAudience } from '@alga-psa/shared/lib/tickets/b
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
+import { filterRecipientsWhoCanReadProject } from '../../notifications/projectNotificationAudience';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
 const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
@@ -1500,12 +1501,15 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     const resolvedMentionedUserIds = mentionedUserIds.length > 0
       ? (await resolveEveryoneMention(db, tenantId, mentionedUserIds)).filter(id => id !== userId)
       : [];
+    const admittedMentionedUserIds = await filterRecipientsWhoCanReadProject(
+      db, tenantId, task.project_id, resolvedMentionedUserIds,
+    );
 
     // Get user details and create notifications for mentioned users
-    if (resolvedMentionedUserIds.length > 0) {
+    if (admittedMentionedUserIds.length > 0) {
       const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-        .whereIn('user_id', resolvedMentionedUserIds);
+        .whereIn('user_id', admittedMentionedUserIds);
 
       if (mentionedUsers.length > 0) {
         const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1564,8 +1568,11 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     // Notify all assigned agents
     const allAssignees = await getAllTaskAssignees(db, tenantId, taskId);
+    const admittedAssigneeIds = await filterRecipientsWhoCanReadProject(
+      db, tenantId, task.project_id, allAssignees,
+    );
 
-    for (const assigneeId of allAssignees) {
+    for (const assigneeId of admittedAssigneeIds) {
       if (assigneeId !== userId && !notifiedUserIds.has(assigneeId)) {
         await createNotificationFromTemplateInternal(db, {
           tenant: tenantId,
@@ -1700,11 +1707,14 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
     if (newlyMentionedUserIds.length > 0) {
       const resolvedNewlyMentionedUserIds = (await resolveEveryoneMention(db, tenantId, newlyMentionedUserIds))
         .filter(id => id !== userId);
+      const admittedNewlyMentionedUserIds = await filterRecipientsWhoCanReadProject(
+        db, tenantId, task.project_id, resolvedNewlyMentionedUserIds,
+      );
 
-      if (resolvedNewlyMentionedUserIds.length > 0) {
+      if (admittedNewlyMentionedUserIds.length > 0) {
         const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds);
+          .whereIn('user_id', admittedNewlyMentionedUserIds);
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -3498,6 +3508,8 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketClosed,
   handleTicketCommentAdded,
   handleTicketCommentUpdated,
+  handleTaskCommentAdded,
+  handleTaskCommentUpdated,
   handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
   handleCalendarShareGranted,

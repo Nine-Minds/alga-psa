@@ -28,6 +28,7 @@ import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
+import { filterRecipientsWhoCanReadProject } from '../../notifications/projectNotificationAudience';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -1572,10 +1573,13 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
           customerUsers: assignees.map((a) => ({ kind: 'customer_user' as const, principalId: a.user_id, email: a.email })),
         })
       : null;
+    const admittedAssigneeIds = new Set(await filterRecipientsWhoCanReadProject(
+      db, tenantId, task.project_id, assignees.map((assignee) => assignee.user_id),
+    ));
 
     // Send email to each assignee (excluding the comment author)
     for (const assignee of assignees) {
-      if (assignee.user_id === userId) {
+      if (assignee.user_id === userId || !admittedAssigneeIds.has(assignee.user_id)) {
         continue;
       }
       const planned = recipients?.find((r) => r.principalId === assignee.user_id);
@@ -1601,6 +1605,8 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     throw error;
   }
 }
+
+export const projectEmailSubscriberTestHarness = { handleTaskCommentAdded };
 
 /**
  * Handle all project events
