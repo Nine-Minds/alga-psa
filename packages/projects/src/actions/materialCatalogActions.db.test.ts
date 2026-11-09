@@ -1,7 +1,8 @@
 /**
  * Project material wrappers combine coarse RBAC with the real project-read kernel.
  * Published bundle narrowing is exercised against the migrated inventory DB; every
- * example uses a rolled-back transaction. Run with scripts/run-workspace-db-tests.mjs.
+ * denial cases roll back their fixtures; dedicated hook cases verify real commit/rollback behavior.
+ * Run with scripts/run-workspace-db-tests.mjs.
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
@@ -15,46 +16,34 @@ const testState = vi.hoisted(() => ({
   user: { user_id: '', user_type: 'internal', roles: [] as unknown[] } as Record<string, unknown>,
   permissions: new Set<string>(),
   publishedEvents: [] as Array<{ eventType: string; payload: unknown }>,
-  assetLinks: [] as unknown[],
 }));
 
 vi.mock('@alga-psa/db', async () => ({
   ...(await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db')),
   createTenantKnex: vi.fn(async () => ({ knex: testState.trx })),
-  withTransaction: vi.fn(async (_db: unknown, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-    testState.trx.transaction(callback)),
 }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: unknown[]) => fn(testState.user, { tenant: testState.tenant }, ...args),
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) =>
+    testState.permissions.has(`${resource}:${action}`)),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) =>
     testState.permissions.has(`${resource}:${action}`)),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('../../../inventory/src/lib/inventoryEvents', () => ({
-  publishInventoryEvent: vi.fn(async (eventType: string, payload: unknown) => {
-    testState.publishedEvents.push({ eventType, payload });
-  }),
-}));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
   publishWorkflowEvent: vi.fn(async () => undefined),
-  reviveStoredWorkflowPayload: vi.fn((_type: string, payload: unknown) => payload),
-  publishBuiltWorkflowPayload: vi.fn(async (payload: { eventType?: string }) => {
-    testState.publishedEvents.push({ eventType: payload.eventType ?? '', payload });
-  }),
+  reviveStoredWorkflowPayload: vi.fn(() => null),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
   publishNonCatalogEventByName: vi.fn(async ({ eventType, payload }: { eventType: string; payload: unknown }) => {
     testState.publishedEvents.push({ eventType, payload });
   }),
 }));
-vi.mock('../../../inventory/src/lib/assetLink', () => ({
-  createAndLinkDeliveredAsset: vi.fn(async (_db: unknown, _tenant: string, pending: unknown) => {
-    testState.assetLinks.push(pending);
-  }),
-}));
 
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { withTransaction } from '@alga-psa/db';
 import { addMaterial as addInventoryMaterial } from '@alga-psa/inventory/lib';
 import {
   addProjectMaterial,
@@ -84,7 +73,7 @@ let CLIENT_A: string;
 let CLIENT_B: string;
 let TYPE_ID: string;
 let FOREIGN_MATERIAL_ID: string;
-const ALL = ['project:read', 'project:update', 'inventory:read'];
+const ALL = ['project:read', 'project:update', 'inventory:read', 'asset:create'];
 
 beforeAll(async () => {
   knex = knexLib({ client: 'pg', connection: databaseConnection, pool: { min: 1, max: 4 } });
@@ -130,10 +119,9 @@ beforeEach(async () => {
   testState.user = { user_id: USER, user_type: 'internal', roles: [] };
   testState.permissions = new Set(ALL);
   testState.publishedEvents = [];
-  testState.assetLinks = [];
 });
 afterEach(async () => {
-  await testState.trx?.rollback();
+  if (typeof testState.trx?.rollback === 'function') await testState.trx.rollback();
   testState.trx = null;
 });
 afterAll(async () => { await knex?.destroy(); });
@@ -221,25 +209,36 @@ describe('project material actions: coarse RBAC and record scope', () => {
   });
 
   it('maps missing and foreign-tenant material IDs to the same update permission error', async () => {
-    const missing = await updateProjectMaterial(randomUUID(), { rate: 500, billing_destination: 'separate' });
-    const foreign = await updateProjectMaterial(FOREIGN_MATERIAL_ID, { rate: 500, billing_destination: 'separate' });
-    expect(isActionPermissionError(missing)).toBe(true);
-    expect(foreign).toEqual(missing);
+    const projectB = await makeProject(CLIENT_B);
+    const product = await makeProduct({ stock: 5 });
+    const inaccessibleId = await seedMaterial(projectB, CLIENT_B, product, 321);
+    const beforeInaccessible = await trx()('project_materials').where({ tenant: TENANT, project_material_id: inaccessibleId }).first();
+    const beforeForeign = await knex('project_materials').where({ tenant: FOREIGN_TENANT, project_material_id: FOREIGN_MATERIAL_ID }).first();
+
+    const missingUpdate = await updateProjectMaterial(randomUUID(), { rate: 500, billing_destination: 'separate' });
+    const foreignUpdate = await updateProjectMaterial(FOREIGN_MATERIAL_ID, { rate: 500, billing_destination: 'separate' });
+    const inaccessibleUpdate = await updateProjectMaterial(inaccessibleId, { rate: 500, billing_destination: 'separate' });
+    expect(isActionPermissionError(inaccessibleUpdate)).toBe(true);
+    expect(missingUpdate).toEqual(inaccessibleUpdate);
+    expect(foreignUpdate).toEqual(inaccessibleUpdate);
+
     const missingDelete = await deleteProjectMaterial(randomUUID());
     const foreignDelete = await deleteProjectMaterial(FOREIGN_MATERIAL_ID);
-    expect(isActionPermissionError(missingDelete)).toBe(true);
-    expect(foreignDelete).toEqual(missingDelete);
+    const inaccessibleDelete = await deleteProjectMaterial(inaccessibleId);
+    expect(isActionPermissionError(inaccessibleDelete)).toBe(true);
+    expect(missingDelete).toEqual(inaccessibleDelete);
+    expect(foreignDelete).toEqual(inaccessibleDelete);
+    expect(await trx()('project_materials').where({ tenant: TENANT, project_material_id: inaccessibleId }).first()).toEqual(beforeInaccessible);
+    expect(await knex('project_materials').where({ tenant: FOREIGN_TENANT, project_material_id: FOREIGN_MATERIAL_ID }).first()).toEqual(beforeForeign);
   });
 
-  it('allows in-bundle add/delete and keeps inventory, low-stock, and asset hooks active', async () => {
+  it('allows in-bundle add/delete and applies inventory effects', async () => {
     const projectA = await makeProject(CLIENT_A);
     const lowStockProduct = await makeProduct({ stock: 3, reorder: 1 });
     const added: any = await addProjectMaterial({ project_id: projectA, client_id: CLIENT_A, service_id: lowStockProduct, quantity: 2, rate: 500, currency_code: 'USD' });
     expect(added).toMatchObject({ project_id: projectA, billing_destination: 'next_project_invoice' });
     expect(Number((await trx()('stock_levels').where({ tenant: TENANT, service_id: lowStockProduct, location_id: LOCATION }).first()).quantity_on_hand)).toBe(1);
     expect(await count('stock_movements', { service_id: lowStockProduct, movement_type: 'consume' })).toBe(1);
-    expect(testState.publishedEvents.some((event) => event.eventType === 'INVENTORY_STOCK_LOW')).toBe(true);
-
     const deleteProduct = await makeProduct({ stock: 2 });
     const materialId = await seedMaterial(projectA, CLIENT_A, deleteProduct, 200);
     expect(await deleteProjectMaterial(materialId)).toBeUndefined();
@@ -249,7 +248,79 @@ describe('project material actions: coarse RBAC and record scope', () => {
     const unitId = (await trx()('stock_units').where({ tenant: TENANT, service_id: serialized }).first()).unit_id;
     const delivered: any = await addProjectMaterial({ project_id: projectA, client_id: CLIENT_A, service_id: serialized, unit_id: unitId, quantity: 1, rate: 900, currency_code: 'USD' });
     expect(delivered.project_id).toBe(projectA);
-    expect(testState.assetLinks).toHaveLength(1);
     expect((await trx()('stock_units').where({ tenant: TENANT, unit_id: unitId }).first()).status).toBe('delivered');
+  });
+
+  it('runs stock-low publication and persists the delivered asset link after commit', async () => {
+    await trx().rollback();
+    testState.trx = null;
+    let projectId = '';
+    let lowStockServiceId = '';
+    let serializedServiceId = '';
+    let unitId = '';
+
+    await withTransaction(knex, async (outer) => {
+      testState.trx = outer;
+      projectId = await makeProject(CLIENT_A);
+      lowStockServiceId = await makeProduct({ stock: 3, reorder: 1 });
+      serializedServiceId = await makeProduct({ stock: 0, serialized: true, createsAsset: true });
+      unitId = (await outer('stock_units').where({ tenant: TENANT, service_id: serializedServiceId }).first()).unit_id;
+      testState.trx = knex;
+    });
+
+    await withTransaction(knex, async (outer) => {
+      testState.trx = outer;
+      const lowStockAdd: any = await addProjectMaterial({ project_id: projectId, client_id: CLIENT_A, service_id: lowStockServiceId, quantity: 2, rate: 500, currency_code: 'USD' });
+      const assetAdd: any = await addProjectMaterial({ project_id: projectId, client_id: CLIENT_A, service_id: serializedServiceId, unit_id: unitId, quantity: 1, rate: 900, currency_code: 'USD' });
+      expect(lowStockAdd.project_id).toBe(projectId);
+      expect(assetAdd.project_id).toBe(projectId);
+      expect(testState.publishedEvents).toEqual([]);
+      expect(await outer('assets').where({ tenant: TENANT, stock_unit_id: unitId }).first()).toBeUndefined();
+      testState.trx = knex;
+    });
+
+    expect(testState.publishedEvents.some((event) => event.eventType === 'INVENTORY_STOCK_LOW')).toBe(true);
+    const unit = await knex('stock_units').where({ tenant: TENANT, unit_id: unitId }).first();
+    expect(unit.status).toBe('delivered');
+    expect(unit.asset_id).toBeTruthy();
+    expect(await knex('assets').where({ tenant: TENANT, asset_id: unit.asset_id, stock_unit_id: unitId }).first()).toBeDefined();
+    expect(Number((await knex('stock_levels').where({ tenant: TENANT, service_id: lowStockServiceId, location_id: LOCATION }).first()).quantity_on_hand)).toBe(1);
+  });
+
+  it('drops stock-low and asset-link effects when the consuming transaction rolls back', async () => {
+    await trx().rollback();
+    testState.trx = null;
+    let projectId = '';
+    let lowStockServiceId = '';
+    let serializedServiceId = '';
+    let unitId = '';
+
+    await withTransaction(knex, async (outer) => {
+      testState.trx = outer;
+      projectId = await makeProject(CLIENT_A);
+      lowStockServiceId = await makeProduct({ stock: 3, reorder: 1 });
+      serializedServiceId = await makeProduct({ stock: 0, serialized: true, createsAsset: true });
+      unitId = (await outer('stock_units').where({ tenant: TENANT, service_id: serializedServiceId }).first()).unit_id;
+      testState.trx = knex;
+    });
+
+    testState.publishedEvents = [];
+    await expect(withTransaction(knex, async (outer) => {
+      testState.trx = outer;
+      await addProjectMaterial({ project_id: projectId, client_id: CLIENT_A, service_id: lowStockServiceId, quantity: 2, rate: 500, currency_code: 'USD' });
+      await addProjectMaterial({ project_id: projectId, client_id: CLIENT_A, service_id: serializedServiceId, unit_id: unitId, quantity: 1, rate: 900, currency_code: 'USD' });
+      testState.trx = knex;
+      throw new Error('force material transaction rollback');
+    })).rejects.toThrow('force material transaction rollback');
+    testState.trx = knex;
+
+    expect(testState.publishedEvents).toEqual([]);
+    expect(await knex('project_materials').where({ tenant: TENANT, project_id: projectId })).toHaveLength(0);
+    expect(Number((await knex('stock_levels').where({ tenant: TENANT, service_id: lowStockServiceId, location_id: LOCATION }).first()).quantity_on_hand)).toBe(3);
+    expect(await knex('stock_movements').where({ tenant: TENANT, service_id: lowStockServiceId, movement_type: 'consume' })).toHaveLength(0);
+    const unit = await knex('stock_units').where({ tenant: TENANT, unit_id: unitId }).first();
+    expect(unit.status).toBe('in_stock');
+    expect(unit.asset_id).toBeNull();
+    expect(await knex('assets').where({ tenant: TENANT, stock_unit_id: unitId })).toHaveLength(0);
   });
 });

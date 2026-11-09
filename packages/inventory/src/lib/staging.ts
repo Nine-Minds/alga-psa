@@ -1,4 +1,4 @@
-import { admitOperationalWrite } from '@alga-psa/db';
+import { admitOperationalWrite, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type {
   IProjectStagingLine,
@@ -767,7 +767,7 @@ export async function installLines(
       const material = isTransaction
         ? await (db as unknown as Knex.Transaction).transaction((sp) =>
             addMaterial(sp as unknown as Knex, tenant, materialInput, performedBy, { fromStagingLineId: id }))
-        : await addMaterial(db, tenant, materialInput, performedBy, { fromStagingLineId: id });
+        : await withTransaction(db, (trx) => addMaterial(trx, tenant, materialInput, performedBy, { fromStagingLineId: id }));
       results.push({ staging_line_id: id, ok: true, project_material_id: (material as { project_material_id: string }).project_material_id });
     } catch (error) {
       const conflict = stockConflictResultFrom(error);

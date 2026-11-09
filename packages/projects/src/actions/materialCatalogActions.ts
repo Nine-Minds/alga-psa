@@ -250,7 +250,7 @@ export const updateProjectMaterial = withAuth(async (
     return await withTransaction(db, async (trx) => {
       const projectId = await resolveProjectIdForMaterial(trx, tenant, projectMaterialId);
       if (!projectId) {
-        return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
+        throw new Error('Permission denied: Cannot read project');
       }
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
       return await updateProjectMaterialBilling(trx, tenant, projectMaterialId, input) as IProjectMaterial;
@@ -288,7 +288,7 @@ export const deleteProjectMaterial = withAuth(async (
     return await withTransaction(db, async (trx) => {
       const projectId = await resolveProjectIdForMaterial(trx, tenant, projectMaterialId);
       if (!projectId) {
-        return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
+        throw new Error('Permission denied: Cannot read project');
       }
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
       await deleteMaterial(trx, tenant, 'project', projectMaterialId, (user as any)?.user_id ?? null);
