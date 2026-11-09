@@ -173,6 +173,7 @@ const installRecurringRolloutGuardHarness = (
     billingCycle: "monthly",
   });
   vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateTicketFixedFeeCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateFixedPriceCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateTimeBasedCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateUsageBasedCharges").mockResolvedValue([]);
@@ -242,6 +243,7 @@ const installPersistedRecurringExecutionHarness = (
     clientContractLines,
   );
   vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateTicketFixedFeeCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateFixedPriceCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateTimeBasedCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateUsageBasedCharges").mockResolvedValue([]);

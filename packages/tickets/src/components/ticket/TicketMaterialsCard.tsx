@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Trash2, Package, Loader2 } from 'lucide-react';
+import { Trash2, Package, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -27,6 +26,9 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { isStockConflictResult, type StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import type { ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
+import TicketChargeEditDialog from './TicketChargeEditDialog';
+import TicketChargeTable from './TicketChargeTable';
+import TicketCatalogCategoryFilter from './TicketCatalogCategoryFilter';
 
 interface TicketMaterialsCardProps {
   id?: string;
@@ -70,7 +72,9 @@ export default function TicketMaterialsCard({
     listTicketMaterials,
     addTicketMaterial,
     deleteTicketMaterial,
+    updateTicketMaterial,
     searchServiceCatalogForPicker,
+    getTicketCatalogCategories,
     getServicePrices,
     listAvailableStockUnitsForMaterial,
     getProductAvailability,
@@ -81,10 +85,15 @@ export default function TicketMaterialsCard({
   const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<ITicketMaterial | null>(null);
+
+  useEffect(() => { setEditingMaterial(null); }, [ticketId]);
 
   // Add form state
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
+  const [categoryId, setCategoryId] = useState('');
+  useEffect(() => { setCategoryId(''); }, [ticketId]);
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [selectedCatalogCost, setSelectedCatalogCost] = useState<{ cost: number; currency: string } | null>(null);
@@ -158,6 +167,7 @@ export default function TicketMaterialsCard({
         limit,
         item_kinds: ['product'],
         is_active: true,
+        ...(categoryId ? { category_id: categoryId } : {}),
       });
 
       const options: SelectOption[] = result.items.map((item) => {
@@ -174,8 +184,12 @@ export default function TicketMaterialsCard({
 
       return { options, total: result.totalCount };
     },
-    [t]
+    [t, categoryId, searchServiceCatalogForPicker]
   );
+
+  const loadProductCategories = useMemo(() => getTicketCatalogCategories
+    && (() => getTicketCatalogCategories({ item_kinds: ['product'] })),
+  [getTicketCatalogCategories]);
 
   // Load product prices when product is selected
   useEffect(() => {
@@ -357,18 +371,6 @@ export default function TicketMaterialsCard({
   };
 
   // Calculate total for a material
-  const calculateTotal = (mat: ITicketMaterial) => mat.quantity * mat.rate;
-
-  // Group unbilled materials by currency for proper totals
-  const unbilledByCurrency = materials
-    .filter(m => !m.is_billed)
-    .reduce((acc, m) => {
-      const curr = m.currency_code || currencyCode;
-      if (!acc[curr]) acc[curr] = 0;
-      acc[curr] += calculateTotal(m);
-      return acc;
-    }, {} as Record<string, number>);
-
   const currencyOptions = productPrices.map(p => ({
     value: p.currency_code,
     label: `${p.currency_code} - ${money(p.rate, p.currency_code)}`,
@@ -391,11 +393,14 @@ export default function TicketMaterialsCard({
       >
         {/* Add Form */}
         {showAddForm && clientId && !readOnly && (
-          <div className="border rounded-md p-4 space-y-4 bg-gray-50">
+          <div className="mb-4 space-y-4 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
             <div className="space-y-2">
               <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
               <AsyncSearchableSelect
                 id={`${id}-product-select`}
+                headerContent={loadProductCategories && <TicketCatalogCategoryFilter
+                  id={`${id}-category-filter`} value={categoryId} onChange={setCategoryId}
+                  loadCategories={loadProductCategories} />}
                 value={selectedProductId}
                 selectedLabel={selectedProductLabel}
                 onChange={(value, option) => {
@@ -422,16 +427,16 @@ export default function TicketMaterialsCard({
               <div className="space-y-2">
                 <Label htmlFor={`${id}-currency-select`}>{t('materials.price', 'Price')}</Label>
                 {isLoadingPrices ? (
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-[rgb(var(--color-text-500))]">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     {t('materials.loadingPrices', 'Loading prices...')}
                   </div>
                 ) : productPrices.length === 0 ? (
-                  <div className="text-sm text-amber-600">
+                  <div className="text-sm text-[rgb(var(--badge-warning-text))]">
                     {t('materials.noPricesConfigured', 'No prices configured for this product')}
                   </div>
                 ) : productPrices.length === 1 ? (
-                  <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
+                  <div className="flex h-10 items-center rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
                     {money(productPrices[0].rate, productPrices[0].currency_code)}
                   </div>
                 ) : (
@@ -449,7 +454,7 @@ export default function TicketMaterialsCard({
             {selectedProductId && (
               <div className="space-y-2">
                 <Label>{t('materials.catalogUnitCost', 'Catalog unit cost')}</Label>
-                <div className="h-10 px-3 py-2 bg-gray-100 border rounded-md text-gray-700 flex items-center">
+                <div className="flex h-10 items-center rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
                   {selectedCatalogCost
                     ? money(selectedCatalogCost.cost, selectedCatalogCost.currency)
                     : t('materials.costNotConfigured', 'Not configured')}
@@ -471,7 +476,7 @@ export default function TicketMaterialsCard({
               </div>
               <div className="space-y-2">
                 <Label>{t('materials.total', 'Total')}</Label>
-                <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
+                <div className="flex h-10 items-center rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
                   {selectedPrice
                     ? money(selectedPrice.rate * quantity, selectedPrice.currency_code)
                     : '-'}
@@ -509,8 +514,8 @@ export default function TicketMaterialsCard({
             </div>
 
             {availability?.track_stock && availability.locations.length > 0 && (
-              <div id={`${id}-availability`} className="text-xs text-gray-500 space-y-0.5">
-                <div className="font-medium text-gray-600">{t('materials.availableByLocation', 'Free stock by location')}</div>
+              <div id={`${id}-availability`} className="text-xs text-[rgb(var(--color-text-500))] space-y-0.5">
+                <div className="font-medium text-[rgb(var(--color-text-600))]">{t('materials.availableByLocation', 'Free stock by location')}</div>
                 {availability.locations.map((loc) => (
                   <div key={loc.location_id} className="flex justify-between">
                     <span>{loc.location_name}</span>
@@ -523,7 +528,7 @@ export default function TicketMaterialsCard({
             )}
 
             {addError && (
-              <div id={`${id}-add-error`} className="text-sm text-red-600">
+              <div id={`${id}-add-error`} className="text-sm text-[rgb(var(--badge-error-text))]">
                 {addError}
               </div>
             )}
@@ -568,67 +573,37 @@ export default function TicketMaterialsCard({
 
         {/* Materials List */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
+          <div className="flex items-center justify-center py-8 text-[rgb(var(--color-text-500))]">
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             {t('materials.loading', 'Loading materials...')}
           </div>
         ) : materials.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
             {t('materials.empty', 'No materials added to this ticket.')}
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-2 font-medium">{t('materials.product', 'Product')}</th>
-                    <th className="pb-2 font-medium text-right">{t('materials.qty', 'Qty')}</th>
-                    <th className="pb-2 font-medium text-right">{t('materials.rate', 'Rate')}</th>
-                    <th className="pb-2 font-medium text-right">{t('materials.total', 'Total')}</th>
-                    <th className="pb-2 font-medium text-center">{t('materials.status', 'Status')}</th>
-                    <th className="pb-2 w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {materials.map((material) => (
-                    <tr key={material.ticket_material_id} className="border-b last:border-0">
-                      <td className="py-2">
-                        <div>
-                          <span className="font-medium">
-                            {material.service_name || t('materials.unknownProduct', 'Unknown Product')}
-                          </span>
-                          {material.sku && (
-                            <span className="text-gray-500 ml-1">({material.sku})</span>
-                          )}
-                        </div>
-                        {material.description && (
-                          <div className="text-xs text-gray-500">{material.description}</div>
+          <TicketChargeTable itemLabel={t('materials.product', 'Product')} money={money}
+            rows={materials.map((material, index) => ({
+              id: material.ticket_material_id,
+              name: `${material.service_name || t('materials.unknownProduct', 'Unknown Product')}${material.sku ? ` (${material.sku})` : ''}`,
+              description: material.description, quantity: material.quantity, rate: material.rate,
+              currency: material.currency_code || currencyCode, billed: material.is_billed,
+              actions: !material.is_billed && !readOnly ? <>
+                        {updateTicketMaterial && (
+                          <Button id={`${id}-edit-${index}-button`} variant="ghost" size="sm"
+                            className="h-8 w-8 shrink-0 p-0" disabled={deletingId === material.ticket_material_id}
+                            data-material-id={material.ticket_material_id} aria-label={t('chargeEdit.edit')}
+                            onClick={() => setEditingMaterial(material)}><Pencil className="h-4 w-4" /></Button>
                         )}
-                      </td>
-                      <td className="py-2 text-right">{material.quantity}</td>
-                      <td className="py-2 text-right">
-                        {money(material.rate, material.currency_code)}
-                      </td>
-                      <td className="py-2 text-right font-medium">
-                        {money(calculateTotal(material), material.currency_code)}
-                      </td>
-                      <td className="py-2 text-center">
-                        {material.is_billed ? (
-                          <Badge variant="default">{t('materials.billed', 'Billed')}</Badge>
-                        ) : (
-                          <Badge variant="outline">{t('materials.pending', 'Pending')}</Badge>
-                        )}
-                      </td>
-                      <td className="py-2 text-right">
-                        {!material.is_billed && !readOnly && (
                           <Button
-                            {...withDataAutomationId({ id: `${id}-delete-${material.ticket_material_id}` })}
+                            id={`${id}-delete-${index}-button`}
+                            data-material-id={material.ticket_material_id}
+                            aria-label={t('common:actions.remove', 'Remove')}
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteMaterial(material.ticket_material_id)}
                             disabled={deletingId === material.ticket_material_id}
-                            className="text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 h-auto"
+                            className="h-8 w-8 shrink-0 p-0 text-[rgb(var(--badge-error-text))] hover:bg-[rgb(var(--badge-error-bg))] hover:text-[rgb(var(--badge-error-text))]"
                           >
                             {deletingId === material.ticket_material_id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -636,36 +611,12 @@ export default function TicketMaterialsCard({
                               <Trash2 className="w-4 h-4" />
                             )}
                           </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Summary - show totals per currency */}
-            {Object.keys(unbilledByCurrency).length > 0 && (
-              <div className="flex justify-end pt-2 border-t">
-                <div className="text-sm space-y-1">
-                  {Object.entries(unbilledByCurrency).map(([curr, total]) => (
-                    <div key={curr} className="text-right">
-                      <span className="text-gray-500">
-                        {t('materials.unbilled', 'Unbilled ({{currency}}):', { currency: curr })}{' '}
-                      </span>
-                      <span className="font-semibold">
-                        {money(total, curr)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+                </> : undefined,
+            }))} />
         )}
 
         {!clientId && (
-          <div className="text-center py-4 text-amber-600 text-sm">
+          <div className="text-center py-4 text-[rgb(var(--badge-warning-text))] text-sm">
             {t(
               'materials.clientRequired',
               'A client must be assigned to this ticket before materials can be added.'
@@ -673,6 +624,16 @@ export default function TicketMaterialsCard({
           </div>
         )}
       </ContentCard>
+      {editingMaterial && !readOnly && updateTicketMaterial && (
+        <TicketChargeEditDialog key={editingMaterial.ticket_material_id} id={`${id}-edit-dialog`}
+          quantity={editingMaterial.quantity} description={editingMaterial.description}
+          onClose={() => setEditingMaterial(null)}
+          onSave={async (input) => {
+            const result = await updateTicketMaterial(editingMaterial.ticket_material_id, input);
+            if (!isReturnedActionError(result)) await loadMaterials();
+            return result;
+          }} />
+      )}
       <ConfirmationDialog
         id={`${id}-reserved-stock-confirm`}
         isOpen={reservedConflict !== null}
