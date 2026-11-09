@@ -1,25 +1,33 @@
+import { Temporal } from '@js-temporal/polyfill';
 import { describe, expect, it } from 'vitest';
 
-import { resolveManualExpirationDate } from './hourBlockExpiration';
+import { settleManualExpirationDate } from './hourBlockExpiration';
 
-describe('resolveManualExpirationDate', () => {
+// Evergreen fixtures: resolve the real clock when the test runs and derive
+// every date from it, so the suite stays valid as time advances.
+const today = Temporal.Now.plainDateISO();
+
+describe('settleManualExpirationDate', () => {
   it('settles at today when the block has no scheduled expiry', () => {
-    expect(resolveManualExpirationDate(null, '2026-11-08')).toBe('2026-11-08');
+    expect(settleManualExpirationDate(null, today.toString())).toBe(today.toString());
   });
 
   it('settles at today when the scheduled expiry is still in the future', () => {
-    // The portal scenario: Oct-2027 block expired by hand in Nov 2026 must
-    // write off now, not linger on the liability until October.
-    expect(resolveManualExpirationDate('2027-10-02', '2026-11-08')).toBe('2026-11-08');
+    // The portal scenario: a block expired by hand months before its
+    // scheduled expiry must write off now, not linger on the liability
+    // until the scheduled day.
+    const futureExpiry = today.add({ months: 11 }).toString();
+    expect(settleManualExpirationDate(futureExpiry, today.toString())).toBe(today.toString());
   });
 
   it('keeps an already-elapsed scheduled expiry', () => {
     // The block drifted past its date unprocessed; the report already
     // projects the write-off at the scheduled day, so don't restate it.
-    expect(resolveManualExpirationDate('2026-04-30', '2026-11-08')).toBe('2026-04-30');
+    const elapsedExpiry = today.subtract({ months: 6 }).toString();
+    expect(settleManualExpirationDate(elapsedExpiry, today.toString())).toBe(elapsedExpiry);
   });
 
   it('keeps a scheduled expiry equal to today', () => {
-    expect(resolveManualExpirationDate('2026-11-08', '2026-11-08')).toBe('2026-11-08');
+    expect(settleManualExpirationDate(today.toString(), today.toString())).toBe(today.toString());
   });
 });
