@@ -1040,8 +1040,12 @@ export const bulkApplyTagsToEntities = withAuth(async (
       const seen = new Set<string>();
       const newTexts: string[] = [];
       for (const raw of app.newTexts) {
-        const text = raw.trim();
-        if (!text) continue;
+        const validation = validateTagText(raw);
+        if (isTagTextValidationFailure(validation)) {
+          console.warn(`Skipping tag "${raw}": ${validation.message}`);
+          continue;
+        }
+        const text = validation.text;
         const lower = text.toLowerCase();
         if (existingLower.has(lower) || seen.has(lower)) continue;
         seen.add(lower);
@@ -1071,10 +1075,6 @@ export const bulkApplyTagsToEntities = withAuth(async (
   const definitionByLowerText = new Map<string, ITagDefinition>();
   const createdDefinitions: ITagDefinition[] = [];
   for (const [lower, text] of uniqueTexts) {
-    if (text.length > 50) {
-      console.warn(`Tag text "${text}" too long, skipping`);
-      continue;
-    }
     if (!userHasTagCreate) {
       // Can only apply texts whose definition already exists.
       const existingDefinition = await TagDefinition.findByTextAndType(trx, tenant, text, taggedType);
@@ -1146,7 +1146,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
   const occurredAt = new Date().toISOString();
 
   for (const definition of createdDefinitions) {
-    await publishWorkflowEvent({
+    registerAfterCommit(trx, () => publishWorkflowEvent({
       eventType: 'TAG_DEFINITION_CREATED',
       payload: buildTagDefinitionCreatedPayload({
         tagId: definition.tag_id,
@@ -1159,13 +1159,13 @@ export const bulkApplyTagsToEntities = withAuth(async (
         occurredAt,
         actor: { actorType: 'USER', actorUserId: userId },
       },
-    });
+    }), `TAG_DEFINITION_CREATED tag=${definition.tag_id}`);
   }
 
   // TAG_APPLIED per actually-inserted mapping; track which entities changed.
   const changedEntities = new Set<string>();
   for (const row of insertedRows) {
-    await publishWorkflowEvent({
+    registerAfterCommit(trx, () => publishWorkflowEvent({
       eventType: 'TAG_APPLIED',
       payload: buildTagAppliedPayload({
         tagId: row.tag_id,
@@ -1179,7 +1179,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
         occurredAt,
         actor: { actorType: 'USER', actorUserId: userId },
       },
-    });
+    }), `TAG_APPLIED tag=${row.tag_id} entity=${row.tagged_id}`);
     changedEntities.add(row.tagged_id);
   }
 
@@ -1202,7 +1202,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
     if (!changedEntities.has(app.entityId)) continue;
     const previousTags = Array.from(new Set(app.existingTexts)).sort((a, b) => a.localeCompare(b));
     const newTags = Array.from(new Set(finalTagsByEntity.get(app.entityId) ?? [])).sort((a, b) => a.localeCompare(b));
-    await publishEntityTagUpdateEvent({
+    registerAfterCommit(trx, () => publishEntityTagUpdateEvent({
       trx,
       tenant,
       taggedId: app.entityId,
@@ -1214,7 +1214,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
       projectTaskContext: projectTaskContexts
         ? (projectTaskContexts.get(app.entityId) ?? null)
         : undefined,
-    });
+    }), `${taggedType.toUpperCase()}_UPDATED entity=${app.entityId}`);
   }
 
   return { appliedByEntity };

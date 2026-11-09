@@ -61,6 +61,11 @@ vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
     state.calls.push('record-level');
     return state.recordLevelAllowed;
   }),
+  authorizeApiResourceRead: vi.fn(async () => {
+    state.actions.push('read');
+    state.calls.push('record-level');
+    return { allowed: state.recordLevelAllowed, redactedFields: [] };
+  }),
 }));
 
 const { ApiAssetController } = await import('@/lib/api/controllers/ApiAssetController');
