@@ -7,7 +7,9 @@ import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
-import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from './CommentAudienceControl';
+import { useComposerAudiences, type ComposerAudience } from './CommentAudienceControl';
+import { useTicketCommentComposer, NO_STATUS_CHANGE } from './composer/useTicketCommentComposer';
+import { ComposerAudienceOrVisibility } from './composer/ComposerAudienceOrVisibility';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -48,7 +50,7 @@ import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import styles from './TicketDetails.module.css';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
-import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { getUserTimeZone } from '@alga-psa/core';
 import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -68,7 +70,6 @@ import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
-import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 import {
   CommentEmailRecipientsControl,
   commentEmailRecipientsPayload,
@@ -149,7 +150,6 @@ const ALL_COMMENTS_TAB_ID = 'all-comments';
 const CLIENT_TAB_ID = 'client';
 const INTERNAL_TAB_ID = 'internal';
 const RESOLUTION_TAB_ID = 'resolution';
-const NO_STATUS_CHANGE = '__no_status_change__';
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
@@ -198,38 +198,48 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const { deleteDocument } = useDocumentsCrossFeature();
   // Ensure we have a stable id for interactive element ids
   const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
-  const [showEditor, setShowEditor] = useState(false);
   // The composer owns its own in-flight state so every host (the client portal
   // passes no isSubmitting) gets a single submission and a pending button.
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const submitInFlightRef = useRef(false);
   const isSubmitting = isSubmittingFromParent || isSubmittingComment;
-  // Which sticky slot the composer opens into — decided at open time so it
-  // opens where the reader clicked and never moves mid-draft.
-  const [editorPlacement, setEditorPlacement] = useState<'top' | 'bottom'>('top');
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
-  const [isInternalToggle, setIsInternalToggle] = useState(false);
   // Shared tickets and co_managed workspaces replace the Internal toggle with a required audience
   // choice, driven by the data source's conversation config (never by a tenant-wide capability).
   // There is deliberately no default: submit stays blocked until the author picks one.
   const configuredAudiences = useComposerAudiences();
   const useAudienceComposer = configuredAudiences != null && !hideInternalTab;
-  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
-  const [isResolutionToggle, setIsResolutionToggle] = useState(false);
-  // A resolution closes the ticket through the native path, so it never offers `shared_it`.
-  const offeredAudiences = configuredAudiences == null ? [] : isResolutionToggle ? nativeComposerAudiences(configuredAudiences) : configuredAudiences;
-  const chosenAudience = composerAudience != null && offeredAudiences.includes(composerAudience) ? composerAudience : null;
-  const audienceMissing = useAudienceComposer && chosenAudience == null;
-  const handleAudienceChange = (next: ComposerAudience) => {
-    setComposerAudience(next);
-    setIsInternalToggle(audienceIsInternal(next));
-  };
+  const showEmailRecipients = allowEmailRecipients && !hideInternalTab;
+  // The composer opens into the sticky slot the reader clicked and never moves mid-draft; when it opens
+  // without an audience select, visibility is seeded from the active tab.
+  const seedComposerVisibility = useCallback(
+    () => (hideInternalTab
+      ? null
+      : activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal) ? 'internal' as const : 'client' as const),
+    [hideInternalTab, activeTab, defaultReplyInternal],
+  );
+  const composer = useTicketCommentComposer({
+    configuredAudiences,
+    audienceSelectable: useAudienceComposer,
+    allowEmailRecipients: showEmailRecipients,
+    portalSubmit: hideInternalTab,
+    seedVisibility: seedComposerVisibility,
+  });
+  const {
+    isOpen: showEditor, setIsOpen: setShowEditor, placement: editorPlacement,
+    isInternal: isInternalToggle, setIsInternal: setIsInternalToggle,
+    offeredAudiences, chosenAudience, audienceMissing, setComposerAudience, handleAudienceChange,
+    isResolution: isResolutionToggle, setIsResolution: setIsResolutionToggle,
+    isSchedule: isScheduleToggle, setIsSchedule: setIsScheduleToggle,
+    scheduledPublishAt, setScheduledPublishAt, scheduledInstant, scheduleInstantValid: scheduleIsValid,
+    resolutionCloseStatusId, setResolutionCloseStatusId,
+    notificationSuppression, setNotificationSuppression, defaultNotificationSuppression,
+    emailRecipients,
+  } = composer;
   // One-off Cc/Bcc for the comment being composed. Separate drafts for the main
   // composer and the reply composer so one never leaks into the other.
-  const emailRecipients = useCommentEmailRecipientsDraft();
   const replyEmailRecipients = useCommentEmailRecipientsDraft();
   const searchEmailRecipients = useCommentEmailRecipientSuggestions(ticket.client_id);
-  const showEmailRecipients = allowEmailRecipients && !hideInternalTab;
   // Canned responses are an MSP-agent tool: this component is also the client portal's conversation view
   // (hideInternalTab), where customers must not see the library.
   const cannedResponseSnippets = useCannedResponseSnippets(ticket.ticket_id, !hideInternalTab);
@@ -237,18 +247,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // under a public comment.
   const showReplyEmailRecipients = (parent?: IComment | null) =>
     showEmailRecipients && Boolean(parent) && !parent!.is_internal;
-  const [isScheduleToggle, setIsScheduleToggle] = useState(false);
-  const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
-  const scheduledInstant = useMemo(() => {
-    if (!isScheduleToggle || !scheduledPublishAt) return null;
-    try { return zonedWallTimeToUtc(dateToWallTimeString(scheduledPublishAt), getUserTimeZone()); } catch { return null; }
-  }, [isScheduleToggle, scheduledPublishAt]);
-  const scheduleIsValid = !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
-  const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
-  const defaultNotificationSuppression = useDefaultNotificationSuppression();
-  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
-    defaultNotificationSuppression
-  );
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
@@ -344,16 +342,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   }, []);
 
   const handleAddCommentClick = (placement: 'top' | 'bottom' = 'top') => {
-    // Auto-check toggles based on which tab is active
-    if (useAudienceComposer) {
-      // Opening a fresh composer never carries a previous audience; an open draft keeps its choice.
-      if (!showEditor) { setComposerAudience(null); setIsInternalToggle(false); }
-    } else if (!hideInternalTab) {
-      setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
-    }
     setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
-    setEditorPlacement(placement);
-    setShowEditor(true);
+    composer.open(placement);
   };
   const handleSubmitComment = async () => {
     if (composeUploadSession.isUploading || isSubmittingFromParent || submitInFlightRef.current) return;
@@ -363,46 +353,17 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     setIsSubmittingComment(true);
     let success = false;
     try {
-      if (hideInternalTab) {
-        // Client Portal: Call with false for isInternal and use isResolutionToggle for isResolution
-        success = await onAddNewComment(false, isResolutionToggle);
-        if (success) {
+      success = await onAddNewComment(...composer.buildSubmitArgs());
+      if (success) {
+        if (hideInternalTab) {
+          // Client Portal: only the resolution toggle is carried over
           setIsResolutionToggle(false);
-        }
-      } else {
-        // Main App: Use toggle states for isInternal and isResolution
-        const closeStatusId =
-          isResolutionToggle && resolutionCloseStatusId !== NO_STATUS_CHANGE
-            ? resolutionCloseStatusId
-            : null;
-        const suppressionOptions =
-          closeStatusId && notificationSuppression.suppressContactNotifications
-            ? notificationSuppression
-            : undefined;
-        success = await onAddNewComment(
-          isInternalToggle,
-          isResolutionToggle,
-          closeStatusId,
-          suppressionOptions,
-          isScheduleToggle && !isInternalToggle && scheduledInstant
-            ? { publishAt: scheduledInstant.toISOString(), timeZone: getUserTimeZone() }
-            : null,
-          // Never sent with an internal note, even though the draft is kept.
-          showEmailRecipients && !isInternalToggle ? emailRecipients.payload : undefined,
-          ...(useAudienceComposer ? [chosenAudience] as const : []),
-        );
-        if (success) {
-          emailRecipients.reset();
+        } else {
+          composer.resetAfterSubmit();
           setIsInternalToggle(false);
-          setComposerAudience(null);
-          setIsResolutionToggle(false);
-          setResolutionCloseStatusId(NO_STATUS_CHANGE);
-          setNotificationSuppression(defaultNotificationSuppression());
-          setIsScheduleToggle(false);
-          setScheduledPublishAt(undefined);
         }
       }
-      
+
       if (success) {
         console.log('Comment added successfully, closing editor');
         composeUploadSession.resetDraftTracking();
@@ -435,30 +396,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       return nextValue;
     });
   };
-  // Removed renderButtonBar function as it's no longer needed
-  const handleAddNewComment = async () => {
-    if (composeUploadSession.isUploading) return;
-    if (hideInternalTab) {
-      await onAddNewComment(false, isResolutionToggle);
-    } else {
-      const closeStatusId =
-        isResolutionToggle && resolutionCloseStatusId !== NO_STATUS_CHANGE
-          ? resolutionCloseStatusId
-          : null;
-      await onAddNewComment(
-        isInternalToggle,
-        isResolutionToggle,
-        closeStatusId,
-        closeStatusId && notificationSuppression.suppressContactNotifications
-          ? notificationSuppression
-          : undefined,
-        undefined,
-        undefined,
-        useAudienceComposer ? composerAudience : undefined,
-      );
-    }
-  };
-
   const previousComposerTab = useRef(activeTab);
   // Explicit tab changes override visibility; loading settings must not change an open draft.
   useEffect(() => {
@@ -865,27 +802,27 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <div className='flex-grow min-w-0 max-w-full'>
         {/* Toggle switches above the editor */}
         <div className="flex flex-wrap items-center gap-4 mb-2 ml-2">
-          {useAudienceComposer && (
-            <CommentAudienceSelect
-              id={`${compId}-audience-select`}
-              audiences={offeredAudiences}
-              value={chosenAudience}
-              onChange={handleAudienceChange}
-              disabled={isSubmitting}
-            />
-          )}
-          {!hideInternalTab && !useAudienceComposer && (
-            <div className="flex items-center space-x-2">
-              <Switch
-                id={`${compId}-internal-toggle`}
-                checked={isInternalToggle}
-                onCheckedChange={setIsInternalToggle}
-              />
-              <Label htmlFor={`${id}-internal-toggle`}>
-                {isInternalToggle ? t('conversation.markedAsInternal', 'Marked as Internal') : t('conversation.markAsInternal', 'Mark as Internal')}
-              </Label>
-            </div>
-          )}
+          <ComposerAudienceOrVisibility
+            audienceSelectable={useAudienceComposer}
+            id={`${compId}-audience-select`}
+            audiences={offeredAudiences}
+            value={chosenAudience}
+            onChange={handleAudienceChange}
+            disabled={isSubmitting}
+          >
+            {!hideInternalTab && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id={`${compId}-internal-toggle`}
+                  checked={isInternalToggle}
+                  onCheckedChange={setIsInternalToggle}
+                />
+                <Label htmlFor={`${id}-internal-toggle`}>
+                  {isInternalToggle ? t('conversation.markedAsInternal', 'Marked as Internal') : t('conversation.markAsInternal', 'Mark as Internal')}
+                </Label>
+              </div>
+            )}
+          </ComposerAudienceOrVisibility>
           {!hideInternalTab && !isInternalToggle && (
             <div className="flex items-center space-x-2">
               <Switch

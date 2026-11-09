@@ -40,18 +40,22 @@ describe('resolution comment close contract', () => {
     expect(details).toContain('metadata: { closes_ticket: true }');
     expect(details).toContain("await handleSelectChange('status_id', closeStatusId)");
     expect(details).toContain('await handleBatchSaveChanges({ status_id: closeStatusId }, options)');
+    // The submit tuple is built once, by the controller both composers share.
+    const controller = read('../composer/useTicketCommentComposer.ts');
     expect(tile).toContain('const success = await onAddNewComment(');
-    expect(tile).toContain('closeStatusId && notificationSuppression.suppressContactNotifications');
-    expect(tile).toContain('? notificationSuppression');
+    expect(tile).toContain('composerState.buildSubmitArgs()');
+    expect(controller).toContain('closeStatusId && notificationSuppression.suppressContactNotifications');
+    expect(controller).toContain('? notificationSuppression');
   });
 
   it('T054: entry resolution composer exposes and forwards the same suppression control', () => {
     const conversation = read('../TicketConversation.tsx');
+    const controller = read('../composer/useTicketCommentComposer.ts');
 
     expect(conversation).toContain('TicketNotificationSuppressionControl');
     expect(conversation).toContain('idPrefix={`${compId}-resolution-notification-suppression`}');
-    expect(conversation).toContain('const suppressionOptions =');
-    expect(conversation).toContain('suppressionOptions');
+    expect(conversation).toContain('composer.buildSubmitArgs()');
+    expect(controller).toContain('notificationSuppression');
     expect(conversation).toContain('setNotificationSuppression(defaultNotificationSuppression())');
   });
 
@@ -60,11 +64,12 @@ describe('resolution comment close contract', () => {
 
     // Two-way visibility segment only: resolution rides along as its own toggle
     // so an internal note can also be the resolution.
-    expect(tile).toContain("useState<'client' | 'internal'>");
+    const controller = read('../composer/useTicketCommentComposer.ts');
+    expect(tile).toContain("const composerVisibility: 'client' | 'internal'");
+    expect(controller).toContain('useState(initialInternal)');
     expect(tile).not.toContain("'resolution'");
     expect(tile).toContain('id={`${id}-composer-resolution-toggle`}');
-    expect(tile).toContain("composerVisibility === 'internal',");
-    expect(tile).toContain('const isResolution = isResolutionToggle;');
+    expect(controller).toContain('isInternal,\n      isResolution,');
     expect(tile).toContain('setIsResolutionToggle(false)');
   });
 
@@ -98,13 +103,16 @@ describe('resolution comment close contract', () => {
     expect(defaults).toContain('suppressContactNotifications: false');
     expect(defaults).toContain('suppressInternalNotifications: false');
 
-    for (const source of sources) {
+    // The classic and Bento composers take theirs from the shared composer controller.
+    const controller = read('../composer/useTicketCommentComposer.ts');
+    expect(controller).toContain('const defaultNotificationSuppression = useDefaultNotificationSuppression();');
+    expect(controller).toContain('defaultNotificationSuppression()');
+    for (const source of sources.filter((candidate) => !candidate.includes('useTicketCommentComposer'))) {
       expect(source).toContain('const defaultNotificationSuppression = useDefaultNotificationSuppression();');
       expect(source).toContain('defaultNotificationSuppression()');
     }
 
-    expect(read('../TicketConversation.tsx')).toContain('setNotificationSuppression(defaultNotificationSuppression())');
-    expect(read('./BentoTimelineTile.tsx')).toContain('setNotificationSuppression(defaultNotificationSuppression())');
+    expect(controller).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     expect(read('./BentoHero.tsx')).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     expect(read('../../TicketingDashboard.tsx')).toContain('setBulkMoveNotificationSuppression(defaultNotificationSuppression())');
   });
