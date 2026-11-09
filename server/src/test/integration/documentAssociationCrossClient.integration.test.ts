@@ -24,14 +24,17 @@ let visibleBoardId: string;
 let hiddenBoardId: string;
 let visibilityGroupId: string;
 let contractBId: string;
+let contractUnassignedId: string;
 let quoteBId: string;
 let opportunityBId: string;
+let assetDeniedByPolicyId: string | undefined;
 let documentAId: string;
 let documentBId: string;
 let statusOrder = 0;
 let mspStorageProviderId: string;
 let mspStorageConfigurationId: string;
 let mspUploadedFileId: string;
+let trackedStorageFileIds: string[] = [];
 
 const dbRef = vi.hoisted(() => ({ knex: null as Knex | null, tenant: '' as string }));
 const storageMocks = vi.hoisted(() => ({
@@ -195,6 +198,11 @@ describe('document association cross-client authorization', () => {
       tenant: tenantId, client_contract_id: uuidv4(), client_id: clientBId, contract_id: contractBId,
       start_date: new Date('2026-01-01'), is_active: true,
     });
+    contractUnassignedId = uuidv4();
+    await table('contracts').insert({
+      tenant: tenantId, contract_id: contractUnassignedId, contract_name: 'Unassigned existing contract',
+      billing_frequency: 'monthly', currency_code: 'USD', status: 'active', is_active: true, is_template: false,
+    });
     quoteBId = uuidv4();
     await table('quotes').insert({
       tenant: tenantId, quote_id: quoteBId, client_id: clientBId, quote_number: `QB-${quoteBId.slice(0, 6)}`,
@@ -230,6 +238,9 @@ describe('document association cross-client authorization', () => {
       }
       if (mspUploadedFileId) await table('external_files').where({ file_id: mspUploadedFileId }).del();
       await table('document_folders').whereIn('entity_id', [taskAId, taskBId]).del();
+      await table('document_default_folders').whereIn('folder_path', [
+        '/Concurrent Tasks', '/Concurrent Tasks/Deliverables', '/Concurrent Tasks/Specifications', '/Concurrent Tasks/Reference',
+      ]).del();
       if (mspStorageConfigurationId) await table('storage_configurations').where({ configuration_id: mspStorageConfigurationId }).del();
       if (mspStorageProviderId) await table('storage_providers').where({ provider_id: mspStorageProviderId }).del();
       await table('tickets').whereIn('ticket_id', [ticketBId, ticketAVisibleId, ticketAVisibleSecondId, ticketAHiddenBoardId]).del();
@@ -238,7 +249,11 @@ describe('document association cross-client authorization', () => {
       await table('quotes').where({ quote_id: quoteBId }).del();
       await table('opportunities').where({ opportunity_id: opportunityBId }).del();
       await table('client_contracts').where({ contract_id: contractBId }).del();
-      await table('contracts').where({ contract_id: contractBId }).del();
+      await table('contracts').whereIn('contract_id', [contractBId, contractUnassignedId]).del();
+      if (assetDeniedByPolicyId) {
+        await table('asset_associations').where({ asset_id: assetDeniedByPolicyId }).del();
+        await table('assets').where({ asset_id: assetDeniedByPolicyId }).del();
+      }
       await table('boards').whereIn('board_id', [visibleBoardId, hiddenBoardId]).del();
       const projects = await table('projects').whereIn('client_id', [clientAId, clientBId]).pluck('project_id');
       const phases = projects.length ? await table('project_phases').whereIn('project_id', projects).select('phase_id') : [];
@@ -262,14 +277,29 @@ describe('document association cross-client authorization', () => {
       tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
       entity_type: 'client', entity_id: clientAId, created_at: new Date(),
     });
-    const uploadedDocuments = await table('documents').where({ created_by: mspUserId, document_name: 'msp-cross-client.txt' }).select('document_id');
+    const uploadedDocuments = await table('documents').where({ created_by: mspUserId })
+      .whereIn('document_name', ['msp-cross-client.txt', 'folder-concurrent-a.txt', 'folder-concurrent-b.txt'])
+      .select('document_id', 'file_id');
     const uploadedIds = uploadedDocuments.map((document: { document_id: string }) => document.document_id);
+    const uploadedFileIds = [...new Set([
+      ...uploadedDocuments.map((document: { file_id?: string }) => document.file_id).filter(Boolean),
+      ...trackedStorageFileIds,
+    ])];
     if (uploadedIds.length) {
       await table('document_associations').whereIn('document_id', uploadedIds).del();
       await table('documents').whereIn('document_id', uploadedIds).del();
     }
-    if (mspUploadedFileId) await table('external_files').where({ file_id: mspUploadedFileId }).del();
+    if (uploadedFileIds.length) await table('external_files').whereIn('file_id', uploadedFileIds).del();
+    trackedStorageFileIds = [];
+    if (assetDeniedByPolicyId) {
+      await table('asset_associations').where({ asset_id: assetDeniedByPolicyId }).del();
+      await table('assets').where({ asset_id: assetDeniedByPolicyId }).del();
+      assetDeniedByPolicyId = undefined;
+    }
     await table('document_folders').whereIn('entity_id', [taskAId, taskBId]).del();
+    await table('document_default_folders').whereIn('folder_path', [
+      '/Concurrent Tasks', '/Concurrent Tasks/Deliverables', '/Concurrent Tasks/Specifications', '/Concurrent Tasks/Reference',
+    ]).del();
     if (mspStorageConfigurationId) await table('storage_configurations').where({ configuration_id: mspStorageConfigurationId }).del();
     if (mspStorageProviderId) await table('storage_providers').where({ provider_id: mspStorageProviderId }).del();
   });
@@ -365,6 +395,11 @@ describe('document association cross-client authorization', () => {
       const result = await searchDocumentAssociationEntities(type, search, 1, 10);
       expect(result.options.map((item: { value: string }) => item.value)).toContain(expectedId);
     }
+    const unassignedContractSearch = await searchDocumentAssociationEntities('contract', 'Unassigned existing contract', 1, 10);
+    expect(unassignedContractSearch.options.map((item: { value: string }) => item.value)).toContain(contractUnassignedId);
+    expect(await createDocumentAssociations(contractUnassignedId, 'contract', [documentAId])).toEqual({ success: true });
+    expect(await removeDocumentAssociations(contractUnassignedId, 'contract', [documentAId])).toEqual({ success: true });
+    expect(await createDocumentAssociations(uuidv4(), 'contract', [documentAId])).toHaveProperty('permissionError');
     expect(await createDocumentAssociations(taskBId, 'project_task', [documentAId])).toEqual({ success: true });
     expect(await table('document_associations').where({ document_id: documentAId, entity_id: taskBId })).toHaveLength(1);
     for (const [type, id] of [['contract', contractBId], ['quote', quoteBId], ['opportunity', opportunityBId]] as const) {
@@ -388,6 +423,7 @@ describe('document association cross-client authorization', () => {
       file_size: 22, storage_path: `test/${mspUploadedFileId}`, uploaded_by_id: mspUserId,
     });
     storageMocks.uploadFile.mockResolvedValue({ file_id: mspUploadedFileId, storage_path: `test/${mspUploadedFileId}` });
+    trackedStorageFileIds.push(mspUploadedFileId);
     const uploadForm = new FormData();
     uploadForm.set('file', new File(['MSP cross-client upload'], 'msp-cross-client.txt', { type: 'text/plain' }));
     const authorizedUpload = await uploadDocument(uploadForm, { userId: mspUserId, projectTaskId: taskBId });
@@ -476,5 +512,163 @@ describe('document association cross-client authorization', () => {
     } finally {
       await table('projects').where({ project_id: projectId }).update({ client_id: clientAId });
     }
+  });
+
+  it('denies asset association writes when record policy denies access despite asset:update', async () => {
+    assetDeniedByPolicyId = uuidv4();
+    await table('assets').insert({
+      tenant: tenantId, asset_id: assetDeniedByPolicyId, asset_type: 'workstation', client_id: clientAId,
+      asset_tag: `AUTH-${assetDeniedByPolicyId.slice(0, 8)}`, name: 'Policy restricted asset', status: 'active',
+    });
+    await table('document_associations').insert({
+      tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
+      entity_type: 'asset', entity_id: assetDeniedByPolicyId, created_at: new Date(),
+    });
+
+    const mspUser = createMockUser('internal', { user_id: mspUserId, tenant: tenantId });
+    const grants = new Set(['document:update', 'asset:update']);
+    const checkedPermissions: string[] = [];
+    setMockUser(mspUser, [...grants]);
+    setupCommonMocks({
+      tenantId, userId: mspUserId, user: mspUser,
+      permissionCheck: (_user, resource, action) => {
+        checkedPermissions.push(`${resource}:${action}`);
+        return grants.has(`${resource}:${action}`);
+      },
+    });
+
+    const bundleService = await import('@alga-psa/authorization/bundles/service');
+    const ruleSpy = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockImplementation(async (_trx, input) =>
+      input.resource.type === 'asset' && input.resource.action === 'read'
+        ? [{ id: 'deny-asset-record', resource: 'asset', action: 'read', templateKey: 'same_team' }]
+        : []
+    );
+    try {
+      expect(await createDocumentAssociations(assetDeniedByPolicyId, 'asset', [documentAId])).toHaveProperty('permissionError');
+      const beforeRemoval = await table('document_associations')
+        .where({ document_id: documentAId, entity_type: 'asset', entity_id: assetDeniedByPolicyId }).select('association_id');
+      expect(beforeRemoval).toHaveLength(1);
+      expect(await removeDocumentAssociations(assetDeniedByPolicyId, 'asset', [documentAId])).toHaveProperty('permissionError');
+      expect(await table('document_associations')
+        .where({ document_id: documentAId, entity_type: 'asset', entity_id: assetDeniedByPolicyId }).select('association_id'))
+        .toEqual(beforeRemoval);
+      expect(checkedPermissions).toContain('asset:update');
+    } finally {
+      ruleSpy.mockRestore();
+    }
+  });
+
+  it('applies document update bundle policy separately from read to association mutations and parent uploads', async () => {
+    const clientUser = createMockUser('client', {
+      user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
+    });
+    const grants = new Set(['document:read', 'document:create', 'document:update', 'project:update']);
+    setMockUser(clientUser, [...grants]);
+    setupCommonMocks({
+      tenantId, userId: clientAUserId, user: clientUser,
+      permissionCheck: (_user, resource, action) => grants.has(`${resource}:${action}`),
+    });
+    const beforeDocuments = await table('documents').where({ document_id: documentAId }).select('document_id', 'folder_path');
+    const beforeFolders = await table('document_folders').where({ entity_id: taskAId }).select('folder_id', 'folder_path');
+    await table('document_associations').insert({
+      tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
+      entity_type: 'project_task', entity_id: taskAId, created_at: new Date(),
+    });
+    const existingTaskAssociation = await table('document_associations')
+      .where({ document_id: documentAId, entity_type: 'project_task', entity_id: taskAId }).select('association_id');
+    const expectedAssociations = await table('document_associations')
+      .where({ document_id: documentAId }).select('association_id', 'entity_id', 'entity_type');
+
+    const bundleService = await import('@alga-psa/authorization/bundles/service');
+    const ruleSpy = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockImplementation(async (_trx, input) =>
+      input.resource.type === 'document' && input.resource.action === 'update'
+        ? [{ id: 'deny-document-update', resource: 'document', action: 'update', templateKey: 'same_team' }]
+        : []
+    );
+    try {
+      const readable = await getClientDocuments(1, 20, {});
+      expect(readable.documents.map((document: { document_id: string }) => document.document_id)).toContain(documentAId);
+      expect(await createDocumentAssociations(taskAId, 'project_task', [documentAId])).toHaveProperty('permissionError');
+      expect(await removeDocumentAssociations(taskAId, 'project_task', [documentAId])).toHaveProperty('permissionError');
+      expect(await table('document_associations')
+        .where({ document_id: documentAId, entity_type: 'project_task', entity_id: taskAId }).select('association_id'))
+        .toEqual(existingTaskAssociation);
+
+      storageMocks.uploadFile.mockClear();
+      const parentUpload = new FormData();
+      parentUpload.set('file', new File(['update policy'], 'update-policy-parent.txt', { type: 'text/plain' }));
+      expect(await uploadDocument(parentUpload, { userId: clientAUserId, parentDocumentId: documentAId })).toHaveProperty('permissionError');
+      expect(storageMocks.uploadFile).not.toHaveBeenCalled();
+      expect(await table('documents').where({ document_id: documentAId }).select('document_id', 'folder_path')).toEqual(beforeDocuments);
+      expect(await table('document_folders').where({ entity_id: taskAId }).select('folder_id', 'folder_path')).toEqual(beforeFolders);
+      expect(await table('document_associations')
+        .where({ document_id: documentAId }).select('association_id', 'entity_id', 'entity_type'))
+        .toEqual(expectedAssociations);
+    } finally {
+      ruleSpy.mockRestore();
+    }
+  });
+
+  it('completes concurrent first uploads through one entity-folder initialization and retains both files', async () => {
+    const mspUser = createMockUser('internal', { user_id: mspUserId, tenant: tenantId });
+    const grants = new Set(['document:read', 'document:create', 'document:update', 'project:update']);
+    setMockUser(mspUser, [...grants]);
+    setupCommonMocks({
+      tenantId, userId: mspUserId, user: mspUser,
+      permissionCheck: (_user, resource, action) => grants.has(`${resource}:${action}`),
+    });
+
+    mspStorageProviderId = uuidv4();
+    mspStorageConfigurationId = uuidv4();
+    await table('storage_providers').insert({
+      tenant: tenantId, provider_id: mspStorageProviderId, provider_type: 'local', provider_name: 'Concurrent folder test storage', config: {},
+    });
+    await table('storage_configurations').insert({
+      tenant: tenantId, configuration_id: mspStorageConfigurationId, provider_id: mspStorageProviderId,
+      name: 'Concurrent folder test storage', path: '/', is_default: true,
+    });
+    await table('document_default_folders').insert([
+      { tenant: tenantId, default_folder_id: uuidv4(), entity_type: 'project_task', folder_path: '/Concurrent Tasks', folder_name: 'Concurrent Tasks', sort_order: 0, is_client_visible: false },
+      { tenant: tenantId, default_folder_id: uuidv4(), entity_type: 'project_task', folder_path: '/Concurrent Tasks/Deliverables', folder_name: 'Deliverables', sort_order: 1, is_client_visible: false },
+      { tenant: tenantId, default_folder_id: uuidv4(), entity_type: 'project_task', folder_path: '/Concurrent Tasks/Specifications', folder_name: 'Specifications', sort_order: 2, is_client_visible: false },
+      { tenant: tenantId, default_folder_id: uuidv4(), entity_type: 'project_task', folder_path: '/Concurrent Tasks/Reference', folder_name: 'Reference', sort_order: 3, is_client_visible: false },
+    ]);
+
+    let arrivalCount = 0;
+    let releaseUploads!: () => void;
+    const uploadBarrier = new Promise<void>((resolve) => { releaseUploads = resolve; });
+    storageMocks.deleteFile.mockClear();
+    storageMocks.uploadFile.mockImplementation(async (_tenant: string, buffer: Buffer, fileName: string) => {
+      const fileId = uuidv4();
+      trackedStorageFileIds.push(fileId);
+      await table('external_files').insert({
+        tenant: tenantId, file_id: fileId, file_name: fileName, original_name: fileName, mime_type: 'text/plain',
+        file_size: buffer.length, storage_path: `test/${fileId}`, uploaded_by_id: mspUserId,
+      });
+      arrivalCount += 1;
+      if (arrivalCount === 2) releaseUploads();
+      await uploadBarrier;
+      return { file_id: fileId, storage_path: `test/${fileId}` };
+    });
+
+    const makeForm = (name: string) => {
+      const form = new FormData();
+      form.set('file', new File([name], name, { type: 'text/plain' }));
+      return form;
+    };
+    const results = await Promise.all([
+      uploadDocument(makeForm('folder-concurrent-a.txt'), { userId: mspUserId, projectTaskId: taskAId }),
+      uploadDocument(makeForm('folder-concurrent-b.txt'), { userId: mspUserId, projectTaskId: taskAId }),
+    ]);
+    expect(results.map((result) => result).every((result) => 'success' in result && result.success)).toBe(true);
+    const uploaded = await table('documents').where({ created_by: mspUserId })
+      .whereIn('document_name', ['folder-concurrent-a.txt', 'folder-concurrent-b.txt'])
+      .select('document_id', 'document_name', 'file_id');
+    expect(uploaded).toHaveLength(2);
+    expect(await table('document_associations').whereIn('document_id', uploaded.map((row: { document_id: string }) => row.document_id))
+      .andWhere({ entity_type: 'project_task', entity_id: taskAId })).toHaveLength(2);
+    expect(await table('document_folders').where({ entity_id: taskAId })).toHaveLength(4);
+    expect(await table('external_files').whereIn('file_id', uploaded.map((row: { file_id: string }) => row.file_id))).toHaveLength(2);
+    expect(storageMocks.deleteFile).not.toHaveBeenCalled();
   });
 });

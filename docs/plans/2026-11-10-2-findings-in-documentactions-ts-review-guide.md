@@ -16,6 +16,8 @@ Plan followed: [2026-11-10 fix plan](./2026-11-10-2-findings-in-documentactions-
 
 **Repair.** The shared target adapter resolves and authorizes target records inside the same transaction as association writes. Mutation checks require `document:update` and evaluate the document relationship/bundle policy for the `update` action; the document target adapter does the same. Parent-document uploads pass through this update gate. Upload performs an early authorization check, then rechecks inside the final transaction; entity-folder provisioning, folder visibility lookup, document insertion, and associations now share that transaction. If late authorization or a later write fails, database state rolls back and the uploaded storage object is cleaned up. Supported association kinds include the picker entities and the additional entity types accepted by the association API; unknown types fail closed.
 
+Asset targets also require the existing asset record-read policy after coarse `asset:update` permission. Contract target checks confirm a `contracts` row exists; client principals additionally need a `client_contracts` assignment to their client, while MSP principals may target existing unassigned contracts. Both folder provisioning helpers use conflict-safe inserts inside the upload transaction so a duplicate folder race does not leave PostgreSQL's transaction aborted.
+
 **Behavioral regression and observed result.** The same integration case verifies:
 
 - Client A's upload to Client B's task is denied; no document, association, or folder row is added.
@@ -27,14 +29,18 @@ Plan followed: [2026-11-10 fix plan](./2026-11-10-2-findings-in-documentactions-
 - With `document:read` and `document:create` but without `document:update`, Client A can read the existing document but create/remove association and parent-document upload requests are denied without state changes.
 - If a task changes client scope after the upload's early check and storage upload, the final transaction denies the upload; no folder, document, or association persists, and `deleteFile` is called for the uploaded object.
 - The search test verifies visible and blocked ticket boards, scoped count values, and two-page pagination. MSP contract, quote, and opportunity search and association operations succeed with faithful grants.
+- With `asset:update` granted but an asset `same_team` record policy denying access, both association creation and removal are denied; removal preserves the persisted row.
+- A client with coarse document read/update permissions can read a document, but a document `update` bundle rule denies association creation/removal and parent-document upload with no persisted changes.
+- An MSP can associate to an existing unassigned contract; a nonexistent contract target is denied.
+- Two uploads released through a shared storage barrier both complete their first entity-folder initialization. Both documents, task associations, four default folders, and external storage rows persist, and uploaded files are not cleaned up on success.
 
-The isolated run `TEST_DB_NAME=test_document_actions_authz_4477 npx vitest run src/test/integration/documentAssociationCrossClient.integration.test.ts --coverage.enabled=false` passed: 3 integration tests. The existing authorization contract suite passed: 3 files, 10 tests.
+The isolated run `TEST_DB_NAME=test_document_actions_authz_4477 npx vitest run src/test/integration/documentAssociationCrossClient.integration.test.ts --coverage.enabled=false` passed: 6 integration tests. The existing authorization contract suite passed: 3 files, 10 tests.
 
 ## Review first
 
-1. Inspect the permission-resource mapping and shared ticket SQL scope in `shared/lib/documentAssociationTargetAuthorization.ts`; check `billing`, `opportunities`, allowed/blocked boards, and pagination/count behavior.
-2. Inspect update-action authorization in `assertAuthorizedDocumentSetForMutation`, the document target adapter, and the parent-document upload path.
-3. Trace upload authorization through folder provisioning and association insertion in the final transaction; confirm rollback and storage cleanup on late denial.
+1. Inspect the permission-resource mapping, contract existence/client assignment split, asset record policy, and shared ticket SQL scope in `shared/lib/documentAssociationTargetAuthorization.ts`.
+2. Inspect update-action authorization in `assertAuthorizedDocumentSetForMutation`, the document target adapter, and the parent-document upload path; check the read-allowed/update-denied regression.
+3. Trace both folder helpers' conflict-safe inserts and the concurrent-upload regression, then verify folder, document, association, and storage outcomes.
 4. Review the permission-grant fixtures and persisted outcomes in `server/src/test/integration/documentAssociationCrossClient.integration.test.ts`.
 
 ## Uncertainty / unverified behavior

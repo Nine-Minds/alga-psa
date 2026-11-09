@@ -287,7 +287,7 @@ async function ensureEntityFoldersInitializedInternal(
     });
 
   if (foldersToInsert.length > 0) {
-    await tenantScopedTable(knex, 'document_folders', tenant).insert(foldersToInsert);
+    await tenantScopedTable(knex, 'document_folders', tenant).insert(foldersToInsert).onConflict().ignore();
   }
 }
 

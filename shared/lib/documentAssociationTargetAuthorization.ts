@@ -195,11 +195,10 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
       if (!await hasTargetPermission(user, 'asset', action, conn)) return false;
       const row = await dbTable(conn, tenant, 'assets').select('asset_id', 'client_id').where({ asset_id: id }).first();
       if (!row || !await clientOwns(conn, tenant, user, row.client_id)) return false;
-      if (action === 'read') {
-        const context = await createAssetReadContext(conn, tenant, user);
-        return (await filterReadableAssets(conn, tenant, context, [row])).length === 1;
-      }
-      return true;
+      // Asset writes follow the existing asset mutation rule: coarse update
+      // permission does not bypass the per-record asset read policy.
+      const context = await createAssetReadContext(conn, tenant, user);
+      return (await filterReadableAssets(conn, tenant, context, [row])).length === 1;
     },
   },
   project_task: {
@@ -228,9 +227,14 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
     },
     assertTarget: async (conn, tenant, user, id, action) => {
       if (!await hasTargetPermission(user, 'billing', action, conn)) return false;
-      const rows = await dbTable(conn, tenant, 'client_contracts').select('client_id').where({ contract_id: id });
-      if (user.user_type !== 'client') return rows.length > 0;
-      return Boolean(user.clientId && rows.length === 1 && rows[0]?.client_id === user.clientId);
+      const contract = await dbTable(conn, tenant, 'contracts').select('contract_id').where({ contract_id: id }).first();
+      if (!contract) return false;
+      if (user.user_type !== 'client') return true;
+      if (!user.clientId) return false;
+      return Boolean(await dbTable(conn, tenant, 'client_contracts')
+        .select('client_contract_id')
+        .where({ contract_id: id, client_id: user.clientId })
+        .first());
     },
   },
   opportunity: {
