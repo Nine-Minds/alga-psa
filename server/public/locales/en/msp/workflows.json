@@ -536,6 +536,7 @@
         "contractEnd": "the contract's end date",
         "warrantyEnd": "the asset's warranty end date",
         "maintenanceDue": "the asset maintenance due date",
+        "ticketDueDate": "the ticket's due date",
         "ticketStatusAge": "the day the ticket reaches the number of days in status"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Tenant timezone (default)",
       "searchTimezones": "Search timezones",
       "inputDataEventPending": "Choose the event above; your steps will read the data that event sends.",
+      "dateSourceTicketDueDate": "Ticket due date",
       "dateSourceTicketStatusAge": "Ticket in status for N days",
       "statusAgeStatus": "Status",
       "statusAgeStatusPlaceholder": "Select a status",

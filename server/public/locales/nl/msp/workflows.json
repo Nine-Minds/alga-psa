@@ -536,6 +536,7 @@
         "contractEnd": "de einddatum van het contract",
         "warrantyEnd": "de einddatum van de garantie van het asset",
         "maintenanceDue": "de vervaldatum van het onderhoud van het asset",
+        "ticketDueDate": "de vervaldatum van het ticket",
         "ticketStatusAge": "de dag waarop het ticket het aantal dagen in de status bereikt"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Tijdzone van de tenant (standaard)",
       "searchTimezones": "Tijdzones zoeken",
       "inputDataEventPending": "Kies hierboven de gebeurtenis; uw stappen lezen de gegevens die die gebeurtenis verstuurt.",
+      "dateSourceTicketDueDate": "Vervaldatum van ticket",
       "dateSourceTicketStatusAge": "Ticket N dagen in status",
       "statusAgeStatus": "Status",
       "statusAgeStatusPlaceholder": "Selecteer een status",

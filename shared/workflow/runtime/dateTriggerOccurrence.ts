@@ -190,6 +190,28 @@ export const DATE_TRIGGER_OCCURRENCE_RULES: Record<WorkflowDateTriggerSourceId, 
       return occursOn ? { occursOn, payload: { dueDate: occursOn } } : null;
     },
   },
+  'ticket.due_date': {
+    recordKind: 'ticket',
+    payloadDateField: 'dueDate',
+    // The scheduler uses the tenant-local calendar date of the due instant; the Run dialog has no
+    // tenant timezone, so the date part of the timestamp is close enough for a test payload.
+    fromRecord: (record) => {
+      const occursOn = toIsoDateOnly(record.due_date);
+      if (!occursOn) return null;
+      const dueAt = record.due_date instanceof Date ? record.due_date.toISOString() : String(record.due_date);
+      return {
+        occursOn,
+        payload: {
+          dueDate: occursOn,
+          dueAt,
+          ...(typeof record.ticket_id === 'string' ? { ticketId: record.ticket_id } : {}),
+          ...(typeof record.ticket_number === 'string' ? { ticketNumber: record.ticket_number } : {}),
+          ...(typeof record.title === 'string' ? { title: record.title } : {}),
+          ticketOrigin: typeof record.ticket_origin === 'string' ? record.ticket_origin : 'internal',
+        },
+      };
+    },
+  },
   'ticket.status_age': {
     recordKind: 'ticket',
     fromRecord: (record, today, params) => {

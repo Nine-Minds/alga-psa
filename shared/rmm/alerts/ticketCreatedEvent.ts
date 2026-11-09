@@ -26,7 +26,8 @@ export async function publishRmmTicketCreated({
   const publish = () =>
     publishWorkflowEvent({
       eventType: 'TICKET_CREATED',
-      payload: buildRmmTicketCreatedPayload({ ticketId, source }),
+      // RMM inserts set neither column, so the stored values are the defaults: origin internal, no due date.
+      payload: buildRmmTicketCreatedPayload({ ticketId, source, ticketOrigin: 'internal', dueDate: null }),
       ctx: { tenantId, actor: { actorType: 'SYSTEM' } },
     });
 

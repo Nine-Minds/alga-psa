@@ -155,6 +155,8 @@ export const ticketContracts = {
             boardId: ticket.board_id,
             priorityId: ticket.priority_id,
             clientId: ticket.client_id,
+            dueDate: new Date('2026-12-31T17:00:00.000Z'),
+            ticketOrigin: 'api',
             externalLinks: [
               {
                 link_id: 'ffffffff-ffff-4fff-8fff-000000000001',
@@ -168,7 +170,7 @@ export const ticketContracts = {
             suppressContactNotifications: true,
             suppressInternalNotifications: true,
           }),
-        expectFields: suppressionFields,
+        expectFields: [...suppressionFields, 'dueDate', 'ticketOrigin'],
       },
       {
         site: `${TICKET_SERVICE}#createFromAsset`,
@@ -187,7 +189,8 @@ export const ticketContracts = {
       },
       {
         site: 'shared/rmm/alerts/ticketCreatedEvent.ts#publishRmmTicketCreated',
-        build: () => buildRmmTicketCreatedPayload({ ticketId: ticket.ticket_id!, source: 'rmm_alert' }),
+        build: () => buildRmmTicketCreatedPayload({ ticketId: ticket.ticket_id!, source: 'rmm_alert', ticketOrigin: 'internal', dueDate: null }),
+        expectFields: ['ticketOrigin'],
         ctx: { actor: { actorType: 'SYSTEM' } },
       },
       {
@@ -197,6 +200,40 @@ export const ticketContracts = {
             { tenantId: IDS.tenant, ticketId: ticket.ticket_id!, userId: IDS.user, metadata: createdMetadata },
             { suppressContactNotifications: true }
           ),
+      },
+      {
+        // A recurring-generated ticket: the generator hands the schedule ids down as payload extras.
+        site: `${MODEL_PUBLISHER}#publishTicketCreated`,
+        build: () =>
+          buildModelPublisherTicketCreatedPayload(
+            {
+              tenantId: IDS.tenant,
+              ticketId: ticket.ticket_id!,
+              userId: IDS.user,
+              metadata: { ...createdMetadata, dueDate: '2026-12-31T17:00:00.000Z', ticketOrigin: 'recurring' },
+            },
+            {
+              suppressContactNotifications: true,
+              recurrence: { definitionId: 'rrrrrrrr-rrrr-4rrr-8rrr-000000000001', occurrenceId: 'oooooooo-oooo-4ooo-8ooo-000000000001', occurrenceDate: '2026-12-31' },
+            }
+          ),
+        expectFields: ['dueDate', 'ticketOrigin', 'recurrence'],
+      },
+      {
+        // Inbound-email outbox path: metadata from TicketModel carries the due date and origin.
+        site: `${OUTBOX_PUBLISHER}#publishTicketCreated`,
+        publishPath: 'rawPublishEvent',
+        build: () =>
+          withOutboxOccurredAt(
+            buildInboundPublisherTicketCreatedPayload({
+              tenantId: IDS.tenant,
+              ticketId: ticket.ticket_id!,
+              userId: IDS.user,
+              metadata: { ...createdMetadata, dueDate: null, ticketOrigin: 'inbound_email' },
+            }),
+            HARNESS_EVENT_TIMESTAMP
+          ),
+        expectFields: ['dueDate', 'ticketOrigin'],
       },
       {
         site: `${SERVER_PUBLISHER}#publishTicketCreated`,

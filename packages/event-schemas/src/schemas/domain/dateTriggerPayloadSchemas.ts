@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { withWorkflowPicker } from '../../jsonSchemaMetadata';
-import { dateOnlySchema } from './commonEventPayloadSchemas';
+import { dateOnlySchema, ticketRecurrenceSchema } from './commonEventPayloadSchemas';
 import { dateTriggerSourceDefinitions, type DateTriggerPayloadSchemaRefs } from './dateTriggerSourceDefinitions';
 
 const date = dateOnlySchema('Calendar date (YYYY-MM-DD)');
@@ -31,6 +31,24 @@ export const dateTriggerPayloadSchemas = {
     assetName: z.string().optional(),
     maintenanceType: z.string().optional(),
     dueDate: dateOnlySchema('Maintenance due date (YYYY-MM-DD)'),
+  }).passthrough(),
+  // `ticket.due_date` carries everything a reminder step needs, like `ticket.status_age`.
+  'payload.TicketDueDate.v1': z.object({
+    ...common,
+    ticketId,
+    ticketNumber: z.string(),
+    title: z.string(),
+    dueDate: dateOnlySchema('Due date in the tenant timezone (YYYY-MM-DD)'),
+    dueAt: z.string().describe('Due date and time (ISO 8601 timestamp)'),
+    statusId: ticketStatusId,
+    statusName: z.string(),
+    boardId,
+    boardName: z.string(),
+    priorityId: withWorkflowPicker(z.string(), 'Priority', 'ticket-priority').optional(),
+    contactId: contactId.optional(),
+    assignedUserId: assignedUserId.optional(),
+    ticketOrigin: z.string().describe('Where the ticket came from (recurring for schedule-generated tickets)'),
+    recurrence: ticketRecurrenceSchema.optional(),
   }).passthrough(),
   // `ticket.status_age` carries everything a follow-up step needs (contact, assignee, board, status),
   // so a workflow never has to look the ticket up again.
