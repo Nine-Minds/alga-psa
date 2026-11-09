@@ -629,29 +629,35 @@ describe('BoardsSettings notifications section', () => {
     });
 
     it('reloads the created board after a failed notification save and never resends source ids or re-creates', async () => {
+      let resolveReloadedSettings!: (settings: { rules: any[]; default_watcher_user_ids: string[] }) => void;
       saveBoardNotificationSettingsMock
         .mockResolvedValueOnce({ actionError: 'boom' })
         .mockImplementation(async (_id: string, input: any) => input);
+      getBoardNotificationSettingsMock.mockImplementationOnce(
+        () => new Promise((resolve) => { resolveReloadedSettings = resolve; })
+      );
       await startCopyCreateWithStatusRule();
+      await waitFor(() => expect(screen.getByTestId('save-board-button')).toBeEnabled());
       click('save-board-button');
 
-      await waitFor(() => {
-        expect(screen.getByTestId('board-editor-section-error-notifications')).toHaveTextContent('boom');
-      });
       await waitFor(() => {
         expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-created');
         expect(getBoardNotificationSettingsMock).toHaveBeenCalledWith('board-created');
       });
       expect(createBoardMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('save-board-button')).toBeDisabled();
 
-      // Retry: rules reloaded from the server (empty), so add one against the new board's statuses.
+      await act(async () => {
+        resolveReloadedSettings({ rules: [], default_watcher_user_ids: [] });
+      });
       await waitFor(() => {
+        expect(screen.getByTestId('board-editor-section-error-notifications')).toHaveTextContent('boom');
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId('save-board-button')).toBeEnabled();
         expect(document.getElementById('board-notification-rule-0')).toBeNull();
       });
-      // Let the reload (statuses, close rules, notification settings) settle before editing.
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      });
+      // Retry against the reloaded board state and its newly-created status ids.
       click('add-board-notification-rule-button');
       click('board-notification-rule-0-create');
       await waitFor(() => {
