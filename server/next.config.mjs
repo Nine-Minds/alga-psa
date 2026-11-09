@@ -1351,6 +1351,10 @@ const nextConfig = {
     '@google-cloud/vertexai',
     'handlebars',
     'jsdom',
+    // The headless editor imports React-backed Tiptap extensions. Resolve its
+    // whole Node dependency graph outside RSC bundling so those extensions get
+    // React's normal runtime (including createContext), rather than react-server.
+    '@blocknote/server-util',
     'monaco-editor',
     // The SDK generator transpiles with the compiler API at runtime; keep it
     // on disk so `ts.sys` can still read the default lib .d.ts files.

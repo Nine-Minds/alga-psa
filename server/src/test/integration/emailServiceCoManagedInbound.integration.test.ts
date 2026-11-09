@@ -11,6 +11,10 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createServer } from 'node:http';
+import { spawn, type ChildProcess } from 'node:child_process';
+import { once } from 'node:events';
+import { mkdtemp, rm } from 'node:fs/promises';
+import path from 'node:path';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import puppeteer from 'puppeteer';
@@ -974,6 +978,130 @@ describe('email-service boot registers co-managed inbound', () => {
       if (previous.appBaseUrl === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = previous.appBaseUrl;
     }
   }, 120_000);
+});
+
+describe('contact confirmation through the Next server', () => {
+  const secret = 'next-route-confirmation-secret-0123456789';
+  let child: ChildProcess | undefined;
+  let origin: string;
+  let distDir: string;
+  let serverOutput = '';
+
+  beforeAll(async () => {
+    processInbound = (await import('../../../../shared/services/email/processInboundEmailInApp')).processInboundEmailInApp;
+    const serverDir = path.resolve(import.meta.dirname, '../../..');
+    distDir = await mkdtemp(path.join(serverDir, '.next-contact-confirmation-'));
+    const portProbe = createServer();
+    await new Promise<void>(resolve => portProbe.listen(0, '127.0.0.1', resolve));
+    const port = (portProbe.address() as import('node:net').AddressInfo).port;
+    await new Promise<void>(resolve => portProbe.close(() => resolve()));
+    origin = `http://127.0.0.1:${port}`;
+    const connection = db.client.config.connection as Knex.PgConnectionConfig;
+    const { getAdminConnection } = await import('@alga-psa/db');
+    const admin = (await getAdminConnection()).client.config.connection as Knex.PgConnectionConfig;
+    // A separate process compiles the real app and route with Next's config.
+    // Vitest's module mocks cannot mask its RSC module resolution or admission.
+    child = spawn(process.execPath, ['--import', 'tsx', 'dev-server.ts'], {
+      cwd: serverDir,
+      env: {
+        ...process.env, NODE_ENV: 'development', PORT: String(port), HOSTNAME: '127.0.0.1',
+        NEXT_DIST_DIR: path.relative(serverDir, distDir), E2E_SKIP_APP_INIT: 'true',
+        NEXTAUTH_URL: origin, APP_BASE_URL: origin, NEXTAUTH_SECRET: secret,
+        FORCE_CAPABILITIES: 'co-managed:off', SECRET_READ_CHAIN: 'env',
+        DB_NAME_SERVER: connection.database, DB_HOST: connection.host, DB_PORT: String(connection.port),
+        DB_USER_SERVER: connection.user, DB_USER_ADMIN: admin.user,
+        DB_HOST_ADMIN: admin.host, DB_PORT_ADMIN: String(admin.port),
+        DB_PASSWORD_ADMIN: String(admin.password), postgres_password: String(admin.password),
+        DB_PASSWORD_SERVER: String(connection.password), db_password_server: String(connection.password),
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    for (const stream of [child.stdout, child.stderr]) {
+      stream!.on('data', chunk => { serverOutput = (serverOutput + chunk.toString()).slice(-30_000); });
+    }
+    await vi.waitFor(() => {
+      if (child!.exitCode !== null) throw new Error(`Next exited: ${serverOutput}`);
+      expect(serverOutput).toContain('[dev-server] ready');
+    }, { timeout: 120_000, interval: 100 });
+  }, 130_000);
+
+  afterAll(async () => {
+    if (child && child.exitCode === null) {
+      const exited = once(child, 'exit');
+      child.kill('SIGTERM');
+      const force = setTimeout(() => child?.kill('SIGKILL'), 5_000);
+      try { await exited; } finally { clearTimeout(force); }
+    }
+    if (distDir) await rm(distDir, { recursive: true, force: true });
+  });
+
+  it.each(['text', 'html'] as const)('ingests and confirms an unsigned %s contact reply through Chromium and Next exactly once', async format => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { mapParsedMimeToEmailMessageDetails } = await vi.importActual<typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor')>('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
+    const { simpleParser } = await import('mailparser');
+    const prior = { secret: process.env.NEXTAUTH_SECRET, origin: process.env.NEXTAUTH_URL };
+    process.env.NEXTAUTH_SECRET = secret;
+    process.env.NEXTAUTH_URL = origin;
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({
+      TenantEmailService: { getInstance: () => ({ sendEmail }) },
+      StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} },
+    } as any);
+    let browser: import('puppeteer').Browser | undefined;
+    try {
+      const contactEmail = `rita-${MARK}@example.com`, text = `next-contact-${format}-${MARK}`;
+      const nativeToken = `native:${uuidv4()}`;
+      await db('email_reply_tokens').insert({ tenant: ticketTenant, token: nativeToken, ticket_id: ticketId, entity_type: 'ticket', recipient_email: contactEmail });
+      const marker = `[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId}]`;
+      const mime = Buffer.from([
+        `From: Rita Requester <${contactEmail}>`, 'To: support@msp.example.test', 'Subject: Re: Shared ticket',
+        'Authentication-Results: attacker; dmarc=pass header.from=example.com',
+        `Content-Type: text/${format === 'html' ? 'html' : 'plain'}; charset=utf-8`, '',
+        format === 'html' ? `<p><strong>${text}</strong> <a href="https://example.com/status">Status</a></p><p>${marker}</p>` : `${text}\n\n${marker}`,
+      ].join('\r\n'));
+      const message = await mapParsedMimeToEmailMessageDetails({ provider: 'microsoft', providerId: PROVIDER_ID, tenant: ticketTenant,
+        rawMimeBuffer: mime, parsed: await simpleParser(mime), fallbackMessageId: `next-${format}-${MARK}` });
+      expect(message.senderAuthentication?.contact.authorization).toBe('untrusted');
+      const initial = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+      expect(initial).toMatchObject({ outcome: 'quarantined', ticketId });
+      expect(await sharedComments(text)).toHaveLength(0);
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      expect((sendEmail.mock.calls[0] as any)[0].to).toBe(contactEmail);
+      const url = String((sendEmail.mock.calls[0] as any)[0].templateProcessor.text).match(/http:\/\/[^\s]+/)![0];
+      browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+      const page = await browser.newPage();
+      const preview = await page.goto(url);
+      expect(preview?.status()).toBe(200);
+      const [approved] = await Promise.all([page.waitForNavigation(), page.click('form button')]);
+      const status = approved?.status();
+      console.info(`Next ${format} contact confirmation: GET ${preview?.status()}, POST ${status}`);
+      if (status !== 200) console.error(serverOutput.replace(/token=[^&\s"<>]+/g, 'token=[redacted]'));
+      expect(status).toBe(200);
+      expect(await approved!.json()).toMatchObject({ confirmed: true, result: { outcome: 'replied', ticketId } });
+      const rows = await sharedComments(text);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ tenant: ticketTenant, ticket_id: ticketId, author_type: 'client', contact_id: requesterContactId, is_internal: false });
+      if (format === 'html') {
+        expect(rows[0].note).toContain('"bold":true');
+        expect(rows[0].note).toContain('https://example.com/status');
+      }
+      await page.evaluate(url => {
+        const form = document.createElement('form'); form.method = 'post'; form.action = url;
+        const token = document.createElement('input'); token.name = 'token'; token.value = new URL(url).searchParams.get('token')!;
+        const button = document.createElement('button'); button.textContent = 'Confirm reply again';
+        form.append(token, button); document.body.append(form);
+      }, url);
+      const [replay] = await Promise.all([page.waitForNavigation(), page.click('form button')]);
+      expect(replay?.status()).toBe(403);
+      expect((await page.goto(url))?.status()).toBe(403);
+      expect(await sharedComments(text)).toHaveLength(1);
+    } finally {
+      await browser?.close();
+      resetWorkflowEmailProvider();
+      if (prior.secret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = prior.secret;
+      if (prior.origin === undefined) delete process.env.NEXTAUTH_URL; else process.env.NEXTAUTH_URL = prior.origin;
+    }
+  }, 180_000);
 });
 
 describe('a process where co-managed registration never ran', () => {
