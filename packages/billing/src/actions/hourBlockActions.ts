@@ -23,7 +23,7 @@ import {
   computeRemainingBlockValueMinor,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString } from '@alga-psa/core';
-import { resolveManualExpirationDate } from '../lib/hourBlockExpiration';
+import { settleManualExpirationDate } from '../lib/hourBlockExpiration';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { getDueDate } from './billingAndTax';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
@@ -593,11 +593,12 @@ export const manuallyExpireHourBlock = withAuth(async (
       const nowIso = new Date().toISOString();
       const today = toCalendarDateString(nowIso) ?? nowIso.slice(0, 10);
       const currentExpiry = block.expiration_date ? toCalendarDateString(block.expiration_date) : null;
-      const expirationDate = resolveManualExpirationDate(currentExpiry, today);
+      const expirationDate = settleManualExpirationDate(currentExpiry, today);
 
-      await tenantScopedTable(trx, tenant, 'hour_blocks')
+      const [updated] = await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
-        .update({ status: 'expired', expiration_date: expirationDate, updated_at: nowIso });
+        .update({ status: 'expired', expiration_date: expirationDate, updated_at: nowIso })
+        .returning('*');
 
       await writeAudit(trx, tenant, {
         blockId,
@@ -607,15 +608,14 @@ export const manuallyExpireHourBlock = withAuth(async (
         metadata: {
           remaining_minutes_at_expiration: Number(block.remaining_minutes),
           // The stamp above can overwrite a scheduled future date; record both
-          // sides so the original schedule stays auditable and recoverable.
+          // sides so the original schedule stays auditable and recoverable, and
+          // flag which one applied so debugging doesn't have to diff the dates.
           previous_expiration_date: currentExpiry,
           new_expiration_date: expirationDate,
+          expiration_date_settled_for_reporting: currentExpiry !== expirationDate,
         },
       });
 
-      const updated = await tenantScopedTable(trx, tenant, 'hour_blocks')
-        .where({ block_id: blockId, tenant })
-        .first();
       return updated as IHourBlock;
     });
   });
