@@ -26,7 +26,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters, translate } from '@alga-psa/ui/lib/i18n/client';
+import { interpolateFallback } from '@alga-psa/ui/lib/i18n/interpolateFallback';
 import { ticketActivityAttribution } from '../../lib/ticketActivityAttribution';
 import {
   getErrorMessage,
@@ -47,6 +48,20 @@ interface TicketActivityTimelineProps {
   refreshKey?: number;
 }
 
+const TIMELINE_NS = 'features/tickets';
+
+/** The slice of i18next's `t` the timeline formatters need. */
+type TimelineT = (key: string, options: Record<string, unknown> & { defaultValue: string }) => string;
+
+// formatEntries is exported and runs outside a React tree (unit tests, shared
+// formatting callers), so it falls back to the module-level i18next instance and
+// fills interpolations by hand when no namespace has loaded yet.
+const fallbackT: TimelineT = (key, options) =>
+  interpolateFallback(
+    translate(TIMELINE_NS, key, options),
+    options as Record<string, string | number | null | undefined>,
+  );
+
 interface FormattedEntry {
   key: string;
   occurredAt: string;
@@ -63,66 +78,66 @@ interface FormattedEntry {
   actorType: string;
 }
 
-function actorLabel(activity: TicketActivityRow): string {
+function actorLabel(activity: TicketActivityRow, t: TimelineT): string {
   const snapshot = ticketActivityAttribution(activity);
   if (snapshot) return snapshot;
   switch (activity.actor_type) {
     case 'user':
-      return 'A user';
+      return t('activityTimeline.actor.user', { defaultValue: 'A user' });
     case 'contact':
     case 'email_sender':
-      return 'A contact';
+      return t('activityTimeline.actor.contact', { defaultValue: 'A contact' });
     case 'api':
-      return 'API client';
+      return t('activityTimeline.actor.apiClient', { defaultValue: 'API client' });
     case 'workflow':
-      return 'Workflow';
+      return t('activityTimeline.actor.workflow', { defaultValue: 'Workflow' });
     case 'system':
     default:
-      return 'System';
+      return t('activityTimeline.actor.system', { defaultValue: 'System' });
   }
 }
 
-function fieldLabel(field: string): string {
+function fieldLabel(field: string, t: TimelineT): string {
   switch (field) {
     case 'status_id':
-      return 'status';
+      return t('activityTimeline.fields.status', { defaultValue: 'status' });
     case 'priority_id':
-      return 'priority';
+      return t('activityTimeline.fields.priority', { defaultValue: 'priority' });
     case 'assigned_to':
-      return 'assignee';
+      return t('activityTimeline.fields.assignee', { defaultValue: 'assignee' });
     case 'assigned_team_id':
-      return 'team';
+      return t('activityTimeline.fields.team', { defaultValue: 'team' });
     case 'board_id':
-      return 'board';
+      return t('activityTimeline.fields.board', { defaultValue: 'board' });
     case 'category_id':
-      return 'category';
+      return t('activityTimeline.fields.category', { defaultValue: 'category' });
     case 'subcategory_id':
-      return 'subcategory';
+      return t('activityTimeline.fields.subcategory', { defaultValue: 'subcategory' });
     case 'client_id':
-      return 'client';
+      return t('activityTimeline.fields.client', { defaultValue: 'client' });
     case 'contact_name_id':
-      return 'contact';
+      return t('activityTimeline.fields.contact', { defaultValue: 'contact' });
     case 'due_date':
-      return 'due date';
+      return t('activityTimeline.fields.dueDate', { defaultValue: 'due date' });
     case 'response_state':
-      return 'response state';
+      return t('activityTimeline.fields.responseState', { defaultValue: 'response state' });
     case 'closed_at':
-      return 'closed-at';
+      return t('activityTimeline.fields.closedAt', { defaultValue: 'closed-at' });
     case 'closed_by':
-      return 'closed-by';
+      return t('activityTimeline.fields.closedBy', { defaultValue: 'closed-by' });
     case 'title':
-      return 'title';
+      return t('activityTimeline.fields.title', { defaultValue: 'title' });
     case 'url':
-      return 'URL';
+      return t('activityTimeline.fields.url', { defaultValue: 'URL' });
     default:
       return field;
   }
 }
 
-function changeLine(field: string, change: { old?: unknown; new?: unknown; oldLabel?: string | null; newLabel?: string | null }): string {
+function changeLine(field: string, change: { old?: unknown; new?: unknown; oldLabel?: string | null; newLabel?: string | null }, t: TimelineT): string {
   const oldVal = change.oldLabel ?? (change.old == null ? '∅' : String(change.old));
   const newVal = change.newLabel ?? (change.new == null ? '∅' : String(change.new));
-  return `${fieldLabel(field)}: ${oldVal} → ${newVal}`;
+  return `${fieldLabel(field, t)}: ${oldVal} → ${newVal}`;
 }
 
 function eventIcon(eventType: string): React.ReactElement {
@@ -172,17 +187,17 @@ function eventIcon(eventType: string): React.ReactElement {
   }
 }
 
-function externalLinkReference(activity: TicketActivityRow): string {
+function externalLinkReference(activity: TicketActivityRow, t: TimelineT): string {
   const details = (activity.details ?? {}) as {
     system?: string;
     system_label?: string;
     external_id?: string;
   };
-  const system = details.system_label ?? details.system ?? 'an external system';
+  const system = details.system_label ?? details.system ?? t('activityTimeline.externalSystemFallback', { defaultValue: 'an external system' });
   return details.external_id ? `${system} #${details.external_id}` : system;
 }
 
-function notificationSuppressionAnnotation(activity: TicketActivityRow): string | undefined {
+function notificationSuppressionAnnotation(activity: TicketActivityRow, t: TimelineT): string | undefined {
   const suppression = (activity.details as {
     notification_suppression?: {
       suppress_contact_notifications?: unknown;
@@ -191,62 +206,66 @@ function notificationSuppressionAnnotation(activity: TicketActivityRow): string 
   }).notification_suppression;
 
   if (suppression?.suppress_internal_notifications === true) {
-    return 'silent — no notifications';
+    return t('activityTimeline.annotation.silentAll', { defaultValue: 'silent — no notifications' });
   }
 
   if (suppression?.suppress_contact_notifications === true) {
-    return 'silent — contact not notified';
+    return t('activityTimeline.annotation.silentContact', { defaultValue: 'silent — contact not notified' });
   }
 
   return undefined;
 }
 
-function describeActivity(activity: TicketActivityRow, visibilityLabel: (visible: boolean) => string): { title: string; annotation?: string; subtitle?: string } {
-  const actor = actorLabel(activity);
-  const annotation = notificationSuppressionAnnotation(activity);
+function describeActivity(
+  activity: TicketActivityRow,
+  visibilityLabel: (visible: boolean) => string,
+  t: TimelineT,
+): { title: string; annotation?: string; subtitle?: string } {
+  const actor = actorLabel(activity, t);
+  const annotation = notificationSuppressionAnnotation(activity, t);
 
   switch (activity.event_type) {
     case 'TICKET_CREATED':
-      return { title: `${actor} created the ticket` };
+      return { title: t('activityTimeline.events.created', { defaultValue: '{{actor}} created the ticket', actor }) };
     case 'TICKET_CREATED_FROM_TEMPLATE': {
       // The name is a snapshot taken at creation, so it survives the template being renamed or deleted.
       const details = (activity.details ?? {}) as { template_name?: string };
       return {
         title: details.template_name
-          ? `${actor} created this ticket from template "${details.template_name}"`
-          : `${actor} created this ticket from a template`,
+          ? t('activityTimeline.events.createdFromTemplateNamed', { defaultValue: '{{actor}} created this ticket from template "{{templateName}}"', actor, templateName: details.template_name })
+          : t('activityTimeline.events.createdFromTemplate', { defaultValue: '{{actor}} created this ticket from a template', actor }),
       };
     }
     case 'TICKET_DUPLICATED_FROM': {
       const details = (activity.details ?? {}) as { source_ticket_number?: string };
       return {
         title: details.source_ticket_number
-          ? `${actor} created this ticket as a duplicate of #${details.source_ticket_number}`
-          : `${actor} created this ticket as a duplicate of another ticket`,
+          ? t('activityTimeline.events.duplicatedFromNumber', { defaultValue: '{{actor}} created this ticket as a duplicate of #{{ticketNumber}}', actor, ticketNumber: details.source_ticket_number })
+          : t('activityTimeline.events.duplicatedFrom', { defaultValue: '{{actor}} created this ticket as a duplicate of another ticket', actor }),
       };
     }
     case 'TICKET_DUPLICATED_TO': {
       const details = (activity.details ?? {}) as { duplicate_ticket_number?: string };
       return {
         title: details.duplicate_ticket_number
-          ? `${actor} duplicated this ticket as #${details.duplicate_ticket_number}`
-          : `${actor} duplicated this ticket`,
+          ? t('activityTimeline.events.duplicatedToNumber', { defaultValue: '{{actor}} duplicated this ticket as #{{ticketNumber}}', actor, ticketNumber: details.duplicate_ticket_number })
+          : t('activityTimeline.events.duplicatedTo', { defaultValue: '{{actor}} duplicated this ticket', actor }),
       };
     }
     case 'TICKET_CLOSED':
-      return { title: `${actor} closed the ticket`, annotation };
+      return { title: t('activityTimeline.events.closed', { defaultValue: '{{actor}} closed the ticket', actor }), annotation };
     case 'TICKET_REOPENED':
       return {
-        title: `${actor} reopened the ticket`,
+        title: t('activityTimeline.events.reopened', { defaultValue: '{{actor}} reopened the ticket', actor }),
         subtitle:
           (activity.details as { reopen_trigger?: string })?.reopen_trigger === 'inbound_email_reply'
-            ? 'Triggered by inbound email reply'
+            ? t('activityTimeline.events.reopenedByEmail', { defaultValue: 'Triggered by inbound email reply' })
             : undefined,
       };
     case 'TICKET_BUNDLE_REOPENED':
       return {
-        title: 'Bundle master reopened',
-        subtitle: 'Triggered by a child-ticket reply',
+        title: t('activityTimeline.events.bundleReopened', { defaultValue: 'Bundle master reopened' }),
+        subtitle: t('activityTimeline.events.bundleReopenedSubtitle', { defaultValue: 'Triggered by a child-ticket reply' }),
       };
     case 'TICKET_BUNDLE_STATUS_PROPAGATED': {
       const details = (activity.details ?? {}) as {
@@ -255,112 +274,117 @@ function describeActivity(activity: TicketActivityRow, visibilityLabel: (visible
         child_ticket_ids?: string[];
       };
       if (details.propagated === false) {
-        return { title: `${actor} changed the bundle master status (children not updated)` };
+        return { title: t('activityTimeline.events.bundleStatusNotPropagated', { defaultValue: '{{actor}} changed the bundle master status (children not updated)', actor }) };
       }
       const count = details.child_ticket_ids?.length ?? 0;
-      const action = details.action === 'reopen' ? 'reopened' : 'closed';
-      return { title: `${actor} ${action} the bundle master and ${count} child ticket(s)` };
+      const action = details.action === 'reopen'
+        ? t('activityTimeline.events.bundleAction.reopened', { defaultValue: 'reopened' })
+        : t('activityTimeline.events.bundleAction.closed', { defaultValue: 'closed' });
+      return { title: t('activityTimeline.events.bundleStatusPropagated', { defaultValue: '{{actor}} {{action}} the bundle master and {{count}} child ticket(s)', actor, action, count }) };
     }
     case 'TICKET_STATUS_CHANGED': {
       const c = activity.changes?.status_id;
-      const detail = c ? changeLine('status_id', c) : 'Status changed';
-      return { title: `${actor} changed the status`, annotation, subtitle: detail };
+      const detail = c ? changeLine('status_id', c, t) : t('activityTimeline.events.statusChangedSubtitle', { defaultValue: 'Status changed' });
+      return { title: t('activityTimeline.events.statusChanged', { defaultValue: '{{actor}} changed the status', actor }), annotation, subtitle: detail };
     }
     case 'TICKET_PRIORITY_CHANGED': {
       const c = activity.changes?.priority_id;
-      const detail = c ? changeLine('priority_id', c) : 'Priority changed';
-      return { title: `${actor} changed the priority`, annotation, subtitle: detail };
+      const detail = c ? changeLine('priority_id', c, t) : t('activityTimeline.events.priorityChangedSubtitle', { defaultValue: 'Priority changed' });
+      return { title: t('activityTimeline.events.priorityChanged', { defaultValue: '{{actor}} changed the priority', actor }), annotation, subtitle: detail };
     }
     case 'TICKET_ASSIGNED': {
       const c = activity.changes?.assigned_to;
       return {
-        title: `${actor} assigned the ticket`,
+        title: t('activityTimeline.events.assigned', { defaultValue: '{{actor}} assigned the ticket', actor }),
         annotation,
-        subtitle: c ? changeLine('assigned_to', c) : undefined,
+        subtitle: c ? changeLine('assigned_to', c, t) : undefined,
       };
     }
     case 'TICKET_UNASSIGNED':
-      return { title: `${actor} unassigned the ticket` };
+      return { title: t('activityTimeline.events.unassigned', { defaultValue: '{{actor}} unassigned the ticket', actor }) };
     case 'TICKET_BOARD_MOVED': {
       const c = activity.changes?.board_id;
       return {
-        title: `${actor} moved the ticket to another board`,
+        title: t('activityTimeline.events.boardMoved', { defaultValue: '{{actor}} moved the ticket to another board', actor }),
         annotation,
-        subtitle: c ? changeLine('board_id', c) : undefined,
+        subtitle: c ? changeLine('board_id', c, t) : undefined,
       };
     }
     case 'TICKET_RESPONSE_STATE_CHANGED': {
       const c = activity.changes?.response_state;
       return {
-        title: `${actor} updated the response state`,
+        title: t('activityTimeline.events.responseStateUpdated', { defaultValue: '{{actor}} updated the response state', actor }),
         annotation,
-        subtitle: c ? changeLine('response_state', c) : undefined,
+        subtitle: c ? changeLine('response_state', c, t) : undefined,
       };
     }
     case 'TICKET_INTERNAL_NOTE_ADDED':
-      return { title: `${actor} added an internal note` };
+      return { title: t('activityTimeline.events.internalNoteAdded', { defaultValue: '{{actor}} added an internal note', actor }) };
     case 'TICKET_CUSTOMER_REPLIED':
       return {
-        title: `${actor} replied`,
+        title: t('activityTimeline.events.replied', { defaultValue: '{{actor}} replied', actor }),
         subtitle:
           activity.source === 'inbound_email'
-            ? 'Received via inbound email'
+            ? t('activityTimeline.events.repliedViaEmail', { defaultValue: 'Received via inbound email' })
             : activity.source === 'client_portal'
-              ? 'Received via client portal'
+              ? t('activityTimeline.events.repliedViaPortal', { defaultValue: 'Received via client portal' })
               : undefined,
       };
     case 'TICKET_MESSAGE_ADDED':
     case 'TICKET_COMMENT_ADDED':
-      return { title: `${actor} added a comment` };
+      return { title: t('activityTimeline.events.commentAdded', { defaultValue: '{{actor}} added a comment', actor }) };
     case 'TICKET_COMMENT_UPDATED':
-      return { title: `${actor} edited a comment` };
+      return { title: t('activityTimeline.events.commentEdited', { defaultValue: '{{actor}} edited a comment', actor }) };
     case 'TICKET_DOCUMENT_ATTACHED': {
       const name = (activity.details as { document_name?: string })?.document_name;
       return {
-        title: `${actor} attached a document`,
+        title: t('activityTimeline.events.documentAttached', { defaultValue: '{{actor}} attached a document', actor }),
         subtitle: name ? name : undefined,
       };
     }
     case 'TICKET_DOCUMENT_REMOVED':
-      return { title: `${actor} removed a document` };
+      return { title: t('activityTimeline.events.documentRemoved', { defaultValue: '{{actor}} removed a document', actor }) };
     case 'TICKET_INBOUND_EMAIL_RECEIVED': {
       const subject = (activity.details as { email?: { subject?: string } })?.email?.subject;
       return {
-        title: 'Inbound email received',
+        title: t('activityTimeline.events.inboundEmailReceived', { defaultValue: 'Inbound email received' }),
         subtitle: subject ?? undefined,
       };
     }
     case 'TICKET_UPDATED': {
       const fields = Object.keys(activity.changes ?? {});
       return {
-        title: `${actor} updated the ticket`,
+        title: t('activityTimeline.events.updated', { defaultValue: '{{actor}} updated the ticket', actor }),
         annotation,
-        subtitle: fields.length > 0 ? fields.map(fieldLabel).join(', ') : undefined,
+        subtitle: fields.length > 0 ? fields.map((field) => fieldLabel(field, t)).join(', ') : undefined,
       };
     }
     case 'TICKET_EXTERNAL_LINK_ADDED':
-      return { title: `${actor} linked ${externalLinkReference(activity)}` };
+      return { title: t('activityTimeline.events.externalLinkAdded', { defaultValue: '{{actor}} linked {{reference}}', actor, reference: externalLinkReference(activity, t) }) };
     case 'TICKET_EXTERNAL_LINK_UPDATED':
       return {
-        title: `${actor} updated the ${externalLinkReference(activity)} link`,
+        title: t('activityTimeline.events.externalLinkUpdated', { defaultValue: '{{actor}} updated the {{reference}} link', actor, reference: externalLinkReference(activity, t) }),
         subtitle: activity.changes?.portal_visible
           ? `${visibilityLabel(activity.changes.portal_visible.old === true)} → ${visibilityLabel(activity.changes.portal_visible.new === true)}`
           : undefined,
       };
     case 'TICKET_EXTERNAL_LINK_REMOVED':
-      return { title: `${actor} unlinked ${externalLinkReference(activity)}` };
+      return { title: t('activityTimeline.events.externalLinkRemoved', { defaultValue: '{{actor}} unlinked {{reference}}', actor, reference: externalLinkReference(activity, t) }) };
     default:
-      return { title: `${actor} • ${activity.event_type}` };
+      return { title: t('activityTimeline.events.fallback', { defaultValue: '{{actor}} • {{eventType}}', actor, eventType: activity.event_type }) };
   }
 }
 
 export function formatEntries(
   entries: TicketTimelineEntry[],
-  visibilityLabel: (visible: boolean) => string = (visible: boolean) => visible ? 'Visible in client portal' : 'Internal only',
+  visibilityLabel: (visible: boolean) => string = (visible: boolean) => visible
+    ? fallbackT('externalLinks.visibility.shared', { defaultValue: 'Visible in client portal' })
+    : fallbackT('externalLinks.visibility.internal', { defaultValue: 'Internal only' }),
+  t: TimelineT = fallbackT,
 ): FormattedEntry[] {
   return entries.map((entry) => {
     if (entry.type === 'activity' && entry.activity) {
-      const desc = describeActivity(entry.activity, visibilityLabel);
+      const desc = describeActivity(entry.activity, visibilityLabel, t);
       return {
         key: `activity-${entry.sortId}`,
         occurredAt: entry.occurredAt,
@@ -369,7 +393,7 @@ export function formatEntries(
         annotation: desc.annotation,
         subtitle: desc.subtitle,
         source: entry.activity.source,
-        actor: actorLabel(entry.activity),
+        actor: actorLabel(entry.activity, t),
         rawActivity: entry.activity,
         entryType: 'activity',
         eventType: entry.activity.event_type,
@@ -383,12 +407,12 @@ export function formatEntries(
     const responseSource =
       (c?.metadata as { responseSource?: string } | null | undefined)?.responseSource ?? null;
 
-    let title = 'Comment added';
-    if (isInternal) title = 'Internal note added';
+    let title = t('activityTimeline.comment.added', { defaultValue: 'Comment added' });
+    if (isInternal) title = t('activityTimeline.comment.internalNoteAdded', { defaultValue: 'Internal note added' });
     else if (authorType === 'client' || authorType === 'contact' || responseSource === 'client_portal') {
-      title = 'Customer reply';
+      title = t('activityTimeline.comment.customerReply', { defaultValue: 'Customer reply' });
     } else if (responseSource === 'inbound_email') {
-      title = 'Inbound email reply';
+      title = t('activityTimeline.comment.inboundEmailReply', { defaultValue: 'Inbound email reply' });
     }
 
     return {
@@ -398,7 +422,7 @@ export function formatEntries(
       title,
       subtitle: undefined,
       source: responseSource ?? (isInternal ? 'internal' : 'ui'),
-      actor: 'See conversation tab',
+      actor: t('activityTimeline.comment.actor', { defaultValue: 'See conversation tab' }),
       entryType: 'comment',
       eventType: isInternal ? 'TICKET_INTERNAL_NOTE_ADDED' : 'TICKET_COMMENT_ADDED',
       actorType: authorType === 'client' || authorType === 'contact' ? 'contact' : 'user',
@@ -430,69 +454,71 @@ function formatTimestamp(value: string, formatDate: FormatDate): string {
 
 const ALL_FILTER_VALUE = '__all__';
 
-const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: ALL_FILTER_VALUE, label: 'All events' },
-  { value: 'TICKET_CREATED', label: 'Ticket created' },
-  { value: 'TICKET_UPDATED', label: 'Ticket updated' },
-  { value: 'TICKET_STATUS_CHANGED', label: 'Status changed' },
-  { value: 'TICKET_CLOSED', label: 'Closed' },
-  { value: 'TICKET_REOPENED', label: 'Reopened' },
-  { value: 'TICKET_PRIORITY_CHANGED', label: 'Priority changed' },
-  { value: 'TICKET_ASSIGNED', label: 'Assigned' },
-  { value: 'TICKET_UNASSIGNED', label: 'Unassigned' },
-  { value: 'TICKET_BOARD_MOVED', label: 'Board moved' },
-  { value: 'TICKET_RESPONSE_STATE_CHANGED', label: 'Response state' },
-  { value: 'TICKET_MESSAGE_ADDED', label: 'Comment added' },
-  { value: 'TICKET_COMMENT_ADDED', label: 'Comment added' },
-  { value: 'TICKET_COMMENT_UPDATED', label: 'Comment edited' },
-  { value: 'TICKET_INTERNAL_NOTE_ADDED', label: 'Internal note' },
-  { value: 'TICKET_CUSTOMER_REPLIED', label: 'Customer reply' },
-  { value: 'TICKET_DOCUMENT_ATTACHED', label: 'Document attached' },
-  { value: 'TICKET_DOCUMENT_REMOVED', label: 'Document removed' },
-  { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: 'Inbound email' },
-  { value: 'TICKET_CREATED_FROM_TEMPLATE', label: 'Created from template' },
-  { value: 'TICKET_DUPLICATED_FROM', label: 'Duplicated from' },
-  { value: 'TICKET_DUPLICATED_TO', label: 'Duplicated to' },
-  { value: 'TICKET_BUNDLE_REOPENED', label: 'Bundle reopened' },
-  { value: 'TICKET_BUNDLE_STATUS_PROPAGATED', label: 'Bundle status propagated' },
+const eventTypeOptions = (t: TimelineT): { value: string; label: string }[] => [
+  { value: ALL_FILTER_VALUE, label: t('activityTimeline.filters.events.all', { defaultValue: 'All events' }) },
+  { value: 'TICKET_CREATED', label: t('activityTimeline.filters.events.created', { defaultValue: 'Ticket created' }) },
+  { value: 'TICKET_UPDATED', label: t('activityTimeline.filters.events.updated', { defaultValue: 'Ticket updated' }) },
+  { value: 'TICKET_STATUS_CHANGED', label: t('activityTimeline.filters.events.statusChanged', { defaultValue: 'Status changed' }) },
+  { value: 'TICKET_CLOSED', label: t('activityTimeline.filters.events.closed', { defaultValue: 'Closed' }) },
+  { value: 'TICKET_REOPENED', label: t('activityTimeline.filters.events.reopened', { defaultValue: 'Reopened' }) },
+  { value: 'TICKET_PRIORITY_CHANGED', label: t('activityTimeline.filters.events.priorityChanged', { defaultValue: 'Priority changed' }) },
+  { value: 'TICKET_ASSIGNED', label: t('activityTimeline.filters.events.assigned', { defaultValue: 'Assigned' }) },
+  { value: 'TICKET_UNASSIGNED', label: t('activityTimeline.filters.events.unassigned', { defaultValue: 'Unassigned' }) },
+  { value: 'TICKET_BOARD_MOVED', label: t('activityTimeline.filters.events.boardMoved', { defaultValue: 'Board moved' }) },
+  { value: 'TICKET_RESPONSE_STATE_CHANGED', label: t('activityTimeline.filters.events.responseState', { defaultValue: 'Response state' }) },
+  { value: 'TICKET_MESSAGE_ADDED', label: t('activityTimeline.filters.events.messageAdded', { defaultValue: 'Comment added' }) },
+  { value: 'TICKET_COMMENT_ADDED', label: t('activityTimeline.filters.events.commentAdded', { defaultValue: 'Comment added' }) },
+  { value: 'TICKET_COMMENT_UPDATED', label: t('activityTimeline.filters.events.commentEdited', { defaultValue: 'Comment edited' }) },
+  { value: 'TICKET_INTERNAL_NOTE_ADDED', label: t('activityTimeline.filters.events.internalNote', { defaultValue: 'Internal note' }) },
+  { value: 'TICKET_CUSTOMER_REPLIED', label: t('activityTimeline.filters.events.customerReply', { defaultValue: 'Customer reply' }) },
+  { value: 'TICKET_DOCUMENT_ATTACHED', label: t('activityTimeline.filters.events.documentAttached', { defaultValue: 'Document attached' }) },
+  { value: 'TICKET_DOCUMENT_REMOVED', label: t('activityTimeline.filters.events.documentRemoved', { defaultValue: 'Document removed' }) },
+  { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: t('activityTimeline.filters.events.inboundEmail', { defaultValue: 'Inbound email' }) },
+  { value: 'TICKET_CREATED_FROM_TEMPLATE', label: t('activityTimeline.filters.events.createdFromTemplate', { defaultValue: 'Created from template' }) },
+  { value: 'TICKET_DUPLICATED_FROM', label: t('activityTimeline.filters.events.duplicatedFrom', { defaultValue: 'Duplicated from' }) },
+  { value: 'TICKET_DUPLICATED_TO', label: t('activityTimeline.filters.events.duplicatedTo', { defaultValue: 'Duplicated to' }) },
+  { value: 'TICKET_BUNDLE_REOPENED', label: t('activityTimeline.filters.events.bundleReopened', { defaultValue: 'Bundle reopened' }) },
+  { value: 'TICKET_BUNDLE_STATUS_PROPAGATED', label: t('activityTimeline.filters.events.bundleStatusPropagated', { defaultValue: 'Bundle status propagated' }) },
 ];
 
-const SOURCE_OPTIONS: { value: string; label: string }[] = [
-  { value: ALL_FILTER_VALUE, label: 'All sources' },
+const sourceOptions = (t: TimelineT): { value: string; label: string }[] => [
+  { value: ALL_FILTER_VALUE, label: t('activityTimeline.filters.sources.all', { defaultValue: 'All sources' }) },
+  // 'UI' and 'API' are acronyms, identical in every shipped locale.
   { value: 'ui', label: 'UI' },
   { value: 'api', label: 'API' },
-  { value: 'client_portal', label: 'Client Portal' },
-  { value: 'inbound_email', label: 'Inbound Email' },
-  { value: 'workflow', label: 'Workflow' },
-  { value: 'system', label: 'System' },
-  { value: 'internal', label: 'Internal Note' },
+  { value: 'client_portal', label: t('activityTimeline.filters.sources.clientPortal', { defaultValue: 'Client Portal' }) },
+  { value: 'inbound_email', label: t('activityTimeline.filters.sources.inboundEmail', { defaultValue: 'Inbound Email' }) },
+  { value: 'workflow', label: t('activityTimeline.filters.sources.workflow', { defaultValue: 'Workflow' }) },
+  { value: 'system', label: t('activityTimeline.filters.sources.system', { defaultValue: 'System' }) },
+  { value: 'internal', label: t('activityTimeline.filters.sources.internalNote', { defaultValue: 'Internal Note' }) },
 ];
 
-const ACTOR_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: ALL_FILTER_VALUE, label: 'All actors' },
-  { value: 'user', label: 'User' },
-  { value: 'contact', label: 'Contact' },
-  { value: 'email_sender', label: 'Email sender' },
-  { value: 'api', label: 'API client' },
-  { value: 'workflow', label: 'Workflow' },
-  { value: 'system', label: 'System' },
+const actorTypeOptions = (t: TimelineT): { value: string; label: string }[] => [
+  { value: ALL_FILTER_VALUE, label: t('activityTimeline.filters.actors.all', { defaultValue: 'All actors' }) },
+  { value: 'user', label: t('activityTimeline.filters.actors.user', { defaultValue: 'User' }) },
+  { value: 'contact', label: t('activityTimeline.filters.actors.contact', { defaultValue: 'Contact' }) },
+  { value: 'email_sender', label: t('activityTimeline.filters.actors.emailSender', { defaultValue: 'Email sender' }) },
+  { value: 'api', label: t('activityTimeline.actor.apiClient', { defaultValue: 'API client' }) },
+  { value: 'workflow', label: t('activityTimeline.filters.actors.workflow', { defaultValue: 'Workflow' }) },
+  { value: 'system', label: t('activityTimeline.filters.actors.system', { defaultValue: 'System' }) },
 ];
 
-const ENTRY_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: ALL_FILTER_VALUE, label: 'All entries' },
-  { value: 'activity', label: 'Activity only' },
-  { value: 'comment', label: 'Comments only' },
+const entryTypeOptions = (t: TimelineT): { value: string; label: string }[] => [
+  { value: ALL_FILTER_VALUE, label: t('activityTimeline.filters.entries.all', { defaultValue: 'All entries' }) },
+  { value: 'activity', label: t('activityTimeline.filters.entries.activity', { defaultValue: 'Activity only' }) },
+  { value: 'comment', label: t('activityTimeline.filters.entries.comments', { defaultValue: 'Comments only' }) },
 ];
 
-function sourceBadge(source: string): { label: string; className: string } {
+function sourceBadge(source: string, t: TimelineT): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
+    // 'UI' and 'API' are acronyms, identical in every shipped locale.
     ui: { label: 'UI', className: 'chip-primary' },
     api: { label: 'API', className: 'chip-secondary' },
-    client_portal: { label: 'Client Portal', className: 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
-    inbound_email: { label: 'Inbound Email', className: 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
-    workflow: { label: 'Workflow', className: 'bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300' },
-    system: { label: 'System', className: 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]' },
-    internal: { label: 'Internal Note', className: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300' },
+    client_portal: { label: t('activityTimeline.filters.sources.clientPortal', { defaultValue: 'Client Portal' }), className: 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
+    inbound_email: { label: t('activityTimeline.filters.sources.inboundEmail', { defaultValue: 'Inbound Email' }), className: 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
+    workflow: { label: t('activityTimeline.filters.sources.workflow', { defaultValue: 'Workflow' }), className: 'bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300' },
+    system: { label: t('activityTimeline.filters.sources.system', { defaultValue: 'System' }), className: 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]' },
+    internal: { label: t('activityTimeline.filters.sources.internalNote', { defaultValue: 'Internal Note' }), className: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300' },
   };
   return (
     map[source] ?? {
@@ -533,7 +559,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
       .catch((err) => {
         if (cancelled) return;
         console.error('Failed to load ticket activity timeline:', err);
-        setError('Failed to load ticket activity timeline.');
+        setError(tTickets('activityTimeline.errors.loadFailed', { defaultValue: 'Failed to load ticket activity timeline.' }));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -547,7 +573,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
   // above the loading/error early returns to satisfy the rules of hooks.
   const formatted = useMemo(() => formatEntries(entries ?? [], (visible) => visible
     ? tTickets('externalLinks.visibility.shared', 'Visible in client portal')
-    : tTickets('externalLinks.visibility.internal', 'Internal only')), [entries, tTickets]);
+    : tTickets('externalLinks.visibility.internal', 'Internal only'), tTickets), [entries, tTickets]);
 
   const filtered = useMemo(() => {
     return formatted.filter((entry) => {
@@ -570,6 +596,11 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
     sourceFilter !== ALL_FILTER_VALUE ||
     actorTypeFilter !== ALL_FILTER_VALUE;
 
+  const entryTypeFilterOptions = useMemo(() => entryTypeOptions(tTickets), [tTickets]);
+  const eventTypeFilterOptions = useMemo(() => eventTypeOptions(tTickets), [tTickets]);
+  const sourceFilterOptions = useMemo(() => sourceOptions(tTickets), [tTickets]);
+  const actorTypeFilterOptions = useMemo(() => actorTypeOptions(tTickets), [tTickets]);
+
   const resetFilters = () => {
     setEntryTypeFilter(ALL_FILTER_VALUE);
     setEventTypeFilter(ALL_FILTER_VALUE);
@@ -580,7 +611,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
   const columns: ColumnDefinition<FormattedEntry>[] = useMemo(
     () => [
       {
-        title: 'When',
+        title: tTickets('activityTimeline.columns.when', { defaultValue: 'When' }),
         dataIndex: 'occurredAt',
         width: '180px',
         render: (value: unknown) => (
@@ -594,7 +625,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         ),
       },
       {
-        title: 'Event',
+        title: tTickets('activityTimeline.columns.event', { defaultValue: 'Event' }),
         dataIndex: 'title',
         render: (_value: unknown, record: FormattedEntry) => (
           <div className="flex items-start gap-2">
@@ -618,11 +649,11 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         ),
       },
       {
-        title: 'Source',
+        title: tTickets('activityTimeline.columns.source', { defaultValue: 'Source' }),
         dataIndex: 'source',
         width: '140px',
         render: (value: unknown) => {
-          const badge = sourceBadge(String(value ?? ''));
+          const badge = sourceBadge(String(value ?? ''), tTickets);
           return (
             <span
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}
@@ -633,7 +664,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         },
       },
       {
-        title: 'Actor',
+        title: tTickets('activityTimeline.columns.actor', { defaultValue: 'Actor' }),
         dataIndex: 'actor',
         width: '180px',
         render: (value: unknown, record: FormattedEntry) => (
@@ -665,12 +696,12 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
               {isOpen ? (
                 <>
                   <ChevronDown className="mr-1 h-3 w-3" />
-                  Hide
+                  {tTickets('activityTimeline.actions.hide', { defaultValue: 'Hide' })}
                 </>
               ) : (
                 <>
                   <ChevronRight className="mr-1 h-3 w-3" />
-                  Details
+                  {tTickets('activityTimeline.actions.details', { defaultValue: 'Details' })}
                 </>
               )}
             </Button>
@@ -678,7 +709,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         },
       },
     ],
-    [expandedKey, formatDate],
+    [expandedKey, formatDate, tTickets],
   );
 
   const filterBar = (
@@ -688,45 +719,45 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
     >
       <div className="flex flex-col">
         <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-entry-type">
-          Type
+          {tTickets('activityTimeline.filters.entryType', { defaultValue: 'Type' })}
         </label>
         <CustomSelect
           id="ticket-activity-filter-entry-type"
           value={entryTypeFilter}
-          options={ENTRY_TYPE_OPTIONS}
+          options={entryTypeFilterOptions}
           onValueChange={setEntryTypeFilter}
         />
       </div>
       <div className="flex flex-col">
         <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-event-type">
-          Event
+          {tTickets('activityTimeline.filters.eventType', { defaultValue: 'Event' })}
         </label>
         <CustomSelect
           id="ticket-activity-filter-event-type"
           value={eventTypeFilter}
-          options={EVENT_TYPE_OPTIONS}
+          options={eventTypeFilterOptions}
           onValueChange={setEventTypeFilter}
         />
       </div>
       <div className="flex flex-col">
         <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-source">
-          Source
+          {tTickets('activityTimeline.filters.source', { defaultValue: 'Source' })}
         </label>
         <CustomSelect
           id="ticket-activity-filter-source"
           value={sourceFilter}
-          options={SOURCE_OPTIONS}
+          options={sourceFilterOptions}
           onValueChange={setSourceFilter}
         />
       </div>
       <div className="flex flex-col">
         <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-actor-type">
-          Actor
+          {tTickets('activityTimeline.filters.actorType', { defaultValue: 'Actor' })}
         </label>
         <CustomSelect
           id="ticket-activity-filter-actor-type"
           value={actorTypeFilter}
-          options={ACTOR_TYPE_OPTIONS}
+          options={actorTypeFilterOptions}
           onValueChange={setActorTypeFilter}
         />
       </div>
@@ -739,7 +770,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
           disabled={!filtersDirty}
           onClick={resetFilters}
         >
-          Reset filters
+          {tTickets('activityTimeline.filters.reset', { defaultValue: 'Reset filters' })}
         </Button>
       </div>
     </div>
@@ -756,7 +787,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
   if (error) {
     return (
       <div id="ticket-activity-timeline-error" className="p-4 text-sm text-red-600 dark:text-red-400">
-        Failed to load activity timeline: {error}
+        {tTickets('activityTimeline.errors.loadFailedPrefix', { defaultValue: 'Failed to load activity timeline:' })} {error}
       </div>
     );
   }
@@ -771,7 +802,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
           id="ticket-activity-timeline-empty"
           className="p-4 text-sm text-[rgb(var(--color-text-500))]"
         >
-          No activity yet. New events will appear here as the ticket changes.
+          {tTickets('activityTimeline.empty.noActivity', { defaultValue: 'No activity yet. New events will appear here as the ticket changes.' })}
         </div>
       </div>
     );
@@ -786,7 +817,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
             id="ticket-activity-timeline-no-matches"
             className="p-3 text-sm text-[rgb(var(--color-text-500))]"
           >
-            No entries match the current filters.
+            {tTickets('activityTimeline.empty.noMatches', { defaultValue: 'No entries match the current filters.' })}
           </div>
         ) : (
           <div id="ticket-activity-timeline" data-row-count={filtered.length}>
@@ -815,7 +846,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
                 className="h-6 px-2 text-xs"
                 onClick={() => setExpandedKey(null)}
               >
-                Close
+                {tCommon('actions.close', { defaultValue: 'Close' })}
               </Button>
             </div>
             <pre className="max-h-64 overflow-auto text-xs text-[rgb(var(--color-text-700))]">

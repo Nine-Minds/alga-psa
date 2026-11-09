@@ -71,7 +71,7 @@
       "message_other": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?",
       "deleteType": "Excluir tipo",
       "keepType": "Mantenha o tipo",
-      "message_few": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?",
+      "message_few": "Os seguintes tipos de telefone personalizados não são mais usados por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?",
       "message_many": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?"
     },
     "print": {
@@ -418,7 +418,10 @@
       "refreshing": "Refrescante...",
       "resend": "Reenviar",
       "resending": "Reenviando...",
-      "revoke": "Revogar"
+      "revoke": "Revogar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Excluir"
     },
     "toast": {
       "successTitle": "Sucesso",
@@ -460,9 +463,10 @@
         "noBaseUrl": "O URL base não está configurado para convites do portal.",
         "invitationNotFound": "Convite não encontrado ou já utilizado."
       },
-      "userNotFound": "Usuário do cliente não encontrado"
+      "userNotFound": "Usuário do cliente não encontrado",
+      "validationErrorTitle": "Erro de validação"
     },
-    "boardCount_few": "Quadros {{count}}",
+    "boardCount_few": "{{count}} quadros",
     "boardCount_many": "Quadros {{count}}"
   },
   "quickAddContact": {
@@ -723,6 +727,118 @@
       "saved": "Contato atualizado",
       "saveFailed": "Nao foi possivel atualizar o contato",
       "saveFailedDescription": "Não foi possível atualizar o contato. Tente novamente."
+    },
+    "relative": {
+      "today": "hoje",
+      "yesterday": "ontem",
+      "daysAgo": "há {{count}}d"
+    },
+    "emailType": {
+      "primary": "Principal",
+      "other": "outro"
+    },
+    "phoneType": {
+      "other": "Outro"
+    },
+    "ticketPill": {
+      "closed": "Fechado",
+      "urgent": "Urgente",
+      "open": "Aberto"
+    },
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo"
+    },
+    "role": {
+      "add": "Adicionar papel",
+      "editTitle": "Clique para editar o papel"
+    },
+    "atClient": "em",
+    "noClient": "Sem cliente",
+    "noPrimaryEmail": "Sem email principal",
+    "noPhoneNumber": "Sem número de telefone",
+    "contactSince": "Contato desde {{date}}",
+    "lastTouch": "Última interação",
+    "editContact": "Editar contato",
+    "openFullPage": "Abrir página completa",
+    "viewAll": "Ver tudo",
+    "viewAllCount": "Ver todos os {{count}}",
+    "reach": {
+      "title": "Meios de contato",
+      "add": "Adicionar email ou telefone",
+      "email": "Email",
+      "phone": "Telefone",
+      "primaryMeta": "principal",
+      "noEmails": "Nenhum endereço de email",
+      "addEmail": "Adicionar um email",
+      "noPhones": "Nenhum número de telefone",
+      "addPhone": "Adicionar um número de telefone"
+    },
+    "portalChip": {
+      "deactivated": "Portal · desativado",
+      "signedIn": "Portal · último acesso {{when}}",
+      "neverSignedIn": "Portal · nunca acessado",
+      "invited": "Portal · convite enviado",
+      "noAccess": "Sem acesso ao portal"
+    },
+    "portal": {
+      "title": "Acesso ao portal",
+      "manage": "Gerenciar",
+      "status": "Status",
+      "role": "Função",
+      "clientAdmin": "Administrador do cliente",
+      "standard": "Padrão",
+      "lastSignIn": "Último acesso",
+      "invited": "Convidado em",
+      "noClientAssigned": "Nenhum cliente atribuído",
+      "deactivated": "Desativado",
+      "activeAccount": "Conta ativa",
+      "invitationSent": "Convite enviado",
+      "noAccess": "Sem acesso"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "create": "Criar ticket",
+      "createFirst": "Criar um ticket",
+      "empty": "Nenhum ticket ainda",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interações",
+      "log": "Registrar interação",
+      "logFirst": "Registrar uma interação",
+      "empty": "Nenhuma interação registrada",
+      "fallbackTitle": "Interação",
+      "loadError": "Não foi possível carregar as interações. Tente novamente."
+    },
+    "documents": {
+      "title": "Documentos",
+      "add": "Adicionar documento",
+      "addFirst": "Adicionar um documento",
+      "empty": "Nenhum documento ainda",
+      "fallbackTitle": "Documento",
+      "dialogTitle": "Documentos do contato"
+    },
+    "relatedWork": {
+      "title": "Trabalhos relacionados",
+      "projects": "Projetos",
+      "quotes": "Cotações",
+      "noProjects": "Nenhum projeto",
+      "noQuotes": "Nenhuma cotação",
+      "noStatus": "Sem status",
+      "noStatusLower": "sem status",
+      "projectFallback": "Projeto {{number}}",
+      "quoteFallback": "Cotação",
+      "empty": "Nenhum projeto ou cotação relacionada"
+    },
+    "notes": {
+      "title": "Notas",
+      "edit": "Editar",
+      "openDocument": "Abrir documento de notas",
+      "save": "Salvar notas",
+      "cancel": "Cancelar",
+      "empty": "Nenhuma nota ainda",
+      "add": "Adicionar notas"
     }
   },
   "errors": {
@@ -833,9 +949,32 @@
       "scopeSummaryAll": "Todos",
       "scopeSummaryOwn": "Próprios",
       "managerScopeNote_one": "A visão dele também inclui os registros de {{count}} pessoa que se reporta a ele.",
-      "managerScopeNote_many": "A visão dele também inclui os registros de {{count}} de pessoas que se reportam a ele.",
       "managerScopeNote_other": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele.",
-      "managerScopeNote_few": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele."
+      "managerScopeNote_few": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele.",
+      "managerScopeNote_many": "A visão dele também inclui os registros de {{count}} de pessoas que se reportam a ele.",
+      "assignmentLabel": "Grupo de visibilidade de tickets",
+      "assignmentPlaceholder": "Selecione a atribuição de visibilidade",
+      "assignmentUpdated": "Atribuição de visibilidade do contato atualizada",
+      "assignFailed": "Falha ao atribuir grupo de visibilidade",
+      "manageLabel": "Grupos de visibilidade do cliente",
+      "manageHelp": "Crie ou edite grupos de quadros e atribua esses grupos aos contatos.",
+      "nameLabel": "Nome do grupo",
+      "nameRequired": "O nome do grupo de visibilidade é obrigatório",
+      "descriptionLabel": "Descrição",
+      "descriptionPlaceholder": "Descrição opcional",
+      "boardsLabel": "Quadros",
+      "noBoards": "Nenhum quadro disponível",
+      "createGroup": "Criar grupo",
+      "updateGroup": "Atualizar grupo",
+      "created": "Grupo de visibilidade criado",
+      "updated": "Grupo de visibilidade atualizado",
+      "deleted": "Grupo de visibilidade excluído",
+      "deleteConfirm": "Excluir este grupo de visibilidade?",
+      "deleteFailed": "Falha ao excluir grupo de visibilidade",
+      "saveFailed": "Falha ao salvar grupo de visibilidade",
+      "loadFailed": "Falha ao carregar grupo de visibilidade para edição",
+      "empty": "Nenhum grupo de visibilidade ainda",
+      "fullAccess": "Acesso completo"
     }
   },
   "messages": {

@@ -26,7 +26,8 @@ import {
   type TemplateFieldDisplayFormat,
   type TemplatePrintSettings,
 } from '@alga-psa/types';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, translate } from '@alga-psa/ui/lib/i18n/client';
+import { interpolateFallback } from '@alga-psa/ui/lib/i18n/interpolateFallback';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
@@ -316,7 +317,8 @@ const resolveNearestAncestorSection = (
 
 const wasSizeConstrainedFromDraft = (draft: Size, resolved: Size) => !sizesAreEffectivelyEqual(draft, resolved);
 
-const getSectionFitNoopMessage = (_section: DesignerNode) => 'Section is already fitted.';
+const getSectionFitNoopMessage = (_section: DesignerNode, t: DesignerT = fallbackT) =>
+  t('designer.shell.sectionAlreadyFitted', { defaultValue: 'Section is already fitted.' });
 
 const shouldPromoteParentToCanvasForManualPosition = (
   node: DesignerNode | null,
@@ -337,6 +339,18 @@ const shouldPromoteParentToCanvasForManualPosition = (
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+/** The slice of i18next's `t` the module-level option builders need. */
+type DesignerT = (key: string, options: Record<string, unknown> & { defaultValue: string }) => string;
+
+// getSectionFitNoopMessage is exported for unit tests that run outside a React
+// tree, so it falls back to the module-level i18next instance and fills
+// interpolations by hand when no namespace has loaded yet.
+const fallbackT: DesignerT = (key, options) =>
+  interpolateFallback(
+    translate('msp/invoicing', key, options),
+    options as Record<string, string | number | null | undefined>,
+  );
+
 type IconToggleOption = {
   value: string;
   label: string;
@@ -353,65 +367,65 @@ type GridColumnPreset = {
 
 type FlexItemPreset = 'natural' | 'fill' | 'share' | 'fixed' | 'custom';
 
-const CONTAINER_LAYOUT_MODE_OPTIONS: IconToggleOption[] = [
-  { value: 'flex', label: 'Stack', tooltip: 'Stack (Flex)', icon: AlignJustify },
-  { value: 'grid', label: 'Grid', tooltip: 'Grid layout', icon: Grid3X3 },
+const containerLayoutModeOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'flex', label: t('designer.shell.layoutMode.flex.label', { defaultValue: 'Stack' }), tooltip: t('designer.shell.layoutMode.flex.tooltip', { defaultValue: 'Stack (Flex)' }), icon: AlignJustify },
+  { value: 'grid', label: t('designer.shell.layoutMode.grid.label', { defaultValue: 'Grid' }), tooltip: t('designer.shell.layoutMode.grid.tooltip', { defaultValue: 'Grid layout' }), icon: Grid3X3 },
 ];
 
-const CONTAINER_FLEX_DIRECTION_OPTIONS: IconToggleOption[] = [
-  { value: 'column', label: 'Vertical', tooltip: 'Vertical flow', icon: ArrowDown },
-  { value: 'row', label: 'Horizontal', tooltip: 'Horizontal flow', icon: ArrowRight },
+const containerFlexDirectionOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'column', label: t('designer.shell.direction.column.label', { defaultValue: 'Vertical' }), tooltip: t('designer.shell.direction.column.tooltip', { defaultValue: 'Vertical flow' }), icon: ArrowDown },
+  { value: 'row', label: t('designer.shell.direction.row.label', { defaultValue: 'Horizontal' }), tooltip: t('designer.shell.direction.row.tooltip', { defaultValue: 'Horizontal flow' }), icon: ArrowRight },
 ];
 
-const CONTAINER_ALIGN_ITEMS_OPTIONS: IconToggleOption[] = [
-  { value: 'stretch', label: 'Stretch', tooltip: 'Stretch children', icon: ArrowUpDown },
-  { value: 'flex-start', label: 'Start', tooltip: 'Align to start', icon: AlignLeft },
-  { value: 'center', label: 'Center', tooltip: 'Align to center', icon: AlignCenter },
-  { value: 'flex-end', label: 'End', tooltip: 'Align to end', icon: AlignRight },
+const containerAlignItemsOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'stretch', label: t('designer.shell.alignItems.stretch.label', { defaultValue: 'Stretch' }), tooltip: t('designer.shell.alignItems.stretch.tooltip', { defaultValue: 'Stretch children' }), icon: ArrowUpDown },
+  { value: 'flex-start', label: t('designer.shell.alignItems.start.label', { defaultValue: 'Start' }), tooltip: t('designer.shell.alignItems.start.tooltip', { defaultValue: 'Align to start' }), icon: AlignLeft },
+  { value: 'center', label: t('designer.shell.alignItems.center.label', { defaultValue: 'Center' }), tooltip: t('designer.shell.alignItems.center.tooltip', { defaultValue: 'Align to center' }), icon: AlignCenter },
+  { value: 'flex-end', label: t('designer.shell.alignItems.end.label', { defaultValue: 'End' }), tooltip: t('designer.shell.alignItems.end.tooltip', { defaultValue: 'Align to end' }), icon: AlignRight },
 ];
 
-const CONTAINER_JUSTIFY_CONTENT_OPTIONS: IconToggleOption[] = [
-  { value: 'flex-start', label: 'Start', tooltip: 'Pack at start', icon: AlignLeft },
-  { value: 'center', label: 'Center', tooltip: 'Pack at center', icon: AlignCenter },
-  { value: 'flex-end', label: 'End', tooltip: 'Pack at end', icon: AlignRight },
+const containerJustifyContentOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'flex-start', label: t('designer.shell.justify.start.label', { defaultValue: 'Start' }), tooltip: t('designer.shell.justify.start.tooltip', { defaultValue: 'Pack at start' }), icon: AlignLeft },
+  { value: 'center', label: t('designer.shell.justify.center.label', { defaultValue: 'Center' }), tooltip: t('designer.shell.justify.center.tooltip', { defaultValue: 'Pack at center' }), icon: AlignCenter },
+  { value: 'flex-end', label: t('designer.shell.justify.end.label', { defaultValue: 'End' }), tooltip: t('designer.shell.justify.end.tooltip', { defaultValue: 'Pack at end' }), icon: AlignRight },
   {
     value: 'space-between',
-    label: 'Between',
-    tooltip: 'Distribute with space between',
+    label: t('designer.shell.justify.between.label', { defaultValue: 'Between' }),
+    tooltip: t('designer.shell.justify.between.tooltip', { defaultValue: 'Distribute with space between' }),
     icon: AlignHorizontalSpaceBetween,
   },
   {
     value: 'space-around',
-    label: 'Around',
-    tooltip: 'Distribute with space around',
+    label: t('designer.shell.justify.around.label', { defaultValue: 'Around' }),
+    tooltip: t('designer.shell.justify.around.tooltip', { defaultValue: 'Distribute with space around' }),
     icon: AlignHorizontalSpaceAround,
   },
   {
     value: 'space-evenly',
-    label: 'Evenly',
-    tooltip: 'Distribute with equal spacing',
+    label: t('designer.shell.justify.evenly.label', { defaultValue: 'Evenly' }),
+    tooltip: t('designer.shell.justify.evenly.tooltip', { defaultValue: 'Distribute with equal spacing' }),
     icon: AlignHorizontalDistributeCenter,
   },
 ];
 
-const MEDIA_HORIZONTAL_ALIGN_OPTIONS: IconToggleOption[] = [
-  { value: 'left', label: 'Left', tooltip: 'Align image to the left', icon: AlignLeft },
-  { value: 'center', label: 'Center', tooltip: 'Center image horizontally', icon: AlignCenter },
-  { value: 'right', label: 'Right', tooltip: 'Align image to the right', icon: AlignRight },
+const mediaHorizontalAlignOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'left', label: t('designer.shell.mediaHorizontal.left.label', { defaultValue: 'Left' }), tooltip: t('designer.shell.mediaHorizontal.left.tooltip', { defaultValue: 'Align image to the left' }), icon: AlignLeft },
+  { value: 'center', label: t('designer.shell.mediaHorizontal.center.label', { defaultValue: 'Center' }), tooltip: t('designer.shell.mediaHorizontal.center.tooltip', { defaultValue: 'Center image horizontally' }), icon: AlignCenter },
+  { value: 'right', label: t('designer.shell.mediaHorizontal.right.label', { defaultValue: 'Right' }), tooltip: t('designer.shell.mediaHorizontal.right.tooltip', { defaultValue: 'Align image to the right' }), icon: AlignRight },
 ];
 
-const MEDIA_VERTICAL_ALIGN_OPTIONS: IconToggleOption[] = [
-  { value: 'top', label: 'Top', tooltip: 'Align image to the top', icon: ArrowUp },
-  { value: 'center', label: 'Center', tooltip: 'Center image vertically', icon: ArrowUpDown },
-  { value: 'bottom', label: 'Bottom', tooltip: 'Align image to the bottom', icon: ArrowDown },
+const mediaVerticalAlignOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'top', label: t('designer.shell.mediaVertical.top.label', { defaultValue: 'Top' }), tooltip: t('designer.shell.mediaVertical.top.tooltip', { defaultValue: 'Align image to the top' }), icon: ArrowUp },
+  { value: 'center', label: t('designer.shell.mediaVertical.center.label', { defaultValue: 'Center' }), tooltip: t('designer.shell.mediaVertical.center.tooltip', { defaultValue: 'Center image vertically' }), icon: ArrowUpDown },
+  { value: 'bottom', label: t('designer.shell.mediaVertical.bottom.label', { defaultValue: 'Bottom' }), tooltip: t('designer.shell.mediaVertical.bottom.tooltip', { defaultValue: 'Align image to the bottom' }), icon: ArrowDown },
 ];
 
-const MEDIA_OBJECT_FIT_OPTIONS: IconToggleOption[] = [
-  { value: 'contain', label: 'Contain', tooltip: 'Scale to fit inside the frame', icon: Scaling },
-  { value: 'cover', label: 'Cover', tooltip: 'Fill the frame and crop overflow', icon: Maximize2 },
-  { value: 'fill', label: 'Fill', tooltip: 'Stretch to fill the frame', icon: StretchHorizontal },
-  { value: 'none', label: 'None', tooltip: 'Keep the intrinsic image size', icon: BoxSelect },
-  { value: 'scale-down', label: 'Scale Down', tooltip: 'Use intrinsic size unless it needs shrinking', icon: Shrink },
+const mediaObjectFitOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'contain', label: t('designer.shell.objectFit.contain.label', { defaultValue: 'Contain' }), tooltip: t('designer.shell.objectFit.contain.tooltip', { defaultValue: 'Scale to fit inside the frame' }), icon: Scaling },
+  { value: 'cover', label: t('designer.shell.objectFit.cover.label', { defaultValue: 'Cover' }), tooltip: t('designer.shell.objectFit.cover.tooltip', { defaultValue: 'Fill the frame and crop overflow' }), icon: Maximize2 },
+  { value: 'fill', label: t('designer.shell.objectFit.fill.label', { defaultValue: 'Fill' }), tooltip: t('designer.shell.objectFit.fill.tooltip', { defaultValue: 'Stretch to fill the frame' }), icon: StretchHorizontal },
+  { value: 'none', label: t('designer.shell.objectFit.none.label', { defaultValue: 'None' }), tooltip: t('designer.shell.objectFit.none.tooltip', { defaultValue: 'Keep the intrinsic image size' }), icon: BoxSelect },
+  { value: 'scale-down', label: t('designer.shell.objectFit.scaleDown.label', { defaultValue: 'Scale Down' }), tooltip: t('designer.shell.objectFit.scaleDown.tooltip', { defaultValue: 'Use intrinsic size unless it needs shrinking' }), icon: Shrink },
 ];
 
 const INSPECTOR_TABS: DesignerInspectorTab[] = ['content', 'style', 'layout'];
@@ -425,16 +439,16 @@ const SHELL_CONTENT_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'ba
 
 type SizeMode = 'auto' | 'fill' | 'fit' | 'fixed';
 
-const SIZE_WIDTH_MODE_OPTIONS: IconToggleOption[] = [
-  { value: 'auto', label: 'Auto', tooltip: 'Let the container decide (stretches in a vertical stack)', icon: ArrowUpDown },
-  { value: 'fill', label: 'Fill', tooltip: 'Fill the full width of the container', icon: Maximize2 },
-  { value: 'fit', label: 'Fit', tooltip: 'Shrink to fit the content', icon: Shrink },
-  { value: 'fixed', label: 'Fixed', tooltip: 'Use the exact width typed below', icon: BoxSelect },
+const sizeWidthModeOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'auto', label: t('designer.shell.widthMode.auto.label', { defaultValue: 'Auto' }), tooltip: t('designer.shell.widthMode.auto.tooltip', { defaultValue: 'Let the container decide (stretches in a vertical stack)' }), icon: ArrowUpDown },
+  { value: 'fill', label: t('designer.shell.widthMode.fill.label', { defaultValue: 'Fill' }), tooltip: t('designer.shell.widthMode.fill.tooltip', { defaultValue: 'Fill the full width of the container' }), icon: Maximize2 },
+  { value: 'fit', label: t('designer.shell.widthMode.fit.label', { defaultValue: 'Fit' }), tooltip: t('designer.shell.widthMode.fit.tooltip', { defaultValue: 'Shrink to fit the content' }), icon: Shrink },
+  { value: 'fixed', label: t('designer.shell.widthMode.fixed.label', { defaultValue: 'Fixed' }), tooltip: t('designer.shell.widthMode.fixed.tooltip', { defaultValue: 'Use the exact width typed below' }), icon: BoxSelect },
 ];
 
-const SIZE_HEIGHT_MODE_OPTIONS: IconToggleOption[] = [
-  { value: 'auto', label: 'Auto', tooltip: 'Grow with the content', icon: ArrowUpDown },
-  { value: 'fixed', label: 'Fixed', tooltip: 'Use the exact height typed below', icon: BoxSelect },
+const sizeHeightModeOptions = (t: DesignerT): IconToggleOption[] => [
+  { value: 'auto', label: t('designer.shell.heightMode.auto.label', { defaultValue: 'Auto' }), tooltip: t('designer.shell.heightMode.auto.tooltip', { defaultValue: 'Grow with the content' }), icon: ArrowUpDown },
+  { value: 'fixed', label: t('designer.shell.heightMode.fixed.label', { defaultValue: 'Fixed' }), tooltip: t('designer.shell.heightMode.fixed.tooltip', { defaultValue: 'Use the exact height typed below' }), icon: BoxSelect },
 ];
 
 const resolveSizeMode = (value: string): SizeMode => {
@@ -446,30 +460,30 @@ const resolveSizeMode = (value: string): SizeMode => {
 };
 
 
-const FLEX_ITEM_PRESET_OPTIONS: Array<{
+const flexItemPresetOptions = (t: DesignerT): Array<{
   value: Exclude<FlexItemPreset, 'custom'>;
   label: string;
   description: string;
-}> = [
+}> => [
   {
     value: 'natural',
-    label: 'Natural',
-    description: 'Use the item content size, but allow it to shrink if space is tight.',
+    label: t('designer.shell.flexPreset.natural.label', { defaultValue: 'Natural' }),
+    description: t('designer.shell.flexPreset.natural.description', { defaultValue: 'Use the item content size, but allow it to shrink if space is tight.' }),
   },
   {
     value: 'fill',
-    label: 'Fill',
-    description: 'Expand into leftover space while keeping the item’s preferred size.',
+    label: t('designer.shell.flexPreset.fill.label', { defaultValue: 'Fill' }),
+    description: t('designer.shell.flexPreset.fill.description', { defaultValue: 'Expand into leftover space while keeping the item’s preferred size.' }),
   },
   {
     value: 'share',
-    label: 'Share',
-    description: 'Split available space evenly with other shared items.',
+    label: t('designer.shell.flexPreset.share.label', { defaultValue: 'Share' }),
+    description: t('designer.shell.flexPreset.share.description', { defaultValue: 'Split available space evenly with other shared items.' }),
   },
   {
     value: 'fixed',
-    label: 'Fixed',
-    description: 'Keep the item size and do not let flexbox shrink it.',
+    label: t('designer.shell.flexPreset.fixed.label', { defaultValue: 'Fixed' }),
+    description: t('designer.shell.flexPreset.fixed.description', { defaultValue: 'Keep the item size and do not let flexbox shrink it.' }),
   },
 ];
 
@@ -535,10 +549,10 @@ const humanizeBindingToken = (input: string): string =>
     })
     .join(' ');
 
-const resolveFieldTypeLabel = (bindingKey: string): string => {
+const resolveFieldTypeLabel = (bindingKey: string, t: DesignerT = fallbackT): string => {
   const normalized = bindingKey.trim();
   if (!normalized) {
-    return 'Unbound';
+    return t('designer.shell.unbound', { defaultValue: 'Unbound' });
   }
   return resolveDocumentFieldLabel(normalized);
 };
@@ -1128,9 +1142,9 @@ export const DesignerShell: React.FC = () => {
         return { ok: true, parentId: fallback.id };
       }
 
-      return { ok: false, message: 'Drop target is not compatible for this component.' };
+      return { ok: false, message: t('designer.feedback.dropIncompatibleComponent', { defaultValue: 'Drop target is not compatible for this component.' }) };
     },
-    [resolvePageForDrop]
+    [resolvePageForDrop, t]
   );
 
   const getDefaultInsertionPoint = useCallback((options?: { preferSelectionAnchor?: boolean; selectionAnchorId?: string | null }): Point => {
@@ -1175,7 +1189,7 @@ export const DesignerShell: React.FC = () => {
 
       if (options.requireCanvasPointer && !dropMeta && !pointerRef.current) {
         recordDropResult(false);
-        showDropFeedback('error', 'Drop on the canvas to add this component.');
+        showDropFeedback('error', t('designer.feedback.dropOnCanvas', { defaultValue: 'Drop on the canvas to add this component.' }));
         return false;
       }
 
@@ -1185,7 +1199,7 @@ export const DesignerShell: React.FC = () => {
       });
       if (!resolution.ok) {
         recordDropResult(false);
-        showDropFeedback('error', 'message' in resolution ? resolution.message : 'Drop target is not compatible.');
+        showDropFeedback('error', 'message' in resolution ? resolution.message : t('designer.feedback.dropIncompatible', { defaultValue: 'Drop target is not compatible.' }));
         return false;
       }
 
@@ -1199,7 +1213,7 @@ export const DesignerShell: React.FC = () => {
         .nodes.some((node) => !existingNodeIds.has(node.id));
       recordDropResult(inserted);
       if (!inserted) {
-        showDropFeedback('error', 'Unable to add this component in the current context.');
+        showDropFeedback('error', t('designer.feedback.addComponentFailed', { defaultValue: 'Unable to add this component in the current context.' }));
         return false;
       }
       if (options.preserveSelectionId) {
@@ -1219,6 +1233,7 @@ export const DesignerShell: React.FC = () => {
       resolveComponentDropParent,
       selectNode,
       showDropFeedback,
+      t,
     ]
   );
 
@@ -1227,7 +1242,7 @@ export const DesignerShell: React.FC = () => {
       const presetDef = getPresetById(presetId);
       if (!presetDef) {
         recordDropResult(false);
-        showDropFeedback('error', 'Preset definition is unavailable.');
+        showDropFeedback('error', t('designer.feedback.presetUnavailable', { defaultValue: 'Preset definition is unavailable.' }));
         return false;
       }
 
@@ -1235,7 +1250,7 @@ export const DesignerShell: React.FC = () => {
       const dropMeta = options.dropMeta;
       if (options.requireDropTarget && !dropMeta) {
         recordDropResult(false);
-        showDropFeedback('error', 'Drop target is not compatible for this preset.');
+        showDropFeedback('error', t('designer.feedback.dropIncompatiblePreset', { defaultValue: 'Drop target is not compatible for this preset.' }));
         return false;
       }
 
@@ -1248,7 +1263,7 @@ export const DesignerShell: React.FC = () => {
 
       if (!resolvedParent) {
         recordDropResult(false);
-        showDropFeedback('error', 'Unable to resolve where to place this preset.');
+        showDropFeedback('error', t('designer.feedback.presetPlacementUnresolved', { defaultValue: 'Unable to resolve where to place this preset.' }));
         return false;
       }
 
@@ -1258,7 +1273,7 @@ export const DesignerShell: React.FC = () => {
           : canNestWithinParent('section', resolvedParent.type);
       if (!presetDropAllowed) {
         recordDropResult(false);
-        showDropFeedback('error', 'Drop target is not compatible for this preset.');
+        showDropFeedback('error', t('designer.feedback.dropIncompatiblePreset', { defaultValue: 'Drop target is not compatible for this preset.' }));
         return false;
       }
 
@@ -1269,7 +1284,7 @@ export const DesignerShell: React.FC = () => {
         .nodes.some((node) => !existingNodeIds.has(node.id));
       recordDropResult(inserted);
       if (!inserted) {
-        showDropFeedback('error', 'Unable to add this preset in the current context.');
+        showDropFeedback('error', t('designer.feedback.addPresetFailed', { defaultValue: 'Unable to add this preset in the current context.' }));
         return false;
       }
       return true;
@@ -1281,6 +1296,7 @@ export const DesignerShell: React.FC = () => {
 	      resolvePageForDrop,
       selectedNodeId,
       showDropFeedback,
+      t,
     ]
   );
 
@@ -1349,12 +1365,12 @@ export const DesignerShell: React.FC = () => {
         data-automation-id="designer-container-layout-controls"
       >
         <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.layoutControls', { defaultValue: 'Layout Controls' })}</p>
-        {renderIconButtonGroup('layout-mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
+        {renderIconButtonGroup('layout-mode', t('designer.shell.groups.layout', { defaultValue: 'Layout' }), containerLayoutModeOptions(t), layoutMode, (value) => {
           setNodeProp(selectedNode.id, 'layout.display', value, true);
         }, 2)}
         {layoutMode === 'grid' && (
           <div className="space-y-1.5">
-            <p className="text-xs text-slate-500">Columns</p>
+            <p className="text-xs text-slate-500">{t('designer.shell.groups.columns', { defaultValue: 'Columns' })}</p>
             <div className="grid grid-cols-2 gap-2" data-automation-id="designer-container-layout-grid-presets">
               {GRID_COLUMN_PRESETS.map((preset) => {
                 const isSelected = normalizeGridTemplateColumns(preset.template) === activeGridTemplateColumns;
@@ -1372,7 +1388,7 @@ export const DesignerShell: React.FC = () => {
                         : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
                     )}
                     aria-pressed={isSelected}
-                    aria-label={`Columns: ${preset.label}`}
+                    aria-label={t('designer.shell.columnsAria', { defaultValue: 'Columns: {{preset}}', preset: preset.label })}
                     data-automation-id={`designer-container-layout-grid-preset-${preset.id}`}
                   >
                     <div
@@ -1403,16 +1419,16 @@ export const DesignerShell: React.FC = () => {
         )}
         {layoutMode === 'flex' && (
           <>
-            {renderIconButtonGroup('layout-direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
+            {renderIconButtonGroup('layout-direction', t('designer.shell.groups.direction', { defaultValue: 'Direction' }), containerFlexDirectionOptions(t), direction, (value) => {
               setNodeProp(selectedNode.id, 'layout.flexDirection', value, true);
             }, 2)}
-            {renderIconButtonGroup('layout-align-items', 'Align Items', CONTAINER_ALIGN_ITEMS_OPTIONS, alignItems, (value) => {
+            {renderIconButtonGroup('layout-align-items', t('designer.shell.groups.alignItems', { defaultValue: 'Align Items' }), containerAlignItemsOptions(t), alignItems, (value) => {
               setNodeProp(selectedNode.id, 'layout.alignItems', value, true);
             }, 4)}
             {renderIconButtonGroup(
               'layout-justify-content',
-              'Justify Content',
-              CONTAINER_JUSTIFY_CONTENT_OPTIONS,
+              t('designer.shell.groups.justifyContent', { defaultValue: 'Justify Content' }),
+              containerJustifyContentOptions(t),
               justifyContent,
               (value) => {
                 setNodeProp(selectedNode.id, 'layout.justifyContent', value, true);
@@ -1500,7 +1516,7 @@ export const DesignerShell: React.FC = () => {
         {renderIconButtonGroup(
           'width-mode',
           t('designer.inspector.width', { defaultValue: 'Width' }),
-          SIZE_WIDTH_MODE_OPTIONS.map((option) => ({
+          sizeWidthModeOptions(t).map((option) => ({
             ...option,
             label: t(`designer.inspector.sizeModes.${option.value}.label`, { defaultValue: option.label }),
             tooltip: t(`designer.inspector.sizeModes.${option.value}.widthTooltip`, { defaultValue: option.tooltip }),
@@ -1527,7 +1543,7 @@ export const DesignerShell: React.FC = () => {
         {renderIconButtonGroup(
           'height-mode',
           t('designer.inspector.height', { defaultValue: 'Height' }),
-          SIZE_HEIGHT_MODE_OPTIONS.map((option) => ({
+          sizeHeightModeOptions(t).map((option) => ({
             ...option,
             label: t(`designer.inspector.sizeModes.${option.value}.label`, { defaultValue: option.label }),
             tooltip: t(`designer.inspector.sizeModes.${option.value}.heightTooltip`, { defaultValue: option.tooltip }),
@@ -1608,8 +1624,12 @@ export const DesignerShell: React.FC = () => {
       return null;
     }
 
-    const mainAxisLabel = selectedParentFlexLayout.flexDirection === 'row' ? 'Width' : 'Height';
-    const mainAxisNoun = selectedParentFlexLayout.flexDirection === 'row' ? 'width' : 'height';
+    const mainAxisLabel = selectedParentFlexLayout.flexDirection === 'row'
+      ? t('designer.shell.axis.width', { defaultValue: 'Width' })
+      : t('designer.shell.axis.height', { defaultValue: 'Height' });
+    const mainAxisNoun = selectedParentFlexLayout.flexDirection === 'row'
+      ? t('designer.shell.axis.widthLower', { defaultValue: 'width' })
+      : t('designer.shell.axis.heightLower', { defaultValue: 'height' });
     const currentFlexGrow = coerceFlexNumber(selectedSizingStyle?.flexGrow, 0);
     const currentFlexShrink = coerceFlexNumber(selectedSizingStyle?.flexShrink, 1);
     const currentFlexBasis = typeof selectedSizingStyle?.flexBasis === 'string' ? selectedSizingStyle.flexBasis : '';
@@ -1658,13 +1678,17 @@ export const DesignerShell: React.FC = () => {
         <div className="space-y-1">
           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.flexItem', { defaultValue: 'Flex Item' })}</p>
           <p className="text-[11px] text-slate-500">
-            In this {selectedParentFlexLayout.flexDirection === 'row' ? 'horizontal' : 'vertical'} stack, these settings control how the item shares {mainAxisNoun} with its siblings.
+            {t('designer.shell.flexItemHint', {
+              defaultValue: 'In this {{direction}} stack, these settings control how the item shares {{axis}} with its siblings.',
+              direction: selectedParentFlexLayout.flexDirection === 'row' ? 'horizontal' : 'vertical',
+              axis: mainAxisNoun,
+            })}
           </p>
         </div>
         <div className="space-y-1.5">
-          <p className="text-xs text-slate-500">{mainAxisLabel} Behavior</p>
+          <p className="text-xs text-slate-500">{t('designer.shell.flexBehavior', { defaultValue: '{{axis}} Behavior', axis: mainAxisLabel })}</p>
           <div className="grid grid-cols-2 gap-2">
-            {FLEX_ITEM_PRESET_OPTIONS.map((option) => {
+            {flexItemPresetOptions(t).map((option) => {
               const isSelected = option.value === selectedFlexItemPreset;
               return (
                 <button
@@ -1678,7 +1702,7 @@ export const DesignerShell: React.FC = () => {
                       : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
                   )}
                   aria-pressed={isSelected}
-                  aria-label={`${mainAxisLabel} behavior: ${option.label}`}
+                  aria-label={t('designer.shell.flexBehaviorAria', { defaultValue: '{{axis}} behavior: {{preset}}', axis: mainAxisLabel, preset: option.label })}
                   data-automation-id={`designer-flex-item-preset-${option.value}`}
                 >
                   <div className="text-xs font-medium">{option.label}</div>
@@ -1689,18 +1713,18 @@ export const DesignerShell: React.FC = () => {
           </div>
           {selectedFlexItemPreset === 'custom' && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400">
-              This item has custom flex values. Choose a preset to simplify it, or adjust the advanced values below.
+              {t('designer.shell.flexCustomNotice', { defaultValue: 'This item has custom flex values. Choose a preset to simplify it, or adjust the advanced values below.' })}
             </p>
           )}
         </div>
         <details data-automation-id="designer-flex-item-advanced">
           <summary className="cursor-pointer text-xs font-medium text-slate-600 dark:text-slate-300">
-            Advanced Flex Values
+            {t('designer.shell.advancedFlexValues', { defaultValue: 'Advanced Flex Values' })}
           </summary>
           <div className="mt-2 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] text-slate-500 block mb-1">Take extra space</label>
+                <label className="text-[10px] text-slate-500 block mb-1">{t('designer.shell.flexGrow', { defaultValue: 'Take extra space' })}</label>
                 <Input
                   value={String(currentFlexGrow)}
                   placeholder="0"
@@ -1710,7 +1734,7 @@ export const DesignerShell: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 block mb-1">Allow shrinking</label>
+                <label className="text-[10px] text-slate-500 block mb-1">{t('designer.shell.flexShrink', { defaultValue: 'Allow shrinking' })}</label>
                 <Input
                   value={String(currentFlexShrink)}
                   placeholder="1"
@@ -1721,7 +1745,7 @@ export const DesignerShell: React.FC = () => {
               </div>
             </div>
             <div>
-              <label className="text-[10px] text-slate-500 block mb-1">Preferred {mainAxisNoun} size</label>
+              <label className="text-[10px] text-slate-500 block mb-1">{t('designer.shell.flexBasis', { defaultValue: 'Preferred {{axis}} size', axis: mainAxisNoun })}</label>
               <Input
                 value={currentFlexBasis}
                 placeholder="auto | 240px | 50%"
@@ -1755,14 +1779,14 @@ export const DesignerShell: React.FC = () => {
         : 'single-line'
     ) as TemplateFieldDisplayFormat;
     const optionLabels: Record<TemplateFieldDisplayFormat, string> = {
-      'single-line': 'Single line',
-      multiline: 'Multiline',
-      raw: 'Raw',
+      'single-line': t('designer.shell.displayFormat.singleLine.label', { defaultValue: 'Single line' }),
+      multiline: t('designer.shell.displayFormat.multiline.label', { defaultValue: 'Multiline' }),
+      raw: t('designer.shell.displayFormat.raw.label', { defaultValue: 'Raw' }),
     };
     const optionDescriptions: Record<TemplateFieldDisplayFormat, string> = {
-      'single-line': 'Collapse the address onto one line.',
-      multiline: 'Split the address into multiple lines.',
-      raw: 'Use the stored value as-is.',
+      'single-line': t('designer.shell.displayFormat.singleLine.description', { defaultValue: 'Collapse the address onto one line.' }),
+      multiline: t('designer.shell.displayFormat.multiline.description', { defaultValue: 'Split the address into multiple lines.' }),
+      raw: t('designer.shell.displayFormat.raw.description', { defaultValue: 'Use the stored value as-is.' }),
     };
 
     return (
@@ -1773,7 +1797,7 @@ export const DesignerShell: React.FC = () => {
         <div className="space-y-1">
           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.displayFormat', { defaultValue: 'Display Format' })}</p>
           <p className="text-[11px] text-slate-500">
-            {fieldDefinition.description} This only applies to Data Field nodes.
+            {fieldDefinition.description} {t('designer.shell.displayFormat.onlyDataField', { defaultValue: 'This only applies to Data Field nodes.' })}
           </p>
         </div>
         <div className="grid grid-cols-1 gap-2">
@@ -1791,7 +1815,7 @@ export const DesignerShell: React.FC = () => {
                     : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
                 )}
                 aria-pressed={isSelected}
-                aria-label={`Display format: ${optionLabels[option]}`}
+                aria-label={t('designer.shell.displayFormat.aria', { defaultValue: 'Display format: {{format}}', format: optionLabels[option] })}
                 data-automation-id={`designer-field-display-format-${option}`}
               >
                 <div className="text-xs font-medium">{optionLabels[option]}</div>
@@ -1829,7 +1853,7 @@ export const DesignerShell: React.FC = () => {
           ...items,
           {
             id: createLocalId(),
-            label: 'Attachment',
+            label: t('designer.shell.attachments.defaultLabel', { defaultValue: 'Attachment' }),
             url: 'https://example.com',
           },
           ],
@@ -1842,7 +1866,7 @@ export const DesignerShell: React.FC = () => {
         <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.attachments', { defaultValue: 'Attachments' })}</p>
           <div>
-            <label className="text-xs text-slate-500 block mb-1">Title</label>
+            <label className="text-xs text-slate-500 block mb-1">{t('designer.shell.attachments.title', { defaultValue: 'Title' })}</label>
             <Input
               id="designer-attachments-title"
               value={metadata.title ?? 'Attachments'}
@@ -1851,12 +1875,12 @@ export const DesignerShell: React.FC = () => {
             />
           </div>
           <div className="flex items-center justify-between text-xs text-slate-600">
-            <span>Items</span>
+            <span>{t('designer.shell.attachments.items', { defaultValue: 'Items' })}</span>
             <Button id="designer-attachment-add" variant="outline" size="xs" onClick={addItem}>
-              Add
+              {t('designer.shell.attachments.add', { defaultValue: 'Add' })}
             </Button>
           </div>
-          {items.length === 0 && <p className="text-xs text-slate-500">No attachments defined.</p>}
+          {items.length === 0 && <p className="text-xs text-slate-500">{t('designer.shell.attachments.empty', { defaultValue: 'No attachments defined.' })}</p>}
           {items.map((item) => (
             <div key={item.id} className="border border-slate-100 dark:border-slate-700 rounded-md p-2 space-y-2 bg-slate-50 dark:bg-[rgb(var(--color-background))]">
               <div className="flex items-center justify-between">
@@ -2049,7 +2073,7 @@ export const DesignerShell: React.FC = () => {
           </div>
           )}
           <div>
-            <label className="text-xs text-slate-500 block mb-1">Alt text</label>
+            <label className="text-xs text-slate-500 block mb-1">{t('designer.shell.media.altText', { defaultValue: 'Alt text' })}</label>
             <Input
               id="designer-media-alt"
               value={metadata.alt ?? ''}
@@ -2059,8 +2083,8 @@ export const DesignerShell: React.FC = () => {
 	          </div>
             {renderIconButtonGroup(
               'media-object-fit',
-              'Object Fit',
-              MEDIA_OBJECT_FIT_OPTIONS,
+              t('designer.shell.groups.objectFit', { defaultValue: 'Object Fit' }),
+              mediaObjectFitOptions(t),
               objectFit,
               (value) => {
                 setNodeProp(selectedNode.id, 'style.objectFit', value, true);
@@ -2073,23 +2097,23 @@ export const DesignerShell: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {renderIconButtonGroup(
                 'media-horizontal-align',
-                'Horizontal Align',
-                MEDIA_HORIZONTAL_ALIGN_OPTIONS,
+                t('designer.shell.groups.horizontalAlign', { defaultValue: 'Horizontal Align' }),
+                mediaHorizontalAlignOptions(t),
                 objectPosition.horizontal,
                 (value) => applyObjectPosition({ horizontal: value as 'left' | 'center' | 'right' }),
                 3
               )}
               {renderIconButtonGroup(
                 'media-vertical-align',
-                'Vertical Align',
-                MEDIA_VERTICAL_ALIGN_OPTIONS,
+                t('designer.shell.groups.verticalAlign', { defaultValue: 'Vertical Align' }),
+                mediaVerticalAlignOptions(t),
                 objectPosition.vertical,
                 (value) => applyObjectPosition({ vertical: value as 'top' | 'center' | 'bottom' }),
                 3
               )}
             </div>
             <div>
-              <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
+              <label className="text-xs text-slate-500 block mb-1">{t('designer.shell.media.aspectRatio', { defaultValue: 'Aspect ratio' })}</label>
 	              <Input
 	                id="designer-media-aspect-ratio"
 	                value={getNodeStyle(selectedNode)?.aspectRatio ?? ''}
@@ -2105,14 +2129,14 @@ export const DesignerShell: React.FC = () => {
               onClick={fitParentSectionFromMedia}
               disabled={!selectedMediaParentSection}
             >
-              Fit Parent Section to Media
+              {t('designer.shell.media.fitParentSection', { defaultValue: 'Fit Parent Section to Media' })}
             </Button>
             {selectedMediaParentSection ? (
               <p className="text-[11px] text-slate-500">
-                Reflows <span className="font-medium text-slate-600">{getNodeName(selectedMediaParentSection)}</span> to remove extra whitespace.
+                {t('designer.shell.media.reflowsPrefix', { defaultValue: 'Reflows' })} <span className="font-medium text-slate-600">{getNodeName(selectedMediaParentSection)}</span> {t('designer.shell.media.reflowsSuffix', { defaultValue: 'to remove extra whitespace.' })}
               </p>
             ) : (
-              <p className="text-[11px] text-slate-500">This media block is not inside a section.</p>
+              <p className="text-[11px] text-slate-500">{t('designer.shell.media.notInSection', { defaultValue: 'This media block is not inside a section.' })}</p>
             )}
           </div>
         </div>
@@ -2276,17 +2300,17 @@ export const DesignerShell: React.FC = () => {
           options: invoicePathOptions,
         });
         if (validation.diagnostics.length > 0) {
-          showDropFeedback('info', `Inserted ${inserted.insertedValue}. ${validation.diagnostics[0]?.message ?? ''}`);
+          showDropFeedback('info', t('designer.feedback.insertedWithDiagnostic', { defaultValue: 'Inserted {{value}}. {{diagnostic}}', value: inserted.insertedValue, diagnostic: validation.diagnostics[0]?.message ?? '' }));
           return;
         }
-        showDropFeedback('info', `Inserted ${inserted.insertedValue}.`);
+        showDropFeedback('info', t('designer.feedback.inserted', { defaultValue: 'Inserted {{value}}.', value: inserted.insertedValue }));
         return;
       }
 
       const liveState = useInvoiceDesignerStore.getState();
       const liveSelectedNodeId = liveState.selectedNodeId;
       if (!liveSelectedNodeId) {
-        showDropFeedback('info', 'Select a text block, then focus a text field to insert variables.');
+        showDropFeedback('info', t('designer.feedback.selectTextBlock', { defaultValue: 'Select a text block, then focus a text field to insert variables.' }));
         return;
       }
 
@@ -2302,7 +2326,7 @@ export const DesignerShell: React.FC = () => {
         return;
       }
       if (!liveSelectedNode || (liveSelectedNode.type !== 'text' && liveSelectedNode.type !== 'label')) {
-        showDropFeedback('info', 'Focus a text field in the inspector to insert this variable.');
+        showDropFeedback('info', t('designer.feedback.focusTextField', { defaultValue: 'Focus a text field in the inspector to insert this variable.' }));
         return;
       }
 
@@ -2325,10 +2349,10 @@ export const DesignerShell: React.FC = () => {
         options: invoicePathOptions,
       });
       if (validation.diagnostics.length > 0) {
-        showDropFeedback('info', `Inserted ${token}. ${validation.diagnostics[0]?.message ?? ''}`);
+        showDropFeedback('info', t('designer.feedback.insertedWithDiagnostic', { defaultValue: 'Inserted {{value}}. {{diagnostic}}', value: token, diagnostic: validation.diagnostics[0]?.message ?? '' }));
         return;
       }
-      showDropFeedback('info', `Inserted ${token}.`);
+      showDropFeedback('info', t('designer.feedback.inserted', { defaultValue: 'Inserted {{value}}.', value: token }));
     },
     [clearDropFeedback, invoicePathOptions, setNodeProp, showDropFeedback, t]
   );
@@ -2390,7 +2414,7 @@ export const DesignerShell: React.FC = () => {
       sectionId: string | null,
       options?: { missingSectionMessage?: string; autoSwitchFillToFixed?: boolean }
     ) => {
-      const missingSectionMessage = options?.missingSectionMessage ?? 'Select a section to fit.';
+      const missingSectionMessage = options?.missingSectionMessage ?? t('designer.feedback.selectSectionToFit', { defaultValue: 'Select a section to fit.' });
       if (!sectionId) {
         showDropFeedback('info', missingSectionMessage);
         return;
@@ -2411,11 +2435,11 @@ export const DesignerShell: React.FC = () => {
 
       const intent = getSectionFitIntent(sectionNode, nodesById);
       if (intent.status === 'no-children') {
-        showDropFeedback('info', 'Section has no child content to fit.');
+        showDropFeedback('info', t('designer.feedback.sectionNoChildren', { defaultValue: 'Section has no child content to fit.' }));
         return;
       }
       if (intent.status === 'already-fitted') {
-        showDropFeedback('info', getSectionFitNoopMessage(sectionNode));
+        showDropFeedback('info', getSectionFitNoopMessage(sectionNode, t));
         return;
       }
 
@@ -2424,32 +2448,32 @@ export const DesignerShell: React.FC = () => {
       resizeNode(resolvedSectionId, intent.size, true);
       const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === resolvedSectionId);
       if (!afterSection || sizesAreEffectivelyEqual(beforeSize, afterSection.size)) {
-        showDropFeedback('info', getSectionFitNoopMessage(sectionNode));
+        showDropFeedback('info', getSectionFitNoopMessage(sectionNode, t));
         return;
       }
       showDropFeedback(
         'info',
         switchedFromFill
-          ? 'Section switched to Fixed sizing and fitted to contents.'
-          : 'Section fitted to contents.'
+          ? t('designer.feedback.sectionFittedFixed', { defaultValue: 'Section switched to Fixed sizing and fitted to contents.' })
+          : t('designer.feedback.sectionFitted', { defaultValue: 'Section fitted to contents.' })
       );
     },
-    [showDropFeedback, resizeNode]
+    [showDropFeedback, resizeNode, t]
   );
 
   const fitSelectedSectionToContents = useCallback(() => {
     const sectionId = selectedNode?.type === 'section' ? selectedNode.id : null;
     runSectionFitAction(sectionId, {
-      missingSectionMessage: 'Select a section to fit.',
+      missingSectionMessage: t('designer.feedback.selectSectionToFit', { defaultValue: 'Select a section to fit.' }),
       autoSwitchFillToFixed: false,
     });
-  }, [runSectionFitAction, selectedNode]);
+  }, [runSectionFitAction, selectedNode, t]);
 
   const fitParentSectionFromMedia = useCallback(() => {
     runSectionFitAction(selectedMediaParentSection?.id ?? null, {
-      missingSectionMessage: 'This media block is not inside a section.',
+      missingSectionMessage: t('designer.shell.media.notInSection', { defaultValue: 'This media block is not inside a section.' }),
     });
-  }, [runSectionFitAction, selectedMediaParentSection]);
+  }, [runSectionFitAction, selectedMediaParentSection, t]);
 
   const normalizeCssValue = (raw: string): string | undefined => {
     // Allow advanced CSS values like `calc(100% - 2rem)`; only normalize empty/whitespace.
