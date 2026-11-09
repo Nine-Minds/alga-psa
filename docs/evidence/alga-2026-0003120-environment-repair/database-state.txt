@@ -1,0 +1,33 @@
+   current_database   |    current_user     
+----------------------+---------------------
+ server_card_ee4611c9 | card_ee4611c9_admin
+(1 row)
+
+ tenants 
+---------
+       1
+(1 row)
+
+       email       | user_type | role_name | msp 
+-------------------+-----------+-----------+-----
+ qa@emeraldcity.oz | internal  | Admin     | t
+(1 row)
+
+ asset_sequence_rows_after_settings_preview 
+--------------------------------------------
+                                          0
+(1 row)
+
+ claims 
+--------
+      5
+(1 row)
+
+                              name                              
+----------------------------------------------------------------
+ 20261104130000_asset_numbering_and_label_intake.cjs
+ 20261104131000_validate_asset_numbering_normalized_columns.cjs
+ 20261104132000_enforce_asset_tag_claim_bindings.cjs
+ 20261104133000_validate_asset_tag_claim_bindings.cjs
+(4 rows)
+
