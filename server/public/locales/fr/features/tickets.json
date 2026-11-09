@@ -2387,7 +2387,9 @@
       "builtInGroup": "Systèmes intégrés",
       "customGroup": "Systèmes personnalisés",
       "urlPreview": "Ouvre :",
-      "urlPreviewIncomplete": "Renseignez les champs ci-dessus pour prévisualiser le lien."
+      "urlPreviewIncomplete": "Renseignez les champs ci-dessus pour prévisualiser le lien.",
+      "title": "Titre",
+      "titlePlaceholder": "Facultatif, p. ex. le nom de l'article"
     },
     "errors": {
       "ticketNotFound": "Ticket introuvable",
@@ -2799,7 +2801,8 @@
       "details": "Modèle",
       "ticket": "Ticket",
       "checklist": "Liste de contrôle",
-      "customFields": "Champs personnalisés"
+      "customFields": "Champs personnalisés",
+      "links": "Liens de documentation"
     },
     "fields": {
       "name": "Nom du modèle",
@@ -2854,13 +2857,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Les modèles de tickets ne sont pas disponibles",
       "subcategoryNeedsCategory": "Une sous-catégorie nécessite une catégorie",
-      "inUseBySchedules": "Utilisée par {{count}} planification(s) récurrente(s) : {{schedules}}. Associez-les à un autre modèle ou archivez-les d'abord."
+      "inUseBySchedules": "Utilisée par {{count}} planification(s) récurrente(s) : {{schedules}}. Associez-les à un autre modèle ou archivez-les d'abord.",
+      "duplicateLink": "Ce modèle contient déjà ce lien de documentation."
     },
     "usage": {
       "schedules": "Utilisé par {{count}} planifications",
       "paused": "en pause",
       "tickets": "{{count}} tickets créés à partir de ce modèle",
       "scheduleThis": "Planifier ce modèle…"
+    },
+    "links": {
+      "help": "Copiés comme références sur chaque ticket créé à partir de ce modèle. Les modifications ultérieures du modèle ne changent pas les tickets existants.",
+      "empty": "Aucun lien de documentation.",
+      "add": "Ajouter un lien",
+      "remove": "Retirer le lien",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "dialogTitle": "Ajouter un lien de documentation",
+      "pickFromHudu": "Choisir dans Hudu",
+      "huduPickerTitle": "Choisir un article Hudu",
+      "huduSearch": "Rechercher des articles Hudu...",
+      "huduLoading": "Chargement des articles Hudu...",
+      "huduDisconnected": "Hudu n'est pas connecté. Vous pouvez tout de même ajouter un lien en saisissant ses détails.",
+      "huduError": "Impossible de joindre Hudu. Réessayez plus tard.",
+      "huduEmpty": "Aucun article Hudu trouvé.",
+      "huduSelect": "Sélectionner",
+      "huduPrev": "Précédent",
+      "huduNext": "Suivant"
     }
   },
   "enums": {

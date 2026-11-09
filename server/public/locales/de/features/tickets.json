@@ -2241,7 +2241,9 @@
       "builtInGroup": "Integrierte Systeme",
       "customGroup": "Benutzerdefinierte Systeme",
       "urlPreview": "Öffnet:",
-      "urlPreviewIncomplete": "Füllen Sie die Felder oben aus, um den Link in der Vorschau zu sehen."
+      "urlPreviewIncomplete": "Füllen Sie die Felder oben aus, um den Link in der Vorschau zu sehen.",
+      "title": "Titel",
+      "titlePlaceholder": "Optional, z. B. der Artikelname"
     },
     "errors": {
       "ticketNotFound": "Ticket nicht gefunden",
@@ -2653,7 +2655,8 @@
       "details": "Vorlage",
       "ticket": "Ticket",
       "checklist": "Checkliste",
-      "customFields": "Benutzerdefinierte Felder"
+      "customFields": "Benutzerdefinierte Felder",
+      "links": "Dokumentationslinks"
     },
     "fields": {
       "name": "Vorlagenname",
@@ -2708,13 +2711,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket-Vorlagen sind nicht verfügbar",
       "subcategoryNeedsCategory": "Eine Unterkategorie erfordert eine Kategorie",
-      "inUseBySchedules": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet: {{schedules}}. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie."
+      "inUseBySchedules": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet: {{schedules}}. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie.",
+      "duplicateLink": "Diese Vorlage enthält diesen Dokumentationslink bereits."
     },
     "usage": {
       "schedules": "Wird von {{count}} Zeitplänen verwendet",
       "paused": "pausiert",
       "tickets": "{{count}} Tickets aus dieser Vorlage erstellt",
       "scheduleThis": "Diese Vorlage planen…"
+    },
+    "links": {
+      "help": "Werden als Verweise auf jedes aus dieser Vorlage erstellte Ticket kopiert. Spätere Änderungen an der Vorlage ändern bestehende Tickets nicht.",
+      "empty": "Keine Dokumentationslinks.",
+      "add": "Link hinzufügen",
+      "remove": "Link entfernen",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "dialogTitle": "Dokumentationslink hinzufügen",
+      "pickFromHudu": "Aus Hudu auswählen",
+      "huduPickerTitle": "Hudu-Artikel auswählen",
+      "huduSearch": "Hudu-Artikel durchsuchen...",
+      "huduLoading": "Hudu-Artikel werden geladen...",
+      "huduDisconnected": "Hudu ist nicht verbunden. Sie können trotzdem einen Link hinzufügen, indem Sie seine Details eingeben.",
+      "huduError": "Hudu konnte nicht erreicht werden. Versuchen Sie es später erneut.",
+      "huduEmpty": "Keine Hudu-Artikel gefunden.",
+      "huduSelect": "Auswählen",
+      "huduPrev": "Zurück",
+      "huduNext": "Weiter"
     }
   },
   "enums": {

@@ -2387,7 +2387,9 @@
       "builtInGroup": "Sistemas integrados",
       "customGroup": "Sistemas personalizados",
       "urlPreview": "Abre:",
-      "urlPreviewIncomplete": "Complete los campos anteriores para previsualizar el vínculo."
+      "urlPreviewIncomplete": "Complete los campos anteriores para previsualizar el vínculo.",
+      "title": "Título",
+      "titlePlaceholder": "Opcional, p. ej., el nombre del artículo"
     },
     "errors": {
       "ticketNotFound": "Ticket no encontrado",
@@ -2799,7 +2801,8 @@
       "details": "Plantilla",
       "ticket": "Ticket",
       "checklist": "Lista de verificación",
-      "customFields": "Campos personalizados"
+      "customFields": "Campos personalizados",
+      "links": "Vínculos de documentación"
     },
     "fields": {
       "name": "Nombre de la plantilla",
@@ -2854,13 +2857,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Las plantillas de tickets no están disponibles",
       "subcategoryNeedsCategory": "Una subcategoría requiere una categoría",
-      "inUseBySchedules": "Usada por {{count}} programación(es) recurrente(s): {{schedules}}. Asígneles otra plantilla o archívelas primero."
+      "inUseBySchedules": "Usada por {{count}} programación(es) recurrente(s): {{schedules}}. Asígneles otra plantilla o archívelas primero.",
+      "duplicateLink": "Esta plantilla ya tiene ese vínculo de documentación."
     },
     "usage": {
       "schedules": "Usada por {{count}} programaciones",
       "paused": "en pausa",
       "tickets": "{{count}} tickets creados con esta plantilla",
       "scheduleThis": "Programar esta plantilla…"
+    },
+    "links": {
+      "help": "Se copian como referencias en cada ticket creado a partir de esta plantilla. Los cambios posteriores en la plantilla no modifican los tickets existentes.",
+      "empty": "No hay vínculos de documentación.",
+      "add": "Agregar vínculo",
+      "remove": "Quitar vínculo",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "dialogTitle": "Agregar vínculo de documentación",
+      "pickFromHudu": "Elegir de Hudu",
+      "huduPickerTitle": "Elegir un artículo de Hudu",
+      "huduSearch": "Buscar artículos de Hudu...",
+      "huduLoading": "Cargando artículos de Hudu...",
+      "huduDisconnected": "Hudu no está conectado. Aún puede agregar un vínculo introduciendo sus datos.",
+      "huduError": "No se pudo conectar con Hudu. Inténtelo de nuevo más tarde.",
+      "huduEmpty": "No se encontraron artículos de Hudu.",
+      "huduSelect": "Seleccionar",
+      "huduPrev": "Anterior",
+      "huduNext": "Siguiente"
     }
   },
   "enums": {

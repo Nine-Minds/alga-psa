@@ -2387,7 +2387,9 @@
       "builtInGroup": "Sistemas integrados",
       "customGroup": "Sistemas personalizados",
       "urlPreview": "Abre:",
-      "urlPreviewIncomplete": "Preencha os campos acima para visualizar o link."
+      "urlPreviewIncomplete": "Preencha os campos acima para visualizar o link.",
+      "title": "Título",
+      "titlePlaceholder": "Opcional, p. ex., o nome do artigo"
     },
     "errors": {
       "ticketNotFound": "Ticket não encontrado",
@@ -2799,7 +2801,8 @@
       "details": "Modelo",
       "ticket": "Ticket",
       "checklist": "Lista de verificação",
-      "customFields": "Campos personalizados"
+      "customFields": "Campos personalizados",
+      "links": "Links de documentação"
     },
     "fields": {
       "name": "Nome do modelo",
@@ -2854,13 +2857,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Os modelos de tickets não estão disponíveis",
       "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria",
-      "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro."
+      "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro.",
+      "duplicateLink": "Este modelo já tem esse link de documentação."
     },
     "usage": {
       "schedules": "Usado por {{count}} agendamentos",
       "paused": "pausado",
       "tickets": "{{count}} tickets criados a partir deste modelo",
       "scheduleThis": "Agendar este modelo…"
+    },
+    "links": {
+      "help": "Copiados como referências para cada ticket criado a partir deste modelo. Alterações posteriores no modelo não alteram os tickets existentes.",
+      "empty": "Nenhum link de documentação.",
+      "add": "Adicionar link",
+      "remove": "Remover link",
+      "moveUp": "Mover para cima",
+      "moveDown": "Mover para baixo",
+      "dialogTitle": "Adicionar link de documentação",
+      "pickFromHudu": "Escolher do Hudu",
+      "huduPickerTitle": "Escolher um artigo do Hudu",
+      "huduSearch": "Pesquisar artigos do Hudu...",
+      "huduLoading": "Carregando artigos do Hudu...",
+      "huduDisconnected": "O Hudu não está conectado. Você ainda pode adicionar um link informando os detalhes dele.",
+      "huduError": "Não foi possível acessar o Hudu. Tente novamente mais tarde.",
+      "huduEmpty": "Nenhum artigo do Hudu encontrado.",
+      "huduSelect": "Selecionar",
+      "huduPrev": "Anterior",
+      "huduNext": "Próximo"
     }
   },
   "enums": {
