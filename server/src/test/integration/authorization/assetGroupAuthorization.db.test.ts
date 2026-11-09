@@ -401,7 +401,7 @@ describe('asset group mutation authorization', () => {
 
     await database().table('asset_group_members').insert({ tenant: holder.tenant, group_id: groupId, asset_id: outOfTeam });
     expect(await removeAssetFromGroup(groupId, outOfTeam)).toHaveProperty('permissionError');
-    expect(await removeAssetFromGroup(groupId, randomUUID())).toMatchObject({ group_id: groupId });
+    expect(await removeAssetFromGroup(groupId, randomUUID())).toHaveProperty('permissionError');
     const beforeLocation = await database().table('assets').whereIn('asset_id', [inTeam, secondInTeam, outOfTeam]).select('asset_id', 'location_id', 'location', 'contact_name_id');
     const beforeAssignments = await assignmentState([inTeam, secondInTeam, outOfTeam]);
     const beforeOwner = await database().table('asset_group_contacts').where({ group_id: groupId, role: 'owner' }).first('contact_name_id');
@@ -418,6 +418,36 @@ describe('asset group mutation authorization', () => {
     expect(await database().table('asset_group_contacts').where({ group_id: groupId, role: 'owner' }).first('contact_name_id')).toEqual(beforeOwner);
     expect(await database().table('assets').whereIn('asset_id', [inTeam, secondInTeam, outOfTeam]).select('asset_id', 'location_id', 'location', 'contact_name_id')).toEqual(beforeLocation);
     expect(await assignmentState([inTeam, secondInTeam, outOfTeam])).toEqual(beforeAssignments);
+  });
+
+  it('allows in-scope removal but denies every removal target once the group has a restricted member', async () => {
+    const inTeam = await createAsset('Removable in-team asset');
+    const outOfTeam = await createAsset('Restricted removal group member');
+    await assignAssetToTeam(inTeam);
+    const created = await createAssetGroup({ clientId, name: 'Removal authorization group', kind: 'bundle', assetIds: [inTeam] });
+    expect(created).toMatchObject({ name: 'Removal authorization group' });
+    const groupId = (created as { group_id: string }).group_id;
+
+    expect(await removeAssetFromGroup(groupId, inTeam)).toMatchObject({ group_id: groupId, members: [] });
+    expect(await database().table('asset_group_members').where({ group_id: groupId })).toHaveLength(0);
+    expect(await addAssetsToGroup(groupId, [inTeam])).toMatchObject({ group_id: groupId });
+    await database().table('asset_group_members').insert({ tenant: holder.tenant, group_id: groupId, asset_id: outOfTeam });
+
+    const state = async () => ({
+      group: await database().table('asset_groups').where({ group_id: groupId }).first(),
+      members: await database().table('asset_group_members').where({ group_id: groupId }).orderBy('asset_id'),
+      assets: await database().table('assets').whereIn('asset_id', [inTeam, outOfTeam]).orderBy('asset_id'),
+      assignments: await database().table('asset_assignments').whereIn('asset_id', [inTeam, outOfTeam]).orderBy('assignment_id'),
+      history: await database().table('asset_history').whereIn('asset_id', [inTeam, outOfTeam]).count('* as count').first(),
+    });
+    const before = await state();
+    for (const assetId of [inTeam, outOfTeam, randomUUID()]) {
+      expect(await removeAssetFromGroup(groupId, assetId)).toEqual({
+        permissionError: 'Permission denied: Cannot update assets',
+        messageKey: 'msp/assets:errors.permissions.updateAssets',
+      });
+      expect(await state()).toEqual(before);
+    }
   });
 
   it('serializes membership insertion behind the update authorization and propagation transaction', async () => {
