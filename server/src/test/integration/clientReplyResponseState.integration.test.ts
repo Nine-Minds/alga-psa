@@ -65,9 +65,8 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) =>
 vi.mock('@/lib/eventBus', async () =>
   (await import('../../../test-utils/webhookSinkHarness')).eventBusMockFactory(state));
 
-// parseStagedMimeIntoEmailDetails drops message headers, so a staged reply never carries
-// Authentication-Results and the sender-auth gate would discard every contact match.
-// Stand in for a DKIM-aligned sender; this card does not test the gate itself.
+// The staged fixture replies carry no Authentication-Results, so the sender-auth gate would
+// discard every contact match. Stand in for a DKIM-aligned sender; this suite does not test the gate.
 vi.mock('@alga-psa/shared/lib/email/senderAuthVerification', async (importOriginal) => ({
   ...(await importOriginal<any>()),
   allowsContactSenderAttribution: () => true,
