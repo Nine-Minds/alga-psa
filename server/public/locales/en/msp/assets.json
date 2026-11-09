@@ -1447,7 +1447,182 @@
   "maintenanceCommandCenter": {
     "title": "Maintenance",
     "description": "Command center for preventive work across all client assets.",
-    "assetsLink": "Assets"
+    "assetsLink": "Assets",
+    "notRecorded": "Not recorded",
+    "system": "System",
+    "checklist": {
+      "complete": "Complete",
+      "incomplete": "Incomplete"
+    },
+    "weekdays": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    },
+    "cadence": {
+      "custom": "Custom",
+      "customSchedule": "Custom schedule",
+      "everyUnit": "Every {{unit}}",
+      "everyCountUnit": "Every {{count}} {{unit}}",
+      "onDays": "{{base}} on {{days}}",
+      "onDatesOfMonth": "{{base}} on the {{dates}}",
+      "frequency": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "yearly": "Yearly"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}}d overdue",
+      "dueToday": "due today",
+      "inDays": "in {{count}}d"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "refresh": "Refresh",
+      "newPlan": "New maintenance plan",
+      "skip": "Skip",
+      "skipTooltip": "Skip with a required reason — the plan advances to its next occurrence",
+      "complete": "Complete maintenance",
+      "createTicket": "Create ticket",
+      "openTicket": "Open ticket ↗",
+      "pausePlan": "Pause plan"
+    },
+    "assetPicker": {
+      "title": "Select an asset",
+      "searchPlaceholder": "Search by name, tag, or serial number",
+      "loading": "Loading assets…",
+      "loadFailed": "Unable to load assets.",
+      "empty": "No assets found.",
+      "showingFirst": "Showing first {{shown}} of {{total}} — refine your search."
+    },
+    "kpi": {
+      "overdue": "Overdue",
+      "dueToday": "Due today",
+      "upcoming7d": "Upcoming 7d",
+      "openTickets": "Open tickets",
+      "compliance90d": "Compliance 90d",
+      "clickToFilter": "click to filter",
+      "allClear": "all clear",
+      "quietWeek": "quiet week ahead",
+      "linkedToOccurrences": "linked to occurrences",
+      "onTimeCompletion": "on-time completion"
+    },
+    "tabs": {
+      "queue": "Work queue",
+      "plans": "Plan queue",
+      "history": "History"
+    },
+    "filters": {
+      "searchPlaceholder": "Search plans, assets, or clients",
+      "actionable": "Actionable",
+      "allStatuses": "All statuses",
+      "completed": "Completed",
+      "skipped": "Skipped",
+      "button": "Filters",
+      "allClients": "All clients",
+      "allAssetTypes": "All asset types",
+      "allPlanTypes": "All plan types",
+      "due": "Due",
+      "clearAll": "Clear all",
+      "done": "Done",
+      "clientChip": "Client"
+    },
+    "viewMode": {
+      "list": "List",
+      "calendar": "Calendar"
+    },
+    "queue": {
+      "actionableTitle": "Actionable occurrences",
+      "plansTitle": "Active plan queue (occurrence-backed)",
+      "loading": "Loading maintenance…",
+      "empty": "No maintenance occurrences match these filters.",
+      "emptyFiltered": "No maintenance occurrences match these filters. Clear a filter or widen the due-date range.",
+      "emptyHistory": "Completed and skipped occurrences will appear here once maintenance is closed out.",
+      "emptyPlans": "Open plan occurrences will appear here as schedules generate work.",
+      "clearBeyond": "Queue is clear beyond these {{count}} — widen the due range or check the plan queue.",
+      "allCaughtUp": "All caught up",
+      "nextDueIn": "— next due in {{count}}d",
+      "shownCount": "{{shown}} shown · {{open}} open ·",
+      "inHistory": "{{count}} in history",
+      "itemCount_one": "· {{count}} item",
+      "itemCount_other": "· {{count}} items",
+      "overdueCount": "{{count}} overdue",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} at a glance",
+      "overdue": "overdue",
+      "today": "today",
+      "upcoming": "upcoming"
+    },
+    "calendar": {
+      "dueCount": "{{count}} due",
+      "today": "Today",
+      "moreCount": "+{{count}} more",
+      "legend": "Legend",
+      "scheduled": "Scheduled"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Type",
+      "cadence": "Cadence",
+      "nextDue": "Next due",
+      "lastDone": "Last done",
+      "assignee": "Assignee",
+      "createdBy": "Created by",
+      "linkedTicket": "Linked ticket"
+    },
+    "detail": {
+      "noSelection": "No occurrence selected",
+      "noSelectionHint": "Select an occurrence from the queue to see its asset, plan, linked ticket, and execution actions — or clear the filters to see more work.",
+      "unassignedClient": "Unassigned client",
+      "dueSuffix": "· due {{date}}",
+      "nextDueTooltip": "Next due advances from the actual completion date.",
+      "never": "Never",
+      "unassigned": "Unassigned",
+      "assignViaTicket": "Assign via ticket",
+      "ticketClosed": "Closed",
+      "ticketOpen": "Open",
+      "noTicketYet": "None yet",
+      "execution": "Execution",
+      "noChecklistPrefix": "No checklist on this plan —",
+      "addStepsLink": "add steps on the asset",
+      "noChecklistSuffix": "to guide technicians.",
+      "timeline": "Timeline"
+    },
+    "timeline": {
+      "created": "Occurrence created",
+      "ticketLinked": "Ticket linked — {{ticket}}",
+      "dueRepeats": "Due — repeats {{cadence}}",
+      "completedBy": "Completed by {{name}}{{notes}}",
+      "skippedBy": "Skipped by {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Completion evidence",
+      "performed": "Performed:",
+      "performedBy": "Performed by:",
+      "notes": "Notes:",
+      "checklist": "Checklist:",
+      "skipTitle": "Skip evidence",
+      "reason": "Reason:",
+      "closedBy": "Closed by:",
+      "closed": "Closed:"
+    },
+    "skip": {
+      "title": "Skip maintenance",
+      "reason": "Reason"
+    },
+    "ticket": {
+      "title": "Maintenance: {{plan}}",
+      "description": "{{type}} maintenance due {{date}}. Occurrence: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {

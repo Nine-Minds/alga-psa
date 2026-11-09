@@ -1447,7 +1447,182 @@
   "maintenanceCommandCenter": {
     "title": "⟦Ḿȧīƞŧḗƞȧƞƈḗ⟧",
     "description": "⟦Ƈȯḿḿȧƞḓ ƈḗƞŧḗř ƒȯř ƥřḗṽḗƞŧīṽḗ ẇȯřķ ȧƈřȯşş ȧŀŀ ƈŀīḗƞŧ ȧşşḗŧş.⟧",
-    "assetsLink": "⟦Ȧşşḗŧş⟧"
+    "assetsLink": "⟦Ȧşşḗŧş⟧",
+    "notRecorded": "⟦Ƞȯŧ řḗƈȯřḓḗḓ⟧",
+    "system": "⟦Şẏşŧḗḿ⟧",
+    "checklist": {
+      "complete": "⟦Ƈȯḿƥŀḗŧḗ⟧",
+      "incomplete": "⟦Īƞƈȯḿƥŀḗŧḗ⟧"
+    },
+    "weekdays": {
+      "0": "⟦Şŭƞ⟧",
+      "1": "⟦Ḿȯƞ⟧",
+      "2": "⟦Ŧŭḗ⟧",
+      "3": "⟦Ẇḗḓ⟧",
+      "4": "⟦Ŧħŭ⟧",
+      "5": "⟦Ƒřī⟧",
+      "6": "⟦Şȧŧ⟧"
+    },
+    "cadence": {
+      "custom": "⟦Ƈŭşŧȯḿ⟧",
+      "customSchedule": "⟦Ƈŭşŧȯḿ şƈħḗḓŭŀḗ⟧",
+      "everyUnit": "⟦Ḗṽḗřẏ {{unit}}⟧",
+      "everyCountUnit": "⟦Ḗṽḗřẏ {{count}} {{unit}}⟧",
+      "onDays": "⟦{{base}} ȯƞ {{days}}⟧",
+      "onDatesOfMonth": "⟦{{base}} ȯƞ ŧħḗ {{dates}}⟧",
+      "frequency": {
+        "daily": "⟦Ḓȧīŀẏ⟧",
+        "weekly": "⟦Ẇḗḗķŀẏ⟧",
+        "monthly": "⟦Ḿȯƞŧħŀẏ⟧",
+        "quarterly": "⟦Ɋŭȧřŧḗřŀẏ⟧",
+        "yearly": "⟦Ẏḗȧřŀẏ⟧"
+      }
+    },
+    "urgency": {
+      "overdue": "⟦{{count}}ḓ ȯṽḗřḓŭḗ⟧",
+      "dueToday": "⟦ḓŭḗ ŧȯḓȧẏ⟧",
+      "inDays": "⟦īƞ {{count}}ḓ⟧"
+    },
+    "actions": {
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "refresh": "⟦Řḗƒřḗşħ⟧",
+      "newPlan": "⟦Ƞḗẇ ḿȧīƞŧḗƞȧƞƈḗ ƥŀȧƞ⟧",
+      "skip": "⟦Şķīƥ⟧",
+      "skipTooltip": "⟦Şķīƥ ẇīŧħ ȧ řḗʠŭīřḗḓ řḗȧşȯƞ — ŧħḗ ƥŀȧƞ ȧḓṽȧƞƈḗş ŧȯ īŧş ƞḗẋŧ ȯƈƈŭřřḗƞƈḗ⟧",
+      "complete": "⟦Ƈȯḿƥŀḗŧḗ ḿȧīƞŧḗƞȧƞƈḗ⟧",
+      "createTicket": "⟦Ƈřḗȧŧḗ ŧīƈķḗŧ⟧",
+      "openTicket": "⟦Ȯƥḗƞ ŧīƈķḗŧ ↗⟧",
+      "pausePlan": "⟦Ƥȧŭşḗ ƥŀȧƞ⟧"
+    },
+    "assetPicker": {
+      "title": "⟦Şḗŀḗƈŧ ȧƞ ȧşşḗŧ⟧",
+      "searchPlaceholder": "⟦Şḗȧřƈħ ƀẏ ƞȧḿḗ, ŧȧɠ, ȯř şḗřīȧŀ ƞŭḿƀḗř⟧",
+      "loading": "⟦Ŀȯȧḓīƞɠ ȧşşḗŧş…⟧",
+      "loadFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ȧşşḗŧş.⟧",
+      "empty": "⟦Ƞȯ ȧşşḗŧş ƒȯŭƞḓ.⟧",
+      "showingFirst": "⟦Şħȯẇīƞɠ ƒīřşŧ {{shown}} ȯƒ {{total}} — řḗƒīƞḗ ẏȯŭř şḗȧřƈħ.⟧"
+    },
+    "kpi": {
+      "overdue": "⟦Ȯṽḗřḓŭḗ⟧",
+      "dueToday": "⟦Ḓŭḗ ŧȯḓȧẏ⟧",
+      "upcoming7d": "⟦Ŭƥƈȯḿīƞɠ 7ḓ⟧",
+      "openTickets": "⟦Ȯƥḗƞ ŧīƈķḗŧş⟧",
+      "compliance90d": "⟦Ƈȯḿƥŀīȧƞƈḗ 90ḓ⟧",
+      "clickToFilter": "⟦ƈŀīƈķ ŧȯ ƒīŀŧḗř⟧",
+      "allClear": "⟦ȧŀŀ ƈŀḗȧř⟧",
+      "quietWeek": "⟦ʠŭīḗŧ ẇḗḗķ ȧħḗȧḓ⟧",
+      "linkedToOccurrences": "⟦ŀīƞķḗḓ ŧȯ ȯƈƈŭřřḗƞƈḗş⟧",
+      "onTimeCompletion": "⟦ȯƞ-ŧīḿḗ ƈȯḿƥŀḗŧīȯƞ⟧"
+    },
+    "tabs": {
+      "queue": "⟦Ẇȯřķ ʠŭḗŭḗ⟧",
+      "plans": "⟦Ƥŀȧƞ ʠŭḗŭḗ⟧",
+      "history": "⟦Ħīşŧȯřẏ⟧"
+    },
+    "filters": {
+      "searchPlaceholder": "⟦Şḗȧřƈħ ƥŀȧƞş, ȧşşḗŧş, ȯř ƈŀīḗƞŧş⟧",
+      "actionable": "⟦Ȧƈŧīȯƞȧƀŀḗ⟧",
+      "allStatuses": "⟦Ȧŀŀ şŧȧŧŭşḗş⟧",
+      "completed": "⟦Ƈȯḿƥŀḗŧḗḓ⟧",
+      "skipped": "⟦Şķīƥƥḗḓ⟧",
+      "button": "⟦Ƒīŀŧḗřş⟧",
+      "allClients": "⟦Ȧŀŀ ƈŀīḗƞŧş⟧",
+      "allAssetTypes": "⟦Ȧŀŀ ȧşşḗŧ ŧẏƥḗş⟧",
+      "allPlanTypes": "⟦Ȧŀŀ ƥŀȧƞ ŧẏƥḗş⟧",
+      "due": "⟦Ḓŭḗ⟧",
+      "clearAll": "⟦Ƈŀḗȧř ȧŀŀ⟧",
+      "done": "⟦Ḓȯƞḗ⟧",
+      "clientChip": "⟦Ƈŀīḗƞŧ⟧"
+    },
+    "viewMode": {
+      "list": "⟦Ŀīşŧ⟧",
+      "calendar": "⟦Ƈȧŀḗƞḓȧř⟧"
+    },
+    "queue": {
+      "actionableTitle": "⟦Ȧƈŧīȯƞȧƀŀḗ ȯƈƈŭřřḗƞƈḗş⟧",
+      "plansTitle": "⟦Ȧƈŧīṽḗ ƥŀȧƞ ʠŭḗŭḗ (ȯƈƈŭřřḗƞƈḗ-ƀȧƈķḗḓ)⟧",
+      "loading": "⟦Ŀȯȧḓīƞɠ ḿȧīƞŧḗƞȧƞƈḗ…⟧",
+      "empty": "⟦Ƞȯ ḿȧīƞŧḗƞȧƞƈḗ ȯƈƈŭřřḗƞƈḗş ḿȧŧƈħ ŧħḗşḗ ƒīŀŧḗřş.⟧",
+      "emptyFiltered": "⟦Ƞȯ ḿȧīƞŧḗƞȧƞƈḗ ȯƈƈŭřřḗƞƈḗş ḿȧŧƈħ ŧħḗşḗ ƒīŀŧḗřş. Ƈŀḗȧř ȧ ƒīŀŧḗř ȯř ẇīḓḗƞ ŧħḗ ḓŭḗ-ḓȧŧḗ řȧƞɠḗ.⟧",
+      "emptyHistory": "⟦Ƈȯḿƥŀḗŧḗḓ ȧƞḓ şķīƥƥḗḓ ȯƈƈŭřřḗƞƈḗş ẇīŀŀ ȧƥƥḗȧř ħḗřḗ ȯƞƈḗ ḿȧīƞŧḗƞȧƞƈḗ īş ƈŀȯşḗḓ ȯŭŧ.⟧",
+      "emptyPlans": "⟦Ȯƥḗƞ ƥŀȧƞ ȯƈƈŭřřḗƞƈḗş ẇīŀŀ ȧƥƥḗȧř ħḗřḗ ȧş şƈħḗḓŭŀḗş ɠḗƞḗřȧŧḗ ẇȯřķ.⟧",
+      "clearBeyond": "⟦Ɋŭḗŭḗ īş ƈŀḗȧř ƀḗẏȯƞḓ ŧħḗşḗ {{count}} — ẇīḓḗƞ ŧħḗ ḓŭḗ řȧƞɠḗ ȯř ƈħḗƈķ ŧħḗ ƥŀȧƞ ʠŭḗŭḗ.⟧",
+      "allCaughtUp": "⟦Ȧŀŀ ƈȧŭɠħŧ ŭƥ⟧",
+      "nextDueIn": "⟦— ƞḗẋŧ ḓŭḗ īƞ {{count}}ḓ⟧",
+      "shownCount": "⟦{{shown}} şħȯẇƞ · {{open}} ȯƥḗƞ ·⟧",
+      "inHistory": "⟦{{count}} īƞ ħīşŧȯřẏ⟧",
+      "itemCount_one": "⟦· {{count}} īŧḗḿ⟧",
+      "itemCount_other": "⟦· {{count}} īŧḗḿş⟧",
+      "overdueCount": "⟦{{count}} ȯṽḗřḓŭḗ⟧",
+      "ticketChip": "⟦ŧīƈķḗŧ⟧"
+    },
+    "miniMonth": {
+      "atAGlance": "⟦{{month}} ȧŧ ȧ ɠŀȧƞƈḗ⟧",
+      "overdue": "⟦ȯṽḗřḓŭḗ⟧",
+      "today": "⟦ŧȯḓȧẏ⟧",
+      "upcoming": "⟦ŭƥƈȯḿīƞɠ⟧"
+    },
+    "calendar": {
+      "dueCount": "⟦{{count}} ḓŭḗ⟧",
+      "today": "⟦Ŧȯḓȧẏ⟧",
+      "moreCount": "⟦+{{count}} ḿȯřḗ⟧",
+      "legend": "⟦Ŀḗɠḗƞḓ⟧",
+      "scheduled": "⟦Şƈħḗḓŭŀḗḓ⟧"
+    },
+    "fields": {
+      "asset": "⟦Ȧşşḗŧ⟧",
+      "type": "⟦Ŧẏƥḗ⟧",
+      "cadence": "⟦Ƈȧḓḗƞƈḗ⟧",
+      "nextDue": "⟦Ƞḗẋŧ ḓŭḗ⟧",
+      "lastDone": "⟦Ŀȧşŧ ḓȯƞḗ⟧",
+      "assignee": "⟦Ȧşşīɠƞḗḗ⟧",
+      "createdBy": "⟦Ƈřḗȧŧḗḓ ƀẏ⟧",
+      "linkedTicket": "⟦Ŀīƞķḗḓ ŧīƈķḗŧ⟧"
+    },
+    "detail": {
+      "noSelection": "⟦Ƞȯ ȯƈƈŭřřḗƞƈḗ şḗŀḗƈŧḗḓ⟧",
+      "noSelectionHint": "⟦Şḗŀḗƈŧ ȧƞ ȯƈƈŭřřḗƞƈḗ ƒřȯḿ ŧħḗ ʠŭḗŭḗ ŧȯ şḗḗ īŧş ȧşşḗŧ, ƥŀȧƞ, ŀīƞķḗḓ ŧīƈķḗŧ, ȧƞḓ ḗẋḗƈŭŧīȯƞ ȧƈŧīȯƞş — ȯř ƈŀḗȧř ŧħḗ ƒīŀŧḗřş ŧȯ şḗḗ ḿȯřḗ ẇȯřķ.⟧",
+      "unassignedClient": "⟦Ŭƞȧşşīɠƞḗḓ ƈŀīḗƞŧ⟧",
+      "dueSuffix": "⟦· ḓŭḗ {{date}}⟧",
+      "nextDueTooltip": "⟦Ƞḗẋŧ ḓŭḗ ȧḓṽȧƞƈḗş ƒřȯḿ ŧħḗ ȧƈŧŭȧŀ ƈȯḿƥŀḗŧīȯƞ ḓȧŧḗ.⟧",
+      "never": "⟦Ƞḗṽḗř⟧",
+      "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+      "assignViaTicket": "⟦Ȧşşīɠƞ ṽīȧ ŧīƈķḗŧ⟧",
+      "ticketClosed": "⟦Ƈŀȯşḗḓ⟧",
+      "ticketOpen": "⟦Ȯƥḗƞ⟧",
+      "noTicketYet": "⟦Ƞȯƞḗ ẏḗŧ⟧",
+      "execution": "⟦Ḗẋḗƈŭŧīȯƞ⟧",
+      "noChecklistPrefix": "⟦Ƞȯ ƈħḗƈķŀīşŧ ȯƞ ŧħīş ƥŀȧƞ —⟧",
+      "addStepsLink": "⟦ȧḓḓ şŧḗƥş ȯƞ ŧħḗ ȧşşḗŧ⟧",
+      "noChecklistSuffix": "⟦ŧȯ ɠŭīḓḗ ŧḗƈħƞīƈīȧƞş.⟧",
+      "timeline": "⟦Ŧīḿḗŀīƞḗ⟧"
+    },
+    "timeline": {
+      "created": "⟦Ȯƈƈŭřřḗƞƈḗ ƈřḗȧŧḗḓ⟧",
+      "ticketLinked": "⟦Ŧīƈķḗŧ ŀīƞķḗḓ — {{ticket}}⟧",
+      "dueRepeats": "⟦Ḓŭḗ — řḗƥḗȧŧş {{cadence}}⟧",
+      "completedBy": "⟦Ƈȯḿƥŀḗŧḗḓ ƀẏ {{name}}{{notes}}⟧",
+      "skippedBy": "⟦Şķīƥƥḗḓ ƀẏ {{name}}⟧"
+    },
+    "evidence": {
+      "completionTitle": "⟦Ƈȯḿƥŀḗŧīȯƞ ḗṽīḓḗƞƈḗ⟧",
+      "performed": "⟦Ƥḗřƒȯřḿḗḓ:⟧",
+      "performedBy": "⟦Ƥḗřƒȯřḿḗḓ ƀẏ:⟧",
+      "notes": "⟦Ƞȯŧḗş:⟧",
+      "checklist": "⟦Ƈħḗƈķŀīşŧ:⟧",
+      "skipTitle": "⟦Şķīƥ ḗṽīḓḗƞƈḗ⟧",
+      "reason": "⟦Řḗȧşȯƞ:⟧",
+      "closedBy": "⟦Ƈŀȯşḗḓ ƀẏ:⟧",
+      "closed": "⟦Ƈŀȯşḗḓ:⟧"
+    },
+    "skip": {
+      "title": "⟦Şķīƥ ḿȧīƞŧḗƞȧƞƈḗ⟧",
+      "reason": "⟦Řḗȧşȯƞ⟧"
+    },
+    "ticket": {
+      "title": "⟦Ḿȧīƞŧḗƞȧƞƈḗ: {{plan}}⟧",
+      "description": "⟦{{type}} ḿȧīƞŧḗƞȧƞƈḗ ḓŭḗ {{date}}. Ȯƈƈŭřřḗƞƈḗ: {{occurrenceId}}⟧"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {

@@ -1447,7 +1447,182 @@
   "maintenanceCommandCenter": {
     "title": "Centre de contrôle de maintenance",
     "description": "La prochaine échéance est calculée à partir de la date de réalisation réelle.",
-    "assetsLink": "Actifs"
+    "assetsLink": "Actifs",
+    "notRecorded": "Non renseigné",
+    "system": "Système",
+    "checklist": {
+      "complete": "Terminé",
+      "incomplete": "Non terminé"
+    },
+    "weekdays": {
+      "0": "dim.",
+      "1": "lun.",
+      "2": "mar.",
+      "3": "mer.",
+      "4": "jeu.",
+      "5": "ven.",
+      "6": "sam."
+    },
+    "cadence": {
+      "custom": "Personnalisé",
+      "customSchedule": "Planning personnalisé",
+      "everyUnit": "Chaque {{unit}}",
+      "everyCountUnit": "À intervalles de {{count}} {{unit}}",
+      "onDays": "{{base}} : {{days}}",
+      "onDatesOfMonth": "{{base}} : {{dates}} du mois",
+      "frequency": {
+        "daily": "Quotidien",
+        "weekly": "Hebdomadaire",
+        "monthly": "Mensuel",
+        "quarterly": "Trimestriel",
+        "yearly": "Annuel"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} j de retard",
+      "dueToday": "à échéance aujourd'hui",
+      "inDays": "dans {{count}} j"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "refresh": "Actualiser",
+      "newPlan": "Nouveau plan d'entretien",
+      "skip": "Ignorer",
+      "skipTooltip": "Ignorer en précisant obligatoirement un motif — le plan passe à l'occurrence suivante",
+      "complete": "Terminer l'entretien",
+      "createTicket": "Créer un ticket",
+      "openTicket": "Ouvrir le ticket ↗",
+      "pausePlan": "Mettre le plan en pause"
+    },
+    "assetPicker": {
+      "title": "Sélectionner un actif",
+      "searchPlaceholder": "Rechercher par nom, étiquette ou numéro de série",
+      "loading": "Chargement des actifs…",
+      "loadFailed": "Impossible de charger les actifs.",
+      "empty": "Aucun actif trouvé.",
+      "showingFirst": "Affichage des {{shown}} premiers résultats sur {{total}} — affinez votre recherche."
+    },
+    "kpi": {
+      "overdue": "En retard",
+      "dueToday": "À échéance aujourd'hui",
+      "upcoming7d": "À venir sous 7 j",
+      "openTickets": "Tickets ouverts",
+      "compliance90d": "Conformité sur 90 j",
+      "clickToFilter": "cliquer pour filtrer",
+      "allClear": "tout est à jour",
+      "quietWeek": "semaine calme en vue",
+      "linkedToOccurrences": "liés aux occurrences",
+      "onTimeCompletion": "réalisation dans les délais"
+    },
+    "tabs": {
+      "queue": "Interventions à traiter",
+      "plans": "Plans à traiter",
+      "history": "Historique"
+    },
+    "filters": {
+      "searchPlaceholder": "Rechercher des plans, des actifs ou des clients",
+      "actionable": "À traiter",
+      "allStatuses": "Tous les statuts",
+      "completed": "Terminées",
+      "skipped": "Ignorées",
+      "button": "Filtres",
+      "allClients": "Tous les clients",
+      "allAssetTypes": "Tous les types d'actifs",
+      "allPlanTypes": "Tous les types de plans",
+      "due": "Échéance",
+      "clearAll": "Tout effacer",
+      "done": "Terminé",
+      "clientChip": "Client"
+    },
+    "viewMode": {
+      "list": "Liste",
+      "calendar": "Calendrier"
+    },
+    "queue": {
+      "actionableTitle": "Occurrences à traiter",
+      "plansTitle": "Plans actifs à traiter (selon les occurrences)",
+      "loading": "Chargement des entretiens…",
+      "empty": "Aucune occurrence d'entretien ne correspond à ces filtres.",
+      "emptyFiltered": "Aucune occurrence d'entretien ne correspond à ces filtres. Supprimez un filtre ou élargissez la plage d'échéances.",
+      "emptyHistory": "Les occurrences terminées et ignorées apparaîtront ici une fois l'entretien clôturé.",
+      "emptyPlans": "Les occurrences ouvertes des plans apparaîtront ici à mesure que les plannings génèrent des interventions.",
+      "clearBeyond": "Aucune autre occurrence à traiter au-delà de ces {{count}} — élargissez la plage d'échéances ou consultez les plans à traiter.",
+      "allCaughtUp": "Tout est à jour",
+      "nextDueIn": "— prochaine échéance dans {{count}} j",
+      "shownCount": "{{shown}} affichées · {{open}} ouvertes ·",
+      "inHistory": "{{count}} dans l'historique",
+      "itemCount_one": "· {{count}} élément",
+      "itemCount_other": "· {{count}} éléments",
+      "overdueCount": "{{count}} en retard",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} en un coup d'œil",
+      "overdue": "en retard",
+      "today": "aujourd'hui",
+      "upcoming": "à venir"
+    },
+    "calendar": {
+      "dueCount": "{{count}} à échéance",
+      "today": "Aujourd'hui",
+      "moreCount": "+{{count}} de plus",
+      "legend": "Légende",
+      "scheduled": "Planifiées"
+    },
+    "fields": {
+      "asset": "Actif",
+      "type": "Type",
+      "cadence": "Cadence",
+      "nextDue": "Prochaine échéance",
+      "lastDone": "Dernière réalisation",
+      "assignee": "Responsable",
+      "createdBy": "Créé par",
+      "linkedTicket": "Ticket lié"
+    },
+    "detail": {
+      "noSelection": "Aucune occurrence sélectionnée",
+      "noSelectionHint": "Sélectionnez une occurrence dans la file pour consulter son actif, son plan, son ticket lié et les actions d'exécution — ou effacez les filtres pour voir davantage d'interventions.",
+      "unassignedClient": "Client non affecté",
+      "dueSuffix": "· échéance le {{date}}",
+      "nextDueTooltip": "La prochaine échéance est calculée à partir de la date réelle de réalisation.",
+      "never": "Jamais",
+      "unassigned": "Non affecté",
+      "assignViaTicket": "Affecter via le ticket",
+      "ticketClosed": "Fermé",
+      "ticketOpen": "Ouvert",
+      "noTicketYet": "Aucun pour le moment",
+      "execution": "Exécution",
+      "noChecklistPrefix": "Ce plan ne comporte aucune liste de contrôle —",
+      "addStepsLink": "ajouter des étapes sur l'actif",
+      "noChecklistSuffix": "pour guider les techniciens.",
+      "timeline": "Chronologie"
+    },
+    "timeline": {
+      "created": "Occurrence créée",
+      "ticketLinked": "Ticket lié — {{ticket}}",
+      "dueRepeats": "Échéance — récurrence : {{cadence}}",
+      "completedBy": "Terminée par {{name}}{{notes}}",
+      "skippedBy": "Ignorée par {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Preuves de réalisation",
+      "performed": "Réalisé le :",
+      "performedBy": "Réalisé par :",
+      "notes": "Notes :",
+      "checklist": "Liste de contrôle :",
+      "skipTitle": "Justificatifs de non-réalisation",
+      "reason": "Motif :",
+      "closedBy": "Clôturé par :",
+      "closed": "Clôturé le :"
+    },
+    "skip": {
+      "title": "Ignorer l'entretien",
+      "reason": "Motif"
+    },
+    "ticket": {
+      "title": "Entretien : {{plan}}",
+      "description": "Entretien de type {{type}} à effectuer le {{date}}. Occurrence : {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {

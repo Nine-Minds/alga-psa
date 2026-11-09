@@ -51,7 +51,7 @@ export async function unregisterMaintenanceJobSubscriber(): Promise<void> {
 
 async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
   const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse(event);
-  const { jobName, jobId, data, tenantId } = validated.payload;
+  const { jobName, jobId, data, tenantId, requestId } = validated.payload;
 
   try {
     // Maintenance schedules publish a bare jobName; forwarded jobs always carry
@@ -67,9 +67,28 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
       // execution because its handler imports src-consumed packages the worker
       // can't load. Run the registered handler directly for the tenant.
       logger.info(`[MaintenanceJobSubscriber] Running forwarded job '${jobName}' for tenant ${tenantId}`);
-      await runWithTenant(tenantId, () =>
-        executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any),
-      );
+      try {
+        await runWithTenant(tenantId, () =>
+          executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any),
+        );
+        if (requestId) {
+          await getEventBus().completeRequest(requestId, { success: true });
+        }
+      } catch (error) {
+        if (requestId) {
+          try {
+            await getEventBus().completeRequest(requestId, {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          } catch (completionError) {
+            logger.error(`[MaintenanceJobSubscriber] Could not report failure for request '${requestId}'`, {
+              error: completionError,
+            });
+          }
+        }
+        throw error;
+      }
       logger.info(`[MaintenanceJobSubscriber] Forwarded job '${jobName}' complete`);
     }
   } catch (error) {

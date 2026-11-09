@@ -62,7 +62,7 @@ vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: mocks.hasPermission })
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@/lib/api/controllers/authorizationKernel', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/api/controllers/authorizationKernel')>()),
-  authorizeApiResourceRead: vi.fn(async () => true),
+  authorizeApiResourceRead: vi.fn(async () => ({ allowed: true, redactedFields: [] })),
 }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/db', () => ({
