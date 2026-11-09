@@ -136,6 +136,7 @@ export async function addTicketInternalNote(
     throw new Error('Failed to generate comment/thread identifiers');
   }
 
+  // LEVERAGE: pattern thread-audience-insert — a root comment_threads insert with no audience; insertCommentThread (shared/lib/commentThreadInsert.ts) would own it, left as-is (NULL audience maps to the default container)
   await db.table('comment_threads').insert({
     tenant: tenantId,
     thread_id: ids.thread_id,

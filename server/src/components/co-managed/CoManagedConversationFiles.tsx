@@ -32,8 +32,8 @@ const MAX_FILES = 20;
  * `ticket.conversation.thread-header` per thread, and offers the composer's file picker.
  * It registers the file stager here so a native ticket page never does.
  */
-// LEVERAGE: friction conversation-inline-slots — TicketConversation/CommentItem have no per-comment slot, so files and the
-// disclosure control render in this panel beside the conversation instead of inside each comment bubble.
+// Note: the base conversation now offers `slots.commentInline` and `slots.threadHeader` (TicketScreenSlots). Files and the
+// disclosure control still render in this panel beside the conversation; moving them into each bubble is a later card.
 export default function CoManagedConversationFiles({ session, resource, staging, onCommentsChanged }: {
   session: SharedConversationSession; resource: CoManagedSharedResource; staging: AttachmentStaging;
   /** Fired after a draft is published from the "Unsent messages" panel, so the host timeline re-reads. Never fired by a plain load. */

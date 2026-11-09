@@ -162,6 +162,7 @@ export async function discloseCoManagedPrivateThread(db: Knex, inputActor: CoMan
       }
       await assertCoManagedSessionUnexpired(trx, actor); await assertCoManagedOperationalWrite(trx, resource.tenant);
       const clock = await trx.raw('SELECT clock_timestamp() AS value'), appliedAt = (clock.rows[0].value as Date).toISOString();
+      // LEVERAGE: pattern thread-audience-insert — a root comment_threads insert with no audience; insertCommentThread (shared/lib/commentThreadInsert.ts) would own it, left as-is (NULL audience maps to the default container)
       await customer.table('comment_threads').insert({ tenant: resource.tenant, thread_id: operationId, ...coManagedAttachmentParent(resource), root_comment_id: operationId,
         is_internal: request.audience !== 'requester', collaboration_audience: request.audience, reply_count: source.comments.length - 1,
         created_at: source.thread.created_at_exact, last_activity_at: appliedAt, created_by: null });
