@@ -10,13 +10,17 @@ import {
   fetchTimeEntriesParamsSchema, // Re-use for fetching work items based on time sheet
   FetchTimeEntriesParams,
   addWorkItemParamsSchema,
-  AddWorkItemParams
+  AddWorkItemParams,
+  deleteWorkItemParamsSchema,
+  DeleteWorkItemParams
 } from './timeEntrySchemas'; // Import schemas
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
 import { recalculateProjectTaskActualHours } from '@alga-psa/db';
+import { deleteTimeEntryCore } from '../lib/timeEntryWriteCore';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
   effectiveServiceIdSql,
   effectiveServiceNameSql,
@@ -246,39 +250,86 @@ export const addWorkItem = withAuth(async (
 export const deleteWorkItem = withAuth(async (
   user,
   { tenant },
-  workItemId: string
+  workItemId: string,
+  timeSheetId: string,
+  workItemType: string,
 ): Promise<void | TimeSheetActionError> => {
   // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.removeWorkItem(ctx, workItemId));
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.removeWorkItem(ctx, workItemId, timeSheetId, workItemType));
   if (delegated.handled) return delegated.value;
   try {
   const {knex: db} = await createTenantKnex();
+  const validatedParams = validateData<DeleteWorkItemParams>(deleteWorkItemParamsSchema, {
+    workItemId,
+    timeSheetId,
+    workItemType,
+  });
 
   // Check permission for time entry deletion (deleting work items affects time entries)
   if (!await hasPermission(user, 'time_entry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete work items for time entries');
   }
 
-    await db.transaction(async (trx) => {
-      const scopedDb = tenantDb(trx, tenant) as any;
-      const projectTaskEntries = await scopedDb.table('time_entries')
-        .where({ work_item_id: workItemId, work_item_type: 'project_task' })
-        .select('work_item_id');
-      // First delete all time entries associated with this work item
-      // Note: This only deletes time entries. It doesn't delete the work item itself
-      // (e.g., the ticket or project task). Consider if the work item itself should be deleted.
-      await scopedDb.table('time_entries')
-        .where({
-          work_item_id: workItemId
-        })
-        .delete();
-      await recalculateProjectTaskActualHours(
-        trx,
-        tenant,
-        projectTaskEntries.map((entry: { work_item_id: string }) => entry.work_item_id),
-      );
-        console.log(`Deleted time entries associated with work item ${workItemId}`);
-    });
+  const scopedDb = tenantDb(db, tenant) as any;
+  const timeSheet = await scopedDb.table('time_sheets')
+    .where({ id: validatedParams.timeSheetId })
+    .select('user_id')
+    .first();
+  if (!timeSheet) {
+    throw new Error(`Time sheet with id ${validatedParams.timeSheetId} not found`);
+  }
+  await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
+
+  const deletedEntries = await db.transaction(async (trx) => {
+    const transactionDb = tenantDb(trx, tenant) as any;
+    const entries = await transactionDb.table('time_entries')
+      .where({
+        work_item_id: validatedParams.workItemId,
+        work_item_type: validatedParams.workItemType,
+        time_sheet_id: validatedParams.timeSheetId,
+      })
+      .select('entry_id', 'user_id', 'invoiced', 'work_item_type', 'time_sheet_id', 'work_item_id')
+      .forUpdate();
+
+    for (const entry of entries) {
+      await deleteTimeEntryCore(trx, tenant, entry.entry_id, {
+        guard: async (currentEntry) => {
+          await assertCanActOnBehalf(user, tenant, currentEntry.user_id, trx);
+          if (currentEntry.invoiced) {
+            throw new Error('This time entry has already been invoiced and cannot be deleted.');
+          }
+        },
+      });
+    }
+
+    await recalculateProjectTaskActualHours(
+      trx,
+      tenant,
+      entries
+        .filter((entry: { work_item_type: string }) => entry.work_item_type === 'project_task')
+        .map((entry: { work_item_id: string }) => entry.work_item_id),
+    );
+    return entries;
+  });
+
+  for (const entry of deletedEntries) {
+    try {
+      await publishEvent({
+        eventType: 'TIME_ENTRY_DELETED',
+        payload: {
+          tenantId: tenant,
+          timeEntryId: entry.entry_id,
+          userId: entry.user_id,
+          workItemId: entry.work_item_id,
+          workItemType: entry.work_item_type,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (eventError) {
+      console.error('[TimeEntryActions] Failed to publish TIME_ENTRY_DELETED event', eventError);
+    }
+  }
+  console.log(`Deleted time entries associated with work item ${validatedParams.workItemId}`);
   } catch (error) {
     console.error('Error deleting work item (associated time entries):', error);
     const expected = timeSheetActionErrorFrom(error);

@@ -907,9 +907,15 @@ export function TimeSheet({
         }
     }, [closeDrawer, refreshTimeSheetData]);
 
-    const handleDeleteWorkItem = useCallback(async (workItemId: string) => {
+    const handleDeleteWorkItem = useCallback(async (workItemId: string, workItemType?: string) => {
         try {
-            const result = await deleteWorkItem(workItemId);
+            const selectedWorkItemType = workItemType ?? Object.values(workItemsByType)
+                .flat()
+                .find((workItem) => workItem.work_item_id === workItemId)?.type;
+            if (!selectedWorkItemType) {
+                throw new Error(`Could not determine the type for work item ${workItemId}`);
+            }
+            const result = await deleteWorkItem(workItemId, timeSheet.id, selectedWorkItemType);
             if (isActionMessageError(result) || isActionPermissionError(result)) {
                 toast.error(getErrorMessage(result));
                 return;
@@ -937,7 +943,7 @@ export function TimeSheet({
         } catch (error) {
             handleError(error, 'Failed to delete work item');
         }
-    }, [refreshTimeSheetData]);
+    }, [refreshTimeSheetData, timeSheet.id, workItemsByType]);
 
     const handleWorkItemClick = useCallback((workItem: IExtendedWorkItem) => {
         openDrawer(
