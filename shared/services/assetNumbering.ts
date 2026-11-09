@@ -20,6 +20,21 @@ export function normalizeAssetTag(value: string): string {
   return value.replace(/^ +| +$/g, '').replace(/[a-z]/g, (letter) => letter.toUpperCase());
 }
 
+/** N-1 writers leave identity metadata absent or stale until tenant activation.
+ * Read their physical tag; managed rows have a checked, indexed canonical tag. */
+export function effectiveAssetTagSql(): string {
+  return "(CASE WHEN asset_tag_managed THEN asset_tag_normalized ELSE NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '') END)";
+}
+
+/** Hold the policy stable until the caller persists its asset. Before explicit
+ * activation, even new-code rows must remain editable by the previous release. */
+export async function assetTagClaimsRequired(trx: Knex.Transaction, tenant: string): Promise<boolean> {
+  const policy = await trx('tenants').where({ tenant }).forKeyShare()
+    .first<{ asset_tag_claims_required: boolean }>('asset_tag_claims_required');
+  if (!policy) throw new Error('Tenant not found');
+  return policy.asset_tag_claims_required;
+}
+
 export function formatAssetTag(sequenceValue: string, clientPrefix: string | null | undefined): string {
   const normalizedPrefix = clientPrefix?.trim().toUpperCase() ?? '';
   return `${normalizedPrefix}${sequenceValue}`;
@@ -38,7 +53,7 @@ export async function claimAssetTag(
   const normalized = normalizeAssetTag(args.assetTag);
   if (!normalized) throw new Error('Asset tag cannot be blank');
   const db = tenantDb(trx, args.tenant);
-  const existing = await db.table('assets').where({ asset_tag_normalized: normalized })
+  const existing = await db.table('assets').whereRaw(`${effectiveAssetTagSql()} = ?`, [normalized])
     .whereNot('asset_id', args.ownerId).first<{ asset_id: string }>('asset_id');
   if (existing) throw new AssetTagConflictError('Asset tag already exists in this tenant');
   await db.table('asset_tag_claims').insert({
@@ -53,13 +68,14 @@ export async function claimAssetTag(
   throw new AssetTagConflictError('Asset tag is already claimed in this tenant');
 }
 
-/** Prepare the database-enforced identity before inserting an asset. All writes
- * share this ordering, including a reservation-to-asset ownership transfer.
- * The caller must persist the returned identity in this same transaction. */
+/** Claim an identity before inserting an asset, including reservation ownership
+ * transfer. The policy lock keeps the enforcement phase stable until the caller
+ * persists the returned identity in this same transaction. */
 export async function prepareAssetIdentity(
   trx: Knex.Transaction,
   args: { tenant: string; clientId: string | null | undefined; assetTag?: string; reservationId?: string },
-): Promise<{ asset_id: string; asset_tag: string; asset_tag_normalized: string; asset_tag_legacy_exempt: false }> {
+): Promise<{ asset_id: string; asset_tag: string; asset_tag_normalized: string; asset_tag_legacy_exempt: false; asset_tag_managed: boolean }> {
+  const managed = await assetTagClaimsRequired(trx, args.tenant);
   const assetId = randomUUID();
   let assetTag = args.assetTag ?? '';
   if (args.reservationId) {
@@ -85,7 +101,7 @@ export async function prepareAssetIdentity(
       }
     }
   }
-  return { asset_id: assetId, asset_tag: assetTag, asset_tag_normalized: normalizeAssetTag(assetTag), asset_tag_legacy_exempt: false };
+  return { asset_id: assetId, asset_tag: assetTag, asset_tag_normalized: normalizeAssetTag(assetTag), asset_tag_legacy_exempt: false, asset_tag_managed: managed };
 }
 
 export async function clientAssetPrefix(
@@ -114,7 +130,7 @@ export async function nextAssetTag(
     const tag = formatAssetTag(value, prefix);
     const normalized = normalizeAssetTag(tag);
     const [asset, reservation] = await Promise.all([
-      tenantDb(db, tenant).table('assets').where({ asset_tag_normalized: normalized }).first('asset_id'),
+      tenantDb(db, tenant).table('assets').whereRaw(`${effectiveAssetTagSql()} = ?`, [normalized]).first('asset_id'),
       tenantDb(db, tenant).table('asset_tag_claims').where({ normalized_tag: normalized }).first('owner_id'),
     ]);
     if (!asset && !reservation) return tag;
@@ -190,7 +206,7 @@ export async function commitAssetReservation(
   if (!['reserved', 'expired', 'released'].includes(reservation.state)) {
     throw new AssetTagConflictError(`Asset number reservation cannot be committed from ${reservation.state}`);
   }
-  const collision = await db.table('assets').where({ asset_tag_normalized: normalizeAssetTag(args.assetTag) })
+  const collision = await db.table('assets').whereRaw(`${effectiveAssetTagSql()} = ?`, [normalizeAssetTag(args.assetTag)])
     .whereNot('asset_id', args.assetId).first('asset_id');
   if (collision) throw new AssetTagConflictError('Asset tag already exists in this tenant');
   const claim = await db.table('asset_tag_claims')

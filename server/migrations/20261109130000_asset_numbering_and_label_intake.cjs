@@ -2,9 +2,10 @@
  * Asset numbering persistence. No triggers are used: Citus 12.1 does not
  * support triggers on distributed tables. Applications write the canonical
  * normalized columns and an atomic tenant-scoped identity claim in the same
- * transaction as the asset/reservation. CHECK constraints reject inconsistent
- * canonical values; the follow-up binding migration makes claim ownership
- * mandatory with colocated foreign keys.
+ * transaction as the asset/reservation. During rollout, old writers remain
+ * compatible until explicit tenant activation adopts their rows and closes
+ * the write policy. CHECK constraints and colocated foreign keys then require
+ * canonical values and claim ownership for every subsequent asset write.
  *
  * This migration is intentionally resumable because production runs it with
  * transaction:false. Every DDL/backfill operation is safe to retry.
@@ -50,9 +51,13 @@ async function distributeIfNeeded(knex, table) {
 }
 
 exports.up = async function up(knex) {
+  // Expand first: N-1 writers cannot supply a canonical tag or acquire a claim.
+  // Explicit tenant activation later fences those writers through a foreign key.
+  await knex.raw('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS asset_tag_claims_required boolean NOT NULL DEFAULT false');
   await knex.raw('ALTER TABLE clients ADD COLUMN IF NOT EXISTS asset_prefix text NULL');
   await knex.raw('ALTER TABLE clients ADD COLUMN IF NOT EXISTS asset_prefix_normalized text NULL');
   await knex.raw('ALTER TABLE assets ADD COLUMN IF NOT EXISTS asset_tag_normalized text NULL');
+  await knex.raw('ALTER TABLE assets ADD COLUMN IF NOT EXISTS asset_tag_managed boolean NOT NULL DEFAULT false');
 
   await knex.raw(`CREATE TABLE IF NOT EXISTS asset_tag_audit (
     tenant uuid NOT NULL, audit_id uuid NOT NULL DEFAULT gen_random_uuid(), asset_id uuid NOT NULL,
@@ -87,7 +92,10 @@ exports.up = async function up(knex) {
   await ensureConcurrentIndex(knex, 'asset_number_reservations_tag_idx', 'CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_tag_idx ON asset_number_reservations (tenant, normalized_tag)');
   await ensureConcurrentIndex(knex, 'asset_number_reservations_expiry_idx', 'CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_expiry_idx ON asset_number_reservations (tenant, state, expires_at)');
   await ensureConcurrentIndex(knex, 'assets_tenant_asset_tag_normalized_idx', 'CREATE INDEX CONCURRENTLY IF NOT EXISTS assets_tenant_asset_tag_normalized_idx ON assets (tenant, asset_tag_normalized) WHERE asset_tag_normalized IS NOT NULL');
+  await ensureConcurrentIndex(knex, 'assets_tenant_effective_tag_idx', `CREATE INDEX CONCURRENTLY IF NOT EXISTS assets_tenant_effective_tag_idx ON assets
+    (tenant, (CASE WHEN asset_tag_managed THEN asset_tag_normalized ELSE ${NORMALIZE_TAG} END))`);
   await ensureConcurrentIndex(knex, 'clients_tenant_asset_prefix_normalized_uq', 'CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS clients_tenant_asset_prefix_normalized_uq ON clients (tenant, asset_prefix_normalized) WHERE asset_prefix_normalized IS NOT NULL');
+  await ensureConcurrentIndex(knex, 'tenants_asset_tag_policy_uq', 'CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS tenants_asset_tag_policy_uq ON tenants (tenant, asset_tag_claims_required)');
 
   // Normalize all existing clients/tags without changing physical labels.
   await backfillClients(knex);
@@ -129,7 +137,7 @@ exports.up = async function up(knex) {
   // canonical value must match the same ASCII btrim/case fold used by lookup.
   await knex.raw(`DO $$ BEGIN
     ALTER TABLE assets ADD CONSTRAINT assets_asset_tag_normalized_ck
-      CHECK (asset_tag_normalized IS NOT DISTINCT FROM ${NORMALIZE_TAG}) NOT VALID;
+      CHECK (NOT asset_tag_managed OR asset_tag_normalized IS NOT DISTINCT FROM ${NORMALIZE_TAG}) NOT VALID;
   EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
   await knex.raw(`DO $$ BEGIN
     ALTER TABLE clients ADD CONSTRAINT clients_asset_prefix_normalized_ck
@@ -149,8 +157,12 @@ exports.down = async function down(knex) {
   await knex.raw('ALTER TABLE assets DROP CONSTRAINT IF EXISTS assets_asset_tag_normalized_ck');
   await knex.raw('ALTER TABLE clients DROP CONSTRAINT IF EXISTS clients_asset_prefix_normalized_ck');
   await knex.raw('DROP INDEX IF EXISTS assets_tenant_asset_tag_normalized_idx');
+  await knex.raw('DROP INDEX IF EXISTS assets_tenant_effective_tag_idx');
   await knex.raw('DROP INDEX IF EXISTS clients_tenant_asset_prefix_normalized_uq');
   await knex.raw('ALTER TABLE assets DROP COLUMN IF EXISTS asset_tag_normalized');
+  await knex.raw('ALTER TABLE assets DROP COLUMN IF EXISTS asset_tag_managed');
+  await knex.raw('DROP INDEX IF EXISTS tenants_asset_tag_policy_uq');
+  await knex.raw('ALTER TABLE tenants DROP COLUMN IF EXISTS asset_tag_claims_required');
   await knex.raw('ALTER TABLE clients DROP COLUMN IF EXISTS asset_prefix_normalized');
   await knex.raw('ALTER TABLE clients DROP COLUMN IF EXISTS asset_prefix');
 };

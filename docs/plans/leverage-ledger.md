@@ -190,6 +190,7 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **What:** UI, REST, and ingestion inserted assets before an optional claim. Legacy duplicates also left the tag namespace unoccupied. This allowed persistence callers to bypass identity arbitration and made reservation completion order differ between write paths.
 - **Gate:** Multiple creation paths, high correctness cost, and stable tenant/tag ownership semantics. A shared identity preparation operation serves all concrete callers.
 - **Execution:** Bounded repair within asset numbering. `prepareAssetIdentity` acquires or transfers a claim before insertion. Colocated foreign keys make the relationship mandatory. Exact legacy bindings and holding claims preserve physical tags until reviewed activation.
+- **Rollout:** Identity enforcement follows the existing tenant activation operation. Before activation, N-1 writers can insert and edit assets without identity metadata; reads normalize their live physical tags. Activation locks the tenant policy, reconciles and adopts all assets, then closes the compatibility policy through a composite foreign key. New-code writes lock and read that policy before persistence. This keeps the release overlap compatible without an SQL bypass after activation.
 - **Status:** Revised. Database and shared-service behavior is exercised on PostgreSQL and Citus; evidence lives under `docs/evidence/alga-2026-0003120-draft/`. This ledger entry is not an approved implementation plan.
 
 ## numbering-settings-allocation-lock — friction

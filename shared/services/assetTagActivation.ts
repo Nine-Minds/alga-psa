@@ -1,15 +1,21 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
-/** Reviewed per-tenant claim backfill. The shared claim primary key already
- * protects all writes; this marks one tenant as reconciled without a global
- * assets index or requiring other tenants to finish reconciliation. */
+/** Adopt N-1 rows and close a tenant's compatibility write policy atomically.
+ * The tenant-row lock serializes activation with old inserts through their FK.
+ * After activation even SQL writers must provide a bound, managed identity. */
 export async function activateAssetTagUniquenessForTenant(
   trx: Knex.Transaction,
   tenant: string,
   activatedBy: string,
 ): Promise<{ success: boolean; error?: string }> {
   const db = tenantDb(trx, tenant);
+  const policy = await trx('tenants').where({ tenant }).forUpdate().first('tenant');
+  if (!policy) throw new Error('Tenant not found');
+  // Old code can edit a physical tag without refreshing its identity snapshot.
+  // Normalize only unmanaged rows; managed identities remain checked by SQL.
+  await trx.raw(`UPDATE assets SET asset_tag_normalized = NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')
+    WHERE tenant = ? AND NOT asset_tag_managed`, [tenant]);
   const unresolved = await db.table('asset_tag_audit').whereIn('reason', ['duplicate', 'claim_conflict']).whereNull('resolved_at')
     .count<{ count: string }[]>({ count: '*' });
   if (Number(unresolved[0]?.count ?? 0) > 0) {
@@ -43,10 +49,19 @@ export async function activateAssetTagUniquenessForTenant(
     SELECT a.tenant, a.asset_tag_normalized, a.asset_tag, 'asset', a.asset_id
       FROM assets a WHERE a.tenant = ? AND a.asset_tag_normalized IS NOT NULL
     ON CONFLICT (tenant, normalized_tag) DO NOTHING`, [tenant]);
-  await db.table('assets').whereNotNull('asset_tag_normalized').update({ asset_tag_legacy_exempt: false });
+  await db.table('assets').whereNotNull('asset_tag_normalized').update({ asset_tag_legacy_exempt: false, asset_tag_managed: true });
+  // Blank legacy records are retained under an exact binding, never a general
+  // blank-tag exemption that new writers could reuse.
+  await trx.raw(`INSERT INTO asset_tag_legacy_bindings (tenant, asset_id, normalized_tag, asset_tag)
+    SELECT tenant, asset_id, '', asset_tag FROM assets
+      WHERE tenant = ? AND NOT asset_tag_managed AND asset_tag_normalized IS NULL
+    ON CONFLICT (tenant, asset_id, normalized_tag) DO NOTHING`, [tenant]);
+  await db.table('assets').whereNull('asset_tag_normalized').where({ asset_tag_managed: false })
+    .update({ asset_tag_legacy_exempt: true, asset_tag_managed: true });
   await trx.raw(`DELETE FROM asset_tag_legacy_bindings legacy USING assets a
     WHERE legacy.tenant = ? AND a.tenant = legacy.tenant AND a.asset_id = legacy.asset_id
       AND NOT a.asset_tag_legacy_exempt`, [tenant]);
+  await trx('tenants').where({ tenant }).update({ asset_tag_claims_required: true });
   // Citus requires immutable expressions in an ON CONFLICT update. Bind the
   // timestamp rather than asking each shard to evaluate CURRENT_TIMESTAMP.
   const activatedAt = new Date().toISOString();

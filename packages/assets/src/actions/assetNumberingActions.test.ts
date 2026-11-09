@@ -25,6 +25,7 @@ vi.mock('@alga-psa/db', () => ({
     table: (name: string) => {
       const qb: any = {
         where: () => qb,
+        whereRaw: () => qb,
         whereIn: () => qb,
         orderBy: () => qb,
         select: async () => name === 'assets' ? h.candidates : [],

@@ -23,20 +23,23 @@ try {
     await db.raw('SELECT citus_add_node(?, 5432)', [worker]);
     await db.raw('SET citus.shard_count = 2');
   }
-  await db.raw(`CREATE TABLE clients (tenant uuid NOT NULL, client_id uuid NOT NULL, PRIMARY KEY (tenant, client_id));
+  await db.raw(`CREATE TABLE tenants (tenant uuid PRIMARY KEY);
+    CREATE TABLE clients (tenant uuid NOT NULL, client_id uuid NOT NULL, PRIMARY KEY (tenant, client_id));
     CREATE TABLE assets (tenant uuid NOT NULL, asset_id uuid NOT NULL, asset_tag text NOT NULL, PRIMARY KEY (tenant, asset_id))`);
   if (worker) {
-    await db.raw("SELECT create_distributed_table('clients', 'tenant')");
+    await db.raw("SELECT create_distributed_table('tenants', 'tenant')");
+    await db.raw("SELECT create_distributed_table('clients', 'tenant', colocate_with => 'tenants')");
     await db.raw("SELECT create_distributed_table('assets', 'tenant', colocate_with => 'clients')");
   }
   const tenant = randomUUID();
+  await db('tenants').insert({ tenant });
   const legacy = ['DUP-1', ' dup-1 ', 'LONG-PREFIX-2', 'long-prefix-2', '', 'OLD-SINGLE-90'].map((asset_tag) => ({ tenant, asset_id: randomUUID(), asset_tag }));
   await db('assets').insert(legacy);
   const migrations = [
-    '20261104130000_asset_numbering_and_label_intake',
-    '20261104131000_validate_asset_numbering_normalized_columns',
-    '20261104132000_enforce_asset_tag_claim_bindings',
-    '20261104133000_validate_asset_tag_claim_bindings',
+    '20261109130000_asset_numbering_and_label_intake',
+    '20261109131000_validate_asset_numbering_normalized_columns',
+    '20261109132000_enforce_asset_tag_claim_bindings',
+    '20261109133000_validate_asset_tag_claim_bindings',
   ].map((name) => require(`../server/migrations/${name}.cjs`));
   await migrations[0].up(db);
   await migrations[1].up(db);
@@ -75,7 +78,16 @@ try {
     console.log('PASS: an invalid concurrent-index artifact is repaired on retry');
   }
 
-  const rawAsset = (tag, extra = {}) => ({ tenant, asset_id: randomUUID(), asset_tag: tag, asset_tag_normalized: tag, ...extra });
+  const rawAsset = (tag, extra = {}) => ({ tenant, asset_id: randomUUID(), asset_tag: tag, asset_tag_normalized: tag, asset_tag_managed: true, ...extra });
+  const compatible = { tenant, asset_id: randomUUID(), asset_tag: 'N-1-WRITE' };
+  await db('assets').insert(compatible);
+  await db('assets').where({ tenant, asset_id: compatible.asset_id }).del();
+  // Exercise the storage fence independently of the reviewed activation service.
+  // Existing exact legacy bindings still authorize preserved duplicates/blanks.
+  await db('assets').where({ tenant }).update({ asset_tag_managed: true });
+  await db('tenants').where({ tenant }).update({ asset_tag_claims_required: true });
+  await assert.rejects(db('assets').insert(compatible), { code: '23503' });
+  console.log('PASS: N-1 writes work before the policy closes and are fenced afterwards');
   await assert.rejects(db('assets').insert(rawAsset('DUP-1')), { code: '23503' });
   await assert.rejects(db('assets').insert(rawAsset('DUP-1', { asset_tag_legacy_exempt: true })), { code: '23503' });
   await assert.rejects(db('asset_tag_claims').insert({ tenant, normalized_tag: 'DUP-1', asset_tag: 'DUP-1', owner_kind: 'asset', owner_id: randomUUID() }), { code: '23505' });

@@ -13,6 +13,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 type DbState = {
+  tenants?: Array<any>;
   assets: Array<any>;
   workstation_assets: Array<any>;
   server_assets: Array<any>;
@@ -27,6 +28,7 @@ let assetCounter = 0;
 let mappingCounter = 0;
 
 function createFakeKnex(state: DbState) {
+  state.tenants ??= [{ tenant: 'tenant_1', asset_tag_claims_required: false }];
   function rowsFor(table: string): any[] {
     // Tables the assignment helper and the group lookup touch are created on
     // demand so each test only has to seed what it cares about.
@@ -39,6 +41,7 @@ function createFakeKnex(state: DbState) {
     return Object.entries(where).every(([k, v]) => row[k] === v);
   }
 
+  // LEVERAGE: pattern asset-action-query-fake — Asset scenarios duplicate an in-memory SQL adapter.
   class QueryBuilder {
     private wheres: Array<Record<string, any>> = [];
 
@@ -59,6 +62,13 @@ function createFakeKnex(state: DbState) {
     }
 
     forUpdate() {
+      return this;
+    }
+
+    forKeyShare() { return this; }
+
+    whereRaw(_sql: string, values: unknown[]) {
+      this.wheres.push({ __physical_tag: values[0] });
       return this;
     }
 
@@ -103,6 +113,11 @@ function createFakeKnex(state: DbState) {
     private filtered() {
       let rows = [...rowsFor(this.table)];
       for (const where of this.wheres) {
+        if ('__physical_tag' in where) {
+          rows = rows.filter((row) => (row.asset_tag_managed ? row.asset_tag_normalized
+            : String(row.asset_tag ?? '').replace(/^ +| +$/g, '').replace(/[a-z]/g, (letter) => letter.toUpperCase())) === where.__physical_tag);
+          continue;
+        }
         if ('__not' in where) {
           const { col, value } = where.__not;
           rows = rows.filter(row => row[col] !== value);

@@ -116,7 +116,7 @@ import {
     type AssetAuthorizationAction,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
-import { prepareAssetIdentity, claimAssetTag, normalizeAssetTag } from '../lib/assetNumbering';
+import { prepareAssetIdentity, claimAssetTag, normalizeAssetTag, assetTagClaimsRequired } from '../lib/assetNumbering';
 import { getAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
@@ -1538,6 +1538,7 @@ export async function updateAssetRecord(
                 baseUpdateData.asset_tag_normalized = normalizedTag || null;
                 if (normalizedTag !== normalizeAssetTag(asset.asset_tag ?? '')) {
                     baseUpdateData.asset_tag_legacy_exempt = false;
+                    baseUpdateData.asset_tag_managed = await assetTagClaimsRequired(trx, tenant);
                     await claimAssetTag(trx, { tenant, assetTag: nextTag, ownerKind: 'asset', ownerId: asset_id });
                 }
             }

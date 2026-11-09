@@ -1,7 +1,8 @@
 /**
  * Bind persisted assets/reservations to their exclusive physical tag claim.
- * Generated keys make the relationship mandatory even for SQL writers that
- * omit the shared service. Legacy exceptions are exact (tenant, asset, tag)
+ * Generated keys make the relationship mandatory after tenant activation,
+ * even for SQL writers that omit the shared service. Before activation the
+ * compatibility policy accepts N-1 writes. Legacy exceptions are exact (tenant, asset, tag)
  * bindings captured by the migration, never a general uniqueness opt-out.
  * Colocated foreign keys and generated columns work on PostgreSQL and Citus.
  */
@@ -41,9 +42,11 @@ exports.up = async function up(knex) {
   await knex.raw(`ALTER TABLE assets
     ADD COLUMN IF NOT EXISTS asset_tag_legacy_exempt boolean NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS asset_tag_claim_key text GENERATED ALWAYS AS
-      (CASE WHEN asset_tag_legacy_exempt THEN NULL ELSE asset_tag_normalized END) STORED,
+      (CASE WHEN NOT asset_tag_managed OR asset_tag_legacy_exempt THEN NULL ELSE asset_tag_normalized END) STORED,
     ADD COLUMN IF NOT EXISTS asset_tag_legacy_key text GENERATED ALWAYS AS
-      (CASE WHEN asset_tag_legacy_exempt THEN COALESCE(asset_tag_normalized, '') ELSE NULL END) STORED`);
+      (CASE WHEN asset_tag_managed AND asset_tag_legacy_exempt THEN COALESCE(asset_tag_normalized, '') ELSE NULL END) STORED,
+    ADD COLUMN IF NOT EXISTS asset_tag_unmanaged_policy boolean GENERATED ALWAYS AS
+      (CASE WHEN asset_tag_managed THEN NULL ELSE false END) STORED`);
   await knex.raw(`CREATE TABLE IF NOT EXISTS asset_tag_legacy_bindings (
     tenant uuid NOT NULL, asset_id uuid NOT NULL, normalized_tag text NOT NULL,
     asset_tag text NOT NULL, recorded_at timestamptz NOT NULL DEFAULT now(),
@@ -133,7 +136,12 @@ exports.up = async function up(knex) {
   await addConstraint(knex, 'asset_tag_claims', 'asset_tag_claims_reservation_owner_ck',
     "CHECK (owner_kind <> 'reservation' OR reservation_id IS NOT DISTINCT FROM owner_id)");
   await addConstraint(knex, 'assets', 'assets_nonblank_claim_ck',
-    'CHECK (asset_tag_legacy_exempt OR asset_tag_normalized IS NOT NULL)');
+    'CHECK (NOT asset_tag_managed OR asset_tag_legacy_exempt OR asset_tag_normalized IS NOT NULL)');
+  // MATCH SIMPLE skips managed rows (NULL policy). Unmanaged writers must
+  // reference the tenant's open compatibility policy. Activation adopts all
+  // rows then closes that policy atomically, fencing even direct SQL writers.
+  await addConstraint(knex, 'assets', 'assets_tag_write_policy_fk',
+    'FOREIGN KEY (tenant, asset_tag_unmanaged_policy) REFERENCES tenants (tenant, asset_tag_claims_required)');
   await addConstraint(knex, 'assets', 'assets_tag_claim_fk',
     'FOREIGN KEY (tenant, asset_tag_claim_key, asset_id) REFERENCES asset_tag_claims (tenant, normalized_tag, asset_id)');
   await addConstraint(knex, 'assets', 'assets_tag_legacy_binding_fk',
@@ -150,10 +158,10 @@ exports.down = async function down(knex) {
   for (const name of ['asset_number_reservations_claim_fk', 'asset_number_reservations_tag_ck', 'asset_number_reservations_state_ck']) {
     await knex.raw(`ALTER TABLE asset_number_reservations DROP CONSTRAINT IF EXISTS ${name}`);
   }
-  for (const name of ['assets_tag_claim_fk', 'assets_tag_legacy_binding_fk', 'assets_nonblank_claim_ck']) {
+  for (const name of ['assets_tag_claim_fk', 'assets_tag_legacy_binding_fk', 'assets_nonblank_claim_ck', 'assets_tag_write_policy_fk']) {
     await knex.raw(`ALTER TABLE assets DROP CONSTRAINT IF EXISTS ${name}`);
   }
-  await knex.raw('ALTER TABLE assets DROP COLUMN IF EXISTS asset_tag_claim_key, DROP COLUMN IF EXISTS asset_tag_legacy_key, DROP COLUMN IF EXISTS asset_tag_legacy_exempt');
+  await knex.raw('ALTER TABLE assets DROP COLUMN IF EXISTS asset_tag_claim_key, DROP COLUMN IF EXISTS asset_tag_legacy_key, DROP COLUMN IF EXISTS asset_tag_legacy_exempt, DROP COLUMN IF EXISTS asset_tag_unmanaged_policy');
   await knex.schema.dropTableIfExists('asset_tag_legacy_bindings');
   await knex.raw('ALTER TABLE asset_tag_claims DROP CONSTRAINT IF EXISTS asset_tag_claims_reservation_owner_ck');
   await knex.raw('DROP INDEX IF EXISTS asset_tag_claims_asset_owner_uq');

@@ -42,7 +42,7 @@ import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/ass
 import { getAuthorizedAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import type { AssetAuthUser } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
-import { claimAssetTag, prepareAssetIdentity, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { claimAssetTag, prepareAssetIdentity, normalizeAssetTag, assetTagClaimsRequired } from '@alga-psa/shared/services/assetNumbering';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -670,6 +670,7 @@ export class AssetService extends BaseService<any> {
         updateData.asset_tag_normalized = normalizedTag || null;
         if (normalizedTag !== normalizeAssetTag(String(before?.asset_tag ?? ''))) {
           updateData.asset_tag_legacy_exempt = false;
+          updateData.asset_tag_managed = await assetTagClaimsRequired(trx, context.tenant);
           await claimAssetTag(trx, { tenant: context.tenant, assetTag: physicalTag, ownerKind: 'asset', ownerId: id });
         }
       }

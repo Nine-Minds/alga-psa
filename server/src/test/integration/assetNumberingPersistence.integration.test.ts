@@ -128,6 +128,122 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
     expect(await db('assets').where({ tenant })).toHaveLength(1);
   });
 
+  it('accepts N-1 inserts and tag edits before activation and checks their live physical tags', async () => {
+    const { tenant, client1 } = await fixture();
+    const assetId = randomUUID();
+    // The previous release supplies neither identity metadata nor a claim.
+    await db('assets').insert({ tenant, asset_id: assetId, client_id: client1,
+      asset_type: 'unknown', name: 'Old release intake', status: 'active', asset_tag: 'Old-42' });
+    await db('assets').where({ tenant, asset_id: assetId }).update({ asset_tag: ' nw00001 ' });
+    await expect(inTenant(tenant, (trx) => claimAssetTag(trx, {
+      tenant, assetTag: 'NW00001', ownerKind: 'asset', ownerId: randomUUID(),
+    }))).rejects.toMatchObject({ code: 'ASSET_TAG_CONFLICT' });
+    expect(await inTenant(tenant, (trx) => nextAssetTag(trx, tenant, client1))).toBe('NW00002');
+    expect(await db('assets').where({ tenant, asset_id: assetId }).first())
+      .toMatchObject({ asset_tag: ' nw00001 ', asset_tag_normalized: null, asset_tag_managed: false });
+    // Blue/green overlap also lets old code edit an asset created by new code.
+    const newCodeId = await createBareAsset(tenant, client1, 'NEW-CODE-3');
+    await db('assets').where({ tenant, asset_id: newCodeId }).update({ asset_tag: ' Edited-By-Old-Code ' });
+    await expect(inTenant(tenant, (trx) => claimAssetTag(trx, {
+      tenant, assetTag: 'EDITED-BY-OLD-CODE', ownerKind: 'asset', ownerId: randomUUID(),
+    }))).rejects.toMatchObject({ code: 'ASSET_TAG_CONFLICT' });
+    expect(await inTenant(tenant, (trx) => activateAssetTagUniquenessForTenant(trx, tenant, randomUUID())))
+      .toEqual({ success: true });
+    expect(await db('assets').where({ tenant, asset_id: newCodeId }).first())
+      .toMatchObject({ asset_tag_normalized: 'EDITED-BY-OLD-CODE', asset_tag_managed: true });
+  });
+
+  it('adopts N-1 rows on activation and fences every unmanaged writer afterwards', async () => {
+    const { tenant, client1 } = await fixture();
+    const assetId = randomUUID();
+    const blankId = randomUUID();
+    const raw = { tenant, client_id: client1, asset_type: 'unknown', name: 'Old release', status: 'active' };
+    await db('assets').insert([
+      { ...raw, asset_id: assetId, asset_tag: ' Mixed-42 ' },
+      { ...raw, asset_id: blankId, asset_tag: '' },
+    ]);
+    expect(await inTenant(tenant, (trx) => activateAssetTagUniquenessForTenant(trx, tenant, randomUUID())))
+      .toEqual({ success: true });
+    expect(await db('assets').where({ tenant, asset_id: assetId }).first())
+      .toMatchObject({ asset_tag: ' Mixed-42 ', asset_tag_normalized: 'MIXED-42', asset_tag_managed: true });
+    expect(await db('asset_tag_claims').where({ tenant, normalized_tag: 'MIXED-42' }).first())
+      .toMatchObject({ owner_kind: 'asset', owner_id: assetId });
+    expect(await db('assets').where({ tenant, asset_id: blankId }).first())
+      .toMatchObject({ asset_tag: '', asset_tag_legacy_exempt: true, asset_tag_managed: true });
+    // A caller cannot bypass claims by omitting the new columns or demoting a row.
+    await expect(db('assets').insert({ ...raw, asset_id: randomUUID(), asset_tag: 'UNCLAIMED' }))
+      .rejects.toMatchObject({ code: '23503' });
+    await expect(db('assets').where({ tenant, asset_id: assetId }).update({ asset_tag_managed: false }))
+      .rejects.toMatchObject({ code: '23503' });
+    await expect(db('assets').insert({ ...raw, asset_id: randomUUID(), asset_tag: 'UNCLAIMED',
+      asset_tag_normalized: 'UNCLAIMED', asset_tag_managed: true })).rejects.toMatchObject({ code: '23503' });
+    await expect(db('assets').where({ tenant, asset_id: assetId }).update({ asset_tag_normalized: 'WRONG' }))
+      .rejects.toMatchObject({ code: '23514' });
+    await expect(createBareAsset(tenant, client1, 'CLAIMED-43')).resolves.toBeTruthy();
+  });
+
+  it('refuses activation for N-1 duplicates or reservation collisions created after migration', async () => {
+    const { tenant, client1 } = await fixture();
+    const ids = [randomUUID(), randomUUID()];
+    const raw = { tenant, client_id: client1, asset_type: 'unknown', name: 'Old release', status: 'active' };
+    await db('assets').insert(ids.map((asset_id) => ({ ...raw, asset_id, asset_tag: ' Duplicate-1 ' })));
+    const activate = () => inTenant(tenant, (trx) => activateAssetTagUniquenessForTenant(trx, tenant, randomUUID()));
+    await expect(activate()).resolves.toMatchObject({ success: false });
+    const reserved = await inTenant(tenant, (trx) => reserveAssetNumber(trx, { tenant, clientId: client1 }));
+    await db('assets').where({ tenant, asset_id: ids[1] }).update({ asset_tag: reserved.assetTag });
+    await expect(activate()).resolves.toMatchObject({ success: false });
+    expect(await db('tenants').where({ tenant }).first('asset_tag_claims_required'))
+      .toEqual({ asset_tag_claims_required: false });
+    await db('assets').where({ tenant, asset_id: ids[1] }).update({ asset_tag: 'RECONCILED-2' });
+    await expect(activate()).resolves.toEqual({ success: true });
+  });
+
+  it('waits for an in-flight N-1 insert before closing the tenant write policy', async () => {
+    const { tenant, client1 } = await fixture();
+    const assetId = randomUUID();
+    const oldWriter = await db.transaction();
+    const { rows: [{ pid }] } = await oldWriter.raw('SELECT pg_backend_pid() AS pid');
+    await oldWriter('assets').insert({ tenant, asset_id: assetId, client_id: client1,
+      asset_type: 'unknown', name: 'Concurrent old release', status: 'active', asset_tag: 'IN-FLIGHT-1' });
+    const activating = inTenant(tenant, (trx) => activateAssetTagUniquenessForTenant(trx, tenant, randomUUID()));
+    try {
+      await vi.waitFor(async () => {
+        const blocked = await db.raw('SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))) AS blocked', [pid]);
+        expect(blocked.rows[0].blocked).toBe(true);
+      }, { timeout: 5_000 });
+      await oldWriter.commit();
+      await expect(activating).resolves.toEqual({ success: true });
+    } finally {
+      if (!oldWriter.isCompleted()) await oldWriter.rollback();
+      await activating;
+    }
+    expect(await db('assets').where({ tenant, asset_id: assetId }).first())
+      .toMatchObject({ asset_tag_normalized: 'IN-FLIGHT-1', asset_tag_managed: true });
+  });
+
+  it('keeps the policy stable between new-code identity preparation and asset persistence', async () => {
+    const { tenant, client1 } = await fixture();
+    const creating = await db.transaction();
+    const identity = await prepareAssetIdentity(creating, { tenant, clientId: client1, assetTag: 'PREPARED-1' });
+    const { rows: [{ pid }] } = await creating.raw('SELECT pg_backend_pid() AS pid');
+    const activating = inTenant(tenant, (trx) => activateAssetTagUniquenessForTenant(trx, tenant, randomUUID()));
+    try {
+      await vi.waitFor(async () => {
+        const blocked = await db.raw('SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))) AS blocked', [pid]);
+        expect(blocked.rows[0].blocked).toBe(true);
+      }, { timeout: 5_000 });
+      await creating('assets').insert({ tenant, ...identity, client_id: client1,
+        asset_type: 'unknown', name: 'Prepared before activation', status: 'active' });
+      await creating.commit();
+      await expect(activating).resolves.toEqual({ success: true });
+    } finally {
+      if (!creating.isCompleted()) await creating.rollback();
+      await activating;
+    }
+    expect(await db('assets').where({ tenant, asset_id: identity.asset_id }).first())
+      .toMatchObject({ asset_tag: 'PREPARED-1', asset_tag_managed: true });
+  });
+
   it('previews without consuming and applies two client prefixes to one shared sequence', async () => {
     const { tenant, client1, client2 } = await fixture();
     const previewBefore = await inTenant(tenant, (trx) => previewNextAssetTag(trx, tenant, client1));
@@ -288,7 +404,7 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
     const secondId = await createBareAsset(fx.tenant, fx.client1, 'BOUND-02');
     await inTenant(fx.tenant, (trx) => activateAssetTagUniquenessForTenant(trx, fx.tenant, randomUUID()));
     const raw = { tenant: fx.tenant, asset_id: randomUUID(), asset_type: 'unknown', client_id: fx.client1,
-      asset_tag: ' bound-01 ', asset_tag_normalized: 'BOUND-01', name: 'Unclaimed duplicate', status: 'active' };
+      asset_tag: ' bound-01 ', asset_tag_normalized: 'BOUND-01', asset_tag_managed: true, name: 'Unclaimed duplicate', status: 'active' };
     await expect(db('assets').insert(raw)).rejects.toMatchObject({ code: '23503' });
     await expect(db('assets').insert({ ...raw, asset_tag_legacy_exempt: true })).rejects.toMatchObject({ code: '23503' });
     await expect(db('assets').where({ tenant: fx.tenant, asset_id: secondId })

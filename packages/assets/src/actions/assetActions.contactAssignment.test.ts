@@ -52,6 +52,7 @@ const h = vi.hoisted(() => {
       { tenant: TENANT, status_id: 'st-retired', slug: 'retired', label: 'Retired', kind: 'archived', is_builtin: true, is_active: true, display_order: 4 },
     ];
     updateCalls.length = 0;
+    dbState.tenants = [{ tenant: TENANT, asset_tag_claims_required: false }];
     uuidCounter = 0;
   };
 
@@ -60,6 +61,7 @@ const h = vi.hoisted(() => {
   const isRaw = (value: unknown): value is { __raw: true; sql: string; bindings: string } =>
     Boolean(value && typeof value === 'object' && (value as any).__raw === true);
 
+  // LEVERAGE: pattern asset-action-query-fake — These action suites duplicate an in-memory SQL adapter.
   class QB {
     private readonly table: string;
     private objWheres: Array<Record<string, any>> = [];
@@ -95,6 +97,10 @@ const h = vi.hoisted(() => {
       this.objWheres.push(normalized);
       return this;
     }
+
+    forKeyShare() { return this; }
+
+    whereRaw(_sql: string, values: unknown[]) { return this.where({ asset_tag_normalized: values[0] }); }
 
     andWhere(arg1: any, arg2?: any) {
       return this.where(arg1, arg2);

@@ -2,7 +2,7 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { previewNextAssetTag, reserveAssetNumber, normalizeAssetTag } from '../lib/assetNumbering';
+import { previewNextAssetTag, reserveAssetNumber, normalizeAssetTag, effectiveAssetTagSql } from '../lib/assetNumbering';
 import { createAssetInTransaction } from './assetActions';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildAssetCreatedPayload } from '@alga-psa/workflow-streams';
@@ -101,7 +101,7 @@ export const findAssetByScannedTag = withAuth(async (user, { tenant }, rawTag: s
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
     const allMatches = await tenantDb(trx, tenant).table('assets')
-      .where({ asset_tag_normalized: tag })
+      .whereRaw(`${effectiveAssetTagSql()} = ?`, [tag])
       .select('asset_id', 'asset_tag', 'name', 'client_id', 'asset_type');
     const context = await createAssetReadContext(trx, tenant, user as any);
     const visible = await filterReadableAssets(trx, tenant, context, allMatches);
