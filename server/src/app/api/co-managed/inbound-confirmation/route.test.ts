@@ -34,6 +34,8 @@ import { GET, POST } from './route';
 describe('inbound sender confirmation HTTP boundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('NEXTAUTH_URL', 'https://psa.example.test');
+    delete process.env.APP_BASE_URL;
     mocks.payloadState = 'pending';
     mocks.contactPending = false;
     mocks.updatedAt = new Date();
@@ -43,8 +45,9 @@ describe('inbound sender confirmation HTTP boundary', () => {
 
   it('requires the intended authenticated internal user for the confirmation page', async () => {
     mocks.currentUser.mockResolvedValueOnce(null);
-    const confirmationUrl = 'https://psa.example.test/api/co-managed/inbound-confirmation?token=valid-token';
-    const response = await GET(new NextRequest(confirmationUrl));
+    const response = await GET(new NextRequest('http://0.0.0.0:3101/api/co-managed/inbound-confirmation?token=valid-token&callbackUrl=https%3A%2F%2Fattacker.example.test%2F', {
+      headers: { host: 'attacker.example.test', 'x-forwarded-host': 'attacker.example.test', 'x-forwarded-proto': 'http' },
+    }));
     expect(response.status).toBe(200);
     const anonymousHtml = await response.text();
     expect(anonymousHtml).toContain('Sign in as the intended internal user');
@@ -53,14 +56,19 @@ describe('inbound sender confirmation HTTP boundary', () => {
     expect(signInHref).toBeTruthy();
     const signIn = new URL(signInHref!);
     expect(signIn.pathname).toBe('/auth/msp/signin');
-    expect(signIn.searchParams.get('callbackUrl')).toBe(confirmationUrl);
+    const returnedUrl = new URL(signIn.searchParams.get('callbackUrl')!);
+    expect(returnedUrl.origin).toBe('https://psa.example.test');
+    expect(returnedUrl.pathname).toBe('/api/co-managed/inbound-confirmation');
+    expect(returnedUrl.searchParams.get('token')).toBe('valid-token');
+    expect(returnedUrl.searchParams.get('callbackUrl')).toBe('https://attacker.example.test/');
 
     // Simulate the authenticated return from sign-in: the original callback
     // URL must reopen the confirmation page and allow its guarded POST.
-    const returned = await GET(new NextRequest(signIn.searchParams.get('callbackUrl')!));
+    const returned = await GET(new NextRequest(returnedUrl.toString()));
     expect(returned.status).toBe(200);
-    expect(await returned.text()).toContain('Confirm reply');
-    const approval = await POST(new NextRequest(confirmationUrl, {
+    expect(returned.headers.get('Referrer-Policy')).toBe('origin');
+    expect(await returned.text()).toContain('<meta name="referrer" content="origin">');
+    const approval = await POST(new NextRequest(returnedUrl.toString(), {
       method: 'POST', headers: { origin: 'https://psa.example.test', 'content-type': 'application/x-www-form-urlencoded' },
       body: 'token=valid-token',
     }));
@@ -88,12 +96,37 @@ describe('inbound sender confirmation HTTP boundary', () => {
     expect(anonymous.status).toBe(403);
     expect(mocks.approve).not.toHaveBeenCalled();
 
-    const accepted = await POST(new NextRequest('https://psa.example.test/api/co-managed/inbound-confirmation', {
-      method: 'POST', headers: { origin: 'https://psa.example.test', 'content-type': 'application/x-www-form-urlencoded' },
+    const accepted = await POST(new NextRequest('http://0.0.0.0:3101/api/co-managed/inbound-confirmation', {
+      method: 'POST', headers: { origin: 'https://psa.example.test', host: 'attacker.example.test', 'x-forwarded-host': 'attacker.example.test', 'x-forwarded-proto': 'http', 'content-type': 'application/x-www-form-urlencoded' },
       body: 'token=valid-token',
     }));
     expect(accepted.status).toBe(200);
     expect(mocks.approve).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['opaque null', 'null'],
+    ['malformed', 'https://psa.example.test/path'],
+    ['untrusted', 'https://attacker.example.test'],
+  ])('denies %s origins without reaching approval', async (_name, origin) => {
+    const request = new NextRequest('http://0.0.0.0:3101/api/co-managed/inbound-confirmation', {
+      method: 'POST',
+      headers: { ...(origin ? { origin } : {}), 'content-type': 'application/x-www-form-urlencoded', host: 'attacker.example.test', 'x-forwarded-host': 'attacker.example.test', 'x-forwarded-proto': 'https' },
+      body: 'token=valid-token',
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(403);
+    expect(mocks.approve).not.toHaveBeenCalled();
+  });
+
+  it('denies when no trusted public origin is configured', async () => {
+    vi.stubEnv('NEXTAUTH_URL', 'not a URL');
+    const response = await POST(new NextRequest('https://psa.example.test/api/co-managed/inbound-confirmation', {
+      method: 'POST', headers: { origin: 'https://psa.example.test', 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=valid-token',
+    }));
+    expect(response.status).toBe(403);
+    expect(mocks.approve).not.toHaveBeenCalled();
   });
 
   it('shows a stale interrupted redemption for retry but hides an active claim', async () => {

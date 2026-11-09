@@ -10,8 +10,11 @@
  * and event transport that commentAudience.crossTenant.integration.test.ts also stands in for.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { createServer } from 'node:http';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import puppeteer from 'puppeteer';
+import { NextRequest } from 'next/server';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraphEmulator from '@alga-psa/emulator-msgraph';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -84,6 +87,59 @@ function emailData(id: string, text: string, authenticationResults: string | nul
   } as any;
 }
 const sharedComments = (text: string) => db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).whereRaw('note::text ILIKE ?', [`%${text}%`]);
+
+async function withConfirmationBrowser(run: (context: { origin: string; browser: import('puppeteer').Browser; lastOrigin: () => string | undefined; lastReferer: () => string | undefined }) => Promise<void>) {
+  let browserActor: any = null;
+  let lastOrigin: string | undefined;
+  let lastReferer: string | undefined;
+  vi.doMock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => browserActor }));
+  const route = await import('../../app/api/co-managed/inbound-confirmation/route');
+  const server = createServer(async (incoming, outgoing) => {
+    const requestUrl = new URL(incoming.url || '/', 'http://127.0.0.1');
+    if (requestUrl.pathname === '/__signin-return') {
+      browserActor = { tenant: customerTenant, user_id: aliceId, user_type: 'internal', email: aliceEmail };
+      outgoing.writeHead(302, { Location: requestUrl.searchParams.get('callbackUrl') || '/' }).end();
+      return;
+    }
+    if (requestUrl.pathname === '/__referrer-sink') {
+      lastReferer = incoming.headers.referer;
+      outgoing.writeHead(200, { 'Content-Type': 'text/html' }).end('<title>referrer sink</title>');
+      return;
+    }
+    if (requestUrl.pathname === '/auth/msp/signin') {
+      const callback = requestUrl.searchParams.get('callbackUrl') || '/';
+      const returnUrl = `/__signin-return?callbackUrl=${encodeURIComponent(callback)}`;
+      outgoing.writeHead(200, { 'Content-Type': 'text/html' }).end(`<a id="sign-in" href="${returnUrl}">Sign in</a>`);
+      return;
+    }
+    const isBaseline = requestUrl.pathname === '/__baseline';
+    const internalUrl = `http://0.0.0.0:3101${isBaseline ? `/api/co-managed/inbound-confirmation${requestUrl.search}` : requestUrl.pathname + requestUrl.search}`;
+    const requestHeaders = new Headers();
+    for (const [name, value] of Object.entries(incoming.headers)) if (value !== undefined) requestHeaders.set(name, Array.isArray(value) ? value.join(', ') : value);
+    if (incoming.method === 'POST') lastOrigin = requestHeaders.get('origin') || undefined;
+    let body: Buffer | undefined;
+    for await (const chunk of incoming) body = Buffer.concat([body || Buffer.alloc(0), Buffer.from(chunk)]);
+    const req = new NextRequest(internalUrl, { method: incoming.method, headers: requestHeaders, ...(body ? { body } : {}) });
+    const response = incoming.method === 'POST' ? await route.POST(req) : await route.GET(req);
+    const html = await response.text();
+    if (isBaseline) {
+      outgoing.writeHead(response.status, { 'Content-Type': 'text/html; charset=utf-8', 'Referrer-Policy': 'no-referrer' });
+      outgoing.end(html.replace('content="origin"', 'content="no-referrer"').replace('<form method="post">', '<form method="post" action="/api/co-managed/inbound-confirmation">'));
+      return;
+    }
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, name) => { responseHeaders[name] = value; });
+    outgoing.writeHead(response.status, responseHeaders).end(html);
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Confirmation browser harness did not bind to a TCP port.');
+  const origin = `http://127.0.0.1:${address.port}`;
+  process.env.NEXTAUTH_URL = origin;
+  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  try { await run({ origin, browser, lastOrigin: () => lastOrigin, lastReferer: () => lastReferer }); }
+  finally { await browser.close(); await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())); }
+}
 
 /**
  * Boot exactly what production boots: the email-service entry point, FIRST, before the world seed below
@@ -819,6 +875,105 @@ describe('email-service boot registers co-managed inbound', () => {
     expect(await sharedComments(text)).toHaveLength(0);
     (await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry')).resetWorkflowEmailProvider();
   });
+
+  it('drives real owner and contact confirmation pages through Chromium across public and internal origins', async () => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { requestInboundSenderConfirmation, requestInboundContactSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+    const previous = { secret: process.env.NEXTAUTH_SECRET, nextAuthUrl: process.env.NEXTAUTH_URL, appBaseUrl: process.env.APP_BASE_URL };
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({
+      TenantEmailService: { getInstance: () => ({ sendEmail }) },
+      StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } },
+    } as any);
+    try {
+      await withConfirmationBrowser(async ({ origin, browser, lastOrigin, lastReferer }) => {
+        const ownerText = `chromium-owner-${MARK}`;
+        await requestInboundSenderConfirmation({ tenant: ticketTenant, actor: { tenant: customerTenant, userId: aliceId }, actorEmail: aliceEmail,
+          ticketId, relationshipId, threadId, parentCommentId, audience: 'shared_it', replyToken: token,
+          providerId: PROVIDER_ID, providerMessageId: `browser-owner-${MARK}`, text: ownerText });
+        const ownerEmail = (sendEmail.mock.calls[0] as any)[0].templateProcessor.text as string;
+        const ownerUrl = new URL(ownerEmail.match(/https?:\/\/[^\s]+/)![0]);
+        expect(ownerUrl.origin).toBe(origin);
+        const ownerToken = ownerUrl.searchParams.get('token')!;
+        const page = await browser.newPage();
+        await page.goto(ownerUrl.toString());
+        const signInHref = await page.$eval('a', (link) => (link as HTMLAnchorElement).href);
+        const callbackUrl = new URL(signInHref).searchParams.get('callbackUrl')!;
+        expect(new URL(callbackUrl).origin).toBe(origin);
+        expect(new URL(callbackUrl).searchParams.get('token')).toBe(ownerToken);
+        await page.goto(signInHref);
+        await Promise.all([page.waitForNavigation(), page.click('a#sign-in')]);
+        expect(page.url()).toBe(callbackUrl);
+        const confirmationResponse = await page.goto(callbackUrl);
+        expect(confirmationResponse?.headers()['referrer-policy']).toBe('origin');
+        expect(await page.$eval('meta[name="referrer"]', (meta) => meta.getAttribute('content'))).toBe('origin');
+        await page.evaluate(() => {
+          const link = document.createElement('a'); link.href = `${location.origin}/__referrer-sink`; link.id = 'referrer-check'; link.textContent = 'Continue'; link.style.display = 'block'; document.body.append(link);
+        });
+        await Promise.all([page.waitForNavigation(), page.click('#referrer-check')]);
+        expect(lastReferer()).toBe(`${origin}/`);
+        await page.goto(callbackUrl);
+
+        // Chromium reproduces the old page policy: it emits Origin: null and the live handler denies it.
+        await page.goto(`${origin}/__baseline?token=${encodeURIComponent(ownerToken)}`);
+        expect(await page.$eval('meta[name="referrer"]', (meta) => meta.getAttribute('content'))).toBe('no-referrer');
+        const baseline = await Promise.all([page.waitForNavigation(), page.click('form button')]);
+        expect(lastOrigin()).toBe('null');
+        expect(baseline[0]?.status()).toBe(403);
+
+        await page.goto(callbackUrl);
+        const approved = await Promise.all([page.waitForNavigation(), page.click('form button')]);
+        expect(lastOrigin()).toBe(origin);
+        expect(approved[0]?.status()).toBe(200);
+        await page.evaluate(({ action, token }) => {
+          const form = document.createElement('form'); form.method = 'post'; form.action = action;
+          const input = document.createElement('input'); input.name = 'token'; input.value = token; form.append(input);
+          const button = document.createElement('button'); button.textContent = 'Confirm reply again'; form.append(button); document.body.append(form);
+        }, { action: `${origin}/api/co-managed/inbound-confirmation`, token: ownerToken });
+        const replay = await Promise.all([page.waitForNavigation(), page.click('form button')]);
+        expect(replay[0]?.status()).toBe(403);
+        const ownerRows = await sharedComments(ownerText);
+        expect(ownerRows).toHaveLength(1);
+        expect(ownerRows[0]).toMatchObject({ tenant: ticketTenant, ticket_id: ticketId, author_type: 'internal', is_internal: true });
+        const ownerActor = await db('collaboration_actor_references').where({ tenant: ticketTenant, actor_reference_id: ownerRows[0].actor_reference_id }).first();
+        expect(ownerActor).toMatchObject({ actor_tenant: customerTenant, actor_user_id: aliceId });
+
+        const contactEmail = `rita-${MARK}@example.com`, contactText = `chromium-contact-${MARK}`, nativeToken = `native:${uuidv4()}`;
+        await db('email_reply_tokens').insert({ tenant: ticketTenant, token: nativeToken, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: contactEmail, metadata: null });
+        const contactMessage = { id: `browser-contact-${MARK}`, provider: 'microsoft', providerId: PROVIDER_ID, tenant: ticketTenant,
+          receivedAt: new Date().toISOString(), from: { email: contactEmail, name: 'Rita Requester' }, to: [{ email: 'support@msp.example.test' }],
+          subject: 'Re: Shared ticket', body: { text: `${contactText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` }, attachments: [], headers: {} } as any;
+        await requestInboundContactSenderConfirmation({ tenant: ticketTenant, contactId: requesterContactId, contactEmail, ticketId,
+          providerId: PROVIDER_ID, providerMessageId: `browser-contact-${MARK}`, emailData: contactMessage });
+        const contactEmailText = (sendEmail.mock.calls[1] as any)[0].templateProcessor.text as string;
+        const contactUrl = new URL(contactEmailText.match(/https?:\/\/[^\s]+/)![0]);
+        expect(contactUrl.origin).toBe(origin);
+        const contactPage = await browser.newPage();
+        const contactResponse = await contactPage.goto(contactUrl.toString());
+        expect(contactResponse?.headers()['referrer-policy']).toBe('origin');
+        expect(await contactPage.$eval('meta[name="referrer"]', (meta) => meta.getAttribute('content'))).toBe('origin');
+        const contactApproved = await Promise.all([contactPage.waitForNavigation(), contactPage.click('form button')]);
+        expect(lastOrigin()).toBe(origin);
+        expect(contactApproved[0]?.status()).toBe(200);
+        await contactPage.evaluate(({ action, token }) => {
+          const form = document.createElement('form'); form.method = 'post'; form.action = action;
+          const input = document.createElement('input'); input.name = 'token'; input.value = token; form.append(input);
+          const button = document.createElement('button'); button.textContent = 'Confirm reply again'; form.append(button); document.body.append(form);
+        }, { action: `${origin}/api/co-managed/inbound-confirmation`, token: contactUrl.searchParams.get('token')! });
+        const contactReplay = await Promise.all([contactPage.waitForNavigation(), contactPage.click('form button')]);
+        expect(contactReplay[0]?.status()).toBe(403);
+        const contactRows = await sharedComments(contactText);
+        expect(contactRows).toHaveLength(1);
+        expect(contactRows[0]).toMatchObject({ tenant: ticketTenant, ticket_id: ticketId, author_type: 'client', contact_id: requesterContactId, is_internal: false });
+      });
+    } finally {
+      resetWorkflowEmailProvider();
+      if (previous.secret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = previous.secret;
+      if (previous.nextAuthUrl === undefined) delete process.env.NEXTAUTH_URL; else process.env.NEXTAUTH_URL = previous.nextAuthUrl;
+      if (previous.appBaseUrl === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = previous.appBaseUrl;
+    }
+  }, 120_000);
 });
 
 describe('a process where co-managed registration never ran', () => {

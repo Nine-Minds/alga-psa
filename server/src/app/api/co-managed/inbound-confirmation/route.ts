@@ -12,14 +12,40 @@ import {
 
 const headers = {
   'Cache-Control': 'private, no-store',
-  'Referrer-Policy': 'no-referrer',
+  'Referrer-Policy': 'origin',
   'X-Content-Type-Options': 'nosniff',
   'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
+function trustedPublicOrigin(): string | null {
+  // NEXTAUTH_URL is the application's canonical public URL. APP_BASE_URL is
+  // retained as the same fallback used by confirmation-link generation.
+  const configuredUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL;
+  if (!configuredUrl) return null;
+  try {
+    const url = new URL(configuredUrl);
+    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function isTrustedPublicOrigin(value: string | null, trustedOrigin: string | null): boolean {
+  if (!value || value === 'null' || !trustedOrigin) return false;
+  try {
+    const parsed = new URL(value);
+    // Origin headers are serialized origins, never arbitrary URLs. Requiring
+    // exact serialization also rejects credentials, paths, and malformed input.
+    return parsed.origin === value && parsed.origin === trustedOrigin
+      && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
+  } catch {
+    return false;
+  }
+}
 const denied = () => new NextResponse('This confirmation is invalid, expired, or no longer available.', { status: 403, headers });
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
 const page = (token: string, message = 'Confirm this reply to add it to the co-managed ticket conversation.', replyText = '') =>
-  new NextResponse(`<!doctype html><html lang="en"><meta name="referrer" content="no-referrer"><title>Confirm ticket reply</title><main><h1>Confirm ticket reply</h1><p>${escapeHtml(message)}</p><p>Only confirm if you wrote this reply.</p><pre>${escapeHtml(replyText)}</pre><form method="post"><input type="hidden" name="token" value="${escapeHtml(token)}"><button type="submit">Confirm reply</button></form></main></html>`, {
+  new NextResponse(`<!doctype html><html lang="en"><meta name="referrer" content="origin"><title>Confirm ticket reply</title><main><h1>Confirm ticket reply</h1><p>${escapeHtml(message)}</p><p>Only confirm if you wrote this reply.</p><pre>${escapeHtml(replyText)}</pre><form method="post"><input type="hidden" name="token" value="${escapeHtml(token)}"><button type="submit">Confirm reply</button></form></main></html>`, {
     headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
   });
 
@@ -54,8 +80,13 @@ export async function GET(request: NextRequest) {
   if (pending.contact) return page(token, `Confirm reply for ticket ${String(pending.payload.ticketId)}.`, String(pending.payload.emailData?.body?.text || ''));
   const user = await getCurrentUser();
   if (!user) {
-    const signIn = new URL('/auth/msp/signin', request.nextUrl.origin);
-    signIn.searchParams.set('callbackUrl', request.nextUrl.toString());
+    const publicOrigin = trustedPublicOrigin();
+    if (!publicOrigin) return denied();
+    const signIn = new URL('/auth/msp/signin', publicOrigin);
+    const callback = new URL(publicOrigin);
+    callback.pathname = request.nextUrl.pathname;
+    callback.search = request.nextUrl.search;
+    signIn.searchParams.set('callbackUrl', callback.toString());
     return new NextResponse(`<!doctype html><html lang="en"><title>Confirm ticket reply</title><main><h1>Confirm ticket reply</h1><p>Sign in as the intended internal user to confirm this reply.</p><a href="${signIn.toString()}">Sign in</a></main></html>`, { headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' } });
   }
   return userMatches(user, pending)
@@ -65,7 +96,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get('origin');
-  if (origin !== request.nextUrl.origin) return denied();
+  if (!isTrustedPublicOrigin(origin, trustedPublicOrigin())) return denied();
   const form = await request.formData();
   const token = String(form.get('token') || '');
   const pending = await loadConfirmation(token);
