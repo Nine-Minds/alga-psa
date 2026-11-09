@@ -578,6 +578,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
+          inlineSlot={dataSource.slots.commentInline?.({
+            comment: mergedConversation,
+            threadRoot: groupByCommentId.get(mergedConversation.comment_id || '')?.root ?? null,
+            variant: 'default',
+          })}
         />
         {replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
           <InlineReplyComposer
@@ -641,17 +646,27 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         getThreadId={(comment) => comment.thread_id || comment.comment_id}
         getParentCommentId={(comment) => comment.parent_comment_id}
         getCreatedAt={(comment) => comment.created_at}
-        renderThreadGroup={(group) => (
-          <HybridThreadNode<IComment>
-            key={`${group.threadId}-${group.replyCount}`}
-            group={group}
-            comment={group.root}
-            getCommentId={(comment) => comment.comment_id}
-            renderComment={(comment) => renderCommentItem(comment)}
-            onOpenPanel={openCommentThreadPanel}
-            autoCollapseAfter={3}
-          />
-        )}
+        renderThreadGroup={(group) => {
+          const node = (
+            <HybridThreadNode<IComment>
+              key={`${group.threadId}-${group.replyCount}`}
+              group={group}
+              comment={group.root}
+              getCommentId={(comment) => comment.comment_id}
+              renderComment={(comment) => renderCommentItem(comment)}
+              onOpenPanel={openCommentThreadPanel}
+              autoCollapseAfter={3}
+            />
+          );
+          const header = dataSource.slots.threadHeader?.({ group, variant: 'default' });
+          if (header == null) return node;
+          return (
+            <React.Fragment key={`${group.threadId}-${group.replyCount}`}>
+              {header}
+              {node}
+            </React.Fragment>
+          );
+        }}
       />
     );
   };
@@ -677,6 +692,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     () => buildThreadTabs(threadGroups, threadTabDefinitions, { hideInternal: hideInternalTab }),
     [threadGroups, threadTabDefinitions, hideInternalTab]
   );
+  const groupByCommentId = useMemo(() => {
+    const map = new Map<string, (typeof threadGroups)[number]>();
+    for (const group of threadGroups) {
+      for (const comment of group.comments) {
+        if (comment.comment_id) map.set(comment.comment_id, group);
+      }
+    }
+    return map;
+  }, [threadGroups]);
   const openPanelThreadGroup = openPanelCommentId
     ? threadGroups.find((group) =>
       group.comments.some((comment) => comment.comment_id === openPanelCommentId)

@@ -868,6 +868,11 @@ export function BentoTimelineTile({
           onToggleReaction={dataSource.capabilities.reactionToggle ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+          inlineSlot={dataSource.slots.commentInline?.({
+            comment,
+            threadRoot: groupByCommentId.get(commentId)?.root ?? null,
+            variant: 'compact',
+          })}
         />
       </>
     );
@@ -1221,7 +1226,7 @@ export function BentoTimelineTile({
                       if (!group) {
                         return renderThreadComment(rootComment);
                       }
-                      return (
+                      const threadNode = (
                         <HybridThreadNode<IComment>
                           group={group}
                           comment={group.root}
@@ -1230,6 +1235,14 @@ export function BentoTimelineTile({
                           autoCollapseAfter={3}
                           maxIndentDepth={1}
                         />
+                      );
+                      const threadHeader = dataSource.slots.threadHeader?.({ group, variant: 'compact' });
+                      if (threadHeader == null) return threadNode;
+                      return (
+                        <>
+                          {threadHeader}
+                          {threadNode}
+                        </>
                       );
                     })() : (
                       <TimelineNodeView id={`${id}-node`} node={node} t={t} />

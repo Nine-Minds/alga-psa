@@ -85,6 +85,11 @@ interface CommentItemProps {
    * ticket-level links, so these come from the API/integration path.
    */
   externalLinks?: ITicketExternalLinkView[];
+  /**
+   * Host content rendered inside the bubble, after the body and before reactions (see `slots.commentInline`).
+   * Nothing, not even a wrapper element, is rendered when it is null or undefined.
+   */
+  inlineSlot?: React.ReactNode;
 }
 
 function getInboundSenderIdentity(
@@ -189,6 +194,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   variant = 'default',
   accentBorderClassName,
   externalLinks = [],
+  inlineSlot,
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -878,6 +884,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   </ClampedContent>
               </div>
           )}
+          {inlineSlot ?? null}
           {reactions && onToggleReaction && !(isCompact && reactions.length === 0) && (
             <ReactionDisplay
               id={`${commentId}-reactions`}
