@@ -4,9 +4,7 @@ import React, { useMemo, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { TextEditor } from '../editor';
 import type { EditorSnippetsConfig } from '../editor/snippets';
-import { hasEditorContent } from '../editor/hasEditorContent';
-import { useRegisterDismissGuard } from './DismissGuard';
-import { useRegisterUnsavedChanges } from '../context/UnsavedChangesContext';
+import { useComposerDirtyGuard } from '../editor/useComposerDirtyGuard';
 import { Button } from './Button';
 import { Label } from './Label';
 import { Switch } from './Switch';
@@ -82,12 +80,9 @@ export function InlineReplyComposer({
 
   // A typed reply must survive a stray Escape / overlay click on the drawer or
   // dialog hosting this composer: report it so the container asks before closing.
-  // LEVERAGE: pattern composer-dirty-guard — same track-content + two-guard shape as TicketConversation and BentoTimelineTile
-  const hasTypedReply = hasEditorContent(content);
-  useRegisterDismissGuard(hasTypedReply);
   // On a full page (no Dialog/Drawer) the page-level registry guards ticket
   // navigation and reload instead; a no-op when no UnsavedChangesProvider is mounted.
-  useRegisterUnsavedChanges(`inline-reply-composer-${componentId}`, hasTypedReply);
+  const dirtyGuard = useComposerDirtyGuard(true, `inline-reply-composer-${componentId}`);
 
   return (
     // Sticky so replying to a comment taller than the viewport keeps the
@@ -112,7 +107,7 @@ export function InlineReplyComposer({
         {...withDataAutomationId({ id: `${componentId}-editor` })}
         roomName={roomName}
         initialContent={editorInitialContent}
-        onContentChange={setContent}
+        onContentChange={(next) => { setContent(next); dirtyGuard.trackContent(next); }}
         searchMentions={searchMentions}
         uploadFile={uploadFile}
         footerActions={footerActions}

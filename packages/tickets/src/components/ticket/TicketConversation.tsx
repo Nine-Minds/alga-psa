@@ -56,9 +56,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useTicketDataSource } from './TicketDataSourceContext';
 import { hasCommentCollaborationAttribution, type CommentContactAuthor, type CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
-import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
-import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
+import { useComposerDirtyGuard } from '@alga-psa/ui/editor/useComposerDirtyGuard';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import {
@@ -278,26 +276,23 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
   // Whether the open composer holds typed text. Reported to the surrounding
   // Drawer/Dialog so Escape or an overlay click asks before dropping it.
-  const [composeHasContent, setComposeHasContent] = useState(false);
-  // LEVERAGE: pattern composer-dirty-guard — same track-content + two-guard shape as BentoTimelineTile and InlineReplyComposer
-  useRegisterDismissGuard(showEditor && composeHasContent);
   // Full-page ticket view: no Dialog/Drawer to guard, so the page-level registry
   // makes prev/next ticket navigation confirm and reload/history chords blocked.
-  useRegisterUnsavedChanges(`${compId}-compose`, showEditor && composeHasContent);
+  const { trackContent: trackComposeContent, clear: clearComposeContent } = useComposerDirtyGuard(showEditor, `${compId}-compose`);
 
   const handleComposeContentChange = React.useCallback((content: PartialBlock[]) => {
-    setComposeHasContent(hasEditorContent(content));
+    trackComposeContent(content);
     onNewCommentContentChange(content);
-  }, [onNewCommentContentChange]);
+  }, [onNewCommentContentChange, trackComposeContent]);
 
   // The composer remounts empty after a successful submit (editorKey bump).
   useEffect(() => {
-    setComposeHasContent(false);
-  }, [editorKey]);
+    clearComposeContent();
+  }, [editorKey, clearComposeContent]);
 
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
-    setComposeHasContent(false);
+    clearComposeContent();
     setShowEditor(false);
     // Runs only when the discard really happens (not on 'keep editing'), so a host can drop what it staged beside the composer.
     dataSource.screen.onComposerCancel?.();
