@@ -288,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Läser in kommentarer…",
     "placeholder": "Lägg till en kommentar…",
     "responsePlaceholder": "Svara på de begärda ändringarna…",
     "respondToChanges": "Svara på ändringar"
@@ -363,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Datatabell för tidrapport",
+    "deleteWorkItem": {
+      "title": "Radera arbetspost",
+      "message": "Alla tidposter för den här arbetsposten raderas permanent. Åtgärden kan inte ångras."
+    },
+    "bundled": "Grupperat",
+    "bundledTo": "Grupperat → {{ticketNumber}}",
+    "addEntryForCell": "Lägg till tidpost för {{workItem}} den {{date}}",
+    "saveTimeEntry": "Spara tidpost",
+    "weeklyTotal": "Veckosumma",
     "empty": {
       "title": "Inga arbetsposter i din tidrapport",
       "description": "Lägg till en ny arbetspost för att börja registrera din tid för den här veckan.",
@@ -425,6 +436,9 @@
     "viewEntryDetails": "Visa tidpostens detaljer"
   },
   "messages": {
+    "saveEntryFailed": "Det gick inte att spara tidposten",
+    "updateTaskFailed": "Det gick inte att uppdatera uppgiften",
+    "deleteWorkItemFailed": "Det gick inte att radera arbetsposten",
     "serviceRequired": "Välj en tjänst innan du sparar tidposter",
     "invalidService": "Den valda tjänsten är ogiltig",
     "taxRegionRequired": "Välj en skatteregion för skattepliktiga tjänster",
@@ -555,6 +569,11 @@
     },
     "activitySummary_few": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})",
     "activitySummary_many": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Hantering av tidrapporter",
+    "delegationDisabledPrefix": "Delegerad tidsregistrering är för närvarande inaktiverad. Aktivera funktionsflaggan",
+    "delegationDisabledSuffix": "för att redigera andra användares tidrapporter."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} spårat i {{count}} segment (pausat {{paused}})",

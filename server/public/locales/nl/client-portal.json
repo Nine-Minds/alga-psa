@@ -729,7 +729,40 @@
       "reportsToHelp": "Een leidinggevende kan de tickets, apparaten en projecten zien van personen die aan hem of haar rapporteren, wanneer de zichtbaarheidsgroep beperkt is tot de eigen gegevens.",
       "locations": "Locaties",
       "primaryLocation": "Primair",
-      "remote": "Op afstand"
+      "remote": "Op afstand",
+      "thisUser": "deze gebruiker",
+      "deactivate": {
+        "title": "Gebruiker deactiveren en openstaand werk afhandelen",
+        "confirm": "Gebruiker deactiveren",
+        "deactivating": "Deactiveren…",
+        "thisUserCapitalized": "Deze gebruiker",
+        "openWorkPrompt": "heeft openstaand werk. Kies wat hiermee moet gebeuren voordat deze gebruiker wordt gedeactiveerd.",
+        "reassignTo": "Openstaand werk opnieuw toewijzen aan",
+        "selectAssignee": "Selecteer een actieve interne gebruiker",
+        "noAssignee": "Er is geen actieve interne gebruiker beschikbaar om het werk aan toe te wijzen.",
+        "selectedUser": "de geselecteerde gebruiker",
+        "buckets": {
+          "tickets": "Tickets",
+          "tasks": "Projecttaken"
+        },
+        "openCount": "{{count}} open {{label}}",
+        "actions": {
+          "reassign": "Opnieuw toewijzen",
+          "unassign": "Toewijzing opheffen",
+          "archive": "Archiveren"
+        },
+        "labels": {
+          "ticket": "ticket",
+          "tickets": "tickets",
+          "projectTask": "projecttaak",
+          "projectTasks": "projecttaken"
+        },
+        "summary": {
+          "archived": "Te archiveren: {{count}} {{label}}",
+          "unassigned": "Toewijzing op te heffen voor {{count}} {{label}}",
+          "reassigned": "Opnieuw toe te wijzen aan {{name}}: {{count}} {{label}}"
+        }
+      }
     },
     "visibilityGroups": {
       "title": "Zichtbaarheidsgroepen",
@@ -869,7 +902,12 @@
       "noMessage": "Geen bericht"
     },
     "unreadCount_few": "{{count}} ongelezen notificaties",
-    "unreadCount_many": "{{count}} ongelezen notificaties"
+    "unreadCount_many": "{{count}} ongelezen notificaties",
+    "reconnectingToServer": "Opnieuw verbinden met de server...",
+    "refresh": "Vernieuwen",
+    "markAllRead": "Alles als gelezen markeren",
+    "emptyTitle": "Geen notificaties",
+    "emptyDescription": "U bent helemaal bij!"
   },
   "sidebar": {
     "goToDashboard": "Naar dashboard",
@@ -1045,7 +1083,34 @@
     },
     "unassigned": "Niet toegewezen",
     "sharedWorkspace": "Gedeelde werkplek: {{name}}",
-    "sharedWorkspaceLabel": "Gedeelde werkplek"
+    "sharedWorkspaceLabel": "Gedeelde werkplek",
+    "details": {
+      "notProvided": "Niet opgegeven",
+      "notAvailable": "N.v.t.",
+      "cpuWithModel": "{{model}} ({{count}} kernen)",
+      "cpuCores": "{{count}} kernen",
+      "workstationTitle": "Werkstationgegevens",
+      "networkDeviceTitle": "Netwerkapparaatgegevens",
+      "serverTitle": "Servergegevens",
+      "basicInformation": "Basisgegevens",
+      "os": "Besturingssysteem",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Opslag",
+      "deviceType": "Apparaattype",
+      "ipAddress": "IP-adres",
+      "ports": "Poorten",
+      "firmware": "Firmware",
+      "type": "Type",
+      "virtual": "Virtueel",
+      "physical": "Fysiek",
+      "assetTag": "Assettag",
+      "serialNumber": "Serienummer",
+      "status": "Status",
+      "location": "Locatie",
+      "purchaseDate": "Aankoopdatum",
+      "warrantyEndDate": "Einddatum garantie"
+    }
   },
   "errors": {
     "account": {

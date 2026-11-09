@@ -272,7 +272,7 @@ export function TimeSheetTable({
 
     return (
         <div ref={containerRef}>
-        <ReflectionContainer id="timesheet-table" label="Time Sheet Data Table">
+        <ReflectionContainer id="timesheet-table" label={t('timeSheetTable.reflectionLabel', { defaultValue: 'Time Sheet Data Table' })}>
             <React.Fragment>
             {selectedWorkItemToDelete && (
                 <ConfirmationDialog
@@ -283,9 +283,9 @@ export function TimeSheetTable({
                         setSelectedWorkItemToDelete(null);
                     }}
                     onClose={() => setSelectedWorkItemToDelete(null)}
-                    title="Delete Work Item"
-                    message="This will permanently delete all time entries for this work item. This action cannot be undone."
-                    confirmLabel="Delete"
+                    title={t('timeSheetTable.deleteWorkItem.title', { defaultValue: 'Delete Work Item' })}
+                    message={t('timeSheetTable.deleteWorkItem.message', { defaultValue: 'This will permanently delete all time entries for this work item. This action cannot be undone.' })}
+                    confirmLabel={t('common.actions.delete', { defaultValue: 'Delete' })}
                 />
             )}
 
@@ -309,7 +309,7 @@ export function TimeSheetTable({
                                 disabled={!isEditable}
                             >
                                 <Plus className="h-4 w-4 mr-1.5" />
-                                Add Item
+                                {t('common.actions.addItem', { defaultValue: 'Add Item' })}
                             </Button>
                         </th>
                         {visibleDates.map((date, index): React.JSX.Element => {
@@ -446,7 +446,9 @@ export function TimeSheetTable({
                                                 </span>
                                                 {workItem.type === 'ticket' && workItem.master_ticket_id && (
                                                     <span className="chip-primary inline-flex w-max items-center px-2 py-0.5 rounded-full text-xs font-medium">
-                                                        {workItem.master_ticket_number ? `Bundled → ${workItem.master_ticket_number}` : 'Bundled'}
+                                                        {workItem.master_ticket_number
+                                                            ? t('timeSheetTable.bundledTo', { defaultValue: 'Bundled → {{ticketNumber}}', ticketNumber: workItem.master_ticket_number })
+                                                            : t('timeSheetTable.bundled', { defaultValue: 'Bundled' })}
                                                     </span>
                                                 )}
                                             </div>
@@ -457,7 +459,7 @@ export function TimeSheetTable({
                                                 variant="icon"
                                                 size="sm"
                                                 className="absolute right-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                                                title="Delete Work Item"
+                                                title={t('timeSheetTable.deleteWorkItem.title', { defaultValue: 'Delete Work Item' })}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setSelectedWorkItemToDelete(workItem.work_item_id);
@@ -547,7 +549,7 @@ export function TimeSheetTable({
                                                                     e.stopPropagation();
                                                                     onAddEntryForCell(buildCellSelection(workItem, date, dayEntries));
                                                                 }}
-                                                                aria-label={`Add time entry for ${workItem.name} on ${dateKey}`}
+                                                                aria-label={t('timeSheetTable.addEntryForCell', { defaultValue: 'Add time entry for {{workItem}} on {{date}}', workItem: workItem.name, date: dateKey })}
                                                             />
                                                         )}
 	                                                    {dayEntries.length > 0 ? (
@@ -576,7 +578,9 @@ export function TimeSheetTable({
 	                                                                    }`}
 	                                                                    title={prominentCellFeedback?.comment}
 	                                                                    data-feedback-state={cellFeedbackState}
-	                                                                    aria-label={cellFeedbackState === 'unresolved' ? 'Change requested' : 'Addressed'}
+	                                                                    aria-label={cellFeedbackState === 'unresolved'
+                                                                        ? t('common.states.changeRequested', { defaultValue: 'Change requested' })
+                                                                        : t('common.states.addressed', { defaultValue: 'Addressed' })}
 	                                                                >
 	                                                                    {cellFeedbackState === 'unresolved' ? (
 	                                                                        <X className="h-3 w-3" />
@@ -649,7 +653,7 @@ export function TimeSheetTable({
                                                                             e.stopPropagation();
                                                                             await onQuickAddSubmit();
                                                                         }}
-                                                                        title="Save time entry"
+                                                                        title={t('timeSheetTable.saveTimeEntry', { defaultValue: 'Save time entry' })}
                                                                     >
                                                                         <Check className="h-3 w-3" />
                                                                     </button>
@@ -663,7 +667,7 @@ export function TimeSheetTable({
                                                                             e.stopPropagation();
                                                                             onQuickAddCancel();
                                                                         }}
-                                                                        title="Cancel"
+                                                                        title={t('common.actions.cancel', { defaultValue: 'Cancel' })}
                                                                     >
                                                                         <X className="h-3 w-3" />
                                                                     </button>
@@ -686,7 +690,7 @@ export function TimeSheetTable({
                 <tfoot>
                     <tr className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 border-t border-r border-gray-200 dark:border-gray-700 sticky left-0 z-10 bg-gray-100 dark:bg-gray-800">
-                            Weekly Total
+                            {t('timeSheetTable.weeklyTotal', { defaultValue: 'Weekly Total' })}
                         </td>
                         {visibleDates.map((date): React.JSX.Element => {
                             const dateKey = formatISO(date, { representation: 'date' });

@@ -196,6 +196,7 @@
     "fileError": "Bestand kon niet worden geüpload"
   },
   "folders": {
+    "show": "Mappen weergeven",
     "root": "Hoofdmap",
     "loadFailed": "Mappenstructuur kon niet worden geladen",
     "deleteConfirm": "Weet u zeker dat u de map \"{{name}}\" wilt verwijderen? Dit werkt alleen als de map leeg is.",
@@ -304,6 +305,11 @@
   },
   "ticketDocuments": "Ticketdocumenten",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Afdrukken",
+    "edit": "Bewerken",
+    "upload": "Uploaden",
+    "closePreview": "Voorbeeld sluiten",
     "save": "Opslaan",
     "saving": "Opslaan...",
     "cancel": "Annuleren"
@@ -376,6 +382,18 @@
     "altVideoThumbnail": "Miniatuur van {{name}}",
     "pageCount_one": "{{count}} pagina",
     "pageCount_other": "{{count}} pagina's"
+  },
+  "fallbackUserName": "Gebruiker",
+  "selectOrCreate": "Selecteer een document of maak een nieuw document aan.",
+  "viewMode": {
+    "grid": "Raster",
+    "list": "Lijst"
+  },
+  "unsavedChanges": {
+    "title": "Niet-opgeslagen wijzigingen",
+    "message": "Weet u zeker dat u wilt annuleren? Alle niet-opgeslagen wijzigingen gaan verloren.",
+    "confirm": "Wijzigingen verwerpen",
+    "cancel": "Doorgaan met bewerken"
   },
   "skeleton": {
     "cardLabel": "Laadplaceholder voor documentkaart"

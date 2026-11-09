@@ -21,8 +21,6 @@ const testState = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', async () => ({
   ...(await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db')),
   createTenantKnex: vi.fn(async () => ({ knex: testState.trx })),
-  withTransaction: vi.fn(async (_db: unknown, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-    testState.trx.transaction(callback)),
 }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: unknown[]) => fn(testState.user, { tenant: testState.tenant }, ...args),
@@ -33,7 +31,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
-// The delivered-asset hook runs after the material's transaction; record what it was handed.
+// Record external effects so tests can assert their transaction boundaries.
 vi.mock('./assetLink', async () => ({
   ...(await vi.importActual<typeof import('./assetLink')>('./assetLink')),
   createAndLinkDeliveredAsset: vi.fn(async (_db: unknown, _tenant: string, link: unknown) => {
@@ -82,6 +80,7 @@ import {
 import { confirmSalesOrder, createSalesOrder } from '../actions/salesOrderActions';
 import { fulfillSalesOrderLine, listFulfillmentCandidateUnits } from '../actions/fulfillmentActions';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { withTransaction } from '@alga-psa/db';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -121,6 +120,17 @@ afterAll(async () => {
 
 const trx = (): Knex.Transaction => testState.trx;
 const db = (): Knex => testState.trx as unknown as Knex;
+
+// These cases need a real outer commit to exercise external effects. Other
+// cases keep the default rollback isolation. Never dispatch hooks on release
+// of the per-line savepoint.
+async function withCommittedFixture<T>(callback: () => Promise<T>): Promise<T> {
+  await trx().rollback();
+  return withTransaction(knex, async (transaction) => {
+    testState.trx = transaction;
+    return callback();
+  });
+}
 
 async function makeProduct(opts: { onHand?: number; serialized?: boolean; tracked?: boolean; kit?: boolean; createsAsset?: boolean; location?: string | null } = {}): Promise<string> {
   const label = `vitest-c6-${randomUUID().slice(0, 8)}`;
@@ -459,16 +469,20 @@ describe('T004 SO fulfillment never poaches a project claim', () => {
 
 describe('T005 install, undo and delete', () => {
   it('low-stock signal after install names the claimed-from location, not the product default', async () => {
-    const other = await makeLocation('Reserve warehouse');
-    const svc = await makeProduct({ onHand: 1 });
-    await trx()('product_inventory_settings').where({ tenant: TENANT, service_id: svc }).update({ reorder_point: 5 });
-    await recordStockMovement(trx(), TENANT, { movement_type: 'receipt', service_id: svc, quantity: 6, to_location_id: other, unit_cost: 500 });
-    const { projectId } = await makeProject();
-    const [line] = await reserve(projectId, svc, 4, { location_id: other });
-    await stageLines(db(), TENANT, [line.staging_line_id], USER);
+    const other = await withCommittedFixture(async () => {
+      const other = await makeLocation('Reserve warehouse');
+      const svc = await makeProduct({ onHand: 1 });
+      await trx()('product_inventory_settings').where({ tenant: TENANT, service_id: svc }).update({ reorder_point: 5 });
+      await recordStockMovement(trx(), TENANT, { movement_type: 'receipt', service_id: svc, quantity: 6, to_location_id: other, unit_cost: 500 });
+      const { projectId } = await makeProject();
+      const [line] = await reserve(projectId, svc, 4, { location_id: other });
+      await stageLines(db(), TENANT, [line.staging_line_id], USER);
 
-    const [result] = await installLines(db(), TENANT, [line.staging_line_id], USER);
-    expect(result.ok).toBe(true);
+      const [result] = await installLines(db(), TENANT, [line.staging_line_id], USER);
+      expect(result.ok).toBe(true);
+      expect(testState.inventoryEvents).toHaveLength(0);
+      return other;
+    });
     const low = testState.inventoryEvents.filter((e) => e.name === 'INVENTORY_STOCK_LOW');
     expect(low).toHaveLength(1);
     expect(JSON.stringify(low[0].payload)).toContain(other);
@@ -503,15 +517,19 @@ describe('T005 install, undo and delete', () => {
   });
 
   it('serialized: delivers the claimed unit to the client and hands the asset link over after the material', async () => {
-    const svc = await makeProduct({ onHand: 2, serialized: true, createsAsset: true });
-    const { projectId } = await makeProject();
-    const [line] = await reserve(projectId, svc, 1);
-    const [result] = await installLines(db(), TENANT, [line.staging_line_id], USER);
-    expect(result.ok).toBe(true);
-    const unit = await trx()('stock_units').where({ tenant: TENANT, unit_id: line.unit_id }).first();
-    expect(unit).toMatchObject({ status: 'delivered', client_id: CLIENT, allocated_staging_line_id: null, location_id: null });
+    const unitId = await withCommittedFixture(async () => {
+      const svc = await makeProduct({ onHand: 2, serialized: true, createsAsset: true });
+      const { projectId } = await makeProject();
+      const [line] = await reserve(projectId, svc, 1);
+      const [result] = await installLines(db(), TENANT, [line.staging_line_id], USER);
+      expect(result.ok).toBe(true);
+      const unit = await trx()('stock_units').where({ tenant: TENANT, unit_id: line.unit_id }).first();
+      expect(unit).toMatchObject({ status: 'delivered', client_id: CLIENT, allocated_staging_line_id: null, location_id: null });
+      expect(testState.assetLinks).toHaveLength(0);
+      return line.unit_id;
+    });
     expect(testState.assetLinks).toHaveLength(1);
-    expect((testState.assetLinks[0] as any).unit.unit_id).toBe(line.unit_id);
+    expect((testState.assetLinks[0] as any).unit.unit_id).toBe(unitId);
     expect((testState.assetLinks[0] as any).clientId).toBe(CLIENT);
   });
 

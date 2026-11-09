@@ -781,7 +781,8 @@
       "collapse": "Replier les dossiers",
       "allDocuments": "Tous les documents",
       "expand": "Afficher les dossiers",
-      "deleteTitle": "Supprimer le dossier"
+      "deleteTitle": "Supprimer le dossier",
+      "show": "Afficher les dossiers"
     },
     "folderManager": {
       "title": "Créer un nouveau dossier",
@@ -843,6 +844,28 @@
     "huduTab": {
       "documentsTabLabel": "Documents",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Utilisateur",
+    "selectOrCreate": "Sélectionnez un document ou créez-en un nouveau.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimer",
+      "edit": "Modifier",
+      "upload": "Téléverser",
+      "closePreview": "Fermer l’aperçu",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement..."
+    },
+    "viewMode": {
+      "grid": "Grille",
+      "list": "Liste"
+    },
+    "unsavedChanges": {
+      "title": "Modifications non enregistrées",
+      "message": "Voulez-vous vraiment annuler ? Les modifications non enregistrées seront perdues.",
+      "confirm": "Abandonner les modifications",
+      "cancel": "Continuer la modification"
     }
   },
   "fields": {
@@ -1426,7 +1449,16 @@
     "unnamedTeam": "Équipe sans nom",
     "userPicker": "Sélecteur d’utilisateurs",
     "noUsersFound": "Aucun utilisateur trouvé",
-    "contactRemoteLocation": "À distance"
+    "contactRemoteLocation": "À distance",
+    "selectBoard": "Sélectionner un tableau",
+    "activeBoards": "Tableaux actifs",
+    "inactiveBoards": "Tableaux inactifs",
+    "allBoards": "Tous les tableaux",
+    "boardPicker": "Sélecteur de tableaux",
+    "filterByStatus": "Filtrer par statut",
+    "statusFilter": "Filtre de statut",
+    "boards": "Tableaux",
+    "inactiveSuffix": "(Inactif)"
   },
   "serviceTypeSelect": {
     "placeholder": "Sélectionner un type de service...",
@@ -1727,7 +1759,14 @@
       "assigned": "Attribué :",
       "performedBy": "par {{name}}",
       "internal": "Interne"
-    }
+    },
+    "title": "Notifications",
+    "reconnectingToServer": "Reconnexion au serveur...",
+    "refresh": "Actualiser",
+    "markAllAsRead": "Tout marquer comme lu",
+    "markAllRead": "Tout marquer comme lu",
+    "emptyTitle": "Aucune notification",
+    "emptyDescription": "Vous êtes à jour !"
   },
   "importConflicts": {
     "title": "Résoudre les conflits d'import",

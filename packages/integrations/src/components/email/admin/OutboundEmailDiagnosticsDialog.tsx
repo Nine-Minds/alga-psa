@@ -68,6 +68,12 @@ export function OutboundEmailDiagnosticsDialog({
   const [recipient, setRecipient] = React.useState('');
   const [recipientError, setRecipientError] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (!copied || !isOpen) return;
+    const timeout = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timeout);
+  }, [copied, isOpen]);
+
   const runDiagnostics = React.useCallback(async (withLiveSend: boolean) => {
     setLoading(true);
     setSendingTest(withLiveSend);
@@ -150,7 +156,6 @@ export function OutboundEmailDiagnosticsDialog({
         }
       }
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
     } catch {
       setCopied(false);
       setCopyError(t('outboundDiagnostics.copyReportFailed', {

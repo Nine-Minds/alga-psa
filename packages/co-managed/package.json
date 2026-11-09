@@ -66,6 +66,10 @@
       "types": "./src/sharedWorkRedaction.ts",
       "import": "./src/sharedWorkRedaction.ts"
     },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
+    },
     "./policy": {
       "types": "./src/policy.ts",
       "import": "./src/policy.ts"

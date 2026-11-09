@@ -397,6 +397,7 @@
       "helpText": "Lassen Sie das Feld leer, wenn kein Ablaufdatum vorliegt oder der Standardablaufzeitraum verwendet werden soll"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "Der ausgewählte Vertrag gehört nicht zum Kunden dieser Rechnung.",
       "selectClient": "Bitte wählen Sie einen Kunden aus",
       "invoiceNumberUnique": "Diese Rechnungsnummer wird bereits verwendet.",
       "noTaxRateConfigured": "Für die Region ist kein Steuersatz konfiguriert.",
@@ -421,6 +422,7 @@
       "salesOrderNotInvoiceable": "Dieser Kundenauftrag kann nicht mehr abgerechnet werden.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dieses Rechnungsfenster enthält abrechenbare Positionen, aber für {{services}} wurde im Leistungszeitraum {{periodStart}} bis {{periodEnd}} kein Verbrauch gemeldet. Erfasse zuerst den Verbrauch oder bestätige ausdrücklich die Erstellung ohne ihn – die nicht gemeldeten Dienste bleiben später abrechenbar.",
       "USAGE_PERIOD_TOTAL_STALE": "Die Vorschau ist veraltet: {{details}}. Führe die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstelle die Rechnung dann erneut.",
+      "RECURRING_PRICING_STALE": "Die Vorschau ist veraltet: {{details}}. Führen Sie die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstellen Sie die Rechnung dann erneut.",
       "USAGE_CALCULATION_ERROR": "Der Verbrauch für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}} ist erfasst, konnte aber nicht bepreist werden. Korrigiere die Dienstpreise (Katalogpreis in der Vertragswährung, ein individueller Satz oder Preisstaffeln) und versuche es erneut. Erfasse keinen Ersatzverbrauch.",
       "RECURRING_PERIODS_NOT_MATERIALIZED": "Für dieses Abrechnungsfenster wurden noch keine Leistungszeiträume erzeugt. Nutzen Sie auf der Seite „Automatische Rechnungen“ die Aktion „Alle beheben“ oder erzeugen Sie die Zeiträume unter Abrechnung > Leistungszeiträume neu und starten Sie die Vorschau erneut.",
       "NO_ACTIVE_CONTRACT_LINES": "Für diesen Abrechnungszeitraum ist keine Vertragsposition aktiv. Prüfen Sie Start- und Enddatum des Vertrags und ob der Vertrag aktiv ist.",
@@ -430,9 +432,7 @@
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
       "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Der ausgewählte Vertrag gehört nicht zum Kunden dieser Rechnung.",
       "SERVICE_REQUIRED": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu.",
-      "RECURRING_PRICING_STALE": "Die Vorschau ist veraltet: {{details}}. Führen Sie die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstellen Sie die Rechnung dann erneut.",
       "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut.",
       "sessionExpired": "Ihre Sitzung ist abgelaufen. Ihre Änderungen sind noch hier, wurden aber nicht gespeichert. Melden Sie sich in einem neuen Tab wieder an und versuchen Sie anschließend erneut zu speichern.",
       "saveRefreshFailed": "Ihre Änderungen wurden gespeichert, aber die Rechnungsseite konnte nicht vollständig aktualisiert werden. Laden Sie die Seite neu, um die gespeicherte Rechnung anzuzeigen."
@@ -458,6 +458,9 @@
       "increase": "Erhöhung",
       "decrease": "Verringerung (Gutschrift)",
       "units": "Einheiten",
+      "source": "Abgerechnete Leistung auswählen",
+      "effectiveDate": "Wirksam ab",
+      "sourceRate": "Satz {{rate}}",
       "unitPrice": "Einzelpreis",
       "coveredDays": "Abgedeckte Tage",
       "fullPeriodDays": "Tage des Gesamtzeitraums",
@@ -468,14 +471,11 @@
       "addCharge": "Gebühr hinzufügen",
       "creditDescription": "Gutschrift: {{proration}}",
       "errors": {
+        "source": "Wählen Sie eine abgerechnete Leistung mit eindeutigem Leistungszeitraum.",
         "units": "Die Einheiten müssen größer als null sein.",
         "unitPrice": "Der Einzelpreis muss eine Zahl sein.",
-        "invalid": "Geben Sie einen gültigen Teilzeitraum ein.",
-        "source": "Wählen Sie eine abgerechnete Leistung mit eindeutigem Leistungszeitraum."
+        "invalid": "Geben Sie einen gültigen Teilzeitraum ein."
       },
-      "source": "Abgerechnete Leistung auswählen",
-      "effectiveDate": "Wirksam ab",
-      "sourceRate": "Satz {{rate}}",
       "permanentChangeNudge": "Ist dies eine dauerhafte Änderung? Erfassen Sie sie stattdessen im Vertrag.",
       "overlapConfirm": "Eine automatische Vertragsänderungsanpassung überschneidet diesen Zeitraum bereits. Diese separate manuelle Anpassung trotzdem hinzufügen?",
       "invoiceDescription": {
@@ -1484,14 +1484,244 @@
       "barcodeCode128": "Code 128",
       "barcodeValue": "Wert",
       "barcodeHintWorkTag": "Text oder ein Feld wie {{example}} (der Link zum Datensatz). Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt.",
-      "barcodeHint": "Der zu codierende Text. Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt."
+      "barcodeHint": "Der zu codierende Text. Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt.",
+      "binding": {
+        "noFieldSelected": "Kein Feld ausgewählt",
+        "customHint": "Geben Sie einen beliebigen Bindungspfad ein, wenn das benötigte Feld nicht aufgeführt ist.",
+        "useFieldPicker": "Feldauswahl verwenden",
+        "current": "Aktuell",
+        "unbound": "Nicht gebunden",
+        "searchFields": "Felder suchen…",
+        "noMatches": "Keine passenden Felder.",
+        "useCustomPath": "Benutzerdefinierten Pfad verwenden"
+      },
+      "customCssPreserved": "Benutzerdefinierter CSS-Wert bleibt bis zur Bearbeitung erhalten:",
+      "pickField": "{{field}} auswählen"
     },
     "shell": {
       "selectedLabel": "Ausgewählt:",
       "selectedNone": "Keine",
       "clickBlockHint": "Block auf Leinwand klicken",
       "orUse": "oder",
-      "plusInLeftPanelHint": "+ im linken Bereich"
+      "plusInLeftPanelHint": "+ im linken Bereich",
+      "sectionAlreadyFitted": "Abschnitt ist bereits angepasst.",
+      "unbound": "Nicht gebunden",
+      "layoutMode": {
+        "flex": {
+          "label": "Stapel",
+          "tooltip": "Stapel (Flex)"
+        },
+        "grid": {
+          "label": "Raster",
+          "tooltip": "Rasterlayout"
+        }
+      },
+      "direction": {
+        "column": {
+          "label": "Vertikal",
+          "tooltip": "Vertikale Anordnung"
+        },
+        "row": {
+          "label": "Horizontal",
+          "tooltip": "Horizontale Anordnung"
+        }
+      },
+      "alignItems": {
+        "stretch": {
+          "label": "Strecken",
+          "tooltip": "Untergeordnete Elemente strecken"
+        },
+        "start": {
+          "label": "Anfang",
+          "tooltip": "Am Anfang ausrichten"
+        },
+        "center": {
+          "label": "Mitte",
+          "tooltip": "Mittig ausrichten"
+        },
+        "end": {
+          "label": "Ende",
+          "tooltip": "Am Ende ausrichten"
+        }
+      },
+      "justify": {
+        "start": {
+          "label": "Anfang",
+          "tooltip": "Am Anfang gruppieren"
+        },
+        "center": {
+          "label": "Mitte",
+          "tooltip": "In der Mitte gruppieren"
+        },
+        "end": {
+          "label": "Ende",
+          "tooltip": "Am Ende gruppieren"
+        },
+        "between": {
+          "label": "Dazwischen",
+          "tooltip": "Mit Abständen zwischen den Elementen verteilen"
+        },
+        "around": {
+          "label": "Rundum",
+          "tooltip": "Mit Abständen um die Elemente verteilen"
+        },
+        "evenly": {
+          "label": "Gleichmäßig",
+          "tooltip": "Mit gleichen Abständen verteilen"
+        }
+      },
+      "mediaHorizontal": {
+        "left": {
+          "label": "Links",
+          "tooltip": "Bild links ausrichten"
+        },
+        "center": {
+          "label": "Mitte",
+          "tooltip": "Bild horizontal zentrieren"
+        },
+        "right": {
+          "label": "Rechts",
+          "tooltip": "Bild rechts ausrichten"
+        }
+      },
+      "mediaVertical": {
+        "top": {
+          "label": "Oben",
+          "tooltip": "Bild oben ausrichten"
+        },
+        "center": {
+          "label": "Mitte",
+          "tooltip": "Bild vertikal zentrieren"
+        },
+        "bottom": {
+          "label": "Unten",
+          "tooltip": "Bild unten ausrichten"
+        }
+      },
+      "objectFit": {
+        "contain": {
+          "label": "Einpassen",
+          "tooltip": "So skalieren, dass das Bild vollständig in den Rahmen passt"
+        },
+        "cover": {
+          "label": "Abdecken",
+          "tooltip": "Den Rahmen ausfüllen und überstehende Bildbereiche abschneiden"
+        },
+        "fill": {
+          "label": "Füllen",
+          "tooltip": "Das Bild strecken, um den Rahmen auszufüllen"
+        },
+        "none": {
+          "label": "Keine",
+          "tooltip": "Die ursprüngliche Bildgröße beibehalten"
+        },
+        "scaleDown": {
+          "label": "Verkleinern",
+          "tooltip": "Die ursprüngliche Größe verwenden und nur bei Bedarf verkleinern"
+        }
+      },
+      "widthMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Der Container entscheidet (wird in einem vertikalen Stapel gestreckt)"
+        },
+        "fill": {
+          "label": "Füllen",
+          "tooltip": "Die volle Breite des Containers ausfüllen"
+        },
+        "fit": {
+          "label": "Anpassen",
+          "tooltip": "Auf die Größe des Inhalts verkleinern"
+        },
+        "fixed": {
+          "label": "Fest",
+          "tooltip": "Die unten eingegebene exakte Breite verwenden"
+        }
+      },
+      "heightMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Mit dem Inhalt mitwachsen"
+        },
+        "fixed": {
+          "label": "Fest",
+          "tooltip": "Die unten eingegebene exakte Höhe verwenden"
+        }
+      },
+      "flexPreset": {
+        "natural": {
+          "label": "Natürlich",
+          "description": "Die Inhaltsgröße des Elements verwenden, bei Platzmangel jedoch Verkleinerung zulassen."
+        },
+        "fill": {
+          "label": "Füllen",
+          "description": "Ausgehend von der bevorzugten Elementgröße den verbleibenden Platz ausfüllen."
+        },
+        "share": {
+          "label": "Aufteilen",
+          "description": "Den verfügbaren Platz gleichmäßig mit anderen Elementen in diesem Modus teilen."
+        },
+        "fixed": {
+          "label": "Fest",
+          "description": "Die Elementgröße beibehalten und eine Verkleinerung durch Flexbox verhindern."
+        }
+      },
+      "groups": {
+        "layout": "Layout",
+        "direction": "Richtung",
+        "alignItems": "Elemente ausrichten",
+        "justifyContent": "Inhalt verteilen",
+        "objectFit": "Bildanpassung",
+        "horizontalAlign": "Horizontale Ausrichtung",
+        "verticalAlign": "Vertikale Ausrichtung",
+        "columns": "Spalten"
+      },
+      "columnsAria": "Spalten: {{preset}}",
+      "axis": {
+        "width": "Breite",
+        "height": "Höhe",
+        "widthLower": "Breite",
+        "heightLower": "Höhe"
+      },
+      "flexItemHint": "In diesem Stapel (Richtung: {{direction}}) steuern diese Einstellungen, wie sich das Element die {{axis}} mit benachbarten Elementen teilt.",
+      "flexBehavior": "Verhalten für {{axis}}",
+      "flexBehaviorAria": "Verhalten für {{axis}}: {{preset}}",
+      "flexCustomNotice": "Dieses Element hat benutzerdefinierte Flex-Werte. Wählen Sie zur Vereinfachung eine Voreinstellung oder passen Sie unten die erweiterten Werte an.",
+      "advancedFlexValues": "Erweiterte Flex-Werte",
+      "flexGrow": "Zusätzlichen Platz nutzen",
+      "flexShrink": "Verkleinerung zulassen",
+      "flexBasis": "Bevorzugte {{axis}}",
+      "displayFormat": {
+        "singleLine": {
+          "label": "Einzeilig",
+          "description": "Die Adresse in einer Zeile zusammenfassen."
+        },
+        "multiline": {
+          "label": "Mehrzeilig",
+          "description": "Die Adresse auf mehrere Zeilen aufteilen."
+        },
+        "raw": {
+          "label": "Unverändert",
+          "description": "Den gespeicherten Wert unverändert verwenden."
+        },
+        "onlyDataField": "Dies gilt nur für Datenfeld-Knoten.",
+        "aria": "Anzeigeformat: {{format}}"
+      },
+      "attachments": {
+        "defaultLabel": "Anhang",
+        "title": "Titel",
+        "items": "Einträge",
+        "add": "Hinzufügen",
+        "empty": "Keine Anhänge definiert."
+      },
+      "media": {
+        "altText": "Alternativtext",
+        "aspectRatio": "Seitenverhältnis",
+        "fitParentSection": "Übergeordneten Abschnitt an Medien anpassen",
+        "reflowsPrefix": "Passt den Inhalt von",
+        "reflowsSuffix": "neu an, um überflüssigen Leerraum zu entfernen.",
+        "notInSection": "Dieser Medienblock befindet sich nicht in einem Abschnitt."
+      }
     },
     "pageSetup": {
       "title": "Seiteneinrichtung",
@@ -2106,7 +2336,23 @@
       "cannotInsert": "{{block}} kann hier nicht hinzugefügt werden.",
       "insertedOnPage": "{{block}} zur Seite hinzugefügt.",
       "insertedInto": "{{block}} zu {{parent}} hinzugefügt.",
-      "fieldRebound": "{{name}} zeigt jetzt {{path}}."
+      "fieldRebound": "{{name}} zeigt jetzt {{path}}.",
+      "dropIncompatibleComponent": "Das Ablageziel ist mit dieser Komponente nicht kompatibel.",
+      "dropIncompatible": "Das Ablageziel ist nicht kompatibel.",
+      "dropIncompatiblePreset": "Das Ablageziel ist mit dieser Vorlage nicht kompatibel.",
+      "dropOnCanvas": "Legen Sie die Komponente auf der Leinwand ab, um sie hinzuzufügen.",
+      "addComponentFailed": "Diese Komponente kann im aktuellen Kontext nicht hinzugefügt werden.",
+      "presetUnavailable": "Die Definition der Vorlage ist nicht verfügbar.",
+      "presetPlacementUnresolved": "Es konnte nicht ermittelt werden, wo diese Vorlage platziert werden soll.",
+      "addPresetFailed": "Diese Vorlage kann im aktuellen Kontext nicht hinzugefügt werden.",
+      "inserted": "{{value}} eingefügt.",
+      "insertedWithDiagnostic": "{{value}} eingefügt. {{diagnostic}}",
+      "selectTextBlock": "Wählen Sie einen Textblock aus und setzen Sie dann den Fokus auf ein Textfeld, um Variablen einzufügen.",
+      "focusTextField": "Setzen Sie den Fokus auf ein Textfeld im Inspektor, um diese Variable einzufügen.",
+      "selectSectionToFit": "Wählen Sie einen Abschnitt zum Anpassen aus.",
+      "sectionNoChildren": "Der Abschnitt enthält keine untergeordneten Inhalte zum Anpassen.",
+      "sectionFitted": "Abschnitt an Inhalte angepasst.",
+      "sectionFittedFixed": "Abschnitt auf feste Größe umgestellt und an Inhalte angepasst."
     },
     "translation": {
       "translatedAs": "Standardbezeichnung „{{name}}“, für jeden Empfänger übersetzt",
