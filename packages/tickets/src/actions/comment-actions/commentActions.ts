@@ -641,10 +641,21 @@ export const createComment = withAuth(async (
  * that arrived by email). A co-managed collaborator's comment changes only
  * through the collaboration commands.
  */
-async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment, tenant: string): Promise<void> {
-  // Every principal (MSP or client) may only reach comments on tickets it can still see: authorship alone
-  // (e.g. a row written before the write path was guarded) does not grant access.
-  // LEVERAGE: pattern ticket-comment-record-authz — same guard as createComment / toggleCommentReaction.
+async function assertMayChangeComment(
+  trx: Knex.Transaction,
+  user: { user_id: string; user_type: string },
+  existing: IComment,
+  tenant: string,
+  operation: 'update' | 'delete',
+): Promise<void> {
+  if (!(await hasPermission(user as any, 'ticket', operation, trx))) {
+    throw new Error(`Permission denied: Cannot ${operation} comment`);
+  }
+  // Authorship alone does not preserve access after ticket permissions or
+  // record visibility change. The record kernel currently models mutating
+  // access as `update`; coarse RBAC above still distinguishes deletion.
+  // Every principal is denied indistinguishably when the ticket is no longer
+  // visible, even if the comment author still matches.
   if (existing.ticket_id) {
     await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: 'update', conceal: 'all' });
   }
@@ -652,6 +663,31 @@ async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: st
   if (existing.user_id === user.user_id) return;
   if (existing.user_id == null && isMspPrincipalUserType(user.user_type) && await hasPermission(user as any, 'ticket', 'update', trx)) return;
   throw new Error('You can only edit your own comments');
+}
+
+/**
+ * Scheduled comments may only be changed by a principal who can currently
+ * update the owning ticket. Internal user type and authorship do not grant
+ * schedule-management authority on their own.
+ */
+async function assertMayManageScheduledComment(
+  trx: Knex.Transaction,
+  user: { user_id: string; user_type: string },
+  existing: IComment,
+  tenant: string,
+): Promise<void> {
+  if (!(await hasPermission(user as any, 'ticket', 'update', trx))) {
+    throw new Error('Permission denied: Cannot manage scheduled comment');
+  }
+  if (existing.ticket_id) {
+    await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user: user as any,
+      ticketId: existing.ticket_id,
+      action: 'update',
+    });
+  }
 }
 
 export const updateComment = withAuth(async (user, { tenant }, id: string, requested: Partial<IComment>) => {
@@ -694,7 +730,7 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
         .first();
       const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
 
-      await assertMayChangeComment(trx, user, existingComment, commentTenant);
+      await assertMayChangeComment(trx, user, existingComment, commentTenant, 'update');
       // Only the text and its two flags are editable; authorship, timestamps,
       // publication and deletion are history and have their own commands.
       const comment: Partial<IComment> = {};
@@ -871,7 +907,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       if (existingComment?.is_system_generated) {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
-      if (existingComment) await assertMayChangeComment(trx, user, existingComment, tenant);
+      if (existingComment) await assertMayChangeComment(trx, user, existingComment, tenant, 'delete');
 
       // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
       await tenantScopedTable(trx, 'comment_reactions', tenant)
@@ -939,7 +975,7 @@ export const rescheduleScheduledComment = withAuth(async (user, { tenant }, id: 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const existing = await Comment.get(trx, tenant, id);
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be rescheduled');
-    if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only reschedule your own comments');
+    await assertMayManageScheduledComment(trx, user, existing, tenant);
     if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
     const scheduled = await scheduleBackgroundJobAt(
       SCHEDULED_COMMENT_JOB, { tenantId: tenant, ticketId: existing.ticket_id!, commentId: id }, at,
@@ -963,7 +999,7 @@ export const cancelScheduledComment = withAuth(async (user, { tenant }, id: stri
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const existing = await Comment.get(trx, tenant, id);
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be canceled');
-    if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only cancel your own comments');
+    await assertMayManageScheduledComment(trx, user, existing, tenant);
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
       publish_state: 'canceled', deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
     });

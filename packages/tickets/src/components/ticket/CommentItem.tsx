@@ -206,6 +206,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const [isScheduleMutating, setIsScheduleMutating] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [reschedulePublishAt, setReschedulePublishAt] = useState<Date | undefined>(undefined);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
@@ -391,8 +392,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const handleCancelSchedule = async () => {
     if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
+    setScheduleError(null);
     setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
+    try {
+      await cancelScheduledComment(commentId);
+      runTicketRefresh(dataSource, 'reload');
+    } catch {
+      setScheduleError(t('conversation.scheduledCommentChangeFailed', 'Unable to change this scheduled comment. Refresh and try again.'));
+    } finally {
+      setIsScheduleMutating(false);
+    }
   };
 
   const editorContent = useMemo(() => {
@@ -810,12 +819,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   <>
                     {conversation.publish_state === 'scheduled' && (
                       <>
-                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
+                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setScheduleError(null); setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
                           {t('conversation.reschedule', 'Reschedule')}
                         </Button>
                         <Button id={`cancel-scheduled-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => void handleCancelSchedule()} aria-label={t('conversation.cancelScheduledComment', 'Cancel scheduled comment')}>
                           {t('conversation.cancel', 'Cancel')}
                         </Button>
+                        {scheduleError && <p role="alert" className="text-sm text-[rgb(var(--color-accent-500))]">{scheduleError}</p>}
                       </>
                     )}
                     <Button

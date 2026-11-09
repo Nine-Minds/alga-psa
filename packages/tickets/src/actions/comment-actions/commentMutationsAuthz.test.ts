@@ -160,6 +160,51 @@ describe('comment mutations: client principals need record access to the owning 
     expect(commentUpdate).toHaveBeenCalledTimes(1);
   });
 
+  it('updateComment: ignores client attempts to change authorship and publication metadata', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    await updateComment('c-1', {
+      note: 'edited',
+      user_id: 'another-user',
+      author_type: 'internal',
+      publish_state: 'published',
+      scheduled_publish_at: '2030-01-01T00:00:00.000Z',
+      deleted_at: '2030-01-01T00:00:00.000Z',
+    } as any);
+    expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(commentUpdate.mock.calls[0][3]).toEqual(expect.objectContaining({ note: 'edited', markdown_content: 'md' }));
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('user_id');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('author_type');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('publish_state');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('scheduled_publish_at');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('deleted_at');
+  });
+
+  it('updateComment: rejects a client attempting to make their comment internal', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    await expect(updateComment('c-1', { is_internal: true })).resolves.toMatchObject({ actionError: 'Only MSP users can set comments as internal' });
+    expect(commentUpdate).not.toHaveBeenCalled();
+  });
+
+  it('updateComment: authorship does not bypass ticket:update', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    hasPermissionMock.mockResolvedValue(false);
+    await expect(updateComment('c-1', { note: 'edited' })).resolves.toMatchObject({ permissionError: expect.any(String) });
+    expect(commentUpdate).not.toHaveBeenCalled();
+  });
+
+  it('deleteComment: authorship does not bypass ticket:delete', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    hasPermissionMock.mockImplementation(async (_user: any, _resource: string, action: string) => action !== 'delete');
+    await expect(deleteComment('c-1')).resolves.toMatchObject({ permissionError: expect.any(String) });
+    expect(hasPermissionMock).toHaveBeenCalledWith(client, 'ticket', 'delete', expect.anything());
+    expect(commentDelete).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
   it('deleteComment: rejects a client deleting their own comment on a ticket they cannot see', async () => {
     const result: any = await deleteComment('c-1').catch((e) => e);
     expect(JSON.stringify(result?.message ?? result)).toMatch(/denied|permission/i);
