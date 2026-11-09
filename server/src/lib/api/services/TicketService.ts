@@ -39,6 +39,7 @@ import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
+import type { IUserWithRoles as TicketServiceUser } from '@alga-psa/types';
 import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
@@ -468,7 +469,7 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   private ticketResourceAuthorization(context: ServiceContext, trx: Knex.Transaction) {
-    const user = context.user as IUserWithRoles | undefined;
+    const user = context.user as TicketServiceUser | undefined;
     if (!user || user.user_id !== context.userId || !user.user_type) {
       throw new ForbiddenError('Ticket resource operations require a verified user authorization context');
     }
