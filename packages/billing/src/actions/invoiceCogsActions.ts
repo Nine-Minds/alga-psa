@@ -154,7 +154,7 @@ export async function getInvoiceLineCogsForTenant(
          AND nm.material_match_seq = il.material_match_seq
         LEFT JOIN stock_movements sm
           ON sm.tenant = il.tenant
-         AND sm.movement_type = 'consume'
+         AND sm.movement_type IN ('consume', 'return_restock')
          AND sm.source_doc_type = nm.source_doc_type
          AND sm.source_doc_id = nm.source_doc_id
         WHERE il.so_line_id IS NULL
