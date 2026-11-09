@@ -8,6 +8,7 @@ import type {
   IService,
   IServicePrice,
   IStockUnit,
+  IUserWithRoles,
   ProjectMaterialBillingDestination,
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -23,6 +24,7 @@ import {
 } from '@alga-psa/inventory/lib';
 import { InsufficientStockError, stockConflictResultFrom } from '@alga-psa/inventory/lib/consume';
 import type { StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
+import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import {
   actionError,
   permissionError,
@@ -31,6 +33,17 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 type ProjectMaterialActionError = ActionMessageError | ActionPermissionError;
+
+async function resolveProjectIdForMaterial(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  projectMaterialId: string,
+): Promise<string | null> {
+  const row = await conn('project_materials')
+    .where({ tenant, project_material_id: projectMaterialId })
+    .first('project_id');
+  return row?.project_id ?? null;
+}
 
 function projectMaterialActionErrorFrom(error: unknown): ProjectMaterialActionError | null {
   if (error instanceof Error) {
@@ -93,31 +106,38 @@ export const getProjectMaterialBillingOptions = withAuth(async (
   { tenant },
   projectId: string,
 ): Promise<{ project_currency: string | null; entries: ProjectMaterialBillingOption[] } | ProjectMaterialActionError> => {
-  if (!await hasPermission(user, 'project', 'read')) {
-    return permissionError('Permission denied: project read required', 'projects:errors.permissions.materialRead');
+  try {
+    if (!await hasPermission(user, 'project', 'read')) {
+      return permissionError('Permission denied: project read required', 'projects:errors.permissions.materialRead');
+    }
+    const { knex: db } = await createTenantKnex();
+    return await withTransaction(db, async (trx) => {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+      const config = await trx('project_billing_configs')
+        .where({ tenant, project_id: projectId })
+        .first('config_id', 'currency');
+      if (!config) return { project_currency: null, entries: [] };
+      const entries = await trx('project_billing_schedule_entries as entry')
+        .leftJoin('project_phases as phase', function joinPhase() {
+          this.on('phase.tenant', '=', 'entry.tenant')
+            .andOn('phase.phase_id', '=', 'entry.phase_id');
+        })
+        .where({ 'entry.tenant': tenant, 'entry.config_id': config.config_id })
+        .whereNot('entry.status', 'canceled')
+        .select(
+          'entry.schedule_entry_id',
+          'entry.description',
+          'entry.status',
+          'phase.phase_name',
+        )
+        .orderBy('entry.display_order', 'asc');
+      return { project_currency: config.currency ?? null, entries };
+    });
+  } catch (error) {
+    const expected = projectMaterialActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx) => {
-    const config = await trx('project_billing_configs')
-      .where({ tenant, project_id: projectId })
-      .first('config_id', 'currency');
-    if (!config) return { project_currency: null, entries: [] };
-    const entries = await trx('project_billing_schedule_entries as entry')
-      .leftJoin('project_phases as phase', function joinPhase() {
-        this.on('phase.tenant', '=', 'entry.tenant')
-          .andOn('phase.phase_id', '=', 'entry.phase_id');
-      })
-      .where({ 'entry.tenant': tenant, 'entry.config_id': config.config_id })
-      .whereNot('entry.status', 'canceled')
-      .select(
-        'entry.schedule_entry_id',
-        'entry.description',
-        'entry.status',
-        'phase.phase_name',
-      )
-      .orderBy('entry.display_order', 'asc');
-    return { project_currency: config.currency ?? null, entries };
-  });
 });
 
 export const searchServiceCatalogForPicker = withAuth(async (
@@ -153,7 +173,10 @@ export const listProjectMaterials = withAuth(async (
       return permissionError('Permission denied: project read required', 'projects:errors.permissions.materialRead');
     }
     const { knex: db } = await createTenantKnex();
-    return (await listMaterials(db, tenant, 'project', projectId)) as IProjectMaterial[];
+    return await withTransaction(db, async (trx) => {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+      return await listMaterials(trx, tenant, 'project', projectId) as IProjectMaterial[];
+    });
   } catch (error) {
     const expected = projectMaterialActionErrorFrom(error);
     if (expected) {
@@ -186,12 +209,15 @@ export const addProjectMaterial = withAuth(async (
       return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
     }
     const { knex: db } = await createTenantKnex();
-    return (await addMaterial(
-      db,
-      tenant,
-      { ...input, parent_type: 'project', parent_id: input.project_id },
-      (user as any)?.user_id ?? null,
-    )) as IProjectMaterial;
+    return await withTransaction(db, async (trx) => {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, input.project_id);
+      return await addMaterial(
+        trx,
+        tenant,
+        { ...input, parent_type: 'project', parent_id: input.project_id },
+        (user as any)?.user_id ?? null,
+      ) as IProjectMaterial;
+    });
   } catch (error) {
     // Stock-level refusals travel as a structured, serializable result so the dialog can
     // show the refusal or the override prompt (thrown messages do not cross the boundary).
@@ -221,7 +247,14 @@ export const updateProjectMaterial = withAuth(async (
       return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
     }
     const { knex: db } = await createTenantKnex();
-    return await updateProjectMaterialBilling(db, tenant, projectMaterialId, input) as IProjectMaterial;
+    return await withTransaction(db, async (trx) => {
+      const projectId = await resolveProjectIdForMaterial(trx, tenant, projectMaterialId);
+      if (!projectId) {
+        return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
+      }
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+      return await updateProjectMaterialBilling(trx, tenant, projectMaterialId, input) as IProjectMaterial;
+    });
   } catch (error) {
     const expected = projectMaterialActionErrorFrom(error);
     if (expected) return expected;
@@ -252,7 +285,14 @@ export const deleteProjectMaterial = withAuth(async (
       return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
     }
     const { knex: db } = await createTenantKnex();
-    await deleteMaterial(db, tenant, 'project', projectMaterialId, (user as any)?.user_id ?? null);
+    return await withTransaction(db, async (trx) => {
+      const projectId = await resolveProjectIdForMaterial(trx, tenant, projectMaterialId);
+      if (!projectId) {
+        return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
+      }
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+      await deleteMaterial(trx, tenant, 'project', projectMaterialId, (user as any)?.user_id ?? null);
+    });
   } catch (error) {
     const expected = projectMaterialActionErrorFrom(error);
     if (expected) {
