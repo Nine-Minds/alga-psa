@@ -6,6 +6,9 @@ import { createDateTriggerScanHandler } from '../../../../../packages/jobs/src/l
 import { ticketDueDateSource } from '../../../../../packages/jobs/src/lib/dateTriggers/sources/ticketDueDate';
 import { launchDateTriggeredWorkflows } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
 import { dateTriggerPayloadSchemas } from '@alga-psa/event-schemas/schemas';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
+import { createTenant, createClient, createUser } from '@main-test-utils/testDataFactory';
+import { generateRecurringTicketsForTenant } from '../../../../../packages/tickets/src/lib/recurring/generateRecurringTicketsForTenant';
 import { loadTicketRecurringProvenance } from '../../../../../shared/lib/tickets/ticketRecurringProvenance';
 
 /**
@@ -192,4 +195,60 @@ describe('ticket.due_date date trigger integration', () => {
       expect(map.has(other)).toBe(false);
     });
   });
+
+  // The whole chain with no hand-built rows: the real generator creates the ticket and occurrence (lead_days 60,
+  // so the ticket exists 60 days ahead), TICKET_CREATED carries the schedule ids, and a -60 trigger then selects it.
+  it('a ticket created by the real recurring generator is picked up by a -60 trigger with its definition id', async () => {
+    const tenant = await createTenant(db, `DueDate gen ${uuidv4().slice(0, 6)}`);
+    const clientId = await createClient(db, tenant, 'Acme Corp');
+    const userId = await createUser(db, tenant);
+    const scoped = tenantDb(db, tenant);
+    const boardId = uuidv4();
+    await scoped.table('boards').insert({ tenant, board_id: boardId, board_name: 'Renewals', is_default: true });
+    await scoped.table('statuses').insert({ tenant, status_id: uuidv4(), board_id: boardId, name: 'New', status_type: 'ticket', item_type: 'ticket', order_number: 1, is_default: true, is_closed: false });
+    const priorityId = uuidv4();
+    await scoped.table('priorities').insert({ tenant, priority_id: priorityId, priority_name: 'Medium', item_type: 'ticket', order_number: 1, color: '#ccc', created_by: userId });
+    const templateId = uuidv4();
+    await scoped.table('ticket_templates').insert({ tenant, template_id: templateId, name: 'Renewal', title: 'Renewal {{year}}', board_id: boardId, priority_id: priorityId, tags: JSON.stringify([]), offer_for_manual_use: false });
+    const definitionId = uuidv4();
+    await scoped.table('recurring_ticket_definitions').insert({
+      tenant, definition_id: definitionId, name: 'Annual renewal', is_active: true, ticket_template_id: templateId, additional_agent_ids: JSON.stringify([]),
+      recurrence: JSON.stringify({ frequency: 'yearly', month: 1, day: 1, end: { type: 'never' } }),
+      start_date: '2026-01-01', create_time: '08:00', due_time: '17:00', lead_days: 60, non_business_day_policy: 'keep', open_previous_policy: 'always_create', notify_client_on_create: false,
+    });
+    const definitionClientId = uuidv4();
+    await scoped.table('recurring_ticket_definition_clients').insert({
+      tenant, definition_client_id: definitionClientId, definition_id: definitionId, client_id: clientId, is_active: true, overrides: JSON.stringify({}),
+      evaluated_through: new Date('2026-11-01T12:00:00Z'),
+    });
+
+    mocks.publish.mockClear();
+    // Due 2027-01-01 17:00 New York; created 60 days earlier at 08:00 New York (2026-11-02).
+    const summary = await runWithTenant(tenant, () => generateRecurringTicketsForTenant(db, tenant, { timeZone: 'America/New_York', locale: 'en', now: new Date('2026-11-02T14:00:00Z') }));
+    expect(summary).toMatchObject({ created: 1, failed: 0 });
+
+    const occurrence = await scoped.table('recurring_ticket_occurrences').where({ definition_client_id: definitionClientId }).first('*', db.raw('occurrence_date::text as occurrence_date_text'));
+    expect(occurrence.status).toBe('created');
+    const createdEvents = mocks.publish.mock.calls.map((c: any[]) => c[0]).filter((e: any) => e?.eventType === 'TICKET_CREATED');
+    expect(createdEvents).toHaveLength(1);
+    expect(createdEvents[0].payload).toMatchObject({
+      ticketId: occurrence.ticket_id, ticketOrigin: 'recurring', dueDate: new Date(occurrence.due_at).toISOString(),
+      recurrence: { definitionId, occurrenceId: occurrence.occurrence_id, occurrenceDate: occurrence.occurrence_date_text },
+    });
+
+    const workflowId = uuidv4();
+    const trigger = { type: 'date', source: 'ticket.due_date', offsetDays: -60, localTime: '00:00', timezone: 'UTC' };
+    const definition = { trigger, payloadSchemaRef: REF, steps: [] };
+    await db('workflow_definitions').insert({ workflow_id: workflowId, tenant, name: `Due date gen ${workflowId.slice(0, 4)}`, payload_schema_ref: REF, trigger: JSON.stringify(trigger), draft_definition: JSON.stringify(definition), draft_version: 1, status: 'published' });
+    await db('workflow_definition_versions').insert({ workflow_id: workflowId, tenant, version: 1, definition_json: JSON.stringify(definition), published_at: '2026-01-01' });
+    const handler = createDateTriggerScanHandler((p) => launchDateTriggeredWorkflows(p), () => new Date('2026-11-02T12:00:00Z'), async () => 'UTC', async () => ({ knex: db }));
+    await handler({ tenantId: tenant });
+    const rows = await db('workflow_runs').where({ workflow_id: workflowId, tenant }).select('input_json');
+    expect(rows).toHaveLength(1);
+    expect(dateTriggerPayloadSchemas[REF].safeParse(rows[0].input_json).success).toBe(true);
+    expect(rows[0].input_json).toMatchObject({
+      ticketId: occurrence.ticket_id, ticketOrigin: 'recurring', offsetDays: -60,
+      recurrence: { definitionId, occurrenceId: occurrence.occurrence_id },
+    });
+  }, 120_000);
 });
