@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import {
   EXTERNAL_ENTITY_LINK_ENTITY_TYPES,
+  EXTERNAL_LINK_IDENTITY_RELATIONSHIPS,
   EXTERNAL_LINK_RELATIONSHIPS,
   type ExternalEntityLinkEntityType,
   type ExternalLinkRelationship,
@@ -349,7 +350,7 @@ export async function assertNoLinkConflict(
     return q;
   };
 
-  if (candidate.relationship === 'reference') {
+  if (!(EXTERNAL_LINK_IDENTITY_RELATIONSHIPS as readonly string[]).includes(candidate.relationship)) {
     const duplicate = await sameRecord()
       .where({ entity_id: candidate.entity_id, relationship: 'reference' })
       .first();
@@ -362,7 +363,7 @@ export async function assertNoLinkConflict(
     return;
   }
 
-  const duplicate = await sameRecord().whereIn('relationship', ['origin', 'mirror']).first();
+  const duplicate = await sameRecord().whereIn('relationship', [...EXTERNAL_LINK_IDENTITY_RELATIONSHIPS]).first();
   if (duplicate) {
     throw new ExternalLinkValidationError(
       'duplicate_external_link',

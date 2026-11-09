@@ -18,6 +18,14 @@ export const EXTERNAL_LINK_RELATIONSHIPS = ['origin', 'mirror', 'reference'] as 
 export type ExternalLinkRelationship =
   (typeof EXTERNAL_LINK_RELATIONSHIPS)[number];
 
+/**
+ * Identity relationships: the Alga entity *is* that external record, so one record maps to at most one
+ * entity per level across the tenant. Every other relationship (`reference`) is a citation, unique only
+ * per entity. The partial unique indexes in server/migrations/20261109120000_ticket_template_links.cjs
+ * express the same split; externalLinkUniquenessRule.contract.test.ts keeps the two in step.
+ */
+export const EXTERNAL_LINK_IDENTITY_RELATIONSHIPS = ['origin', 'mirror'] as const satisfies readonly ExternalLinkRelationship[];
+
 /** Built-in keys are lowercase `[a-z0-9_]+`; tenant systems are `custom:<slug>`. */
 export const BUILT_IN_EXTERNAL_SYSTEM_KEY_PATTERN = /^[a-z0-9_]+$/;
 export const CUSTOM_EXTERNAL_SYSTEM_KEY_PREFIX = 'custom:';

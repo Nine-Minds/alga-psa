@@ -57,6 +57,8 @@ const HUDU_URL = 'https://docs.example.hudu.com/a/runbook-123';
 
 let generate: typeof import('@alga-psa/tickets/lib/recurring/generateRecurringTicketsForTenant').generateRecurringTicketsForTenant;
 let templateActions: typeof import('@alga-psa/tickets/actions/ticketTemplateActions');
+let instantiate: typeof import('@alga-psa/tickets/lib/instantiateTicketTemplate').instantiateTicketTemplate;
+let persistLinks: typeof import('@alga-psa/shared/services/tickets/externalLinkPersistence').persistExternalLinksForCreate;
 
 interface Fixture {
   tenant: string;
@@ -126,6 +128,8 @@ describe('ticket template documentation links (integration)', () => {
     db = await createTestDbConnection();
     ({ generateRecurringTicketsForTenant: generate } = await import('@alga-psa/tickets/lib/recurring/generateRecurringTicketsForTenant'));
     templateActions = await import('@alga-psa/tickets/actions/ticketTemplateActions');
+    ({ instantiateTicketTemplate: instantiate } = await import('@alga-psa/tickets/lib/instantiateTicketTemplate'));
+    ({ persistExternalLinksForCreate: persistLinks } = await import('@alga-psa/shared/services/tickets/externalLinkPersistence'));
   }, 900_000);
 
   afterAll(async () => {
@@ -168,6 +172,55 @@ describe('ticket template documentation links (integration)', () => {
       await expect(scoped.table('external_entity_links').insert(link(b, 'mirror'))).rejects.toMatchObject({ code: '23505' });
     });
 
+    it('still rejects a second ticket claiming the same origin record with 23505', async () => {
+      const [a, b] = [await insertTicket(f.clientId), await insertTicket(f.clientTwoId)];
+      const scoped = tenantDb(db, f.tenant);
+      await scoped.table('external_entity_links').insert(link(a, 'origin'));
+      await expect(scoped.table('external_entity_links').insert(link(b, 'origin'))).rejects.toMatchObject({ code: '23505' });
+    });
+
+    // The application pre-check applies the same rule as the indexes and refuses with a structured error.
+    const appLink = (relationship: 'origin' | 'mirror' | 'reference') => [
+      { system: 'github', realm: 'acme/repo', external_id: 'issue-7', relationship },
+    ];
+    const persistOn = (ticketId: string, relationship: 'origin' | 'mirror' | 'reference') =>
+      db.transaction((trx) => persistLinks(trx, f.tenant, ticketId, appLink(relationship), { type: 'user', userId: f.userId }));
+
+    it.each(['origin', 'mirror'] as const)('refuses linking the same %s record to a second ticket (app path), writing nothing', async (relationship) => {
+      const [a, b] = [await insertTicket(f.clientId), await insertTicket(f.clientTwoId)];
+      await persistOn(a, relationship);
+      await expect(persistOn(b, relationship)).rejects.toMatchObject({ name: 'ExternalLinkValidationError', code: 'duplicate_external_link' });
+      expect(await linksOf(f, b)).toHaveLength(0);
+    });
+
+    it('lets a second ticket cite a record another ticket mirrors (app path)', async () => {
+      const [a, b] = [await insertTicket(f.clientId), await insertTicket(f.clientTwoId)];
+      await persistOn(a, 'mirror');
+      await persistOn(b, 'reference');
+      expect(await linksOf(f, b)).toHaveLength(1);
+    });
+
+    it('down restores the tenant-wide rule (deduping shared references); up splits it again', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const migration = require('../../../migrations/20261109120000_ticket_template_links.cjs');
+      const [a, b, c] = [await insertTicket(f.clientId), await insertTicket(f.clientTwoId), await insertTicket(f.clientId)];
+      const scoped = () => tenantDb(db, f.tenant).table('external_entity_links');
+      await scoped().insert(link(a, 'reference'));
+      await scoped().insert(link(b, 'reference'));
+      try {
+        await migration.down(db);
+        // The oldest citation survives; the tenant-wide index is back, so a third ticket cannot cite the record.
+        expect(await scoped().where({ system: 'hudu', external_id: '123' }).pluck('entity_id')).toHaveLength(1);
+        await expect(scoped().insert(link(c, 'reference'))).rejects.toMatchObject({ code: '23505' });
+        await expect(migration.down(db)).resolves.not.toThrow();
+      } finally {
+        await migration.up(db);
+      }
+      await scoped().insert(link(c, 'reference'));
+      expect(await scoped().where({ system: 'hudu', external_id: '123' })).toHaveLength(2);
+      await expect(migration.up(db)).resolves.not.toThrow();
+    });
+
     it('rejects the same reference twice on one ticket', async () => {
       const a = await insertTicket(f.clientId);
       const scoped = tenantDb(db, f.tenant);
@@ -201,6 +254,34 @@ describe('ticket template documentation links (integration)', () => {
     });
   });
 
+  describe('instantiate path (REST / MCP)', () => {
+    it('copies the template link onto each ticket instantiated from it, for two tickets in a row', async () => {
+      const templateId = await insertTemplateWithLink(f);
+      const ticketIds: string[] = [];
+      for (const clientId of [f.clientId, f.clientTwoId]) {
+        const { ticketId } = await runWithTenant(f.tenant, () =>
+          db.transaction((trx) =>
+            instantiate(trx, f.tenant, {
+              templateId,
+              client: { client_id: clientId },
+              overrides: [],
+              dispatch: { status_id: null, assigned_to: null, assigned_team_id: null, additional_agent_ids: [] },
+              actor: { type: 'user', userId: f.userId },
+              titleContext: { clientName: 'Client', contactName: null, dueDate: null, locale: 'en' },
+              origin: { ticket_origin: 'api', source: 'api' },
+            })
+          )
+        );
+        ticketIds.push(ticketId);
+      }
+      for (const ticketId of ticketIds) {
+        const links = await linksOf(f, ticketId);
+        expect(links).toHaveLength(1);
+        expect(links[0]).toMatchObject({ system: 'hudu', external_id: '123', url: HUDU_URL, title: 'Patching runbook', relationship: 'reference', created_by: f.userId });
+      }
+    });
+  });
+
   describe('recurring generation (done criterion)', () => {
     it('shows the Hudu link (URL and title) on every generated ticket, adds nothing on rerun, and never calls Hudu', async () => {
       const templateId = await insertTemplateWithLink(f);
@@ -209,12 +290,16 @@ describe('ticket template documentation links (integration)', () => {
       await sweep(f, '2026-02-01T14:00:00Z');
       await sweep(f, '2026-03-01T14:00:00Z');
 
+      // Every occurrence created its ticket: none rolled back on the shared reference.
+      const occurrences = await tenantDb(db, f.tenant).table('recurring_ticket_occurrences').where({ definition_id: definitionId });
+      expect(occurrences.map((o: any) => o.status)).toEqual(['created', 'created', 'created', 'created']);
+
       const tickets = await tenantDb(db, f.tenant).table('tickets').whereIn('client_id', [f.clientId, f.clientTwoId]).select('ticket_id');
       expect(tickets).toHaveLength(4);
       for (const { ticket_id } of tickets) {
         const links = await linksOf(f, ticket_id);
         expect(links).toHaveLength(1);
-        expect(links[0]).toMatchObject({ system: 'hudu', external_id: '123', url: HUDU_URL, title: 'Patching runbook', relationship: 'reference', portal_visible: false });
+        expect(links[0]).toMatchObject({ system: 'hudu', external_id: '123', url: HUDU_URL, title: 'Patching runbook', relationship: 'reference', portal_visible: false, created_by: null });
       }
 
       // The rerun reprocesses nothing: no new tickets and no new links.
