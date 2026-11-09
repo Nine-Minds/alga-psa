@@ -4528,5 +4528,27 @@
       "title": "Provedores de email e identidade",
       "description": "Registre seu próprio aplicativo do Google ou da Microsoft para emails recebidos e login da equipe. Essas credenciais pertencem ao seu espaço de trabalho."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numeração de ativos",
+      "description": "Uma sequência única para todo o locatário é formatada com o prefixo de cada cliente. A prévia e a impressão não atribuem números. Números emitidos e abandonados deixam lacunas e nunca são reutilizados.",
+      "clientPrefixes": "Prefixos dos clientes",
+      "noPrefix": "Sem prefixo",
+      "prefixSaved": "Prefixo do cliente salvo",
+      "uniquenessEnabled": "A exclusividade das etiquetas de ativos está ativa",
+      "legacyAudit": "Auditoria de etiquetas existentes",
+      "legacyAuditHelp": "As etiquetas existentes são preservadas. Resolva duplicatas editando as etiquetas dos ativos afetados; revise as etiquetas vazias sem alterá-las se estiverem vazias intencionalmente.",
+      "reconciliationNote": "Nota de conciliação manual",
+      "markReviewed": "Marcar como revisado",
+      "noLegacyIssues": "Nenhuma etiqueta vazia ou duplicada foi encontrada durante a migração.",
+      "activate": "Ativar etiquetas de ativos exclusivas",
+      "saveFailed": "Não foi possível salvar o prefixo",
+      "activationFailed": "Resolva as etiquetas duplicadas antes da ativação",
+      "continuationReview": "A revisão dos dados existentes examinou {{scanned}} etiquetas salvas; {{numeric}} têm sufixos numéricos. O maior sufixo é {{maximum}}; revise um valor inicial de {{next}}. Isto é apenas uma recomendação. Insira e salve acima o valor de continuação aprovado; esta revisão não consome nenhum valor da sequência.",
+      "continuationExamples": "Exemplos: {{examples}}",
+      "blankTag": "(etiqueta vazia)",
+      "normalizedTag": "Normalizada: {{tag}}"
+    }
   }
 }

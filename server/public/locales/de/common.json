@@ -1666,7 +1666,9 @@
       "ticketTitle": "Arbeitsetiketten drucken",
       "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",
       "unnamedAsset": "Unbenanntes Asset",
-      "useTemplate": "{{template}} verwenden"
+      "useTemplate": "{{template}} verwenden",
+      "copiesPerAsset": "Exemplare pro Asset",
+      "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt."
     }
   },
   "deleteEntity": {

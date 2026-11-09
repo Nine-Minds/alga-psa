@@ -19,6 +19,8 @@ type DbState = {
   network_device_assets?: Array<any>;
   tenant_external_entity_mappings: Array<any>;
   rmm_organization_mappings: Array<any>;
+  asset_tag_claims?: Array<any>;
+  next_number?: Array<any>;
 };
 
 let assetCounter = 0;
@@ -46,8 +48,17 @@ function createFakeKnex(state: DbState) {
 
     private readonly table: string;
 
-    where(where: Record<string, any>) {
-      this.wheres.push(where);
+    where(where: Record<string, any> | string, value?: unknown) {
+      this.wheres.push(typeof where === 'string' ? { [where]: value } : where);
+      return this;
+    }
+
+    whereNot(col: string, value: unknown) {
+      this.wheres.push({ __not: { col, value } });
+      return this;
+    }
+
+    forUpdate() {
       return this;
     }
 
@@ -92,6 +103,11 @@ function createFakeKnex(state: DbState) {
     private filtered() {
       let rows = [...rowsFor(this.table)];
       for (const where of this.wheres) {
+        if ('__not' in where) {
+          const { col, value } = where.__not;
+          rows = rows.filter(row => row[col] !== value);
+          continue;
+        }
         if ('__not_null' in where) {
           const col = (where as any).__not_null;
           rows = rows.filter((row) => row[col] !== null && typeof row[col] !== 'undefined');
@@ -147,15 +163,20 @@ function createFakeKnex(state: DbState) {
 
       const response = {
         returning: async (_cols: string[]) => [row],
-        onConflict: (_cols: string[]) => ({
+        onConflict: (cols: string[]) => ({
+          ignore: async () => {
+            if (rows.some(candidate => candidate !== row && cols.every(col => candidate[col] === row[col]))) {
+              rows.splice(rows.indexOf(row), 1);
+            }
+          },
           merge: async (patch: Record<string, unknown>) => {
             const existing = rows.find(
               (candidate) =>
-                candidate.tenant === row.tenant &&
-                String(candidate.asset_id) === String(row.asset_id)
+                candidate !== row && cols.every(col => candidate[col] === row[col])
             );
             if (existing) {
               Object.assign(existing, patch);
+              rows.splice(rows.indexOf(row), 1);
             }
           },
         }),
@@ -167,7 +188,14 @@ function createFakeKnex(state: DbState) {
 
   const knex: any = (table: string) => new QueryBuilder(table);
   knex.fn = { now: () => new Date('2026-04-06T12:00:00.000Z') };
-  knex.raw = (_sql: string, bindings: any[]) => ({ bindings });
+  knex.raw = (sql: string, bindings: any) => {
+    if (sql.includes('generate_next_number')) {
+      const counter = rowsFor('next_number').find(row => row.tenant === bindings.tenant && row.entity_type === bindings.type);
+      counter.last_number += 1;
+      return { rows: [{ number: `${counter.prefix}${String(counter.last_number).padStart(counter.padding_length, '0')}` }] };
+    }
+    return { bindings };
+  };
   knex.transaction = async (cb: (trx: any) => Promise<any>) => cb(knex);
   return knex;
 }
@@ -224,6 +252,13 @@ describe('sharedAssetIngestionService', () => {
 
     expect(result.action).toBe('created');
     expect(state.assets).toHaveLength(1);
+    const created = state.assets[0];
+    expect(created.asset_tag).toBe('00001');
+    expect(created.asset_tag).not.toBe(buildSnapshot().assetTag);
+    expect(created.asset_tag_normalized).toBe('00001');
+    expect(state.asset_tag_claims).toEqual([expect.objectContaining({
+      tenant: 'tenant_1', normalized_tag: '00001', owner_kind: 'asset', owner_id: created.asset_id,
+    })]);
     expect(state.workstation_assets).toHaveLength(1);
     expect(state.tenant_external_entity_mappings).toHaveLength(1);
     expect(state.tenant_external_entity_mappings[0]).toMatchObject({

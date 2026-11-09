@@ -4528,5 +4528,27 @@
       "title": "Proveedores de correo electrónico e identidad",
       "description": "Registre su propia aplicación de Google o Microsoft para el correo electrónico entrante y el inicio de sesión del personal. Estas credenciales pertenecen a su espacio de trabajo."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numeración de activos",
+      "description": "Una única secuencia para todo el inquilino se formatea con el prefijo de cada cliente. La vista previa y la impresión no asignan números. Los números emitidos que se abandonan dejan huecos y nunca se reutilizan.",
+      "clientPrefixes": "Prefijos de clientes",
+      "noPrefix": "Sin prefijo",
+      "prefixSaved": "Prefijo de cliente guardado",
+      "uniquenessEnabled": "La unicidad de las etiquetas de activos está activa",
+      "legacyAudit": "Auditoría de etiquetas existentes",
+      "legacyAuditHelp": "Se conservan las etiquetas existentes. Resuelva los duplicados editando las etiquetas de los activos afectados; revise las etiquetas vacías sin cambiarlas si están vacías intencionadamente.",
+      "reconciliationNote": "Nota de conciliación manual",
+      "markReviewed": "Marcar como revisado",
+      "noLegacyIssues": "No se encontraron etiquetas vacías ni duplicadas durante la migración.",
+      "activate": "Activar etiquetas de activos únicas",
+      "saveFailed": "No se pudo guardar el prefijo",
+      "activationFailed": "Resuelva las etiquetas duplicadas antes de la activación",
+      "continuationReview": "La revisión de datos existentes examinó {{scanned}} etiquetas guardadas; {{numeric}} tienen sufijos numéricos. El sufijo más alto es {{maximum}}; revise un valor inicial de {{next}}. Esto es solo una recomendación. Introduzca y guarde arriba el valor de continuación aprobado; esta revisión no consume ningún valor de la secuencia.",
+      "continuationExamples": "Ejemplos: {{examples}}",
+      "blankTag": "(etiqueta vacía)",
+      "normalizedTag": "Normalizada: {{tag}}"
+    }
   }
 }

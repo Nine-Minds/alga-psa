@@ -198,3 +198,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Gate:** Settings and issuance share one persisted counter and one existing PostgreSQL advisory-lock protocol. A deterministic database race reproduced the counter rewind.
 - **Execution:** Bounded repair of the shared settings action. Initialize with conflict-ignore, acquire the allocator's existing tenant/entity lock, then validate and save the current state. All numbered entity settings use the same protocol. No new counters or asset-specific modes were added.
 - **Status:** Revised. The regression fails against the prior action and passes with the repair. PostgreSQL tests also verify concurrent first use, no-op settings saves, and independent ticket/asset counters.
+
+## asset-fixture-identities — pattern
+
+- **What:** Client and enterprise integration fixtures inserted assets without the normalized identity and ownership claim now required by the database.
+- **Gate:** The same persisted identity contract broke multiple independent suites. Identity acquisition and insertion must be atomic, and fixtures must retain IDs referenced by their scenario data.
+- **Execution:** Bounded CI repair. `server/test-utils/assetFixtures.ts` composes the production claim operation with single or batch inserts in the caller's transaction, opening a transaction when needed. Migrated the failing client and enterprise fixtures; tests that deliberately exercise invalid or legacy identities retain their direct writes.
+- **Status:** Extracted. Existing database scenarios exercise real constraints rather than bypassing them.

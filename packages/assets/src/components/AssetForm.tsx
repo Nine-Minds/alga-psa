@@ -1283,7 +1283,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
 
       if (createMode) {
         const created = result as Asset;
-        toast.success(`Asset ${created.asset_tag} created`);
+        toast.success(t('assetForm.create.success', { defaultValue: 'Asset {{tag}} created', tag: created.asset_tag }));
         if (addAnother) {
           setFormData((current) => ({ ...current, name: '', asset_tag: '', serial_number: '', manufacturer: '', model: '' }));
           setCustomAttributes({});
@@ -1347,7 +1347,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
     <div id="asset-form-container" className="space-y-4">
       <div id="asset-form-header" className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">
-          {createMode ? 'Add asset' : t('assetForm.heading', { defaultValue: 'Edit Asset' })}
+          {createMode ? t('fullIntake.title', { defaultValue: 'Add asset' }) : t('assetForm.heading', { defaultValue: 'Edit Asset' })}
         </h1>
       </div>
 
@@ -1545,9 +1545,9 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
                   <label htmlFor="asset_tag" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                     {t('assetForm.fields.assetTag', { defaultValue: 'Asset Tag' })}
                   </label>
-                  {createMode && <div className="mb-2"><Checkbox id="asset-auto-number" label="Assign next automatic tag" checked={automaticTag} onChange={(event) => setAutomaticTag(event.target.checked)} /></div>}
+                  {createMode && <div className="mb-2"><Checkbox id="asset-auto-number" label={t('assetForm.create.autoTag', { defaultValue: 'Assign next automatic tag' })} checked={automaticTag} onChange={(event) => setAutomaticTag(event.target.checked)} /></div>}
                   {createMode && automaticTag
-                    ? <p id="asset-number-preview" className="mb-2 text-sm text-[rgb(var(--color-text-600))]">Next tag preview: {tagPreview ?? 'Select a client to preview'} (preview does not reserve a number)</p>
+                    ? <p id="asset-number-preview" className="mb-2 text-sm text-[rgb(var(--color-text-600))]">{t('assetForm.create.preview', { defaultValue: 'Next tag preview: {{tag}} (preview does not reserve a number)', tag: tagPreview ?? t('assetForm.create.selectClient', { defaultValue: 'Select a client to preview' }) })}</p>
                     : <Input
                       id="asset_tag"
                       name="asset_tag"
@@ -1820,7 +1820,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
 
         {!hideActions && (
           <div id="form-actions" className="flex justify-end gap-2">
-            {createMode && <Checkbox id="asset-add-another" label="Save and add another" checked={addAnother} onChange={(event) => setAddAnother(event.target.checked)} />}
+            {createMode && <Checkbox id="asset-add-another" label={t('assetForm.create.addAnother', { defaultValue: 'Save and add another' })} checked={addAnother} onChange={(event) => setAddAnother(event.target.checked)} />}
             <Button
               id="cancel-button"
               type="button"
@@ -1837,7 +1837,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
             >
               {saving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : (createMode ? 'Create asset' : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' }))}
+                : (createMode ? t('assetForm.create.submit', { defaultValue: 'Create asset' }) : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' }))}
             </Button>
           </div>
         )}

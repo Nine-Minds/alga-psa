@@ -4528,5 +4528,27 @@
       "title": "Fournisseurs d'e-mail et d'identité",
       "description": "Enregistrez votre propre application Google ou Microsoft pour les e-mails entrants et la connexion du personnel. Ces identifiants appartiennent à votre espace de travail."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numérotation des actifs",
+      "description": "Une séquence unique pour le locataire est formatée avec le préfixe de chaque client. L’aperçu et l’impression n’attribuent aucun numéro. Les numéros attribués puis abandonnés laissent des trous et ne sont jamais réutilisés.",
+      "clientPrefixes": "Préfixes des clients",
+      "noPrefix": "Aucun préfixe",
+      "prefixSaved": "Préfixe du client enregistré",
+      "uniquenessEnabled": "L’unicité des étiquettes d’actifs est activée",
+      "legacyAudit": "Audit des étiquettes existantes",
+      "legacyAuditHelp": "Les étiquettes existantes sont conservées. Résolvez les doublons en modifiant les étiquettes des actifs concernés ; examinez les étiquettes vides sans les modifier si elles sont volontairement vides.",
+      "reconciliationNote": "Note de rapprochement manuel",
+      "markReviewed": "Marquer comme vérifié",
+      "noLegacyIssues": "Aucune étiquette vide ou en double n’a été trouvée lors de la migration.",
+      "activate": "Activer les étiquettes d’actifs uniques",
+      "saveFailed": "Impossible d’enregistrer le préfixe",
+      "activationFailed": "Résolvez les doublons d’étiquettes avant l’activation",
+      "continuationReview": "L’examen des données existantes a analysé {{scanned}} étiquettes enregistrées ; {{numeric}} ont un suffixe numérique. Le suffixe le plus élevé est {{maximum}} ; examinez une valeur de départ de {{next}}. Il s’agit d’une simple recommandation. Saisissez et enregistrez ci-dessus la valeur de continuation approuvée ; cet examen ne consomme aucune valeur de la séquence.",
+      "continuationExamples": "Exemples : {{examples}}",
+      "blankTag": "(étiquette vide)",
+      "normalizedTag": "Normalisée : {{tag}}"
+    }
   }
 }

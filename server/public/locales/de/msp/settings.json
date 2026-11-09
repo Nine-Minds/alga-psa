@@ -4528,5 +4528,27 @@
       "title": "E-Mail- und Identitätsanbieter",
       "description": "Registrieren Sie Ihre eigene Google- oder Microsoft-Anwendung für eingehende E-Mails und die Anmeldung von Mitarbeitern. Diese Anmeldedaten gehören zu Ihrem Arbeitsbereich."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Asset-Nummerierung",
+      "description": "Eine mandantenweite Nummernfolge wird mit dem Präfix des jeweiligen Kunden formatiert. Vorschau und Druck vergeben keine Nummern. Nicht verwendete vergebene Nummern hinterlassen Lücken und werden nie erneut verwendet.",
+      "clientPrefixes": "Kundenpräfixe",
+      "noPrefix": "Kein Präfix",
+      "prefixSaved": "Kundenpräfix gespeichert",
+      "uniquenessEnabled": "Eindeutige Asset-Tags sind aktiviert",
+      "legacyAudit": "Prüfung bestehender Tags",
+      "legacyAuditHelp": "Bestehende Tags bleiben erhalten. Bereinigen Sie Duplikate durch Bearbeiten der betroffenen Asset-Tags. Prüfen Sie leere Tags, ohne sie zu ändern, wenn sie absichtlich leer sind.",
+      "reconciliationNote": "Manuelle Bereinigungsnotiz",
+      "markReviewed": "Als geprüft markieren",
+      "noLegacyIssues": "Bei der Migration wurden keine leeren oder doppelten Tags gefunden.",
+      "activate": "Eindeutige Asset-Tags aktivieren",
+      "saveFailed": "Präfix konnte nicht gespeichert werden",
+      "activationFailed": "Bereinigen Sie doppelte Tags vor der Aktivierung",
+      "continuationReview": "Die Bestandsprüfung hat {{scanned}} gespeicherte Tags geprüft; {{numeric}} haben numerische Suffixe. Das höchste Suffix ist {{maximum}}; prüfen Sie den Startwert {{next}}. Dies ist nur ein Hinweis. Geben Sie oben den genehmigten Fortsetzungswert ein und speichern Sie ihn. Diese Prüfung verbraucht keinen Wert der Nummernfolge.",
+      "continuationExamples": "Beispiele: {{examples}}",
+      "blankTag": "(leerer Tag)",
+      "normalizedTag": "Normalisiert: {{tag}}"
+    }
   }
 }

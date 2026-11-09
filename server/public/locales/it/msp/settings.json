@@ -4528,5 +4528,27 @@
       "title": "Provider di email e identità",
       "description": "Registra la tua applicazione Google o Microsoft per le email in arrivo e l'accesso del personale. Queste credenziali appartengono al tuo spazio di lavoro."
     }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numerazione degli asset",
+      "description": "Un’unica sequenza per il tenant viene formattata con il prefisso di ciascun cliente. L’anteprima e la stampa non assegnano numeri. I numeri emessi e abbandonati lasciano intervalli e non vengono mai riutilizzati.",
+      "clientPrefixes": "Prefissi dei clienti",
+      "noPrefix": "Nessun prefisso",
+      "prefixSaved": "Prefisso del cliente salvato",
+      "uniquenessEnabled": "L’unicità dei tag asset è attiva",
+      "legacyAudit": "Verifica dei tag esistenti",
+      "legacyAuditHelp": "I tag esistenti vengono conservati. Risolvi i duplicati modificando i tag degli asset interessati; verifica i tag vuoti senza modificarli se sono intenzionalmente vuoti.",
+      "reconciliationNote": "Nota di riconciliazione manuale",
+      "markReviewed": "Segna come verificato",
+      "noLegacyIssues": "Nessun tag vuoto o duplicato trovato durante la migrazione.",
+      "activate": "Attiva tag asset univoci",
+      "saveFailed": "Impossibile salvare il prefisso",
+      "activationFailed": "Risolvi i tag duplicati prima dell’attivazione",
+      "continuationReview": "La verifica dei dati esistenti ha esaminato {{scanned}} tag salvati; {{numeric}} hanno suffissi numerici. Il suffisso più alto è {{maximum}}; verifica un valore iniziale di {{next}}. È solo un suggerimento. Inserisci e salva sopra il valore di continuazione approvato; questa verifica non consuma alcun valore della sequenza.",
+      "continuationExamples": "Esempi: {{examples}}",
+      "blankTag": "(tag vuoto)",
+      "normalizedTag": "Normalizzato: {{tag}}"
+    }
   }
 }

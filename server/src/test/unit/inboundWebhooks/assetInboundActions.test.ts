@@ -36,6 +36,8 @@ describe('asset inbound webhook actions', () => {
   let trx: ReturnType<typeof vi.fn>;
   let assetsQuery: {
     where: ReturnType<typeof vi.fn>;
+    whereNot: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     returning: ReturnType<typeof vi.fn>;
@@ -45,6 +47,8 @@ describe('asset inbound webhook actions', () => {
     vi.clearAllMocks();
     assetsQuery = {
       where: vi.fn().mockReturnThis(),
+      whereNot: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       returning: vi.fn().mockResolvedValue([
@@ -54,10 +58,21 @@ describe('asset inbound webhook actions', () => {
         },
       ]),
     };
+    let claim: Record<string, unknown> | undefined;
+    const claimsQuery = {
+      where: vi.fn().mockReturnThis(),
+      forUpdate: vi.fn().mockReturnThis(),
+      first: vi.fn(async () => claim),
+      insert: vi.fn((row: Record<string, unknown>) => {
+        claim = row;
+        return { onConflict: () => ({ ignore: async () => undefined }) };
+      }),
+    };
     trx = vi.fn((table: string) => {
       if (table === 'assets') {
         return assetsQuery;
       }
+      if (table === 'asset_tag_claims') return claimsQuery;
       throw new Error(`Unexpected table ${table}`);
     });
     mocks.createTenantKnex.mockResolvedValue({ knex: tenantKnex });
@@ -276,6 +291,10 @@ describe('asset inbound webhook actions', () => {
       'switch-42',
       { knex: trx },
     );
+    expect(await trx('asset_tag_claims').first()).toMatchObject({
+      tenant: 'tenant-a', normalized_tag: 'NET-42', owner_kind: 'asset',
+      owner_id: assetsQuery.insert.mock.calls[0][0].asset_id,
+    });
     expect(assetsQuery.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         tenant: 'tenant-a',

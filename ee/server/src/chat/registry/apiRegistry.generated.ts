@@ -6201,7 +6201,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, name, and status are required. A blank or omitted asset_tag is allocated from the tenant-wide sequence, optionally using asset_number_reservation_id. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
     "tags": [
       "Assets"
     ],
@@ -6233,9 +6233,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_tag": {
           "type": "string",
-          "minLength": 1,
           "maxLength": 255,
-          "description": "Required tenant-specific asset tag."
+          "description": "Optional physical tag. Omit or send blank to allocate from the tenant-wide asset sequence."
+        },
+        "asset_number_reservation_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional durable reservation to commit to this new asset."
         },
         "name": {
           "type": "string",
@@ -6340,7 +6344,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "client_id",
         "asset_type",
-        "asset_tag",
         "name",
         "status"
       ]

@@ -58,6 +58,7 @@ const h = vi.hoisted(() => {
     private readonly table: string;
     private objWheres: Array<Record<string, any>> = [];
     private inWheres: Array<{ col: string; vals: any[] }> = [];
+    private notWheres: Array<{ col: string; value: unknown }> = [];
 
     constructor(tableSpec: string) {
       this.table = tableSpec.split(' as ')[0];
@@ -81,6 +82,8 @@ const h = vi.hoisted(() => {
     }
 
     andWhere(arg1: any, arg2?: any) { return this.where(arg1, arg2); }
+    whereNot(col: string, value: unknown) { this.notWheres.push({ col: stripPrefix(col), value }); return this; }
+    forUpdate() { return this; }
     orWhere() { return this; }
     whereIn(col: string, vals: any[]) { this.inWheres.push({ col: stripPrefix(col), vals }); return this; }
     select(..._cols: any[]) { return this; }
@@ -99,6 +102,7 @@ const h = vi.hoisted(() => {
       for (const { col, vals } of this.inWheres) {
         rows = rows.filter((row) => vals.includes(row[col]));
       }
+      for (const { col, value } of this.notWheres) rows = rows.filter(row => row[col] !== value);
       for (const { col, isNull } of this.nullWheres) {
         rows = rows.filter((row) => (isNull ? row[col] === null || row[col] === undefined : row[col] !== null && row[col] !== undefined));
       }
@@ -121,6 +125,13 @@ const h = vi.hoisted(() => {
       this.rows.push(...incoming);
       const result: any = Promise.resolve(incoming);
       result.returning = () => Promise.resolve(incoming);
+      result.onConflict = (cols: string[]) => ({ ignore: async () => {
+        for (const row of incoming) {
+          if (this.rows.some(existing => existing !== row && cols.every(col => existing[col] === row[col]))) {
+            this.rows.splice(this.rows.indexOf(row), 1);
+          }
+        }
+      } });
       return result;
     }
 
@@ -183,8 +194,13 @@ const h = vi.hoisted(() => {
     roles: [{ role_id: 'role-1' }],
   };
 
-  return { TENANT, dbState, knexMock, mockUser, resetDb };
+  return { TENANT, dbState, knexMock, mockUser, resetDb, nextUuid };
 });
+
+vi.mock('node:crypto', async (original) => ({
+  ...await original<typeof import('node:crypto')>(),
+  randomUUID: () => h.nextUuid(),
+}));
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
@@ -354,6 +370,9 @@ describe('post-commit effects are best-effort (alga0002283)', () => {
     expect(created.actionError).toBeUndefined();
     expect(created.asset_tag).toBe('WS-NEW');
     expect(h.dbState.assets).toHaveLength(1);
+    expect(h.dbState.asset_tag_claims).toEqual([expect.objectContaining({
+      tenant: TENANT, normalized_tag: 'WS-NEW', owner_kind: 'asset', owner_id: created.asset_id,
+    })]);
     const logged = consoleError.mock.calls.map((call) => call.map(String).join(' ')).join('\n');
     expect(logged).toContain(TENANT);
     expect(logged).toContain('ASSET_CREATED');
@@ -410,10 +429,11 @@ describe('output-schema check runs inside the transaction (alga0002283)', () => 
         storage_capacity_gb: 100,
         installed_software: [],
       },
-    } as any).catch((error: Error) => error)) as any;
+    } as any)) as any;
 
-    expect(result).toBeInstanceOf(Error);
+    expect(typeof result.actionError).toBe('string');
     expect(h.dbState.assets).toHaveLength(0);
+    expect(h.dbState.asset_tag_claims ?? []).toHaveLength(0);
     expect(publishWorkflowEvent).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });

@@ -1666,7 +1666,9 @@
       "ticketTitle": "Print work tags",
       "tooMany": "You can print at most {{max}} labels at a time.",
       "unnamedAsset": "Unnamed asset",
-      "useTemplate": "Use {{template}}"
+      "useTemplate": "Use {{template}}",
+      "copiesPerAsset": "Copies per asset",
+      "adjacentCopies": "Copies print together for each asset."
     }
   },
   "deleteEntity": {

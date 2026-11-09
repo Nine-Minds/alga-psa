@@ -1676,7 +1676,9 @@
       "ticketTitle": "Drukuj etykiety robocze",
       "tooMany": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet.",
       "unnamedAsset": "Zasób bez nazwy",
-      "useTemplate": "Użyj szablonu {{template}}"
+      "useTemplate": "Użyj szablonu {{template}}",
+      "copiesPerAsset": "Kopie na zasób",
+      "adjacentCopies": "Kopie każdego zasobu są drukowane razem."
     }
   },
   "deleteEntity": {

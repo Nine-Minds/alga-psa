@@ -12,6 +12,7 @@ const NOW_ISO = '2026-06-12T12:00:00.000Z';
 
 type Row = Record<string, any>;
 
+// LEVERAGE: pattern asset-actions-inmemory-harness — identity operations also require shared query semantics in these action doubles.
 const h = vi.hoisted(() => {
   const TENANT = 'a0000000-0000-4000-8000-00000000000a';
 
@@ -75,7 +76,8 @@ const h = vi.hoisted(() => {
 
     private notWheres: Array<Record<string, any>> = [];
 
-    whereNot(arg1: Record<string, any>) {
+    whereNot(arg1: Record<string, any> | string, arg2?: unknown) {
+      if (typeof arg1 === 'string') { this.notWheres.push({ [stripPrefix(arg1)]: arg2 }); return this; }
       const normalized: Record<string, any> = {};
       for (const [key, value] of Object.entries(arg1)) normalized[stripPrefix(key)] = value;
       this.notWheres.push(normalized);
@@ -131,6 +133,8 @@ const h = vi.hoisted(() => {
       return this;
     }
 
+    forUpdate() { return this; }
+
     orderBy() {
       return this;
     }
@@ -172,6 +176,13 @@ const h = vi.hoisted(() => {
       this.rows.push(...incoming);
       const result: any = Promise.resolve(incoming);
       result.returning = () => Promise.resolve(incoming);
+      result.onConflict = (cols: string[]) => ({ ignore: async () => {
+        for (const row of incoming) {
+          if (this.rows.some(existing => existing !== row && cols.every(col => existing[col] === row[col]))) {
+            this.rows.splice(this.rows.indexOf(row), 1);
+          }
+        }
+      } });
       return result;
     }
 

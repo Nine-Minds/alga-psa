@@ -22,6 +22,9 @@ const mockPreviewAssetNumber = vi.fn();
 const mockGetAssetTypes = vi.fn();
 const mockPush = vi.fn();
 const mockToastError = vi.fn();
+const mockMutateCache = vi.fn();
+
+vi.mock('swr', () => ({ useSWRConfig: () => ({ mutate: mockMutateCache }) }));
 
 vi.mock('../actions/assetActions', () => ({
   getAsset: (...args: unknown[]) => mockGetAsset(...args),
@@ -348,6 +351,20 @@ describe('Full Add asset numbering', () => {
 });
 
 describe('AssetForm custom asset types', () => {
+  it('invalidates every saved-asset cache entry while leaving other assets cached', async () => {
+    mockGetAsset.mockResolvedValue(workstationAsset);
+    await renderForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mockMutateCache).toHaveBeenCalledOnce());
+    const matches = mockMutateCache.mock.calls[0][0] as (key: unknown) => boolean;
+    for (const suffix of ['record', 'summary', 'history', 'notes', 'documents']) {
+      expect(matches(['asset', ASSET_ID, suffix])).toBe(true);
+      expect(matches(['asset', 'another-asset', suffix])).toBe(false);
+    }
+    expect(matches('assets')).toBe(false);
+    expect(matches(['ticket', ASSET_ID])).toBe(false);
+  });
+
   it('T310: edit type select sources the registry (six built-ins incl. unknown + customs)', async () => {
     mockGetAsset.mockResolvedValue(cloudAccountAsset);
     const { typeSelect } = await renderForm();

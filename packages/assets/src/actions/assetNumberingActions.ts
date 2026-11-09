@@ -121,7 +121,7 @@ export const findAssetByScannedTag = withAuth(async (user, { tenant }, rawTag: s
         .update({ state: 'expired', updated_at: trx.fn.now() });
       reservation = { ...reservation, state: 'expired' };
     }
-    return reservation && await hasPermission(user, 'asset', 'create')
+    return reservation && await hasPermission(user, 'asset', 'create', trx)
       ? { kind: 'reservation' as const, reservation }
       : { kind: 'not_found' as const };
   });

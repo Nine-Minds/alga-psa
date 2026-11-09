@@ -15,6 +15,7 @@ import { activateAssetTagUniquenessForTenant } from '@alga-psa/shared/services/a
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { insertTestAssets } from '../../../test-utils/assetFixtures';
 import { AssetService } from '../../lib/api/services/AssetService';
 import { createAssetInTransaction } from '@alga-psa/assets/actions/assetActions';
 import { updateNumberSettings } from '../../../../packages/reference-data/src/actions/number-actions/numberingActions';
@@ -110,6 +111,21 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
       }).catch(() => undefined);
     }
     if (db) await db.destroy();
+  });
+
+  it('inserts fixture identities atomically, preserving IDs and rejecting normalized collisions', async () => {
+    const { tenant, client1 } = await fixture();
+    const assetId = randomUUID();
+    const row = { tenant, asset_id: assetId, client_id: client1, asset_type: 'unknown', name: 'Fixture', status: 'active', asset_tag: ' Mixed-42 ' };
+    const [stored] = await insertTestAssets(db, row);
+    expect(stored).toMatchObject({ asset_id: assetId, asset_tag: ' Mixed-42 ', asset_tag_normalized: 'MIXED-42' });
+    expect(await db('asset_tag_claims').where({ tenant, normalized_tag: 'MIXED-42' }).first()).toMatchObject({ owner_kind: 'asset', owner_id: assetId });
+    await expect(insertTestAssets(db, [
+      { ...row, asset_id: randomUUID(), asset_tag: 'NEW-43' },
+      { ...row, asset_id: randomUUID(), asset_tag: 'mixed-42' },
+    ])).rejects.toThrow(/already exists/);
+    expect(await db('asset_tag_claims').where({ tenant, normalized_tag: 'NEW-43' }).first()).toBeUndefined();
+    expect(await db('assets').where({ tenant })).toHaveLength(1);
   });
 
   it('previews without consuming and applies two client prefixes to one shared sequence', async () => {
