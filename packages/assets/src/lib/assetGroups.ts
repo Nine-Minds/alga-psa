@@ -10,6 +10,8 @@ import type {
 } from '@alga-psa/types';
 import { setAssetAssignee } from './assetAssignment';
 import { formatClientLocation, type ClientLocationLike } from './formatClientLocation';
+import { isAssetGroupOperationAllowed } from './assetGroupAuthorization';
+import type { AssetAuthUser } from './assetReadAuthorization';
 
 /**
  * Bundles and shared workspaces (FR-E1 to FR-E10).
@@ -674,6 +676,25 @@ export async function getAssetGroupSummary(
   };
 }
 
+/** Return an asset's group summary only when the caller can read the whole group. */
+export async function getAuthorizedAssetGroupSummary(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  assetId: string,
+  additionalReadCheck?: (trx: Knex | Knex.Transaction, assetId: string) => Promise<boolean>
+): Promise<AssetGroupSummary | null> {
+  const member = await table(trx, tenant, 'asset_group_members')
+    .where({ asset_id: assetId })
+    .first<{ group_id: string }>('group_id');
+  if (!member) return null;
+
+  if (!await isAssetGroupOperationAllowed(trx, tenant, user, { action: 'read', groupId: member.group_id, additionalReadCheck })) {
+    return null;
+  }
+  return getAssetGroupSummary(trx, tenant, assetId);
+}
+
 /**
  * F075: group summaries for a whole page of assets in four queries instead of
  * four per row, so the list's Group column costs the same at 10 rows as at 100.
@@ -739,6 +760,38 @@ export async function getAssetGroupSummariesForAssets(
     if (summary) byAsset.set(row.asset_id, summary);
   }
   return byAsset;
+}
+
+/** Batch summary lookup that excludes denied groups before reading their metadata. */
+export async function getAuthorizedAssetGroupSummariesForAssets(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  assetIds: string[],
+  additionalReadCheck?: (trx: Knex | Knex.Transaction, assetId: string) => Promise<boolean>
+): Promise<Map<string, AssetGroupSummary>> {
+  const byAsset = new Map<string, AssetGroupSummary>();
+  if (assetIds.length === 0) return byAsset;
+
+  const candidates = await table(trx, tenant, 'asset_group_members')
+    .whereIn('asset_id', assetIds)
+    .select<{ asset_id: string; group_id: string }[]>('asset_id', 'group_id');
+  const groupAssets = new Map<string, string[]>();
+  for (const candidate of candidates) {
+    const group = groupAssets.get(candidate.group_id) ?? [];
+    group.push(candidate.asset_id);
+    groupAssets.set(candidate.group_id, group);
+  }
+
+  const allowedAssetIds = new Set<string>();
+  for (const [groupId, memberAssetIds] of groupAssets) {
+    if (await isAssetGroupOperationAllowed(trx, tenant, user, { action: 'read', groupId, additionalReadCheck })) {
+      for (const memberAssetId of memberAssetIds) allowedAssetIds.add(memberAssetId);
+    }
+  }
+  if (allowedAssetIds.size === 0) return byAsset;
+
+  return getAssetGroupSummariesForAssets(trx, tenant, Array.from(allowedAssetIds));
 }
 
 export type { AssetGroupContactRole };

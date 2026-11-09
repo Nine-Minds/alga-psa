@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { generateDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { validateDocumentPreviewProvenance } from '@alga-psa/documents/lib/documentPreviewProvenance';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 import type { IDocument } from 'server/src/interfaces/document.interface';
@@ -82,6 +83,7 @@ export async function persistDocumentPreviews(
 ) {
   try {
     const result = await generateDocumentPreviews(document, buffer);
+    await validateDocumentPreviewProvenance(knex, tenant, document.document_id, result);
     await tenantDb(knex, tenant)
       .table('documents')
       .where({ document_id: document.document_id })

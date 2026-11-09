@@ -124,6 +124,7 @@ export default defineConfig({
           include: [
             'tests/**/*.test.ts',
             'src/lib/renderHtmlToPng.test.ts',
+            'src/lib/documentPreviewProvenance.test.ts',
             'src/lib/renderHtmlToPng.failure.test.ts',
             'src/handlers/GenericFileDocumentHandler.previewSsrf.test.ts',
           ],

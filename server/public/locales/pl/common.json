@@ -881,7 +881,8 @@
       "collapse": "Zwiń foldery",
       "allDocuments": "Wszystkie dokumenty",
       "expand": "Pokaż foldery",
-      "deleteTitle": "Usuń folder"
+      "deleteTitle": "Usuń folder",
+      "show": "Pokaż foldery"
     },
     "folderManager": {
       "title": "Utwórz nowy folder",
@@ -943,6 +944,28 @@
     "huduTab": {
       "documentsTabLabel": "Dokumenty",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Użytkownik",
+    "selectOrCreate": "Wybierz dokument lub utwórz nowy.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Drukuj",
+      "edit": "Edytuj",
+      "upload": "Prześlij",
+      "closePreview": "Zamknij podgląd",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "saving": "Zapisywanie..."
+    },
+    "viewMode": {
+      "grid": "Siatka",
+      "list": "Lista"
+    },
+    "unsavedChanges": {
+      "title": "Niezapisane zmiany",
+      "message": "Czy na pewno chcesz anulować? Wszystkie niezapisane zmiany zostaną utracone.",
+      "confirm": "Odrzuć zmiany",
+      "cancel": "Kontynuuj edycję"
     }
   },
   "surveys": {
@@ -1424,7 +1447,16 @@
     "unnamedTeam": "Zespół bez nazwy",
     "userPicker": "Wybór użytkownika",
     "noUsersFound": "Nie znaleziono użytkowników",
-    "contactRemoteLocation": "Zdalnie"
+    "contactRemoteLocation": "Zdalnie",
+    "selectBoard": "Wybierz tablicę",
+    "activeBoards": "Aktywne tablice",
+    "inactiveBoards": "Nieaktywne tablice",
+    "allBoards": "Wszystkie tablice",
+    "boardPicker": "Wybór tablicy",
+    "filterByStatus": "Filtruj według statusu",
+    "statusFilter": "Filtr statusu",
+    "boards": "Tablice",
+    "inactiveSuffix": "(Nieaktywna)"
   },
   "serviceTypeSelect": {
     "placeholder": "Wybierz rodzaj usługi...",
@@ -1737,7 +1769,14 @@
       "assigned": "Przypisano:",
       "performedBy": "przez {{name}}",
       "internal": "Wewnętrzny"
-    }
+    },
+    "title": "Powiadomienia",
+    "reconnectingToServer": "Ponowne łączenie z serwerem...",
+    "refresh": "Odśwież",
+    "markAllAsRead": "Oznacz wszystkie jako przeczytane",
+    "markAllRead": "Oznacz jako przeczytane",
+    "emptyTitle": "Brak powiadomień",
+    "emptyDescription": "Jesteś na bieżąco!"
   },
   "importConflicts": {
     "title": "Rozwiąż konflikty importu",

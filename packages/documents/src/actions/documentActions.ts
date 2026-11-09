@@ -44,6 +44,7 @@ import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { documentPreviewErrorMessage } from '@alga-psa/documents/handlers/previewErrors';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
+import { validateDocumentPreviewProvenance } from '../lib/documentPreviewProvenance';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
@@ -2979,6 +2980,7 @@ export const uploadDocument = withAuth(async (
       try {
         const previewResult = await generateDocumentPreviews(document, buffer);
         if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
+          await validateDocumentPreviewProvenance(knex, tenant, document.document_id, previewResult);
           await tenantScopedTable(knex, 'documents', tenant)
             .where({ document_id: document.document_id })
             .update({

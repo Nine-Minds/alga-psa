@@ -54,6 +54,10 @@
       "import": "./src/lib/renderHtmlToPng.ts",
       "types": "./src/lib/renderHtmlToPng.ts"
     },
+    "./lib/documentPreviewProvenance": {
+      "import": "./src/lib/documentPreviewProvenance.ts",
+      "types": "./src/lib/documentPreviewProvenance.ts"
+    },
     "./lib/documentMarkdownExport": {
       "import": "./src/lib/documentMarkdownExport.ts",
       "types": "./src/lib/documentMarkdownExport.ts"
