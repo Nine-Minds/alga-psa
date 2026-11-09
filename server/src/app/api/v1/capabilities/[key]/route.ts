@@ -3,6 +3,7 @@ import { getSession } from '@alga-psa/auth';
 import { isFeatureFlagEnabled } from '@alga-psa/core/features';
 import {
   capabilityFeatureFlag,
+  isCapabilityKey,
   capabilityResolverStatus,
   evaluateCapability,
 } from '@alga-psa/core/capability';
@@ -11,12 +12,12 @@ import { capabilityRouteGuard, notFoundResponse } from '@alga-psa/core/capabilit
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const CAPABILITY = 'co-managed' as const;
-
 /**
- * GET /api/v1/capabilities/co-managed
+ * GET /api/v1/capabilities/<key>   (`co-managed`, `ticket-conversations`, …)
  *
- * The canonical probe. Reveals only the caller's own tenant's decision and
+ * The canonical probe, one URL per capability in `CAPABILITY_KEYS`. An unknown
+ * key answers with the same 404 as a closed capability, so the probe cannot be
+ * used to enumerate capabilities. Reveals only the caller's own tenant's decision and
  * reasons: no query parameters, no body, no other tenant, no resolver SQL, no
  * user identity, no PostHog token, no capability list.
  *
@@ -25,7 +26,8 @@ const CAPABILITY = 'co-managed' as const;
  * exists. A resolver or flag failure fails that branch closed inside the gate
  * and therefore also yields 404, never 500.
  */
-export async function GET() {
+export async function GET(_request: Request, context: { params: Promise<{ key: string }> }) {
+  const { key } = await context.params;
   const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
@@ -34,6 +36,10 @@ export async function GET() {
   if (session.user.user_type === 'client' || !session.user.tenant) {
     return withNoStore(notFoundResponse());
   }
+  if (!isCapabilityKey(key)) {
+    return withNoStore(notFoundResponse());
+  }
+  const CAPABILITY = key;
   const tenantId = session.user.tenant;
 
   let decision;

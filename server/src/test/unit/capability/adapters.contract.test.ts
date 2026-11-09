@@ -18,6 +18,8 @@ import {
   isCapabilityServed,
   registerCapabilityEligibility,
   registerCapabilityParticipation,
+  CAPABILITY_KEYS,
+  type CapabilityKey,
 } from '@alga-psa/core/capability';
 import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import {
@@ -29,13 +31,22 @@ import {
 import { withCapabilityJob } from '../../../../../packages/jobs/src/lib/jobs/capabilityJob';
 import { handleApiError, NotFoundError } from '../../../lib/api/middleware/apiMiddleware';
 
-function open(on: boolean) {
-  registerCapabilityEligibility('co-managed', async () => on);
-  registerCapabilityParticipation('co-managed', async ({ tenantIds }) => (on ? [...tenantIds] : []));
+/**
+ * Open or close one capability. co-managed's eligibility is a registered resolver; ticket-conversations'
+ * eligibility is seeded (every tenant), so its admission follows the flag and the registered participation
+ * resolver stands in for L1's.
+ */
+function open(capability: CapabilityKey, on: boolean) {
+  if (capability === 'co-managed') {
+    registerCapabilityEligibility(capability, async () => on);
+  } else {
+    registerFeatureFlagChecker(async () => on);
+  }
+  registerCapabilityParticipation(capability, async ({ tenantIds }) => (on ? [...tenantIds] : []));
   clearCapabilityCache();
 }
 
-describe('capability adapters', () => {
+describe.each(CAPABILITY_KEYS)('capability adapters: %s', (capability) => {
   afterEach(() => {
     // The gate registry is process-global; leave no resolvers for the next file.
     resetCapabilityRegistry();
@@ -50,36 +61,36 @@ describe('capability adapters', () => {
     vi.stubEnv('DISABLE_FEATURE_FLAGS', 'false');
     vi.clearAllMocks();
     registerFeatureFlagChecker(async () => true);
-    open(false);
+    open(capability, false);
   });
 
   it('server action: closed throws CapabilityUnavailableError, open resolves', async () => {
-    await expect(requireCapabilityForAction('co-managed', 't1')).rejects.toBeInstanceOf(CapabilityUnavailableError);
-    open(true);
-    await expect(requireCapabilityForAction('co-managed', 't1')).resolves.toBeUndefined();
+    await expect(requireCapabilityForAction(capability, 't1')).rejects.toBeInstanceOf(CapabilityUnavailableError);
+    open(capability, true);
+    await expect(requireCapabilityForAction(capability, 't1')).resolves.toBeUndefined();
   });
 
   it('REST: closed body is byte-identical to handleApiError(NotFoundError)', async () => {
-    const res = await capabilityRouteGuard('co-managed', 't1');
+    const res = await capabilityRouteGuard(capability, 't1');
     const existing = await handleApiError(new NotFoundError());
     expect(res!.status).toBe(404);
     expect(res!.status).toBe(existing.status);
     expect(await res!.json()).toEqual(await existing.json());
-    open(true);
-    expect(await capabilityRouteGuard('co-managed', 't1')).toBeNull();
+    open(capability, true);
+    expect(await capabilityRouteGuard(capability, 't1')).toBeNull();
   });
 
   it('RSC: closed calls notFound(), open does not', async () => {
-    await expect(requireCapabilityForPage('co-managed', 't1')).rejects.toThrow('NEXT_NOT_FOUND');
-    open(true);
+    await expect(requireCapabilityForPage(capability, 't1')).rejects.toThrow('NEXT_NOT_FOUND');
+    open(capability, true);
     nf.mockClear();
-    await requireCapabilityForPage('co-managed', 't1');
+    await requireCapabilityForPage(capability, 't1');
     expect(nf).not.toHaveBeenCalled();
   });
 
   it('job: closed logs job_skipped_capability_closed and never runs the handler', async () => {
     const handler = vi.fn();
-    await withCapabilityJob('co-managed', handler)('job-1', { tenantId: 't1' } as any);
+    await withCapabilityJob(capability, handler)('job-1', { tenantId: 't1' } as any);
     expect(handler).not.toHaveBeenCalled();
     expect(sql.createTenantKnex).not.toHaveBeenCalled();
     expect(sql.getAdminConnection).not.toHaveBeenCalled();
@@ -88,30 +99,30 @@ describe('capability adapters', () => {
       expect.any(String),
       expect.objectContaining({ event: 'job_skipped_capability_closed', tenantId: 't1', jobId: 'job-1' }),
     );
-    open(true);
-    await withCapabilityJob('co-managed', handler)('job-2', { tenantId: 't1' } as any);
+    open(capability, true);
+    await withCapabilityJob(capability, handler)('job-2', { tenantId: 't1' } as any);
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
   it('job: system-scope (no tenantId) runs unchanged', async () => {
     const handler = vi.fn();
-    await withCapabilityJob('co-managed', handler)('job-3', {} as any);
+    await withCapabilityJob(capability, handler)('job-3', {} as any);
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
   it('subscriber: native fall-through (false / filtered list)', async () => {
-    expect(await isCapabilityServed('co-managed', 't1')).toBe(false);
-    expect(await filterCapabilityServed('co-managed', ['a', 'b'])).toEqual([]);
-    open(true);
-    expect(await filterCapabilityServed('co-managed', ['a', 'b'])).toEqual(['a', 'b']);
+    expect(await isCapabilityServed(capability, 't1')).toBe(false);
+    expect(await filterCapabilityServed(capability, ['a', 'b'])).toEqual([]);
+    open(capability, true);
+    expect(await filterCapabilityServed(capability, ['a', 'b'])).toEqual(['a', 'b']);
   });
 
   it('temporal: closed returns the CapabilitySkip sentinel, open returns null', async () => {
-    expect(await activityServesCapability('co-managed', 't1')).toEqual({ skipped: true, capability: 'co-managed' });
+    expect(await activityServesCapability(capability, 't1')).toEqual({ skipped: true, capability });
     expect(sql.createTenantKnex).not.toHaveBeenCalled();
     expect(sql.getAdminConnection).not.toHaveBeenCalled();
-    open(true);
-    invalidateCapability('co-managed');
-    expect(await activityServesCapability('co-managed', 't1')).toBeNull();
+    open(capability, true);
+    invalidateCapability(capability);
+    expect(await activityServesCapability(capability, 't1')).toBeNull();
   });
 });

@@ -4,13 +4,11 @@ import {
   capabilityAdmitBootstrapKey,
   capabilityFeatureFlag,
   capabilityServedBootstrapKey,
+  CAPABILITY_KEYS,
   evaluateCapability,
-  type CapabilityKey,
 } from '@alga-psa/core/capability';
 
 export type CapabilityBootstrap = Record<string, boolean>;
-
-const CAPABILITIES: readonly CapabilityKey[] = ['co-managed'];
 
 /**
  * Server-evaluated values for `PostHogProvider initialFeatureFlags`.
@@ -22,13 +20,14 @@ const CAPABILITIES: readonly CapabilityKey[] = ['co-managed'];
  * - `capability:<key>` (served) and `capability:<key>:admit` (admitted), which
  *   `useCapability` reads. The browser never decides a capability itself.
  *
- * Deduplicated per request with React `cache`. Anonymous requests get `{}`.
+ * Every registered capability is included (`CAPABILITY_KEYS`); capabilities that share a
+ * flag share one flag evaluation. Deduplicated per request with React `cache`. Anonymous requests get `{}`.
  */
 export const resolveCapabilityBootstrap = cache(async (tenantId: string | null): Promise<CapabilityBootstrap> => {
   if (!tenantId) return {};
   const out: CapabilityBootstrap = {};
 
-  const flagKeys = new Set(CAPABILITIES.map(capabilityFeatureFlag));
+  const flagKeys = new Set(CAPABILITY_KEYS.map(capabilityFeatureFlag));
   await Promise.all(
     [...flagKeys].map(async (flag) => {
       try {
@@ -41,7 +40,7 @@ export const resolveCapabilityBootstrap = cache(async (tenantId: string | null):
   );
 
   await Promise.all(
-    CAPABILITIES.map(async (capability) => {
+    CAPABILITY_KEYS.map(async (capability) => {
       try {
         const decision = await evaluateCapability(capability, tenantId);
         out[capabilityServedBootstrapKey(capability)] = decision.served;

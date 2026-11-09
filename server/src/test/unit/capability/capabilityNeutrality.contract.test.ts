@@ -116,6 +116,9 @@ describe('capability neutrality on the real evaluator path', () => {
     for (let request = 0; request < 5; request++) {
       const bootstrap = await resolveCapabilityBootstrap('emerald');
       expect(bootstrap).not.toHaveProperty(FLAG);
+      // ticket-conversations is admitted by the flag alone; unavailable flag => closed, still one PostHog call.
+      expect(bootstrap[capabilityAdmitBootstrapKey('ticket-conversations')]).toBe(false);
+      expect((await admits('ticket-conversations', 'emerald')).reasons.admitted).toBe('flag-unavailable');
       expect(resolveClientCapability({ capability: 'co-managed', bootstrap })).toMatchObject({ enabled: true, admitted: false });
       expect((await admits('co-managed', 'emerald')).reasons.admitted).toBe('flag-unavailable');
     }
@@ -138,13 +141,16 @@ describe('capability neutrality on the real evaluator path', () => {
     expect(sqlCalls()).toBe(0);
   });
 
-  it('bootstrap: one PostHog evaluation and one tenant read on a cold tenant, none for the capability', async () => {
+  it('bootstrap: one PostHog evaluation and one tenant read on a cold tenant, none for either capability', async () => {
     const bootstrap = await resolveCapabilityBootstrap('kansas');
     expect(bootstrap).toEqual({
       [FLAG]: false,
       [capabilityServedBootstrapKey('co-managed')]: false,
       [capabilityAdmitBootstrapKey('co-managed')]: false,
+      [capabilityServedBootstrapKey('ticket-conversations')]: false,
+      [capabilityAdmitBootstrapKey('ticket-conversations')]: false,
     });
+    // Both capabilities share the flag: the budget does not grow with the capability count.
     expect(posthogNode.isFeatureEnabled).toHaveBeenCalledTimes(1);
     expect(posthogNode.isFeatureEnabled.mock.calls[0][0]).toBe(FLAG);
     expect(tenantReads()).toBe(1);
@@ -200,13 +206,44 @@ describe('capability neutrality on the real evaluator path', () => {
     expect(client.admitted).toBe(server.admitted);
   });
 
-  it('flag off (Kansas) and flag on (Emerald) differ only in the Timeline flag', async () => {
+  it('flag off (Kansas) and flag on (Emerald) differ only in the Timeline flag and ticket-conversations admission', async () => {
     const kansas = await resolveCapabilityBootstrap('kansas');
     const emerald = await resolveCapabilityBootstrap('emerald');
-    const { [FLAG]: kFlag, ...kRest } = kansas;
-    const { [FLAG]: eFlag, ...eRest } = emerald;
-    expect(kFlag).toBe(false);
-    expect(eFlag).toBe(true);
-    expect(eRest).toEqual(kRest);
+    const isTc = (key: string) => key.startsWith('capability:ticket-conversations');
+    const split = (b: Record<string, boolean>) => ({
+      flag: b[FLAG],
+      tcAdmit: b[capabilityAdmitBootstrapKey('ticket-conversations')],
+      // every co-managed key, and every served key (including ticket-conversations' own)
+      rest: Object.fromEntries(
+        Object.entries(b).filter(([key]) => key !== FLAG && !(isTc(key) && key.endsWith(':admit'))),
+      ),
+    });
+    const k = split(kansas);
+    const e = split(emerald);
+    expect(k.flag).toBe(false);
+    expect(e.flag).toBe(true);
+    expect(k.tcAdmit).toBe(false);
+    expect(e.tcAdmit).toBe(true);
+    expect(e.rest).toEqual(k.rest);
+    expect(e.rest).toEqual({
+      [capabilityServedBootstrapKey('co-managed')]: false,
+      [capabilityAdmitBootstrapKey('co-managed')]: false,
+      [capabilityServedBootstrapKey('ticket-conversations')]: false,
+    });
+  });
+
+  it('ticket-conversations evaluation does no SQL, flag off or flag on', async () => {
+    // Warm the flag layer (its one tenant read is not the capability's), then count only the gate.
+    await resolveCapabilityBootstrap('kansas');
+    await resolveCapabilityBootstrap('emerald');
+    const before = sqlCalls();
+    for (const tenant of ['kansas', 'emerald']) {
+      clearCapabilityCache();
+      const d = await evaluateCapability('ticket-conversations', tenant);
+      expect(d.admitted).toBe(tenant === 'emerald');
+      expect(d.reasons.served).toBe('resolver-unregistered');
+    }
+    expect(await filterServed('ticket-conversations', ['kansas', 'emerald'])).toEqual([]);
+    expect(sqlCalls()).toBe(before);
   });
 });

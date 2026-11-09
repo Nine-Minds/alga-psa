@@ -63,4 +63,35 @@ describe('useCapability', () => {
     const { result } = renderHook(() => useCapability('co-managed'));
     expect(result.current).toMatchObject({ enabled: false, admitted: false });
   });
+
+  it('reads ticket-conversations independently of co-managed, in both directions', () => {
+    const bootstrap = {
+      'capability:co-managed': true,
+      'capability:co-managed:admit': true,
+      'capability:ticket-conversations': false,
+      'capability:ticket-conversations:admit': true,
+    };
+    const tc = renderHook(() => useCapability('ticket-conversations'), { wrapper: withBootstrap(bootstrap) });
+    const cm = renderHook(() => useCapability('co-managed'), { wrapper: withBootstrap(bootstrap) });
+    expect(tc.result.current).toEqual({ enabled: false, admitted: true, resolved: true });
+    expect(cm.result.current).toEqual({ enabled: true, admitted: true, resolved: true });
+
+    const flipped = {
+      'capability:co-managed': false,
+      'capability:co-managed:admit': false,
+      'capability:ticket-conversations': true,
+      'capability:ticket-conversations:admit': true,
+    };
+    const tc2 = renderHook(() => useCapability('ticket-conversations'), { wrapper: withBootstrap(flipped) });
+    const cm2 = renderHook(() => useCapability('co-managed'), { wrapper: withBootstrap(flipped) });
+    expect(tc2.result.current).toEqual({ enabled: true, admitted: true, resolved: true });
+    expect(cm2.result.current).toEqual({ enabled: false, admitted: false, resolved: true });
+  });
+
+  it('a co-managed bootstrap alone leaves ticket-conversations unresolved and closed', () => {
+    const { result } = renderHook(() => useCapability('ticket-conversations'), {
+      wrapper: withBootstrap({ 'capability:co-managed': true, 'capability:co-managed:admit': true, 'release-v2-0-feature': true }),
+    });
+    expect(result.current).toMatchObject({ enabled: false, admitted: false, resolved: false });
+  });
 });

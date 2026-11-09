@@ -4,7 +4,7 @@ import type { BaseJobData } from './interfaces';
 import type { JobHandlerFn } from './jobHandlerRegistry';
 
 /**
- * Adapter 4. Wrap a co-managed job handler so a tenant that is not served by
+ * Adapter 4. Wrap a capability's job handler so a tenant that is not served by
  * the capability completes as a logged skip: no retry, no DLQ, no SQL. Mirrors
  * the suspended-tenant skip in `JobHandlerRegistry.execute`. Jobs without a
  * tenantId (system scope) run unchanged.

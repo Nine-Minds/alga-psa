@@ -9,21 +9,26 @@
  *   admits(tenant)  may START: forced, else (release flag AND eligibility).
  *   serves(tenant)  keeps SERVING existing state: forced, else participation.
  *
- * The release flag alone never admits anything, and `serves` has no flag term
- * at all, so a flag flip can never strand a workspace and a PostHog outage can
- * never close reads. A throwing flag checker or resolver fails that branch
+ * admits = release flag AND eligibility. A capability whose eligibility is every
+ * tenant (a constant `true`, e.g. `ticket-conversations`) is admitted by the flag
+ * alone; one with a durable entitlement (`co-managed`) is not. `serves` has no
+ * flag term at all, so a flag flip can never strand a workspace and a PostHog
+ * outage can never close reads. A throwing flag checker or resolver fails that branch
  * closed; the error never escapes the gate (a 500 would reveal that a closed
  * capability exists).
  */
 
 import { evaluateFeatureFlag } from './features';
 import logger from './logger-universal';
+import { CAPABILITY_KEYS, isCapabilityKey, type CapabilityKey } from './capabilityKeys';
+
+export { CAPABILITY_KEYS, isCapabilityKey };
+export type { CapabilityKey };
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type CapabilityKey = 'co-managed';
 export type CapabilityMode = 'admits' | 'serves';
 
 export type CapabilityReason =
@@ -209,11 +214,29 @@ interface CapabilityRegistry {
 const REGISTRY_KEY = Symbol.for('alga.core.capabilityRegistry');
 type RegistryHost = typeof globalThis & { [REGISTRY_KEY]?: CapabilityRegistry };
 
+/** Eligibility for a capability every tenant may use: constant, no SQL, same answer in every process. */
+const everyTenant: EligibilityResolver = async () => true;
+
+/**
+ * Built-in gate definitions, one row per capability. The key list lives in the
+ * dependency-free `./capabilityKeys` (the edge middleware imports it), and the
+ * `satisfies` below makes a key without a row here a compile error.
+ * `ticket-conversations` seeds its (constant) eligibility here, not from a
+ * package at boot, so every process answers the same; its participation is
+ * registered by the owning package (L1).
+ */
+const CAPABILITY_SEEDS = {
+  'co-managed': { featureFlag: 'release-v2-0-feature' },
+  'ticket-conversations': { featureFlag: 'release-v2-0-feature', eligibility: everyTenant },
+} as const satisfies Record<CapabilityKey, Omit<CapabilityGateDefinition, 'capability'>>;
+
 function registry(): CapabilityRegistry {
   const host = globalThis as RegistryHost;
   if (!host[REGISTRY_KEY]) {
     const gates = new Map<CapabilityKey, CapabilityGateDefinition>();
-    gates.set('co-managed', { capability: 'co-managed', featureFlag: 'release-v2-0-feature' });
+    for (const capability of CAPABILITY_KEYS) {
+      gates.set(capability, { capability, ...CAPABILITY_SEEDS[capability] });
+    }
     host[REGISTRY_KEY] = { gates, cache: new Map() };
   }
   return host[REGISTRY_KEY]!;
@@ -516,7 +539,7 @@ export async function evaluateCapability(
 // Worker-safe guards (adapters 5 and 6)
 // ---------------------------------------------------------------------------
 
-/** Subscriber/inbound adapter: enter the co-managed branch only when true. */
+/** Subscriber/inbound adapter: enter the capability's branch only when true. */
 export async function isCapabilityServed(capability: CapabilityKey, tenantId: string): Promise<boolean> {
   return (await serves(capability, tenantId)).served;
 }

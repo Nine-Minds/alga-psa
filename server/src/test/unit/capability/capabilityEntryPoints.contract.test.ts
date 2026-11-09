@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
+import { CAPABILITY_KEYS, type CapabilityKey } from '@alga-psa/core/capability';
 import { REPO, closure, isForbiddenForWorkers } from './importGraph';
 
 /**
  * AST gate-coverage contract (plan 2.7, acceptance A7).
  *
- * Every co-managed entry point must pass through one of the six capability
- * adapters, before it touches the database. Later cards extend
+ * Every capability entry point (co-managed, ticket-conversations) must pass
+ * through one of the six capability adapters, naming its own capability, before
+ * it touches the database. Later cards extend
  * ENTRY_POINT_GLOBS; they never delete from it (registry sanity below).
  */
 
@@ -27,37 +29,45 @@ export const SCAN_ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/t
 export interface EntryPointFamily {
   id: string;
   glob: string;
+  /** The capability whose gate every file in this family must go through. */
+  capability: CapabilityKey;
   ruleA: boolean;
 }
 
 export const ENTRY_POINT_FAMILIES: readonly EntryPointFamily[] = [
-  { id: 'rsc-pages', glob: 'server/src/app/msp/co-manag*/**', ruleA: true },
-  { id: 'rest-routes', glob: 'server/src/app/api/**/co-management/**', ruleA: true },
-  { id: 'server-actions', glob: 'server/src/lib/actions/coManaged*', ruleA: true },
-  { id: 'package-actions', glob: 'packages/co-managed/src/**/actions*', ruleA: true },
+  { id: 'rsc-pages', glob: 'server/src/app/msp/co-manag*/**', capability: 'co-managed', ruleA: true },
+  { id: 'rest-routes', glob: 'server/src/app/api/**/co-management/**', capability: 'co-managed', ruleA: true },
+  { id: 'server-actions', glob: 'server/src/lib/actions/coManaged*', capability: 'co-managed', ruleA: true },
+  { id: 'package-actions', glob: 'packages/co-managed/src/**/actions*', capability: 'co-managed', ruleA: true },
   // Shared PSA/customer actions and token verification discover product and
   // trusted tenant first, then delegate to the separately registered guard.
-  { id: 'user-invitation-actions', glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', ruleA: false },
-  { id: 'user-invitation-service', glob: 'packages/users/src/services/UserInvitationService.ts', ruleA: false },
-  { id: 'user-invitation-gate', glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', ruleA: true },
-  { id: 'jobs', glob: 'packages/jobs/**/coManaged*', ruleA: true },
-  { id: 'subscribers', glob: 'server/src/lib/eventBus/subscribers/coManaged*', ruleA: true },
-  { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', ruleA: true },
-  { id: 'temporal-workflows', glob: 'ee/temporal-workflows/src/workflows/coManaged*', ruleA: true },
+  { id: 'user-invitation-actions', glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', capability: 'co-managed', ruleA: false },
+  { id: 'user-invitation-service', glob: 'packages/users/src/services/UserInvitationService.ts', capability: 'co-managed', ruleA: false },
+  { id: 'user-invitation-gate', glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', capability: 'co-managed', ruleA: true },
+  { id: 'jobs', glob: 'packages/jobs/**/coManaged*', capability: 'co-managed', ruleA: true },
+  { id: 'subscribers', glob: 'server/src/lib/eventBus/subscribers/coManaged*', capability: 'co-managed', ruleA: true },
+  { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', capability: 'co-managed', ruleA: true },
+  { id: 'temporal-workflows', glob: 'ee/temporal-workflows/src/workflows/coManaged*', capability: 'co-managed', ruleA: true },
   // The Temporal files are kebab-case; the camelCase globs above do not match them.
-  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed-provisioning*', ruleA: true },
-  { id: 'independent-upgrade-activity', glob: 'ee/temporal-workflows/src/activities/co-managed-upgrade-activities.ts', ruleA: true },
+  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed-provisioning*', capability: 'co-managed', ruleA: true },
+  { id: 'independent-upgrade-activity', glob: 'ee/temporal-workflows/src/activities/co-managed-upgrade-activities.ts', capability: 'co-managed', ruleA: true },
   // Tenant deletion is a cross-capability lifecycle hook: it must clean up existing co-managed state even after
   // the capability lapses, so it is deliberately not gated by the current capability resolver.
-  { id: 'tenant-deletion-cleanup', glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', ruleA: false },
+  { id: 'tenant-deletion-cleanup', glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', capability: 'co-managed', ruleA: false },
   // A workflow sandbox cannot import the adapter: its activities carry the gate.
-  { id: 'temporal-workflows-kebab', glob: 'ee/temporal-workflows/src/workflows/co-managed*', ruleA: false },
-  { id: 'ee-server-actions', glob: 'ee/server/src/lib/actions/coManaged*', ruleA: true },
-  { id: 'shared-services', glob: 'shared/services/**/coManaged*', ruleA: true },
+  { id: 'temporal-workflows-kebab', glob: 'ee/temporal-workflows/src/workflows/co-managed*', capability: 'co-managed', ruleA: false },
+  { id: 'ee-server-actions', glob: 'ee/server/src/lib/actions/coManaged*', capability: 'co-managed', ruleA: true },
+  { id: 'shared-services', glob: 'shared/services/**/coManaged*', capability: 'co-managed', ruleA: true },
   // Co-managed UI mounts (plan 4). DO-NOT-PORT 24's raw-flag boundary lived at
   // server/src/components/co-managed/CoManagedFeatureBoundary.tsx.
-  { id: 'server-ui', glob: 'server/src/components/co-managed/**', ruleA: false },
-  { id: 'package-ui', glob: 'packages/co-managed/src/components/**', ruleA: false },
+  { id: 'server-ui', glob: 'server/src/components/co-managed/**', capability: 'co-managed', ruleA: false },
+  { id: 'package-ui', glob: 'packages/co-managed/src/components/**', capability: 'co-managed', ruleA: false },
+  // Ticket conversations (L0a). The directories do not exist yet: L1 (actions, routes) and L3 (UI) create them
+  // and raise these counts in their own diffs. A non-zero count at L0a means the glob is matching unrelated code.
+  { id: 'tc-ticket-ui', glob: 'packages/tickets/src/components/ticket/conversations/**', capability: 'ticket-conversations', ruleA: false },
+  { id: 'tc-package-actions', glob: 'packages/conversations/src/**/actions*', capability: 'ticket-conversations', ruleA: true },
+  { id: 'tc-ticket-actions', glob: 'packages/tickets/src/actions/**/conversation*', capability: 'ticket-conversations', ruleA: true },
+  { id: 'tc-rest-routes', glob: 'server/src/app/api/**/tickets/**/conversations/**', capability: 'ticket-conversations', ruleA: true },
 ];
 
 export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f) => f.glob);
@@ -67,7 +77,7 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  * exact family set and, per family, how many production files it matches at
  * HEAD. Deleting a family, swapping one for another, or narrowing a glob so it
  * stops matching files all fail. A card that adds co-managed entry points
- * updates the count in the same diff.
+ * updates the count in the same diff. The `tc-*` families are pinned at 0 until L1/L3 land.
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 17 },
@@ -89,6 +99,10 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
   'server-ui': { glob: 'server/src/components/co-managed/**', files: 77 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
+  'tc-ticket-ui': { glob: 'packages/tickets/src/components/ticket/conversations/**', files: 0 },
+  'tc-package-actions': { glob: 'packages/conversations/src/**/actions*', files: 0 },
+  'tc-ticket-actions': { glob: 'packages/tickets/src/actions/**/conversation*', files: 0 },
+  'tc-rest-routes': { glob: 'server/src/app/api/**/tickets/**/conversations/**', files: 0 },
 };
 
 /** The six adapters (plus the three Next-free guard names they export). */
@@ -108,6 +122,18 @@ export const ADAPTER_EXPORTS = new Set([
   // 7 purchase surface (L8a): a purchase creates the FIRST entitlement, so `admits` (flag AND entitlement)
   // would make it unreachable. The surface is price AND kill switch AND release flag; it grants nothing.
   'isCoManagedPurchaseSurfaceOpen',
+]);
+
+/** Adapters whose first argument is the capability key; Rule A requires it to be the family's own capability. */
+export const CAPABILITY_ARG_ADAPTERS = new Set([
+  'requireCapabilityForAction',
+  'requireCapabilityEitherMode',
+  'capabilityRouteGuard',
+  'requireCapabilityForPage',
+  'withCapabilityJob',
+  'isCapabilityServed',
+  'filterCapabilityServed',
+  'activityServesCapability',
 ]);
 
 const DB_TOUCHING = new Set(['createTenantKnex', 'tenantDb', 'runWithTenant', 'knex']);
@@ -234,12 +260,22 @@ export function ruleA(files: SourceFile[]): string[] {
   const out: string[] = [];
   for (const f of files.filter((x) => isEntryPoint(x.path))) {
     const sf = parse(f);
+    const capability = entryPointFamily(f.path)!.capability;
     let adapterPos = Infinity;
     let dbAwaitPos = Infinity;
+    let wrongCapability: string | null = null;
     const visit = (n: ts.Node) => {
       if (ts.isCallExpression(n)) {
         const name = calleeName(n);
-        if (name && ADAPTER_EXPORTS.has(name)) adapterPos = Math.min(adapterPos, n.getStart(sf));
+        if (name && ADAPTER_EXPORTS.has(name)) {
+          const first = n.arguments[0];
+          if (CAPABILITY_ARG_ADAPTERS.has(name) && first && ts.isStringLiteralLike(first) && first.text !== capability) {
+            // Gated on another capability's key: that does not gate this surface.
+            wrongCapability ??= first.text;
+          } else {
+            adapterPos = Math.min(adapterPos, n.getStart(sf));
+          }
+        }
       }
       if (ts.isAwaitExpression(n)) {
         let touches = false;
@@ -255,12 +291,16 @@ export function ruleA(files: SourceFile[]): string[] {
     visit(sf);
     const where = matchesEntryPointGlob(f.path);
     if (adapterPos === Infinity) {
-      out.push(`capabilityEntryPoints: ${f.path} (glob ${where}) never calls a capability adapter`);
+      out.push(
+        wrongCapability
+          ? `capabilityEntryPoints: ${f.path} (glob ${where}) never calls a capability adapter for '${capability}' (it gates on '${wrongCapability}')`
+          : `capabilityEntryPoints: ${f.path} (glob ${where}) never calls a capability adapter for '${capability}'`,
+      );
       continue;
     }
     const orderSensitive = /(^|\/)(page\.tsx?|route\.ts)$|\/actions?[^/]*\.tsx?$|\/lib\/actions\//.test(f.path);
     if (orderSensitive && dbAwaitPos < adapterPos) {
-      out.push(`capabilityEntryPoints: ${f.path} awaits database work before calling its capability adapter`);
+      out.push(`capabilityEntryPoints: ${f.path} awaits database work before calling its '${capability}' capability adapter`);
     }
   }
   return out;
@@ -371,11 +411,12 @@ export function isSessionTenant(expr: ts.Expression, path: string[] = [], depth 
   return false;
 }
 
-/** Rule A2: adapters 1-3 in co-managed entry points take the tenant from the session, never from input. */
+/** Rule A2: adapters 1-3 in capability entry points take the tenant from the session, never from input. */
 export function ruleA2(files: SourceFile[]): string[] {
   const out: string[] = [];
   for (const f of files.filter((x) => isEntryPoint(x.path))) {
     const sf = parse(f);
+    const capability = entryPointFamily(f.path)!.capability;
     const visit = (n: ts.Node) => {
       if (ts.isCallExpression(n)) {
         const name = calleeName(n);
@@ -383,7 +424,7 @@ export function ruleA2(files: SourceFile[]): string[] {
           const tenant = n.arguments[SESSION_TENANT_ADAPTERS.get(name)!];
           if (!tenant || !isSessionTenant(tenant)) {
             out.push(
-              `capabilityEntryPoints: ${name} at ${f.path}:${lineOf(sf, n)} takes a tenant that does not come from the authenticated session (${tenant ? tenant.getText(sf) : 'missing'})`,
+              `capabilityEntryPoints: ${name} at ${f.path}:${lineOf(sf, n)} takes a tenant that does not come from the authenticated session in a '${capability}' entry point (${tenant ? tenant.getText(sf) : 'missing'})`,
             );
           }
         }
@@ -414,18 +455,23 @@ export function ruleB(files: SourceFile[]): string[] {
   return out;
 }
 
-/** Rule C: raw flag reads inside co-managed entry points. */
+/** Rule C: raw flag reads inside any capability's entry points. */
 export function ruleC(files: SourceFile[]): string[] {
   const out: string[] = [];
   for (const f of files) {
     if (f.path in ALLOWLIST || !matchesEntryPointGlob(f.path) || !isSourcePath(f.path) || isTestPath(f.path)) continue;
     const sf = parse(f);
+    const capability = entryPointFamily(f.path)!.capability;
+    const why =
+      capability === 'co-managed'
+        ? 'the release flag alone never changes co-managed behaviour'
+        : `the raw release flag is not the ${capability} gate`;
     const visit = (n: ts.Node) => {
       if (ts.isCallExpression(n) && calleeName(n) === 'useFeatureFlag') {
         const a = n.arguments[0];
         if (a && ts.isStringLiteralLike(a) && (a.text === 'release-v2-0-feature' || a.text.startsWith('capability:'))) {
           out.push(
-            `capabilityEntryPoints: raw useFeatureFlag('${a.text}') at ${f.path}:${lineOf(sf, n)} — co-managed UI must read useCapability('co-managed'); the release flag alone never changes co-managed behaviour`,
+            `capabilityEntryPoints: raw useFeatureFlag('${a.text}') at ${f.path}:${lineOf(sf, n)} — ${capability} UI must read useCapability('${capability}'); ${why}`,
           );
         }
       }
@@ -572,7 +618,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
     expect(repoFiles.length).toBeGreaterThan(500);
   });
 
-  it('Rule A: every co-managed entry point calls an adapter before DB work', () => {
+  it('Rule A: every capability entry point calls its own capability adapter before DB work', () => {
     expect(ruleA(repoFiles)).toEqual([]);
   });
 
@@ -584,7 +630,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
     expect(ruleB(repoFiles)).toEqual([]);
   });
 
-  it('Rule C: no raw release flag reads inside co-managed entry points', () => {
+  it('Rule C: no raw release flag reads inside capability entry points', () => {
     expect(ruleC(repoFiles)).toEqual([]);
   });
 
@@ -688,7 +734,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     );
     const v = ruleA([f]);
     expect(v).toHaveLength(1);
-    expect(v[0]).toContain('before calling its capability adapter');
+    expect(v[0]).toContain("before calling its 'co-managed' capability adapter");
   });
 
   it('Rule A passes when the adapter comes first', () => {
@@ -783,11 +829,78 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     expect(ruleA([file('server/src/components/co-managed/Panel.tsx', `export const Panel = () => null;`)])).toEqual([]);
   });
 
+  describe('ticket-conversations families', () => {
+    const TC_ACTION = 'packages/tickets/src/actions/conversationActions.ts';
+
+    it("Rule C fails on a raw useFeatureFlag('release-v2-0-feature') in the conversations UI", () => {
+      const v = ruleC([
+        file(
+          'packages/tickets/src/components/ticket/conversations/Foo.tsx',
+          `export function Foo() {\n  const { enabled } = useFeatureFlag('release-v2-0-feature');\n  return enabled ? null : null;\n}`,
+        ),
+      ]);
+      expect(v).toEqual([
+        "capabilityEntryPoints: raw useFeatureFlag('release-v2-0-feature') at packages/tickets/src/components/ticket/conversations/Foo.tsx:2 — ticket-conversations UI must read useCapability('ticket-conversations'); the raw release flag is not the ticket-conversations gate",
+      ]);
+    });
+
+    it('Rule A fails on a stub conversation action that does DB work with no adapter', () => {
+      const v = ruleA([
+        file(
+          TC_ACTION,
+          `export async function listConversations() {\n  const { knex } = await createTenantKnex();\n  return knex('conversations').select('*');\n}`,
+        ),
+      ]);
+      expect(v).toEqual([
+        `capabilityEntryPoints: ${TC_ACTION} (glob packages/tickets/src/actions/**/conversation*) never calls a capability adapter for 'ticket-conversations'`,
+      ]);
+    });
+
+    it("Rule A fails on a conversation action gated on 'co-managed', and passes when it names its own key", () => {
+      const gated = (key: string) =>
+        file(TC_ACTION, `export async function a(tenant: string) {\n  await requireCapabilityForAction('${key}', tenant);\n  await createTenantKnex();\n}`);
+      expect(ruleA([gated('co-managed')])).toEqual([
+        `capabilityEntryPoints: ${TC_ACTION} (glob packages/tickets/src/actions/**/conversation*) never calls a capability adapter for 'ticket-conversations' (it gates on 'co-managed')`,
+      ]);
+      expect(ruleA([gated('ticket-conversations')])).toEqual([]);
+    });
+
+    it("Rule A2 names the family's capability", () => {
+      const v = ruleA2([file(TC_ACTION, `export async function a(t: string) { await requireCapabilityForAction('ticket-conversations', t); }`)]);
+      expect(v).toHaveLength(1);
+      expect(v[0]).toContain("'ticket-conversations' entry point");
+    });
+
+    it('every family names a capability from CAPABILITY_KEYS, and every capability has a family', () => {
+      for (const family of ENTRY_POINT_FAMILIES) expect(CAPABILITY_KEYS, family.id).toContain(family.capability);
+      for (const key of CAPABILITY_KEYS) expect(ENTRY_POINT_FAMILIES.some((f) => f.capability === key), key).toBe(true);
+    });
+
+    it.each([
+      ['packages/tickets/src/components/ticket/conversations/Thread.tsx', 'tc-ticket-ui'],
+      ['packages/conversations/src/lib/actions.ts', 'tc-package-actions'],
+      ['packages/tickets/src/actions/conversationActions.ts', 'tc-ticket-actions'],
+      ['packages/tickets/src/actions/ticketActions/conversationList.ts', 'tc-ticket-actions'],
+      ['server/src/app/api/v1/tickets/[id]/conversations/route.ts', 'tc-rest-routes'],
+    ])('%s belongs to %s', (path, id) => {
+      expect(entryPointFamily(path)?.id).toBe(id);
+    });
+
+    it.each([
+      'server/src/components/chat/ConversationList.tsx',
+      'packages/tickets/src/actions/ticketActions.ts',
+      'packages/tickets/src/components/ticket/TicketConversation.tsx',
+      'server/src/app/api/chat/conversations/route.ts',
+    ])('%s is not matched by a tc-* family', (path) => {
+      expect(entryPointFamily(path)?.id ?? '').not.toMatch(/^tc-/);
+    });
+  });
+
   it('registry sanity fails when a family is dropped, swapped for another, or narrowed', () => {
     const dropped = ENTRY_POINT_FAMILIES.filter((f) => f.id !== 'server-ui');
     expect(registrySanity(dropped, repoFiles).some((m) => m.includes('!= expected ['))).toBe(true);
 
-    const swapped = [...dropped, { id: 'something-else', glob: 'server/src/elsewhere/**', ruleA: true }];
+    const swapped = [...dropped, { id: 'something-else', glob: 'server/src/elsewhere/**', capability: 'co-managed' as const, ruleA: true }];
     expect(registrySanity(swapped, repoFiles).some((m) => m.includes('!= expected ['))).toBe(true);
 
     const narrowed = ENTRY_POINT_FAMILIES.map((f) => (f.id === 'server-actions' ? { ...f, glob: 'server/src/lib/actions/coManagedX*' } : f));
@@ -844,48 +957,75 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
 // diff, with its test.
 // ---------------------------------------------------------------------------
 
-const UI_SLOT_MOUNTS: Readonly<Record<string, string>> = {
-  'server/src/components/layout/SidebarWithFeatureFlags.tsx': 'msp.navigation.group',
-  'server/src/components/co-managed/CoManagedConversationFiles.tsx': 'ticket.conversation.comment-attachments',
+/** Slots each mount resolves / each contribution file fills, by file. */
+const UI_SLOT_MOUNTS: Readonly<Record<string, readonly string[]>> = {
+  'server/src/components/layout/SidebarWithFeatureFlags.tsx': ['msp.navigation.group'],
+  'server/src/components/co-managed/CoManagedConversationFiles.tsx': [
+    'ticket.conversation.comment-attachments',
+    'ticket.conversation.thread-header',
+  ],
 };
-const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, string>> = {
-  'server/src/config/coManagedMenu.ts': 'msp.navigation.group',
-  'server/src/config/coManagedConversationSlots.ts': 'ticket.conversation.thread-header',
+const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, readonly string[]>> = {
+  'server/src/config/coManagedMenu.ts': ['msp.navigation.group'],
+  'server/src/config/coManagedConversationSlots.ts': [
+    'ticket.conversation.comment-attachments',
+    'ticket.conversation.thread-header',
+  ],
 };
+
+/**
+ * The capability keys a source reads: `useCapability('<k>')` for a mount, `capability: '<k>'` for a
+ * contribution. Generalised over CAPABILITY_KEYS, so L3's ticket-conversations mounts and contributions
+ * (L3's `ticket.details.sidebar`) pass by naming their own key.
+ */
+const capabilityKeysUsed = (source: string, form: (key: CapabilityKey) => string): CapabilityKey[] =>
+  CAPABILITY_KEYS.filter((key) => source.includes(form(key)));
+const mountKeys = (source: string) => capabilityKeysUsed(source, (k) => `useCapability('${k}')`);
+const contributionKeys = (source: string) => capabilityKeysUsed(source, (k) => `capability: '${k}'`);
 
 describe('UI-slot mounts (A8)', () => {
   const mounts = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && /\bresolveUiSlots\s*[<(]/.test(f.source)
+    && !f.path.endsWith('uiSlotRegistry.ts'));
+  const contributions = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && /\bregisterUiSlot\s*[<(]/.test(f.source)
     && !f.path.endsWith('uiSlotRegistry.ts'));
 
   it('enumerates every resolveUiSlots mount', () => {
     expect(mounts.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_MOUNTS).sort());
   });
 
-  it("each mount serves slots from useCapability('co-managed') and names its surface", () => {
+  it('each mount serves slots from useCapability(<one capability key>) and names its surface', () => {
     for (const f of mounts) {
-      expect(f.source, f.path).toContain("useCapability('co-managed')");
-      if (f.path.endsWith('CoManagedConversationFiles.tsx')) {
-        expect(f.source, f.path).toContain("'ticket.conversation.comment-attachments'");
-        expect(f.source, f.path).toContain("'ticket.conversation.thread-header'");
-      } else {
-        expect(f.source, f.path).toContain(`'${UI_SLOT_MOUNTS[f.path]}'`);
-      }
+      expect(mountKeys(f.source), f.path).toHaveLength(1);
+      for (const slot of UI_SLOT_MOUNTS[f.path]) expect(f.source, f.path).toContain(`'${slot}'`);
       expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*'release-v2-0-feature'/);
     }
   });
 
-  it('every registerUiSlot contribution is enumerated and gated on the co-managed capability', () => {
-    const contributions = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && /\bregisterUiSlot\s*[<(]/.test(f.source)
-      && !f.path.endsWith('uiSlotRegistry.ts'));
+  it('every registerUiSlot contribution is enumerated and declares exactly one capability key', () => {
     expect(contributions.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_CONTRIBUTIONS).sort());
     for (const f of contributions) {
-      expect(f.source, f.path).toContain("capability: 'co-managed'");
-      if (f.path.endsWith('coManagedConversationSlots.ts')) {
-        expect(f.source, f.path).toContain("'ticket.conversation.comment-attachments'");
-        expect(f.source, f.path).toContain("'ticket.conversation.thread-header'");
-      } else {
-        expect(f.source, f.path).toContain(`'${UI_SLOT_CONTRIBUTIONS[f.path]}'`);
+      expect(contributionKeys(f.source), f.path).toHaveLength(1);
+      for (const slot of UI_SLOT_CONTRIBUTIONS[f.path]) expect(f.source, f.path).toContain(`'${slot}'`);
+    }
+  });
+
+  it("a mount's capability key equals its contributions' key for every slot they share", () => {
+    for (const mount of mounts) {
+      for (const contribution of contributions) {
+        const shared = UI_SLOT_MOUNTS[mount.path].filter((slot) => UI_SLOT_CONTRIBUTIONS[contribution.path].includes(slot));
+        if (shared.length) expect(contributionKeys(contribution.source), `${contribution.path} vs ${mount.path}`).toEqual(mountKeys(mount.source));
       }
     }
+  });
+
+  it('today every mount and contribution is gated on co-managed (ticket-conversations ships none at L0a)', () => {
+    for (const f of mounts) expect(mountKeys(f.source), f.path).toEqual(['co-managed']);
+    for (const f of contributions) expect(contributionKeys(f.source), f.path).toEqual(['co-managed']);
+  });
+
+  it('the key matchers accept any capability key and reject a missing one', () => {
+    expect(mountKeys(`const x = useCapability('ticket-conversations');`)).toEqual(['ticket-conversations']);
+    expect(contributionKeys(`registerUiSlot({ capability: 'ticket-conversations' })`)).toEqual(['ticket-conversations']);
+    expect(mountKeys(`useFeatureFlag('release-v2-0-feature')`)).toEqual([]);
   });
 });

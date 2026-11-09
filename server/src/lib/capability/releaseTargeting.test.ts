@@ -44,6 +44,9 @@ describe('production release tenant targeting (co-managed)', () => {
       'release-v2-0-feature': flag,
       'capability:co-managed': served,
       'capability:co-managed:admit': admitted,
+      // ticket-conversations: admitted by the flag alone, never served before L1 registers participation.
+      'capability:ticket-conversations': false,
+      'capability:ticket-conversations:admit': flag,
     });
     expect(checker).not.toHaveBeenCalled();
   });
@@ -55,6 +58,8 @@ describe('production release tenant targeting (co-managed)', () => {
       'release-v2-0-feature': true,
       'capability:co-managed': false,
       'capability:co-managed:admit': false,
+      'capability:ticket-conversations': false,
+      'capability:ticket-conversations:admit': true, // co-managed:off does not touch it
     });
   });
 

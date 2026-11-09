@@ -9,7 +9,7 @@
  * COST MODEL for a plain PSA tenant:
  *   - nothing registered (flag off, package failed to resolve) => `{ handled: false }` synchronously,
  *     no import, no SQL;
- *   - something registered => one cached `serves('co-managed', tenant)` verdict
+ *   - something registered => one cached `serves(<capability>, tenant)` verdict
  *     (@alga-psa/core capability gate: forced value, else a 30s participation cache). A
  *     non-participating tenant is answered from that cache with zero statements in steady state.
  *
@@ -18,6 +18,8 @@
  *
  * The registry lives on globalThis because Next bundles a module more than once.
  */
+import type { CapabilityKey } from '@alga-psa/core/capability';
+
 export type SharedWorkMiss = { handled: false };
 
 export interface SharedWorkSeam<P> {
@@ -34,8 +36,12 @@ export interface SharedWorkSeam<P> {
 
 interface Slot<P> { factory: () => P | Promise<P>; instance?: Promise<P> }
 
-export function sharedWorkSeam<P>(name: string, capability: 'co-managed' = 'co-managed'): SharedWorkSeam<P> {
-  const key = Symbol.for(`alga.sharedWorkSeam.${name}`);
+export function sharedWorkSeam<P>(name: string, capability: CapabilityKey = 'co-managed'): SharedWorkSeam<P> {
+  // Co-managed keeps its historical slot name; any other capability is namespaced so a seam
+  // named like an existing one (e.g. `delivery`) cannot collide across capabilities.
+  const key = Symbol.for(
+    capability === 'co-managed' ? `alga.sharedWorkSeam.${name}` : `alga.sharedWorkSeam.${capability}.${name}`,
+  );
   const host = globalThis as unknown as Record<symbol, Slot<P> | undefined>;
 
   async function resolve(tenant: string): Promise<P | null> {

@@ -73,4 +73,28 @@ describe('worker boot safety', () => {
     testing.resetCapabilityRegistry();
     vi.doUnmock('../../../../../packages/core/src/lib/features');
   });
+
+  it('ticket-conversations fails closed when the flag checker throws; its seeded eligibility cannot', async () => {
+    vi.resetModules();
+    const boom = vi.fn(async () => {
+      throw new Error('boom');
+    });
+    vi.doMock('../../../../../packages/core/src/lib/features', () => ({ evaluateFeatureFlag: boom, isFeatureFlagEnabled: boom }));
+    const cap = await import('../../../../../packages/core/src/lib/capability');
+    const testing = await import('../../../../../packages/core/src/capability/testing');
+    testing.resetCapabilityRegistry();
+    // No package registered anything: the pure entry alone already carries the constant eligibility.
+    expect(cap.capabilityResolverStatus('ticket-conversations').eligibility).toBe('registered');
+    await expect(cap.admits('ticket-conversations', 't1')).resolves.toMatchObject({
+      admitted: false,
+      reasons: { admitted: 'flag-unavailable' },
+    });
+    await expect(cap.serves('ticket-conversations', 't1')).resolves.toMatchObject({ served: false });
+    await expect(cap.activityServesCapability('ticket-conversations', 't1')).resolves.toEqual({
+      skipped: true,
+      capability: 'ticket-conversations',
+    });
+    testing.resetCapabilityRegistry();
+    vi.doUnmock('../../../../../packages/core/src/lib/features');
+  });
 });

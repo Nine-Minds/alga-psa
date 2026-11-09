@@ -16,8 +16,8 @@ export interface UseCapabilityResult {
  * Client view of a release capability. Reads ONLY the server bootstrap (plus a
  * dev/CI-only build-time force); it never imports posthog-js, never subscribes
  * to flag updates and never re-evaluates, so the answer cannot drift from the
- * server's. Co-managed UI must use this, never raw
- * `useFeatureFlag('release-v2-0-feature')`.
+ * server's. Capability UI must use this, never the raw release flag
+ * (`useFeatureFlag('release-v2-0-feature')`).
  */
 export function useCapability(capability: CapabilityKey): UseCapabilityResult {
   const bootstrap = useFeatureFlagBootstrap();

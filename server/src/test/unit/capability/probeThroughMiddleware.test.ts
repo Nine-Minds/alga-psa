@@ -19,14 +19,25 @@ vi.mock('next/server', async () => ({
   ...await import('next/dist/server/web/spec-extension/response'),
 }));
 vi.mock('@alga-psa/auth', () => ({ getSession }));
-vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag }));
+vi.mock('@alga-psa/core/features', () => ({
+  isFeatureFlagEnabled: flag,
+  // The gate reads the flag through evaluateFeatureFlag; mirror the checker's outcome.
+  evaluateFeatureFlag: async (...args: unknown[]) => {
+    try {
+      return { status: 'evaluated', enabled: Boolean(await flag(...args)) };
+    } catch {
+      return { status: 'unavailable' };
+    }
+  },
+}));
 
 import middleware from 'server/src/middleware';
-import {  } from '@alga-psa/core/capability';
+import { CAPABILITY_KEYS } from '@alga-psa/core/capability';
 import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
-import { GET } from 'server/src/app/api/v1/capabilities/co-managed/route';
+import { GET } from 'server/src/app/api/v1/capabilities/[key]/route';
 
-const PROBE = 'http://localhost:3000/api/v1/capabilities/co-managed';
+const probe = (key: string) => `http://localhost:3000/api/v1/capabilities/${key}`;
+const PROBE = probe('co-managed');
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'Resource not found' } };
 const mspUser = { id: 'u1', user_type: 'internal', tenant: 'tenant-1' };
 
@@ -37,7 +48,8 @@ async function dispatch(url: string, auth: { user: typeof mspUser } | null): Pro
   const req = Object.assign(new NextRequest(url), { auth });
   const res = await (middleware as unknown as Middleware)(req);
   if (res.headers.get('x-middleware-next') !== '1') return res;
-  return GET();
+  const key = new URL(url).pathname.split('/').filter(Boolean).pop() as string;
+  return GET(req, { params: Promise.resolve({ key }) });
 }
 
 describe('capability probe behind the real middleware', () => {
@@ -85,9 +97,8 @@ describe('capability probe behind the real middleware', () => {
   it('the exemption names the probe only: siblings and deeper paths under /api/v1/capabilities/ still need an API key', async () => {
     for (const url of [
       'http://localhost:3000/api/v1/capabilities/other',
-      'http://localhost:3000/api/v1/capabilities/co-managed/extra',
-      'http://localhost:3000/api/v1/capabilities/co-managed-evil',
       'http://localhost:3000/api/v1/capabilities',
+      ...CAPABILITY_KEYS.flatMap((key) => [`${probe(key)}/extra`, `${probe(key)}-evil`]),
     ]) {
       const res = await dispatch(url, { user: mspUser });
       expect(res.status, url).toBe(401);
@@ -101,5 +112,47 @@ describe('capability probe behind the real middleware', () => {
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: { code: 'UNAUTHORIZED', message: 'API key required' } });
     expect(getSession).not.toHaveBeenCalled();
+  });
+
+  describe('ticket-conversations', () => {
+    const TC = probe('ticket-conversations');
+
+    it.each(CAPABILITY_KEYS)('%s: the exact probe path, with and without a trailing slash, bypasses the API-key check', async (key) => {
+      for (const url of [probe(key), `${probe(key)}/`]) {
+        getSession.mockResolvedValue(null);
+        const res = await dispatch(url, null);
+        expect(res.status, url).toBe(401);
+        expect(await res.json(), url).toEqual({ error: 'Unauthorized' }); // the handler's 401, not API key required
+      }
+    });
+
+    it('R1: flag off answers 404', async () => {
+      flag.mockResolvedValue(false);
+      const res = await dispatch(TC, { user: mspUser });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual(NOT_FOUND);
+    });
+
+    it('R2: flag on answers 200 admitted, not served', async () => {
+      const res = await dispatch(TC, { user: mspUser });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({
+        capability: 'ticket-conversations', admitted: true, served: false,
+        reasons: { served: 'resolver-unregistered' },
+      });
+    });
+
+    it('kill switch: ticket-conversations:off is 404 while the co-managed probe is unchanged', async () => {
+      const before = await (await dispatch(PROBE, { user: mspUser })).status;
+      process.env.FORCE_CAPABILITIES = 'ticket-conversations:off';
+      expect((await dispatch(TC, { user: mspUser })).status).toBe(404);
+      expect((await dispatch(PROBE, { user: mspUser })).status).toBe(before);
+    });
+
+    it('an unknown key under the exemption list still needs an API key; a known-shaped one is not exempt', async () => {
+      const res = await dispatch(probe('ticket-conversation'), { user: mspUser });
+      expect(res.status).toBe(401);
+      expect(await res.json()).toEqual({ error: { code: 'UNAUTHORIZED', message: 'API key required' } });
+    });
   });
 });

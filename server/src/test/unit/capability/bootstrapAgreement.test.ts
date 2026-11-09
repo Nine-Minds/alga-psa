@@ -8,13 +8,14 @@ import {
   admits,
   registerCapabilityEligibility,
   registerCapabilityParticipation,
+  CAPABILITY_KEYS,
   resolveClientCapability,
   serves,
 } from '@alga-psa/core/capability';
 import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import { resolveCapabilityBootstrap } from '../../../lib/capability/bootstrap';
 
-const flag = vi.fn<() => Promise<boolean | FeatureFlagEvaluation>>();
+const flag = vi.fn<(name?: string) => Promise<boolean | FeatureFlagEvaluation>>();
 
 describe('server/client agreement through the bootstrap', () => {
   afterEach(() => {
@@ -96,5 +97,57 @@ describe('server/client agreement through the bootstrap', () => {
     const bootstrap = await resolveCapabilityBootstrap(null);
     expect(bootstrap).toEqual({});
     expect(resolveClientCapability({ capability: 'co-managed', bootstrap })).toMatchObject({ enabled: false, resolved: false });
+  });
+
+  describe('ticket-conversations', () => {
+    const TC = 'ticket-conversations' as const;
+
+    it('every capability key and the flag come from one flag (one bootstrap evaluation; the flag layer dedupes the rest)', async () => {
+      flag.mockResolvedValue(true);
+      const bootstrap = await resolveCapabilityBootstrap('control');
+      expect(Object.keys(bootstrap).sort()).toEqual(
+        [
+          'release-v2-0-feature',
+          ...CAPABILITY_KEYS.flatMap((key) => [`capability:${key}`, `capability:${key}:admit`]),
+        ].sort(),
+      );
+      expect(Object.keys(bootstrap)).toContain('capability:ticket-conversations:admit');
+      // The bootstrap evaluates the shared flag once itself; each capability's admission asks the flag layer
+      // (which caches it: see capabilityNeutrality, one PostHog call). Nothing but the shared flag is asked.
+      expect(flag.mock.calls.every(([name]) => name === 'release-v2-0-feature')).toBe(true);
+      expect(flag.mock.calls.length).toBeLessThanOrEqual(1 + CAPABILITY_KEYS.length);
+    });
+
+    it.each([
+      ['flag on', true, { admitted: true, served: false }],
+      ['flag off', false, { admitted: false, served: false }],
+    ])('%s: the client decision equals the server decision', async (_label, on, expected) => {
+      flag.mockResolvedValue(on);
+      const bootstrap = await resolveCapabilityBootstrap('control');
+      const client = resolveClientCapability({ capability: TC, bootstrap });
+      expect(client).toMatchObject({ enabled: expected.served, admitted: expected.admitted, resolved: true });
+      expect(client.enabled).toBe((await serves(TC, 'control')).served);
+      expect(client.admitted).toBe((await admits(TC, 'control')).admitted);
+    });
+
+    it('ticket-conversations:off closes only that key', async () => {
+      flag.mockResolvedValue(true);
+      vi.stubEnv('FORCE_CAPABILITIES', 'ticket-conversations:off');
+      const bootstrap = await resolveCapabilityBootstrap('internal');
+      expect(resolveClientCapability({ capability: TC, bootstrap })).toMatchObject({ enabled: false, admitted: false });
+      expect(resolveClientCapability({ capability: 'co-managed', bootstrap })).toMatchObject({ enabled: true, admitted: true });
+      expect(bootstrap['release-v2-0-feature']).toBe(true);
+    });
+
+    it('one failing key never drops the other', async () => {
+      flag.mockResolvedValue(true);
+      registerCapabilityParticipation(TC, async () => {
+        throw new Error('db down');
+      });
+      const bootstrap = await resolveCapabilityBootstrap('internal');
+      expect(bootstrap['capability:co-managed:admit']).toBe(true);
+      expect(bootstrap['capability:ticket-conversations:admit']).toBe(true);
+      expect(bootstrap['capability:ticket-conversations']).toBe(false); // participation error fails closed
+    });
   });
 });

@@ -14,6 +14,10 @@
       "import": "./dist/lib/capability.js",
       "types": "./src/lib/capability.ts"
     },
+    "./capability/keys": {
+      "import": "./dist/lib/capabilityKeys.js",
+      "types": "./src/lib/capabilityKeys.ts"
+    },
     "./capability/server": {
       "import": "./dist/capability/server.js",
       "types": "./src/capability/server.ts"

@@ -11,6 +11,7 @@ import {
   PUBLIC_QUOTE_PAGE_PATTERN,
   PUBLIC_QUOTE_PDF_PATTERN,
 } from './lib/quote/publicQuotePaths';
+import { CAPABILITY_KEYS } from '@alga-psa/core/capability/keys';
 import { resolveHostSurface } from './lib/portal-domains/hostSurface';
 import { portalDomainServes, surfaceForPath, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
 
@@ -260,12 +261,11 @@ const exactApiKeySkipPaths = [
   // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
   '/api/webhooks/datto',
   '/api/webhooks/datto/',
-  // The co-managed capability probe: a read-only GET that authenticates the
-  // session in-route (tenant from the session, never the request). Exact match
-  // only, so any future route under /api/v1/capabilities/ stays behind the
-  // API-key gate until it is exempted by name.
-  '/api/v1/capabilities/co-managed',
-  '/api/v1/capabilities/co-managed/',
+  // The capability probes (one per CAPABILITY_KEYS entry): a read-only GET that
+  // authenticates the session in-route (tenant from the session, never the
+  // request). Exact match only, so `/api/v1/capabilities`, deeper paths and
+  // lookalikes stay behind the API-key gate.
+  ...CAPABILITY_KEYS.flatMap((key) => [`/api/v1/capabilities/${key}`, `/api/v1/capabilities/${key}/`]),
   // Notification live-stream token: the MSP shell and the client portal both
   // mint a short-lived Hocuspocus token from their browser session (no
   // x-api-key). The route re-checks the session itself, and

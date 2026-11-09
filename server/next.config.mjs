@@ -304,6 +304,7 @@ const nextConfig = {
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
       '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
       '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
+      '@alga-psa/core/capability/keys': '../packages/core/src/lib/capabilityKeys.ts',
       '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
       '@alga-psa/core/net/safeFetch': '../packages/core/src/lib/net/safeFetch.ts',
       '@alga-psa/core/': '../packages/core/src/',

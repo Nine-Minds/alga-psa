@@ -7,6 +7,8 @@ vi.mock('./logger-universal', () => ({
 import logger from './logger-universal';
 import { registerFeatureFlagChecker } from './features';
 import {
+  CAPABILITY_KEYS,
+  isCapabilityKey,
   activityServesCapability,
   admits,
   evaluateCapability,
@@ -506,5 +508,162 @@ describe('FORCE_CAPABILITIES parser and client/server forced-value parity', () =
     const c = resolveClientCapability({ capability: CAP, bootstrap: {}, publicForceRaw: 'co-managed:on', production: true });
     expect(c).toMatchObject({ enabled: false, resolved: false });
     expect(logger.warn).toHaveBeenCalled();
+  });
+});
+
+describe('ticket-conversations', () => {
+  const env = { ...process.env };
+  const TC: CapabilityKey = 'ticket-conversations';
+  const CM: CapabilityKey = 'co-managed';
+  const T = 'tenant-1';
+
+  function flag(value: boolean | Error): void {
+    flagChecker.mockReset();
+    flagChecker.mockImplementation(async () => {
+      if (value instanceof Error) throw value;
+      return value;
+    });
+    registerFeatureFlagChecker(flagChecker);
+  }
+
+  beforeEach(() => {
+    delete process.env.FORCE_CAPABILITIES;
+    delete process.env.DISABLE_FEATURE_FLAGS;
+    delete process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS;
+    process.env.CAPABILITY_CACHE_TTL_MS = '0';
+    resetCapabilityRegistry(); // the real seed, no test resolvers
+    clearCapabilityCache();
+    vi.mocked(logger.warn).mockClear();
+    flag(false);
+  });
+
+  afterEach(() => {
+    process.env = { ...env };
+    resetCapabilityRegistry();
+  });
+
+  it('is gated by release-v2-0-feature, like co-managed', () => {
+    expect(capabilityFeatureFlag(TC)).toBe(FLAG);
+    expect(CAPABILITY_KEYS).toEqual(['co-managed', 'ticket-conversations']);
+    expect(isCapabilityKey(TC)).toBe(true);
+    expect(isCapabilityKey('nope')).toBe(false);
+    expect(isCapabilityKey(undefined)).toBe(false);
+  });
+
+  it('flag off: not admitted (flag-off), not served (resolver-unregistered)', async () => {
+    flag(false);
+    expect(await evaluateCapability(TC, T)).toMatchObject({
+      admitted: false,
+      served: false,
+      forced: null,
+      reasons: { admitted: 'flag-off', served: 'resolver-unregistered' },
+    });
+  });
+
+  it('flag on: admitted (open), not served (resolver-unregistered)', async () => {
+    flag(true);
+    expect(await evaluateCapability(TC, T)).toMatchObject({
+      admitted: true,
+      served: false,
+      forced: null,
+      reasons: { admitted: 'open', served: 'resolver-unregistered' },
+    });
+    expect(flagChecker).toHaveBeenCalledWith(FLAG, expect.objectContaining({ tenantId: T }));
+  });
+
+  it('flag unavailable: closed (flag-unavailable) and not cached', async () => {
+    process.env.CAPABILITY_CACHE_TTL_MS = '30000';
+    flag(new Error('posthog down'));
+    expect(await evaluateCapability(TC, T)).toMatchObject({ admitted: false, reasons: { admitted: 'flag-unavailable' } });
+    flag(true);
+    expect(await admits(TC, T)).toMatchObject({ admitted: true, reasons: { admitted: 'open' } });
+  });
+
+  it('forced on: admitted and served, without reading the flag', async () => {
+    process.env.FORCE_CAPABILITIES = 'ticket-conversations:on';
+    flag(false);
+    expect(await evaluateCapability(TC, T)).toMatchObject({
+      admitted: true, served: true, forced: 'on', reasons: { admitted: 'forced-on', served: 'forced-on' },
+    });
+    expect(flagChecker).not.toHaveBeenCalled();
+  });
+
+  it('forced off with the flag on: both closed', async () => {
+    process.env.FORCE_CAPABILITIES = 'ticket-conversations:off';
+    flag(true);
+    expect(await evaluateCapability(TC, T)).toMatchObject({
+      admitted: false, served: false, forced: 'off', reasons: { admitted: 'forced-off', served: 'forced-off' },
+    });
+  });
+
+  it('forced malformed: both closed, with a warning', async () => {
+    process.env.FORCE_CAPABILITIES = 'ticket-conversations:maybe';
+    flag(true);
+    expect(await evaluateCapability(TC, T)).toMatchObject({
+      admitted: false, served: false, forced: 'off', reasons: { admitted: 'forced-malformed', served: 'forced-malformed' },
+    });
+    expect(logger.warn).toHaveBeenCalled();
+  });
+
+  describe('independence of co-managed and ticket-conversations', () => {
+    const STATES = ['on', 'off', 'malformed', 'unset'] as const;
+    type State = (typeof STATES)[number];
+    const raw = (key: string, state: State) =>
+      state === 'unset' ? [] : [`${key}:${state === 'malformed' ? 'maybe' : state}`];
+
+    async function decide(key: CapabilityKey, forceRaw: string) {
+      resetCapabilityRegistry();
+      clearCapabilityCache();
+      if (forceRaw) process.env.FORCE_CAPABILITIES = forceRaw;
+      else delete process.env.FORCE_CAPABILITIES;
+      flag(true);
+      const d = await evaluateCapability(key, T);
+      return { admitted: d.admitted, served: d.served, forced: d.forced, reasons: d.reasons };
+    }
+
+    const COMBOS = STATES.flatMap((cm) => STATES.map((tc) => [cm, tc] as const));
+    it.each(COMBOS)('co-managed:%s x ticket-conversations:%s: each key equals its solo-forced decision', async (cm, tc) => {
+      const both = [...raw('co-managed', cm), ...raw('ticket-conversations', tc)].join(',');
+      expect(await decide(CM, both)).toEqual(await decide(CM, raw('co-managed', cm).join(',')));
+      expect(await decide(TC, both)).toEqual(await decide(TC, raw('ticket-conversations', tc).join(',')));
+    });
+    it('has all 16 combinations', () => expect(COMBOS).toHaveLength(16));
+  });
+
+  it('cache isolation: forcing ticket-conversations leaves a warm co-managed entry untouched', async () => {
+    process.env.CAPABILITY_CACHE_TTL_MS = '30000';
+    flag(true);
+    registerCapabilityEligibility(CM, async () => true);
+    const warm = await evaluateCapability(CM, T);
+    expect(warm.admitted).toBe(true);
+    const calls = flagChecker.mock.calls.length;
+    process.env.FORCE_CAPABILITIES = 'ticket-conversations:off';
+    expect((await evaluateCapability(TC, T)).admitted).toBe(false);
+    const again = await evaluateCapability(CM, T);
+    expect(again).toEqual(warm);
+    expect(flagChecker.mock.calls.length).toBe(calls); // co-managed answered from its own cache entry
+    invalidateCapability(TC, T);
+    expect(await evaluateCapability(CM, T)).toEqual(warm);
+  });
+
+  it('capabilityResolverStatus: eligibility registered (constant), participation unregistered', () => {
+    expect(capabilityResolverStatus(TC)).toEqual({ eligibility: 'registered', participation: 'unregistered' });
+    expect(capabilityResolverStatus(CM)).toEqual({ eligibility: 'unregistered', participation: 'unregistered' });
+  });
+
+  it('resetCapabilityRegistry re-seeds both keys, dropping registered resolvers', () => {
+    registerCapabilityEligibility(TC, null);
+    registerCapabilityParticipation(TC, async () => new Set<string>());
+    registerCapabilityEligibility(CM, async () => true);
+    expect(capabilityResolverStatus(TC)).toEqual({ eligibility: 'unregistered', participation: 'registered' });
+    resetCapabilityRegistry();
+    expect(capabilityResolverStatus(TC)).toEqual({ eligibility: 'registered', participation: 'unregistered' });
+    expect(capabilityResolverStatus(CM)).toEqual({ eligibility: 'unregistered', participation: 'unregistered' });
+    expect(capabilityFeatureFlag(CM)).toBe(FLAG);
+    expect(capabilityFeatureFlag(TC)).toBe(FLAG);
+  });
+
+  it('an unknown key still throws UnknownCapabilityError', async () => {
+    await expect(evaluateCapability('nope' as CapabilityKey, T)).rejects.toBeInstanceOf(UnknownCapabilityError);
   });
 });
