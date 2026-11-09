@@ -66,7 +66,6 @@ import {
 import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '@alga-psa/tickets/lib/bundleWorkflowLock';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
-import type { IUserWithRoles } from '@alga-psa/types';
 import {
   ticketLatestActivitySql,
 } from '@alga-psa/tickets/actions/ticketListSortSql';
