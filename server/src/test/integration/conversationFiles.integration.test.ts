@@ -1,13 +1,13 @@
 /**
  * TC L0c: the owner-qualified conversation file engine against a real Postgres with the real
- * migration applied (scratch database; FAILS when the dev server is unreachable).
+ * migration applied (standard migrated test DB via createTestDbConnection; FAILS when the DB is unreachable).
  * Two tenants, two synthetic owner types and an in-memory storage prove the engine is
  * owner-neutral: draft -> publish -> copy -> authorized read, for any owning record.
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import knexFactory, { type Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createHash, randomUUID } from 'node:crypto';
-import { createRequire } from 'node:module';
 import {
   CONVERSATION_FILE_MAX_BYTES, CONVERSATION_FILE_MAX_COUNT, abandonConversationFilePublication, cleanupConversationFiles, describeConversationFile,
   prepareConversationFilePublication, publishConversationFilePublication, readConversationFile, registerConversationFileOwner,
@@ -16,17 +16,7 @@ import {
 } from '@alga-psa/conversations/files';
 import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
 
-const require = createRequire(import.meta.url);
-const migration = require('../../../migrations/20261109120000_create_conversation_files.cjs');
-const connection = {
-  host: process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST || '127.0.0.1',
-  port: Number(process.env.DB_PORT === '6432' ? 5432 : process.env.DB_PORT || 5432),
-  user: process.env.DB_USER_ADMIN || 'postgres',
-  password: process.env.DB_PASSWORD_ADMIN || process.env.DB_PASSWORD || '',
-};
-const scratch = `conv_files_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-let admin: Knex | undefined, db: Knex;
-let reachable = false;
+let db: Knex;
 
 const memoryStorage = () => {
   const objects = new Map<string, Uint8Array>();
@@ -50,23 +40,34 @@ const adapter = { canRead: async (_t: unknown, a: { userId: string }, id: string
 
 beforeAll(async () => {
   try {
-    admin = knexFactory({ client: 'pg', connection: { ...connection, database: 'postgres' }, pool: { min: 0, max: 1 } });
-    await admin.raw('select 1');
-    await admin.raw(`CREATE DATABASE ${scratch}`);
-    db = knexFactory({ client: 'pg', connection: { ...connection, database: scratch }, pool: { min: 0, max: 4 } });
-    await db.raw('CREATE EXTENSION IF NOT EXISTS pgcrypto').catch(() => undefined);
-    await db.schema.createTable('tenants', t => { t.uuid('tenant').primary(); });
-    await migration.up(db);
-    reachable = true;
+    // Standard integration bootstrap: recreates TEST_DB_NAME and runs every migration
+    // (including 20261109120000_create_conversation_files.cjs). Direct Postgres, not pgbouncer.
+    db = await createTestDbConnection({ runSeeds: false });
+    const cols = await db('tenants').columnInfo();
+    expect(await db.schema.hasTable('conversation_files')).toBe(true);
+    for (const t of [T1, T2]) {
+      await db('tenants').insert({
+        tenant: t,
+        ...('company_name' in cols ? { company_name: `Tenant ${t.slice(0, 8)}` } : { client_name: `Tenant ${t.slice(0, 8)}` }),
+        email: `tenant-${t.slice(0, 8)}@example.com`,
+        ...('created_at' in cols ? { created_at: db.fn.now() } : {}),
+        ...('updated_at' in cols ? { updated_at: db.fn.now() } : {}),
+      });
+    }
   } catch (error) {
     // Never skip silently: an unreachable database is a blocker, not a pass.
-    throw new Error(`conversation files integration: database unreachable (${(error as Error).message})`);
+    throw new Error(`conversation files integration: database unreachable or bootstrap failed (${(error as Error).message})`);
   }
-}, 60000);
+}, 600000);
 afterAll(async () => {
-  await db?.destroy();
-  if (admin && reachable) await admin.raw(`DROP DATABASE IF EXISTS ${scratch}`).catch(() => undefined);
-  await admin?.destroy();
+  if (db) {
+    for (const t of [T1, T2]) {
+      await db('conversation_files').where({ tenant: t }).del().catch(() => undefined);
+      await db('conversation_file_publications').where({ tenant: t }).del().catch(() => undefined);
+      await db('tenants').where({ tenant: t }).del().catch(() => undefined);
+    }
+    await db.destroy();
+  }
 });
 beforeEach(() => {
   registerConversationFileOwner('widget', adapter);
@@ -86,7 +87,6 @@ const rejects = (p: Promise<unknown>, code: string) => expect(p).rejects.toMatch
 
 describe('conversation file engine', () => {
   it('prepare -> publish -> authorized read; receipts round-trip', must(async () => {
-    await db('tenants').insert([{ tenant: T1 }, { tenant: T2 }]).onConflict('tenant').ignore();
     const storage = memoryStorage();
     const src = await stage(storage, 'draft bytes');
     // A draft upload is readable by its uploader only.
