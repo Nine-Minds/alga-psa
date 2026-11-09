@@ -4,7 +4,10 @@ import { AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorizatio
 let currentUser: any;
 
 const hasPermissionMock = vi.fn();
-const resolveBundleRulesMock = vi.hoisted(() => vi.fn<typeof import('@alga-psa/authorization/bundles/service').resolveBundleNarrowingRulesForEvaluation>());
+const resolveBundleRulesMock = vi.hoisted(() => vi.fn<(
+  trx: unknown,
+  subject: { tenant: string; userId: string; apiKeyId: string | null },
+) => Promise<any[]>>());
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
@@ -52,9 +55,9 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
     selectedBoardIds: rule.config.selectedBoardIds, selectedClientIds: rule.config.selectedClientIds,
   }),
   resolveBundleNarrowingRulesForEvaluation: resolveBundleRulesMock,
-  loadAuthorizationEvaluationSnapshot: async (...args: any[]) => ({
+  loadAuthorizationEvaluationSnapshot: async (trx: unknown, subject: { tenant: string; userId: string; apiKeyId: string | null }) => ({
     roleIds: [], teamIds: [], managedUserIds: [],
-    rules: (await resolveBundleRulesMock(...args)).map((rule: any) => ({
+    rules: (await resolveBundleRulesMock(trx, subject)).map((rule: any) => ({
       rule_id: rule.id, resource_type: rule.resource, action: rule.action,
       template_key: rule.templateKey, constraint_key: rule.constraintKey ?? null,
       config: { selectedBoardIds: rule.selectedBoardIds, selectedClientIds: rule.selectedClientIds },

@@ -9,7 +9,10 @@ import {
 
 const getVisibilityMock = vi.fn<(...args: any[]) => Promise<any>>();
 const hasPermissionMock = vi.hoisted(() => vi.fn<(...args: any[]) => Promise<boolean>>(async () => true));
-const resolveBundleRulesMock = vi.hoisted(() => vi.fn<typeof import('@alga-psa/authorization/bundles/service').resolveBundleNarrowingRulesForEvaluation>(async () => []));
+const resolveBundleRulesMock = vi.hoisted(() => vi.fn<(
+  trx: unknown,
+  subject: { tenant: string; userId: string; apiKeyId: string | null },
+) => Promise<any[]>>(async () => []));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t) }),
@@ -27,9 +30,9 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
     selectedBoardIds: rule.config.selectedBoardIds, selectedClientIds: rule.config.selectedClientIds,
   }),
   resolveBundleNarrowingRulesForEvaluation: resolveBundleRulesMock,
-  loadAuthorizationEvaluationSnapshot: async (...args: any[]) => ({
+  loadAuthorizationEvaluationSnapshot: async (trx: unknown, subject: { tenant: string; userId: string; apiKeyId: string | null }) => ({
     roleIds: [], teamIds: [], managedUserIds: [],
-    rules: (await resolveBundleRulesMock(...args)).map((rule: any) => ({
+    rules: (await resolveBundleRulesMock(trx, subject)).map((rule: any) => ({
       rule_id: rule.id, resource_type: rule.resource, action: rule.action,
       template_key: rule.templateKey, constraint_key: rule.constraintKey ?? null,
       config: { selectedBoardIds: rule.selectedBoardIds, selectedClientIds: rule.selectedClientIds },
