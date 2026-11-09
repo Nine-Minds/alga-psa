@@ -87,12 +87,10 @@ function credentialRemovalKnex(hostId: string, scope: string) {
 
 describe('UniFi credential removal confirmation', () => {
   it.each([
-    { description: 'a composite host', hostId: 'console-1:123456', scope: 'console-1:123456:site-1', malformed: false },
-    { description: 'a legacy host', hostId: 'console-1', scope: 'console-1:site-1', malformed: false },
-    { description: 'a legacy host with a missing site', hostId: 'console-1', scope: 'console-1:', malformed: true },
-    { description: 'a previously matched malformed scope', hostId: 'console-1', scope: 'console-1:legacy:', malformed: true },
-    { description: 'a composite host with a missing site', hostId: 'console-1:123456', scope: 'console-1:123456:', malformed: true },
-  ])('requires confirmation for mapped sites on $description before deleting anything', async ({ hostId, scope, malformed }) => {
+    { description: 'a composite host', hostId: 'console-1:123456', scope: 'console-1:123456:site-1' },
+    { description: 'a legacy host', hostId: 'console-1', scope: 'console-1:site-1' },
+    { description: 'a migrated local host', hostId: 'local', scope: 'local:site-1' },
+  ])('requires confirmation for mapped sites on $description before deleting anything', async ({ hostId, scope }) => {
     vi.mocked(logger.warn).mockClear();
     deleteTenantSecret.mockClear();
     const { knex, queries } = credentialRemovalKnex(hostId, scope);
@@ -104,14 +102,7 @@ describe('UniFi credential removal confirmation', () => {
       });
       expect(queries.every((query) => query.sql.startsWith('select'))).toBe(true);
       expect(deleteTenantSecret).not.toHaveBeenCalled();
-      if (malformed) {
-        expect(logger.warn).toHaveBeenCalledWith(
-          '[UniFi] Malformed mapped-site scope during credential removal',
-          { credentialId: CREDENTIAL_ID }
-        );
-      } else {
-        expect(logger.warn).not.toHaveBeenCalled();
-      }
+      expect(logger.warn).not.toHaveBeenCalled();
     } finally {
       await knex.destroy();
     }
@@ -130,17 +121,53 @@ describe('UniFi credential removal confirmation', () => {
     }
   });
 
-  it('removes a credential after confirmation for a malformed legacy mapping', async () => {
+  it.each([
+    { hostId: 'console-1:123456', scope: 'console-1:123456:site-1' },
+    { hostId: 'console-1', scope: 'console-1:site-1' },
+    { hostId: 'local', scope: 'local:site-1' },
+  ])('removes a credential after confirmation for $scope without deleting mappings', async ({ hostId, scope }) => {
     deleteTenantSecret.mockClear();
-    const { knex, queries } = credentialRemovalKnex('console-1', 'console-1:');
+    const { knex, queries } = credentialRemovalKnex(hostId, scope);
     try {
       await expect(removeCredential(knex, TENANT, {
         integrationId: INTEGRATION_ID, credentialId: CREDENTIAL_ID, confirm: true,
       })).resolves.toEqual({ removed: true, affectedSites: ['Branch / Default'] });
       expect(queries.filter((query) => query.sql.startsWith('delete'))).toHaveLength(2);
+      expect(queries.filter((query) => query.sql.startsWith('delete')).every(
+        (query) => !query.sql.includes('rmm_organization_mappings')
+      )).toBe(true);
       expect(deleteTenantSecret).toHaveBeenCalledTimes(2);
     } finally {
       await knex.destroy();
     }
+  });
+
+  describe.each([false, true])('with confirm=%s', (confirm) => {
+    it.each([
+      { hostId: 'console-1', scope: 'console-1:' },
+      { hostId: 'console-1', scope: 'console-1:legacy:' },
+      { hostId: 'console-1:123456', scope: 'console-1:123456:' },
+      { hostId: 'console-1', scope: 'unrelated-console:' },
+      { hostId: 'console-1', scope: 'console-1' },
+      { hostId: 'console-1', scope: ':site-1' },
+      { hostId: 'console-1', scope: '' },
+    ])('rejects malformed scope "$scope" without guessing its host or deleting anything', async ({ hostId, scope }) => {
+      vi.mocked(logger.warn).mockClear();
+      deleteTenantSecret.mockClear();
+      const { knex, queries } = credentialRemovalKnex(hostId, scope);
+      try {
+        await expect(removeCredential(knex, TENANT, {
+          integrationId: INTEGRATION_ID, credentialId: CREDENTIAL_ID, confirm,
+        })).rejects.toThrow('Repair or unmap invalid site mappings');
+        expect(queries.every((query) => query.sql.startsWith('select'))).toBe(true);
+        expect(deleteTenantSecret).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+          '[UniFi] Malformed mapped-site scope during credential removal',
+          { credentialId: CREDENTIAL_ID, integrationId: INTEGRATION_ID }
+        );
+      } finally {
+        await knex.destroy();
+      }
+    });
   });
 });
