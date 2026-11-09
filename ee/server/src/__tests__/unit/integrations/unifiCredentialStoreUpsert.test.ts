@@ -42,8 +42,6 @@ describe('UniFi persistent fleet store: console route upsert', () => {
       consoleName: 'HQ console',
       state: 'routed',
       lastError: null,
-      firstSeenAt: new Date(),
-      lastVerifiedAt: new Date(),
     });
 
     const upsert = queries.find((q) => /insert into "unifi_console_routes"/.test(q.sql));
