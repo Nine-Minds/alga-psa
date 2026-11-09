@@ -10,6 +10,7 @@ export default defineConfig({
     'lib/ticketQuery/ticketSlaSql': 'lib/ticketQuery/ticketSlaSql.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
+    'lib/net/outboundTarget': 'lib/net/outboundTarget.ts',
     'index': 'index.ts',
     'types/index': 'types/index.ts',
     'core/logger': 'core/logger.ts',

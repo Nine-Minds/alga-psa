@@ -13,7 +13,12 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
+
+// This suite exercises persistence with a real database. Authorization is
+// covered behaviorally in the action unit suite, so grant the action boundary
+// here rather than depending on the test fixture user's roles.
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 
 let testDb: Knex;
 let testTenant: string;
@@ -439,6 +444,63 @@ describe('Email Provider Creation', () => {
       expect(result.provider.status).toBe('configuring'); // Default before webhook automation runs
       expect(result.provider.createdAt).toBeDefined();
       expect(result.provider.updatedAt).toBeDefined();
+    });
+  });
+
+  describe('IMAP OAuth issuer binding', () => {
+    it('preserves credentials on the same endpoint and commits their clearing when the endpoint changes', async () => {
+      const original = {
+        tenant: testTenant,
+        providerType: 'imap' as const,
+        providerName: 'IMAP issuer binding',
+        mailbox: 'imap-issuer-binding@example.test',
+        isActive: true,
+        imapConfig: {
+          host: 'imap.example.test',
+          port: 993,
+          secure: true,
+          auth_type: 'oauth2',
+          username: 'imap-issuer-binding@example.test',
+          oauth_token_url: 'https://issuer-one.example.test/token',
+          oauth_client_id: 'imap-client',
+          oauth_client_secret: 'stored-client-secret',
+          refresh_token: 'stored-refresh-token',
+          access_token: 'stored-access-token',
+          token_expires_at: new Date(Date.now() + 60_000).toISOString(),
+        },
+      };
+      const created = await createEmailProvider(original as any, true);
+      expect(created).toHaveProperty('provider.id');
+      const providerId = created.provider.id;
+
+      await updateEmailProvider(providerId, { ...original, imapConfig: {
+        ...original.imapConfig,
+        oauth_client_secret: undefined,
+        refresh_token: undefined,
+        access_token: undefined,
+        token_expires_at: undefined,
+      } } as any, true);
+      let row = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
+      expect(row.oauth_token_url).toBe('https://issuer-one.example.test/token');
+      expect(row.oauth_client_secret).toBe('stored-client-secret');
+      expect(row.refresh_token).toBe('stored-refresh-token');
+      expect(row.access_token).toBe('stored-access-token');
+
+      const changed = await updateEmailProvider(providerId, { ...original, imapConfig: {
+        ...original.imapConfig,
+        oauth_token_url: 'https://issuer-two.example.test/token',
+        oauth_client_secret: undefined,
+        refresh_token: undefined,
+        access_token: undefined,
+        token_expires_at: undefined,
+      } } as any, true);
+      expect(changed).toMatchObject({ setupError: expect.stringContaining('Reconnect the mailbox') });
+      row = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
+      expect(row.oauth_token_url).toBe('https://issuer-two.example.test/token');
+      expect(row.oauth_client_secret).toBeNull();
+      expect(row.refresh_token).toBeNull();
+      expect(row.access_token).toBeNull();
+      expect(row.token_expires_at).toBeNull();
     });
   });
 });

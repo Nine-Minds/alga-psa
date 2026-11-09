@@ -49,6 +49,7 @@ const liveReport = (status: 'pass' | 'fail', message?: string) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.tableCalls.length = 0;
   mocks.createTenantKnex.mockResolvedValue({ knex: {} });
   mocks.sessionUser.user_type = 'internal';
   mocks.testConnection.mockResolvedValue({ success: true, message: 'SMTP connection verified.' });

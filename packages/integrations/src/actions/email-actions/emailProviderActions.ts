@@ -16,7 +16,6 @@ import axios from 'axios';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 import { configureGmailProvider, type ConfigureGmailProviderResult } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
 import { gmailSubscriptionName, gmailTopicName } from '../../utils/email/gmailPubSub';
 import { runGmailDeliveryDiagnostics } from '../../services/email/GmailDiagnosticsService';
@@ -38,6 +37,11 @@ import {
 } from '../../lib/microsoftEmailIssuerSelection';
 import { getMicrosoftSenderDeleteBlockMessage } from './microsoftSenderDeleteGuard';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
+import { requireOutboundEmailAdmin } from './mspOutboundEmailAccess';
+import {
+  assertSafeOutboundTarget,
+  parseOutboundTargetAllowlist,
+} from '@alga-psa/shared/lib/net/outboundTarget';
 
 type EmailProviderActionError = ActionMessageError;
 type MicrosoftEmailProviderConfigInput = Omit<
@@ -608,7 +612,8 @@ async function persistImapConfig(
   trx: any,
   tenant: string,
   providerId: string,
-  config?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>
+  config?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>,
+  state?: { oauthTokenEndpointChanged: boolean }
 ): Promise<ImapEmailProviderConfig | undefined> {
   if (!config) return undefined;
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save IMAP email configuration');
@@ -620,15 +625,30 @@ async function persistImapConfig(
   const connectionTimeoutMs = Number(process.env.IMAP_CONNECTION_TIMEOUT_MS || 10_000);
   const socketKeepalive = (process.env.IMAP_SOCKET_KEEPALIVE || 'true') !== 'false';
 
+  const existing = await tenantDb(trx, tenant)
+    .table('imap_email_provider_config')
+    .where({ email_provider_id: providerId })
+    .first('oauth_token_url');
+  const tokenEndpointChanged = Boolean(
+    existing && config.oauth_token_url != null && existing.oauth_token_url !== config.oauth_token_url
+  );
+  if (tokenEndpointChanged && state) state.oauthTokenEndpointChanged = true;
+
   if (config.password && typeof config.password === 'string') {
     await secretProvider.setTenantSecret(tenant, `imap_password_${providerId}`, config.password);
   }
 
-  if (config.oauth_client_secret && typeof config.oauth_client_secret === 'string') {
+  if (tokenEndpointChanged) {
+    // Remove both secret-store copies before committing the new issuer. If the
+    // DB transaction rolls back, the old endpoint remains and reauthorization
+    // is required; credentials are never carried to a different issuer.
+    await secretProvider.deleteTenantSecret(tenant, `imap_oauth_client_secret_${providerId}`);
+    await secretProvider.deleteTenantSecret(tenant, `imap_refresh_token_${providerId}`);
+  } else if (config.oauth_client_secret && typeof config.oauth_client_secret === 'string') {
     await secretProvider.setTenantSecret(tenant, `imap_oauth_client_secret_${providerId}`, config.oauth_client_secret);
   }
 
-  if (config.refresh_token && typeof config.refresh_token === 'string') {
+  if (!tokenEndpointChanged && config.refresh_token && typeof config.refresh_token === 'string') {
     await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${providerId}`, config.refresh_token);
   }
 
@@ -651,13 +671,13 @@ async function persistImapConfig(
       max_emails_per_sync: maxEmailsPerSync,
       folder_filters: JSON.stringify(folderFiltersArray),
       oauth_authorize_url: config.oauth_authorize_url || null,
-      oauth_token_url: config.oauth_token_url || null,
+      oauth_token_url: config.oauth_token_url ?? existing?.oauth_token_url ?? null,
       oauth_client_id: config.oauth_client_id || null,
-      oauth_client_secret: config.oauth_client_secret || null,
+      oauth_client_secret: tokenEndpointChanged ? null : (config.oauth_client_secret || null),
       oauth_scopes: config.oauth_scopes || null,
-      access_token: config.access_token || null,
-      refresh_token: config.refresh_token || null,
-      token_expires_at: config.token_expires_at || null,
+      access_token: tokenEndpointChanged ? null : (config.access_token || null),
+      refresh_token: tokenEndpointChanged ? null : (config.refresh_token || null),
+      token_expires_at: tokenEndpointChanged ? null : (config.token_expires_at || null),
       uid_validity: config.uid_validity || null,
       last_uid: config.last_uid || null,
       last_seen_at: config.last_seen_at || null,
@@ -680,15 +700,15 @@ async function persistImapConfig(
       max_emails_per_sync: maxEmailsPerSync,
       folder_filters: JSON.stringify(folderFiltersArray),
       oauth_authorize_url: config.oauth_authorize_url || null,
-      oauth_token_url: config.oauth_token_url || null,
+      oauth_token_url: config.oauth_token_url ?? existing?.oauth_token_url ?? null,
       oauth_client_id: config.oauth_client_id || null,
-      oauth_client_secret: config.oauth_client_secret || null,
+      oauth_client_secret: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
       oauth_scopes: config.oauth_scopes || null,
       connection_timeout_ms: trx.raw('COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms)'),
       socket_keepalive: trx.raw('COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive)'),
-      access_token: trx.raw('COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token)'),
-      refresh_token: trx.raw('COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token)'),
-      token_expires_at: trx.raw('COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at)'),
+      access_token: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token)'),
+      refresh_token: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token)'),
+      token_expires_at: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at)'),
       uid_validity: trx.raw('COALESCE(EXCLUDED.uid_validity, imap_email_provider_config.uid_validity)'),
       last_uid: trx.raw('COALESCE(EXCLUDED.last_uid, imap_email_provider_config.last_uid)'),
       last_seen_at: trx.raw('COALESCE(EXCLUDED.last_seen_at, imap_email_provider_config.last_seen_at)'),
@@ -711,10 +731,12 @@ async function persistImapConfig(
  */
 
 export const getEmailProviders = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<{ providers: EmailProvider[] }> => {
   const { knex } = await createTenantKnex();
+  const access = await requireOutboundEmailAdmin(user, knex);
+  if (!access.allowed) return { providers: [] };
   const db = tenantDb(knex, tenant);
   
   try {
@@ -866,12 +888,17 @@ export const upsertEmailProvider = withAuth(async (
   skipAutomation?: boolean
 ): Promise<EmailProviderSetupActionResult> => {
   const { knex } = await createTenantKnex();
+  const access = await requireOutboundEmailAdmin(user, knex);
+  if (!access.allowed) {
+    return actionError('Permission denied: Cannot manage email providers', 'errors.permissionDenied');
+  }
 
   const result: EmailProviderSetupResult = {
     provider: null as any,
     setupWarnings: []
   };
 
+  const imapState = { oauthTokenEndpointChanged: false };
   try {
     const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
       const base = await getOrCreateProvider(trx, tenant, data);
@@ -887,7 +914,7 @@ export const upsertEmailProvider = withAuth(async (
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       } else if (data.providerType === 'imap') {
-        base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
+        base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig, imapState);
         await auditLog(trx, {
           userId: user.user_id,
           operation: 'upsert',
@@ -909,6 +936,9 @@ export const upsertEmailProvider = withAuth(async (
     });
 
     result.provider = provider;
+    if (imapState.oauthTokenEndpointChanged) {
+      result.setupError = 'Reconnect the mailbox to authorize the new OAuth token endpoint before testing the connection.';
+    }
 
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
       const secretProvider = await getSecretProviderInstance();
@@ -998,6 +1028,11 @@ export const createEmailProvider = withAuth(async (
 },
   skipAutomation?: boolean
 ): Promise<EmailProviderSetupActionResult> => {
+  const { knex } = await createTenantKnex();
+  const access = await requireOutboundEmailAdmin(user, knex);
+  if (!access.allowed) {
+    return actionError('Permission denied: Cannot manage email providers', 'errors.permissionDenied');
+  }
   // Delegate to upsertEmailProvider since they have identical logic
   return upsertEmailProvider(data, skipAutomation);
 });
@@ -1022,12 +1057,17 @@ export const updateEmailProvider = withAuth(async (
   skipAutomation?: boolean
 ): Promise<EmailProviderSetupActionResult> => {
   const { knex } = await createTenantKnex();
+  const access = await requireOutboundEmailAdmin(user, knex);
+  if (!access.allowed) {
+    return actionError('Permission denied: Cannot manage email providers', 'errors.permissionDenied');
+  }
 
   const result: EmailProviderSetupResult = {
     provider: null as any,
     setupWarnings: []
   };
 
+  const imapState = { oauthTokenEndpointChanged: false };
   try {
     const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
       const base = await getOrCreateProvider(trx, tenant, data, providerId);
@@ -1043,7 +1083,7 @@ export const updateEmailProvider = withAuth(async (
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       } else if (data.providerType === 'imap') {
-        base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
+        base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig, imapState);
         await auditLog(trx, {
           userId: user.user_id,
           operation: 'update',
@@ -1065,6 +1105,9 @@ export const updateEmailProvider = withAuth(async (
     });
 
     result.provider = provider;
+    if (imapState.oauthTokenEndpointChanged) {
+      result.setupError = 'Reconnect the mailbox to authorize the new OAuth token endpoint before testing the connection.';
+    }
 
     // Auth-pause recovery below mutates the provider row after `provider`
     // above was assembled (pause cleared + counters reset, or status flipped
@@ -1323,12 +1366,16 @@ export const updateEmailProvider = withAuth(async (
 });
 
 export const deleteEmailProvider = withAuth(async (
-  _user,
+  user,
   { tenant },
   providerId: string
 ): Promise<{ success: true } | EmailProviderActionError> => {
   try {
     const { knex } = await createTenantKnex();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return actionError('Permission denied: Cannot manage email providers', 'errors.permissionDenied');
+    }
     const routedSender = await tenantDb(knex, tenant).table('email_sender_addresses')
       .where({ microsoft_provider_id: providerId }).first('email_address');
     const senderDeleteBlockMessage = getMicrosoftSenderDeleteBlockMessage(routedSender?.email_address);
@@ -1350,11 +1397,13 @@ export const deleteEmailProvider = withAuth(async (
 });
 
 export const resyncImapProvider = withAuth(async (
-  _user,
+  user,
   { tenant },
   providerId: string
 ): Promise<EmailProviderOperationResult> => {
   const { knex } = await createTenantKnex();
+  const access = await requireOutboundEmailAdmin(user, knex);
+  if (!access.allowed) return emailProviderOperationError(access.message, 'unexpected');
   const db = tenantDb(knex, tenant);
 
   const provider = await db.table('email_providers')
@@ -1398,12 +1447,14 @@ export const resyncImapProvider = withAuth(async (
 });
 
 export const testEmailProviderConnection = withAuth(async (
-  _user,
+  user,
   { tenant },
   providerId: string
 ): Promise<EmailProviderOperationResult> => {
   const { knex: baseKnex } = await createTenantKnex();
   const knex = baseKnex as any;
+  const access = await requireOutboundEmailAdmin(user, knex);
+  if (!access.allowed) return emailProviderOperationError(access.message, 'unexpected');
   const db = tenantDb(knex, tenant);
   
   try {
@@ -1424,6 +1475,19 @@ export const testEmailProviderConnection = withAuth(async (
         return emailProviderOperationError('IMAP provider configuration not found.', 'missing_config');
       }
 
+      try {
+        const rawHost = String(config.host ?? '').trim();
+        const imapHost = rawHost.includes(':') && !rawHost.startsWith('[') ? `[${rawHost}]` : rawHost;
+        await assertSafeOutboundTarget(`imap://${imapHost}/`, {
+          schemes: ['imap'],
+          privateTargetAllowlist: parseOutboundTargetAllowlist(
+            process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST
+          ),
+        });
+      } catch {
+        return emailProviderOperationError('IMAP server is not an allowed target.', 'missing_config');
+      }
+
       const secretProvider = await getSecretProviderInstance();
       let accessToken = config.access_token;
 
@@ -1432,6 +1496,14 @@ export const testEmailProviderConnection = withAuth(async (
           if (!config.oauth_token_url || !config.oauth_client_id) {
             return emailProviderOperationError(
               'IMAP OAuth token configuration is incomplete. Reconnect the mailbox and try again.',
+              'missing_config'
+            );
+          }
+          try {
+            await assertSafeOutboundTarget(config.oauth_token_url, { schemes: ['https'] });
+          } catch {
+            return emailProviderOperationError(
+              'IMAP OAuth token endpoint is not an allowed target.',
               'missing_config'
             );
           }
@@ -1460,7 +1532,8 @@ export const testEmailProviderConnection = withAuth(async (
           let response;
           try {
             response = await axios.post(config.oauth_token_url, params as any, {
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              maxRedirects: 0,
             });
           } catch (oauthError) {
             console.warn('IMAP OAuth token refresh failed:', oauthError);
@@ -1636,6 +1709,9 @@ export const retryMicrosoftSubscriptionRenewal = withAuth(async (
   providerId: string
 ): Promise<{ success: boolean; message?: string }> => {
   try {
+    const { knex } = await createTenantKnex();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) return { success: false, message: access.message };
     const service = new EmailWebhookMaintenanceService();
     const results = await service.renewMicrosoftWebhooks({
       tenantId: tenant,
@@ -1676,12 +1752,9 @@ export const runGmailDiagnostics = withAuth(async (
 ): Promise<{ success: boolean; report?: GmailDiagnosticsReport; error?: string }> => {
   try {
     const { knex } = await createTenantKnex();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) return { success: false, error: access.message };
     const db = tenantDb(knex, tenant);
-
-    const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
-    if (!permitted) {
-      return { success: false, error: 'Permission denied: Cannot run Gmail diagnostics' };
-    }
 
     const provider = await db.table('email_providers')
       .where({ id: providerId })
@@ -1722,12 +1795,9 @@ export const runMicrosoft365Diagnostics = withAuth(async (
 ): Promise<{ success: boolean; report?: Microsoft365DiagnosticsReport; error?: string }> => {
   try {
     const { knex } = await createTenantKnex();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) return { success: false, error: access.message };
     const db = tenantDb(knex, tenant);
-
-    const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
-    if (!permitted) {
-      return { success: false, error: 'Permission denied: Cannot run Microsoft 365 diagnostics' };
-    }
 
     const provider = await db.table('email_providers')
       .where({ id: providerId })

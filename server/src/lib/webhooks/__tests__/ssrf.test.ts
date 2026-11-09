@@ -56,14 +56,18 @@ describe('assertSafeWebhookTarget (T024)', () => {
     expect(dnsState.lookupMock).toHaveBeenCalledTimes(1);
   });
 
-  it('allows the private addresses when WEBHOOK_SSRF_ALLOW_PRIVATE=true', async () => {
+  it('allows private destinations but still rejects malformed URLs and unsupported schemes when enabled', async () => {
     process.env.WEBHOOK_SSRF_ALLOW_PRIVATE = 'true';
 
-    for (const [target] of REJECTED_TARGETS) {
+    for (const [target, label] of REJECTED_TARGETS) {
+      if (label.startsWith('non-http') || label.includes('localhost')) continue;
       await expect(assertSafeWebhookTarget(target)).resolves.toBeUndefined();
     }
 
-    // DNS is bypassed entirely under the override, so the lookup spy stays untouched.
-    expect(dnsState.lookupMock).not.toHaveBeenCalled();
+    await expect(assertSafeWebhookTarget('http://localhost')).rejects.toBeInstanceOf(UnsafeWebhookTargetError);
+    await expect(assertSafeWebhookTarget('https://internal.example.test')).resolves.toBeUndefined();
+    await expect(assertSafeWebhookTarget('ftp://example.com')).rejects.toBeInstanceOf(UnsafeWebhookTargetError);
+    await expect(assertSafeWebhookTarget('not a url')).rejects.toBeInstanceOf(UnsafeWebhookTargetError);
+    expect(dnsState.lookupMock).toHaveBeenCalled();
   });
 });
