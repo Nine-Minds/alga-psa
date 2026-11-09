@@ -715,7 +715,8 @@
         "title": "Azioni del workflow",
         "unavailable": "Non disponibile",
         "unlimitedPlan": "Piano illimitato",
-        "unlimitedRemaining": "Illimitate"
+        "unlimitedRemaining": "Illimitate",
+        "unlimited": "Illimitato"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Ripeti finché nello stato",
       "statusAgeRepeatEvery": "Ripeti ogni (giorni)",
       "statusAgeNoActivity": "Solo se non c'è stata alcuna attività (commenti o modifiche da parte di persone) per quel periodo",
-      "statusAgeSummary": "Viene eseguito ogni giorno alle {{time}} ({{timezone}}) per ogni ticket che è rimasto nello stato scelto per il numero di giorni impostato"
+      "statusAgeSummary": "Viene eseguito ogni giorno alle {{time}} ({{timezone}}) per ogni ticket che è rimasto nello stato scelto per il numero di giorni impostato",
+      "saving": "Salvataggio...",
+      "saveSettings": "Salva impostazioni"
     },
     "stepPanel": {
       "readOnly": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
@@ -877,7 +880,13 @@
       "durationSummary": "Attende {{duration}}.",
       "durationEmpty": "Inserisci per quanto attendere, in una qualsiasi di queste unità.",
       "notFoundInTry": "Questo passaggio si trova in un blocco Try. Se non viene trovato nulla, attualmente prosegue, quindi il ramo Catch non verrà eseguito. Fallo fallire per lasciare che Catch gestisca un record mancante.",
-      "notFoundFailAction": "Fallisci per lasciare gestire a Catch"
+      "notFoundFailAction": "Fallisci per lasciare gestire a Catch",
+      "operatorLabel": "Operatore",
+      "removeFilter": "Rimuovi",
+      "valuesCommaSeparated": "Valori (separati da virgole)",
+      "valueLabel": "Valore",
+      "absoluteTimestampHint": "Salvato come timestamp assoluto in base al fuso orario attuale del tuo browser.",
+      "saveAsConflict": "\"{{saveAs}}\" è in conflitto con un percorso di output di un passaggio esistente"
     },
     "mappingExpr": {
       "add": "Aggiungi",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Configurazione nodo",
       "stepSettings": "Impostazioni passaggio",
-      "missingRequired": "Campi obbligatori mancanti: {{fields}}"
+      "missingRequired": "Campi obbligatori mancanti: {{fields}}",
+      "advancedOptions": "Opzioni avanzate",
+      "invalidJson": "JSON non valido"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1096,7 +1107,10 @@
         "valid": "Valido",
         "unknown": "Sconosciuto"
       },
-      "errors": "Errori di validazione"
+      "errors": "Errori di validazione",
+      "errorsHeading": "Errori di validazione",
+      "warningsHeading": "Avvisi di validazione",
+      "stepFallbackName": "Passaggio {{index}}"
     },
     "discardDialog": {
       "title": "Annullare le modifiche non salvate?",
@@ -1365,7 +1379,8 @@
       "publishFailed": "Impossibile pubblicare il workflow",
       "publishValidationErrors": "Pubblicazione non riuscita – correggere gli errori di validazione",
       "systemEventMissingSchema": "A questo evento di sistema manca uno schema valido e non può essere selezionato finché non viene corretto.",
-      "publishedVersion": "Versione {{version}} pubblicata. Le nuove esecuzioni usano questa versione."
+      "publishedVersion": "Versione {{version}} pubblicata. Le nuove esecuzioni usano questa versione.",
+      "copiedPath": "Copiato: {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Ridimensiona pannello proprietà",
@@ -1391,7 +1406,29 @@
       "mappingTitle": "Mappatura trigger",
       "mappingNotRequired": "Mappatura: Non richiesta.",
       "mappingErrors": "Errori di mappatura",
-      "mappingWarnings": "Avvisi di mappatura"
+      "mappingWarnings": "Avvisi di mappatura",
+      "eventSchemaTitle": "Schema dell'evento trigger",
+      "effectiveSourceSchemaTitle": "Schema di origine effettivo del trigger",
+      "eventMissingSchemaRef": "Questo evento non ha un riferimento a uno schema valido. La pubblicazione e l'esecuzione sono disabilitate finché il problema non viene risolto.",
+      "eventNotInCatalogPrefix": "L'evento trigger",
+      "eventNotInCatalogSuffix": "non è presente nel catalogo degli eventi. La pubblicazione e l'esecuzione sono disabilitate finché il problema non viene risolto.",
+      "eventCatalogLoadFailed": "Impossibile caricare il catalogo degli eventi. La pubblicazione e l'esecuzione dei workflow attivati da eventi sono disabilitate finché il catalogo non viene caricato.",
+      "mappingCustomActive": "La mappatura personalizzata del trigger è attiva.",
+      "mappingRequired": "Per eseguire questo workflow è necessaria una mappatura del trigger.",
+      "mappingOptionalActive": "La mappatura facoltativa del trigger è attiva.",
+      "usingTriggerPayload": "Il payload del trigger viene usato come input del workflow.",
+      "triggerLabel": "Trigger:",
+      "noSourceSchemaPrefix": "Non è ancora disponibile uno schema di origine per questo evento. Aggiungi",
+      "noSourceSchemaSuffix": "nel catalogo degli eventi oppure imposta uno schema alternativo.",
+      "mappingRequiredMismatch": "La mappatura è necessaria perché lo schema del trigger e lo schema di input del workflow non corrispondono.",
+      "useEventSchema": "Usa schema dell'evento",
+      "configureMapping": "Configura mappatura",
+      "hideMapping": "Nascondi mappatura",
+      "showMapping": "Mostra mappatura",
+      "mapDataFromPrefix": "Mappa i dati da",
+      "mapDataFromSuffix": "all'input del workflow.",
+      "viewSchema": "Visualizza schema",
+      "viewEffective": "Visualizza schema effettivo"
     },
     "schemaSettings": {
       "lockVersion": "Blocca versione schema",
@@ -1406,12 +1443,39 @@
       "notLoaded": "Schema non ancora caricato.",
       "loadPreviewFailed": "Caricamento dell'anteprima dello schema non riuscito.",
       "selectVersionPlaceholder": "Seleziona versione schema…",
-      "payloadRefAdvanced": "Riferimento schema payload (avanzato)"
+      "payloadRefAdvanced": "Riferimento schema payload (avanzato)",
+      "triggerSchemaTitle": "Schema del trigger",
+      "clockTriggerPinned": "I trigger temporali restano sempre bloccati sul contratto fisso dell'orologio del workflow.",
+      "hide": "Nascondi",
+      "edit": "Modifica",
+      "clear": "Cancella",
+      "hideFields": "Nascondi campi",
+      "previewFields": "Anteprima campi",
+      "viewJsonSchema": "Visualizza schema JSON",
+      "viewPublished": "Visualizza schema pubblicato",
+      "noTopLevelProperties": "Nessuna proprietà di primo livello.",
+      "hideAdvanced": "Nascondi impostazioni avanzate dello schema",
+      "modeLabel": "Modalità:",
+      "modePinned": "Bloccato",
+      "modeInferred": "Dedotto",
+      "close": "Chiudi",
+      "loadingSchema": "Caricamento dello schema…",
+      "publishedContractSchema": "Schema del contratto pubblicato",
+      "publishedSnapshot": "Snapshot dello schema pubblicato.",
+      "publishedSnapshotMissing": "Snapshot dello schema pubblicato mancante; viene mostrato lo schema attualmente restituito dal registro degli schemi.",
+      "publishedLoadFailed": "Impossibile caricare lo schema pubblicato.",
+      "noPublishedSnapshot": "Nessuno snapshot dello schema pubblicato salvato per la versione {{version}}.",
+      "noPublishedSnapshotWithRef": "Nessuno snapshot dello schema pubblicato salvato per la versione {{version}}. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Inserisci campo",
       "enterPlaceholder": "Inserisci espressione...",
-      "conditionPlaceholder": "ad es. payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "ad es. payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Errori dell'espressione",
+      "warningsHeading": "Avvisi",
+      "infoHeading": "Informazioni sull'espressione",
+      "invalid": "Espressione non valida",
+      "invalidWithReason": "Espressione non valida: {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Dati disponibili in questo passaggio",
@@ -1422,7 +1486,11 @@
       "outputSchemaUnavailable": "Schema di output non disponibile",
       "noFields": "Nessun campo",
       "copyAllPaths": "Copia tutti i percorsi",
-      "copyAllFieldPaths": "Copia tutti i percorsi dei campi"
+      "copyAllFieldPaths": "Copia tutti i percorsi dei campi",
+      "copyPath": "Copia {{path}}",
+      "copied": "Copiato!",
+      "noPreviousSteps": "Nessun passaggio precedente con \"Salva risultato come\" configurato",
+      "globals": "Variabili globali"
     },
     "logoAlt": "Logo dell'editor di workflow",
     "nodes": {
@@ -1581,6 +1649,42 @@
         "loadError": "Impossibile caricare gli eventi saltati.",
         "empty": "Nessun evento saltato in questo periodo."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "uguale a",
+      "notEquals": "diverso da",
+      "in": "incluso in",
+      "notIn": "non incluso in",
+      "exists": "esiste",
+      "notExists": "non esiste",
+      "greaterThan": "maggiore di",
+      "greaterThanOrEqual": "maggiore o uguale a",
+      "lessThan": "minore di",
+      "lessThanOrEqual": "minore o uguale a",
+      "contains": "contiene",
+      "startsWith": "inizia con",
+      "endsWith": "termina con"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "Lo schema del payload del trigger di data deve corrispondere all'origine selezionata.",
+      "eventCatalogLoadFailed": "Impossibile caricare il catalogo degli eventi. La pubblicazione e l'esecuzione sono disabilitate finché il catalogo non viene caricato.",
+      "triggerEventMissing": "L'evento trigger \"{{eventName}}\" non è presente nel catalogo degli eventi.",
+      "eventSchemaInvalid": "{{sourceLabel}} \"{{eventName}}\" {{schemaLabel}}. Correggi la voce nel catalogo degli eventi inserendo uno schema valido prima di pubblicare o eseguire il workflow.",
+      "timeTriggerFixedContract": "I workflow con trigger temporali usano il contratto fisso del payload dell'orologio e non possono dedurre né impostare uno schema diverso.",
+      "manualMustPin": "Per i workflow manuali occorre bloccare uno schema del payload prima della pubblicazione o dell'esecuzione.",
+      "registryLoadFailed": "Impossibile caricare il registro degli schemi. La pubblicazione e l'esecuzione sono disabilitate finché il registro non viene caricato.",
+      "noSchemaForEvent": "Nessuno schema disponibile per l'evento trigger \"{{eventName}}\". La pubblicazione e l'esecuzione sono disabilitate finché il problema non viene risolto.",
+      "unknownSchemaRef": "Il riferimento \"{{ref}}\" allo schema del payload del workflow è sconosciuto. La pubblicazione e l'esecuzione sono disabilitate finché il problema non viene risolto.",
+      "fixMappingErrors": "Correggi gli errori di mappatura del workflow prima di pubblicarlo o eseguirlo.",
+      "fixValidationErrors": "Correggi gli errori di validazione del workflow prima di pubblicarlo o eseguirlo.",
+      "eventCatalogLoading": "Il catalogo degli eventi è ancora in caricamento. L'esecuzione è disabilitata fino al termine del caricamento.",
+      "registryLoading": "Il registro degli schemi è ancora in caricamento. L'esecuzione è disabilitata fino al termine del caricamento.",
+      "eventCatalogLoadingPublish": "Il catalogo degli eventi è ancora in caricamento. La pubblicazione è disabilitata fino al termine del caricamento.",
+      "registryLoadingPublish": "Il registro degli schemi è ancora in caricamento. La pubblicazione è disabilitata fino al termine del caricamento.",
+      "systemEvent": "L'evento di sistema",
+      "tenantEvent": "L'evento del tenant",
+      "missingSchemaRef": "non ha un riferimento allo schema",
+      "unknownSchemaRefShort": "ha un riferimento schema sconosciuto"
     }
   },
   "actionInputFieldInfo": {

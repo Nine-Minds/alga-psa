@@ -1484,14 +1484,244 @@
       "barcodeCode128": "Code 128",
       "barcodeValue": "Value",
       "barcodeHintWorkTag": "Text, or a field such as {{example}} (the record link). Keep the code at least about 20 mm wide so it scans.",
-      "barcodeHint": "The text to encode. Keep the code at least about 20 mm wide so it scans."
+      "barcodeHint": "The text to encode. Keep the code at least about 20 mm wide so it scans.",
+      "binding": {
+        "noFieldSelected": "No field selected",
+        "customHint": "Type any binding path when the field you need is not listed.",
+        "useFieldPicker": "Use field picker",
+        "current": "Current",
+        "unbound": "Unbound",
+        "searchFields": "Search fields...",
+        "noMatches": "No matching fields.",
+        "useCustomPath": "Use custom path"
+      },
+      "customCssPreserved": "Custom CSS value preserved until edited:",
+      "pickField": "Pick {{field}}"
     },
     "shell": {
       "selectedLabel": "Selected:",
       "selectedNone": "None",
       "clickBlockHint": "Click a block on canvas",
       "orUse": "or use",
-      "plusInLeftPanelHint": "+ in the left panel"
+      "plusInLeftPanelHint": "+ in the left panel",
+      "sectionAlreadyFitted": "Section is already fitted.",
+      "unbound": "Unbound",
+      "layoutMode": {
+        "flex": {
+          "label": "Stack",
+          "tooltip": "Stack (Flex)"
+        },
+        "grid": {
+          "label": "Grid",
+          "tooltip": "Grid layout"
+        }
+      },
+      "direction": {
+        "column": {
+          "label": "Vertical",
+          "tooltip": "Vertical flow"
+        },
+        "row": {
+          "label": "Horizontal",
+          "tooltip": "Horizontal flow"
+        }
+      },
+      "alignItems": {
+        "stretch": {
+          "label": "Stretch",
+          "tooltip": "Stretch children"
+        },
+        "start": {
+          "label": "Start",
+          "tooltip": "Align to start"
+        },
+        "center": {
+          "label": "Center",
+          "tooltip": "Align to center"
+        },
+        "end": {
+          "label": "End",
+          "tooltip": "Align to end"
+        }
+      },
+      "justify": {
+        "start": {
+          "label": "Start",
+          "tooltip": "Pack at start"
+        },
+        "center": {
+          "label": "Center",
+          "tooltip": "Pack at center"
+        },
+        "end": {
+          "label": "End",
+          "tooltip": "Pack at end"
+        },
+        "between": {
+          "label": "Between",
+          "tooltip": "Distribute with space between"
+        },
+        "around": {
+          "label": "Around",
+          "tooltip": "Distribute with space around"
+        },
+        "evenly": {
+          "label": "Evenly",
+          "tooltip": "Distribute with equal spacing"
+        }
+      },
+      "mediaHorizontal": {
+        "left": {
+          "label": "Left",
+          "tooltip": "Align image to the left"
+        },
+        "center": {
+          "label": "Center",
+          "tooltip": "Center image horizontally"
+        },
+        "right": {
+          "label": "Right",
+          "tooltip": "Align image to the right"
+        }
+      },
+      "mediaVertical": {
+        "top": {
+          "label": "Top",
+          "tooltip": "Align image to the top"
+        },
+        "center": {
+          "label": "Center",
+          "tooltip": "Center image vertically"
+        },
+        "bottom": {
+          "label": "Bottom",
+          "tooltip": "Align image to the bottom"
+        }
+      },
+      "objectFit": {
+        "contain": {
+          "label": "Contain",
+          "tooltip": "Scale to fit inside the frame"
+        },
+        "cover": {
+          "label": "Cover",
+          "tooltip": "Fill the frame and crop overflow"
+        },
+        "fill": {
+          "label": "Fill",
+          "tooltip": "Stretch to fill the frame"
+        },
+        "none": {
+          "label": "None",
+          "tooltip": "Keep the intrinsic image size"
+        },
+        "scaleDown": {
+          "label": "Scale Down",
+          "tooltip": "Use intrinsic size unless it needs shrinking"
+        }
+      },
+      "widthMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Let the container decide (stretches in a vertical stack)"
+        },
+        "fill": {
+          "label": "Fill",
+          "tooltip": "Fill the full width of the container"
+        },
+        "fit": {
+          "label": "Fit",
+          "tooltip": "Shrink to fit the content"
+        },
+        "fixed": {
+          "label": "Fixed",
+          "tooltip": "Use the exact width typed below"
+        }
+      },
+      "heightMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Grow with the content"
+        },
+        "fixed": {
+          "label": "Fixed",
+          "tooltip": "Use the exact height typed below"
+        }
+      },
+      "flexPreset": {
+        "natural": {
+          "label": "Natural",
+          "description": "Use the item content size, but allow it to shrink if space is tight."
+        },
+        "fill": {
+          "label": "Fill",
+          "description": "Expand into leftover space while keeping the item’s preferred size."
+        },
+        "share": {
+          "label": "Share",
+          "description": "Split available space evenly with other shared items."
+        },
+        "fixed": {
+          "label": "Fixed",
+          "description": "Keep the item size and do not let flexbox shrink it."
+        }
+      },
+      "groups": {
+        "layout": "Layout",
+        "direction": "Direction",
+        "alignItems": "Align Items",
+        "justifyContent": "Justify Content",
+        "objectFit": "Object Fit",
+        "horizontalAlign": "Horizontal Align",
+        "verticalAlign": "Vertical Align",
+        "columns": "Columns"
+      },
+      "columnsAria": "Columns: {{preset}}",
+      "axis": {
+        "width": "Width",
+        "height": "Height",
+        "widthLower": "width",
+        "heightLower": "height"
+      },
+      "flexItemHint": "In this {{direction}} stack, these settings control how the item shares {{axis}} with its siblings.",
+      "flexBehavior": "{{axis}} Behavior",
+      "flexBehaviorAria": "{{axis}} behavior: {{preset}}",
+      "flexCustomNotice": "This item has custom flex values. Choose a preset to simplify it, or adjust the advanced values below.",
+      "advancedFlexValues": "Advanced Flex Values",
+      "flexGrow": "Take extra space",
+      "flexShrink": "Allow shrinking",
+      "flexBasis": "Preferred {{axis}} size",
+      "displayFormat": {
+        "singleLine": {
+          "label": "Single line",
+          "description": "Collapse the address onto one line."
+        },
+        "multiline": {
+          "label": "Multiline",
+          "description": "Split the address into multiple lines."
+        },
+        "raw": {
+          "label": "Raw",
+          "description": "Use the stored value as-is."
+        },
+        "onlyDataField": "This only applies to Data Field nodes.",
+        "aria": "Display format: {{format}}"
+      },
+      "attachments": {
+        "defaultLabel": "Attachment",
+        "title": "Title",
+        "items": "Items",
+        "add": "Add",
+        "empty": "No attachments defined."
+      },
+      "media": {
+        "altText": "Alt text",
+        "aspectRatio": "Aspect ratio",
+        "fitParentSection": "Fit Parent Section to Media",
+        "reflowsPrefix": "Reflows",
+        "reflowsSuffix": "to remove extra whitespace.",
+        "notInSection": "This media block is not inside a section."
+      }
     },
     "pageSetup": {
       "title": "Page Setup",
@@ -2106,7 +2336,23 @@
       "cannotInsert": "{{block}} cannot be added here.",
       "insertedOnPage": "Added {{block}} to the page.",
       "insertedInto": "Added {{block}} to {{parent}}.",
-      "fieldRebound": "{{name}} now shows {{path}}."
+      "fieldRebound": "{{name}} now shows {{path}}.",
+      "dropIncompatibleComponent": "Drop target is not compatible for this component.",
+      "dropIncompatible": "Drop target is not compatible.",
+      "dropIncompatiblePreset": "Drop target is not compatible for this preset.",
+      "dropOnCanvas": "Drop on the canvas to add this component.",
+      "addComponentFailed": "Unable to add this component in the current context.",
+      "presetUnavailable": "Preset definition is unavailable.",
+      "presetPlacementUnresolved": "Unable to resolve where to place this preset.",
+      "addPresetFailed": "Unable to add this preset in the current context.",
+      "inserted": "Inserted {{value}}.",
+      "insertedWithDiagnostic": "Inserted {{value}}. {{diagnostic}}",
+      "selectTextBlock": "Select a text block, then focus a text field to insert variables.",
+      "focusTextField": "Focus a text field in the inspector to insert this variable.",
+      "selectSectionToFit": "Select a section to fit.",
+      "sectionNoChildren": "Section has no child content to fit.",
+      "sectionFitted": "Section fitted to contents.",
+      "sectionFittedFixed": "Section switched to Fixed sizing and fitted to contents."
     },
     "translation": {
       "translatedAs": "Standard label \"{{name}}\", translated for each recipient",

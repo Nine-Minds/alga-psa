@@ -408,7 +408,7 @@ export function TicketList() {
     if (!ticketToUpdateStatus) return;
 
     const { ticketId, newStatus } = ticketToUpdateStatus;
-    const newStatusLabel = rawStatusOptions.find(s => s.value === newStatus)?.label || 'Unknown Status';
+    const newStatusLabel = rawStatusOptions.find(s => s.value === newStatus)?.label || t('status.unknown', { defaultValue: 'Unknown Status' });
 
     try {
       const result = await updateTicketStatus(ticketId, newStatus);
@@ -521,7 +521,7 @@ export function TicketList() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: `rgb(${hue})` }} />
-                  <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
+                  <span className="overflow-hidden text-ellipsis">{value || t('fields.noStatus', { defaultValue: 'No Status' })}</span>
                   <ChevronDown className="h-3 w-3 shrink-0 text-[rgb(var(--color-text-400))]" />
                 </button>
               </DropdownMenu.Trigger>
@@ -577,7 +577,7 @@ export function TicketList() {
             className="h-3.5 w-[3px] shrink-0 rounded-full"
             style={{ backgroundColor: record.priority_color || '#94a3b8' }}
           />
-          <span className="font-medium text-[rgb(var(--color-text-700))]">{value || 'No Priority'}</span>
+          <span className="font-medium text-[rgb(var(--color-text-700))]">{value || t('fields.noPriority', { defaultValue: 'No Priority' })}</span>
         </div>
       ),
     },
@@ -589,7 +589,7 @@ export function TicketList() {
       width: '13%',
       render: (value: string | null) => {
         if (!value) {
-          return <span className="text-sm text-[rgb(var(--color-text-400))]">No due date</span>;
+          return <span className="text-sm text-[rgb(var(--color-text-400))]">{t('fields.noDueDate', { defaultValue: 'No due date' })}</span>;
         }
 
         const now = new Date();
@@ -601,7 +601,7 @@ export function TicketList() {
         else if (hoursUntilDue <= 24) primaryClass = 'text-orange-600 dark:text-orange-400';
 
         const d = daysUntil(dueDate, now);
-        const secondary = d >= 2 ? `in ${d} days` : null;
+        const secondary = d >= 2 ? t('fields.dueInDays', { defaultValue: 'in {{count}} days', count: d }) : null;
 
         return (
           <div className="flex flex-col leading-tight">
@@ -632,7 +632,7 @@ export function TicketList() {
                 +
               </span>
             )}
-            <span className="truncate">{value || 'Unassigned'}</span>
+            <span className="truncate">{value || t('filters.unassigned', { defaultValue: 'Unassigned' })}</span>
             {record.assigned_team_id && record.assigned_team_name && (
               <Tooltip content={record.assigned_team_name}>
                 <span className="inline-flex items-center cursor-help">
@@ -649,7 +649,7 @@ export function TicketList() {
               <Tooltip
                 content={
                   <div className="text-xs space-y-1.5">
-                    <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                    <div className="font-medium text-gray-300 mb-1">{t('info.additionalAgentsTooltip', { defaultValue: 'Additional Agents:' })}</div>
                     {additionalAgents.map((agent, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <UserAvatar
@@ -718,7 +718,7 @@ export function TicketList() {
               setSelectedStatus(value);
               setCurrentPage(1);
             }}
-            placeholder="Select Status"
+            placeholder={t('filters.selectStatus', { defaultValue: 'Select Status' })}
           />
 
           {responseStateTrackingEnabled && (
@@ -749,7 +749,7 @@ export function TicketList() {
               setSelectedPriority(value);
               setCurrentPage(1);
             }}
-            placeholder="All Priorities"
+            placeholder={t('filters.allPriorities', { defaultValue: 'All Priorities' })}
           />
 
           <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
@@ -791,7 +791,7 @@ export function TicketList() {
               id="reset-filters-button"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('actions.reset', { defaultValue: 'Reset' })}
             </Button>
 
             <Button
@@ -832,10 +832,14 @@ export function TicketList() {
         isOpen={!!ticketToUpdateStatus}
         onClose={() => setTicketToUpdateStatus(null)}
         onConfirm={handleStatusChange}
-        title="Update Ticket Status"
-        message={`Are you sure you want to change the status from "${ticketToUpdateStatus?.currentStatus}" to "${rawStatusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label}"?`}
-        confirmLabel="Update"
-        cancelLabel="Cancel"
+        title={t('statusChange.title', { defaultValue: 'Update Ticket Status' })}
+        message={t('statusChange.message', {
+          defaultValue: 'Are you sure you want to change the status from "{{from}}" to "{{to}}"?',
+          from: ticketToUpdateStatus?.currentStatus,
+          to: rawStatusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label,
+        })}
+        confirmLabel={t('actions.update', { defaultValue: 'Update' })}
+        cancelLabel={t('actions.cancel', { defaultValue: 'Cancel' })}
       />
     </div>
   );

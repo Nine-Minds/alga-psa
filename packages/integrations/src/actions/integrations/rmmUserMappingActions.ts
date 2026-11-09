@@ -5,10 +5,13 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { tenantDb } from '@alga-psa/db';
+import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '@alga-psa/authorization/assetReadAuthorization';
 import { countRmmOrganizationAssets as countOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
 import {
   listSignedInUsersForOrganization,
   mapSignedInUserToContact,
+  RmmUserMappingAuthorizationError,
+  type RmmUserMappingAuthorizationRequest,
   type RmmSignedInUserRow,
 } from '@alga-psa/shared/rmm/signedInUserMappings';
 
@@ -81,22 +84,91 @@ export const mapRmmSignedInUserToContact = withAuth(async (
   if (!await hasPermission(user as any, 'system_settings', 'update')) {
     return { success: false, error: 'Forbidden' };
   }
+  if (!await hasPermission(user as any, 'asset', 'read')) {
+    return { success: false, error: 'Permission denied: Cannot read assets' };
+  }
+  if (!await hasPermission(user as any, 'asset', 'update')) {
+    return { success: false, error: 'Permission denied: Cannot update assets' };
+  }
 
   try {
     const { knex } = await createTenantKnex();
     const resolved = await resolveMapping(knex, tenant, input.mappingId);
     if (!resolved) return { success: false, error: 'Mapping not found' };
 
-    const result = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      mapSignedInUserToContact(trx, tenant, {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // LEVERAGE: pattern rmm-action-record-authorization — the asset details action builds the same policy bridge.
+      let authorizationContextPromise: ReturnType<typeof createAssetReadContext> | undefined;
+      const authorize = async ({ assetIds, contactId, integrationId }: RmmUserMappingAuthorizationRequest) => {
+        const db = tenantDb(trx, tenant);
+        const [integration, assetRows, contact] = await Promise.all([
+          db.table('rmm_integrations').where({ integration_id: integrationId })
+            .first<{ integration_id: string }>('integration_id'),
+          assetIds.length
+            ? db.table('assets').whereIn('asset_id', assetIds)
+                .select<Array<{ asset_id: string; client_id: string | null }>>('asset_id', 'client_id')
+            : Promise.resolve([] as Array<{ asset_id: string; client_id: string | null }>),
+          contactId
+            ? db.table('contacts').where({ contact_name_id: contactId }).whereNot({ contact_kind: 'shared_mailbox' })
+                .first<{ contact_name_id: string; client_id: string | null }>('contact_name_id', 'client_id')
+            : Promise.resolve(undefined),
+        ]);
+        if (!integration || assetRows.length !== new Set(assetIds).size ||
+          (contactId && (!contact?.contact_name_id || !contact.client_id))) {
+          throw new RmmUserMappingAuthorizationError();
+        }
+        if (contactId && !await hasPermission(user as any, 'contact', 'read', trx as Knex)) {
+          throw new RmmUserMappingAuthorizationError();
+        }
+
+        const context = await (authorizationContextPromise ??= createAssetReadContext(trx, tenant, user as any));
+        const assetAllowed = await Promise.all(assetRows.map(async (asset) =>
+          await isAssetReadAllowed(trx, tenant, context, asset) &&
+          await isAssetActionAllowed(trx, tenant, context, asset, 'update')
+        ));
+        if (assetAllowed.some((allowed) => !allowed)) throw new RmmUserMappingAuthorizationError();
+
+        if (contactId && contact) {
+          const decision = await context.authorizationKernel.authorizeResource({
+            subject: context.subject,
+            resource: { type: 'contact', action: 'read', id: contactId },
+            record: { id: contactId, clientId: contact.client_id },
+            requestCache: context.requestCache,
+            knex: trx as Knex,
+          });
+          if (!decision.allowed) throw new RmmUserMappingAuthorizationError();
+        }
+
+        const clientIds = new Set<string>();
+        for (const asset of assetRows) if (asset.client_id) clientIds.add(asset.client_id);
+        if (contact?.client_id) clientIds.add(contact.client_id);
+        if (!clientIds.size) {
+          const organizations = await db.table('rmm_organization_mappings').where({ integration_id: integrationId })
+            .select<Array<{ client_id: string | null }>>('client_id');
+          for (const organization of organizations) if (organization.client_id) clientIds.add(organization.client_id);
+        }
+        for (const clientId of clientIds.size ? [...clientIds] : [null]) {
+          const decision = await context.authorizationKernel.authorizeResource({
+            subject: context.subject,
+            resource: { type: 'rmm_integration', action: 'update', id: integrationId },
+            record: { id: integrationId, clientId },
+            requestCache: context.requestCache,
+            knex: trx as Knex,
+          });
+          if (!decision.allowed) throw new RmmUserMappingAuthorizationError();
+        }
+      };
+
+      return mapSignedInUserToContact(trx, tenant, {
         integrationId: resolved.integrationId,
         provider: resolved.provider,
         rawUser: input.rawUser,
         contactId: input.contactId,
         assignAssetId: input.assignAssetId,
         actorUserId: (user as { user_id: string }).user_id,
-      })
-    );
+        authorize,
+      });
+    });
     return { success: true, assignedCount: result.assignedAssetIds.length };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unable to save the mapping.' };

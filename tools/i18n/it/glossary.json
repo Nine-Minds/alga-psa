@@ -2207,6 +2207,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Layout",
       "1 asset",
       "Offline",
       "{{field}}: {{from}} → {{to}}",
@@ -2322,6 +2323,7 @@
       "Test",
       "Ticket",
       "Trigger",
+      "Trigger:",
       "Try/Catch",
       "URL",
       "UUID",
@@ -2371,7 +2373,15 @@
       "Code 128",
       "Asset: {{name}}",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Markdown",
+      "ticket",
+      "Firmware",
+      "No",
+      "team",
+      "{{actor}} • {{eventType}}",
+      "Standard",
+      "Ticket {{number}}"
     ],
     "caseInsensitive": [
       "account",

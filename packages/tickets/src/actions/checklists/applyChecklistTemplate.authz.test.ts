@@ -1,103 +1,204 @@
-// @vitest-environment node
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fakeTenantDb, fakeTransaction } from '@alga-psa/db/testing';
-import { applyChecklistTemplate } from './applyChecklistTemplate';
 
 const state = vi.hoisted(() => ({
-  hasPermission: vi.fn(),
-  applyTemplate: vi.fn(),
-  tenantDb: vi.fn(),
-  db: {},
-  trx: {},
+  user: { user_id: 'client-user', user_type: 'client', clientId: 'client-1', contact_id: 'contact-1', roles: [{ role_id: 'client-role' }] } as any,
+  ticketsByTenant: {} as Record<string, Record<string, any>>,
+  template: { template_id: 'template-1', name: 'Valid checklist', client_id: 'client-1' } as any,
+  templateItems: [{ item_name: 'Valid item', description: null, is_required: true }],
+  rows: [] as any[],
+  activities: [] as any[],
+  events: [] as string[],
+  coarsePermissionChecks: [] as Array<[string, string]>,
+  coarsePermissionAllowed: true,
 }));
-
-const user = {
-  user_id: 'user-1', user_type: 'client', tenant: 'tenant-1',
-  contact_id: 'contact-1', clientId: 'client-1', roles: [{ role_id: 'role-1' }],
-};
 
 vi.mock('@alga-psa/auth', () => ({
-  withAuth: (action: any) => (...args: unknown[]) => action(user, { tenant: user.tenant }, ...args),
-  hasPermission: state.hasPermission,
-}));
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: state.db }),
-  withTransaction: async (_db: unknown, work: any) => work(state.trx),
-  tenantDb: state.tenantDb,
-}));
-vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
-  getClientContactVisibilityContext: async () => ({
-    effectiveTicketScope: 'client', ticketScope: 'client',
-    contactId: 'contact-1', clientId: 'client-1', visibleBoardIds: ['board-1'],
-    isClientAdmin: false, visibilityGroupId: null,
+  withAuth: (action: any) => async (...args: any[]) => action(state.user, { tenant: 'tenant-1' }, ...args),
+  hasPermission: vi.fn(async (_user: any, resource: string, action: string) => {
+    state.coarsePermissionChecks.push([resource, action]);
+    return state.coarsePermissionAllowed;
   }),
 }));
+
+vi.mock('../../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccessConcealed: async ({ tenant, ticketId }: { tenant: string; ticketId: string }) => {
+    state.events.push(`ticket-read:${tenant}`);
+    const ticket = state.ticketsByTenant[tenant]?.[ticketId];
+    if (!ticket || ticket.board_id !== 'board-1') {
+      throw new Error('Permission denied: Cannot access ticket');
+    }
+    return ticket;
+  },
+}));
+
+vi.mock('../../lib/clientPortalVisibility.server', () => ({
+  getClientContactVisibilityContext: async () => ({
+    effectiveTicketScope: 'client',
+    ticketScope: 'client',
+    contactId: 'contact-1',
+    clientId: 'client-1',
+    visibleBoardIds: ['board-1'],
+    isClientAdmin: false,
+    visibilityGroupId: null,
+  }),
+}));
+
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: async () => [],
 }));
-vi.mock('@alga-psa/shared/lib/ticketChecklists', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@alga-psa/shared/lib/ticketChecklists')>(),
-  applyChecklistTemplateToTicket: state.applyTemplate,
+
+vi.mock('@alga-psa/shared/lib/ticketActivity', () => ({
+  TICKET_ACTIVITY_ACTOR: { USER: 'user' },
+  TICKET_ACTIVITY_ENTITY: { CHECKLIST_ITEM: 'checklist_item' },
+  TICKET_ACTIVITY_EVENT: { CHECKLIST_TEMPLATE_APPLIED: 'checklist_template_applied' },
+  TICKET_ACTIVITY_SOURCE: { UI: 'ui', SYSTEM: 'system' },
+  writeTicketActivity: vi.fn(async (_trx: any, activity: any) => {
+    state.activities.push(activity);
+  }),
 }));
 
-const ticket = {
-  ticket_id: 'ticket-1', client_id: 'client-1', board_id: 'board-1',
-  assigned_to: null, entered_by: null, assigned_team_id: null,
-  contact_name_id: 'contact-1', billing_profile_id: null, attributes: {},
-};
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: {} }),
+  withTransaction: async (_db: any, work: any) => work({}),
+  tenantDb: (_conn: any, tenant: string) => ({
+    table: (table: string) => {
+      let predicate: Record<string, any> = {};
+      const builder: any = {
+        where: (where: Record<string, any>) => { predicate = where; return builder; },
+        first: async () => {
+          if (table === 'tickets') {
+            state.events.push(`ticket-read:${tenant}`);
+            return state.ticketsByTenant[tenant]?.[predicate.ticket_id];
+          }
+          if (table === 'checklist_templates') {
+            state.events.push('template-read');
+            return state.template;
+          }
+          if (table === 'ticket_checklist_items') {
+            return state.rows.find((row) => row.ticket_id === predicate.ticket_id && row.template_id === predicate.template_id);
+          }
+          if (table === 'ticket_checklist_items:max') return { max: state.rows.length - 1 };
+          return undefined;
+        },
+        max: () => ({
+          first: async () => ({ max: state.rows.filter((row) => row.ticket_id === predicate.ticket_id).length - 1 }),
+        }),
+        select: () => builder,
+        orderBy: () => builder,
+        then: (resolve: any, reject: any) => Promise.resolve(
+          table === 'checklist_template_items' ? state.templateItems : []
+        ).then(resolve, reject),
+        insert: async (rows: any[]) => { state.rows.push(...rows); },
+      };
+      return builder;
+    },
+  }),
+}));
 
-function database(localTickets: Record<string, unknown>[]) {
-  const db = fakeTenantDb({ tables: {
-    'tenant-1:tickets': localTickets,
-    // The same ID in another tenant must never satisfy the authorization lookup.
-    'tenant-2:tickets': [ticket],
-  } });
-  state.tenantDb.mockImplementation(db);
-  return db;
-}
-
-describe('manual checklist template authorization', () => {
+describe('applyChecklistTemplate record authorization', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    state.trx = fakeTransaction();
-    state.hasPermission.mockResolvedValue(true);
-    state.applyTemplate.mockResolvedValue({ applied: true, itemsAdded: 1 });
+    state.user = { user_id: 'client-user', user_type: 'client', clientId: 'client-1', contact_id: 'contact-1', roles: [{ role_id: 'client-role' }] };
+    state.ticketsByTenant = {
+      'tenant-1': {
+        'ticket-1': {
+          ticket_id: 'ticket-1', client_id: 'client-1', board_id: 'board-1', contact_name_id: 'contact-1',
+          billing_profile_id: null, attributes: {}, assigned_to: null, entered_by: null, assigned_team_id: null,
+        },
+      },
+      'tenant-2': {
+        'cross-tenant-ticket': {
+          ticket_id: 'cross-tenant-ticket', tenant: 'tenant-2', client_id: 'client-1', board_id: 'board-1',
+          contact_name_id: 'contact-1', billing_profile_id: null, attributes: {}, assigned_to: null,
+          entered_by: null, assigned_team_id: null,
+        },
+      },
+    };
+    state.template = { template_id: 'template-1', name: 'Valid checklist', client_id: 'client-1' };
+    state.templateItems = [{ item_name: 'Valid item', description: null, is_required: true }];
+    state.rows = [{ ticket_id: 'other-ticket', item_name: 'Existing row' }];
+    state.activities = [{ ticket_id: 'other-ticket', eventType: 'existing activity' }];
+    state.events = [];
+    state.coarsePermissionChecks = [];
+    state.coarsePermissionAllowed = true;
   });
 
-  it('authorizes the ticket in the authenticated tenant and applies within the same transaction', async () => {
-    const db = database([ticket]);
-    await expect(applyChecklistTemplate('ticket-1', 'template-1')).resolves.toEqual({ applied: true, itemsAdded: 1 });
-    expect(db.calls.length).toBeGreaterThan(0);
-    expect(db.calls.every(call => call.tenant === 'tenant-1' && call.handle === state.trx)).toBe(true);
-    expect(db.calls.filter(call => call.table === 'tickets')).toHaveLength(1);
-    expect(state.applyTemplate).toHaveBeenCalledExactlyOnceWith(
-      state.trx, 'tenant-1', 'ticket-1', 'template-1', 'template',
-      expect.objectContaining({ actor: expect.objectContaining({ userId: user.user_id }) }),
-    );
+  it('requires coarse ticket:update permission before record authorization', async () => {
+    state.coarsePermissionAllowed = false;
+    const { applyChecklistTemplate } = await import('./applyChecklistTemplate');
+
+    const result = await applyChecklistTemplate('ticket-1', 'template-1');
+
+    expect(result).toMatchObject({ permissionError: 'Permission denied: Cannot update ticket checklist' });
+    expect(state.coarsePermissionChecks).toEqual([['ticket', 'update']]);
+    expect(state.events).toEqual([]);
   });
 
-  it.each([
-    ['another client', [{ ...ticket, client_id: 'client-2' }]],
-    ['a hidden board', [{ ...ticket, board_id: 'board-2' }]],
-    ['another tenant only', []],
-    ['a different ticket ID', [{ ...ticket, ticket_id: 'ticket-2' }]],
-  ])('refuses a ticket belonging to %s without applying the template', async (_name, rows) => {
-    database(rows);
-    await expect(applyChecklistTemplate('ticket-1', 'template-1')).resolves.toMatchObject({
-      permissionError: 'Permission denied: Cannot access ticket',
-    });
-    expect(state.applyTemplate).not.toHaveBeenCalled();
+  it('denies a client with coarse ticket:update when record access fails without changing data', async () => {
+    state.ticketsByTenant['tenant-1']['ticket-1'] = {
+      ...state.ticketsByTenant['tenant-1']['ticket-1'], board_id: 'hidden-board',
+    };
+    const initialRows = structuredClone(state.rows);
+    const initialActivities = structuredClone(state.activities);
+    const { applyChecklistTemplate } = await import('./applyChecklistTemplate');
+
+    const result = await applyChecklistTemplate('ticket-1', 'template-1');
+
+    expect(result).toMatchObject({ permissionError: 'Permission denied: Cannot access ticket' });
+    expect(state.coarsePermissionChecks).toEqual([['ticket', 'update']]);
+    expect(state.events).toEqual(['ticket-read:tenant-1']);
+    expect(state.rows).toEqual(initialRows);
+    expect(state.activities).toEqual(initialActivities);
   });
 
-  it('refuses missing ticket:update permission before reading or applying', async () => {
-    const db = database([ticket]);
-    state.hasPermission.mockResolvedValue(false);
-    await expect(applyChecklistTemplate('ticket-1', 'template-1')).resolves.toMatchObject({
-      permissionError: 'Permission denied: Cannot update ticket checklist',
-    });
-    expect(state.hasPermission).toHaveBeenCalledWith(user, 'ticket', 'update');
-    expect(db.calls).toEqual([]);
-    expect(state.applyTemplate).not.toHaveBeenCalled();
+  it('conceals hidden, nonexistent, and cross-tenant ticket references identically before template reads', async () => {
+    state.ticketsByTenant['tenant-1']['hidden-ticket'] = {
+      ...state.ticketsByTenant['tenant-1']['ticket-1'], ticket_id: 'hidden-ticket', board_id: 'hidden-board',
+    };
+    const { applyChecklistTemplate } = await import('./applyChecklistTemplate');
+    const initialRows = structuredClone(state.rows);
+    const initialActivities = structuredClone(state.activities);
+
+    const hidden = await applyChecklistTemplate('hidden-ticket', 'template-1');
+    const hiddenEvents = [...state.events];
+    state.events = [];
+    const nonexistent = await applyChecklistTemplate('nonexistent-ticket', 'template-1');
+    const nonexistentEvents = [...state.events];
+    state.events = [];
+    const crossTenant = await applyChecklistTemplate('cross-tenant-ticket', 'template-1');
+
+    expect(hidden).toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
+    expect(nonexistent).toEqual(hidden);
+    expect(crossTenant).toEqual(hidden);
+    expect(hiddenEvents).toEqual(['ticket-read:tenant-1']);
+    expect(nonexistentEvents).toEqual(['ticket-read:tenant-1']);
+    expect(state.events).toEqual(['ticket-read:tenant-1']);
+    expect(state.rows).toEqual(initialRows);
+    expect(state.activities).toEqual(initialActivities);
+  });
+
+  it('applies a valid template after authorized ticket access', async () => {
+    const { applyChecklistTemplate } = await import('./applyChecklistTemplate');
+
+    const result = await applyChecklistTemplate('ticket-1', 'template-1');
+
+    expect(result).toEqual({ applied: true, itemsAdded: 1 });
+    expect(state.rows).toHaveLength(2);
+    expect(state.rows[1]).toMatchObject({ ticket_id: 'ticket-1', template_id: 'template-1', item_name: 'Valid item' });
+    expect(state.activities).toHaveLength(2);
+    expect(state.activities[1]).toMatchObject({ ticketId: 'ticket-1', entityId: 'template-1' });
+    expect(state.events).toEqual(['ticket-read:tenant-1', 'template-read']);
+  });
+
+  it('preserves the distinct template/client mismatch outcome', async () => {
+    state.template = { ...state.template, client_id: 'another-client' };
+    const initialRows = structuredClone(state.rows);
+    const initialActivities = structuredClone(state.activities);
+    const { applyChecklistTemplate } = await import('./applyChecklistTemplate');
+
+    const result = await applyChecklistTemplate('ticket-1', 'template-1');
+
+    expect(result).toMatchObject({ actionError: 'template-client-mismatch' });
+    expect(state.rows).toEqual(initialRows);
+    expect(state.activities).toEqual(initialActivities);
   });
 });

@@ -301,7 +301,7 @@ const Documents = ({
         const user = await getCurrentUser();
         if (!mounted || !user) return;
         const nameParts = [user.first_name, user.last_name].filter(Boolean);
-        const displayName = nameParts.join(' ').trim() || user.email || 'User';
+        const displayName = nameParts.join(' ').trim() || user.email || tDoc('fallbackUserName', 'User');
         setCurrentUserName(displayName);
         setCurrentTenantId(user.tenant ?? '');
         setCurrentUserId(user.user_id);
@@ -1430,7 +1430,7 @@ const Documents = ({
                 size="sm"
               >
                 <FileText className="w-4 h-4 mr-2" />
-                Markdown
+                {tDoc('actions.markdown', 'Markdown')}
               </Button>
               <Button
                 id={`${id}-print-document-btn`}
@@ -1459,7 +1459,7 @@ const Documents = ({
                 size="sm"
               >
                 <Printer className="w-4 h-4 mr-2" />
-                Print
+                {tDoc('actions.print', 'Print')}
               </Button>
             </>
           )}
@@ -1471,7 +1471,7 @@ const Documents = ({
               size="sm"
             >
               <Edit3 className="w-4 h-4 mr-2" />
-              Edit
+              {tDoc('actions.edit', 'Edit')}
             </Button>
           )}
           {!isInDrawer && (
@@ -1564,7 +1564,7 @@ const Documents = ({
               <DocumentViewer content={currentContent} />
             ) : (
               <div className="flex justify-center items-center h-full text-gray-500">
-                Select a document or create a new one.
+                {tDoc('selectOrCreate', 'Select a document or create a new one.')}
               </div>
             )}
           </div>
@@ -1576,7 +1576,7 @@ const Documents = ({
             onClick={handleDrawerClose}
             variant="outline"
           >
-            Cancel
+            {tDoc('actions.cancel', 'Cancel')}
           </Button>
           {(isCreatingNew || isEditModeInDrawer) && (
             <Button
@@ -1586,7 +1586,7 @@ const Documents = ({
               variant="default"
               className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
             >
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? tDoc('actions.saving', 'Saving...') : tDoc('actions.save', 'Save')}
             </Button>
           )}
         </div>
@@ -1600,7 +1600,7 @@ const Documents = ({
         <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
           <button
             id={`${id}-preview-close`}
-            aria-label="Close preview"
+            aria-label={tDoc('actions.closePreview', 'Close preview')}
             className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
             onClick={() => setShowPreviewModal(false)}
           >
@@ -1654,10 +1654,10 @@ const Documents = ({
           isOpen={showUnsavedChangesDialog}
           onClose={() => setShowUnsavedChangesDialog(false)}
           onConfirm={executeDrawerClose}
-          title="Unsaved Changes"
-          message="Are you sure you want to cancel? Any unsaved changes will be lost."
-          confirmLabel="Discard changes"
-          cancelLabel="Continue editing"
+          title={tDoc('unsavedChanges.title', 'Unsaved Changes')}
+          message={tDoc('unsavedChanges.message', 'Are you sure you want to cancel? Any unsaved changes will be lost.')}
+          confirmLabel={tDoc('unsavedChanges.confirm', 'Discard changes')}
+          cancelLabel={tDoc('unsavedChanges.cancel', 'Continue editing')}
         />
       </>
     );
@@ -1666,7 +1666,7 @@ const Documents = ({
   // Folder mode: show folder tree sidebar and new layout
   if (inFolderMode) {
     return (
-      <ReflectionContainer id={id} label="Documents">
+      <ReflectionContainer id={id} label={tDoc('title', 'Documents')}>
         <div className="flex flex-col h-[calc(100vh-200px)]">
           {/* Header with Actions */}
           <div className="border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] p-4 flex items-center justify-between">
@@ -1680,7 +1680,7 @@ const Documents = ({
                 onClick={handleCreateDocument}
               >
                 <FileText className="w-4 h-4 mr-2" />
-                Add document
+                {tDoc('newDocument', 'Add document')}
               </Button>
               )}
 
@@ -1691,7 +1691,7 @@ const Documents = ({
                 onClick={() => setShowUpload(true)}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Upload
+                {tDoc('actions.upload', 'Upload')}
               </Button>
 
               {/* Create Folder Button */}
@@ -1701,7 +1701,7 @@ const Documents = ({
                 onClick={() => setShowFolderManager(true)}
               >
                 <FolderPlus className="w-4 h-4 mr-2" />
-                New Folder
+                {tDoc('folderSelector.newFolderButton', 'New Folder')}
               </Button>
             </div>
 
@@ -1710,8 +1710,8 @@ const Documents = ({
               currentView={viewMode}
               onChange={(view: string) => setViewMode(view as 'grid' | 'list')}
               options={[
-                { value: 'grid', label: 'Grid', icon: Grid },
-                { value: 'list', label: 'List', icon: ListIcon },
+                { value: 'grid', label: tDoc('viewMode.grid', 'Grid'), icon: Grid },
+                { value: 'list', label: tDoc('viewMode.list', 'List'), icon: ListIcon },
               ]}
             />
           </div>
@@ -1724,8 +1724,8 @@ const Documents = ({
                 <CollapseToggleButton
                   id="documents-show-folders-button"
                   isCollapsed={true}
-                  collapsedLabel="Show folders"
-                  expandedLabel="Collapse folders"
+                  collapsedLabel={tDoc('folders.show', 'Show folders')}
+                  expandedLabel={tDoc('folders.collapse', 'Collapse folders')}
                   expandDirection="right"
                   onClick={() => setIsFoldersPaneCollapsed(false)}
                 />
@@ -1953,10 +1953,10 @@ const Documents = ({
           isOpen={showUnsavedChangesDialog}
           onClose={() => setShowUnsavedChangesDialog(false)}
           onConfirm={executeDrawerClose}
-          title="Unsaved Changes"
-          message="Are you sure you want to cancel? Any unsaved changes will be lost."
-          confirmLabel="Discard changes"
-          cancelLabel="Continue editing"
+          title={tDoc('unsavedChanges.title', 'Unsaved Changes')}
+          message={tDoc('unsavedChanges.message', 'Are you sure you want to cancel? Any unsaved changes will be lost.')}
+          confirmLabel={tDoc('unsavedChanges.confirm', 'Discard changes')}
+          cancelLabel={tDoc('unsavedChanges.cancel', 'Continue editing')}
         />
 
         {allowDocumentSharing && shareDialogDocument && (
@@ -1974,7 +1974,7 @@ const Documents = ({
 
   // Entity mode: existing layout
   return (
-    <ReflectionContainer id={id} label="Documents">
+    <ReflectionContainer id={id} label={tDoc('title', 'Documents')}>
       <div className="w-full space-y-4">
         {!readOnly && <div className="flex justify-between items-center mb-4">
           <div className="flex space-x-2">
@@ -2131,10 +2131,10 @@ const Documents = ({
           isOpen={showUnsavedChangesDialog}
           onClose={() => setShowUnsavedChangesDialog(false)}
           onConfirm={executeDrawerClose}
-          title="Unsaved Changes"
-          message="Are you sure you want to cancel? Any unsaved changes will be lost."
-          confirmLabel="Discard changes"
-          cancelLabel="Continue editing"
+          title={tDoc('unsavedChanges.title', 'Unsaved Changes')}
+          message={tDoc('unsavedChanges.message', 'Are you sure you want to cancel? Any unsaved changes will be lost.')}
+          confirmLabel={tDoc('unsavedChanges.confirm', 'Discard changes')}
+          cancelLabel={tDoc('unsavedChanges.cancel', 'Continue editing')}
         />
       </div>
 
