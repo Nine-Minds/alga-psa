@@ -735,10 +735,12 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
       // publication and deletion are history and have their own commands.
       const comment: Partial<IComment> = {};
       if (requested.note !== undefined) comment.note = requested.note;
-      if (requested.is_resolution !== undefined) comment.is_resolution = requested.is_resolution;
-      // A client can never make a comment internal, nor change an internal one.
-      if (requested.is_internal !== undefined) {
-        if (isMspPrincipalUserType(user.user_type)) {
+      // Portal contacts may only revise the note body; ignore all other
+      // caller-controlled fields just as the portal action does.
+      if (isMspPrincipalUserType(user.user_type)) {
+        if (requested.is_resolution !== undefined) comment.is_resolution = requested.is_resolution;
+        // MSP edits may change visibility only when the thread audience permits it.
+        if (requested.is_internal !== undefined) {
           if (requested.is_internal !== Boolean(existingComment.is_internal)) {
             // A native text edit can never relabel a labelled thread, nor publish a legacy note in
             // a co-managed workspace. Only a real visibility change pays for the lookup.
@@ -747,8 +749,6 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
             await assertNativeEditKeepsAudience(trx, commentTenant, editedThread, { isInternal: requested.is_internal });
           }
           comment.is_internal = requested.is_internal;
-        } else if (requested.is_internal !== Boolean(existingComment.is_internal)) {
-          throw new Error('Only MSP users can set comments as internal');
         }
       }
 

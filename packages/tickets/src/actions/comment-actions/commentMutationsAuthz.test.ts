@@ -165,6 +165,7 @@ describe('comment mutations: client principals need record access to the owning 
     commentRow = ownComment('ticket-1');
     await updateComment('c-1', {
       note: 'edited',
+      is_resolution: true,
       user_id: 'another-user',
       author_type: 'internal',
       publish_state: 'published',
@@ -178,13 +179,26 @@ describe('comment mutations: client principals need record access to the owning 
     expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('publish_state');
     expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('scheduled_publish_at');
     expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('deleted_at');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('is_resolution');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('is_internal');
   });
 
-  it('updateComment: rejects a client attempting to make their comment internal', async () => {
+  it('updateComment: ignores client attempts to change comment visibility', async () => {
     ticketRow = ownTicket;
     commentRow = ownComment('ticket-1');
-    await expect(updateComment('c-1', { is_internal: true })).resolves.toMatchObject({ actionError: 'Only MSP users can set comments as internal' });
-    expect(commentUpdate).not.toHaveBeenCalled();
+    await updateComment('c-1', { note: 'edited', is_internal: true });
+    expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(commentUpdate.mock.calls[0][3]).toEqual(expect.objectContaining({ note: 'edited', markdown_content: 'md' }));
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('is_internal');
+  });
+
+  it('updateComment: allows an MSP to change resolution and visibility flags', async () => {
+    ticketRow = ownTicket;
+    commentRow = { ...ownComment('ticket-1'), user_id: 'msp-user', author_type: 'internal' };
+    currentUser = { user_id: 'msp-user', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    await updateComment('c-1', { note: 'edited by MSP', is_resolution: true, is_internal: true });
+    expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(commentUpdate.mock.calls[0][3]).toMatchObject({ note: 'edited by MSP', markdown_content: 'md', is_resolution: true, is_internal: true });
   });
 
   it('updateComment: authorship does not bypass ticket:update', async () => {

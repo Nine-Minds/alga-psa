@@ -387,7 +387,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return;
     }
     setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
+    try {
+      await rescheduleScheduledComment(commentId, date.toISOString(), timeZone);
+      runTicketRefresh(dataSource, 'reload');
+    } catch {
+      setRescheduleError(t('conversation.scheduledCommentChangeFailed', 'Unable to change this scheduled comment. Refresh and try again.'));
+    } finally {
+      setIsScheduleMutating(false);
+    }
   };
   const handleCancelSchedule = async () => {
     if (!canEdit) return;
@@ -917,7 +924,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               minDate={new Date()}
               clearable
             />
-            {rescheduleError && <p className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
+            {rescheduleError && <p role="alert" className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
           </div>
         </DialogContent>
       </Dialog>
