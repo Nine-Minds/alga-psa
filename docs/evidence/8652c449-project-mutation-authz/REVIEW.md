@@ -13,8 +13,9 @@ The single high-severity finding is addressed. Project and project-child writes 
 ## Behavioral evidence
 
 - [`projectReadAuthorization.mutation.test.ts`](../../../packages/projects/src/lib/projectReadAuthorization.mutation.test.ts) exercises action-specific bundle rules: read allowed/update denied, read allowed/delete denied, read denied/write allowed, allowed mutation, and ordinary read behavior.
-- [`projectMutations.authorization.test.ts`](../../../packages/projects/src/actions/projectMutations.authorization.test.ts) exercises project update, project delete, and child-task update actions. It verifies denied writes do not reach the corresponding model write method and confirms project deletion selects `delete`.
+- [`projectMutations.authorization.test.ts`](../../../packages/projects/src/actions/projectMutations.authorization.test.ts) exercises project update, project delete, and child-task update actions. It verifies denied writes do not reach the corresponding model write method, confirms project deletion selects `delete`, and compares public results for unreadable and missing projects/tasks.
 - [`projectAuthorization.contract.test.ts`](../../../packages/projects/src/actions/projectAuthorization.contract.test.ts) pins shared-boundary use across the mutation surfaces and retains read-path contracts.
+- [`projectTaskStatusTenantScoped.contract.test.ts`](../../../packages/projects/src/actions/projectTaskStatusTenantScoped.contract.test.ts) behaviorally checks tenant-filtered project status counts, status updates, and deletion validation/removal where tenant IDs overlap.
 
 ## Remaining uncertainty
 
@@ -24,5 +25,5 @@ The new rule intentionally blocks write access when a bundle grants a broader wr
 
 - `npm run typecheck --workspace=@alga-psa/projects` — passed.
 - `npm run build --workspace=@alga-psa/projects` — passed.
-- Focused Vitest run — 5 files, 35 tests passed, including the helper, action, contract, and import behavior suites.
+- Focused Vitest run — 6 files, 39 tests passed, including helper/action regressions, authorization contracts, tenant-isolation behavior, and import behavior.
 - Regression sensitivity check — temporarily forcing the shared authorizer to evaluate `read` for every action made 2 of the 6 mutation helper tests fail (update denied and delete denied); restoring action-aware evaluation returned the suite to green.

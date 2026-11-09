@@ -154,6 +154,9 @@ function projectActionErrorFrom(error: unknown): ProjectActionError | null {
     }
 
     if (error instanceof Error) {
+        if (error.message === 'Permission denied: Cannot read project') {
+            return actionError('Project not found');
+        }
         if (error.message.includes('Permission denied')) {
             return permissionError(error.message);
         }
@@ -193,6 +196,9 @@ function projectActionErrorFrom(error: unknown): ProjectActionError | null {
 
 function projectDeleteErrorMessage(error: unknown): string {
     if (error instanceof Error) {
+        if (error.message === 'Permission denied: Cannot read project') {
+            return 'Project not found';
+        }
         if (error.message.includes('Permission denied')) {
             return error.message;
         }

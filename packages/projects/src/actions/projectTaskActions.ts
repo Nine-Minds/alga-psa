@@ -112,6 +112,9 @@ function projectTaskActionErrorFrom(error: unknown): ProjectTaskActionError | nu
     }
 
     if (error instanceof Error) {
+        if (error.message === 'Permission denied: Cannot read project' || error.message.startsWith('Project not found')) {
+            return actionError('Task not found');
+        }
         if (error.message.includes('Permission denied')) {
             return permissionError(error.message);
         }

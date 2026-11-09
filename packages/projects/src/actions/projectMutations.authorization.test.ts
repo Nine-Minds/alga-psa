@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   projectUpdate: vi.fn(),
   projectDelete: vi.fn(),
   taskUpdate: vi.fn(),
+  authorizationMode: 'write-denied' as 'write-denied' | 'read-denied',
   task: { task_id: 'T1', phase_id: 'PH1', project_id: 'P1' },
 }));
 
@@ -44,7 +45,9 @@ vi.mock('@alga-psa/core/server', () => ({
 }));
 
 vi.mock('../lib/projectReadAuthorization', () => ({
-  assertProjectMutationAllowed: state.projectMutation,
+  assertProjectMutationAllowed: async (_trx: unknown, _tenant: string, _user: unknown, projectId: string, action: string) => {
+    return state.projectMutation(_trx, _tenant, _user, projectId, action);
+  },
   assertProjectReadAllowed: async () => ({ project_id: 'P1' }),
   createProjectReadAuthorizer: async () => async () => true,
 }));
@@ -59,7 +62,7 @@ vi.mock('../models/project', () => ({
 
 vi.mock('../models/projectTask', () => ({
   default: {
-    getTaskById: async () => state.task,
+    getTaskById: async (_trx: unknown, _tenant: string, taskId: string) => taskId === 'missing' ? null : state.task,
     updateTask: state.taskUpdate,
   },
 }));
@@ -69,9 +72,16 @@ import { updateTaskWithChecklist } from './projectTaskActions';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  state.projectMutation.mockImplementation(async (_trx, _tenant, _user, _projectId, action) => {
+  state.projectMutation.mockImplementation(async (_trx, _tenant, _user, projectId, action) => {
+    if (projectId === 'missing') {
+      throw new Error('Project not found');
+    }
+    if (state.authorizationMode === 'read-denied') {
+      throw new Error('Permission denied: Cannot read project');
+    }
     throw new Error(`Permission denied: Cannot ${action} project`);
   });
+  state.authorizationMode = 'write-denied';
   state.task = { task_id: 'T1', phase_id: 'PH1', project_id: 'P1' };
 });
 
@@ -98,5 +108,28 @@ describe('project mutation actions enforce record-level write authorization', ()
     expect(result).toMatchObject({ success: false, message: 'Permission denied: Cannot delete project' });
     expect(state.projectMutation).toHaveBeenCalledWith(expect.anything(), 'tenant-1', expect.anything(), 'P1', 'delete');
     expect(state.projectDelete).not.toHaveBeenCalled();
+  });
+
+  it('returns the same public result for unreadable and nonexistent projects and tasks', async () => {
+    state.authorizationMode = 'read-denied';
+
+    const unreadableProjectUpdate = await updateProject('P1', {});
+    const missingProjectUpdate = await updateProject('missing', {});
+    expect(unreadableProjectUpdate).toEqual(missingProjectUpdate);
+    expect(unreadableProjectUpdate).toMatchObject({ actionError: 'Project not found' });
+
+    const unreadableProjectDelete = await deleteProject('P1');
+    const missingProjectDelete = await deleteProject('missing');
+    expect(unreadableProjectDelete).toEqual(missingProjectDelete);
+    expect(unreadableProjectDelete).toMatchObject({ success: false, message: 'Project not found' });
+
+    const unreadableTaskUpdate = await updateTaskWithChecklist('T1', { task_name: 'Changed' } as never);
+    const missingTaskUpdate = await updateTaskWithChecklist('missing', { task_name: 'Changed' } as never);
+    expect(unreadableTaskUpdate).toEqual(missingTaskUpdate);
+    expect(unreadableTaskUpdate).toMatchObject({ actionError: 'Task not found' });
+
+    expect(state.projectUpdate).not.toHaveBeenCalled();
+    expect(state.projectDelete).not.toHaveBeenCalled();
+    expect(state.taskUpdate).not.toHaveBeenCalled();
   });
 });
