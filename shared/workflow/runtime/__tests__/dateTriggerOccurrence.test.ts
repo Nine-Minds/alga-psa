@@ -77,7 +77,7 @@ describe('date trigger occurrence', () => {
       source: 'ticket.due_date', offsetDays: -60, payload: {}, today: '2026-10-03',
       record: { due_date: due, ticket_id: 't1', ticket_number: 'T-1', title: 'Renewal', ticket_origin: 'recurring' },
     });
-    expect(timing).toMatchObject({ occursOn: '2027-01-08', fireDate: '2026-11-09', offsetDays: -60, dueDate: '2027-01-08', dueAt: due.toISOString(), ticketOrigin: 'recurring', ticketId: 't1' });
+    expect(timing).toMatchObject({ occursOn: '2027-01-08', fireDate: '2026-11-09', offsetDays: -60, ticketExists: true, dueDate: '2027-01-08', dueAt: due.toISOString(), ticketOrigin: 'recurring', ticketId: 't1' });
     expect(deriveDateTriggerTiming({ source: 'ticket.due_date', offsetDays: -60, payload: {}, record: { due_date: null }, today: '2026-10-03' }))
       .toEqual({ offsetDays: -60 });
   });

@@ -856,6 +856,9 @@ export function registerTicketActions(): void {
       } as Record<string, any>;
       if (input.patch.tags) mergedAttributes.tags = input.patch.tags;
       if (input.patch.custom_fields) mergedAttributes.custom_fields = input.patch.custom_fields;
+      // The column is the due date (below). The attribute is mirrored only because workflows written
+      // before the backfill read it through tickets.find include.attributes; nothing else reads it.
+      if (input.patch.due_date !== undefined) mergedAttributes.due_date = input.patch.due_date;
 
       const before = {
         title: (current.title as string | null) ?? null,

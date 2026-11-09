@@ -202,6 +202,8 @@ export const DATE_TRIGGER_OCCURRENCE_RULES: Record<WorkflowDateTriggerSourceId, 
       return {
         occursOn,
         payload: {
+          // A picked record is a ticket; scheduled-but-not-created occurrences only come from the scan.
+          ticketExists: true,
           dueDate: occursOn,
           dueAt,
           ...(typeof record.ticket_id === 'string' ? { ticketId: record.ticket_id } : {}),

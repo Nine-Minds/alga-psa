@@ -7,7 +7,7 @@ import { useNativeCoManagedVerdict } from './helpers/nativeCoManagedVerdict';
 
 /**
  * tickets.find returns due_date, ticket_origin and recurrence; tickets.update_fields writes the due_date
- * column (not attributes.due_date). Real tickets, occurrence rows and TicketModel; only the tenant
+ * column and mirrors it into attributes.due_date for workflows written before the backfill. Real tickets, occurrence rows and TicketModel; only the tenant
  * transaction, permissions, audit capture and event publishing are stubbed.
  */
 const runtimeState = vi.hoisted(() => ({
@@ -133,15 +133,15 @@ describe('tickets actions: due date and recurring provenance (DB-backed)', () =>
     expect(b.ticket).toMatchObject({ due_date: null, recurrence: null });
   });
 
-  it('tickets.update_fields writes the due_date column, never attributes.due_date, and reports before/after', async () => {
+  it('tickets.update_fields writes the due_date column, mirrors attributes.due_date, and reports before/after', async () => {
     const ticketId = await makeTicket({ attributes: JSON.stringify({ keep: 'me' }) });
 
     const out = await invoke('tickets.update_fields', { ticket_id: ticketId, patch: { due_date: '2027-05-05T12:00:00.000Z' } });
     expect(out.due_date).toBe('2027-05-05T12:00:00.000Z');
     const after = await columnDue(ticketId);
     expect(after.due).toBe('2027-05-05T12:00:00.000Z');
-    expect(after.attributes).toEqual({ keep: 'me' });
-    expect(after.attributes).not.toHaveProperty('due_date');
+    // Other attributes survive; the attribute mirrors the column for workflows that still read it.
+    expect(after.attributes).toEqual({ keep: 'me', due_date: '2027-05-05T12:00:00.000Z' });
 
     const audit = runtimeState.audits.find((entry) => entry.operation === 'workflow_action:tickets.update_fields');
     expect(audit?.changedData.before.due_date).toBeNull();
@@ -161,6 +161,7 @@ describe('tickets actions: due date and recurring provenance (DB-backed)', () =>
     const out = await invoke('tickets.update_fields', { ticket_id: ticketId, patch: { due_date: null } });
     expect(out.due_date).toBeNull();
     expect((await columnDue(ticketId)).due).toBeNull();
+    expect((await columnDue(ticketId)).attributes).toMatchObject({ due_date: null });
     const audit = runtimeState.audits.find((entry) => entry.operation === 'workflow_action:tickets.update_fields');
     expect(audit?.changedData.before.due_date).toBe('2027-06-01T09:00:00.000Z');
     expect(audit?.changedData.after.due_date).toBeNull();

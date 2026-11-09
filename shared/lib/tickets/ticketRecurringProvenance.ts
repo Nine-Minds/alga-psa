@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { toCalendarDateString } from '@alga-psa/core';
 import { tenantDb } from '@alga-psa/db';
 
 /**
@@ -20,8 +21,8 @@ export interface TicketRecurringProvenance {
   occurrenceDate: string;
 }
 
-const toDateOnly = (value: unknown): string =>
-  value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+// A pg `date` arrives as local midnight; toISOString would shift it a day east of UTC.
+const toDateOnly = (value: unknown): string => toCalendarDateString(value as Date | string) ?? '';
 
 export async function loadTicketRecurringProvenance(
   db: Knex | Knex.Transaction,
