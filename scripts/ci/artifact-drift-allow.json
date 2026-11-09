@@ -863,5 +863,25 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines~1{contractLineId}/delete/responses/422/content/application~1json/schema",
     "reason": "PR #3774 / alga-2026-0002744: contract business-rule responses reuse QuotesContractsApiErrorV1. This replaces the inline service-principal error schema with an identical referenced schema; the EE act-as error descriptions and accepted response shape are preserved."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/operation/enum",
+    "reason": "PR #4076 repair: bulk send is removed because canonical recipient delivery is unimplemented; mark_paid was never supported by the dispatcher. Bulk invoice operations expose only finalize and cancel."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/operation/enum",
+    "reason": "PR #4076 repair: bulk send is removed because canonical recipient delivery is unimplemented; mark_paid was never supported by the dispatcher. Bulk invoice operations expose only finalize and cancel."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/options",
+    "reason": "PR #4076 repair: align the generated OpenAPI body with runtime validation, which accepts optional parameters rather than options."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/options",
+    "reason": "PR #4076 repair: align the generated OpenAPI body with runtime validation, which accepts optional parameters rather than options."
   }
 ]
