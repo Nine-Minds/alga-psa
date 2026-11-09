@@ -2,8 +2,9 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IService, IServicePrice, ITicketMaterial, IStockUnit } from '@alga-psa/types';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
   addMaterial,
@@ -16,6 +17,7 @@ import {
 } from '@alga-psa/inventory/lib';
 import { InsufficientStockError, stockConflictResultFrom } from '@alga-psa/inventory/lib/consume';
 import type { StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
+import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
 import {
   actionError,
   permissionError,
@@ -84,24 +86,34 @@ export type CatalogPickerItem = Pick<
 } & import('@alga-psa/inventory/lib/integrationTypes').PickerStockFields;
 
 export const searchServiceCatalogForPicker = withAuth(async (
-  _user,
+  user,
   { tenant },
   options: CatalogPickerSearchOptions = {}
 ): Promise<{ items: CatalogPickerItem[]; totalCount: number }> => {
+  if (!isMspPrincipalUserType(user.user_type)) return { items: [], totalCount: 0 };
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'service', 'read', trx)
+      || !await hasPermission(user, 'inventory', 'read', trx)) {
+      return { items: [], totalCount: 0 };
+    }
     const { items, totalCount } = await queryCatalogPickerItems(trx, tenant, options);
     return { items: items as CatalogPickerItem[], totalCount };
   });
 });
 
 export const getServicePrices = withAuth(async (
-  _user,
+  user,
   { tenant },
   serviceId: string
 ): Promise<IServicePrice[]> => {
+  if (!isMspPrincipalUserType(user.user_type)) return [];
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'service', 'read', trx)
+      || !await hasPermission(user, 'inventory', 'read', trx)) {
+      return [];
+    }
     return queryServicePrices(trx, tenant, serviceId);
   });
 });
@@ -112,11 +124,17 @@ export const listTicketMaterials = withAuth(async (
   ticketId: string
 ): Promise<ITicketMaterial[] | TicketMaterialActionError> => {
   try {
+    if (!isMspPrincipalUserType(user.user_type)) {
+      throw new Error('Permission denied: MSP ticket access required');
+    }
     if (!await hasPermission(user, 'ticket', 'read')) {
       throw new Error('Permission denied: ticket read required');
     }
     const { knex: db } = await createTenantKnex();
-    return (await listMaterials(db, tenant, 'ticket', ticketId)) as ITicketMaterial[];
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action: 'read' });
+      return (await listMaterials(trx, tenant, 'ticket', ticketId)) as ITicketMaterial[];
+    });
   } catch (error) {
     const expected = ticketMaterialActionErrorFrom(error);
     if (expected) {
@@ -143,16 +161,22 @@ export const addTicketMaterial = withAuth(async (
   }
 ): Promise<ITicketMaterial | TicketMaterialActionError | StockConflictResult> => {
   try {
+    if (!isMspPrincipalUserType(user.user_type)) {
+      throw new Error('Permission denied: MSP ticket access required');
+    }
     if (!await hasPermission(user, 'ticket', 'update')) {
       throw new Error('Permission denied: ticket update required');
     }
     const { knex: db } = await createTenantKnex();
-    return (await addMaterial(
-      db,
-      tenant,
-      { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
-      (user as any)?.user_id ?? null,
-    )) as ITicketMaterial;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId: input.ticket_id, action: 'update' });
+      return (await addMaterial(
+        trx,
+        tenant,
+        { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
+        (user as any)?.user_id ?? null,
+      )) as ITicketMaterial;
+    });
   } catch (error) {
     // Stock-level refusals travel as a structured, serializable result so the dialog can
     // show the refusal or the override prompt (thrown messages do not cross the boundary).
@@ -186,11 +210,22 @@ export const deleteTicketMaterial = withAuth(async (
   ticketMaterialId: string
 ): Promise<void | TicketMaterialActionError> => {
   try {
+    if (!isMspPrincipalUserType(user.user_type)) {
+      throw new Error('Permission denied: MSP ticket access required');
+    }
     if (!await hasPermission(user, 'ticket', 'update')) {
       throw new Error('Permission denied: ticket update required');
     }
     const { knex: db } = await createTenantKnex();
-    await deleteMaterial(db, tenant, 'ticket', ticketMaterialId, (user as any)?.user_id ?? null);
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const material = await tenantDb(trx, tenant)
+        .table('ticket_materials')
+        .where({ ticket_material_id: ticketMaterialId })
+        .first('ticket_id') as { ticket_id: string } | undefined;
+      if (!material) return;
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId: material.ticket_id, action: 'update' });
+      await deleteMaterial(trx, tenant, 'ticket', ticketMaterialId, (user as any)?.user_id ?? null);
+    });
   } catch (error) {
     const expected = ticketMaterialActionErrorFrom(error);
     if (expected) {

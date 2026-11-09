@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
   user: { user_id: 'user-1', user_type: 'client', clientId: 'client-a', tenant: 'tenant-1' } as any,
-  permissions: { read: true, update: false },
+  permissions: { ticketRead: true, settingsRead: false, settingsUpdate: false },
   ticketAllowed: true,
   ticket: { ticket_id: 'ticket-a', client_id: 'client-a' } as any,
   templates: [
@@ -16,13 +16,19 @@ const state = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) => action(state.user, { tenant: 'tenant-1' }, ...args),
-  hasPermission: async (_user: any, _resource: string, action: string) => action === 'read' ? state.permissions.read : state.permissions.update,
+  hasPermission: async (_user: any, resource: string, action: string) => {
+    if (resource === 'ticket') return action === 'read' && state.permissions.ticketRead;
+    return action === 'read' ? state.permissions.settingsRead : state.permissions.settingsUpdate;
+  },
 }));
 
-vi.mock('@alga-psa/types', () => ({ isClientUserType: (type: string) => type === 'client' }));
+vi.mock('@alga-psa/types', () => ({
+  isClientUserType: (type: string) => type === 'client',
+  isMspPrincipalUserType: (type: string) => type === 'internal',
+}));
 
 vi.mock('../../lib/ticketRecordAuthorization', () => ({
-  authorizeTicketRecordAccess: vi.fn(async (input: any) => {
+  authorizeTicketRecordAccessConcealed: vi.fn(async (input: any) => {
     state.events.push(`authorize:${input.ticketId}:${input.action}`);
     if (!state.ticketAllowed) throw new Error('Permission denied: Cannot access ticket');
     return state.ticket;
@@ -80,67 +86,61 @@ vi.mock('@alga-psa/db', () => {
 describe('getChecklistTemplates authorization', () => {
   beforeEach(() => {
     state.user = { user_id: 'user-1', user_type: 'client', clientId: 'client-a', tenant: 'tenant-1' };
-    state.permissions = { read: true, update: false };
+    state.permissions = { ticketRead: true, settingsRead: false, settingsUpdate: false };
     state.ticketAllowed = true;
     state.ticket = { ticket_id: 'ticket-a', client_id: 'client-a' };
     state.events = [];
   });
 
-  it('requires ticket:read before querying template or client data', async () => {
-    state.permissions.read = false;
+  it('requires MSP settings read access before loading the settings list', async () => {
+    state.user = { ...state.user, user_type: 'internal' };
     const { getChecklistTemplates } = await import('./checklistTemplateActions');
 
     await expect(getChecklistTemplates()).rejects.toThrow('Permission denied');
     expect(state.events).toEqual([]);
   });
 
-  it('limits client callers to their own and unscoped active templates', async () => {
+  it('lists settings templates for an authorized MSP principal', async () => {
+    state.user = { ...state.user, user_type: 'internal' };
+    state.permissions.settingsRead = true;
+    state.permissions.settingsUpdate = true;
     const { getChecklistTemplates } = await import('./checklistTemplateActions');
 
-    expect((await getChecklistTemplates()).map((template) => template.template_id)).toEqual(['global', 'own']);
+    expect((await getChecklistTemplates()).map((template) => template.template_id)).toEqual(['global', 'own', 'other']);
   });
 
-  it('does not let the clientId option select another client\'s templates', async () => {
-    const { getChecklistTemplates } = await import('./checklistTemplateActions');
-
-    expect(await getChecklistTemplates({ clientId: 'client-b' })).toEqual([]);
-    expect((await getChecklistTemplates({ clientId: 'client-a' })).map((template) => template.template_id)).toEqual(['own']);
-  });
-
-  it('authorizes the requested ticket before resolving clients or selecting templates', async () => {
+  it('requires ticket:read before authorizing or querying ticket picker templates', async () => {
+    state.permissions.ticketRead = false;
     state.ticketAllowed = false;
-    const { getChecklistTemplates } = await import('./checklistTemplateActions');
+    const { getChecklistTemplatesForTicket } = await import('./checklistTemplateActions');
 
-    await expect(getChecklistTemplates({ forTicketId: 'ticket-hidden' })).rejects.toThrow('Permission denied');
+    await expect(getChecklistTemplatesForTicket('ticket-hidden')).rejects.toThrow('Permission denied');
+    expect(state.events).toEqual([]);
+  });
+
+  it('authorizes the ticket before resolving clients or selecting templates', async () => {
+    state.ticketAllowed = false;
+    const { getChecklistTemplatesForTicket } = await import('./checklistTemplateActions');
+
+    await expect(getChecklistTemplatesForTicket('ticket-hidden')).rejects.toThrow('Permission denied');
     expect(state.events).toEqual(['authorize:ticket-hidden:read']);
   });
 
-  it('returns only templates applicable to an authorized ticket and caller', async () => {
-    state.user = { ...state.user, user_type: 'internal' };
-    state.ticket = { ticket_id: 'ticket-a', client_id: 'client-b' };
-    const { getChecklistTemplates } = await import('./checklistTemplateActions');
+  it('returns only templates in the authorized ticket and client visibility scopes', async () => {
+    const { getChecklistTemplatesForTicket } = await import('./checklistTemplateActions');
 
-    const templates = await getChecklistTemplates({ forTicketId: 'ticket-a' });
-    expect(templates.map((template) => template.template_id)).toEqual(['global', 'other']);
+    const templates = await getChecklistTemplatesForTicket('ticket-a');
+    expect(templates.map((template) => template.template_id)).toEqual(['global', 'own']);
     expect(state.events[0]).toBe('authorize:ticket-a:read');
   });
 
-  it('requires ticket:update before inactive templates are included', async () => {
-    const { getChecklistTemplates } = await import('./checklistTemplateActions');
-
-    await expect(getChecklistTemplates({ includeInactive: true })).rejects.toThrow('Permission denied');
-    state.permissions.update = true;
-    expect((await getChecklistTemplates({ includeInactive: true })).map((template) => template.template_id)).toEqual(['global', 'own', 'inactive']);
-  });
-
-  it('keeps authorized internal listing and option combinations functional', async () => {
+  it('keeps internal ticket pickers scoped to the ticket client', async () => {
     state.user = { ...state.user, user_type: 'internal' };
-    state.permissions.update = true;
-    state.ticket = { ticket_id: 'ticket-a', client_id: 'client-a' };
-    const { getChecklistTemplates } = await import('./checklistTemplateActions');
+    state.ticket = { ticket_id: 'ticket-a', client_id: 'client-b' };
+    const { getChecklistTemplatesForTicket } = await import('./checklistTemplateActions');
 
-    const result = await getChecklistTemplates({ forTicketId: 'ticket-a', includeInactive: true });
-    expect(result.map((template) => template.template_id)).toEqual(['global', 'own', 'inactive']);
+    const result = await getChecklistTemplatesForTicket('ticket-a');
+    expect(result.map((template) => template.template_id)).toEqual(['global', 'other']);
     expect(state.events[0]).toBe('authorize:ticket-a:read');
   });
 });

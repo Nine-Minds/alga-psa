@@ -137,12 +137,37 @@ export async function authorizeApiResourceAction(input: {
 export const authorizeApiResource = authorizeApiResourceAction;
 
 export async function authorizeApiResourceRead(input: {
-  knex: Knex;
+  knex: Knex | Knex.Transaction;
   tenant: string;
   user: any;
   apiKeyId?: string;
   resource: string;
   recordContext: AuthorizationRecord;
-}): Promise<boolean> {
-  return authorizeApiResourceAction({ ...input, action: 'read' });
+}): Promise<{ allowed: boolean; redactedFields: string[] }> {
+  const kernel = await getAuthorizationKernel();
+  const subject = await resolveAuthorizationSubjectForUser(
+    input.knex,
+    input.tenant,
+    {
+      ...input.user,
+      user_id: input.user?.user_id,
+      user_type: input.user?.user_type === 'client' ? 'client' : input.user?.user_type === 'service' ? 'service' : 'internal',
+      clientId: input.user?.client_id ?? input.user?.clientId,
+      role_ids: [
+        ...normalizeStringArray(input.user?.role_ids),
+        ...normalizeIdArrayFromObjects(input.user?.roles, 'role_id'),
+      ],
+    },
+    input.apiKeyId,
+  );
+  subject.tenant = input.tenant;
+
+  const decision = await kernel.authorizeResource({
+    knex: input.knex as any,
+    subject,
+    resource: { type: input.resource, action: 'read' },
+    record: input.recordContext,
+  });
+
+  return { allowed: decision.allowed, redactedFields: decision.redactedFields ?? [] };
 }

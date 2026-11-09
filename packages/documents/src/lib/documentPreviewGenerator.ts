@@ -21,6 +21,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { deferFileUploadEvents } from '@alga-psa/storage/fileUploadTransaction';
 import { createTenantKnex, getTenantContext, tenantDb } from '@alga-psa/db';
 import type { IDocument } from '@alga-psa/types';
+import { validateDocumentPreviewProvenance } from './documentPreviewProvenance';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
@@ -730,6 +731,7 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
 
         // Generate previews
         const previewResult = await generateDocumentPreviews(doc, downloadResult.buffer);
+        await validateDocumentPreviewProvenance(knex, tenant, doc.document_id, previewResult);
 
         // Update document with preview file IDs
         await tenantDb(knex, tenant).table('documents')
@@ -798,6 +800,7 @@ export async function regenerateDocumentPreview(documentId: string): Promise<boo
 
     // Generate previews
     const previewResult = await generateDocumentPreviews(document, downloadResult.buffer);
+    await validateDocumentPreviewProvenance(knex, tenant, documentId, previewResult);
 
     // Update document with preview file IDs
     await tenantDb(knex, tenant).table('documents')
