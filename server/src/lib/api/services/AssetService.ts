@@ -39,7 +39,8 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
-import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import { getAuthorizedAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import type { AssetAuthUser } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
@@ -330,43 +331,61 @@ export class AssetService extends BaseService<any> {
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const knex = await this.getDbForContext(context);
-    const query = scopedTable(knex, context.tenant, this.tableName)
-      .where({
-        [`${this.tableName}.${this.primaryKey}`]: id
+    return withTransaction(knex, async (trx) => {
+      const query = scopedTable(trx, context.tenant, this.tableName)
+        .where({
+          [`${this.tableName}.${this.primaryKey}`]: id
+        });
+      tenantDb(trx, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
+        type: 'left',
       });
-    tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
-      type: 'left',
-    });
-    tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
-      type: 'left',
-    });
-    // FR-C6/FR-E3: mobile and the REST clients read the assignee and the group
-    // off this payload, so they travel with the asset rather than needing a
-    // second round trip.
-    tenantDb(knex, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', {
-      type: 'left',
-    });
+      tenantDb(trx, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
+        type: 'left',
+      });
+      // FR-C6/FR-E3: mobile and the REST clients read the assignee and the group
+      // off this payload, so they travel with the asset rather than needing a
+      // second round trip.
+      tenantDb(trx, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', {
+        type: 'left',
+      });
 
-    const asset = await query.select(
-        `${this.tableName}.*`,
-        'clients.client_name',
-        'vendors.vendor_name',
-        'contacts.full_name as contact_name',
-        knex.raw(`
+      const asset = await query.select(
+          `${this.tableName}.*`,
+          'clients.client_name',
+          'vendors.vendor_name',
+          'contacts.full_name as contact_name',
+          trx.raw(`
           CASE
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
             WHEN ${this.tableName}.warranty_end_date < NOW() + INTERVAL '30 days' THEN 'expiring_soon'
             ELSE 'active'
           END as warranty_status
-        `)
-      )
-      .first();
+          `)
+        )
+        .first();
 
-    if (!asset) return null;
+      if (!asset) return null;
 
-    asset.group = await getAssetGroupSummary(knex, context.tenant, id);
-    return asset;
+      const requestUser = context.user as (AssetAuthUser & { clientId?: string | null }) | undefined;
+      const groupUser: AssetAuthUser | null = requestUser?.user_id
+        ? {
+            user_id: requestUser.user_id,
+            user_type: requestUser.user_type === 'client'
+              ? 'client'
+              : requestUser.user_type === 'service'
+                ? 'service'
+                : 'internal',
+            clientId: requestUser.clientId,
+            apiKeyId: context.apiKeyId ?? null,
+            roles: requestUser.roles,
+          }
+        : null;
+      asset.group = groupUser
+        ? await getAuthorizedAssetGroupSummary(trx, context.tenant, groupUser, id)
+        : null;
+      return asset;
+    });
   }
 
   /**

@@ -25,6 +25,8 @@ export type AssetAuthUser = {
   user_id: string;
   user_type: AuthorizationSubject['userType'];
   clientId?: string | null;
+  /** Verified API-key principal used by bundle target narrowing. */
+  apiKeyId?: string | null;
   client_id?: string | null;
   role_ids?: string[];
   portfolio_client_ids?: string[];
@@ -86,7 +88,7 @@ export async function resolveAuthorizationSubjectForUser(
       ...(user.portfolioClientIds ?? []),
       ...((user.clientId ?? user.client_id) ? [user.clientId ?? user.client_id!] : []),
     ])),
-    ...(apiKeyId ? { apiKeyId } : {}),
+    ...((apiKeyId ?? user.apiKeyId) ? { apiKeyId: apiKeyId ?? user.apiKeyId } : {}),
   };
 }
 
@@ -208,6 +210,42 @@ export async function isAssetActionAllowed(
     resource: { ...request.resource, action },
   });
   return actionDecision.allowed;
+}
+
+const CLIENT_SCOPE_TEMPLATES = new Set(['same_client', 'client_portfolio', 'selected_clients']);
+
+/**
+ * Evaluate only client-level asset restrictions for a client record. Asset
+ * relationship rules such as same_team and assigned are evaluated against each
+ * real asset separately; applying them to a client would lose the asset's
+ * relationships and incorrectly deny otherwise authorized group operations.
+ */
+export async function isAssetClientActionAllowed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  clientId: string,
+  action: AssetAuthorizationAction
+): Promise<boolean> {
+  const input = {
+    subject: context.subject,
+    resource: { type: 'asset', action },
+    record: { clientId },
+    requestCache: context.requestCache,
+    knex: trx as Knex,
+  };
+  const clientKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (evaluation) => {
+        const rules = await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, evaluation);
+        return rules.filter((rule) => rule.templateKey && CLIENT_SCOPE_TEMPLATES.has(rule.templateKey));
+      },
+    }),
+    // Coarse asset RBAC is checked by the action boundary before this function.
+    rbacEvaluator: async () => true,
+  });
+  return (await clientKernel.authorizeResource(input)).allowed;
 }
 
 /** True when the caller's per-record kernel decision allows reading the asset. */
