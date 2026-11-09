@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { EvaluationBusyError } from '@alga-psa/workflows/runtime/expressionEngine';
+import { installExpressionAdmissionTelemetry } from '@alga-psa/workflows/runtime/expressionAdmissionTelemetry';
 
 import { getConnection } from '@/lib/db/db';
 import { runWithTenant } from '@/lib/db';
@@ -19,7 +21,17 @@ interface ProcessInboundWebhookRequestInput {
   webhookSlug: string;
 }
 
+installExpressionAdmissionTelemetry();
+
 const JSON_RESPONSE_HEADERS = { 'content-type': 'application/json' };
+
+// The expression evaluator had no free slot: retryable, so 429 + Retry-After (not a mapping failure).
+function busyResponse(error: EvaluationBusyError, deliveryId?: string): NextResponse {
+  return NextResponse.json(
+    { ...(deliveryId ? { delivery_id: deliveryId } : {}), error: 'evaluator_busy' },
+    { status: 429, headers: { 'retry-after': String(error.retryAfterSeconds) } },
+  );
+}
 
 export async function processInboundWebhookRequest(input: ProcessInboundWebhookRequestInput): Promise<NextResponse> {
   const { request, tenantSlug, webhookSlug } = input;
@@ -150,11 +162,17 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
       );
     }
 
-    const idempotencyKey = await extractInboundWebhookIdempotencyKey({
-      source: mapIdempotencySource(webhook.idempotency_source),
-      headers: request.headers,
-      body,
-    });
+    let idempotencyKey: string | null;
+    try {
+      idempotencyKey = await extractInboundWebhookIdempotencyKey({
+        source: mapIdempotencySource(webhook.idempotency_source),
+        headers: request.headers,
+        body,
+      });
+    } catch (error) {
+      if (error instanceof EvaluationBusyError) return busyResponse(error);
+      throw error;
+    }
     const duplicate = await findDuplicateInboundDelivery({
       knex,
       tenant,
@@ -231,6 +249,19 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
       });
       return NextResponse.json(responseBody);
     } catch (error) {
+      if (error instanceof EvaluationBusyError) {
+        const responseBody = { delivery_id: deliveryId, error: 'evaluator_busy' };
+        await updateInboundDeliveryOutcome(knex, {
+          tenant,
+          deliveryId,
+          dispatchStatus: 'failed',
+          handlerOutcome: { error: 'evaluator_busy' },
+          responseStatus: 429,
+          responseBody,
+          durationMs: Date.now() - startedAt,
+        });
+        return busyResponse(error, deliveryId);
+      }
       const isMappingError = error instanceof InboundWebhookMappingError;
       const responseStatus = isMappingError ? 400 : 500;
       const responseBody = {

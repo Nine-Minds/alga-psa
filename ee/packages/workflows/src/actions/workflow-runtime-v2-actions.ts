@@ -115,11 +115,18 @@ import {
   buildWorkflowAuditCsvRows
 } from './workflow-audit-csv';
 import { workflowTenantDb, workflowTenantTable } from '../lib/workflowTenantDb';
+import { installExpressionAdmissionTelemetry } from '../runtime/expressionAdmissionTelemetry';
+import { consumeWorkflowSimulationQuota, WorkflowSimulationRateLimitError } from '../lib/workflowSimulationRateLimit';
 import { describeManualRunPayloadFailure, type WorkflowPayloadValidationFailure } from '../authoring/payloadIssues';
 
-const throwHttpError = (status: number, message: string, details?: unknown): never => {
-  const error = new Error(message) as Error & { status?: number; details?: unknown };
+installExpressionAdmissionTelemetry();
+
+const throwHttpError = (status: number, message: string, details?: unknown, retryAfterSeconds?: number): never => {
+  const error = new Error(message) as Error & { status?: number; details?: unknown; retryAfterSeconds?: number };
   error.status = status;
+  if (retryAfterSeconds !== undefined) {
+    error.retryAfterSeconds = retryAfterSeconds;
+  }
   if (details) {
     error.details = details;
   }
@@ -1095,14 +1102,6 @@ const workflowRunStartLimiter = new RateLimiterMemory({
   duration: Number.isFinite(WORKFLOW_RUN_RATE_LIMIT_DURATION) ? WORKFLOW_RUN_RATE_LIMIT_DURATION : 60
 });
 
-const WORKFLOW_SIMULATE_RATE_LIMIT_POINTS = Number(process.env.WORKFLOW_SIMULATE_RATE_LIMIT_POINTS ?? 60);
-const WORKFLOW_SIMULATE_RATE_LIMIT_DURATION = Number(process.env.WORKFLOW_SIMULATE_RATE_LIMIT_DURATION ?? 60);
-
-const workflowSimulateLimiter = new RateLimiterMemory({
-  points: Number.isFinite(WORKFLOW_SIMULATE_RATE_LIMIT_POINTS) ? WORKFLOW_SIMULATE_RATE_LIMIT_POINTS : 60,
-  duration: Number.isFinite(WORKFLOW_SIMULATE_RATE_LIMIT_DURATION) ? WORKFLOW_SIMULATE_RATE_LIMIT_DURATION : 60
-});
-
 const measurePayloadBytes = (payload: unknown) => {
   try {
     const serialized = JSON.stringify(payload ?? {});
@@ -1779,10 +1778,14 @@ export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   if (tenant) {
+    // Per-user and per-tenant buckets, consumed before any expression slot is requested.
     try {
-      await workflowSimulateLimiter.consume(tenant);
-    } catch {
-      throwHttpError(429, 'Workflow simulation rate limit exceeded');
+      await consumeWorkflowSimulationQuota({ tenant, userId: user.user_id, action: 'simulateWorkflowDefinitionDraft' });
+    } catch (error) {
+      if (error instanceof WorkflowSimulationRateLimitError) {
+        throwHttpError(429, error.message, undefined, error.retryAfterSeconds);
+      }
+      throw error;
     }
   }
 

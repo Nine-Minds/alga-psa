@@ -1,4 +1,4 @@
-import { evaluateExpressionSource } from '@alga-psa/workflows/runtime/expressionEngine';
+import { EvaluationBusyError, evaluateWorkflowExpression } from '@alga-psa/workflows/runtime/expressionEngine';
 
 export class InboundFieldMappingEvaluationError extends Error {
   public readonly fieldName: string;
@@ -48,8 +48,9 @@ export async function evaluateFieldMapping(
   const results = await Promise.all(
     entries.map(async ([fieldName, expression]) => {
       try {
-        return await evaluateExpressionSource(expression, context);
+        return await evaluateWorkflowExpression(expression, context);
       } catch (error) {
+        if (error instanceof EvaluationBusyError) throw error;
         // JSONata expressions that resolve to undefined are flagged by the expression
         // engine as "not JSON-serializable". For inbound mappings we treat a missing
         // path as undefined so the dispatcher's required/optional checks can run.
