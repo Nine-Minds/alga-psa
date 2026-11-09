@@ -59,6 +59,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       'ee/temporal-workflows/src/__tests__/db-subpath-source-mapping.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
+      'ee/temporal-workflows/src/activities/__tests__/worker-email-resolution.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/tenant-creation-product-bootstrap.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/tenant-email-ingestion-workflow.contract.test.ts',
