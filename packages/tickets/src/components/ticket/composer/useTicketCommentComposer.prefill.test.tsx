@@ -69,22 +69,22 @@ describe('composer prefill handle', () => {
   });
 
   it('drops an audience that is not offered', () => {
-    const { result } = setup({ configuredAudiences: ['internal_only', 'client'], audienceSelectable: true });
+    const { result } = setup({ configuredAudiences: ['organization_private', 'requester'], audienceSelectable: true });
     act(() => { result.current.handle.prefill({ content: text('x'), audience: 'shared_it' }); });
     expect(result.current.composer.chosenAudience).toBeNull();
   });
 
   it('keeps the resolution and drops shared_it when both are requested', () => {
-    const { result } = setup({ configuredAudiences: ['internal_only', 'client', 'shared_it'], audienceSelectable: true });
+    const { result } = setup({ configuredAudiences: ['organization_private', 'requester', 'shared_it'], audienceSelectable: true });
     act(() => { result.current.handle.prefill({ content: text('x'), resolution: true, audience: 'shared_it' }); });
     expect(result.current.composer.isResolution).toBe(true);
     expect(result.current.composer.chosenAudience).toBeNull();
   });
 
   it('an audience sets the matching visibility', () => {
-    const { result } = setup({ configuredAudiences: ['internal_only', 'client'], audienceSelectable: true });
-    act(() => { result.current.handle.prefill({ content: text('x'), audience: 'internal_only' }); });
-    expect(result.current.composer.chosenAudience).toBe('internal_only');
+    const { result } = setup({ configuredAudiences: ['organization_private', 'requester'], audienceSelectable: true });
+    act(() => { result.current.handle.prefill({ content: text('x'), audience: 'organization_private' }); });
+    expect(result.current.composer.chosenAudience).toBe('organization_private');
     expect(result.current.composer.isInternal).toBe(true);
   });
 
@@ -107,14 +107,14 @@ describe('composer prefill handle', () => {
   });
 
   it('submits the same tuple as the same state set by hand', () => {
-    const cfg = { configuredAudiences: ['internal_only', 'client'], audienceSelectable: true };
+    const cfg = { configuredAudiences: ['organization_private', 'requester'], audienceSelectable: true };
     const viaPrefill = setup(cfg);
-    act(() => { viaPrefill.result.current.handle.prefill({ content: text('x'), audience: 'client', resolution: true }); });
+    act(() => { viaPrefill.result.current.handle.prefill({ content: text('x'), audience: 'requester', resolution: true }); });
     const byHand = setup(cfg);
     act(() => {
       byHand.result.current.composer.open('top');
       byHand.result.current.composer.setIsResolution(true);
-      byHand.result.current.composer.handleAudienceChange('client');
+      byHand.result.current.composer.handleAudienceChange('requester');
     });
     expect(viaPrefill.result.current.composer.buildSubmitArgs()).toEqual(byHand.result.current.composer.buildSubmitArgs());
   });
