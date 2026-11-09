@@ -23,6 +23,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
 vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({
   STRIPE_WEBHOOK_EVENTS: ['checkout.session.completed'],
   reconcileStripeWebhookEvents: vi.fn(),
+  getStripeBaseUrl: () => 'http://localhost:3000',
+  stripeWebhookUrls: (base: string, t: string) => ({ legacyUrl: `${base}/api/webhooks/stripe/payments`, tenantUrl: `${base}/api/webhooks/stripe/payments/${t}` }),
 }));
 vi.mock('stripe', () => ({
   default: vi.fn().mockImplementation(function () { return {

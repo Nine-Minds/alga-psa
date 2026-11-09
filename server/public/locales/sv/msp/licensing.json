@@ -266,7 +266,11 @@
         "title": "{{tier}} är aktivt",
         "description": "Din betalda licens är aktiv i den här installationen.",
         "descriptionWithExpiry": "Din licens är aktiv till och med {{date}}.",
-        "badge": "Licensierad"
+        "badge": "Licensierad",
+        "descriptionEnding": "Din prenumeration har avslutats. Pro är aktivt till och med {{date}}.",
+        "descriptionTermEnds": "Pro är aktivt till och med {{date}}, då den fasta perioden upphör.",
+        "descriptionPaymentFailed": "Pro är aktivt, men den senaste förnyelsebetalningen misslyckades. Uppdatera din betalningsmetod för att behålla Pro.",
+        "descriptionPaymentFailedEnded": "Din Pro-prenumeration har upphört — betalningen misslyckades. Pro är aktivt till och med {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "Licensen kräver åtgärd",
@@ -291,6 +295,12 @@
         "title": "Du använder Essentials",
         "description": "Essentials är aktivt i den här installationen. Fortsätt använda grundfunktionerna eller starta en 15 dagars provperiod för Pro, som bara kan startas en gång.",
         "badge": "Essentials är aktivt"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Prenumerationen har upphört",
+        "title": "Du använder nu den kostnadsfria utgåvan",
+        "description": "Din Pro-prenumeration har upphört. Dina data finns kvar och Pro-funktionerna aktiveras igen när du tecknar prenumerationen på nytt.",
+        "badge": "Kostnadsfri utgåva"
       }
     },
     "trialCta": {
@@ -356,7 +366,31 @@
       "activateLicenseKey": "Det gick inte att aktivera licensnyckeln.",
       "activateClaimCode": "Det gick inte att aktivera aktiveringskoden.",
       "startTrial": "Det gick inte att starta provperioden.",
-      "refreshLicense": "Det gick inte att uppdatera licensen."
+      "refreshLicense": "Det gick inte att uppdatera licensen.",
+      "credentialRevoked": "Licensuppgifterna för den här apparaten har återkallats. Anslut den igen med en ny aktiveringskod från licensportalen.",
+      "subscriptionEnding": "Din Pro-prenumeration har avslutats. Pro upphör den {{date}}.",
+      "subscriptionEndingNoDate": "Din Pro-prenumeration har avslutats.",
+      "subscriptionEnded": "Din Pro-prenumeration har upphört. Den här apparaten använder den kostnadsfria utgåvan.",
+      "subscriptionEndingPaymentFailed": "Din Pro-prenumeration har upphört — betalningen misslyckades. Pro upphör den {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Din Pro-prenumeration har upphört — betalningen misslyckades.",
+      "subscriptionEndedPaymentFailed": "Pro har upphört — betalningen misslyckades. Din apparat använder Essentials.",
+      "resubscribeAt": "Teckna igen på {{url}}.",
+      "resubscribeToRestore": "Teckna prenumerationen igen för att återställa Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Du använder nu den kostnadsfria utgåvan. Teckna prenumerationen igen för att återställa Pro.",
+      "endingTitle": "Din Pro-prenumeration har avslutats.",
+      "endedOn": "Pro upphörde den {{date}}.",
+      "endsOn": "Pro upphör den {{date}}.",
+      "dataKept": "Inget raderas. Dina data finns kvar och Pro-funktionerna aktiveras igen när du tecknat prenumerationen på nytt och uppdaterat licensen.",
+      "resubscribe": "Teckna igen",
+      "termEndsTitle": "Din Pro-period håller på att ta slut.",
+      "paymentFailedTitle": "Betalningen misslyckades — vi försöker igen den {{date}}. Uppdatera din betalningsmetod för att behålla Pro.",
+      "paymentFailedTitleNoRetry": "Betalningen misslyckades. Uppdatera din betalningsmetod för att behålla Pro.",
+      "paymentFailedEndedTitle": "Pro har upphört — betalningen misslyckades. Din appliance kör Essentials.",
+      "paymentFailedEndingTitle": "Din Pro-prenumeration har upphört — betalningen misslyckades.",
+      "paymentFailedEndsOn": "Pro upphör den {{date}} om betalningen fortsätter att misslyckas.",
+      "updatePaymentMethod": "Uppdatera betalningsmetod"
     }
   },
   "errors": {
@@ -1017,6 +1051,45 @@
       "invalid": "Den här kommentaren kunde inte sparas.",
       "send": "Skicka",
       "cancel": "Avbryt"
+    },
+    "upgrade": {
+      "title": "Byt till AlgaPSA",
+      "description": "Använd den här arbetsytan självständigt med din egen betalda AlgaPSA-licens.",
+      "preserved": "Dina ärenden, projekt, dokument och historik finns kvar i den här arbetsytan.",
+      "trustEnds": "Bytet avslutar MSP:ns aktiva åtkomst och frigör dina samhanterade platser. MSP:n behåller det tillåtna deltagandearkivet.",
+      "alreadyDeparted": "Din MSP-relation har redan avslutats. Det befintliga arkivet förblir oförändrat.",
+      "seats": "Betalda teknikerplatser som krävs: {{count}}",
+      "hosting": "Bytet behåller din nuvarande driftmiljö. Om du vill lämna den här installationen krävs separat export och återställning.",
+      "licenseRequired": "Aktivera en tenantbunden Pro-licens med tillräckligt många platser innan du byter.",
+      "subscriptionRequired": "Innan du byter krävs en aktiv, betald AlgaPSA-prenumeration som tillhör den här arbetsytan.",
+      "manageLicense": "Hantera arbetsytans licens",
+      "running": "Bytet pågår. Den här sidan uppdateras när det är klart.",
+      "failed": "Bytet slutfördes inte. Kontrollera din licens och försök igen.",
+      "unavailable": "Förloppet är tillfälligt otillgängligt. Uppdatera sidan för att kontrollera igen.",
+      "start": "Byt arbetsyta",
+      "refresh": "Uppdatera status",
+      "completed": "Den här arbetsytan är nu en självständig AlgaPSA-arbetsyta.",
+      "openPsa": "Öppna AlgaPSA",
+      "loadError": "Det gick inte att läsa in bytesstatusen. Uppdatera sidan och försök igen.",
+      "startError": "Det gick inte att starta bytet. Du kan skicka begäran igen.",
+      "confirmTitle": "Byta den här arbetsytan?",
+      "confirmMessage": "Arbetsytan konverteras till AlgaPSA och alla aktiva MSP-relationer avslutas. Din egen betalda licens gäller för arbetsytan. Driftmiljön för dina data ändras inte.",
+      "cancel": "Avbryt",
+      "billingInterval": "Faktureringsintervall",
+      "month": "Månadsvis",
+      "year": "Årligen",
+      "paymentProcessing": "Din betalning behandlas. Uppdatera statusen eller återuppta köpet för att kontrollera igen.",
+      "purchaseScope": "Köpet gäller den här arbetsytan. MSP-åtkomsten avslutas först när du bekräftar bytet efter betalningen.",
+      "paymentFailed": "Den första betalningen misslyckades. Du kan starta en ny checkout när du har stängt det här obetalda försöket.",
+      "retryPayment": "Försök betala igen",
+      "retryTitle": "Försöka med den här betalningen igen?",
+      "retryMessage": "Stäng det misslyckade betalningsförsöket och öppna en ny checkout. MSP-åtkomst och samhanterade platser finns kvar.",
+      "billingTitle": "Din AlgaPSA-fakturering",
+      "paymentMethod": "Uppdatera betalningsmetod",
+      "paidSeats": "Betalda teknikerplatser",
+      "reviewSeatChange": "Granska ändringen av platser",
+      "billingError": "Det gick inte att öppna faktureringen. Uppdatera statusen och försök igen.",
+      "purchaseUnconfigured": "Köp är inte konfigurerade för den här driftsättningen."
     }
   },
   "common": {

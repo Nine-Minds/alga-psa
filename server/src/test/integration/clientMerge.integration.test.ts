@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { createHash } from 'node:crypto';
@@ -14,6 +15,7 @@ import {
   ensureDefaultBillingSettings,
   setupClientTaxConfiguration,
   unwrapInvoiceResult,
+  generateInvoiceForCycle,
 } from '../../../test-utils/billingTestHelpers';
 import {
   createBillingProfile,
@@ -130,7 +132,6 @@ let db: Knex;
 let tenantId: string;
 let userId: string;
 
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification')['finalizeInvoice'];
 let syncRecurringServicePeriodsForContractLine:
   typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
@@ -350,7 +351,6 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     await ensureDefaultBillingSettings({ db, tenantId } as any);
     await ensureClientPlanBundlesTable({ db, tenantId } as any);
 
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import(
       '@alga-psa/billing/actions/recurringServicePeriodSync'
@@ -377,7 +377,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     // A profile-attributed invoice, produced by the real engine.
     await seedFixedLine(source, 'History Monitoring');
     const attributedCycle = await seedCycle(source, JANUARY_START, FEBRUARY_START, sourceDefault);
-    const attributed = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(attributedCycle));
+    const attributed = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(attributedCycle));
 
     // What a sales order leaves behind: an invoice and its ledger transaction
     // with no profile at all (salesOrderInvoicingActions), plus a transferred
@@ -537,13 +537,13 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     await seedFixedLine(source, 'North Monitoring');
 
     const parentCycle = await seedCycle(target, JANUARY_START, FEBRUARY_START);
-    const parentInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(parentCycle));
+    const parentInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(parentCycle));
     expect(await finalizeInvoice(parentInvoice.invoice_id)).toEqual({ success: true });
     const parentBefore = await invoiceMoneyProjection(parentInvoice.invoice_id);
 
     // The absorbed client's own January invoice, produced before the merge.
     const sourceJanuaryCycle = await seedCycle(source, JANUARY_START, FEBRUARY_START, sourceDefault);
-    const sourceInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(sourceJanuaryCycle));
+    const sourceInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(sourceJanuaryCycle));
     const sourceBefore = await invoiceMoneyProjection(sourceInvoice.invoice_id);
 
     // An open cycle, which the merge moves intact rather than refusing.
@@ -561,7 +561,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     expect(await table('client_billing_cycles').where({ billing_cycle_id: sourceFebruaryCycle }).first())
       .toMatchObject({ client_id: target, billing_profile_id: sourceDefault });
 
-    const regenerated = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(sourceFebruaryCycle));
+    const regenerated = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(sourceFebruaryCycle));
     expect(await invoiceMoneyProjection(regenerated.invoice_id)).toBe(sourceBefore);
     expect(await table('invoices').where({ invoice_id: regenerated.invoice_id }).first()).toMatchObject({
       client_id: target,
@@ -771,7 +771,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     const targetBackups = await enrol(backups, target);
 
     const assetId = uuidv4();
-    await table('assets').insert({
+    await insertTestAssets(db, {
       tenant: tenantId, asset_id: assetId, asset_type: 'workstation', client_id: source,
       asset_tag: 'RT-1', name: 'RT-1', status: 'active',
     });
@@ -887,7 +887,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
       });
 
       const assetId = uuidv4();
-      await table('assets').insert({
+      await insertTestAssets(db, {
         tenant: tenantId,
         asset_id: assetId,
         asset_type: 'unknown',

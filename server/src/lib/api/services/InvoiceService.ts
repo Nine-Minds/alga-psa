@@ -8,7 +8,7 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
-import { withTransaction, listInvoiceAuditHistory, type InvoiceHistoryEntry } from '@alga-psa/db';
+import { withTransaction, listInvoiceAuditHistory, writeAccountingAudit, type InvoiceHistoryEntry } from '@alga-psa/db';
 import { formatLocationAddress } from '@alga-psa/core';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -44,7 +44,11 @@ import {
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import { changeInvoiceTaxSourceInternal } from '@alga-psa/billing/actions/taxSourceActions';
-import { assertInvoiceNotExported } from '@alga-psa/billing/services/accountingSync/invoiceExportGuards';
+import { assertInvoiceNotExported, findInvoiceExportInProgress } from '@alga-psa/billing/services/accountingSync/invoiceExportGuards';
+import { findLocalVoidBlocker, voidInvoiceLocally } from '@alga-psa/billing/lib/invoiceVoidCore';
+import { hasConnectedQboRealm } from '@alga-psa/billing/services/accountingSync/accountingSyncSettings';
+import { enqueueInvoiceVoid } from '@alga-psa/billing/services/accountingSync/syncProducers';
+import { signalAutopayInvoiceSettled } from '@alga-psa/billing/services/autopayBridge';
 import type { TaxSource } from '@alga-psa/types';
 import {
   settlePrepaidReplenishmentInvoice,
@@ -84,6 +88,7 @@ import {
   InvoicePreviewRequest,
 } from '../schemas/invoiceSchemas';
 import { INVOICE_UPDATE_FIELDS, LIFECYCLE_OWNED_FIELDS } from '../schemas/invoiceUpdateFields';
+import { checkInvoicePayload } from '../schemas/invoiceFieldPolicy';
 
 import {
   IInvoice,
@@ -101,7 +106,8 @@ import {
   getClientDetails,
   persistManualInvoiceCharges,
   calculateAndDistributeTax,
-  updateInvoiceTotalsAndRecordTransaction
+  updateInvoiceTotalsAndRecordTransaction,
+  recomputeInvoiceHeaderTotals
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { repointHeaderFollowingCharges } from '@alga-psa/billing/lib/billing/repointHeaderFollowingCharges';
@@ -270,6 +276,12 @@ const TAX_SOURCES: ReadonlySet<string> = new Set<TaxSource>(['internal', 'extern
 const isTaxSource = (value: unknown): value is TaxSource =>
   typeof value === 'string' && TAX_SOURCES.has(value);
 
+// Single, connection-based denial for every remote-affecting void refused for an
+// actor without accounting_integrations:remote_mutate. Same text as the user-facing
+// void action (voidInvoiceActions) so the denial is identical on both surfaces.
+// LEVERAGE: pattern void-remote-mutate-denial — duplicated from voidInvoiceActions ('use server' files cannot export constants)
+const VOID_REMOTE_MUTATE_DENIAL = 'Permission denied: voiding invoices while the accounting integration is connected requires the accounting remote-mutate permission.';
+
 export class InvoiceService extends BaseService<IInvoice> {
   private taxService: TaxService;
   private billingEngine: BillingEngine;
@@ -341,6 +353,32 @@ export class InvoiceService extends BaseService<IInvoice> {
    * A billing profile may only be attached to an invoice of the client that
    * owns it, and only while the profile is active.
    */
+  /**
+   * RBAC check against the caller's user record, the same check ApiBaseController.checkPermission
+   * runs. Use this, not validatePermissions (which only checks that a userId is present).
+   */
+  private async assertInvoicePermission(context: ServiceContext, action: string): Promise<void> {
+    if (!context.user) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} invoice - no user context`);
+    }
+    const { knex } = await this.getKnex();
+    if (!(await hasPermission(context.user, 'invoice', action, knex))) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} invoice`);
+    }
+  }
+
+  private async assertClientInTenant(trx: Knex.Transaction, tenant: string, clientId: unknown): Promise<void> {
+    const client = typeof clientId === 'string' && clientId
+      ? await tenantDb(trx, tenant).table('clients').where({ client_id: clientId }).first('client_id')
+      : undefined;
+    if (!client) {
+      throw new ValidationError('The selected client is not available', {
+        code: 'CLIENT_NOT_FOUND',
+        clientId,
+      });
+    }
+  }
+
   private async assertBillingProfileBelongsToClient(
     trx: Knex.Transaction,
     tenant: string,
@@ -633,7 +671,62 @@ export class InvoiceService extends BaseService<IInvoice> {
   async create(data: Partial<IInvoice>, context: ServiceContext): Promise<IInvoice>;
   async create(data: CreateInvoice, context: ServiceContext): Promise<IInvoice>;
   async create(data: any, context: ServiceContext): Promise<IInvoice> {
-    await this.validatePermissions(context, 'invoice', 'create');
+    return this.createDraft(data, context, {});
+  }
+
+  /**
+   * Duplicate an invoice as a new manual draft. is_manual is provenance the server sets
+   * here; it is not accepted from a create body.
+   */
+  async duplicate(invoiceId: string, context: ServiceContext): Promise<IInvoice> {
+    await this.assertInvoicePermission(context, 'create');
+    const original: any = await this.getById(invoiceId, context, { include_items: true });
+    if (!original) {
+      throw new NotFoundError('Invoice not found');
+    }
+    return this.createDraft(
+      {
+        client_id: original.client_id,
+        invoice_date: new Date().toISOString().split('T')[0],
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        items: original.invoice_charges || [],
+      },
+      context,
+      { is_manual: true },
+    );
+  }
+
+  /** Body-validated draft creation; `provenance` is set by server-side operations only. */
+  private async createDraft(
+    data: any,
+    context: ServiceContext,
+    provenance: { is_manual?: boolean; is_prepayment?: boolean },
+  ): Promise<IInvoice> {
+    // Real RBAC check (validatePermissions is a stub): the controller checks too, but
+    // every caller of the service must hold invoice:create.
+    await this.assertInvoicePermission(context, 'create');
+
+    // A created invoice is always a draft. Lifecycle, credit and provenance are owned by
+    // dedicated commands and header totals are derived from the charges, so the create
+    // body cannot set them. Enforced here (not only in the controller) so every caller
+    // of the service inherits the check.
+    const { forbidden } = checkInvoicePayload('create', data);
+    if (forbidden.length > 0) {
+      const first = forbidden[0];
+      throw new ValidationError(
+        `Field '${first.key}' cannot be set when creating an invoice; ${
+          first.command
+            ? `use the dedicated invoice command (${first.command}) instead`
+            : 'it is not settable on create'
+        }`,
+        forbidden.map((f) => ({
+          path: [f.key],
+          message: f.command
+            ? `Field is managed by the ${f.command} invoice command`
+            : 'Field is not settable on create',
+        }))
+      );
+    }
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
@@ -642,23 +735,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Generate invoice number
       const invoiceNumber = await generateInvoiceNumber(trx);
 
-      // Calculate taxes if needed
-      let taxCalculation: { tax_amount: number; tax_region: string; tax_rate: number; calculation_date: string } | null = null;
-      if (data.items?.length) {
-        const taxRegion = await this.resolveTaxRegion(trx, context.tenant, data.client_id);
-        // Only calculate tax when the client has a configured tax region. We do not
-        // fabricate a region (no hardcoded 'US' / inferred default), so a client with
-        // no configured region simply has no tax applied here.
-        if (taxRegion) {
-          taxCalculation = await this.calculateTaxes({
-            client_id: data.client_id,
-            amount: data.subtotal,
-            tax_region: taxRegion
-          }, context);
-        }
-      }
-
       const invoiceDate = data.invoice_date || new Date().toISOString().split('T')[0];
+
+      // The invoice's client must belong to the caller's tenant. The row's tenant is forced
+      // from the context, so a foreign client_id would otherwise be persisted against it.
+      await this.assertClientInTenant(trx, context.tenant, data.client_id);
 
       // Terms follow the client's effective billing identity; explicit caller
       // values win.
@@ -680,22 +761,23 @@ export class InvoiceService extends BaseService<IInvoice> {
         invoice_id: uuidv4(),
         invoice_number: invoiceNumber,
         client_id: data.client_id,
-        billing_cycle_id: data.billing_cycle_id,
-        status: data.status || 'draft',
+        status: 'draft',
         invoice_date: invoiceDate,
         due_date: data.due_date ?? billingTerms?.dueDate,
         payment_method: data.payment_method ?? billingTerms?.paymentMethod ?? null,
         billing_profile_id: data.billing_profile_id ?? billingTerms?.billingProfileId ?? null,
-        subtotal: data.subtotal || 0,
-        tax: taxCalculation?.tax_amount || 0,
-        total_amount: data.total_amount || 0,
+        // Header totals are engine-derived from the charges below; never caller-supplied.
+        subtotal: 0,
+        tax: 0,
+        total_amount: 0,
         // `billing_period_start/end` stores the invoice window, not the service period.
         // This generic create endpoint trusts the caller; rename to `invoice_window_*` is pending.
         billing_period_start: data.billing_period_start,
         billing_period_end: data.billing_period_end,
-        is_manual: data.is_manual || false,
-        is_prepayment: data.is_prepayment || false,
-        credit_applied: data.credit_applied || 0,
+        // Provenance never comes from the body (checkInvoicePayload refuses true above).
+        is_manual: provenance.is_manual ?? false,
+        is_prepayment: provenance.is_prepayment ?? false,
+        credit_applied: 0,
         created_by: context.userId,
         updated_by: context.userId,
         tenant: context.tenant,
@@ -711,6 +793,14 @@ export class InvoiceService extends BaseService<IInvoice> {
         // Only a caller-supplied profile makes the charges 'explicit'; a header
         // profile back-filled from billingTerms keeps them 'client_default'.
         await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context, data.billing_profile_id ?? null);
+
+        // Totals come from the charges through the billing engine (the same tax
+        // distribution + header-totals derivation invoice generation and manual
+        // invoices use). A client with no configured tax region simply gets no tax;
+        // we do not fabricate a region.
+        const client = await getClientDetails(trx, context.tenant, invoice.client_id);
+        await calculateAndDistributeTax(trx, invoice.invoice_id, client, this.taxService, context.tenant);
+        await recomputeInvoiceHeaderTotals(trx, invoice.invoice_id, context.tenant);
       }
 
       // Audit log
@@ -987,7 +1077,17 @@ export class InvoiceService extends BaseService<IInvoice> {
           ? existing.billing_profile_id
           : null;
       }
-      await this.createInvoiceLineItems(id, normalizedItems, trx, context, callerProfileId);
+      if (normalizedItems.length > 0) {
+        await this.createInvoiceLineItems(id, normalizedItems, trx, context, callerProfileId);
+      }
+
+      // A replacement changes the tax base, so discard caller-provided tax and
+      // derive both charge tax and invoice totals from the new charges. Keep the
+      // calculation in this transaction so the response and later reads observe
+      // one consistent replacement. An empty list still recalculates to zero.
+      const client = await getClientDetails(trx, context.tenant, existing.client_id);
+      await calculateAndDistributeTax(trx, id, client, this.taxService, context.tenant);
+      await recomputeInvoiceHeaderTotals(trx, id, context.tenant);
       }
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
@@ -1390,6 +1490,178 @@ export class InvoiceService extends BaseService<IInvoice> {
     // Re-fetch after commit: getById runs on a pooled (non-transaction)
     // connection, so it must read the row only after the tx commits.
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
+  }
+
+  /**
+   * Void (cancel) a finalized invoice.
+   *
+   * Thin service wrapper over the same local-void primitive the user-facing void
+   * action uses (invoiceVoidCore.voidInvoiceLocally): hour-block release,
+   * credit claw-back / reversal, status flip, replenishment suppression and the
+   * invoice_cancelled transaction are NOT re-implemented here.
+   *
+   * InvoiceService.validatePermissions is a userId-only stub, so this method
+   * checks real RBAC itself: invoice:update, plus
+   * accounting_integrations:remote_mutate when an accounting integration is
+   * connected (identical denial text to the action).
+   */
+  async voidInvoice(
+    invoiceId: string,
+    context: ServiceContext,
+    options: { reason?: string } = {}
+  ): Promise<IInvoice> {
+    const user = context.user;
+    if (!user) {
+      throw new ForbiddenError('Permission denied: Authentication required');
+    }
+    // Voiding reverses credits and pushes voids to accounting integrations —
+    // internal MSP users with invoice update permission only.
+    if (user.user_type === 'client') {
+      throw new ForbiddenError('Permission denied: operation not available in client portal');
+    }
+    if (!await hasPermission(user, 'invoice', 'update')) {
+      throw new ForbiddenError('Permission denied: invoice update required');
+    }
+
+    const reason = options.reason?.trim() || 'Voided via API';
+    const { knex } = await this.getKnex();
+    const tenant = context.tenant;
+    const now = new Date().toISOString();
+
+    const invoice = await tenantDb(knex, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+    if (!invoice) {
+      throw new NotFoundError('Invoice not found');
+    }
+    if (!invoice.finalized_at) {
+      throw new ConflictError('Drafts must be deleted, not voided.');
+    }
+    if (invoice.status === 'cancelled') {
+      throw new ConflictError('Invoice is already voided.');
+    }
+
+    // Remote-mutate gate. The denial depends on the tenant's CONNECTION state,
+    // never on whether this invoice is mapped, so a refusal cannot be used to
+    // learn whether a remote entity exists. Fast-fail here; re-checked under
+    // the lock below.
+    const actorCanRemoteMutate = await hasPermission(user, 'accounting_integrations', 'remote_mutate', knex);
+    if (!actorCanRemoteMutate && await hasConnectedQboRealm(tenant)) {
+      throw new ForbiddenError(VOID_REMOTE_MUTATE_DENIAL);
+    }
+
+    // Guards shared with the accounting-sync external-void path (recorded
+    // payments, consumed credit-note credit). Unlocked fast-fail; the
+    // authoritative consumed-credit re-check runs under lock in the core.
+    const blocker = await findLocalVoidBlocker(knex, tenant, invoice);
+    if (blocker) {
+      throw new ConflictError(blocker);
+    }
+
+    let actorCanRemoteMutateUnderLock = actorCanRemoteMutate;
+
+    await withTransaction(knex, async (trx) => {
+      // Lock-order contract with applyCreditToInvoiceInternal (creditActions.ts):
+      // invoice row FIRST, credit_tracking rows only after. Identical to
+      // voidInvoiceActions: lock, re-read status / credit_applied, and pass the
+      // re-read row as `lockedInvoice` so the core never trusts the stale snapshot.
+      const lockedInvoice = await tenantDb(trx, tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
+        .forUpdate()
+        .first('status', 'credit_applied');
+
+      if (!lockedInvoice) {
+        throw new NotFoundError('Invoice not found');
+      }
+      if (lockedInvoice.status === 'cancelled') {
+        throw new ConflictError('Invoice is already voided.');
+      }
+      if (await findInvoiceExportInProgress(trx, tenant, invoiceId)) {
+        throw new ConflictError('An accounting export is being prepared for this invoice. Wait for it to finish before voiding it.');
+      }
+
+      // Authoritative remote-mutate re-check, atomic with the local state change.
+      actorCanRemoteMutateUnderLock = await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx);
+      if (!actorCanRemoteMutateUnderLock && await hasConnectedQboRealm(tenant)) {
+        throw new ForbiddenError(VOID_REMOTE_MUTATE_DENIAL);
+      }
+
+      const remoteMapping = await tenantDb(trx, tenant).table('tenant_external_entity_mappings')
+        .where({
+          tenant,
+          integration_type: 'quickbooks_online',
+          alga_entity_type: 'invoice',
+          alga_entity_id: invoiceId,
+        })
+        .first('id', 'external_entity_id');
+
+      // A refusal (used hour block, consumed credit) commits nothing; throwing
+      // rolls the transaction back, and nothing has been written before this.
+      const localVoid = await voidInvoiceLocally(trx, tenant, {
+        invoice,
+        lockedInvoice,
+        reason,
+        actorUserId: context.userId,
+        now,
+      });
+      if (!localVoid.ok) {
+        throw new ConflictError(localVoid.error);
+      }
+
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, tenant, invoiceId);
+      await auditLog(trx, {
+        userId: context.userId,
+        operation: 'UPDATE',
+        tableName: 'invoices',
+        recordId: invoiceId,
+        changedData: { status: 'cancelled' },
+        details: {
+          action: 'invoice.voided',
+          reason,
+          previous_status: invoice.status,
+          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+        },
+      });
+
+      // The remote-affecting branch is audited in the same transaction as the
+      // local state change (outcome is appended by the sync-cycle applier).
+      if (remoteMapping && actorCanRemoteMutateUnderLock) {
+        await writeAccountingAudit(trx, tenant, 'accounting_remote_void', {
+          userId: context.userId,
+          provider: 'quickbooks_online',
+          recordId: String(remoteMapping.external_entity_id ?? remoteMapping.id),
+          details: {
+            algaEntityType: 'invoice',
+            algaEntityId: invoiceId,
+            operation: 'void_invoice',
+            outcome: 'enqueued',
+            source: 'invoice_void',
+          },
+        }).catch((error) => {
+          console.warn('[InvoiceService.voidInvoice] Failed to write remote-void audit entry', error);
+        });
+      }
+    });
+
+    // Post-commit, best-effort (same as the action): none of these may turn a
+    // committed void into an error response.
+    try {
+      void signalAutopayInvoiceSettled(tenant, invoiceId);
+      void enqueueInvoiceVoid(knex, tenant, invoiceId, {
+        actorUserId: context.userId,
+        allowRemoteMutate: actorCanRemoteMutateUnderLock,
+      });
+      await notifyInvoiceTerminalStatus({
+        knex,
+        tenantId: tenant,
+        invoiceId,
+        newStatus: 'cancelled',
+      });
+    } catch (error) {
+      console.error('[InvoiceService.voidInvoice] Post-commit steps failed', error);
+    }
+
+    return this.getById(invoiceId, context) as Promise<IInvoice>;
   }
 
   /**
@@ -2456,6 +2728,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     return previewInvoiceForSelectionInput(
       this.requireRecurringSelectorInput(data, 'preview'),
+      // REST preview shape is a public contract; keep per-service rows.
+      { consolidateFixedBundles: false },
     );
   }
 

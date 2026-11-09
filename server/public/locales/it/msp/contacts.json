@@ -418,7 +418,10 @@
       "refreshing": "Aggiornamento...",
       "resend": "Reinvia",
       "resending": "Reinvio...",
-      "revoke": "Revoca"
+      "revoke": "Revoca",
+      "cancel": "Annulla",
+      "edit": "Modifica",
+      "delete": "Elimina"
     },
     "toast": {
       "successTitle": "Successo",
@@ -460,7 +463,8 @@
         "noBaseUrl": "L'URL di base non è configurato per gli inviti al portale.",
         "invitationNotFound": "Invito non trovato o già utilizzato."
       },
-      "userNotFound": "Utente cliente non trovato"
+      "userNotFound": "Utente cliente non trovato",
+      "validationErrorTitle": "Errore di convalida"
     },
     "boardCount_few": "{{count}} bacheche",
     "boardCount_many": "{{count}} bacheche"
@@ -723,6 +727,118 @@
       "saved": "Contatto aggiornato",
       "saveFailed": "Impossibile aggiornare il contatto",
       "saveFailedDescription": "Impossibile aggiornare il contatto. Riprova."
+    },
+    "relative": {
+      "today": "oggi",
+      "yesterday": "ieri",
+      "daysAgo": "{{count}} gg fa"
+    },
+    "emailType": {
+      "primary": "Principale",
+      "other": "altro"
+    },
+    "phoneType": {
+      "other": "Altro"
+    },
+    "ticketPill": {
+      "closed": "Chiuso",
+      "urgent": "Urgente",
+      "open": "Aperto"
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "role": {
+      "add": "Aggiungi ruolo",
+      "editTitle": "Fai clic per modificare il ruolo"
+    },
+    "atClient": "presso",
+    "noClient": "Nessun cliente",
+    "noPrimaryEmail": "Nessuna email principale",
+    "noPhoneNumber": "Nessun numero di telefono",
+    "contactSince": "Contatto dal {{date}}",
+    "lastTouch": "Ultima interazione",
+    "editContact": "Modifica contatto",
+    "openFullPage": "Apri pagina completa",
+    "viewAll": "Visualizza tutto",
+    "viewAllCount": "Visualizza tutti ({{count}})",
+    "reach": {
+      "title": "Recapiti",
+      "add": "Aggiungi email o telefono",
+      "email": "Email",
+      "phone": "Telefono",
+      "primaryMeta": "principale",
+      "noEmails": "Nessun indirizzo email",
+      "addEmail": "Aggiungi un indirizzo email",
+      "noPhones": "Nessun numero di telefono",
+      "addPhone": "Aggiungi un numero di telefono"
+    },
+    "portalChip": {
+      "deactivated": "Portale · disattivato",
+      "signedIn": "Portale · ultimo accesso {{when}}",
+      "neverSignedIn": "Portale · accesso mai effettuato",
+      "invited": "Portale · invitato",
+      "noAccess": "Nessun accesso al portale"
+    },
+    "portal": {
+      "title": "Accesso al portale",
+      "manage": "Gestisci",
+      "status": "Stato",
+      "role": "Ruolo",
+      "clientAdmin": "Amministratore cliente",
+      "standard": "Standard",
+      "lastSignIn": "Ultimo accesso",
+      "invited": "Invitato",
+      "noClientAssigned": "Nessun cliente assegnato",
+      "deactivated": "Disattivato",
+      "activeAccount": "Account attivo",
+      "invitationSent": "Invito inviato",
+      "noAccess": "Nessun accesso"
+    },
+    "tickets": {
+      "title": "Ticket",
+      "create": "Crea ticket",
+      "createFirst": "Crea un ticket",
+      "empty": "Ancora nessun ticket",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interazioni",
+      "log": "Registra interazione",
+      "logFirst": "Registra un'interazione",
+      "empty": "Nessuna interazione registrata",
+      "fallbackTitle": "Interazione",
+      "loadError": "Impossibile caricare le interazioni. Riprova."
+    },
+    "documents": {
+      "title": "Documenti",
+      "add": "Aggiungi documento",
+      "addFirst": "Aggiungi un documento",
+      "empty": "Ancora nessun documento",
+      "fallbackTitle": "Documento",
+      "dialogTitle": "Documenti del contatto"
+    },
+    "relatedWork": {
+      "title": "Lavori correlati",
+      "projects": "Progetti",
+      "quotes": "Preventivi",
+      "noProjects": "Nessun progetto",
+      "noQuotes": "Nessun preventivo",
+      "noStatus": "Nessuno stato",
+      "noStatusLower": "nessuno stato",
+      "projectFallback": "Progetto {{number}}",
+      "quoteFallback": "Preventivo",
+      "empty": "Nessun progetto o preventivo correlato"
+    },
+    "notes": {
+      "title": "Note",
+      "edit": "Modifica",
+      "openDocument": "Apri documento delle note",
+      "save": "Salva note",
+      "cancel": "Annulla",
+      "empty": "Ancora nessuna nota",
+      "add": "Aggiungi note"
     }
   },
   "errors": {
@@ -833,9 +949,32 @@
       "scopeSummaryAll": "Tutti",
       "scopeSummaryOwn": "Propri",
       "managerScopeNote_one": "La sua vista include anche i dati di {{count}} persona che riporta a lei.",
-      "managerScopeNote_many": "La sua vista include anche i dati di {{count}} di persone che riportano a lei.",
       "managerScopeNote_other": "La sua vista include anche i dati di {{count}} persone che riportano a lei.",
-      "managerScopeNote_few": "La sua vista include anche i dati di {{count}} persone che riportano a lei."
+      "managerScopeNote_few": "La sua vista include anche i dati di {{count}} persone che riportano a lei.",
+      "managerScopeNote_many": "La sua vista include anche i dati di {{count}} di persone che riportano a lei.",
+      "assignmentLabel": "Gruppo di visibilità dei ticket",
+      "assignmentPlaceholder": "Seleziona assegnazione di visibilità",
+      "assignmentUpdated": "Assegnazione di visibilità del contatto aggiornata",
+      "assignFailed": "Impossibile assegnare il gruppo di visibilità",
+      "manageLabel": "Gruppi di visibilità del cliente",
+      "manageHelp": "Crea o modifica gruppi di bacheche e usali per le assegnazioni ai contatti.",
+      "nameLabel": "Nome del gruppo",
+      "nameRequired": "Il nome del gruppo di visibilità è obbligatorio",
+      "descriptionLabel": "Descrizione",
+      "descriptionPlaceholder": "Descrizione facoltativa",
+      "boardsLabel": "Bacheche",
+      "noBoards": "Nessuna bacheca disponibile",
+      "createGroup": "Crea gruppo",
+      "updateGroup": "Aggiorna gruppo",
+      "created": "Gruppo di visibilità creato",
+      "updated": "Gruppo di visibilità aggiornato",
+      "deleted": "Gruppo di visibilità eliminato",
+      "deleteConfirm": "Vuoi eliminare questo gruppo di visibilità?",
+      "deleteFailed": "Impossibile eliminare il gruppo di visibilità",
+      "saveFailed": "Impossibile salvare il gruppo di visibilità",
+      "loadFailed": "Impossibile caricare il gruppo di visibilità da modificare",
+      "empty": "Ancora nessun gruppo di visibilità",
+      "fullAccess": "Accesso completo"
     }
   },
   "messages": {

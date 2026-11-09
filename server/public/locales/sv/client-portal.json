@@ -781,7 +781,40 @@
       "reportsToHelp": "En chef kan se ärenden, enheter och projekt för personer som rapporterar till dem när deras synlighetsgrupp är begränsad till egna poster.",
       "locations": "Platser",
       "primaryLocation": "Primär",
-      "remote": "Distans"
+      "remote": "Distans",
+      "thisUser": "den här användaren",
+      "deactivate": {
+        "title": "Inaktivera användare och hantera öppet arbete",
+        "confirm": "Inaktivera användare",
+        "deactivating": "Inaktiverar…",
+        "thisUserCapitalized": "Den här användaren",
+        "openWorkPrompt": "har öppet arbete. Välj vad som ska hända innan användaren inaktiveras.",
+        "reassignTo": "Tilldela öppet arbete till",
+        "selectAssignee": "Välj en aktiv intern användare",
+        "noAssignee": "Det finns ingen aktiv intern användare att tilldela arbetet till.",
+        "selectedUser": "den valda användaren",
+        "buckets": {
+          "tickets": "Ärenden",
+          "tasks": "Projektuppgifter"
+        },
+        "openCount": "Antal öppna {{label}}: {{count}}",
+        "actions": {
+          "reassign": "Tilldela på nytt",
+          "unassign": "Ta bort tilldelning",
+          "archive": "Arkivera"
+        },
+        "labels": {
+          "ticket": "ärende",
+          "tickets": "ärenden",
+          "projectTask": "projektuppgift",
+          "projectTasks": "projektuppgifter"
+        },
+        "summary": {
+          "archived": "{{count}} {{label}} kommer att arkiveras",
+          "unassigned": "{{count}} {{label}} kommer att få tilldelningen borttagen",
+          "reassigned": "{{count}} {{label}} kommer att tilldelas {{name}}"
+        }
+      }
     },
     "messages": {
       "saveChanges": "Spara ändringar",
@@ -921,7 +954,12 @@
       "noMessage": "Inget meddelande"
     },
     "unreadCount_few": "{{count}} olästa aviseringar",
-    "unreadCount_many": "{{count}} olästa aviseringar"
+    "unreadCount_many": "{{count}} olästa aviseringar",
+    "reconnectingToServer": "Återansluter till servern…",
+    "refresh": "Uppdatera",
+    "markAllRead": "Markera alla som lästa",
+    "emptyTitle": "Inga aviseringar",
+    "emptyDescription": "Du har läst alla aviseringar."
   },
   "billing": {
     "columns": {
@@ -1051,7 +1089,34 @@
     },
     "unassigned": "Ej tilldelad",
     "sharedWorkspace": "Delad arbetsplats: {{name}}",
-    "sharedWorkspaceLabel": "Delad arbetsplats"
+    "sharedWorkspaceLabel": "Delad arbetsplats",
+    "details": {
+      "notProvided": "Inte angivet",
+      "notAvailable": "Saknas",
+      "cpuWithModel": "{{model}} (antal kärnor: {{count}})",
+      "cpuCores": "Antal kärnor: {{count}}",
+      "workstationTitle": "Information om arbetsstationen",
+      "networkDeviceTitle": "Information om nätverksenheten",
+      "serverTitle": "Information om servern",
+      "basicInformation": "Grundläggande information",
+      "os": "Operativsystem",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Lagring",
+      "deviceType": "Enhetstyp",
+      "ipAddress": "IP-adress",
+      "ports": "Portar",
+      "firmware": "Inbyggd programvara",
+      "type": "Typ",
+      "virtual": "Virtuell",
+      "physical": "Fysisk",
+      "assetTag": "Inventarienummer",
+      "serialNumber": "Serienummer",
+      "status": "Status",
+      "location": "Plats",
+      "purchaseDate": "Inköpsdatum",
+      "warrantyEndDate": "Garantins slutdatum"
+    }
   },
   "errors": {
     "account": {

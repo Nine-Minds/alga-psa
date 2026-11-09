@@ -266,7 +266,11 @@
         "title": "{{tier}} está activo",
         "description": "Su licencia de pago está activa en este dispositivo.",
         "descriptionWithExpiry": "Su licencia está activa hasta el {{date}}.",
-        "badge": "Con licencia"
+        "badge": "Con licencia",
+        "descriptionEnding": "Su suscripción se ha cancelado. Pro sigue activo hasta el {{date}}.",
+        "descriptionTermEnds": "Pro está activo hasta el {{date}}, cuando termina su periodo fijo.",
+        "descriptionPaymentFailed": "Pro está activo, pero el último pago de renovación falló. Actualice su método de pago para conservar Pro.",
+        "descriptionPaymentFailedEnded": "Su suscripción Pro ha finalizado — pago fallido. Pro sigue activo hasta el {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "La licencia requiere atención",
@@ -291,6 +295,12 @@
         "title": "Está usando Essentials",
         "description": "Essentials está activo en este dispositivo. Siga usando el conjunto principal de funciones o inicie una prueba única de Pro de 15 días.",
         "badge": "Essentials activo"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Suscripción finalizada",
+        "title": "Ahora usa la edición gratuita",
+        "description": "Su suscripción Pro ha finalizado. Sus datos se conservan y las funciones Pro se reactivan al volver a suscribirse.",
+        "badge": "Edición gratuita"
       }
     },
     "trialCta": {
@@ -356,7 +366,31 @@
       "activateLicenseKey": "No se pudo activar la clave de licencia.",
       "activateClaimCode": "No se pudo activar el código de activación.",
       "startTrial": "No se pudo iniciar la prueba.",
-      "refreshLicense": "No se pudo actualizar la licencia."
+      "refreshLicense": "No se pudo actualizar la licencia.",
+      "credentialRevoked": "La credencial de licencia de este dispositivo fue revocada. Vuelva a conectarlo con un nuevo código de activación del portal de licencias.",
+      "subscriptionEnding": "Su suscripción Pro se ha cancelado. Pro finaliza el {{date}}.",
+      "subscriptionEndingNoDate": "Su suscripción Pro se ha cancelado.",
+      "subscriptionEnded": "Su suscripción Pro ha finalizado. Este dispositivo usa la edición gratuita.",
+      "subscriptionEndingPaymentFailed": "Su suscripción Pro ha finalizado — pago fallido. Pro finaliza el {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Su suscripción Pro ha finalizado — pago fallido.",
+      "subscriptionEndedPaymentFailed": "Pro ha finalizado — pago fallido. Su dispositivo usa Essentials.",
+      "resubscribeAt": "Vuelva a suscribirse en {{url}}.",
+      "resubscribeToRestore": "Vuelva a suscribirse para restaurar Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Ahora usa la edición gratuita. Vuelva a suscribirse para restaurar Pro.",
+      "endingTitle": "Su suscripción Pro se ha cancelado.",
+      "endedOn": "Pro finalizó el {{date}}.",
+      "endsOn": "Pro finaliza el {{date}}.",
+      "dataKept": "No se elimina nada. Sus datos permanecen y las funciones Pro se reactivan tras volver a suscribirse y actualizar la licencia.",
+      "resubscribe": "Volver a suscribirse",
+      "termEndsTitle": "Su periodo de Pro está por terminar.",
+      "paymentFailedTitle": "Pago fallido — lo reintentaremos el {{date}}. Actualice su método de pago para conservar Pro.",
+      "paymentFailedTitleNoRetry": "Pago fallido. Actualice su método de pago para conservar Pro.",
+      "paymentFailedEndedTitle": "Pro ha finalizado — pago fallido. Su appliance funciona con Essentials.",
+      "paymentFailedEndingTitle": "Su suscripción Pro ha finalizado — pago fallido.",
+      "paymentFailedEndsOn": "Pro finaliza el {{date}} si el pago sigue fallando.",
+      "updatePaymentMethod": "Actualizar método de pago"
     }
   },
   "errors": {
@@ -1017,6 +1051,45 @@
       "invalid": "No se pudo guardar este comentario.",
       "send": "Enviar",
       "cancel": "Cancelar"
+    },
+    "upgrade": {
+      "title": "Cambiar a AlgaPSA",
+      "description": "Use este espacio de trabajo de forma independiente con su propia licencia de AlgaPSA de pago.",
+      "preserved": "Sus tickets, proyectos, documentos e historial permanecerán en este espacio de trabajo.",
+      "trustEnds": "El cambio finaliza el acceso activo de su MSP y libera sus puestos de coadministración. Su MSP conserva el archivo de participación permitido.",
+      "alreadyDeparted": "La relación con su MSP ya terminó. El archivo existente permanece sin cambios.",
+      "seats": "Puestos de técnico de pago necesarios: {{count}}",
+      "hosting": "Este cambio mantiene su alojamiento actual. Para salir de esta instalación, debe exportar y restaurar los datos por separado.",
+      "licenseRequired": "Activa una licencia Pro vinculada al tenant y con suficientes puestos antes de cambiar.",
+      "subscriptionRequired": "Antes de cambiar, necesita una suscripción activa y pagada de AlgaPSA que pertenezca a este espacio de trabajo.",
+      "manageLicense": "Administrar licencia del espacio de trabajo",
+      "running": "El cambio está en curso. Esta página se actualizará cuando termine.",
+      "failed": "El cambio no se completó. Revise sus derechos de uso e inténtelo de nuevo.",
+      "unavailable": "El progreso del cambio no está disponible temporalmente. Actualiza para volver a comprobarlo.",
+      "start": "Cambiar espacio de trabajo",
+      "refresh": "Actualizar estado",
+      "completed": "Este espacio de trabajo ya es un espacio independiente de AlgaPSA.",
+      "openPsa": "Abrir AlgaPSA",
+      "loadError": "No se pudo cargar el estado del cambio. Actualiza e inténtalo de nuevo.",
+      "startError": "No se pudo iniciar el cambio. Puede volver a enviar la solicitud.",
+      "confirmTitle": "¿Cambiar este espacio de trabajo?",
+      "confirmMessage": "Esto convertirá su espacio de trabajo a AlgaPSA y finalizará cualquier relación activa con el MSP. Su propio derecho de uso pagado cubrirá este espacio. El alojamiento de sus datos no cambiará.",
+      "cancel": "Cancelar",
+      "billingInterval": "Frecuencia de facturación",
+      "month": "Mensual",
+      "year": "Anual",
+      "paymentProcessing": "Su pago se está procesando. Actualice el estado o reanude la compra para volver a comprobarlo.",
+      "purchaseScope": "Esta compra paga este espacio de trabajo. El acceso del MSP solo termina cuando confirmas el cambio después del pago.",
+      "paymentFailed": "El pago inicial falló. Puede iniciar otro checkout después de cerrar este intento pendiente de pago.",
+      "retryPayment": "Volver a intentar el pago",
+      "retryTitle": "¿Volver a intentar este pago?",
+      "retryMessage": "Cierra este intento de pago fallido y abre un checkout nuevo. El acceso del MSP y los puestos de coadministración se mantienen.",
+      "billingTitle": "Su facturación de AlgaPSA",
+      "paymentMethod": "Actualizar método de pago",
+      "paidSeats": "Puestos de técnico de pago",
+      "reviewSeatChange": "Revisar cambio de puestos",
+      "billingError": "No se pudo abrir la facturación. Actualiza el estado e inténtalo de nuevo.",
+      "purchaseUnconfigured": "Las compras no están configuradas para esta implementación."
     }
   },
   "common": {

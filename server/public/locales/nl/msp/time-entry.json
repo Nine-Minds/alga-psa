@@ -288,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Opmerkingen laden...",
     "placeholder": "Voeg een reactie toe...",
     "responsePlaceholder": "Reageer op de gevraagde wijzigingen...",
     "respondToChanges": "Reageer op wijzigingen"
@@ -363,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Gegevenstabel van de urenstaat",
+    "deleteWorkItem": {
+      "title": "Werkitem verwijderen",
+      "message": "Hierdoor worden alle tijdregistraties voor dit werkitem definitief verwijderd. Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "bundled": "Gebundeld",
+    "bundledTo": "Gebundeld → {{ticketNumber}}",
+    "addEntryForCell": "Tijdregistratie voor {{workItem}} op {{date}} toevoegen",
+    "saveTimeEntry": "Tijdregistratie opslaan",
+    "weeklyTotal": "Weektotaal",
     "empty": {
       "title": "Geen werkitems op uw urenstaat",
       "description": "Voeg een nieuw werkitem toe om uw tijd voor deze week bij te houden.",
@@ -425,6 +436,9 @@
     "viewEntryDetails": "Bekijk de invoerdetails"
   },
   "messages": {
+    "saveEntryFailed": "Kan tijdregistratie niet opslaan",
+    "updateTaskFailed": "Kan taak niet bijwerken",
+    "deleteWorkItemFailed": "Kan werkitem niet verwijderen",
     "serviceRequired": "Selecteer een dienst voordat u tijdregistraties opslaat",
     "invalidService": "Ongeldige dienst geselecteerd",
     "taxRegionRequired": "Selecteer een belastingregio voor belastbare diensten",
@@ -555,6 +569,11 @@
     },
     "activitySummary_few": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})",
     "activitySummary_many": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Urenstaten beheren",
+    "delegationDisabledPrefix": "Gedelegeerde tijdregistratie is momenteel uitgeschakeld. Schakel de functievlag",
+    "delegationDisabledSuffix": "in om de urenstaten van andere gebruikers te bewerken."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} bijgehouden in {{count}} segment (gepauzeerd {{paused}})",

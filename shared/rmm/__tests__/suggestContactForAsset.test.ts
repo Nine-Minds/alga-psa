@@ -115,7 +115,8 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-const { suggestContactForAsset } = await import('../signedInUserMappings');
+const { suggestContactForAsset, RmmUserMappingAuthorizationError } = await import('../signedInUserMappings');
+const allowMapping = async () => {};
 
 const TENANT = 'tenant-1';
 const CLIENT = 'client-1';
@@ -147,6 +148,16 @@ beforeEach(() => {
 });
 
 describe('suggestContactForAsset', () => {
+  it('fails closed when a caller omits record authorization for an existing suggestion', async () => {
+    h.dbState.rmm_integrations.push({ tenant: TENANT, integration_id: 'int-ninja', provider: 'ninjaone' });
+    h.dbState.rmm_organization_mappings.push({
+      tenant: TENANT, integration_id: 'int-ninja', external_organization_id: ORG,
+      client_id: CLIENT, contact_assignment_mode: 'suggest',
+    });
+
+    await expect(suggestContactForAsset(h.knexMock, TENANT, ASSET, undefined as any)).rejects.toThrow('Permission denied');
+  });
+
   it('reads the mapping of the integration whose provider the asset names', async () => {
     // A tacticalrmm mapping for the same organization id is `off`; the device is
     // a NinjaOne device, so the NinjaOne mapping's mode is what counts.
@@ -171,7 +182,7 @@ describe('suggestContactForAsset', () => {
       },
     );
 
-    const suggestion = await suggestContactForAsset(h.knexMock, TENANT, ASSET);
+    const suggestion = await suggestContactForAsset(h.knexMock, TENANT, ASSET, allowMapping);
 
     expect(suggestion).toMatchObject({
       integrationId: 'int-ninja',
@@ -204,7 +215,7 @@ describe('suggestContactForAsset', () => {
       },
     );
 
-    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET)).toBeNull();
+    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET, allowMapping)).toBeNull();
   });
 
   it('suggests by default when the mapping sets no mode', async () => {
@@ -217,10 +228,24 @@ describe('suggestContactForAsset', () => {
       contact_assignment_mode: null,
     });
 
-    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET)).toMatchObject({
+    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET, allowMapping)).toMatchObject({
       integrationId: 'int-ninja',
       contactId: 'c-jane',
     });
+  });
+
+  it.each(['asset', 'contact'])('does not return a suggestion when the %s is denied', async (denied) => {
+    h.dbState.rmm_integrations.push({ tenant: TENANT, integration_id: 'int-ninja', provider: 'ninjaone' });
+    h.dbState.rmm_organization_mappings.push({
+      tenant: TENANT, integration_id: 'int-ninja', external_organization_id: ORG,
+      client_id: CLIENT, contact_assignment_mode: 'suggest',
+    });
+
+    await expect(suggestContactForAsset(h.knexMock, TENANT, ASSET, async ({ assetIds, contactId }) => {
+      if ((denied === 'asset' && assetIds.includes(ASSET)) || (denied === 'contact' && contactId)) {
+        throw new RmmUserMappingAuthorizationError();
+      }
+    })).rejects.toThrow('Permission denied');
   });
 
   it('returns nothing when no mapping points this organization at the asset client', async () => {
@@ -233,6 +258,6 @@ describe('suggestContactForAsset', () => {
       contact_assignment_mode: 'suggest',
     });
 
-    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET)).toBeNull();
+    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET, allowMapping)).toBeNull();
   });
 });

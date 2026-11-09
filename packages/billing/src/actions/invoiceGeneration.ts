@@ -49,6 +49,7 @@ import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITime
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { applyInvoiceDiscountSummary, attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
+import { buildBundleComponents, buildPreviewFixedBundles } from '../lib/invoiceBundleComponents';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -379,7 +380,13 @@ function previewTimeEntrySnapshots(
 
 function buildPreviewViewModelItem(item: IInvoiceCharge) {
   const recurringSummary = resolvePreviewRecurringSummary(item);
+  // The draft is operator-only, so component money is always included.
+  const bundle = buildBundleComponents(item.bundle_presentation, {
+    includePricing: true,
+    amounts: item.bundle_component_amounts,
+  });
   return {
+    ...(bundle ? { subtitle: bundle.subtitle, hasComponents: bundle.hasComponents, components: bundle.components } : {}),
     id: item.item_id,
     description: item.description,
     quantity: item.quantity,
@@ -1297,13 +1304,15 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
 }
 
 /**
- * Resolves every recurring due obligation materialized for a client's billing
- * window (legacy billing-cycle bridge). A client cycle window can contain
- * multiple client-cadence schedules (one per contract line) plus
- * contract-cadence lines whose invoice window coincides with the cycle window;
- * production grouped generation (recurringBillingRunActions) passes one
- * selector input per obligation, and the cycle bridge must do the same or it
- * silently drops every obligation after the first.
+ * Resolves every live recurring obligation (anything not archived or
+ * superseded) in a client's invoice window, **including obligations that are
+ * already billed**. It is meant for whole-window previews such as
+ * previewRecurringUnitRevisionInvoiceImpact. Generation must not select its
+ * members here: a billed member trips the duplicate-invoice guard for the whole
+ * request. Generation selects members through due-work
+ * (getAvailableRecurringDueWork), which only offers unbilled obligations.
+ * A client window can contain multiple client-cadence schedules (one per
+ * contract line) plus contract-cadence lines whose invoice window coincides.
  */
 async function resolveCanonicalSelectorInputsForClientWindow(params: {
   knex: Knex;
@@ -2403,6 +2412,13 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
    * previews, which bill the client's default profile.
    */
   billingProfileId?: string | null;
+  /**
+   * Fold each Fixed line's per-service charges into one bundle item (the shape
+   * generation persists) so template renderers show the same layout as the
+   * final invoice. Off by default: the Automatic Invoices dialog is an operator
+   * table that keeps the per-service view.
+   */
+  consolidateFixedBundles?: boolean;
 }): Promise<BuiltPreviewInvoice> {
   const { knex, tenant, selectorInputs } = params;
   const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
@@ -2574,8 +2590,37 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     });
   });
 
-  for (const [contractKey, charges] of Object.entries(chargesByContractGroup)) {
+  const previewBundles = params.consolidateFixedBundles
+    ? await buildPreviewFixedBundles(knex, tenant, Object.values(chargesByContractGroup).flat())
+    : [];
+  const bundledCharges = new Set<unknown>(previewBundles.flatMap((bundle) => bundle.charges));
+  for (const bundle of previewBundles) {
+    const first = bundle.charges[0];
+    invoiceItems.push({
+      item_id: 'preview-' + uuidv4(),
+      invoice_id: `preview-${previewInvoiceKey}`,
+      description: bundle.title,
+      quantity: 1,
+      unit_price: bundle.total,
+      total_price: bundle.total,
+      tax_amount: bundle.charges.reduce((sum, c) => sum + (c.tax_amount || 0), 0),
+      tax_rate: first.tax_rate || 0,
+      tax_region: first.tax_region || '',
+      net_amount: bundle.total,
+      is_manual: false,
+      rate: bundle.total,
+      client_contract_id: first.client_contract_id,
+      contract_name: first.contract_name,
+      billing_charge_type: 'fixed',
+      bundle_presentation: bundle.snapshot,
+      bundle_component_amounts: bundle.amounts,
+    } as IInvoiceCharge);
+  }
+
+  for (const [contractKey, allContractCharges] of Object.entries(chargesByContractGroup)) {
     const contractGroupName = contractKey;
+    const charges = allContractCharges.filter((charge) => !bundledCharges.has(charge));
+    if (charges.length === 0) continue;
     const clientContractGroupId = charges[0].client_contract_id;
     const contractGroupHeaderId = 'preview-' + uuidv4();
     invoiceItems.push({
@@ -2929,12 +2974,14 @@ async function buildPreviewInvoiceForSelectionInput(params: {
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
   billingProfileId?: string | null;
+  consolidateFixedBundles?: boolean;
 }): Promise<BuiltPreviewInvoice> {
   return buildPreviewInvoiceForSelectionInputs({
     knex: params.knex,
     tenant: params.tenant,
     selectorInputs: [params.selectorInput],
     billingProfileId: params.billingProfileId,
+    consolidateFixedBundles: params.consolidateFixedBundles,
   });
 }
 
@@ -2989,6 +3036,10 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
   user,
   { tenant },
   groupedSelections: RecurringGroupedPreviewSelectionInput[],
+  // LEVERAGE: pattern preview-vs-persisted-shape — the legacy draft emits per-service rows plus a $0 header,
+  // persisted invoices emit one bundle parent. Default (true) matches persisted output; the operator
+  // dialog passes false to keep its per-service layout.
+  options: { consolidateFixedBundles?: boolean } = {},
 ): Promise<RecurringGroupedPreviewResponse> => {
   const { knex } = await createTenantKnex();
   let normalizedGroupedSelections = groupedSelections;
@@ -3022,6 +3073,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           knex,
           tenant,
           selectorInputs: group.selectorInputs,
+          consolidateFixedBundles: options.consolidateFixedBundles !== false,
         });
         return {
           previewGroupKey: group.previewGroupKey,
@@ -3083,6 +3135,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   user,
   { tenant },
   selectorInput: IRecurringDueSelectionInput,
+  options: { consolidateFixedBundles?: boolean } = {},
 ): Promise<PreviewInvoiceResponse> => {
   const { knex } = await createTenantKnex();
   let normalizedSelectorInput = selectorInput;
@@ -3100,6 +3153,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       knex,
       tenant,
       selectorInput: normalizedSelectorInput,
+      consolidateFixedBundles: options.consolidateFixedBundles !== false,
     });
     return {
       success: true,
@@ -3191,6 +3245,7 @@ export const previewInvoice = withAuth(async (
       tenant,
       selectorInput,
       billingProfileId: await getCycleBillingProfileId(knex, tenant, billing_cycle_id, client_id),
+      consolidateFixedBundles: true,
     });
     return {
       success: true,
@@ -3433,93 +3488,6 @@ export const createSeparateProjectProductInvoices = withAuth(async (
       invoices.push({ invoice_id: invoice.invoice_id, currency_code: currencyCode, product_count: rows.length });
     }
     return { invoices };
-  });
-});
-
-export const generateInvoice = withAuth(async (
-  user,
-  { tenant },
-  billing_cycle_id: string,
-  options: IInvoiceGenerationRequestOptions = {}
-): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
-  return withInvoiceGenerationActionErrors(async () => {
-  // Get billing cycle details
-  const { knex } = await createTenantKnex();
-
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Check permissions within transaction
-    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
-      throw new Error('Permission denied: Cannot generate invoices');
-    }
-
-    return await tenantDb(trx, tenant).table('client_billing_cycles')
-      .where({
-        billing_cycle_id,
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
-    throw new Error('Billing cycle not found');
-  }
-
-  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
-
-  let cycleStart: ISO8601String;
-  let cycleEnd: ISO8601String;
-
-  if (period_start_date && period_end_date) {
-    cycleStart = normalizeRecurringWindowDate(period_start_date);
-    cycleEnd = normalizeRecurringWindowDate(period_end_date);
-  } else if (effective_date) {
-    cycleStart = normalizeRecurringWindowDate(effective_date);
-    cycleEnd = normalizeRecurringWindowDate(
-      unwrapBillingHelperResult(await getNextBillingDate(client_id, cycleStart)),
-    );
-  } else {
-    throw new Error('Invalid billing cycle dates');
-  }
-
-  // Resolve every materialized obligation in this cycle window (multiple
-  // client-cadence schedules and same-window contract-cadence lines), matching
-  // how grouped recurring generation invoices a window. Resolving only the
-  // first schedule key would silently drop the remaining contract lines.
-  const selectorInputs = await resolveCanonicalSelectorInputsForClientWindow({
-    knex,
-    tenant,
-    clientId: client_id,
-    windowStart: cycleStart,
-    windowEnd: cycleEnd,
-  });
-
-  let normalizedSelectorInputs: IRecurringDueSelectionInput[];
-  try {
-    normalizedSelectorInputs = await Promise.all(
-      selectorInputs.map((selectorInput) =>
-        normalizeRecurringSelectorInput({
-          knex,
-          tenant,
-          selectorInput,
-        }),
-      ),
-    );
-  } catch (error) {
-    throw withRecurringWindowErrorContext(
-      error instanceof Error
-        ? error
-        : new Error('An error occurred while validating the recurring execution window.'),
-      selectorInputs[0],
-    );
-  }
-
-  return generateInvoiceForNormalizedSelectionInputs({
-    user,
-    tenant,
-    knex,
-    normalizedSelectorInputs,
-    options,
-    bridgeMetadata: { billingCycleId: billing_cycle_id },
-  });
   });
 });
 
@@ -3782,7 +3750,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       if (computed.overageCents > 0 && !params.options?.allowPoOverage) {
         const currencyCode = billingResult.currency_code || 'USD';
         console.warn(
-          `[generateInvoice] PO overage detected (client_contract_id=${clientContractId}). ` +
+          `[generateInvoiceForNormalizedSelectionInputs] PO overage detected (client_contract_id=${clientContractId}). ` +
             `Over by ${formatCurrencyFromMinorUnits(computed.overageCents, 'en-US', currencyCode)}; continuing because PO limits are advisory.`,
         );
       }

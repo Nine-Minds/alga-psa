@@ -9,7 +9,6 @@
     "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
     "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
   },
-
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/assigned_to/type",
@@ -40,7 +39,6 @@
     "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/priority_id/type",
     "reason": "Mobile 2.0 task detail offers a clearable priority, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
   },
-
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/category_id/type",
@@ -691,7 +689,6 @@
     "pointer": "/components/schemas/ProjectTaskCommentResource/properties/author/properties/user_id",
     "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
   },
-
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1quotes~1{id}/put/requestBody/content/application~1json/schema/$ref",
@@ -791,5 +788,210 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/CreateQuoteBodyV1/required",
     "reason": "alga-2026-0002902: `title` has always been required by createQuoteApiSchema (z.string().trim().min(1).max(500)) and POST /api/v1/quotes has always answered 400 without it. The old hand-written body omitted it from required, so this records the runtime rule the spec was missing rather than a new constraint."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetCreateRequest/properties/asset_tag/minLength",
+    "reason": "PR 4210: omitted or empty asset tags request automatic tenant-wide numbering. Removing the nonempty constraint expands accepted requests; existing explicit tags remain supported."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetCreateRequest/properties/asset_tag/minLength",
+    "reason": "PR 4210: omitted or empty asset tags request automatic tenant-wide numbering. Removing the nonempty constraint expands accepted requests; existing explicit tags remain supported."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/subtotal",
+    "reason": "security-review PR #3985 (InvoiceService.create): header totals are derived from the invoice items by the billing engine; a posted subtotal is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/tax",
+    "reason": "security-review PR #3985 (InvoiceService.create): tax is computed from the items by the tax engine; a posted tax is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/total_amount",
+    "reason": "security-review PR #3985 (InvoiceService.create): total_amount is derived from the items; a posted value is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/status/enum",
+    "reason": "security-review PR #3985 (InvoiceService.create): invoices are always created as drafts; any other status is refused with 400 (lifecycle is owned by finalize/send/payment commands), so only 'draft' is documented."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/credit_applied",
+    "reason": "security-review PR #3985 (InvoiceService.create): credit is applied only through the credit command; a non-zero credit_applied on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_manual",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_manual is server-set provenance (duplicate / manual invoice); true on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_prepayment",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_prepayment is server-set provenance; true on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/subtotal",
+    "reason": "security-review PR #3985 (InvoiceService.create): header totals are derived from the invoice items by the billing engine; a posted subtotal is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/tax",
+    "reason": "security-review PR #3985 (InvoiceService.create): tax is computed from the items by the tax engine; a posted tax is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/total_amount",
+    "reason": "security-review PR #3985 (InvoiceService.create): total_amount is derived from the items; a posted value is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/status/enum",
+    "reason": "security-review PR #3985 (InvoiceService.create): invoices are always created as drafts; any other status is refused with 400 (lifecycle is owned by finalize/send/payment commands), so only 'draft' is documented."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/credit_applied",
+    "reason": "security-review PR #3985 (InvoiceService.create): credit is applied only through the credit command; a non-zero credit_applied on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_manual",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_manual is server-set provenance (duplicate / manual invoice); true on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_prepayment",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_prepayment is server-set provenance; true on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1TimeSheetSearchResponse/properties/data/items/properties/notes",
+    "reason": "The time-sheets.notes database column was retired after its values were migrated into time_sheet_notes history. Search returns actual time_sheets columns and searches note history through fields=note; it does not return a nonexistent notes column. The real-Postgres search regression test verifies both history search and the response shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1TimeSheetSearchResponse/properties/data/items/properties/notes",
+    "reason": "The time-sheets.notes database column was retired after its values were migrated into time_sheet_notes history. Search returns actual time_sheets columns and searches note history through fields=note; it does not return a nonexistent notes column. The real-Postgres search regression test verifies both history search and the response shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines~1{contractLineId}/delete/parameters",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the required contractLineId path parameter consumed by the existing detach route and controller; the URL cannot identify a line without it."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/required",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Require contract_name, billing_frequency and start_date as enforced by createContractSchema; start_date supports the client assignment created atomically with the contract. The compatibility checker reports required-field additions at the containing required array."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/properties/end_date/type",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the nullable end_date accepted by createContractSchema and stored as an open-ended client assignment; this expands the accepted input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines~1{contractLineId}/delete/parameters",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the required contractLineId path parameter consumed by the existing detach route and controller; the URL cannot identify a line without it."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/required",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Require contract_name, billing_frequency and start_date as enforced by createContractSchema; start_date supports the client assignment created atomically with the contract. The compatibility checker reports required-field additions at the containing required array."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/properties/end_date/type",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the nullable end_date accepted by createContractSchema and stored as an open-ended client assignment; this expands the accepted input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1contracts/post/responses/422/content/application~1json/schema",
+    "reason": "PR #3774 / alga-2026-0002744: contract business-rule responses reuse QuotesContractsApiErrorV1. This replaces the inline service-principal error schema with an identical referenced schema; the EE act-as error descriptions and accepted response shape are preserved."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines/post/responses/422/content/application~1json/schema",
+    "reason": "PR #3774 / alga-2026-0002744: contract business-rule responses reuse QuotesContractsApiErrorV1. This replaces the inline service-principal error schema with an identical referenced schema; the EE act-as error descriptions and accepted response shape are preserved."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines~1{contractLineId}/delete/responses/422/content/application~1json/schema",
+    "reason": "PR #3774 / alga-2026-0002744: contract business-rule responses reuse QuotesContractsApiErrorV1. This replaces the inline service-principal error schema with an identical referenced schema; the EE act-as error descriptions and accepted response shape are preserved."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/operation/enum",
+    "reason": "PR #4076 repair: bulk send is removed because canonical recipient delivery is unimplemented; mark_paid was never supported by the dispatcher. Bulk invoice operations expose only finalize and cancel."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/operation/enum",
+    "reason": "PR #4076 repair: bulk send is removed because canonical recipient delivery is unimplemented; mark_paid was never supported by the dispatcher. Bulk invoice operations expose only finalize and cancel."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/options",
+    "reason": "PR #4076 repair: align the generated OpenAPI body with runtime validation, which accepts optional parameters rather than options."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/options",
+    "reason": "PR #4076 repair: align the generated OpenAPI body with runtime validation, which accepts optional parameters rather than options."
   }
 ]

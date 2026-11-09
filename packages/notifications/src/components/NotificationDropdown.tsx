@@ -107,9 +107,9 @@ export function NotificationDropdown({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[rgb(var(--color-border-200))]">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">Notifications</h3>
+          <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{t('notifications.title', { defaultValue: 'Notifications' })}</h3>
           {!isConnected && (
-            <span className="flex items-center gap-1 text-xs text-yellow-600" title="Reconnecting to server...">
+            <span className="flex items-center gap-1 text-xs text-yellow-600" title={t('notifications.reconnectingToServer', { defaultValue: 'Reconnecting to server...' })}>
               <WifiOff className="w-3 h-3" />
             </span>
           )}
@@ -119,7 +119,7 @@ export function NotificationDropdown({
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="p-1 text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))] disabled:opacity-50"
-            title="Refresh"
+            title={t('notifications.refresh', { defaultValue: 'Refresh' })}
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -128,14 +128,14 @@ export function NotificationDropdown({
               onClick={handleMarkAllAsRead}
               disabled={isMarkingAllAsRead}
               className="flex items-center gap-1 px-2 py-1 text-xs text-main-600 hover:text-main-700 disabled:opacity-50"
-              title="Mark all as read"
+              title={t('notifications.markAllAsRead', { defaultValue: 'Mark all as read' })}
             >
               {isMarkingAllAsRead ? (
                 <Spinner size="sm" className="scale-75" />
               ) : (
                 <CheckCheck className="w-3 h-3" />
               )}
-              <span>Mark all read</span>
+              <span>{t('notifications.markAllRead', { defaultValue: 'Mark all read' })}</span>
             </button>
           )}
         </div>
@@ -166,8 +166,8 @@ export function NotificationDropdown({
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <BellIcon className="w-12 h-12 text-[rgb(var(--color-text-300))] mb-3" />
-            <p className="text-sm text-[rgb(var(--color-text-500))] font-medium">No notifications</p>
-            <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">You're all caught up!</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))] font-medium">{t('notifications.emptyTitle', { defaultValue: 'No notifications' })}</p>
+            <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">{t('notifications.emptyDescription', { defaultValue: "You're all caught up!" })}</p>
           </div>
         ) : (
           (() => {

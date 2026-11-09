@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -121,7 +122,7 @@ async function seedFixture(): Promise<Fixture> {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
-  await table(tenantId, 'assets').insert([
+  await insertTestAssets(db, [
     baseAsset(assetId, 'ASSET-PRIMARY', 'Front desk workstation'),
     baseAsset(relatedAssetId, 'ASSET-DOCK', 'Docking station'),
   ]);
@@ -163,6 +164,15 @@ async function seedFixture(): Promise<Fixture> {
   });
 
   return { tenantId, userId, clientId, assetId, relatedAssetId, scheduleId, occurrenceId };
+}
+
+function serviceContext(fx: Fixture, userId = fx.userId) {
+  return {
+    tenant: fx.tenantId,
+    userId,
+    user: { user_id: userId, user_type: 'internal' },
+    db,
+  } as any;
 }
 
 async function cleanupTenant(tenant: string): Promise<void> {
@@ -229,7 +239,7 @@ describe('AssetService REST repairs (integration)', () => {
   it('creates a UI-compatible schedule, notification, and occurrence using the explicit next due date', async () => {
     const fx = await seedFixture();
     const service = new AssetService();
-    const ctx = { tenant: fx.tenantId, userId: fx.userId, db };
+    const ctx = serviceContext(fx);
     const data = createMaintenanceScheduleSchema.parse({
       schedule_name: 'Biannual server maintenance',
       description: 'Inspect backups',
@@ -277,7 +287,7 @@ describe('AssetService REST repairs (integration)', () => {
   it('updates the stored columns without implicit rescheduling and keeps occurrence state in sync', async () => {
     const fx = await seedFixture();
     const service = new AssetService();
-    const ctx = { tenant: fx.tenantId, userId: fx.userId, db };
+    const ctx = serviceContext(fx);
     const before = await table(fx.tenantId, 'asset_maintenance_schedules').where({ schedule_id: fx.scheduleId }).first();
     const updated = await service.updateMaintenanceSchedule(fx.scheduleId,
       updateMaintenanceScheduleSchema.parse({ description: 'Revised', frequency_interval: 6 }), ctx);
@@ -298,7 +308,7 @@ describe('AssetService REST repairs (integration)', () => {
   it('rejects an invalid creator without leaving a schedule or related rows', async () => {
     const fx = await seedFixture();
     const service = new AssetService();
-    const ctx = { tenant: fx.tenantId, userId: randomUUID(), db };
+    const ctx = serviceContext(fx, randomUUID());
     const data = createMaintenanceScheduleSchema.parse({
       schedule_name: 'Atomic schedule', maintenance_type: 'preventive',
       frequency: 'monthly', frequency_interval: 1, schedule_config: {},
@@ -310,7 +320,7 @@ describe('AssetService REST repairs (integration)', () => {
 
   it('hydrates an asset with client, relationships and schedules without a schema-drift 500', async () => {
     const fx = await seedFixture();
-    const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
+    const ctx = serviceContext(fx);
     const service = new AssetService();
 
     const detail = await service.getWithDetails(fx.assetId, ctx);
@@ -333,7 +343,7 @@ describe('AssetService REST repairs (integration)', () => {
 
   it('lists asset documents from real columns: upload name and time, with in-app fallbacks', async () => {
     const fx = await seedFixture();
-    const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
+    const ctx = serviceContext(fx);
     const service = new AssetService();
 
     const fileId = randomUUID();
@@ -396,7 +406,7 @@ describe('AssetService REST repairs (integration)', () => {
 
   it('records maintenance into history, advances the schedule, and rejects a repeat for the same occurrence', async () => {
     const fx = await seedFixture();
-    const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
+    const ctx = serviceContext(fx);
     const service = new AssetService();
 
     const before = await table(fx.tenantId, 'asset_maintenance_schedules').where({ schedule_id: fx.scheduleId }).first();
@@ -433,7 +443,7 @@ describe('AssetService REST repairs (integration)', () => {
 
   it('rejects a schedule used with another asset and leaves paused schedules inert', async () => {
     const fx = await seedFixture();
-    const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
+    const ctx = serviceContext(fx);
     const service = new AssetService();
     await expect(service.recordMaintenance(fx.relatedAssetId, { schedule_id: fx.scheduleId, maintenance_type: 'preventive' } as any, ctx)).rejects.toThrow();
     await table(fx.tenantId, 'asset_maintenance_schedules').where({ schedule_id: fx.scheduleId }).update({ is_active: false });
@@ -535,7 +545,7 @@ describe('AssetService REST repairs (integration)', () => {
 
   it('resolves a scanned serial to its asset via inventory lookup', async () => {
     const fx = await seedFixture();
-    const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
+    const ctx = serviceContext(fx);
     const result = await new InventoryService().lookup('ASSET-PRIMARY', ctx, async (_trx, assets) => assets);
     expect(result.type).toBe('asset');
     if (result.type === 'asset') {

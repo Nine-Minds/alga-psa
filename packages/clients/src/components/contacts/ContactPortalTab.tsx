@@ -259,15 +259,15 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         return;
       }
       toast({
-        title: 'Success',
-        description: 'Contact visibility assignment updated'
+        title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+        description: t('portal.visibilityGroups.assignmentUpdated', { defaultValue: 'Contact visibility assignment updated' })
       });
     } catch (error) {
       setSelectedVisibilityGroupId(previousValue);
       console.error('Error assigning visibility group:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to assign visibility group',
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('portal.visibilityGroups.assignFailed', { defaultValue: 'Failed to assign visibility group' }),
         variant: 'destructive'
       });
     } finally {
@@ -287,8 +287,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     const trimmedName = visibilityGroupName.trim();
     if (!trimmedName) {
       toast({
-        title: 'Validation Error',
-        description: 'Visibility group name is required',
+        title: t('contactPortalTab.toast.validationErrorTitle', { defaultValue: 'Validation Error' }),
+        description: t('portal.visibilityGroups.nameRequired', { defaultValue: 'Visibility group name is required' }),
         variant: 'destructive'
       });
       return;
@@ -309,7 +309,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           showReturnedActionError(result);
           return;
         }
-        toast({ title: 'Success', description: 'Visibility group updated' });
+        toast({ title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }), description: t('portal.visibilityGroups.updated', { defaultValue: 'Visibility group updated' }) });
       } else {
         const result = await createClientPortalVisibilityGroupForContact(contact.contact_name_id, {
           name: trimmedName,
@@ -323,7 +323,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           showReturnedActionError(result);
           return;
         }
-        toast({ title: 'Success', description: 'Visibility group created' });
+        toast({ title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }), description: t('portal.visibilityGroups.created', { defaultValue: 'Visibility group created' }) });
       }
 
       resetVisibilityGroupForm();
@@ -336,8 +336,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     } catch (error) {
       console.error('Failed to save visibility group:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to save visibility group',
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('portal.visibilityGroups.saveFailed', { defaultValue: 'Failed to save visibility group' }),
         variant: 'destructive'
       });
     } finally {
@@ -362,15 +362,15 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     } catch (error) {
       console.error('Failed to load visibility group:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load visibility group for editing',
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('portal.visibilityGroups.loadFailed', { defaultValue: 'Failed to load visibility group for editing' }),
         variant: 'destructive'
       });
     }
   };
 
   const handleDeleteVisibilityGroup = async (groupId: string) => {
-    if (!confirm('Delete this visibility group?')) {
+    if (!confirm(t('portal.visibilityGroups.deleteConfirm', { defaultValue: 'Delete this visibility group?' }))) {
       return;
     }
 
@@ -390,12 +390,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         setVisibilityGroups(updatedGroups || []);
       }
-      toast({ title: 'Success', description: 'Visibility group deleted' });
+      toast({ title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }), description: t('portal.visibilityGroups.deleted', { defaultValue: 'Visibility group deleted' }) });
     } catch (error) {
       console.error('Failed to delete visibility group:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete visibility group',
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('portal.visibilityGroups.deleteFailed', { defaultValue: 'Failed to delete visibility group' }),
         variant: 'destructive'
       });
     } finally {
@@ -582,10 +582,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   }, [selectedGroupIsContactScoped, contact.client_id, contact.contact_name_id, contact.manager_contact_id]);
 
   const visibilityGroupSelectOptions = [
-    { value: FULL_ACCESS_VALUE, label: 'Full access' },
+    { value: FULL_ACCESS_VALUE, label: t('portal.visibilityGroups.fullAccess', { defaultValue: 'Full access' }) },
     ...visibilityGroups.map((group) => ({
       value: group.group_id,
-      label: `${group.name} (${group.board_count} boards)`
+      label: `${group.name} (${t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })})`
     }))
   ];
 
@@ -987,7 +987,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           <div className="border-t pt-6">
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-medium">Ticket visibility group</Label>
+                <Label className="text-sm font-medium">{t('portal.visibilityGroups.assignmentLabel', { defaultValue: 'Ticket visibility group' })}</Label>
                 <p className="text-sm text-muted-foreground">
                   {t('portal.visibilityGroups.assignmentHelp')}
                 </p>
@@ -998,7 +998,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 onValueChange={handleVisibilityGroupSelect}
                 disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                 options={visibilityGroupSelectOptions}
-                placeholder="Select visibility assignment"
+                placeholder={t('portal.visibilityGroups.assignmentPlaceholder', { defaultValue: 'Select visibility assignment' })}
               />
               {selectedGroupIsContactScoped && !isPortalAdmin && reportCount > 0 && (
                 <p className="text-sm text-muted-foreground" id="visibility-group-report-count">
@@ -1010,37 +1010,37 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               )}
 
               <div>
-                <Label className="text-sm font-medium">Visibility groups for client</Label>
+                <Label className="text-sm font-medium">{t('portal.visibilityGroups.manageLabel', { defaultValue: 'Visibility groups for client' })}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Create or edit groups of boards and use them for contact assignments.
+                  {t('portal.visibilityGroups.manageHelp', { defaultValue: 'Create or edit groups of boards and use them for contact assignments.' })}
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label htmlFor="visibility-group-name">Group name</Label>
+                  <Label htmlFor="visibility-group-name">{t('portal.visibilityGroups.nameLabel', { defaultValue: 'Group name' })}</Label>
                   <Input
                     id="visibility-group-name"
                     value={visibilityGroupName}
                     onChange={(event) => setVisibilityGroupName(event.target.value)}
-                    placeholder="Group name"
+                    placeholder={t('portal.visibilityGroups.nameLabel', { defaultValue: 'Group name' })}
                     disabled={isUpdating}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="visibility-group-description">Description</Label>
+                  <Label htmlFor="visibility-group-description">{t('portal.visibilityGroups.descriptionLabel', { defaultValue: 'Description' })}</Label>
                   <TextArea
                     id="visibility-group-description"
                     value={visibilityGroupDescription}
                     onChange={(event) => setVisibilityGroupDescription(event.target.value)}
-                    placeholder="Optional description"
+                    placeholder={t('portal.visibilityGroups.descriptionPlaceholder', { defaultValue: 'Optional description' })}
                     rows={3}
                     disabled={isUpdating}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Boards</Label>
+                  <Label>{t('portal.visibilityGroups.boardsLabel', { defaultValue: 'Boards' })}</Label>
                   {visibilityBoards.length > 0 ? (
                     <div className="space-y-2 rounded-lg border p-3 max-h-56 overflow-y-auto">
                       {visibilityBoards.map((board) => {
@@ -1066,7 +1066,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No boards available</p>
+                    <p className="text-sm text-muted-foreground">{t('portal.visibilityGroups.noBoards', { defaultValue: 'No boards available' })}</p>
                   )}
                 </div>
 
@@ -1118,7 +1118,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       onClick={resetVisibilityGroupForm}
                       disabled={isUpdating}
                     >
-                      Cancel
+                      {t('contactPortalTab.actions.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                   )}
                   <Button
@@ -1127,7 +1127,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     onClick={handleSaveVisibilityGroup}
                     disabled={isUpdating || !visibilityGroupName.trim()}
                   >
-                    {editingVisibilityGroupId ? 'Update group' : 'Create group'}
+                    {editingVisibilityGroupId
+                      ? t('portal.visibilityGroups.updateGroup', { defaultValue: 'Update group' })
+                      : t('portal.visibilityGroups.createGroup', { defaultValue: 'Create group' })}
                   </Button>
                 </div>
               </div>
@@ -1160,7 +1162,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                           onClick={() => handleEditVisibilityGroup(group.group_id)}
                           disabled={isUpdating}
                         >
-                          Edit
+                          {t('contactPortalTab.actions.edit', { defaultValue: 'Edit' })}
                         </Button>
                         <Button
                           id={`visibility-group-delete-${group.group_id}`}
@@ -1170,14 +1172,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                           disabled={isUpdating}
                           className="text-red-600"
                         >
-                          Delete
+                          {t('contactPortalTab.actions.delete', { defaultValue: 'Delete' })}
                         </Button>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">No visibility groups yet</p>
+                <p className="text-sm text-muted-foreground">{t('portal.visibilityGroups.empty', { defaultValue: 'No visibility groups yet' })}</p>
               )}
             </div>
           </div>

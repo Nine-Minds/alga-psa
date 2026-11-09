@@ -17,7 +17,7 @@ vi.mock('@alga-psa/db', () => ({
         first: () => Promise.resolve(state.existingComment),
         update: (data: Record<string, unknown>) => {
           state.updatePayloads.push(data);
-          return Promise.resolve(1);
+          return { returning: () => Promise.resolve([{ ...state.existingComment, ...data }]) };
         },
       };
       return builder;
@@ -48,7 +48,7 @@ describe('Comment.update view-only fields', () => {
   });
 
   it('never persists bundle_mirror_source even when it is smuggled into the payload', async () => {
-    await Comment.update(
+    const updated = await Comment.update(
       {} as never,
       'tenant-1',
       'comment-1',
@@ -62,5 +62,7 @@ describe('Comment.update view-only fields', () => {
     expect(state.updatePayloads).toHaveLength(1);
     expect(state.updatePayloads[0]).not.toHaveProperty('bundle_mirror_source');
     expect(state.updatePayloads[0].note).toBe('edited');
+    expect(updated.note).toBe('edited');
+    expect(updated).not.toHaveProperty('bundle_mirror_source');
   });
 });

@@ -99,15 +99,20 @@ vi.mock('@alga-psa/shared/lib/ticketCommentAttachments', () => ({
   persistCommentPublication: vi.fn(async () => undefined),
   reconcileCommentAttachments: vi.fn(async () => undefined),
 }));
-vi.mock('../lib/clientPortalVisibility.server', () => ({
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: async (_trx: unknown, _tenant: string, contactId: string) => {
     const ctx = visibilityByContact[contactId];
     if (!ctx) throw new Error('visibility unresolved');
     return ctx;
   },
 }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+  authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: [],
+  })),
 }));
 
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';

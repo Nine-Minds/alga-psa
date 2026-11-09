@@ -21,7 +21,8 @@ export interface AssetRelationship {
 }
 
 // RMM Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
+// LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 export interface AssetRemoteAccessLink {
   link_id: string;
@@ -500,7 +501,10 @@ export interface CreateAssetRequest {
    */
   asset_type: string;
   client_id: string;
-  asset_tag: string;
+  /** Omit or leave blank to allocate from the tenant asset sequence. */
+  asset_tag?: string;
+  /** Existing durable label reservation to commit to this new asset. */
+  asset_number_reservation_id?: string;
   name: string;
   status: string;
   /** Who owns the device. Defaults to 'client' server-side. */

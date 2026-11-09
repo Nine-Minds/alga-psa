@@ -35,6 +35,9 @@ export default defineConfig({
       // covers the stale-source comparison, not only the server-wide glob.
       'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
+      'src/services/quoteAccessLinks.test.ts',
+      'src/services/quoteAccessLinks.revoke.test.ts',
+      'src/services/publicQuoteView.test.ts',
       'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
@@ -98,6 +101,7 @@ export default defineConfig({
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
       'src/lib/adapters/salesOrderAdapters.test.ts',
+      'src/lib/adapters/quoteAdapters.test.ts',
       'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
@@ -106,10 +110,21 @@ export default defineConfig({
       // alongside the server-wide glob.
       'src/lib/quoteTermsContent.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.childRows.test.ts',
+      'src/components/invoice-designer/inspector/widgets/BundleComponentRowsWidget.test.tsx',
+      'src/components/invoice-designer/preview/sampleScenarios.bundles.test.ts',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
+      'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/childRows.test.ts',
+      'src/lib/invoice-template-ast/bundleChildRows.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.bundleQuantities.test.ts',
+      'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
+      'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
       // Invoice discount render model (alga0002295): unformatted-field behaviour,
@@ -128,6 +143,11 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      // PDF document rendering must exercise the isolated Chromium policy, and
+      // its existing print-settings tests must remain part of the package lane.
+      'src/services/pdfGenerationService.ssrf.test.ts',
+      'src/services/pdfGenerationService.printSettings.test.ts',
+      'src/services/pdfGenerationService.locale.test.ts',
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
@@ -214,6 +234,14 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/fileNames$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
+      },
+      {
+        find: /^@alga-psa\/core\/rendering\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/rendering')}/$1.ts`,
+      },
+      {
+        find: /^@alga-psa\/core\/net\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/net')}/$1.ts`,
       },
       {
         find: /^@alga-psa\/core\/logger$/,

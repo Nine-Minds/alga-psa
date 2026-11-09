@@ -25,6 +25,7 @@ import {
   deleteBundleRule,
   createAuthorizationBundle,
   ensureDraftBundleRevision,
+  ensurePublishedBundleRule,
   listBundleRulesForRevision,
   listAuthorizationBundles,
   publishBundleRevision,
@@ -225,9 +226,22 @@ export const seedStarterAuthorizationBundlesAction = withAuth(
       for (const starter of STARTER_AUTHORIZATION_BUNDLES) {
         const existing = await tenantScopedTable(trx, tenant, 'authorization_bundles')
           .where('bundle_key', starter.key)
-          .first('bundle_id');
+          .first<{ bundle_id: string; status: 'active' | 'archived' }>('bundle_id', 'status');
 
         if (existing) {
+          if (starter.key === 'restricted-asset-operator' && existing.status === 'active') {
+            const deleteRule = starter.rules.find((rule) => rule.resourceType === 'asset' && rule.action === 'delete');
+            if (deleteRule) {
+              await ensurePublishedBundleRule(trx, {
+                tenant,
+                bundleId: existing.bundle_id,
+                ...deleteRule,
+                constraintKey: deleteRule.constraintKey ?? null,
+                config: deleteRule.config ?? {},
+                actorUserId: user.user_id,
+              });
+            }
+          }
           continue;
         }
 

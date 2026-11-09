@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Propiedad del cliente",
       "msp": "Propiedad del MSP"
+    },
+    "create": {
+      "success": "Activo {{tag}} creado",
+      "autoTag": "Asignar la siguiente etiqueta automática",
+      "preview": "Vista previa de la siguiente etiqueta: {{tag}} (la vista previa no reserva un número)",
+      "selectClient": "Seleccione un cliente para ver la vista previa",
+      "addAnother": "Guardar y añadir otro",
+      "submit": "Crear activo"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Proveedor",
       "purchaseCost": "Coste de compra",
       "orderNumber": "N.º de pedido",
-      "ownership": "Propiedad"
+      "ownership": "Propiedad",
+      "autoAssetTag": "Asignar automáticamente",
+      "assetTagPreviewLoading": "Seleccione un cliente para ver la siguiente etiqueta",
+      "previewNotReserved": "Solo vista previa; se asigna al guardar"
     },
     "placeholders": {
       "workstationOsType": "por ejemplo, Windows, macOS, Linux",
@@ -1447,7 +1458,182 @@
   "maintenanceCommandCenter": {
     "title": "Centro de control de mantenimiento",
     "description": "La próxima fecha de vencimiento se calcula a partir de la fecha de finalización real.",
-    "assetsLink": "Activos"
+    "assetsLink": "Activos",
+    "notRecorded": "Sin registrar",
+    "system": "Sistema",
+    "checklist": {
+      "complete": "Completo",
+      "incomplete": "Incompleto"
+    },
+    "weekdays": {
+      "0": "dom.",
+      "1": "lun.",
+      "2": "mar.",
+      "3": "mié.",
+      "4": "jue.",
+      "5": "vie.",
+      "6": "sáb."
+    },
+    "cadence": {
+      "custom": "Personalizado",
+      "customSchedule": "Programación personalizada",
+      "everyUnit": "Cada {{unit}}",
+      "everyCountUnit": "Cada {{count}} {{unit}}",
+      "onDays": "{{base}} los {{days}}",
+      "onDatesOfMonth": "{{base}} los días {{dates}}",
+      "frequency": {
+        "daily": "Diaria",
+        "weekly": "Semanal",
+        "monthly": "Mensual",
+        "quarterly": "Trimestral",
+        "yearly": "Anual"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} d de atraso",
+      "dueToday": "vence hoy",
+      "inDays": "en {{count}} d"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "refresh": "Actualizar",
+      "newPlan": "Nuevo plan de mantenimiento",
+      "skip": "Omitir",
+      "skipTooltip": "Omitir con un motivo obligatorio — el plan avanza a su próxima ocurrencia",
+      "complete": "Completar mantenimiento",
+      "createTicket": "Crear ticket",
+      "openTicket": "Abrir ticket ↗",
+      "pausePlan": "Pausar plan"
+    },
+    "assetPicker": {
+      "title": "Seleccione un activo",
+      "searchPlaceholder": "Buscar por nombre, etiqueta o número de serie",
+      "loading": "Cargando activos…",
+      "loadFailed": "No se pudieron cargar los activos.",
+      "empty": "No se encontraron activos.",
+      "showingFirst": "Se muestran los primeros {{shown}} de {{total}} — refine su búsqueda."
+    },
+    "kpi": {
+      "overdue": "Vencidas",
+      "dueToday": "Vencen hoy",
+      "upcoming7d": "Próximos 7 d",
+      "openTickets": "Tickets abiertos",
+      "compliance90d": "Cumplimiento en 90 d",
+      "clickToFilter": "haga clic para filtrar",
+      "allClear": "todo al día",
+      "quietWeek": "semana tranquila por delante",
+      "linkedToOccurrences": "vinculados a ocurrencias",
+      "onTimeCompletion": "finalización a tiempo"
+    },
+    "tabs": {
+      "queue": "Cola de trabajo",
+      "plans": "Cola de planes",
+      "history": "Historial"
+    },
+    "filters": {
+      "searchPlaceholder": "Buscar planes, activos o clientes",
+      "actionable": "Por atender",
+      "allStatuses": "Todos los estados",
+      "completed": "Completadas",
+      "skipped": "Omitidas",
+      "button": "Filtros",
+      "allClients": "Todos los clientes",
+      "allAssetTypes": "Todos los tipos de activos",
+      "allPlanTypes": "Todos los tipos de planes",
+      "due": "Vencimiento",
+      "clearAll": "Limpiar todo",
+      "done": "Listo",
+      "clientChip": "Cliente"
+    },
+    "viewMode": {
+      "list": "Lista",
+      "calendar": "Calendario"
+    },
+    "queue": {
+      "actionableTitle": "Ocurrencias por atender",
+      "plansTitle": "Cola de planes activos (con ocurrencias)",
+      "loading": "Cargando mantenimiento…",
+      "empty": "Ninguna ocurrencia de mantenimiento coincide con estos filtros.",
+      "emptyFiltered": "Ninguna ocurrencia de mantenimiento coincide con estos filtros. Quite un filtro o amplíe el rango de fechas de vencimiento.",
+      "emptyHistory": "Las ocurrencias completadas y omitidas aparecerán aquí una vez que se cierre el mantenimiento.",
+      "emptyPlans": "Las ocurrencias abiertas de los planes aparecerán aquí a medida que la programación genere trabajo.",
+      "clearBeyond": "No hay más ocurrencias en la cola aparte de lo que se muestra ({{count}}) — amplíe el rango de vencimiento o revise la cola de planes.",
+      "allCaughtUp": "Todo al día",
+      "nextDueIn": "— próximo vencimiento en {{count}} d",
+      "shownCount": "Mostradas: {{shown}} · abiertas: {{open}} ·",
+      "inHistory": "{{count}} en el historial",
+      "itemCount_one": "· {{count}} elemento",
+      "itemCount_other": "· {{count}} elementos",
+      "overdueCount": "{{count}} con atraso",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} en resumen",
+      "overdue": "vencidas",
+      "today": "hoy",
+      "upcoming": "próximas"
+    },
+    "calendar": {
+      "dueCount": "{{count}} con vencimiento",
+      "today": "Hoy",
+      "moreCount": "+{{count}} más",
+      "legend": "Leyenda",
+      "scheduled": "Programadas"
+    },
+    "fields": {
+      "asset": "Activo",
+      "type": "Tipo",
+      "cadence": "Frecuencia",
+      "nextDue": "Próximo vencimiento",
+      "lastDone": "Última realización",
+      "assignee": "Responsable",
+      "createdBy": "Creado por",
+      "linkedTicket": "Ticket vinculado"
+    },
+    "detail": {
+      "noSelection": "Ninguna ocurrencia seleccionada",
+      "noSelectionHint": "Seleccione una ocurrencia de la cola para ver su activo, plan, ticket vinculado y acciones de ejecución — o limpie los filtros para ver más trabajo.",
+      "unassignedClient": "Cliente sin asignar",
+      "dueSuffix": "· vence el {{date}}",
+      "nextDueTooltip": "El próximo vencimiento se calcula a partir de la fecha real de finalización.",
+      "never": "Nunca",
+      "unassigned": "Sin asignar",
+      "assignViaTicket": "Asignar mediante un ticket",
+      "ticketClosed": "Cerrado",
+      "ticketOpen": "Abierto",
+      "noTicketYet": "Aún ninguno",
+      "execution": "Ejecución",
+      "noChecklistPrefix": "Este plan no tiene una lista de verificación —",
+      "addStepsLink": "agregue pasos en el activo",
+      "noChecklistSuffix": "para guiar a los técnicos.",
+      "timeline": "Cronología"
+    },
+    "timeline": {
+      "created": "Ocurrencia creada",
+      "ticketLinked": "Ticket vinculado — {{ticket}}",
+      "dueRepeats": "Vencimiento — repetición {{cadence}}",
+      "completedBy": "Completada por {{name}}{{notes}}",
+      "skippedBy": "Omitida por {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Evidencia de finalización",
+      "performed": "Realizado:",
+      "performedBy": "Realizado por:",
+      "notes": "Notas:",
+      "checklist": "Lista de verificación:",
+      "skipTitle": "Evidencia de omisión",
+      "reason": "Motivo:",
+      "closedBy": "Cerrado por:",
+      "closed": "Cerrado:"
+    },
+    "skip": {
+      "title": "Omitir mantenimiento",
+      "reason": "Motivo"
+    },
+    "ticket": {
+      "title": "Mantenimiento: {{plan}}",
+      "description": "Mantenimiento de tipo {{type}} con vencimiento el {{date}}. Ocurrencia: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
@@ -1776,6 +1962,7 @@
       "updateAssets": "Permiso denegado: no se pueden actualizar los activos"
     },
     "asset": {
+      "tagAlreadyExists": "Esta etiqueta de activo ya está en uso o reservada. Escanéela para encontrar el activo existente o introduzca otra etiqueta.",
       "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "clientNotFound": "No se encontró el cliente. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "maintenanceNotFound": "No se encontró el plan de mantenimiento. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -2146,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Escanear etiqueta de activo",
+    "input": "Escanear o introducir una etiqueta",
+    "loading": "Buscando…",
+    "find": "Buscar activo",
+    "ambiguous": "Más de un activo visible tiene esta etiqueta. Pida a un administrador que resuelva las etiquetas duplicadas.",
+    "notFound": "Ningún activo visible coincide exactamente con esta etiqueta.",
+    "failed": "No se pudo buscar esta etiqueta. Compruebe sus permisos y vuelva a intentarlo."
+  },
+  "fullIntake": {
+    "title": "Añadir activo",
+    "description": "Elija un número del inquilino o conserve una etiqueta ya impresa.",
+    "back": "Volver a activos"
+  },
+  "labelFirstIntake": {
+    "start": "Recepción con etiqueta previa",
+    "title": "Iniciar recepción con etiqueta previa",
+    "help": "Cree un registro permanente del activo con los datos mínimos e imprima dos copias de su etiqueta. Escanee cualquiera de ellas más adelante para completar este mismo registro.",
+    "client": "Cliente",
+    "clientRequired": "Elija un cliente para continuar.",
+    "createFailed": "No se pudo crear el registro de recepción.",
+    "name": "Descripción breve (opcional)",
+    "creating": "Creando…",
+    "createPrint": "Crear e imprimir el par"
   }
 }

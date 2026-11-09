@@ -129,12 +129,15 @@ const quoteApiBaseSchema = z.object({
  */
 export const createQuoteApiSchema = quoteApiBaseSchema.strict();
 
-/**
- * Derived from the non-strict base so PUT keeps tolerating extra keys; making
- * the update body strict is PR #4041's change, not this one's.
- */
-export const updateQuoteApiSchema = partialWithoutDefaults(quoteApiBaseSchema).extend({
-  status: quoteStatusSchema.optional().nullable(),
+// `status` is deliberately NOT an update field: every quote lifecycle transition goes through a
+// named command (submit-for-approval, approve, send, cancel) that owns its permission, lock and
+// audit row. `.strict()` makes a PUT carrying `status` fail with 400 instead of being silently
+// stripped (zod objects strip unknown keys by default), and QuoteService.update also rejects
+// `status` at runtime for callers that bypass the schema. (alga-2026-0003002)
+export const updateQuoteApiSchema = partialWithoutDefaults(createQuoteApiSchema).strict();
+
+export const cancelQuoteSchema = z.object({
+  reason: z.string().trim().max(2000).optional(),
 });
 
 // ============================================================================
@@ -200,6 +203,7 @@ export const reorderQuoteItemsSchema = z.object({
 
 export type CreateQuoteApi = z.infer<typeof createQuoteApiSchema>;
 export type UpdateQuoteApi = z.infer<typeof updateQuoteApiSchema>;
+export type CancelQuoteApi = z.infer<typeof cancelQuoteSchema>;
 export type CreateQuoteItemApi = z.infer<typeof createQuoteItemSchema>;
 export type UpdateQuoteItemApi = z.infer<typeof updateQuoteItemSchema>;
 export type QuoteListQuery = z.infer<typeof quoteListQuerySchema>;

@@ -16,6 +16,12 @@ import type { ApiContext } from '../middleware/apiMiddleware';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../middleware/apiErrors';
 import { getConnection } from '../../db/db';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { projectApiRecord } from './apiRecordProjection';
+
+export interface AssetReadAuthorization {
+  record: Record<string, any>;
+  redactedFields: string[];
+}
 
 export const ASSET_NOT_FOUND_MESSAGE = 'Asset not found';
 
@@ -41,7 +47,7 @@ export async function assertAssetRecordAccess(
   assetId: string,
   loader: AssetAuthorizationLoader,
   extraReadResources: Array<'ticket'> = [],
-): Promise<void> {
+): Promise<AssetReadAuthorization> {
   if (!context.user) {
     throw new UnauthorizedError('User context required');
   }
@@ -61,7 +67,7 @@ export async function assertAssetRecordAccess(
     throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
   }
 
-  const allowed = await authorizeApiResourceRead({
+  const decision = await authorizeApiResourceRead({
     knex,
     tenant: context.tenant,
     user: context.user,
@@ -69,8 +75,27 @@ export async function assertAssetRecordAccess(
     resource: 'asset',
     recordContext: record as any,
   });
-  if (!allowed) {
+  if (!decision.allowed) {
     throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
+  }
+  const projected = projectApiRecord('asset', record, decision.redactedFields);
+  if (!projected) throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
+  return { record: projected as Record<string, any>, redactedFields: decision.redactedFields };
+}
+
+export async function authorizeAssetRecordAccess(
+  context: ApiContext,
+  assetId: string,
+  loader: AssetAuthorizationLoader,
+  extraReadResources: Array<'ticket'> = [],
+): Promise<AssetReadAuthorization | NextResponse> {
+  try {
+    return await assertAssetRecordAccess(context, assetId, loader, extraReadResources);
+  } catch (error) {
+    if (error instanceof UnauthorizedError) return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+    if (error instanceof ForbiddenError) return createErrorResponse(error.message, 403, 'FORBIDDEN');
+    if (error instanceof NotFoundError) return assetNotFoundResponse();
+    throw error;
   }
 }
 
@@ -81,21 +106,8 @@ export async function guardAssetRead(
   loader: AssetAuthorizationLoader,
   extraReadResources: Array<'ticket'> = [],
 ): Promise<NextResponse | null> {
-  try {
-    await assertAssetRecordAccess(context, assetId, loader, extraReadResources);
-    return null;
-  } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
-    }
-    if (error instanceof ForbiddenError) {
-      return createErrorResponse(error.message, 403, 'FORBIDDEN');
-    }
-    if (error instanceof NotFoundError) {
-      return assetNotFoundResponse();
-    }
-    throw error;
-  }
+  const authorization = await authorizeAssetRecordAccess(context, assetId, loader, extraReadResources);
+  return 'record' in authorization ? null : authorization;
 }
 
 /**

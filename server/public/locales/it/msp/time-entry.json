@@ -288,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Caricamento dei commenti...",
     "placeholder": "Aggiungi un commento...",
     "responsePlaceholder": "Rispondere alle modifiche richieste...",
     "respondToChanges": "Rispondere ai cambiamenti"
@@ -363,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Tabella dei dati del foglio ore",
+    "deleteWorkItem": {
+      "title": "Elimina elemento di lavoro",
+      "message": "Questa operazione eliminerà definitivamente tutti gli inserimenti ore per questo elemento di lavoro. Questa azione non può essere annullata."
+    },
+    "bundled": "In bundle",
+    "bundledTo": "In bundle → {{ticketNumber}}",
+    "addEntryForCell": "Aggiungi un inserimento ore per {{workItem}} il {{date}}",
+    "saveTimeEntry": "Salva inserimento ore",
+    "weeklyTotal": "Totale settimanale",
     "empty": {
       "title": "Nessun elemento di lavoro nel foglio ore",
       "description": "Aggiungi un nuovo elemento di lavoro per iniziare a registrare il tempo per questa settimana.",
@@ -425,6 +436,9 @@
     "viewEntryDetails": "Visualizza i dettagli della voce"
   },
   "messages": {
+    "saveEntryFailed": "Impossibile salvare l’inserimento ore",
+    "updateTaskFailed": "Impossibile aggiornare l’attività",
+    "deleteWorkItemFailed": "Impossibile eliminare l’elemento di lavoro",
     "serviceRequired": "Seleziona un servizio prima di salvare gli inserimenti ore",
     "invalidService": "Servizio selezionato non valido",
     "taxRegionRequired": "Seleziona una regione fiscale per i servizi imponibili",
@@ -555,6 +569,11 @@
     },
     "activitySummary_few": "prima attività {{first}} · ultima {{last}} · {{count}} azioni ({{kinds}})",
     "activitySummary_many": "prima attività {{first}} · ultima {{last}} · {{count}} azioni ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Gestione dei fogli ore",
+    "delegationDisabledPrefix": "L’inserimento ore delegato è attualmente disabilitato. Abilita il flag di funzionalità",
+    "delegationDisabledSuffix": "per modificare i fogli ore degli altri utenti."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} tracciato in {{count}} segmento (in pausa {{paused}})",

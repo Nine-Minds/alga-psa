@@ -11,8 +11,15 @@ import { runWithTenant } from '@alga-psa/db';
 import { registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alga-psa/core';
 import { publishScheduledCommentHandler } from '@/lib/jobs/handlers/publishScheduledCommentHandler';
 import { addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { bulkUpdateTicketDueDate, bulkUpdateTicketPriority } from '@alga-psa/tickets/actions/ticketActions';
 import { createComment } from '@alga-psa/tickets/actions/comment-actions/commentActions';
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  addTicketResource,
+  canAddAsAdditionalAgent,
+  getTicketResources,
+  removeTicketResource,
+} from '@alga-psa/tickets/actions/ticketResourceActions';
 
 const eventMocks = vi.hoisted(() => {
   const publishEvent = vi.fn().mockResolvedValue(undefined);
@@ -46,6 +53,7 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: optimizedPathMocks.hasPermission }));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: optimizedPathMocks.maybeReopenBundleMasterFromChildReply,
+  propagateBundleMasterStatus: vi.fn(),
   revertBundlePropagationForChild: vi.fn(),
 }));
 
@@ -458,6 +466,201 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
       await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: siblingId }).del();
       await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: false });
       await tenantRows('client_portal_visibility_groups', fixture.tenantId).where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'client' });
+    }
+  });
+
+  it('authorizes client ticket-resource actions against the visible ticket record inside the action transaction', async () => {
+    const additionalAgentId = uuidv4();
+    const newlyAddedAgentId = uuidv4();
+    await db('users').insert({
+      tenant: fixture.tenantId, user_id: additionalAgentId, username: `resource-agent-${additionalAgentId}`,
+      hashed_password: 'not-used', email: `${additionalAgentId}@example.com`, user_type: 'internal', is_inactive: false,
+    });
+    await db('users').insert({
+      tenant: fixture.tenantId, user_id: newlyAddedAgentId, username: `resource-agent-${newlyAddedAgentId}`,
+      hashed_password: 'not-used', email: `${newlyAddedAgentId}@example.com`, user_type: 'internal', is_inactive: false,
+    });
+    await db('tickets').where({ tenant: fixture.tenantId, ticket_id: fixture.ticketVisibleId }).update({ assigned_to: fixture.internalUserId });
+    await db('tickets').where({ tenant: fixture.tenantId, ticket_id: fixture.ticketHiddenBoardId }).update({ assigned_to: fixture.internalUserId });
+    const [visibleAssignment] = await db('ticket_resources').insert({
+      tenant: fixture.tenantId, ticket_id: fixture.ticketVisibleId, assigned_to: fixture.internalUserId,
+      additional_user_id: additionalAgentId, role: 'support', assigned_at: new Date(),
+    }).returning('assignment_id');
+    const [hiddenAssignment] = await db('ticket_resources').insert({
+      tenant: fixture.tenantId, ticket_id: fixture.ticketHiddenBoardId, assigned_to: fixture.internalUserId,
+      additional_user_id: additionalAgentId, role: 'support', assigned_at: new Date(),
+    }).returning('assignment_id');
+
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
+    optimizedPathMocks.tenant = fixture.tenantId;
+    optimizedPathMocks.user = { ...clientA(), tenant: fixture.tenantId };
+    const beforeHiddenTicket = await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).first();
+    const beforeHiddenResources = await tenantRows('ticket_resources', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*');
+    const beforeHiddenActivity = await tenantRows('ticket_audit_logs', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*');
+    const emittedBefore = eventMocks.publishWorkflowEvent.mock.calls.length;
+
+    await runWithTenant(fixture.tenantId, async () => {
+      expect(await canAddAsAdditionalAgent(fixture.ticketVisibleId, newlyAddedAgentId)).toBe(true);
+      expect(await getTicketResources(fixture.ticketVisibleId)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ assignment_id: visibleAssignment.assignment_id }),
+      ]));
+      const added = await addTicketResource(fixture.ticketVisibleId, newlyAddedAgentId, 'support');
+      expect(added).toMatchObject({ additional_user_id: newlyAddedAgentId, ticket_id: fixture.ticketVisibleId });
+      expect(await removeTicketResource(visibleAssignment.assignment_id)).toBeUndefined();
+
+      expect(await getTicketResources(fixture.ticketHiddenBoardId)).toMatchObject({ permissionError: expect.any(String) });
+      expect(await canAddAsAdditionalAgent(fixture.ticketHiddenBoardId, additionalAgentId)).toBe(false);
+      expect(await addTicketResource(fixture.ticketHiddenBoardId, additionalAgentId, 'support')).toMatchObject({ permissionError: expect.any(String) });
+      expect(await removeTicketResource(hiddenAssignment.assignment_id)).toMatchObject({ permissionError: expect.any(String) });
+    });
+
+    expect(await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).first()).toMatchObject({
+      assigned_to: beforeHiddenTicket.assigned_to,
+    });
+    expect(await tenantRows('ticket_resources', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*')).toEqual(beforeHiddenResources);
+    expect(await tenantRows('ticket_audit_logs', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*')).toEqual(beforeHiddenActivity);
+    expect(eventMocks.publishWorkflowEvent).toHaveBeenCalledTimes(emittedBefore + 1); // visible add only; denied add emits nothing
+  });
+
+  it('bulk due-date and priority updates enforce current portal record visibility', async () => {
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
+    optimizedPathMocks.tenant = fixture.tenantId;
+    optimizedPathMocks.user = { ...clientA(), tenant: fixture.tenantId };
+
+    const nextPriorityId = uuidv4();
+    await db('priorities').insert({
+      tenant: fixture.tenantId,
+      priority_id: nextPriorityId,
+      priority_name: 'Portal update target',
+      created_by: fixture.internalUserId,
+      order_number: 11,
+    });
+
+    let siblingContactId: string | undefined;
+    let siblingTicketId: string | undefined;
+    const dueDateBefore = new Date('2026-11-01T12:00:00.000Z');
+    await tenantRows('tickets', fixture.tenantId)
+      .where({ ticket_id: fixture.ticketClientBId })
+      .update({ due_date: dueDateBefore });
+
+    try {
+      await runWithTenant(fixture.tenantId, async () => {
+        const dueDateResult = await bulkUpdateTicketDueDate(
+          [fixture.ticketVisibleId, fixture.ticketClientBId, fixture.ticketHiddenBoardId],
+          '2026-11-20T12:00:00.000Z',
+        );
+        expect(dueDateResult.updatedIds).toEqual([fixture.ticketVisibleId]);
+        expect(dueDateResult.failed.map((failure) => failure.ticketId).sort()).toEqual(
+          [fixture.ticketClientBId, fixture.ticketHiddenBoardId].sort(),
+        );
+
+        const priorityResult = await bulkUpdateTicketPriority(
+          [fixture.ticketVisibleId, fixture.ticketClientBId, fixture.ticketHiddenBoardId],
+          nextPriorityId,
+        );
+        expect(priorityResult.updatedIds).toEqual([fixture.ticketVisibleId]);
+        expect(priorityResult.failed.map((failure) => failure.ticketId).sort()).toEqual(
+          [fixture.ticketClientBId, fixture.ticketHiddenBoardId].sort(),
+        );
+      });
+
+      const visible = await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketVisibleId }).first();
+      const crossClient = await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketClientBId }).first();
+      const hiddenBoard = await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).first();
+      expect(visible.due_date).toEqual(new Date('2026-11-20T12:00:00.000Z'));
+      expect(visible.priority_id).toBe(nextPriorityId);
+      expect(crossClient.due_date).toEqual(dueDateBefore);
+      expect(crossClient.priority_id).toBe(fixture.priorityId);
+      expect(hiddenBoard.due_date).toBeNull();
+      expect(hiddenBoard.priority_id).toBe(fixture.priorityId);
+
+      const forgedOptions = {
+        systemActor: true,
+        systemAuthorization: { source: 'auto_close' },
+      } as any;
+      await expect(bulkUpdateTicketDueDate(
+        [fixture.ticketClientBId, fixture.ticketHiddenBoardId],
+        '2026-11-24T12:00:00.000Z',
+        forgedOptions,
+      )).rejects.toThrow('Unsupported ticket update option');
+      await expect(bulkUpdateTicketPriority(
+        [fixture.ticketClientBId, fixture.ticketHiddenBoardId],
+        nextPriorityId,
+        forgedOptions,
+      )).rejects.toThrow('Unsupported ticket update option');
+
+      const deniedClient = await tenantRows('tickets', fixture.tenantId)
+        .where({ ticket_id: fixture.ticketClientBId }).first();
+      const deniedBoard = await tenantRows('tickets', fixture.tenantId)
+        .where({ ticket_id: fixture.ticketHiddenBoardId }).first();
+      expect(deniedClient.due_date).toEqual(dueDateBefore);
+      expect(deniedClient.priority_id).toBe(fixture.priorityId);
+      expect(deniedBoard.due_date).toBeNull();
+      expect(deniedBoard.priority_id).toBe(fixture.priorityId);
+
+      siblingContactId = uuidv4();
+      await db('contacts').insert({
+        tenant: fixture.tenantId,
+        contact_name_id: siblingContactId,
+        client_id: fixture.clientAId,
+        full_name: 'Sibling contact',
+        email: `sibling-${siblingContactId.slice(0, 8)}@example.com`,
+      });
+      const siblingTicket = await db.transaction((trx) => TicketModel.createTicket({
+        title: 'Contact hidden ticket',
+        description: 'Not visible to client A contact',
+        client_id: fixture.clientAId,
+        contact_id: siblingContactId,
+        board_id: fixture.boardVisibleId,
+        status_id: fixture.statusId,
+        priority_id: fixture.priorityId,
+        entered_by: fixture.internalUserId,
+      }, fixture.tenantId, trx, {}, silentTicketCreation('test fixture')));
+      siblingTicketId = siblingTicket.ticket_id!;
+      await tenantRows('client_portal_visibility_groups', fixture.tenantId)
+        .where({ group_id: fixture.groupVisibleId })
+        .update({ ticket_scope: 'contact' });
+      await runWithTenant(fixture.tenantId, async () => {
+        const contactHiddenDueDate = await bulkUpdateTicketDueDate([siblingTicket.ticket_id!], '2026-11-22T12:00:00.000Z');
+        const contactHiddenPriority = await bulkUpdateTicketPriority([siblingTicket.ticket_id!], nextPriorityId);
+        expect(contactHiddenDueDate.updatedIds).toEqual([]);
+        expect(contactHiddenDueDate.failed).toHaveLength(1);
+        expect(contactHiddenPriority.updatedIds).toEqual([]);
+        expect(contactHiddenPriority.failed).toHaveLength(1);
+      });
+      const contactHidden = await tenantRows('tickets', fixture.tenantId).where({ ticket_id: siblingTicket.ticket_id }).first();
+      expect(contactHidden.due_date).toBeNull();
+      expect(contactHidden.priority_id).toBe(fixture.priorityId);
+
+      // A contact whose board grant is revoked loses access immediately, without
+      // changing the caller's coarse RBAC grant.
+      await tenantRows('client_portal_visibility_group_boards', fixture.tenantId)
+        .where({ group_id: fixture.groupVisibleId, board_id: fixture.boardVisibleId })
+        .del();
+      await runWithTenant(fixture.tenantId, async () => {
+        const revokedDueDate = await bulkUpdateTicketDueDate([fixture.ticketVisibleId], '2026-11-21T12:00:00.000Z');
+        const revokedPriority = await bulkUpdateTicketPriority([fixture.ticketVisibleId], fixture.priorityId);
+        expect(revokedDueDate.updatedIds).toEqual([]);
+        expect(revokedDueDate.failed).toHaveLength(1);
+        expect(revokedPriority.updatedIds).toEqual([]);
+        expect(revokedPriority.failed).toHaveLength(1);
+      });
+      const afterRevocation = await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketVisibleId }).first();
+      expect(afterRevocation.due_date).toEqual(new Date('2026-11-20T12:00:00.000Z'));
+      expect(afterRevocation.priority_id).toBe(nextPriorityId);
+    } finally {
+      await tenantRows('client_portal_visibility_group_boards', fixture.tenantId)
+        .insert({ tenant: fixture.tenantId, group_id: fixture.groupVisibleId, board_id: fixture.boardVisibleId })
+        .onConflict(['tenant', 'group_id', 'board_id']).ignore();
+      await tenantRows('client_portal_visibility_groups', fixture.tenantId)
+        .where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'client' });
+      await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketVisibleId })
+        .update({ due_date: null, priority_id: fixture.priorityId });
+      await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketClientBId })
+        .update({ due_date: null });
+      if (siblingTicketId) await tenantRows('tickets', fixture.tenantId).where({ ticket_id: siblingTicketId }).del();
+      if (siblingContactId) await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: siblingContactId }).del();
+      await tenantRows('priorities', fixture.tenantId).where({ priority_id: nextPriorityId }).del();
     }
   });
 

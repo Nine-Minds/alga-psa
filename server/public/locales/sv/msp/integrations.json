@@ -43,6 +43,40 @@
           "body": "{{client}} exporteras inte längre till QuickBooks-kunden {{customer}}. Inget ändras i QuickBooks, och du kan koppla kunden igen från den här listan när du vill.",
           "confirm": "Ta bort koppling",
           "cancel": "Behåll kopplingen"
+        },
+        "linkFailed": "Det gick inte att skapa kopplingen.",
+        "unlinkFailed": "Det gick inte att ta bort kopplingen.",
+        "createFailed": "Det gick inte att skapa kunden.",
+        "createFailedInQbo": "Det gick inte att skapa kunden i QuickBooks.",
+        "loadFailed": "Det gick inte att läsa in kundmappningarna.",
+        "relink": "Ändra koppling",
+        "exact": "Exakt matchning: {{name}}",
+        "suggestion": "Förslag: {{name}}",
+        "linking": "Skapar koppling…",
+        "accept": "Acceptera",
+        "confirm": "Bekräfta",
+        "search": "Sök",
+        "searchPlaceholder": "Sök efter QBO-kunder…",
+        "linkToCustomer": "Koppla till QBO-kund",
+        "creating": "Skapar…",
+        "createInQbo": "Skapa i QuickBooks",
+        "leave": "Lämna oförändrad",
+        "noCustomers": "Inga QBO-kunder hittades.",
+        "noClients": "Inga kunder hittades.",
+        "notMapped": "Inte mappad",
+        "subCustomer": "underkund",
+        "bulkLinked_one": "{{count}} exakt matchning har kopplats.",
+        "bulkLinked_other": "{{count}} exakta matchningar har kopplats.",
+        "bulkFailed": "Det gick inte att acceptera matchningarna i grupp.",
+        "exactReady_one": "{{count}} exakt namnmatchning är klar att accepteras",
+        "exactReady_other": "{{count}} exakta namnmatchningar är klara att accepteras",
+        "accepting": "Accepterar…",
+        "acceptExact_one": "Acceptera {{count}} exakt matchning",
+        "acceptExact_other": "Acceptera {{count}} exakta matchningar",
+        "columns": {
+          "client": "Kund",
+          "customer": "QBO-kund",
+          "action": "Åtgärd"
         }
       },
       "dialog": {
@@ -2458,6 +2492,42 @@
           "title": "Underhållsfönster",
           "description": "Larm som kommer under ett aktivt tidsfönster undertrycks och skapar inga ärenden.",
           "empty": "Inga underhållsfönster har konfigurerats."
+        },
+        "predicate": {
+          "matchAll": "Matchning",
+          "all": "Alla villkor",
+          "any": "Valfritt villkor",
+          "add": "Lägg till villkor",
+          "remove": "Ta bort",
+          "value": "Värde",
+          "nestedGroup": "Nästlad grupp",
+          "legacyRegex": "Äldre reguljärt uttryck för meddelande",
+          "and": "och",
+          "or": "eller",
+          "fields": {
+            "severity": "Allvarlighetsgrad",
+            "alertClass": "Larmklass",
+            "activityType": "Aktivitetstyp",
+            "sourceType": "Källtyp",
+            "organizationId": "Organisations-ID",
+            "text": "Meddelande och detaljer",
+            "deviceName": "Enhetsnamn",
+            "externalDeviceId": "Externt enhets-ID",
+            "message": "Meddelande",
+            "details": "Detaljer"
+          },
+          "operators": {
+            "equals": "är",
+            "not_equals": "är inte",
+            "in": "är ett av",
+            "not_in": "är inget av",
+            "contains": "innehåller",
+            "not_contains": "innehåller inte",
+            "contains_ci": "innehåller, utan hänsyn till skiftläge",
+            "not_contains_ci": "innehåller inte, utan hänsyn till skiftläge"
+          },
+          "addGroup": "Lägg till grupp",
+          "removeGroup": "Ta bort grupp"
         }
       },
       "ninjaOne": {
@@ -3107,6 +3177,138 @@
           "showSecret": "Visa hemlighet",
           "title": "Larmwebhook",
           "url": "Webhook-URL"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "UniFi-integrationen är tillgänglig i AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Spara konfiguration",
+          "testConnection": "Kontrollera alla nycklar igen",
+          "disconnect": "Koppla från",
+          "discoverSites": "Identifiera platser",
+          "runDeviceSync": "Kör enhetssynkronisering",
+          "checkOfflineNow": "Kontrollera offlineenheter nu",
+          "saveAlerting": "Spara aviseringsinställningar"
+        },
+        "alerting": {
+          "title": "Offlineaviseringar",
+          "description": "En enhet som är offline längre än respitperioden utlöser en avisering, och ett ärende om dina aviseringsregler anger det. Aviseringen löses när enheten är online igen.",
+          "graceMinutes": "Respitperiod för offline (minuter)",
+          "graceHelp": "Hur länge en enhet måste vara offline utan avbrott innan en avisering skapas. Använd 0 för att avisera direkt.",
+          "rulesNote": "Ärendeskapande, prioriteringar och automatisk lösning konfigureras i aviseringsreglerna nedan."
+        },
+        "connection": {
+          "title": "UniFi-anslutning",
+          "description": "Anslut med en eller flera UniFi-API-nycklar. En Site Manager-nyckel som skapats under Independent når dina oberoende konsoler; en nyckel under en fabric når bara den fabricen, så lägg till en nyckel per fabric. Nycklar för lokal kontroller fungerar för en kontroller du når direkt. Adopterade gateways, switchar och åtkomstpunkter synkroniseras.",
+          "syncLabel": "Synkronisering: {{status}}",
+          "syncLabelWithError": "Synkronisering: {{status}} ({{error}})",
+          "connectedAt": "Ansluten: {{time}}",
+          "never": "aldrig"
+        },
+        "errors": {
+          "loadSettings": "Det gick inte att läsa in UniFi-inställningar",
+          "loadMappings": "Det gick inte att läsa in UniFi-platskopplingar",
+          "loadSummary": "Det gick inte att läsa in UniFi-anslutningssammanfattningen",
+          "loadState": "Det gick inte att läsa in UniFi-integrationens status",
+          "saveConfiguration": "Det gick inte att spara UniFi-konfigurationen",
+          "testConnectionFailed": "Anslutningstestet misslyckades",
+          "disconnectFailed": "Det gick inte att koppla från UniFi-integrationen",
+          "siteSyncFailed": "Platsidentifieringen misslyckades",
+          "deviceSyncFailed": "Enhetssynkroniseringen misslyckades",
+          "updateMappingFailed": "Det gick inte att uppdatera kopplingen",
+          "reconnectRequired": "UniFi avvisade alla sparade API-nycklar. Byt en nyckel nedan för att återuppta synkroniseringen.",
+          "alertCheckFailed": "Offlinekontrollen misslyckades",
+          "saveAlertingFailed": "Det gick inte att spara aviseringsinställningarna",
+          "invalidGraceMinutes": "Ange ett heltal för minuter mellan 0 och 1440."
+        },
+        "fields": {
+          "apiKey": "API-nyckel ({{state}})",
+          "apiKeyStateSaved": "sparad",
+          "apiKeyStateRequired": "obligatorisk",
+          "apiKeyPlaceholderExisting": "Nyckel sparad. Ange en ny nyckel för att ersätta den",
+          "apiKeyPlaceholderNew": "Klistra in din UniFi API-nyckel",
+          "connectionMode": "Anslutningsläge",
+          "modeSiteManager": "Site Manager (moln)",
+          "modeLocal": "Lokal styrenhet",
+          "localBaseUrl": "Styrenhetens URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi-plats",
+          "reachedBy": "Nås via",
+          "mappedClient": "Kopplad kund",
+          "defaultContact": "Standardkontakt",
+          "selectContact": "Välj kontakt",
+          "autoSync": "Automatisk synkronisering",
+          "autoSyncEnabled": "Aktiverad",
+          "autoSyncDisabled": "Inaktiverad"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Ansluten",
+          "disconnected": "Inte ansluten",
+          "reconnectRequired": "Återanslutning krävs"
+        },
+        "success": {
+          "configurationSaved": "UniFi-konfigurationen sparad",
+          "connectionTestSucceeded": "Anslutningen till UniFi lyckades",
+          "disconnected": "UniFi-integrationen frånkopplad",
+          "siteSyncCompleted": "Platsidentifiering klar: {{processed}} behandlade, {{created}} skapade, {{updated}} uppdaterade",
+          "deviceSyncCompleted": "Enhetssynkronisering klar: {{processed}} behandlade, {{created}} skapade, {{updated}} uppdaterade",
+          "alertCheckCompleted": "Offlinekontrollen klar",
+          "alertingSaved": "Aviseringsinställningarna sparade"
+        },
+        "sync": {
+          "title": "Synkronisering och platskopplingar",
+          "description": "Identifiera UniFi-platser och koppla varje plats till en kund. Enheter på okopplade platser hoppas över.",
+          "summary": "{{mappedSites}} kopplade platser · {{devices}} enheter · {{activeAlerts}} aktiva aviseringar"
+        },
+        "credentials": {
+          "columns": {
+            "label": "Nyckel",
+            "type": "Typ",
+            "status": "Status",
+            "consoles": "Nådda konsoler",
+            "lastError": "Senaste fel",
+            "lastChecked": "Senast kontrollerad",
+            "actions": "Åtgärder"
+          },
+          "statusActive": "Aktiv",
+          "statusReconnect": "Nyckel avvisad",
+          "statusDisabled": "Inaktiverad",
+          "noConsoles": "Inga ännu",
+          "unreachableTitle": "Vissa konsoler syns, men ingen av dina nycklar kan nå dem.",
+          "unreachableAction": "Om en konsol tillhör en fabric, lägg till en nyckel som skapats under den fabricen. Skapa den i UniFi Site Manager medan den fabricen är vald.",
+          "firstKeyHelp": "Klistra in en UniFi-API-nyckel för att ansluta. Du kan lägga till fler nycklar senare, till exempel en per fabric.",
+          "addHelp": "En nyckel som skapats under Independent når dina oberoende konsoler. En nyckel under en fabric når bara den fabricen, så lägg till en per fabric.",
+          "labelField": "Etikett",
+          "labelPlaceholderFirst": "Standard",
+          "labelPlaceholder": "Till exempel: Acme-fabric",
+          "keyField": "API-nyckel",
+          "addKey": "Lägg till nyckel",
+          "addAnother": "Lägg till ytterligare en nyckel",
+          "cancel": "Avbryt",
+          "replaceKey": "Byt nyckel",
+          "replaceTitle": "Byt nyckel: {{label}}",
+          "replaceHelp": "Den nya nyckeln kontrolleras innan den ersätter den sparade. Den gamla nyckeln kasseras.",
+          "replaceUrlField": "Kontroller-URL (lämna tomt för att behålla den sparade)",
+          "newKeyField": "Ny API-nyckel",
+          "rename": "Byt namn",
+          "renameTitle": "Byt namn på nyckel",
+          "remove": "Ta bort",
+          "actionsMenu": "Åtgärder för {{label}}",
+          "removeTitle": "Ta bort nyckel: {{label}}",
+          "removeWarning": "Dessa mappade platser använder nyckeln. De behåller sin kundmappning och sina tillgångar, men slutar synkronisera tills en annan nyckel når deras konsol.",
+          "added": "API-nyckel tillagd",
+          "replaced": "API-nyckel utbytt",
+          "renamed": "Etikett uppdaterad",
+          "removed": "API-nyckel borttagen",
+          "addFailed": "Det gick inte att lägga till API-nyckeln",
+          "replaceFailed": "Det gick inte att byta API-nyckeln",
+          "renameFailed": "Det gick inte att uppdatera etiketten",
+          "removeFailed": "Det gick inte att ta bort API-nyckeln"
         }
       },
       "huntress": {

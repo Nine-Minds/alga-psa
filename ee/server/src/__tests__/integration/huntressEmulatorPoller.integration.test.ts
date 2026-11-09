@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * pollHuntressIncidents end to end: the real poller, the real incident
  * processor and a real migrated database, with the algasim Huntress emulator
@@ -329,7 +330,7 @@ beforeAll(async () => {
     auto_create_tickets: true,
   });
 
-  await tenantTable('assets').insert({
+  await insertTestAssets(db, {
     tenant: tenantId,
     asset_id: assetId,
     asset_type: 'workstation',
