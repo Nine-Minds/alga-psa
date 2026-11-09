@@ -14,8 +14,9 @@ export async function activateAssetTagUniquenessForTenant(
   if (!policy) throw new Error('Tenant not found');
   // Old code can edit a physical tag without refreshing its identity snapshot.
   // Normalize only unmanaged rows; managed identities remain checked by SQL.
-  await trx.raw(`UPDATE assets SET asset_tag_normalized = NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')
-    WHERE tenant = ? AND NOT asset_tag_managed`, [tenant]);
+  await db.table('assets').where({ asset_tag_managed: false }).update({
+    asset_tag_normalized: trx.raw("NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')"),
+  });
   const unresolved = await db.table('asset_tag_audit').whereIn('reason', ['duplicate', 'claim_conflict']).whereNull('resolved_at')
     .count<{ count: string }[]>({ count: '*' });
   if (Number(unresolved[0]?.count ?? 0) > 0) {
