@@ -70,9 +70,7 @@
       "message_one": "Der folgende benutzerdefinierte Telefontyp wird von keinem Kontakt mehr verwendet: {{labels}}. Typdefinition löschen oder für spätere Verwendung behalten?",
       "message_other": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?",
       "deleteType": "Typ löschen",
-      "keepType": "Typ behalten",
-      "message_few": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?",
-      "message_many": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?"
+      "keepType": "Typ behalten"
     },
     "print": {
       "title": "Kontakte",
@@ -418,7 +416,10 @@
       "refreshing": "Wird aktualisiert...",
       "resend": "Erneut senden",
       "resending": "Wird erneut gesendet...",
-      "revoke": "Widerrufen"
+      "revoke": "Widerrufen",
+      "cancel": "Abbrechen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen"
     },
     "toast": {
       "successTitle": "Erfolg",
@@ -460,10 +461,9 @@
         "noBaseUrl": "Die Basis-URL ist nicht für Portaleinladungen konfiguriert.",
         "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet."
       },
-      "userNotFound": "Kundenportalbenutzer nicht gefunden"
-    },
-    "boardCount_few": "{{count}} Boards",
-    "boardCount_many": "{{count}} Boards"
+      "userNotFound": "Kundenportalbenutzer nicht gefunden",
+      "validationErrorTitle": "Validierungsfehler"
+    }
   },
   "quickAddContact": {
     "title": "Neuen Kontakt hinzufügen",
@@ -723,6 +723,118 @@
       "saved": "Kontakt aktualisiert",
       "saveFailed": "Kontakt konnte nicht aktualisiert werden",
       "saveFailedDescription": "Der Kontakt konnte nicht aktualisiert werden. Versuchen Sie es erneut."
+    },
+    "relative": {
+      "today": "heute",
+      "yesterday": "gestern",
+      "daysAgo": "vor {{count}} T."
+    },
+    "emailType": {
+      "primary": "Primär",
+      "other": "Sonstiges"
+    },
+    "phoneType": {
+      "other": "Sonstiges"
+    },
+    "ticketPill": {
+      "closed": "Geschlossen",
+      "urgent": "Dringend",
+      "open": "Offen"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "role": {
+      "add": "Rolle hinzufügen",
+      "editTitle": "Klicken Sie, um die Rolle zu bearbeiten"
+    },
+    "atClient": "bei",
+    "noClient": "Kein Kunde",
+    "noPrimaryEmail": "Keine primäre E-Mail",
+    "noPhoneNumber": "Keine Telefonnummer",
+    "contactSince": "Kontakt seit {{date}}",
+    "lastTouch": "Letzter Kontakt",
+    "editContact": "Kontakt bearbeiten",
+    "openFullPage": "Vollständige Seite öffnen",
+    "viewAll": "Alle anzeigen",
+    "viewAllCount": "Alle {{count}} anzeigen",
+    "reach": {
+      "title": "Erreichbarkeit",
+      "add": "E-Mail-Adresse oder Telefonnummer hinzufügen",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "primaryMeta": "primär",
+      "noEmails": "Keine E-Mail-Adressen",
+      "addEmail": "E-Mail-Adresse hinzufügen",
+      "noPhones": "Keine Telefonnummern",
+      "addPhone": "Telefonnummer hinzufügen"
+    },
+    "portalChip": {
+      "deactivated": "Portal · deaktiviert",
+      "signedIn": "Portal · angemeldet: {{when}}",
+      "neverSignedIn": "Portal · noch nie angemeldet",
+      "invited": "Portal · eingeladen",
+      "noAccess": "Kein Portalzugriff"
+    },
+    "portal": {
+      "title": "Portalzugriff",
+      "manage": "Verwalten",
+      "status": "Status",
+      "role": "Rolle",
+      "clientAdmin": "Kundenadministrator",
+      "standard": "Standard",
+      "lastSignIn": "Letzte Anmeldung",
+      "invited": "Eingeladen",
+      "noClientAssigned": "Kein Kunde zugewiesen",
+      "deactivated": "Deaktiviert",
+      "activeAccount": "Aktives Konto",
+      "invitationSent": "Einladung gesendet",
+      "noAccess": "Kein Zugriff"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "create": "Ticket erstellen",
+      "createFirst": "Ticket erstellen",
+      "empty": "Noch keine Tickets",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interaktionen",
+      "log": "Interaktion erfassen",
+      "logFirst": "Interaktion erfassen",
+      "empty": "Keine Interaktionen erfasst",
+      "fallbackTitle": "Interaktion",
+      "loadError": "Interaktionen konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    },
+    "documents": {
+      "title": "Dokumente",
+      "add": "Dokument hinzufügen",
+      "addFirst": "Dokument hinzufügen",
+      "empty": "Noch keine Dokumente",
+      "fallbackTitle": "Dokument",
+      "dialogTitle": "Kontaktdokumente"
+    },
+    "relatedWork": {
+      "title": "Zugehörige Vorgänge",
+      "projects": "Projekte",
+      "quotes": "Angebote",
+      "noProjects": "Keine Projekte",
+      "noQuotes": "Keine Angebote",
+      "noStatus": "Kein Status",
+      "noStatusLower": "kein Status",
+      "projectFallback": "Projekt {{number}}",
+      "quoteFallback": "Angebot",
+      "empty": "Keine zugehörigen Projekte oder Angebote"
+    },
+    "notes": {
+      "title": "Notizen",
+      "edit": "Bearbeiten",
+      "openDocument": "Notizdokument öffnen",
+      "save": "Notizen speichern",
+      "cancel": "Abbrechen",
+      "empty": "Noch keine Notizen",
+      "add": "Notizen hinzufügen"
     }
   },
   "errors": {
@@ -834,8 +946,29 @@
       "scopeSummaryOwn": "Eigene",
       "managerScopeNote_one": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Person.",
       "managerScopeNote_other": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen.",
-      "managerScopeNote_few": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen.",
-      "managerScopeNote_many": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen."
+      "assignmentLabel": "Sichtbarkeitsgruppe für Tickets",
+      "assignmentPlaceholder": "Sichtbarkeitszuweisung auswählen",
+      "assignmentUpdated": "Sichtbarkeitszuweisung für den Kontakt aktualisiert",
+      "assignFailed": "Sichtbarkeitsgruppe konnte nicht zugewiesen werden",
+      "manageLabel": "Sichtbarkeitsgruppen für den Kunden",
+      "manageHelp": "Erstellen oder bearbeiten Sie Gruppen von Boards und weisen Sie diese den Kontakten zu.",
+      "nameLabel": "Gruppenname",
+      "nameRequired": "Der Name der Sichtbarkeitsgruppe ist erforderlich",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Optionale Beschreibung",
+      "boardsLabel": "Boards",
+      "noBoards": "Keine Boards verfügbar",
+      "createGroup": "Gruppe erstellen",
+      "updateGroup": "Gruppe aktualisieren",
+      "created": "Sichtbarkeitsgruppe erstellt",
+      "updated": "Sichtbarkeitsgruppe aktualisiert",
+      "deleted": "Sichtbarkeitsgruppe gelöscht",
+      "deleteConfirm": "Diese Sichtbarkeitsgruppe löschen?",
+      "deleteFailed": "Sichtbarkeitsgruppe konnte nicht gelöscht werden",
+      "saveFailed": "Sichtbarkeitsgruppe konnte nicht gespeichert werden",
+      "loadFailed": "Sichtbarkeitsgruppe konnte nicht zur Bearbeitung geladen werden",
+      "empty": "Noch keine Sichtbarkeitsgruppen",
+      "fullAccess": "Vollzugriff"
     }
   },
   "messages": {

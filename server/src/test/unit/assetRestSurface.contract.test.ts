@@ -77,7 +77,8 @@ describe('asset REST surface', () => {
     // Mobile reads /api/v1/assets/{id}; without these the Assigned-to and
     // Group rows render as "Unassigned" and nothing at all.
     expect(getById).toContain("'contacts.full_name as contact_name'");
-    expect(getById).toContain('await getAssetGroupSummary(knex, context.tenant, id)');
+    expect(getById).toContain('await getAuthorizedAssetGroupSummary(trx, context.tenant, groupUser, id)');
+    expect(getById).toContain('return withTransaction(knex, async (trx) => {');
     expect(getById).toContain("'vendors.vendor_name'");
   });
 

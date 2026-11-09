@@ -172,7 +172,16 @@
     "unnamedTeam": "Unnamed Team",
     "userPicker": "User Picker",
     "noUsersFound": "No users found",
-    "contactRemoteLocation": "Remote"
+    "contactRemoteLocation": "Remote",
+    "selectBoard": "Select Board",
+    "activeBoards": "Active Boards",
+    "inactiveBoards": "Inactive Boards",
+    "allBoards": "All Boards",
+    "boardPicker": "Board Picker",
+    "filterByStatus": "Filter by status",
+    "statusFilter": "Status Filter",
+    "boards": "Boards",
+    "inactiveSuffix": "(Inactive)"
   },
   "serviceTypeSelect": {
     "placeholder": "Select service type...",
@@ -928,7 +937,8 @@
       "collapse": "Collapse folders",
       "allDocuments": "All Documents",
       "expand": "Show folders",
-      "deleteTitle": "Delete Folder"
+      "deleteTitle": "Delete Folder",
+      "show": "Show folders"
     },
     "folderManager": {
       "title": "Create New Folder",
@@ -990,6 +1000,28 @@
     "huduTab": {
       "documentsTabLabel": "Documents",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "User",
+    "selectOrCreate": "Select a document or create a new one.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Print",
+      "edit": "Edit",
+      "upload": "Upload",
+      "closePreview": "Close preview",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "viewMode": {
+      "grid": "Grid",
+      "list": "List"
+    },
+    "unsavedChanges": {
+      "title": "Unsaved Changes",
+      "message": "Are you sure you want to cancel? Any unsaved changes will be lost.",
+      "confirm": "Discard changes",
+      "cancel": "Continue editing"
     }
   },
   "surveys": {
@@ -1727,7 +1759,14 @@
       "assigned": "Assigned:",
       "performedBy": "by {{name}}",
       "internal": "Internal"
-    }
+    },
+    "title": "Notifications",
+    "reconnectingToServer": "Reconnecting to server...",
+    "refresh": "Refresh",
+    "markAllAsRead": "Mark all as read",
+    "markAllRead": "Mark all read",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "You're all caught up!"
   },
   "importConflicts": {
     "title": "Resolve Import Conflicts",

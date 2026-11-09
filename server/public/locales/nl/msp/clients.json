@@ -105,6 +105,8 @@
     "bulkInactiveFailed_other": "{{count}} klanten konden niet als inactief worden gemarkeerd.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn succesvol als inactief gemarkeerd.",
     "singleInactiveSuccess": "{{name}} is succesvol als inactief gemarkeerd.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} en {{count}} contact zijn succesvol gedeactiveerd.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd.",
     "bulkInactiveSuccess_one": "{{count}} klant is succesvol gemarkeerd als inactief.",
     "bulkInactiveSuccess_other": "{{count}} klanten zijn succesvol gemarkeerd als inactief.",
     "bulkInactiveShortSuccess_one": "{{count}} klant is gemarkeerd als inactief.",
@@ -155,8 +157,6 @@
     },
     "deleteSelectedPrompt_one": "Weet u zeker dat u {{count}} geselecteerde klant wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "deleteSelectedPrompt_other": "Weet u zeker dat u {{count}} geselecteerde klanten wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-    "singleInactiveWithContactsSuccess_one": "{{name}} en {{count}} contact zijn succesvol gedeactiveerd.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd.",
     "clientTypes": {
       "company": "Bedrijf",
       "individual": "Persoon"
@@ -221,6 +221,7 @@
     "clientOnly": "Alleen klant",
     "accountManager": "Accountmanager",
     "clientName": "Klantnaam",
+    "clientNameRequired": "Klantnaam is vereist",
     "clientType": "Klanttype",
     "industry": "Branche",
     "companySize": "Bedrijfsgrootte",
@@ -252,6 +253,12 @@
     "markInactiveError": "Er is een fout opgetreden bij het markeren van de client als inactief. Probeer het opnieuw.",
     "reactivateError": "Er is een fout opgetreden bij het opnieuw activeren van de client. Probeer het opnieuw.",
     "entraSyncError": "Kan Entra-synchronisatie niet starten.",
+    "entraSyncStarted": "Entra-synchronisatie gestart. Uitvoerings-ID: {{runId}}",
+    "entraSyncStatusUnknown": "Synchronisatiestatus niet beschikbaar",
+    "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
+    "inboundDomainAddFailed": "Kan domein niet toevoegen",
+    "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
+    "inboundDomainRemoveFailed": "Kan domein niet verwijderen",
     "deleteError": "Kan klant niet verwijderen. Probeer het opnieuw.",
     "deactivateWithContactsSuccess_one": "Klant en {{count}} contact zijn succesvol gedeactiveerd.",
     "deactivateWithContactsSuccess_other": "Klant en {{count}} contacten zijn succesvol gedeactiveerd.",
@@ -273,6 +280,8 @@
     "syncEntraNow": "Synchroniseer Entra nu",
     "deactivateClient": "Deactiveer Klant",
     "reactivateClient": "Klant opnieuw activeren",
+    "deactivateClientAndContacts": "Klant en contacten deactiveren",
+    "reactivateClientAndContacts": "Klant en contacten opnieuw activeren",
     "deactivatePrompt": "Deze klant heeft {{count}} actieve contact(en). Wilt u deze ook deactiveren?",
     "reactivatePrompt": "Deze klant heeft {{count}} inactieve contact(en). Wilt u deze ook opnieuw activeren?",
     "deactivatePortalWarning": "Gedeactiveerde gebruikers kunnen niet inloggen op het klantportaal.",
@@ -283,15 +292,6 @@
       "label": "Status",
       "helper": "Stel de clientstatus in op actief of inactief"
     },
-    "entraSyncStarted": "Entra-synchronisatie gestart. Uitvoerings-ID: {{runId}}",
-    "entraSyncStatusUnknown": "Synchronisatiestatus niet beschikbaar",
-    "clientNameRequired": "Klantnaam is vereist",
-    "deactivateClientAndContacts": "Klant en contacten deactiveren",
-    "reactivateClientAndContacts": "Klant en contacten opnieuw activeren",
-    "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
-    "inboundDomainAddFailed": "Kan domein niet toevoegen",
-    "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
-    "inboundDomainRemoveFailed": "Kan domein niet verwijderen",
     "fields": {
       "accountManager": "Accountmanager",
       "url": "URL",
@@ -1099,6 +1099,15 @@
     "taxRateOption": "{{regionLabel}} - {{percentage}}% ({{description}})",
     "unknownRegion": "Onbekende regio"
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Standaarddienst voor tijdregistraties",
+    "label": "Standaarddienst voor tijdregistraties",
+    "placeholder": "Standaard van de organisatie gebruiken",
+    "help": "Wordt gebruikt voor nieuwe tijdregistraties op tickets van deze klant. Wis de selectie om de standaard van de organisatie te gebruiken.",
+    "updatedSuccess": "Standaarddienst voor tijdregistraties bijgewerkt.",
+    "saveError": "Standaarddienst voor tijdregistraties kan niet worden opgeslagen",
+    "loadError": "Standaarddienst voor tijdregistraties kan niet worden geladen"
+  },
   "clientZeroDollarInvoiceSettings": {
     "title": "Nul-dollar factuurinstellingen",
     "invoiceHandling": "Factuurafhandeling",
@@ -1329,6 +1338,24 @@
     "loadErrorTitle": "Notities kunnen niet worden geladen",
     "loadErrorDescription": "Kan notities niet laden. Probeer het opnieuw."
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Link voor kaartinstelling",
+    "setupLinkFallback": "Kopieer deze link om met uw klant te delen.",
+    "unknownUser": "Onbekende gebruiker",
+    "changeCard": "Deze kaart gebruiken voor automatische betaling",
+    "title": "Automatische betaling · {{profile}}",
+    "active": "Ingeschakeld",
+    "authorization": "Gemachtigd door {{user}} op {{date}} ({{source}})",
+    "attestation": "De klant heeft terugkerende afschrijvingen gemachtigd",
+    "enable": "Automatische betaling inschakelen",
+    "disable": "Automatische betaling uitschakelen",
+    "copySetupLink": "Instellingslink kopiëren",
+    "enabled": "Automatische betaling ingeschakeld",
+    "disabled": "Automatische betaling uitgeschakeld",
+    "linkCopied": "Link voor kaartinstelling gekopieerd",
+    "recentAttempts": "Recente pogingen",
+    "noAttempts": "Nog geen pogingen"
+  },
   "actions": {
     "cancel": "Annuleren",
     "delete": "Verwijderen",
@@ -1465,7 +1492,14 @@
       "refreshRecordings": "Opnamen vernieuwen",
       "sectionTitle": "Onlinevergadering",
       "transcriptArtifact": "Transcriptie",
-      "viewTranscript": "Transcriptie bekijken"
+      "viewTranscript": "Transcriptie bekijken",
+      "status": {
+        "noRecording": "Geen opname",
+        "recordingReady": "Opname gereed",
+        "cancelled": "Geannuleerd",
+        "failed": "Opname niet beschikbaar",
+        "recordingPending": "In afwachting van opname"
+      }
     },
     "quickAdd": {
       "clientRequired": "Selecteer een klant voor deze interactie",
@@ -1524,6 +1558,86 @@
       "assignedTo": {
         "label": "Toegewezen aan",
         "placeholder": "Gebruiker selecteren"
+      },
+      "endBeforeStart": "De eindtijd moet op of na de starttijd liggen.",
+      "endBeforeStartShort": "De eindtijd moet op of na de starttijd liggen",
+      "rangeTooLong": "Interacties mogen niet langer dan 24 uur duren.",
+      "reflectionLabel": "Snel interactie toevoegen",
+      "validationIntro": "Corrigeer de volgende fouten:",
+      "loadingEditor": "Editor laden...",
+      "dialog": {
+        "createTitle": "Nieuwe interactie toevoegen",
+        "editTitle": "Interactie bewerken"
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "cancelHelper": "Het aanmaken of bewerken van deze interactie annuleren",
+        "save": "Interactie opslaan",
+        "saveHelper": "Deze nieuwe interactie aanmaken",
+        "update": "Interactie bijwerken",
+        "updateHelper": "Wijzigingen in deze interactie opslaan",
+        "close": "Dialoogvenster sluiten",
+        "closeHelper": "Het interactiedialoogvenster sluiten"
+      },
+      "fields": {
+        "type": {
+          "label": "Interactietype",
+          "helper": "Selecteer het type interactie (telefoongesprek, e-mail, vergadering, enz.)",
+          "placeholder": "Interactietype selecteren"
+        },
+        "title": {
+          "label": "Interactietitel",
+          "helper": "Voer een beschrijvende titel in voor deze interactie",
+          "placeholder": "Titel"
+        },
+        "notes": {
+          "label": "Interactienotities",
+          "helper": "Voeg gedetailleerde notities toe over deze interactie"
+        },
+        "notesShort": "Notities",
+        "status": {
+          "label": "Interactiestatus",
+          "helper": "Stel de huidige status van deze interactie in",
+          "placeholder": "Status selecteren"
+        },
+        "user": {
+          "label": "Toegewezen gebruiker",
+          "helper": "Selecteer de gebruiker die verantwoordelijk is voor deze interactie",
+          "placeholder": "Gebruiker selecteren"
+        },
+        "userShort": "Gebruiker",
+        "client": {
+          "label": "Gekoppelde klant",
+          "helper": "Selecteer de klant waarop deze interactie betrekking heeft"
+        },
+        "clientShort": "Klant",
+        "contact": {
+          "label": "Gekoppeld contact",
+          "helper": "Selecteer het contact met wie deze interactie plaatsvindt",
+          "placeholder": "Contact selecteren"
+        },
+        "contactShort": "Contact",
+        "startTime": {
+          "label": "Starttijd",
+          "helper": "Wanneer is deze interactie begonnen?",
+          "placeholder": "Starttijd selecteren"
+        },
+        "endTime": {
+          "label": "Eindtijd",
+          "helper": "Wanneer is deze interactie geëindigd?",
+          "placeholder": "Eindtijd selecteren"
+        },
+        "durationHours": {
+          "label": "Duur in uren",
+          "helper": "Duur van de interactie in uren"
+        },
+        "durationMinutes": {
+          "label": "Duur in minuten",
+          "helper": "Duur van de interactie in minuten"
+        },
+        "duration": "Duur",
+        "hours": "uur",
+        "minutes": "minuten"
       }
     },
     "feed": {
@@ -1581,6 +1695,51 @@
       "transcriptTitle": "Gesprekstranscript",
       "loading": "Transcript wordt geladen…",
       "loadFailed": "Het transcript kon niet worden geladen."
+    },
+    "details": {
+      "title": "Interactiedetails",
+      "noTitle": "Geen titel",
+      "unknownUser": "Onbekend",
+      "noContact": "Geen contact gekoppeld",
+      "noClient": "Geen klant gekoppeld",
+      "deleteConfirm": "Weet u zeker dat u deze interactie wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "timeEntryFailed": "De tijdsvermelding kon niet worden voorbereid. Probeer het opnieuw.",
+      "fields": {
+        "title": "Titel:",
+        "notes": "Notities",
+        "status": "Status:",
+        "startTime": "Starttijd:",
+        "endTime": "Eindtijd:",
+        "duration": "Duur:",
+        "user": "Gebruiker:",
+        "contact": "Contact:",
+        "client": "Klant:"
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "editShort": "Bewerken",
+        "deleteShort": "Verwijderen",
+        "edit": {
+          "label": "Interactie bewerken",
+          "helper": "De details van deze interactie bewerken"
+        },
+        "delete": {
+          "label": "Interactie verwijderen",
+          "helper": "Deze interactie definitief verwijderen"
+        },
+        "back": {
+          "label": "Terug",
+          "helper": "Terug naar de vorige weergave"
+        },
+        "addTicket": {
+          "label": "Ticket toevoegen",
+          "helper": "Een nieuw ticket aanmaken voor deze interactie"
+        },
+        "addTimeEntry": {
+          "label": "Tijdsvermelding toevoegen",
+          "helper": "Een tijdsvermelding toevoegen voor deze interactie"
+        }
+      }
     }
   },
   "clientDrawer": {
@@ -1963,33 +2122,6 @@
       "duplicateManager": "Een facturatieprofiel kan maar één beheerder hebben.",
       "notThisClient": "Een van de geselecteerde contactpersonen hoort niet bij de klant van dit facturatieprofiel."
     }
-  },
-  "clientDefaultTimeEntryServiceSettings": {
-    "title": "Standaarddienst voor tijdregistraties",
-    "label": "Standaarddienst voor tijdregistraties",
-    "placeholder": "Standaard van de organisatie gebruiken",
-    "help": "Wordt gebruikt voor nieuwe tijdregistraties op tickets van deze klant. Wis de selectie om de standaard van de organisatie te gebruiken.",
-    "updatedSuccess": "Standaarddienst voor tijdregistraties bijgewerkt.",
-    "saveError": "Standaarddienst voor tijdregistraties kan niet worden opgeslagen",
-    "loadError": "Standaarddienst voor tijdregistraties kan niet worden geladen"
-  },
-  "clientAutopay": {
-    "setupLinkTitle": "Link voor kaartinstelling",
-    "setupLinkFallback": "Kopieer deze link om met uw klant te delen.",
-    "unknownUser": "Onbekende gebruiker",
-    "changeCard": "Deze kaart gebruiken voor automatische betaling",
-    "title": "Automatische betaling · {{profile}}",
-    "active": "Ingeschakeld",
-    "authorization": "Gemachtigd door {{user}} op {{date}} ({{source}})",
-    "attestation": "De klant heeft terugkerende afschrijvingen gemachtigd",
-    "enable": "Automatische betaling inschakelen",
-    "disable": "Automatische betaling uitschakelen",
-    "copySetupLink": "Instellingslink kopiëren",
-    "enabled": "Automatische betaling ingeschakeld",
-    "disabled": "Automatische betaling uitgeschakeld",
-    "linkCopied": "Link voor kaartinstelling gekopieerd",
-    "recentAttempts": "Recente pogingen",
-    "noAttempts": "Nog geen pogingen"
   },
   "mergeClients": {
     "title": "Een klant in deze klant samenvoegen",

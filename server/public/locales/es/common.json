@@ -146,6 +146,60 @@
     "editionLabel": "Pro",
     "defaultCta": "Explorar Pro"
   },
+  "form": {
+    "selectPlaceholder": "Seleccionar...",
+    "clearSelection": "Borrar selección",
+    "fromDate": "Desde",
+    "toDate": "Hasta",
+    "noResults": "No se encontraron resultados",
+    "searchPlaceholder": "Buscar...",
+    "showingOfTotal": "Mostrando {{shown}} de {{total}} — escriba para acotar"
+  },
+  "pickers": {
+    "addNewClient": "Agregar nuevo cliente",
+    "addNewContact": "Añadir nuevo contacto",
+    "loadingUsers": "Cargando usuarios...",
+    "errorLoadingUsers": "Error al cargar usuarios",
+    "searchUsers": "Buscar usuarios...",
+    "unassigned": "Sin asignar",
+    "noUsersAvailable": "No hay usuarios disponibles",
+    "searchBoards": "Buscar tableros...",
+    "searchBoardsLabel": "Buscar tableros",
+    "noBoardsFound": "No se encontraron tableros",
+    "notAssigned": "Sin asignar",
+    "searchUsersOrTeams": "Buscar usuarios o equipos...",
+    "unnamedUser": "Usuario sin nombre",
+    "unnamedTeam": "Equipo sin nombre",
+    "userPicker": "Selector de usuarios",
+    "noUsersFound": "No se encontraron usuarios",
+    "contactRemoteLocation": "Remoto",
+    "selectBoard": "Seleccionar tablero",
+    "activeBoards": "Tableros activos",
+    "inactiveBoards": "Tableros inactivos",
+    "allBoards": "Todos los tableros",
+    "boardPicker": "Selector de tableros",
+    "filterByStatus": "Filtrar por estado",
+    "statusFilter": "Filtro de estado",
+    "boards": "Tableros",
+    "inactiveSuffix": "(Inactivo)"
+  },
+  "serviceTypeSelect": {
+    "placeholder": "Seleccione un tipo de servicio...",
+    "newNamePlaceholder": "Nombre del nuevo tipo de servicio...",
+    "addNew": "Agregar nuevo tipo de servicio",
+    "deleteTitle": "Eliminar tipo de servicio",
+    "deleteConfirm": "¿Seguro que desea eliminar este tipo de servicio? Esta acción no se puede deshacer.",
+    "errors": {
+      "delete": "No se puede eliminar este tipo de servicio. Es posible que lo usen servicios existentes.",
+      "create": "No se pudo crear el tipo de servicio. Inténtelo de nuevo."
+    }
+  },
+  "tagFilter": {
+    "placeholder": "Filtrar por etiquetas...",
+    "filter": "Filtrar",
+    "selectedCount": "{{count}} seleccionados",
+    "clearAll": "Borrar todo"
+  },
   "status": {
     "loading": "Cargando...",
     "saving": "Guardando...",
@@ -173,108 +227,6 @@
     "invalidEmail": "Correo electrónico no válido",
     "invalidPassword": "Contraseña inválida",
     "passwordMismatch": "Las contraseñas no coinciden"
-  },
-  "fields": {
-    "notes": "Notas",
-    "phone": {
-      "label": "Teléfono",
-      "placeholder": "+1 (555) 123-4567"
-    },
-    "phoneExtension": {
-      "label": "Extensión",
-      "placeholder": "extensión 1234"
-    },
-    "priority": {
-      "placeholder": "Seleccione la prioridad"
-    }
-  },
-  "auth": {
-    "signOut": {
-      "title": "Cerrar sesión",
-      "confirmation": "¿Está seguro de que desea cerrar sesión?",
-      "signingOut": "Cerrando sesión...",
-      "action": "Cerrar sesión"
-    },
-    "passwordReset": {
-      "title": "Se requiere cambiar la contraseña",
-      "description": "Todavía está utilizando una contraseña temporal. Cambie su contraseña para proteger su cuenta."
-    },
-    "twoFactor": {
-      "codeLabel": "Código 2FA",
-      "verify": "Verificar",
-      "title": "Muy fácil",
-      "instructions": "Ingrese el código de 6 dígitos de su aplicación de autenticación.",
-      "digitsLeft": "{{count}} dígitos restantes"
-    },
-    "messages": {
-      "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
-      "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",
-      "handoffNetworkIssue": "Se detectó un problema de red al finalizar el inicio de sesión. Inténtelo de nuevo."
-    },
-    "checkEmail": {
-      "resendSuccess": "¡Correo enviado! Revise su bandeja de entrada.",
-      "resendFailed": "No se pudo reenviar el correo. Inténtelo de nuevo.",
-      "whatsNext": "¿Qué sigue?",
-      "didntReceive": "¿No recibió el correo?"
-    },
-    "sso": {
-      "signInWithMicrosoft": "Iniciar sesión con Microsoft",
-      "signInWithKeycloak": "Iniciar sesión con Keycloak",
-      "signInWithGoogle": "Iniciar sesión con Google",
-      "redirecting": "Redirigiendo...",
-      "startFailed": "No se pudo iniciar el inicio de sesión SSO. Verifique la configuración del proveedor e inténtelo de nuevo."
-    },
-    "verify": {
-      "title": "La verificación por correo electrónico ya no está disponible",
-      "selfRegistrationRemoved": "El autorregistro mediante el dominio de correo electrónico ya no se admite por motivos de seguridad.",
-      "existingContactsOnly": "El registro ahora solo está disponible para contactos existentes. Comuníquese con su administrador para que primero lo agregue como contacto.",
-      "registerFromSignIn": "Si ya es un contacto existente, puede registrarse directamente desde la página de inicio de sesión con la dirección de correo electrónico de su contacto.",
-      "returnToSignIn": "Volver al inicio de sesión"
-    },
-    "validation": {
-      "password": {
-        "required": "La contraseña es obligatoria",
-        "tooShort": "La contraseña debe tener al menos 8 caracteres",
-        "tooLong": "La contraseña no puede tener más de 128 caracteres",
-        "missingUppercase": "La contraseña debe contener al menos una letra mayúscula",
-        "missingLowercase": "La contraseña debe contener al menos una letra minúscula",
-        "missingNumber": "La contraseña debe contener al menos un número",
-        "missingSpecialCharacter": "La contraseña debe contener al menos un carácter especial",
-        "tooCommon": "La contraseña es demasiado común. Elija una contraseña más segura",
-        "sequentialCharacters": "La contraseña no puede contener caracteres secuenciales"
-      }
-    }
-  },
-  "share": {
-    "errors": {
-      "loadFailed": "No se pudo cargar el enlace compartido",
-      "connectionFailed": "No se pudo conectar al servidor",
-      "passwordRequired": "Se requiere contraseña",
-      "invalidPassword": "Contraseña no válida",
-      "downloadFailedRetry": "La descarga falló. Inténtelo de nuevo.",
-      "downloadFailed": "La descarga falló",
-      "linkNotAvailable": "Enlace no disponible",
-      "linkExpired": "Este enlace compartido ha caducado.",
-      "downloadLimitReached": "Se alcanzó el límite de descargas."
-    },
-    "downloadStarted": "¡Descarga iniciada con éxito!",
-    "enterPassword": "Introducir contraseña",
-    "downloadsUsed": "{{used}} de {{max}} descargas utilizadas",
-    "expiresAt": "Caduca: {{date}}"
-  },
-  "tickets": {
-    "responseSource": {
-      "clientPortal": "Recibido vía Portal de Cliente",
-      "inboundEmail": "Recibido vía correo electrónico"
-    },
-    "origin": {
-      "internal": "Creado internamente",
-      "clientPortal": "Creado a través del portal del cliente",
-      "inboundEmail": "Creado a través de correo entrante",
-      "api": "Creado a través de API",
-      "other": "Creado a través de otro",
-      "recurring": "Creado por programación recurrente"
-    }
   },
   "errors": {
     "coManaged": {
@@ -342,6 +294,108 @@
       "textInvalidCharacters": "El texto de la etiqueta contiene caracteres no válidos",
       "backgroundColorInvalid": "Formato de color de fondo no válido. Debe ser un código de color hexadecimal válido (p. ej., #FF0000)",
       "textColorInvalid": "Formato de color de texto no válido. Debe ser un código de color hexadecimal válido (p. ej., #FFFFFF)"
+    }
+  },
+  "fields": {
+    "notes": "Notas",
+    "phone": {
+      "label": "Teléfono",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Extensión",
+      "placeholder": "extensión 1234"
+    },
+    "priority": {
+      "placeholder": "Seleccione la prioridad"
+    }
+  },
+  "auth": {
+    "signOut": {
+      "title": "Cerrar sesión",
+      "confirmation": "¿Está seguro de que desea cerrar sesión?",
+      "signingOut": "Cerrando sesión...",
+      "action": "Cerrar sesión"
+    },
+    "passwordReset": {
+      "title": "Se requiere cambiar la contraseña",
+      "description": "Todavía está utilizando una contraseña temporal. Cambie su contraseña para proteger su cuenta."
+    },
+    "twoFactor": {
+      "codeLabel": "Código 2FA",
+      "verify": "Verificar",
+      "title": "Muy fácil",
+      "instructions": "Ingrese el código de 6 dígitos de su aplicación de autenticación.",
+      "digitsLeft": "{{count}} dígitos restantes"
+    },
+    "messages": {
+      "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
+      "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",
+      "handoffNetworkIssue": "Se detectó un problema de red al finalizar el inicio de sesión. Inténtelo de nuevo."
+    },
+    "checkEmail": {
+      "resendSuccess": "¡Correo enviado! Revise su bandeja de entrada.",
+      "resendFailed": "No se pudo reenviar el correo. Inténtelo de nuevo.",
+      "whatsNext": "¿Qué sigue?",
+      "didntReceive": "¿No recibió el correo?"
+    },
+    "sso": {
+      "signInWithGoogle": "Iniciar sesión con Google",
+      "signInWithMicrosoft": "Iniciar sesión con Microsoft",
+      "signInWithKeycloak": "Iniciar sesión con Keycloak",
+      "redirecting": "Redirigiendo...",
+      "startFailed": "No se pudo iniciar el inicio de sesión SSO. Verifique la configuración del proveedor e inténtelo de nuevo."
+    },
+    "verify": {
+      "title": "La verificación por correo electrónico ya no está disponible",
+      "selfRegistrationRemoved": "El autorregistro mediante el dominio de correo electrónico ya no se admite por motivos de seguridad.",
+      "existingContactsOnly": "El registro ahora solo está disponible para contactos existentes. Comuníquese con su administrador para que primero lo agregue como contacto.",
+      "registerFromSignIn": "Si ya es un contacto existente, puede registrarse directamente desde la página de inicio de sesión con la dirección de correo electrónico de su contacto.",
+      "returnToSignIn": "Volver al inicio de sesión"
+    },
+    "validation": {
+      "password": {
+        "required": "La contraseña es obligatoria",
+        "tooShort": "La contraseña debe tener al menos 8 caracteres",
+        "tooLong": "La contraseña no puede tener más de 128 caracteres",
+        "missingUppercase": "La contraseña debe contener al menos una letra mayúscula",
+        "missingLowercase": "La contraseña debe contener al menos una letra minúscula",
+        "missingNumber": "La contraseña debe contener al menos un número",
+        "missingSpecialCharacter": "La contraseña debe contener al menos un carácter especial",
+        "tooCommon": "La contraseña es demasiado común. Elija una contraseña más segura",
+        "sequentialCharacters": "La contraseña no puede contener caracteres secuenciales"
+      }
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "No se pudo cargar el enlace compartido",
+      "connectionFailed": "No se pudo conectar al servidor",
+      "passwordRequired": "Se requiere contraseña",
+      "invalidPassword": "Contraseña no válida",
+      "downloadFailedRetry": "La descarga falló. Inténtelo de nuevo.",
+      "downloadFailed": "La descarga falló",
+      "linkNotAvailable": "Enlace no disponible",
+      "linkExpired": "Este enlace compartido ha caducado.",
+      "downloadLimitReached": "Se alcanzó el límite de descargas."
+    },
+    "downloadStarted": "¡Descarga iniciada con éxito!",
+    "enterPassword": "Introducir contraseña",
+    "downloadsUsed": "{{used}} de {{max}} descargas utilizadas",
+    "expiresAt": "Caduca: {{date}}"
+  },
+  "tickets": {
+    "origin": {
+      "internal": "Creado internamente",
+      "clientPortal": "Creado a través del portal del cliente",
+      "inboundEmail": "Creado a través de correo entrante",
+      "api": "Creado a través de API",
+      "other": "Creado a través de otro",
+      "recurring": "Creado por programación recurrente"
+    },
+    "responseSource": {
+      "clientPortal": "Recibido vía Portal de Cliente",
+      "inboundEmail": "Recibido vía correo electrónico"
     }
   },
   "time": {
@@ -644,6 +698,8 @@
     "first": "Primera",
     "last": "Última",
     "itemsLabel": "elementos",
+    "itemsLabel_one": "elemento",
+    "itemsLabel_other": "elementos",
     "itemsPerPageOption": "{{count}} elementos/página",
     "itemsPerPagePlaceholder": "Elementos por página",
     "reflectionLabel": "Paginación",
@@ -652,8 +708,6 @@
     "totalItems": "{{count}} {{itemLabel}} en total",
     "totalRecordsInline": "({{count}} registros en total)",
     "pageOf": "Página {{current}} de {{total}}",
-    "itemsLabel_one": "elemento",
-    "itemsLabel_other": "elementos",
     "itemsLabel_few": "elementos",
     "itemsLabel_many": "elementos"
   },
@@ -883,7 +937,8 @@
       "collapse": "Contraer carpetas",
       "allDocuments": "Todos los documentos",
       "expand": "Mostrar carpetas",
-      "deleteTitle": "Eliminar carpeta"
+      "deleteTitle": "Eliminar carpeta",
+      "show": "Mostrar carpetas"
     },
     "folderManager": {
       "title": "Crear nueva carpeta",
@@ -945,6 +1000,28 @@
     "huduTab": {
       "documentsTabLabel": "Documentos",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Usuario",
+    "selectOrCreate": "Seleccione un documento o cree uno nuevo.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimir",
+      "edit": "Editar",
+      "upload": "Subir",
+      "closePreview": "Cerrar vista previa",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando..."
+    },
+    "viewMode": {
+      "grid": "Cuadrícula",
+      "list": "Lista"
+    },
+    "unsavedChanges": {
+      "title": "Cambios sin guardar",
+      "message": "¿Está seguro de que desea cancelar? Se perderán los cambios sin guardar.",
+      "confirm": "Descartar cambios",
+      "cancel": "Continuar editando"
     }
   },
   "surveys": {
@@ -985,10 +1062,10 @@
           "error": "No se pudo guardar el modelo",
           "deleteError": "No se pudo eliminar el modelo"
         },
-        "deleteConfirm": "¿Eliminar este modelo? Las invitaciones ya enviadas no se verán afectadas.",
         "errors": {
           "load": "No se pudieron cargar las plantillas de encuestas."
-        }
+        },
+        "deleteConfirm": "¿Eliminar este modelo? Las invitaciones ya enviadas no se verán afectadas."
       },
       "templateForm": {
         "titleCreate": "Crear modelo de encuesta",
@@ -1053,10 +1130,10 @@
           "error": "No se pudo guardar el desencadenador",
           "deleteError": "No se pudo eliminar el desencadenador"
         },
-        "deleteConfirm": "¿Eliminar este desencadenador? Las invitaciones ya programadas seguirán enviándose.",
         "errors": {
           "load": "No se pudieron cargar los desencadenadores de encuestas."
-        }
+        },
+        "deleteConfirm": "¿Eliminar este desencadenador? Las invitaciones ya programadas seguirán enviándose."
       },
       "triggerForm": {
         "titleCreate": "Crear desencadenador de encuesta",
@@ -1174,11 +1251,11 @@
   "appointments": {
     "requests": {
       "title": "Solicitudes de citas",
+      "viewAll": "Ver todas las solicitudes",
       "approve": "Aprobar y programar",
       "decline": "Rechazar",
       "assignTech": "Asignar técnico",
       "internalNotes": "Notas internas",
-      "viewAll": "Ver todas las solicitudes",
       "pendingCount": "{{count}} solicitudes pendientes",
       "filterByStatus": "Filtrar por estado",
       "filterByService": "Filtrar por servicio",
@@ -1242,6 +1319,54 @@
       "loadFailed": "Error al cargar solicitudes de citas",
       "scheduleEntryCreated": "Entrada de programación creada correctamente"
     }
+  },
+  "common": {
+    "actions": "Acciones",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "loading": "Cargando...",
+    "uploading": "Subiendo...",
+    "error": "Ocurrió un error",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "resetFilters": "Reiniciar",
+    "sort": "Ordenar",
+    "refresh": "Actualizar",
+    "export": "Exportar",
+    "import": "Importar",
+    "download": "Descargar",
+    "upload": "Subir",
+    "selectAll": "Seleccionar todo",
+    "clearSelection": "Limpiar selección",
+    "view": "Ver",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "submitting": "Enviando...",
+    "reset": "Restablecer",
+    "noData": "No hay datos disponibles",
+    "required": "Obligatorio",
+    "optional": "Opcional",
+    "notSpecified": "No especificado",
+    "unknown": "Desconocido",
+    "edited": "editado",
+    "editComment": "Editar comentario",
+    "deleteCommentAriaLabel": "Eliminar comentario",
+    "deleteComment": "Eliminar comentario",
+    "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer.",
+    "update": "Actualizar",
+    "create": "Crear",
+    "replyComment": "Responder al comentario",
+    "saving": "Guardando..."
   },
   "sessionManagement": {
     "title": "Sesiones activas",
@@ -1321,54 +1446,6 @@
       }
     }
   },
-  "common": {
-    "actions": "Acciones",
-    "active": "Activo",
-    "inactive": "Inactivo",
-    "loading": "Cargando...",
-    "error": "Ocurrió un error",
-    "save": "Guardar",
-    "cancel": "Cancelar",
-    "delete": "Eliminar",
-    "edit": "Editar",
-    "close": "Cerrar",
-    "confirm": "Confirmar",
-    "yes": "Sí",
-    "no": "No",
-    "search": "Buscar",
-    "filter": "Filtrar",
-    "resetFilters": "Reiniciar",
-    "sort": "Ordenar",
-    "refresh": "Actualizar",
-    "export": "Exportar",
-    "import": "Importar",
-    "download": "Descargar",
-    "upload": "Subir",
-    "selectAll": "Seleccionar todo",
-    "clearSelection": "Limpiar selección",
-    "view": "Ver",
-    "back": "Atrás",
-    "next": "Siguiente",
-    "previous": "Anterior",
-    "submit": "Enviar",
-    "reset": "Restablecer",
-    "noData": "No hay datos disponibles",
-    "required": "Obligatorio",
-    "optional": "Opcional",
-    "notSpecified": "No especificado",
-    "unknown": "Desconocido",
-    "uploading": "Subiendo...",
-    "submitting": "Enviando...",
-    "edited": "editado",
-    "editComment": "Editar comentario",
-    "deleteCommentAriaLabel": "Eliminar comentario",
-    "deleteComment": "Eliminar comentario",
-    "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer.",
-    "update": "Actualizar",
-    "create": "Crear",
-    "replyComment": "Responder al comentario",
-    "saving": "Guardando..."
-  },
   "enums": {
     "locale": {
       "en": "Inglés",
@@ -1399,51 +1476,6 @@
       "dark": "Oscuro",
       "system": "Sistema"
     }
-  },
-  "form": {
-    "selectPlaceholder": "Seleccionar...",
-    "clearSelection": "Borrar selección",
-    "fromDate": "Desde",
-    "toDate": "Hasta",
-    "noResults": "No se encontraron resultados",
-    "searchPlaceholder": "Buscar...",
-    "showingOfTotal": "Mostrando {{shown}} de {{total}} — escriba para acotar"
-  },
-  "pickers": {
-    "addNewClient": "Agregar nuevo cliente",
-    "addNewContact": "Añadir nuevo contacto",
-    "loadingUsers": "Cargando usuarios...",
-    "errorLoadingUsers": "Error al cargar usuarios",
-    "searchUsers": "Buscar usuarios...",
-    "unassigned": "Sin asignar",
-    "noUsersAvailable": "No hay usuarios disponibles",
-    "searchBoards": "Buscar tableros...",
-    "searchBoardsLabel": "Buscar tableros",
-    "noBoardsFound": "No se encontraron tableros",
-    "notAssigned": "Sin asignar",
-    "searchUsersOrTeams": "Buscar usuarios o equipos...",
-    "unnamedUser": "Usuario sin nombre",
-    "unnamedTeam": "Equipo sin nombre",
-    "userPicker": "Selector de usuarios",
-    "noUsersFound": "No se encontraron usuarios",
-    "contactRemoteLocation": "Remoto"
-  },
-  "serviceTypeSelect": {
-    "placeholder": "Seleccione un tipo de servicio...",
-    "newNamePlaceholder": "Nombre del nuevo tipo de servicio...",
-    "addNew": "Agregar nuevo tipo de servicio",
-    "deleteTitle": "Eliminar tipo de servicio",
-    "deleteConfirm": "¿Seguro que desea eliminar este tipo de servicio? Esta acción no se puede deshacer.",
-    "errors": {
-      "delete": "No se puede eliminar este tipo de servicio. Es posible que lo usen servicios existentes.",
-      "create": "No se pudo crear el tipo de servicio. Inténtelo de nuevo."
-    }
-  },
-  "tagFilter": {
-    "placeholder": "Filtrar por etiquetas...",
-    "filter": "Filtrar",
-    "selectedCount": "{{count}} seleccionados",
-    "clearAll": "Borrar todo"
   },
   "timePicker": {
     "placeholder": "Seleccionar hora",
@@ -1487,6 +1519,9 @@
       "teamsFeatureName": "Integración con Microsoft Teams",
       "teamsEnterprisePitch": "Lleve el contexto de los tickets y los flujos de trabajo de los técnicos a Microsoft Teams.",
       "teamsSignInUnavailable": "Inicio de sesión de Teams no disponible",
+      "teamsSetupNotFinished": "Configuración de Teams sin finalizar",
+      "teamsSetupNotFinishedHint": "Pida a un administrador de PSA que finalice la configuración de Teams y luego vuelva a abrir la pestaña personal.",
+      "teamsTabAdminHint": "Pida a un administrador de PSA que finalice la configuración de Teams y luego vuelva a abrir la pestaña.",
       "assetNotFound": "Activo no encontrado",
       "contactNotFound": "Contacto no encontrado",
       "templateNotFound": "Plantilla no encontrada",
@@ -1494,10 +1529,7 @@
       "unknownError": "Ocurrió un error desconocido",
       "templateNotFoundDetail": "La plantilla que busca no existe o ha sido eliminada.",
       "teamLeadAccessDetail": "Para aprobar hojas de tiempo de los miembros de su equipo, debe ser líder de equipo.",
-      "teamsTabEnableHint": "Pida a un administrador de PSA que habilite la integración de Teams para este tenant antes de volver a abrir la pestaña.",
-      "teamsSetupNotFinished": "Configuración de Teams sin finalizar",
-      "teamsSetupNotFinishedHint": "Pida a un administrador de PSA que finalice la configuración de Teams y luego vuelva a abrir la pestaña personal.",
-      "teamsTabAdminHint": "Pida a un administrador de PSA que finalice la configuración de Teams y luego vuelva a abrir la pestaña."
+      "teamsTabEnableHint": "Pida a un administrador de PSA que habilite la integración de Teams para este tenant antes de volver a abrir la pestaña."
     },
     "actions": {
       "tryAgain": "Reintentar",
@@ -1685,15 +1717,15 @@
     "loading": "Cargando editor…"
   },
   "productBoundary": {
-    "notFound": {
-      "cta": "Ir al panel",
-      "title": "Página no disponible",
-      "description": "Esta página no está disponible en su experiencia de producto actual."
-    },
     "upgrade": {
       "title": "Disponible en AlgaPSA",
       "description": "Esta área forma parte del producto completo AlgaPSA. AlgaDesk incluye únicamente funciones específicas de mesa de ayuda.",
       "cta": "Volver al panel de AlgaDesk"
+    },
+    "notFound": {
+      "title": "Página no disponible",
+      "description": "Esta página no está disponible en su experiencia de producto actual.",
+      "cta": "Ir al panel"
     }
   },
   "notifications": {
@@ -1727,7 +1759,14 @@
       "assigned": "Asignado:",
       "performedBy": "por {{name}}",
       "internal": "Interno"
-    }
+    },
+    "title": "Notificaciones",
+    "reconnectingToServer": "Reconectando al servidor...",
+    "refresh": "Actualizar",
+    "markAllAsRead": "Marcar todas como leídas",
+    "markAllRead": "Marcar todas como leídas",
+    "emptyTitle": "No hay notificaciones",
+    "emptyDescription": "¡Está al día!"
   },
   "importConflicts": {
     "title": "Resolver conflictos de importación",

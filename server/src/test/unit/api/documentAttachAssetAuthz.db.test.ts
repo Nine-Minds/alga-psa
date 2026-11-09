@@ -52,7 +52,7 @@ vi.mock('../../../lib/api/controllers/authorizationKernel', async (original) => 
   ...await original<typeof import('../../../lib/api/controllers/authorizationKernel')>(),
   authorizeApiResourceRead: async (input: { recordContext: { id?: string } }) => {
     spies.kernel(input);
-    return input.recordContext?.id !== spies.deniedAssetId;
+    return { allowed: input.recordContext?.id !== spies.deniedAssetId, redactedFields: [] };
   },
 }));
 vi.mock('../../../lib/api/services/documents/resolveSource', () => ({
