@@ -163,7 +163,7 @@ describe('expression admission', () => {
   describe('deadline', () => {
     it('stops a legal, under-step-budget expression on the wall deadline with the budget error type', async () => {
       let clock = 0;
-      const error = await evaluateWorkflowExpression(LONG_LEGAL, { payload: { items: manyItems(500) } }, {
+      const error: any = await evaluateWorkflowExpression(LONG_LEGAL, { payload: { items: manyItems(500) } }, {
         limits: { wallBudgetMs: 10, now: () => (clock += 1) },
       }).catch((e: any) => e);
       expect(error).toBeInstanceOf(EvaluationBudgetExceededError);
@@ -173,7 +173,7 @@ describe('expression admission', () => {
 
     it('stops it on the CPU budget', async () => {
       let cpu = 0;
-      const error = await evaluateWorkflowExpression(LONG_LEGAL, { payload: { items: manyItems(500) } }, {
+      const error: any = await evaluateWorkflowExpression(LONG_LEGAL, { payload: { items: manyItems(500) } }, {
         limits: { cpuBudgetMs: 250, cpuNow: () => (cpu += 100) },
       }).catch((e: any) => e);
       expect(error).toBeInstanceOf(EvaluationBudgetExceededError);
