@@ -56,6 +56,20 @@
     "product": "⟦Ƥřȯḓŭƈŧ⟧",
     "projectPhase": "⟦Ƥřȯĵḗƈŧ Ƥħȧşḗ⟧",
     "qty": "⟦Ɋŧẏ⟧",
+    "quoteAcceptance": {
+      "title": "⟦Ɋŭȯŧḗ ȧƈƈḗƥŧḗḓ⟧",
+      "signedBy": "⟦Şīɠƞḗḓ ƀẏ⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "jobTitle": "⟦Ŧīŧŀḗ⟧",
+      "acceptedOn": "⟦Ȧƈƈḗƥŧḗḓ ȯƞ⟧",
+      "method": "⟦Ḿḗŧħȯḓ⟧",
+      "ipAddress": "⟦ĪƤ ȧḓḓřḗşş⟧",
+      "methods": {
+        "emailLink": "⟦Ḗḿȧīŀḗḓ ŀīƞķ⟧",
+        "portal": "⟦Ƈŀīḗƞŧ ƥȯřŧȧŀ⟧",
+        "msp": "⟦Řḗƈȯřḓḗḓ ƀẏ ḾŞƤ⟧"
+      }
+    },
     "quoteNumber": "⟦Ɋŭȯŧḗ #⟧",
     "quoteTitle": "⟦ɊŬȮŦḖ⟧",
     "rate": "⟦Řȧŧḗ⟧",

@@ -10,7 +10,9 @@ import { normalizePhone } from "../../../../../packages/validation/src/lib/phone
 import type {
   ContactDetail,
   ContactEmailAddressInput,
+  ContactLocationInput,
   ContactPhoneNumberInput,
+  ContactWorkArrangement,
   ContactWriteInput,
   CreateContactInput,
 } from "../../api/contacts";
@@ -52,9 +54,13 @@ export type ContactFormValues = {
   tags: string[];
   phones: ContactPhoneRow[];
   additionalEmails: ContactEmailRow[];
+  /** null leaves the field unset; the API treats it as "not recorded". */
+  workArrangement: ContactWorkArrangement | null;
+  /** The client locations this person works at. Only locations of `clientId` are ever offered. */
+  locations: ContactLocationInput[];
 };
 
-type ContactField = "fullName" | "email" | "role" | "notes";
+type ContactField = "fullName" | "email" | "role" | "notes" | "locations";
 
 export type ContactFormCheck = {
   errors: Partial<Record<ContactField, string>> & { phones?: Record<number, string>; additionalEmails?: Record<number, string> };
@@ -81,6 +87,8 @@ export function emptyContactForm(client?: { id: string; name: string } | null): 
     tags: [],
     phones: [emptyPhoneRow()],
     additionalEmails: [],
+    workArrangement: null,
+    locations: [],
   };
 }
 
@@ -118,6 +126,12 @@ export function contactFormFromDetail(detail: ContactDetail, tags: string[] = de
     tags,
     phones: phones.length > 0 ? phones : [emptyPhoneRow()],
     additionalEmails,
+    workArrangement: detail.work_arrangement ?? null,
+    // Primary first, as the API returns them, so the radio reads the same order the user sees.
+    locations: (detail.locations ?? []).map((location) => ({
+      location_id: location.location_id,
+      is_primary: Boolean(location.is_primary),
+    })),
   };
 }
 
@@ -143,6 +157,14 @@ export function validateContactForm(values: ContactFormValues, t: TranslateFn, d
   collectField(into, "email", validateEmailAddressField(values.email), tv);
   if (values.role.trim()) collectField(into, "role", validateRoleField(values.role), tv);
   if (values.notes.trim()) collectField(into, "notes", validateNotesField(values.notes), tv);
+
+  // The database has a partial unique index on the primary link; the form refuses to send a second
+  // one rather than let the write fail.
+  if (values.locations.filter((location) => location.is_primary).length > 1) {
+    check.errors.locations = t("form.errors.onePrimaryLocation", {
+      defaultValue: "Only one location can be the primary one.",
+    });
+  }
 
   values.phones.forEach((row, index) => {
     const number = row.number.trim();
@@ -242,7 +264,28 @@ export function buildContactCreatePayload(values: ContactFormValues, defaultCoun
     ...(values.tags.length > 0 ? { tags: values.tags } : {}),
     phone_numbers: buildPhonePayload(values, defaultCountry),
     ...(additional.length > 0 ? { additional_email_addresses: additional } : {}),
+    ...(values.workArrangement ? { work_arrangement: values.workArrangement } : {}),
+    ...(values.locations.length > 0 ? { locations: normalizeLocations(values.locations) } : {}),
   };
+}
+
+/**
+ * One primary, or none when the user marked none: a single link is the primary by definition, and
+ * the server would make it so anyway.
+ */
+export function normalizeLocations(locations: ContactLocationInput[]): ContactLocationInput[] {
+  const primary = locations.find((location) => location.is_primary)?.location_id
+    ?? (locations.length === 1 ? locations[0].location_id : null);
+  return locations.map((location) => ({
+    location_id: location.location_id,
+    is_primary: location.location_id === primary,
+  }));
+}
+
+function sameLocations(left: ContactLocationInput[], right: ContactLocationInput[]): boolean {
+  const key = (rows: ContactLocationInput[]) =>
+    JSON.stringify([...normalizeLocations(rows)].sort((a, b) => a.location_id.localeCompare(b.location_id)));
+  return key(left) === key(right);
 }
 
 function sameTags(a: string[], b: string[]): boolean {
@@ -314,6 +357,19 @@ export function buildContactUpdatePayload(
   if (notes !== (original.notes ?? "")) payload.notes = notes;
   if (values.isInactive !== Boolean(original.is_inactive)) payload.is_inactive = values.isInactive;
   if (!sameTags(values.tags, options.originalTags ?? original.tags ?? [])) payload.tags = values.tags;
+
+  if ((values.workArrangement ?? null) !== (original.work_arrangement ?? null)) {
+    payload.work_arrangement = values.workArrangement;
+  }
+  // Omitting `locations` leaves the links alone, so only a real difference is sent — including the
+  // empty set a client change leaves behind, which removes them.
+  const originalLocations = (original.locations ?? []).map((location) => ({
+    location_id: location.location_id,
+    is_primary: Boolean(location.is_primary),
+  }));
+  if (!sameLocations(values.locations, originalLocations)) {
+    payload.locations = normalizeLocations(values.locations);
+  }
 
   const phones = buildPhonePayload(values, defaultCountry);
   const shape = (phone: { contact_phone_number_id?: string | null; phone_number: string; extension?: string | null; canonical_type?: string | null; custom_type?: string | null; is_default?: boolean }, index: number) => ({

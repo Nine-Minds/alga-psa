@@ -11,9 +11,16 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { knex as createKnex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+
+const require = createRequire(import.meta.url);
+const replyTokenExpiryMigration = require(path.resolve(__dirname, '../../../migrations/20261103120000_require_email_reply_token_expiry.cjs'));
+const SCRATCH_DB = `email_reply_expiry_${uuidv4().replace(/-/g, '')}`;
 
 const SVC = '../../../../services/email-service/src';
 const noop = vi.hoisted(() => ({ start: async () => undefined }));
@@ -66,6 +73,7 @@ const aliceEmail = `alice-${MARK}@customer-it.example.test`;
 let ticketTenant: string, customerTenant: string, aliceId: string, techId: string, ticketId: string;
 let relationshipId: string, threadId: string, parentCommentId: string, token: string;
 let processInbound: typeof import('../../../../shared/services/email/processInboundEmailInApp').processInboundEmailInApp;
+let originalDbName: string | undefined;
 
 // Aligned auth: DMARC pass for the From domain (what allowsInternalSenderAttribution requires for an internal sender).
 const ALIGNED_AUTH = 'mx; spf=pass smtp.mailfrom=customer-it.example.test; dkim=pass header.d=customer-it.example.test; dmarc=pass header.from=customer-it.example.test';
@@ -107,7 +115,11 @@ async function bootEmailService() {
 }
 
 beforeAll(async () => {
-  db = await createTestDbConnection();
+  wireLocalTestDbEnv();
+  originalDbName = process.env.DB_NAME_SERVER;
+  db = await createTestDbConnection({ databaseName: SCRATCH_DB });
+  process.env.DB_NAME_SERVER = SCRATCH_DB;
+  await (await import('@alga-psa/db')).destroyAdminConnection();
   process.env.FORCE_CAPABILITIES = 'co-managed:on';
   (globalThis as any).__algaWriteAdmissionState = undefined;
   (globalThis as any).__algaWriteAdmissionResolver = undefined;
@@ -144,6 +156,7 @@ beforeAll(async () => {
   threadId = stored.thread_id;
   token = `cm2:${uuidv4()}`;
   await db('email_reply_tokens').insert({ tenant: ticketTenant, token, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: aliceEmail,
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     metadata: JSON.stringify({ namespace: 'cm', version: 2, relationshipId, grantGeneration: 0, threadId }) });
 }, 120_000);
 
@@ -169,12 +182,109 @@ afterAll(async () => {
     }
     await db.destroy();
   }
+  await (await import('@alga-psa/db')).destroyAdminConnection();
+  if (originalDbName === undefined) delete process.env.DB_NAME_SERVER;
+  else process.env.DB_NAME_SERVER = originalDbName;
+  if (SCRATCH_DB.startsWith('email_reply_expiry_')) {
+    const admin = createKnex({
+      client: 'pg',
+      connection: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        port: Number(process.env.DB_PORT || 5432),
+        user: process.env.DB_USER_ADMIN || 'postgres',
+        password: process.env.DB_PASSWORD_ADMIN || '',
+        database: 'postgres',
+      },
+      pool: { min: 0, max: 1 },
+    });
+    try {
+      await admin.raw('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()', [SCRATCH_DB]);
+      await admin.raw('DROP DATABASE IF EXISTS ??', [SCRATCH_DB]);
+    } finally {
+      await admin.destroy();
+    }
+  }
 });
 
 describe('email-service boot registers co-managed inbound', () => {
   beforeAll(async () => {
     processInbound = (await import('../../../../shared/services/email/processInboundEmailInApp')).processInboundEmailInApp;
   }, 120_000);
+
+  it('preserves a legacy cm2 token through migration so valid thread headers cannot bypass quarantine', async () => {
+    const { findTicketByReplyToken, findTicketByEmailThread } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const tokenUnderTest = `cm2:${uuidv4()}`;
+    const freshToken = `cm2:${uuidv4()}`;
+    const anchor = `<legacy-expiry-anchor-${uuidv4()}@customer-it.example.test>`;
+    const expiredText = `migrated-expired-${MARK}`;
+    const freshText = `migrated-fresh-${MARK}`;
+    const metadata = { namespace: 'cm', version: 2, relationshipId, grantGeneration: 0, threadId };
+    const originalTicket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('email_metadata');
+    const commentsBefore = Number((await db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first())?.count ?? 0);
+
+    await db.schema.alterTable('email_reply_tokens', table => {
+      table.timestamp('expires_at', { useTz: true }).nullable().alter();
+    });
+    await db('email_reply_tokens').insert({
+      tenant: ticketTenant,
+      token: tokenUnderTest,
+      ticket_id: ticketId,
+      comment_id: parentCommentId,
+      entity_type: 'ticket',
+      recipient_email: aliceEmail,
+      metadata: JSON.stringify(metadata),
+      expires_at: null,
+    });
+
+    try {
+      await replyTokenExpiryMigration.up(db);
+
+      const migrated = await db('email_reply_tokens').where({ tenant: ticketTenant, token: tokenUnderTest }).first('expires_at');
+      expect(migrated).toBeTruthy();
+      expect(new Date(migrated.expires_at).getTime()).toBe(0);
+      expect(await db('information_schema.columns').where({ table_schema: 'public', table_name: 'email_reply_tokens', column_name: 'expires_at' }).first('is_nullable'))
+        .toMatchObject({ is_nullable: 'NO' });
+      await expect(db('email_reply_tokens').insert({ tenant: ticketTenant, token: `cm2:null-${uuidv4()}`, entity_type: 'ticket' }))
+        .rejects.toThrow();
+      await db('email_reply_tokens').insert({
+        tenant: ticketTenant,
+        token: freshToken,
+        ticket_id: ticketId,
+        comment_id: parentCommentId,
+        entity_type: 'ticket',
+        recipient_email: aliceEmail,
+        metadata: JSON.stringify(metadata),
+        expires_at: new Date(Date.now() + 60_000),
+      });
+
+      await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({
+        email_metadata: { messageId: anchor, references: [anchor], threadId },
+      });
+      const migratedLookup = await findTicketByReplyToken(tokenUnderTest, ticketTenant);
+      expect(migratedLookup).toMatchObject({ ticketId, expiryValid: false });
+      expect(await findTicketByEmailThread({ inReplyTo: anchor }, ticketTenant)).toMatchObject({ ticketId });
+
+      const expiredMessage = emailData(`<msg-${uuidv4()}@customer-it.example.test>`, expiredText);
+      expiredMessage.inReplyTo = anchor;
+      expiredMessage.references = [anchor];
+      expiredMessage.body = { text: `${expiredText}\n\n[ALGA-REPLY-TOKEN ${tokenUnderTest}]` };
+      const refused: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: expiredMessage });
+      expect(refused).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId, matchedBy: 'reply_token' });
+      expect(await db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first())
+        .toMatchObject({ count: String(commentsBefore) });
+      expect(await sharedComments(expiredText)).toHaveLength(0);
+
+      expect(await findTicketByReplyToken(freshToken, ticketTenant)).toMatchObject({ ticketId, expiryValid: true });
+      const freshMessage = emailData(`<msg-${uuidv4()}@customer-it.example.test>`, freshText);
+      freshMessage.body = { text: `${freshText}\n\n[ALGA-REPLY-TOKEN ${freshToken}]` };
+      const admitted: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: freshMessage });
+      expect(admitted).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token', ticketId });
+      expect(await sharedComments(freshText)).toHaveLength(1);
+    } finally {
+      await db('email_reply_tokens').where({ tenant: ticketTenant }).whereIn('token', [tokenUnderTest, freshToken]).delete();
+      await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ email_metadata: originalTicket?.email_metadata ?? null });
+    }
+  }, 30_000);
 
   it('admits a cm2 reply to a shared_it comment and writes it as the verified participant in the shared_it audience; a replay is a no-op', async () => {
     const text = `fix-applied-${MARK}`;
@@ -224,12 +334,64 @@ describe('email-service boot registers co-managed inbound', () => {
     expect(await acks()).toHaveLength(acksBefore);
   });
 
+  it('quarantines a known cm2 token with expired expiry before matching thread headers or side effects', async () => {
+    const { REFUSAL_ACK_KIND } = await import('@alga-psa/co-managed/refusalAck');
+    const { findTicketByReplyToken, findTicketByEmailThread } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const tokenUnderTest = `cm2:${uuidv4()}`;
+    const anchor = `<expiry-anchor-${uuidv4()}@customer-it.example.test>`;
+    const text = `expired-token-${MARK}`;
+    const ticketBefore = await db('tickets').where({ tenant: ticketTenant }).count('* as count').first();
+    const commentsBefore = await db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first();
+    const watchersBefore = await db('ticket_watchers').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first();
+    const acksBefore = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND }).count('* as count').first();
+    const originalTicket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('email_metadata', 'attributes');
+    const expiryTokenMetadata = { namespace: 'cm', version: 2, relationshipId, grantGeneration: 0, threadId };
+    await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({
+      email_metadata: { messageId: anchor, references: [anchor], threadId },
+    });
+    await db('email_reply_tokens').insert({
+      tenant: ticketTenant,
+      token: tokenUnderTest,
+      ticket_id: ticketId,
+      comment_id: parentCommentId,
+      entity_type: 'ticket',
+      recipient_email: aliceEmail,
+      metadata: JSON.stringify(expiryTokenMetadata),
+      expires_at: new Date(Date.now() - 1),
+    });
+
+    try {
+      const knownToken = await findTicketByReplyToken(tokenUnderTest, ticketTenant);
+      expect(knownToken).toMatchObject({ ticketId, expiryValid: false });
+      expect(await findTicketByEmailThread({ inReplyTo: anchor }, ticketTenant)).toMatchObject({ ticketId });
+
+      const message = emailData(`<msg-${uuidv4()}@customer-it.example.test>`, text);
+      message.inReplyTo = anchor;
+      message.references = [anchor];
+      message.body = { text: `${text}\n\n[ALGA-REPLY-TOKEN ${tokenUnderTest}]` };
+      const result: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+
+      expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId, matchedBy: 'reply_token' });
+      expect(await db('tickets').where({ tenant: ticketTenant }).count('* as count').first()).toMatchObject({ count: ticketBefore?.count });
+      expect(await db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first()).toMatchObject({ count: commentsBefore?.count });
+      expect(await db('ticket_watchers').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first()).toMatchObject({ count: watchersBefore?.count });
+      expect(await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND }).count('* as count').first()).toMatchObject({ count: acksBefore?.count });
+      const afterTicket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('attributes');
+      expect(afterTicket?.attributes?.watch_list).toEqual(originalTicket?.attributes?.watch_list);
+      expect(await sharedComments(text)).toHaveLength(0);
+    } finally {
+      await db('email_reply_tokens').where({ tenant: ticketTenant, token: tokenUnderTest }).delete();
+      await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ email_metadata: originalTicket?.email_metadata });
+    }
+  });
+
   it('email-service writes no comment and queues one ack; the sender path sends it once; a replay adds nothing', async () => {
     const { registerWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { REFUSAL_ACK_KIND, deliverPendingRefusalAcks } = await import('@alga-psa/co-managed/refusalAck');
     const { processInboundEmailInApp } = await import('../../../../shared/services/email/processInboundEmailInApp');
     const legacy = `cm1:${uuidv4()}`;
     await db('email_reply_tokens').insert({ tenant: ticketTenant, token: legacy, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: aliceEmail,
+      expires_at: new Date(Date.now() - 1),
       metadata: JSON.stringify({ namespace: 'cm', version: 1, relationshipId }) });
     const text = `refused-${MARK}`;
     const message = { ...emailData(`<msg-${MARK}-3@customer-it.example.test>`, text) };

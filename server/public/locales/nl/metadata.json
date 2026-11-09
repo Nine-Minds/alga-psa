@@ -521,7 +521,10 @@
       "defaultTitle": "Dashboard | AlgaPSA"
     },
     "coManaged": {
-      "title": "Gezamenlijk beheerde IT"
+      "title": "Gezamenlijk beheerde IT",
+      "archive": {
+        "title": "Archief voor gezamenlijk beheerde IT"
+      }
     },
     "coManagement": {
       "title": "Toegang voor gezamenlijk beheer",
@@ -542,8 +545,17 @@
         "taskTitle": "Gedeelde taak",
         "projectTitle": "Gedeeld project"
       },
+      "departure": {
+        "title": "Beëindig gezamenlijk beheerde IT"
+      },
+      "sla": {
+        "title": "Co-managed SLA-prioriteiten"
+      },
       "export": {
         "title": "Werkruimte exporteren"
+      },
+      "upgrade": {
+        "title": "Overstappen naar AlgaPSA"
       }
     }
   },

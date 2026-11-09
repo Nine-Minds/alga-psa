@@ -191,6 +191,7 @@ describe('hot-path query budget', () => {
       if (unstable) throw new Error(unstable);
 
       const measured = runs[0];
+      console.table(measured.steps.map(({ name, statements, locks }) => ({ name, statements, locks })));
       expect(measured.steps.map((s) => s.name)).toEqual([...STEP_NAMES]);
 
       // The new-table denylist applies to what the scenario actually touched.

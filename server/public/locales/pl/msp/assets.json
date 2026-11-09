@@ -1447,7 +1447,184 @@
   "maintenanceCommandCenter": {
     "title": "Centrum zarządzania konserwacją",
     "description": "Następny termin jest obliczany na podstawie rzeczywistej daty ukończenia.",
-    "assetsLink": "Zasoby"
+    "assetsLink": "Zasoby",
+    "notRecorded": "Nie odnotowano",
+    "system": "System",
+    "checklist": {
+      "complete": "Ukończono",
+      "incomplete": "Nie ukończono"
+    },
+    "weekdays": {
+      "0": "niedz.",
+      "1": "pon.",
+      "2": "wt.",
+      "3": "śr.",
+      "4": "czw.",
+      "5": "pt.",
+      "6": "sob."
+    },
+    "cadence": {
+      "custom": "Niestandardowa",
+      "customSchedule": "Harmonogram niestandardowy",
+      "everyUnit": "Co {{unit}}",
+      "everyCountUnit": "Co {{count}} {{unit}}",
+      "onDays": "{{base}} w {{days}}",
+      "onDatesOfMonth": "{{base}} w dniach miesiąca: {{dates}}",
+      "frequency": {
+        "daily": "Codziennie",
+        "weekly": "Co tydzień",
+        "monthly": "Co miesiąc",
+        "quarterly": "Co kwartał",
+        "yearly": "Co rok"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} dn. po terminie",
+      "dueToday": "termin dzisiaj",
+      "inDays": "za {{count}} dn."
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "refresh": "Odśwież",
+      "newPlan": "Nowy plan konserwacji",
+      "skip": "Pomiń",
+      "skipTooltip": "Pomiń, podając wymagany powód — plan przejdzie do następnego wystąpienia",
+      "complete": "Zakończ konserwację",
+      "createTicket": "Utwórz zgłoszenie",
+      "openTicket": "Otwórz zgłoszenie ↗",
+      "pausePlan": "Wstrzymaj plan"
+    },
+    "assetPicker": {
+      "title": "Wybierz zasób",
+      "searchPlaceholder": "Szukaj według nazwy, tagu lub numeru seryjnego",
+      "loading": "Ładowanie zasobów…",
+      "loadFailed": "Nie udało się załadować zasobów.",
+      "empty": "Nie znaleziono zasobów.",
+      "showingFirst": "Wyświetlono pierwszych {{shown}} z {{total}} — zawęź wyszukiwanie."
+    },
+    "kpi": {
+      "overdue": "Po terminie",
+      "dueToday": "Termin dzisiaj",
+      "upcoming7d": "Najbliższe 7 dni",
+      "openTickets": "Otwarte zgłoszenia",
+      "compliance90d": "Zgodność (90 dni)",
+      "clickToFilter": "kliknij, aby filtrować",
+      "allClear": "brak zaległości",
+      "quietWeek": "spokojny tydzień przed nami",
+      "linkedToOccurrences": "powiązane z wystąpieniami konserwacji",
+      "onTimeCompletion": "ukończone w terminie"
+    },
+    "tabs": {
+      "queue": "Kolejka zadań",
+      "plans": "Kolejka planów",
+      "history": "Historia"
+    },
+    "filters": {
+      "searchPlaceholder": "Szukaj planów, zasobów lub klientów",
+      "actionable": "Do wykonania",
+      "allStatuses": "Wszystkie statusy",
+      "completed": "Ukończone",
+      "skipped": "Pominięte",
+      "button": "Filtry",
+      "allClients": "Wszyscy klienci",
+      "allAssetTypes": "Wszystkie typy zasobów",
+      "allPlanTypes": "Wszystkie typy planów",
+      "due": "Termin",
+      "clearAll": "Wyczyść wszystko",
+      "done": "Gotowe",
+      "clientChip": "Klient"
+    },
+    "viewMode": {
+      "list": "Lista",
+      "calendar": "Kalendarz"
+    },
+    "queue": {
+      "actionableTitle": "Wystąpienia do wykonania",
+      "plansTitle": "Kolejka aktywnych planów (na podstawie wystąpień)",
+      "loading": "Ładowanie konserwacji…",
+      "empty": "Żadne wystąpienia konserwacji nie pasują do tych filtrów.",
+      "emptyFiltered": "Żadne wystąpienia konserwacji nie pasują do tych filtrów. Usuń filtr lub poszerz zakres terminów.",
+      "emptyHistory": "Ukończone i pominięte wystąpienia pojawią się tutaj po zamknięciu konserwacji.",
+      "emptyPlans": "Otwarte wystąpienia planów pojawią się tutaj, gdy harmonogramy wygenerują pracę.",
+      "clearBeyond": "Poza widocznymi wystąpieniami ({{count}}) kolejka jest pusta — poszerz zakres terminów lub sprawdź kolejkę planów.",
+      "allCaughtUp": "Wszystko na bieżąco",
+      "nextDueIn": "— następny termin za {{count}} dn.",
+      "shownCount": "Wyświetlono: {{shown}} · Otwarte: {{open}} ·",
+      "inHistory": "W historii: {{count}}",
+      "itemCount_one": "· {{count}} element",
+      "itemCount_other": "· {{count}} elementu",
+      "itemCount_few": "· {{count}} elementy",
+      "itemCount_many": "· {{count}} elementów",
+      "overdueCount": "Po terminie: {{count}}",
+      "ticketChip": "zgłoszenie"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} w skrócie",
+      "overdue": "po terminie",
+      "today": "dzisiaj",
+      "upcoming": "nadchodzące"
+    },
+    "calendar": {
+      "dueCount": "Z terminem: {{count}}",
+      "today": "Dzisiaj",
+      "moreCount": "+{{count}} więcej",
+      "legend": "Legenda",
+      "scheduled": "Zaplanowane"
+    },
+    "fields": {
+      "asset": "Zasób",
+      "type": "Typ",
+      "cadence": "Częstotliwość",
+      "nextDue": "Następny termin",
+      "lastDone": "Ostatnio wykonano",
+      "assignee": "Osoba przypisana",
+      "createdBy": "Utworzone przez",
+      "linkedTicket": "Powiązane zgłoszenie"
+    },
+    "detail": {
+      "noSelection": "Nie wybrano wystąpienia",
+      "noSelectionHint": "Wybierz wystąpienie z kolejki, aby zobaczyć jego zasób, plan, powiązane zgłoszenie i dostępne akcje — lub wyczyść filtry, aby zobaczyć więcej zadań.",
+      "unassignedClient": "Nieprzypisany klient",
+      "dueSuffix": "· termin {{date}}",
+      "nextDueTooltip": "Następny termin jest obliczany na podstawie rzeczywistej daty ukończenia.",
+      "never": "Nigdy",
+      "unassigned": "Nie przypisano",
+      "assignViaTicket": "Przypisz przez zgłoszenie",
+      "ticketClosed": "Zamknięte",
+      "ticketOpen": "Otwarte",
+      "noTicketYet": "Jeszcze brak",
+      "execution": "Wykonanie",
+      "noChecklistPrefix": "Ten plan nie ma listy kontrolnej —",
+      "addStepsLink": "dodaj kroki w zasobie",
+      "noChecklistSuffix": "jako wskazówki dla techników.",
+      "timeline": "Oś czasu"
+    },
+    "timeline": {
+      "created": "Utworzono wystąpienie",
+      "ticketLinked": "Powiązano zgłoszenie — {{ticket}}",
+      "dueRepeats": "Termin — powtarzanie: {{cadence}}",
+      "completedBy": "Ukończone przez {{name}}{{notes}}",
+      "skippedBy": "Pominięte przez {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Potwierdzenie wykonania",
+      "performed": "Wykonano:",
+      "performedBy": "Wykonane przez:",
+      "notes": "Notatki:",
+      "checklist": "Lista kontrolna:",
+      "skipTitle": "Potwierdzenie pominięcia",
+      "reason": "Powód:",
+      "closedBy": "Zamknięte przez:",
+      "closed": "Zamknięto:"
+    },
+    "skip": {
+      "title": "Pomiń konserwację",
+      "reason": "Powód"
+    },
+    "ticket": {
+      "title": "Konserwacja: {{plan}}",
+      "description": "Typ konserwacji: {{type}}, termin: {{date}}. Wystąpienie: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {

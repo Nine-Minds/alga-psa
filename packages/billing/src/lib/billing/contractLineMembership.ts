@@ -13,10 +13,11 @@ import type {
   IContractLineServiceBucketConfig,
   IService,
   IUser,
+  IUserWithRoles,
 } from '@alga-psa/types';
 import { deleteTemplateServicePrices } from '@alga-psa/shared/billingClients/templateAmounts';
 import { ContractLineServiceConfigurationService } from '../../services/contractLineServiceConfigurationService';
-import { resolveContractLineServiceConfig } from '../contractLineServiceConfigPolicy';
+import { assertServiceEligibleForContractLine, resolveContractLineServiceConfig } from '../contractLineServiceConfigPolicy';
 import { fetchCurrencyCatalogRates } from '../../repositories/contractLineRepository';
 import type {
   ContractLineServiceMembershipChanges,
@@ -72,14 +73,8 @@ async function addServiceToTemplateLine(
   if (!service) {
     throw new Error(`Service ${serviceId} not found`);
   }
-  if (service.is_active === false) {
-    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
-  }
-
   const lineType: string = templateLine.line_type || 'Fixed';
-  if (service.item_kind === 'product' && lineType !== 'Fixed') {
-    throw new Error('Products can only be added to fixed-fee contract lines.');
-  }
+  assertServiceEligibleForContractLine(service, lineType);
 
   // Same policy resolver the live-line path uses: one place decides the
   // configuration type and the per-type defaults.
@@ -192,6 +187,7 @@ async function addServiceToTemplateLine(
 async function addServiceToLiveContractLine(
   trx: Knex.Transaction,
   tenant: string,
+  user: IUser,
   contractLineId: string,
   serviceId: string,
   quantity?: number,
@@ -213,14 +209,9 @@ async function addServiceToLiveContractLine(
   }
 
   const contractLine = await assertLiveContractLineIsAuthorable(trx, tenant, contractLineId);
-  if (service.is_active === false) {
-    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
-  }
+  assertServiceEligibleForContractLine(service, contractLine.contract_line_type);
 
   if (service.item_kind === 'product') {
-    if (contractLine.contract_line_type !== 'Fixed') {
-      throw new Error('Products can only be added to fixed-fee contract lines.');
-    }
 
     const contract = contractLine.contract_id
       ? await tenantScopedTable(trx, tenant, 'contracts')
@@ -275,10 +266,22 @@ async function addServiceToLiveContractLine(
   const configurationService = new ContractLineServiceConfigurationService(trx, tenant);
   const existingConfig = await configurationService.getConfigurationForService(contractLineId, serviceId);
   if (existingConfig) {
+    if (existingConfig.configuration_type !== configurationType) {
+      return configurationService.rebindConfiguration(user as IUserWithRoles, existingConfig.config_id, {
+        targetContractLineId: contractLineId,
+        targetServiceId: serviceId,
+        configurationType,
+        mutableValues: {
+          custom_rate: customRate,
+          quantity: configurationType === 'Usage' ? undefined : quantity ?? 1,
+        },
+        typeConfig: resolvedTypeConfig,
+        rateTiers,
+      });
+    }
     await configurationService.updateConfiguration(
       existingConfig.config_id,
       {
-        configuration_type: configurationType,
         custom_rate: customRate,
         quantity: configurationType === 'Usage' ? undefined : quantity ?? 1,
       },
@@ -488,6 +491,7 @@ export async function addServiceToContractLineInTransaction(
   return addServiceToLiveContractLine(
     trx,
     tenant,
+    user,
     contractLineId,
     serviceId,
     quantity,

@@ -21,6 +21,7 @@ import {
   type NativeComposerAudience,
 } from "./CommentAudienceControl";
 import { createTicketRichTextParagraph } from "../../lib/ticketRichText";
+import { useDefaultNotificationSuppression } from "../../lib/notificationSuppressionDefaults";
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from "./TicketNotificationSuppressionControl";
@@ -41,12 +42,6 @@ const TextEditor = dynamic(
 );
 
 const DEFAULT_RESOLUTION_BLOCK = createTicketRichTextParagraph("");
-
-const defaultNotificationSuppression =
-  (): TicketNotificationSuppressionValue => ({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-  });
 
 interface TicketResolutionDialogProps {
   id: string;
@@ -121,6 +116,7 @@ export default function TicketResolutionDialog({
   const useAudiences = audiences.length > 0;
   const [audience, setAudience] = useState<NativeComposerAudience | null>(null);
   const isInternal = useAudiences ? audienceIsInternal(audience) : isInternalToggle;
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(
       defaultNotificationSuppression,
@@ -164,7 +160,7 @@ export default function TicketResolutionDialog({
       resetEmailRecipients();
       resetDraftTracking();
     }
-  }, [isOpen, resetDraftTracking, resetEmailRecipients, statusOptions]);
+  }, [isOpen, resetDraftTracking, resetEmailRecipients, statusOptions, defaultNotificationSuppression]);
 
   // A resolution is optional: an empty editor closes the ticket with no comment.
   const hasContent = hasEditorContent(content);

@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
 
 let currentUser: any;
 
 const hasPermissionMock = vi.fn();
+const resolveBundleRulesMock = vi.hoisted(() => vi.fn<(
+  trx: unknown,
+  subject: { tenant: string; userId: string; apiKeyId: string | null },
+) => Promise<any[]>>());
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
@@ -37,6 +42,27 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
+}));
+
+// This suite supplies policy results at the resolver boundary; its fake DB only
+// models ticket/comment persistence. Policy lookup failures must propagate.
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  // LEVERAGE: pattern authorization-snapshot-test-fixture — repeated bundle snapshot adapters can move to a shared test helper.
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action,
+    templateKey: rule.template_key, constraintKey: rule.constraint_key,
+    constraints: rule.config.constraints ?? [], redactedFields: rule.config.redactedFields ?? [],
+    selectedBoardIds: rule.config.selectedBoardIds, selectedClientIds: rule.config.selectedClientIds,
+  }),
+  resolveBundleNarrowingRulesForEvaluation: resolveBundleRulesMock,
+  loadAuthorizationEvaluationSnapshot: async (trx: unknown, subject: { tenant: string; userId: string; apiKeyId: string | null }) => ({
+    roleIds: [], teamIds: [], managedUserIds: [],
+    rules: (await resolveBundleRulesMock(trx, subject)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action,
+      template_key: rule.templateKey, constraint_key: rule.constraintKey ?? null,
+      config: { selectedBoardIds: rule.selectedBoardIds, selectedClientIds: rule.selectedClientIds },
+    })),
+  }),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -279,8 +305,11 @@ function buildTrx(params: {
   currentTicket?: Record<string, unknown>;
   bundleSettings?: Record<string, unknown> | undefined;
   childTickets?: Array<Record<string, unknown>>;
+  boards?: Array<{ board_id: string; is_inactive: boolean }>;
+  tenantSettings?: Record<string, unknown>;
 }) {
   const currentTicket = { ...makeTicket(), ...(params.currentTicket ?? {}) };
+  const boards = params.boards ?? [{ board_id: 'board-1', is_inactive: false }, { board_id: 'board-2', is_inactive: false }];
   let childTickets = (params.childTickets ?? []).map((child) => ({ ...child }));
   const bundleSettings = params.bundleSettings;
 
@@ -370,6 +399,28 @@ function buildTrx(params: {
       return statusesTable;
     }
 
+    if (table === 'boards') {
+      const boardsBuilder: any = {
+        select: vi.fn(() => boardsBuilder),
+        where: vi.fn((whereArgs: Record<string, unknown>) => ({
+          first: vi.fn(async () => boards.find((board) => board.board_id === whereArgs.board_id)),
+        })),
+      };
+      return boardsBuilder;
+    }
+
+    if (table === 'priorities') {
+      return {
+        where: vi.fn(() => ({
+          first: vi.fn(async () => ({ priority_name: 'Normal', is_from_itil_standard: false })),
+        })),
+      };
+    }
+
+    if (table === 'tenant_settings') {
+      return { select: () => ({ first: async () => params.tenantSettings }) };
+    }
+
     if (table === 'ticket_bundle_settings') {
       return bundleSettingsTable;
     }
@@ -450,6 +501,7 @@ describe('updateTicketWithCache live updates', () => {
       user_type: 'internal',
     };
     hasPermissionMock.mockResolvedValue(true);
+    resolveBundleRulesMock.mockReset().mockResolvedValue([]);
     createTenantKnexMock.mockResolvedValue({ knex: { any: true } });
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(buildTrx({})));
   });
@@ -504,6 +556,28 @@ describe('updateTicketWithCache live updates', () => {
 
     expect(ticketUpdates[0]).toMatchObject({ title: 'Renamed' });
     expect(ticketUpdates[0]).not.toHaveProperty('status_changed_at');
+  });
+
+  it('rejects moving a ticket onto an inactive board and writes nothing', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(buildTrx({ boards: [{ board_id: 'board-1', is_inactive: false }, { board_id: 'board-2', is_inactive: true }] }))
+    );
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    const result = await updateTicketWithCache('ticket-1', { board_id: 'board-2', status_id: 'status-2' });
+
+    expect(result).toEqual(
+      expect.objectContaining({ actionError: 'The destination board is inactive. Choose an active board.' })
+    );
+    expect(ticketUpdates).toHaveLength(0);
+    expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('moves a ticket onto an active board', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { board_id: 'board-2', status_id: 'status-2' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toMatchObject({ board_id: 'board-2', status_id: 'status-2' });
   });
 
   it('T005: permission failure results in zero live-update publishes', async () => {
@@ -813,6 +887,43 @@ describe('updateTicketWithCache live updates', () => {
     );
   });
 
+  it.each(['lookup failure', 'record outside bundle scope'] as const)(
+    'refuses a comment without writes or events on %s', async (scenario) => {
+      if (scenario === 'lookup failure') {
+        resolveBundleRulesMock.mockRejectedValue(new Error('bundle policy database unavailable'));
+      } else {
+        resolveBundleRulesMock.mockResolvedValue([
+          { id: 'selected-clients', resource: 'ticket', action: 'update', templateKey: 'selected_clients', selectedClientIds: ['other-client'] },
+        ]);
+      }
+      const connection = buildTrx({});
+      const trx = Object.assign(vi.fn(connection), connection);
+      withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+      const { addTicketCommentWithCache } = await import('./optimizedTicketActions');
+
+      const result = addTicketCommentWithCache(
+        'ticket-1', '[{"type":"paragraph","content":"Resolution text"}]', false, true, true,
+      );
+      if (scenario === 'lookup failure') {
+        await expect(result).rejects.toThrow('bundle policy database unavailable');
+      } else {
+        await expect(result).resolves.toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
+      }
+
+      expect(resolveBundleRulesMock).toHaveBeenCalledWith(trx, {
+        tenant: 'tenant-1', userId: 'user-1', apiKeyId: null,
+      });
+      expect(trx).not.toHaveBeenCalledWith('comment_threads');
+      expect(trx).not.toHaveBeenCalledWith('comments');
+      expect(ticketUpdates).toEqual([]);
+      expect(auditLogInserts).toEqual([]);
+      expect(afterCommitHooksQueue).toEqual([]);
+      expect(publishEventMock).not.toHaveBeenCalled();
+      expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+      expect(publishRedisMock).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     {
       label: 'contact notifications',
@@ -904,7 +1015,7 @@ describe('updateTicketWithCache live updates', () => {
       },
     });
   });
-  it('keeps the USER actor on TICKET_RESPONSE_STATE_CHANGED for a native systemActor update (auto-close)', async () => {
+  it('keeps the existing USER event actor for auto-close capability updates', async () => {
     const trx = buildTrx({
       currentTicket: makeTicket({ status_id: 'status-1', response_state: 'awaiting_client' }),
     });
@@ -916,7 +1027,16 @@ describe('updateTicketWithCache live updates', () => {
     withTransactionMock.mockImplementation(async (_db: any, callback: (t: any) => Promise<any>) => callback(trx));
     await expect(
       withTransaction({ any: true } as any, (t: any) =>
-        updateTicketInTransaction(t, systemUser, 'tenant-1', 'ticket-1', { status_id: 'closed-status-1' }, { systemActor: true }),
+        updateTicketInTransaction(
+          t,
+          systemUser,
+          'tenant-1',
+          'ticket-1',
+          { status_id: 'closed-status-1' },
+          undefined,
+          undefined,
+          AUTO_CLOSE_TICKET_AUTHORIZATION,
+        ),
       ),
     ).resolves.toBe('success');
 
@@ -931,5 +1051,71 @@ describe('updateTicketWithCache live updates', () => {
         payload: expect.objectContaining({ ticketId: 'ticket-1', newResponseState: null, trigger: 'close' }),
       }),
     );
+  });
+  it('rejects serialized attempts to forge trusted update authority', async () => {
+    const trx = buildTrx({
+      currentTicket: makeTicket({ status_id: 'status-1', response_state: 'awaiting_client' }),
+    });
+    const { updateTicketInTransaction } = await import('./optimizedTicketActions');
+
+    await expect(updateTicketInTransaction(
+      trx,
+      { ...currentUser, user_id: 'system-user-1' },
+      'tenant-1',
+      'ticket-1',
+      { status_id: 'closed-status-1' },
+      { systemActor: true, systemAuthorization: { source: 'auto_close' } } as any,
+    )).rejects.toThrow('Unsupported ticket update option');
+    expect(ticketUpdates).toHaveLength(0);
+  });
+
+  describe('comment response state (shared engine)', () => {
+    const plainContent = '[{"type":"paragraph","content":"Reply"}]';
+
+    it('moves the state and emits one change event when tracking is enabled', async () => {
+      withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+        callback(buildTrx({ currentTicket: makeTicket({ response_state: 'awaiting_internal' }) }))
+      );
+      const { addTicketCommentWithCache } = await import('./optimizedTicketActions');
+      await addTicketCommentWithCache('ticket-1', plainContent, false, false);
+
+      expect(ticketUpdates).toContainEqual({ response_state: 'awaiting_client' });
+      const changed = publishWorkflowEventMock.mock.calls.filter(
+        ([event]: any[]) => event?.eventType === 'TICKET_RESPONSE_STATE_CHANGED'
+      );
+      expect(changed).toHaveLength(1);
+      expect(changed[0][0].payload).toEqual(
+        expect.objectContaining({
+          previousResponseState: 'awaiting_internal',
+          newResponseState: 'awaiting_client',
+          trigger: 'comment',
+          userId: 'user-1',
+        })
+      );
+    });
+
+    it.each([
+      ['the tenant_settings column', { ticket_display_settings: { responseStateTrackingEnabled: false } }],
+      [
+        'the nested settings.ticketing.display path',
+        { ticket_display_settings: {}, settings: { ticketing: { display: { responseStateTrackingEnabled: false } } } },
+      ],
+    ])('does not write state or emit when tracking is disabled via %s', async (_label, tenantSettings) => {
+      withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+        callback(
+          buildTrx({
+            currentTicket: makeTicket({ response_state: 'awaiting_internal' }),
+            tenantSettings,
+          })
+        )
+      );
+      const { addTicketCommentWithCache } = await import('./optimizedTicketActions');
+      await addTicketCommentWithCache('ticket-1', plainContent, false, false);
+
+      expect(ticketUpdates.filter((u) => 'response_state' in u)).toEqual([]);
+      expect(
+        publishWorkflowEventMock.mock.calls.filter(([event]: any[]) => event?.eventType === 'TICKET_RESPONSE_STATE_CHANGED')
+      ).toEqual([]);
+    });
   });
 });

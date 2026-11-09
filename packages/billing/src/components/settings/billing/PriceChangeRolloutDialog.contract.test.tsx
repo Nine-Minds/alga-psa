@@ -99,8 +99,12 @@ describe('PriceChangeRolloutDialog effective date', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
+    // Radix Dialog defers focus restoration with a zero-delay timer. Let that
+    // callback run while this test's jsdom window is still active; otherwise
+    // it can dispatch its synthetic event into the next/closed test realm.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
   });
 
   it('sends the local calendar date the operator picked', async () => {

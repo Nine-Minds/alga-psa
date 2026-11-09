@@ -1447,7 +1447,182 @@
   "maintenanceCommandCenter": {
     "title": "Central de controle de manutenção",
     "description": "A próxima data de vencimento é calculada a partir da data de conclusão real.",
-    "assetsLink": "Ativos"
+    "assetsLink": "Ativos",
+    "notRecorded": "Não registrado",
+    "system": "Sistema",
+    "checklist": {
+      "complete": "Concluído",
+      "incomplete": "Incompleto"
+    },
+    "weekdays": {
+      "0": "Dom",
+      "1": "Seg",
+      "2": "Ter",
+      "3": "Qua",
+      "4": "Qui",
+      "5": "Sex",
+      "6": "Sáb"
+    },
+    "cadence": {
+      "custom": "Personalizado",
+      "customSchedule": "Agendamento personalizado",
+      "everyUnit": "A cada {{unit}}",
+      "everyCountUnit": "A cada {{count}} {{unit}}",
+      "onDays": "{{base}} em {{days}}",
+      "onDatesOfMonth": "{{base}} nos dias {{dates}}",
+      "frequency": {
+        "daily": "Diariamente",
+        "weekly": "Semanalmente",
+        "monthly": "Mensalmente",
+        "quarterly": "Trimestralmente",
+        "yearly": "Anualmente"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}}d de atraso",
+      "dueToday": "vence hoje",
+      "inDays": "em {{count}}d"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "refresh": "Atualizar",
+      "newPlan": "Novo plano de manutenção",
+      "skip": "Pular",
+      "skipTooltip": "Pular com justificativa obrigatória — o plano avança para a próxima ocorrência",
+      "complete": "Concluir manutenção",
+      "createTicket": "Criar ticket",
+      "openTicket": "Abrir ticket ↗",
+      "pausePlan": "Pausar plano"
+    },
+    "assetPicker": {
+      "title": "Selecione um ativo",
+      "searchPlaceholder": "Buscar por nome, tag ou número de série",
+      "loading": "Carregando ativos…",
+      "loadFailed": "Não foi possível carregar os ativos.",
+      "empty": "Nenhum ativo encontrado.",
+      "showingFirst": "Exibindo os primeiros {{shown}} de {{total}} — refine sua busca."
+    },
+    "kpi": {
+      "overdue": "Em atraso",
+      "dueToday": "Vencem hoje",
+      "upcoming7d": "Próximos 7d",
+      "openTickets": "Tickets abertos",
+      "compliance90d": "Conformidade em 90d",
+      "clickToFilter": "clique para filtrar",
+      "allClear": "sem pendências",
+      "quietWeek": "semana tranquila pela frente",
+      "linkedToOccurrences": "vinculados a ocorrências",
+      "onTimeCompletion": "conclusão no prazo"
+    },
+    "tabs": {
+      "queue": "Fila de trabalho",
+      "plans": "Fila de planos",
+      "history": "Histórico"
+    },
+    "filters": {
+      "searchPlaceholder": "Buscar planos, ativos ou clientes",
+      "actionable": "Aguardando ação",
+      "allStatuses": "Todos os status",
+      "completed": "Concluídas",
+      "skipped": "Puladas",
+      "button": "Filtros",
+      "allClients": "Todos os clientes",
+      "allAssetTypes": "Todos os tipos de ativo",
+      "allPlanTypes": "Todos os tipos de plano",
+      "due": "Vencimento",
+      "clearAll": "Limpar tudo",
+      "done": "Feito",
+      "clientChip": "Cliente"
+    },
+    "viewMode": {
+      "list": "Lista",
+      "calendar": "Calendário"
+    },
+    "queue": {
+      "actionableTitle": "Ocorrências aguardando ação",
+      "plansTitle": "Fila de planos ativos (com ocorrências)",
+      "loading": "Carregando manutenção…",
+      "empty": "Nenhuma ocorrência de manutenção corresponde a estes filtros.",
+      "emptyFiltered": "Nenhuma ocorrência de manutenção corresponde a estes filtros. Remova um filtro ou amplie o intervalo de vencimento.",
+      "emptyHistory": "As ocorrências concluídas e puladas aparecerão aqui após o encerramento da manutenção.",
+      "emptyPlans": "As ocorrências abertas dos planos aparecerão aqui conforme os agendamentos gerarem trabalho.",
+      "clearBeyond": "Não há outras ocorrências na fila além destas {{count}} — amplie o intervalo de vencimento ou consulte a fila de planos.",
+      "allCaughtUp": "Tudo em dia",
+      "nextDueIn": "— próximo vencimento em {{count}}d",
+      "shownCount": "{{shown}} exibidas · {{open}} abertas ·",
+      "inHistory": "{{count}} no histórico",
+      "itemCount_one": "· {{count}} item",
+      "itemCount_other": "· {{count}} itens",
+      "overdueCount": "{{count}} em atraso",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "Resumo de {{month}}",
+      "overdue": "em atraso",
+      "today": "hoje",
+      "upcoming": "próximas"
+    },
+    "calendar": {
+      "dueCount": "{{count}} com vencimento",
+      "today": "Hoje",
+      "moreCount": "+{{count}} mais",
+      "legend": "Legenda",
+      "scheduled": "Agendadas"
+    },
+    "fields": {
+      "asset": "Ativo",
+      "type": "Tipo",
+      "cadence": "Periodicidade",
+      "nextDue": "Próximo vencimento",
+      "lastDone": "Última execução",
+      "assignee": "Responsável",
+      "createdBy": "Criado por",
+      "linkedTicket": "Ticket vinculado"
+    },
+    "detail": {
+      "noSelection": "Nenhuma ocorrência selecionada",
+      "noSelectionHint": "Selecione uma ocorrência na fila para ver o ativo, o plano, o ticket vinculado e as ações de execução — ou limpe os filtros para ver mais trabalho.",
+      "unassignedClient": "Cliente não atribuído",
+      "dueSuffix": "· vence em {{date}}",
+      "nextDueTooltip": "O próximo vencimento é calculado a partir da data real de conclusão.",
+      "never": "Nunca",
+      "unassigned": "Não atribuído",
+      "assignViaTicket": "Atribuir via ticket",
+      "ticketClosed": "Fechado",
+      "ticketOpen": "Aberto",
+      "noTicketYet": "Nenhum ainda",
+      "execution": "Execução",
+      "noChecklistPrefix": "Este plano não tem lista de verificação —",
+      "addStepsLink": "adicione etapas no ativo",
+      "noChecklistSuffix": "para orientar os técnicos.",
+      "timeline": "Linha do tempo"
+    },
+    "timeline": {
+      "created": "Ocorrência criada",
+      "ticketLinked": "Ticket vinculado — {{ticket}}",
+      "dueRepeats": "Vencimento — repete {{cadence}}",
+      "completedBy": "Concluída por {{name}}{{notes}}",
+      "skippedBy": "Pulada por {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Comprovação de conclusão",
+      "performed": "Realizada em:",
+      "performedBy": "Realizada por:",
+      "notes": "Observações:",
+      "checklist": "Lista de verificação:",
+      "skipTitle": "Registro da ocorrência pulada",
+      "reason": "Motivo:",
+      "closedBy": "Encerrada por:",
+      "closed": "Encerrada em:"
+    },
+    "skip": {
+      "title": "Pular manutenção",
+      "reason": "Motivo"
+    },
+    "ticket": {
+      "title": "Manutenção: {{plan}}",
+      "description": "Manutenção {{type}} com vencimento em {{date}}. Ocorrência: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {

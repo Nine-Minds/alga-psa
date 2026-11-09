@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import { getTemplates, createTemplateFromProject } from '@alga-psa/projects/actions/projectTemplateActions';
 import { isTemplateActionError, templateErrorResponse } from './templateRouteErrors';
 
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') || undefined;
     const search = searchParams.get('search') || undefined;
 
-    const templates = await getTemplates({ category, search });
+    const templates = await runWithApiKeyOrSession(request, () => getTemplates({ category, search }));
     if (isTemplateActionError(templates)) {
       return templateErrorResponse(templates, 'Failed to fetch templates');
     }
@@ -45,11 +46,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const templateId = await createTemplateFromProject(projectId, {
-      template_name: templateName,
-      description,
-      category
-    });
+    const templateId = await runWithApiKeyOrSession(request, () =>
+      createTemplateFromProject(projectId, {
+        template_name: templateName,
+        description,
+        category
+      })
+    );
     if (isTemplateActionError(templateId)) {
       return templateErrorResponse(templateId, 'Failed to create template');
     }

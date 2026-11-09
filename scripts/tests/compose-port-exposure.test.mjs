@@ -229,6 +229,11 @@ describe('fresh-install CI combination', () => {
     ['CE', CI_BASE],
     ['EE', [...CI_BASE, 'docker-compose.e2e-ee.yaml']],
   ]) {
+    test(`${label}: permission init uses the selected server image`, () => {
+      const { services } = render(files, { APP_NAME: 'alga-e2e-test' });
+      assert.equal(services['runtime-permissions'].image, services.server.image);
+    });
+
     test(`${label}: only test-ingress publishes data-plane ports, on 127.0.0.1`, () => {
       const bindings = dataPlaneBindings(render(files));
       assert.ok(bindings.length > 0, 'test-ingress should publish the emulated ports');
@@ -237,6 +242,39 @@ describe('fresh-install CI combination', () => {
         assert.equal(binding.host_ip, '127.0.0.1', describeBinding(binding));
       }
     });
+  }
+});
+
+describe('hardening survives compose file merges and extends', () => {
+  // These stacks both merge a base file and extend services from it. Compose
+  // must be able to validate that combination before it can start any service.
+  const stacks = [
+    ['prebuilt CE', PREBUILT_CE],
+    ['prebuilt EE', PREBUILT_EE],
+    ['dev CE', DEV_CE],
+    ['dev EE', DEV_EE],
+    ['root + dev CE', ['docker-compose.yaml', ...DEV_CE]],
+    ['root + dev EE', ['docker-compose.yaml', ...DEV_EE]],
+    ['prod CE', PROD_CE],
+    ['prod EE', PROD_EE],
+  ];
+
+  for (const [label, files] of stacks) {
+    for (const setting of ['', 'false']) {
+      test(`${label}: no-new-privileges=${setting || 'default'}`, () => {
+        const config = render(files, { ALGA_NO_NEW_PRIVILEGES: setting });
+        for (const [name, service] of Object.entries(config.services)) {
+          assert.deepEqual(
+            service.security_opt,
+            [`no-new-privileges:${setting || 'true'}`],
+            `${label}: ${name} must receive the security policy exactly once`
+          );
+        }
+        for (const name of ['redis', 'email-service', 'workflow-worker']) {
+          assert.deepEqual(config.services[name].cap_drop, ['ALL'], `${label}: ${name} drops all capabilities`);
+        }
+      });
+    }
   }
 });
 

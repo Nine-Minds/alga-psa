@@ -1447,7 +1447,182 @@
   "maintenanceCommandCenter": {
     "title": "Underhåll",
     "description": "Kontrollcenter för förebyggande arbete med alla kunders tillgångar.",
-    "assetsLink": "Tillgångar"
+    "assetsLink": "Tillgångar",
+    "notRecorded": "Inte registrerat",
+    "system": "System",
+    "checklist": {
+      "complete": "Slutförd",
+      "incomplete": "Inte slutförd"
+    },
+    "weekdays": {
+      "0": "Sön",
+      "1": "Mån",
+      "2": "Tis",
+      "3": "Ons",
+      "4": "Tor",
+      "5": "Fre",
+      "6": "Lör"
+    },
+    "cadence": {
+      "custom": "Anpassad",
+      "customSchedule": "Anpassat schema",
+      "everyUnit": "Varje {{unit}}",
+      "everyCountUnit": "Varje {{count}} {{unit}}",
+      "onDays": "{{base}} på {{days}}",
+      "onDatesOfMonth": "{{base}} den {{dates}}",
+      "frequency": {
+        "daily": "Dagligen",
+        "weekly": "Veckovis",
+        "monthly": "Månadsvis",
+        "quarterly": "Kvartalsvis",
+        "yearly": "Årligen"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} d försenat",
+      "dueToday": "klart senast idag",
+      "inDays": "om {{count}} d"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "refresh": "Uppdatera",
+      "newPlan": "Ny underhållsplan",
+      "skip": "Hoppa över",
+      "skipTooltip": "Hoppa över med obligatorisk motivering – planen går vidare till nästa tillfälle",
+      "complete": "Slutför underhåll",
+      "createTicket": "Skapa ärende",
+      "openTicket": "Öppna ärende ↗",
+      "pausePlan": "Pausa plan"
+    },
+    "assetPicker": {
+      "title": "Välj en tillgång",
+      "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
+      "loading": "Läser in tillgångar…",
+      "loadFailed": "Det gick inte att läsa in tillgångar.",
+      "empty": "Inga tillgångar hittades.",
+      "showingFirst": "Visar de första {{shown}} av {{total}} – förfina din sökning."
+    },
+    "kpi": {
+      "overdue": "Försenat",
+      "dueToday": "Klart senast idag",
+      "upcoming7d": "Kommande 7 dagar",
+      "openTickets": "Öppna ärenden",
+      "compliance90d": "Efterlevnad 90 dagar",
+      "clickToFilter": "klicka för att filtrera",
+      "allClear": "allt klart",
+      "quietWeek": "lugn vecka framöver",
+      "linkedToOccurrences": "kopplade till underhållstillfällen",
+      "onTimeCompletion": "slutfört i tid"
+    },
+    "tabs": {
+      "queue": "Arbetskö",
+      "plans": "Plankö",
+      "history": "Historik"
+    },
+    "filters": {
+      "searchPlaceholder": "Sök efter planer, tillgångar eller kunder",
+      "actionable": "Kräver åtgärd",
+      "allStatuses": "Alla statusar",
+      "completed": "Slutfört",
+      "skipped": "Överhoppat",
+      "button": "Filter",
+      "allClients": "Alla kunder",
+      "allAssetTypes": "Alla tillgångstyper",
+      "allPlanTypes": "Alla plantyper",
+      "due": "Måldatum",
+      "clearAll": "Rensa alla",
+      "done": "Klar",
+      "clientChip": "Kund"
+    },
+    "viewMode": {
+      "list": "Lista",
+      "calendar": "Kalender"
+    },
+    "queue": {
+      "actionableTitle": "Underhållstillfällen som kräver åtgärd",
+      "plansTitle": "Aktiv plankö (baserad på underhållstillfällen)",
+      "loading": "Läser in underhåll…",
+      "empty": "Inga underhållstillfällen matchar dessa filter.",
+      "emptyFiltered": "Inga underhållstillfällen matchar dessa filter. Rensa ett filter eller utöka intervallet för måldatum.",
+      "emptyHistory": "Slutförda och överhoppade tillfällen visas här när underhållet har avslutats.",
+      "emptyPlans": "Öppna underhållstillfällen visas här när scheman genererar arbete.",
+      "clearBeyond": "Inget mer finns i kön utöver dessa {{count}} – utöka intervallet för måldatum eller kontrollera plankön.",
+      "allCaughtUp": "Allt klart",
+      "nextDueIn": "– nästa måldatum om {{count}} d",
+      "shownCount": "Visas: {{shown}} · Öppna: {{open}} ·",
+      "inHistory": "I historiken: {{count}}",
+      "itemCount_one": "· {{count}} post",
+      "itemCount_other": "· {{count}} poster",
+      "overdueCount": "Försenade: {{count}}",
+      "ticketChip": "ärende"
+    },
+    "miniMonth": {
+      "atAGlance": "Översikt för {{month}}",
+      "overdue": "försenat",
+      "today": "idag",
+      "upcoming": "kommande"
+    },
+    "calendar": {
+      "dueCount": "Med måldatum: {{count}}",
+      "today": "Idag",
+      "moreCount": "+{{count}} till",
+      "legend": "Teckenförklaring",
+      "scheduled": "Schemalagt"
+    },
+    "fields": {
+      "asset": "Tillgång",
+      "type": "Typ",
+      "cadence": "Intervall",
+      "nextDue": "Nästa måldatum",
+      "lastDone": "Senast utfört",
+      "assignee": "Ansvarig",
+      "createdBy": "Skapat av",
+      "linkedTicket": "Kopplat ärende"
+    },
+    "detail": {
+      "noSelection": "Inget underhållstillfälle valt",
+      "noSelectionHint": "Välj ett underhållstillfälle i kön för att se tillgången, planen, det kopplade ärendet och åtgärder för att utföra underhållet – eller rensa filtren för att se mer arbete.",
+      "unassignedClient": "Ingen kund tilldelad",
+      "dueSuffix": "· klart senast {{date}}",
+      "nextDueTooltip": "Nästa måldatum beräknas från det faktiska slutförandedatumet.",
+      "never": "Aldrig",
+      "unassigned": "Ej tilldelad",
+      "assignViaTicket": "Tilldela via ärende",
+      "ticketClosed": "Stängt",
+      "ticketOpen": "Öppet",
+      "noTicketYet": "Inget ännu",
+      "execution": "Utförande",
+      "noChecklistPrefix": "Den här planen saknar checklista –",
+      "addStepsLink": "lägg till steg på tillgången",
+      "noChecklistSuffix": "för att vägleda tekniker.",
+      "timeline": "Tidslinje"
+    },
+    "timeline": {
+      "created": "Underhållstillfälle skapat",
+      "ticketLinked": "Ärende kopplat – {{ticket}}",
+      "dueRepeats": "Måldatum – upprepas {{cadence}}",
+      "completedBy": "Slutfört av {{name}}{{notes}}",
+      "skippedBy": "Överhoppat av {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Dokumentation av slutförande",
+      "performed": "Utfört:",
+      "performedBy": "Utfört av:",
+      "notes": "Anteckningar:",
+      "checklist": "Checklista:",
+      "skipTitle": "Dokumentation av överhoppat underhåll",
+      "reason": "Orsak:",
+      "closedBy": "Avslutat av:",
+      "closed": "Avslutat:"
+    },
+    "skip": {
+      "title": "Hoppa över underhåll",
+      "reason": "Orsak"
+    },
+    "ticket": {
+      "title": "Underhåll: {{plan}}",
+      "description": "Underhåll av typen {{type}} ska vara klart senast {{date}}. Underhållstillfälle: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {

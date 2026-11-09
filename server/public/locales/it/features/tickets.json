@@ -65,10 +65,147 @@
     "unmatchedValuesIntro_few": "{{count}} valori del CSV non sono stati associati automaticamente.",
     "unmatchedValuesIntro_many": "{{count}} valori del CSV non sono stati associati automaticamente.",
     "warningCount_few": "{{count}} avvisi:",
-    "warningCount_many": "{{count}} avvisi:"
+    "warningCount_many": "{{count}} avvisi:",
+    "title": "Importa ticket",
+    "errors": {
+      "readCsv": "Errore durante la lettura del file CSV",
+      "selectDefaultBoard": "Seleziona una bacheca predefinita",
+      "requiredFieldNotMapped": "Il campo obbligatorio \"{{field}}\" non è associato",
+      "processCsv": "Errore durante l'elaborazione dei dati CSV",
+      "importTickets": "Errore durante l'importazione dei ticket"
+    },
+    "unnamedBoard": "Bacheca senza nome",
+    "boardOptionDefault": "{{board}} (predefinita)",
+    "resolveUnmatchedData": "Risolvi i dati senza corrispondenza",
+    "actions": {
+      "back": "Indietro",
+      "next": "Avanti",
+      "processing": "Elaborazione in corso...",
+      "preview": "Anteprima",
+      "import": "Importa ticket",
+      "downloadTemplate": "Scarica modello CSV"
+    },
+    "upload": {
+      "prompt": "Carica un file CSV con i dati dei ticket",
+      "requiredLabel": "Obbligatori:",
+      "optionalLabel": "Facoltativi:",
+      "tipLabel": "Suggerimento:",
+      "tip": "I nomi delle colonne di altri PSA (ConnectWise, Autotask, HaloPSA, Zendesk, Freshdesk) vengono rilevati automaticamente"
+    },
+    "board": {
+      "heading": "Seleziona bacheca",
+      "description": "Tutti i ticket verranno importati in questa bacheca. Gli stati e le categorie disponibili dipendono dalla bacheca selezionata.",
+      "placeholder": "Seleziona una bacheca..."
+    },
+    "mapping": {
+      "heading": "Associa i campi dei ticket alle colonne CSV",
+      "description": "Seleziona la colonna CSV che contiene i dati per ciascun campo. I campi contrassegnati con * sono obbligatori.",
+      "fieldColumn": "Campo",
+      "csvColumn": "Seleziona colonna CSV",
+      "notMapped": "Non associato"
+    },
+    "preview": {
+      "heading": "Anteprima dell'importazione",
+      "totalRows": "Righe totali:",
+      "valid": "Valide:",
+      "invalid": "Non valide:",
+      "skipInvalidRows": "Salta le righe non valide",
+      "skipInvalidRowsHelp": "Continua l'importazione anche se alcune righe contengono errori di validazione",
+      "yes": "Sì",
+      "no": "No",
+      "rowValid": "Valida",
+      "rowHasErrors": "Contiene errori",
+      "columns": {
+        "row": "Riga",
+        "issues": "Problemi"
+      },
+      "unmatchedCount": "{{count}} valori",
+      "unmatchedIntro": "del tuo CSV non corrispondono ai dati esistenti",
+      "unmatchedNextStep": "Potrai risolverli nel passaggio successivo.",
+      "invalidRowCount": "{{count}} righe",
+      "invalidRowsHelp": "contengono errori di validazione. Attiva \"Salta le righe non valide\" per procedere, oppure torna indietro e correggi il CSV."
+    },
+    "confirmLargeImport": "Conferma l'importazione di grandi dimensioni ({{count}} ticket)",
+    "confirmLargeImportHelp": "Confermo di voler creare {{count}} ticket. L'operazione potrebbe richiedere del tempo.",
+    "confirmLargeImportUpToHelp": "Confermo di voler creare fino a {{count}} ticket. L'operazione potrebbe richiedere del tempo.",
+    "resolve": {
+      "chooseHandling": "Scegli qui sotto come gestire ciascun valore.",
+      "sections": {
+        "clients": "Clienti ({{count}} senza corrispondenza)",
+        "priorities": "Priorità ({{count}} senza corrispondenza)",
+        "statuses": "Stati ({{count}} senza corrispondenza)",
+        "categories": "Categorie ({{count}} senza corrispondenza)",
+        "agents": "Agenti ({{count}} senza corrispondenza)",
+        "teams": "Team ({{count}} senza corrispondenza)",
+        "contacts": "Contatti ({{count}} senza corrispondenza)",
+        "dateFormats": "Formati data ({{count}} non riconosciuti)"
+      },
+      "required": "Obbligatorio",
+      "itilCreateDisabled": "Bacheca ITIL — creazione disabilitata",
+      "needsInterpretation": "Da interpretare",
+      "createNew": "Crea nuovo",
+      "mapToExisting": "Associa a esistente",
+      "useDefault": "Usa valore predefinito",
+      "useBoardDefault": "Usa valore predefinito della bacheca",
+      "skipUncategorized": "Salta (lascia senza categoria)",
+      "skipUnassigned": "Salta (lascia non assegnato)",
+      "skipNoTeam": "Salta (nessun team assegnato)",
+      "skipLeaveBlank": "Salta (lascia vuoto)",
+      "clientTypeCompany": "Azienda",
+      "clientTypeIndividual": "Privato",
+      "clientTypePlaceholder": "Tipo di cliente",
+      "selectClient": "Seleziona cliente...",
+      "selectPriority": "Seleziona priorità...",
+      "selectStatus": "Seleziona stato...",
+      "selectCategory": "Seleziona categoria...",
+      "selectTeam": "Seleziona team...",
+      "selectContact": "Seleziona contatto...",
+      "onClient": "— presso {{client}}",
+      "skippedTicketCount": "{{count}} ticket",
+      "skippedDueToClients": "verranno saltati perché hai scelto di saltare i clienti corrispondenti.",
+      "dates": {
+        "help": "Non è stato possibile leggere automaticamente alcune date del tuo CSV. Indica come interpretarle.",
+        "lookLike": "Le tue date hanno questo formato:",
+        "totalCount": "({{count}} in totale)",
+        "thisMeans": "Questo significa:",
+        "selectFormat": "Seleziona formato...",
+        "formats": {
+          "skip": "Salta queste date",
+          "mdySlash": "Mese/Giorno/Anno (USA)",
+          "dmySlash": "Giorno/Mese/Anno (internazionale)",
+          "mdySlashShort": "Mese/Giorno/Anno (anno a 2 cifre, USA)",
+          "dmySlashShort": "Giorno/Mese/Anno (anno a 2 cifre, internazionale)",
+          "mdyDash": "Mese-Giorno-Anno (USA)",
+          "dmyDash": "Giorno-Mese-Anno (internazionale)",
+          "ymdDot": "Anno.Mese.Giorno",
+          "dmyDot": "Giorno.Mese.Anno"
+        }
+      }
+    },
+    "importing": {
+      "title": "Importazione dei ticket in corso...",
+      "help": "Le importazioni di grandi dimensioni potrebbero richiedere del tempo."
+    },
+    "complete": {
+      "heading": "Importazione completata",
+      "ticketNumbers": "Numeri dei ticket:",
+      "andMore": "... e altri {{count}}",
+      "failedHeading": "Importazione non riuscita",
+      "noneCreated": "Non è stato creato alcun ticket.",
+      "allSkipped_one": "{{count}} ticket è stato saltato a causa di errori.",
+      "allSkipped_other": "Tutti i {{count}} ticket sono stati saltati a causa di errori."
+    }
   },
   "title": "Ticket di supporto",
   "subtitle": "Visualizza e gestisci i tuoi ticket di supporto",
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Non notificare il cliente",
+      "contactHelper": "Salta l'e-mail al cliente, l'invito al sondaggio e la notifica del portale clienti",
+      "internalLabel": "Non notificare anche agenti e osservatori",
+      "internalHelper": "Salta anche le loro e-mail e notifiche in-app"
+    }
+  },
   "backToTickets": "Torna ai ticket",
   "createNew": "Crea nuovo ticket",
   "createButton": "Crea ticket di supporto",
@@ -116,13 +253,18 @@
     "clientTags": "Tag del cliente",
     "tagModeAny": "Almeno uno tra",
     "tagModeNone": "Nessuno tra",
-    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati."
+    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati.",
+    "clearFilters": "Pulisci filtri",
+    "location": "Sede",
+    "requesterLocation": "Sede del richiedente",
+    "selectStatus": "Seleziona stato"
   },
   "create": {
     "title": "Crea ticket di supporto",
     "titlePlaceholder": "Titolo del ticket",
     "descriptionPlaceholder": "Descrivi il tuo problema...",
     "priorityPlaceholder": "Seleziona priorità",
+    "boardPlaceholder": "Seleziona bacheca",
     "noBoardsAvailable": "Nessuna bacheca dei ticket è disponibile per il tuo account. Contatta l'amministratore.",
     "submit": "Crea ticket",
     "submitting": "Creazione in corso...",
@@ -130,10 +272,9 @@
       "titleRequired": "Il titolo è obbligatorio",
       "descriptionRequired": "La descrizione è obbligatoria",
       "priorityRequired": "Seleziona una priorità",
-      "createFailed": "Impossibile creare il ticket. Riprova.",
-      "boardRequired": "Seleziona una bacheca"
+      "boardRequired": "Seleziona una bacheca",
+      "createFailed": "Impossibile creare il ticket. Riprova."
     },
-    "boardPlaceholder": "Seleziona bacheca",
     "linkedToAsset": "Asset collegato: {{name}}",
     "linkedToAssetGeneric": "Asset collegato"
   },
@@ -222,7 +363,13 @@
     "linkedAssets": "Asset collegati",
     "assetName": "Nome",
     "assetTag": "Tag dell’asset",
-    "assetType": "Tipo"
+    "assetType": "Tipo",
+    "noStatus": "Nessuno stato",
+    "noPriority": "Nessuna priorità",
+    "noClient": "Nessun cliente",
+    "multipleClients": "Più clienti",
+    "noDueDate": "Nessuna scadenza",
+    "dueInDays": "tra {{count}} giorni"
   },
   "actions": {
     "view": "Visualizza",
@@ -256,7 +403,9 @@
     "createTemplate": "Crea modello dal ticket",
     "createWorkflowFromTicket": "Crea workflow dal ticket",
     "printWorkTag": "Stampa etichetta di lavoro",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "duplicateMultiple": "Duplica più volte…",
+    "duplicateOptions": "Altre opzioni di duplicazione"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -405,6 +554,7 @@
     "clientSuffix": " (Cliente)",
     "internalCommentTooltip": "Commento interno",
     "resolutionCommentTooltip": "Commento di risoluzione",
+    "clientCommentTooltip": "Commento visibile al cliente",
     "unknownUser": "Utente sconosciuto",
     "editCommentAriaLabel": "Modifica commento",
     "deleteCommentAriaLabel": "Elimina commento",
@@ -421,7 +571,6 @@
     "deleteComment": "Elimina commento",
     "deleteCommentImages": "Elimina commento + immagini",
     "deleteCommentOnly": "Elimina solo il commento",
-    "clientCommentTooltip": "Commento visibile al cliente",
     "cancelScheduledComment": "Annulla commento pianificato",
     "cancelScheduledCommentConfirm": "Annullare questo commento pianificato?",
     "invalidScheduleTime": "Scegli un orario futuro non ambiguo in questo fuso orario.",
@@ -458,7 +607,9 @@
         "operationConflict": "Questo commento è in conflitto con un tentativo precedente. Ricarica e riprova.",
         "audienceUnresolved": "Scegli chi può vedere questo commento prima di pubblicarlo.",
         "unknownOutcome": "Non è stato possibile confermare la pubblicazione del commento. Controlla la conversazione prima di inviarlo di nuovo."
-      }
+      },
+      "unavailable": "Questo ticket non è disponibile.",
+      "back": "Torna ai ticket dei clienti"
     }
   },
   "responseState": {
@@ -666,6 +817,28 @@
   },
   "bulk": {
     "bundleTickets": "Raggruppa ticket",
+    "actionBar": {
+      "selectedCount_one": "{{count}} selezionato",
+      "selectedCount_other": "{{count}} selezionati",
+      "move": "Sposta su bacheca",
+      "bundle": "Raggruppa",
+      "delete": "Elimina",
+      "clear": "Annulla selezione",
+      "bundleNeedsTwo": "Seleziona almeno 2 ticket per raggruppare",
+      "assign": "Assegna",
+      "status": "Stato",
+      "priority": "Priorità",
+      "tags": "Tag",
+      "dueDate": "Scadenza",
+      "statusDisabledMultiBoard": "I ticket selezionati sono su bacheche diverse",
+      "statusResolvingBoards": "Verifica delle bacheche dei ticket selezionati…",
+      "more": "Altro",
+      "bundleNeedsOne": "Seleziona almeno 1 ticket da raggruppare",
+      "selectedCount_few": "{{count}} selezionati",
+      "selectedCount_many": "{{count}} selezionati",
+      "printLabels": "Stampa etichette",
+      "printLabelsLimit": "Puoi stampare al massimo {{max}} etichette alla volta"
+    },
     "moveDialogTitle": "Sposta i ticket selezionati",
     "moveDialogDescription": "Seleziona una bacheca e uno stato di destinazione, quindi conferma lo spostamento dei ticket selezionati.",
     "destinationBoard": "Bacheca di destinazione",
@@ -803,28 +976,6 @@
       "dueDateRequired": "Devi accedere per aggiornare i ticket",
       "statusRequired": "Devi accedere per aggiornare i ticket",
       "priorityRequired": "Devi accedere per aggiornare i ticket"
-    },
-    "actionBar": {
-      "selectedCount_one": "{{count}} selezionato",
-      "selectedCount_other": "{{count}} selezionati",
-      "move": "Sposta su bacheca",
-      "bundle": "Raggruppa",
-      "delete": "Elimina",
-      "clear": "Annulla selezione",
-      "bundleNeedsTwo": "Seleziona almeno 2 ticket per raggruppare",
-      "assign": "Assegna",
-      "status": "Stato",
-      "priority": "Priorità",
-      "tags": "Tag",
-      "dueDate": "Scadenza",
-      "statusDisabledMultiBoard": "I ticket selezionati sono su bacheche diverse",
-      "statusResolvingBoards": "Verifica delle bacheche dei ticket selezionati…",
-      "more": "Altro",
-      "bundleNeedsOne": "Seleziona almeno 1 ticket da raggruppare",
-      "selectedCount_few": "{{count}} selezionati",
-      "selectedCount_many": "{{count}} selezionati",
-      "printLabels": "Stampa etichette",
-      "printLabelsLimit": "Puoi stampare al massimo {{max}} etichette alla volta"
     },
     "assign": {
       "dialogTitle": "Assegna ticket selezionati",
@@ -1023,7 +1174,9 @@
       "heading": "Osservatori",
       "placeholder": "Aggiungi osservatori..."
     },
-    "attachmentsPartialFailure": "Ticket creato, ma non è stato possibile allegare questi file: {{files}}. Aggiungili dal ticket."
+    "attachmentsPartialFailure": "Ticket creato, ma non è stato possibile allegare questi file: {{files}}. Aggiungili dal ticket.",
+    "contactLocationSuffix": "(sede del contatto)",
+    "contactPrimaryLocationSuffix": "(sede principale del contatto)"
   },
   "itil": {
     "calculatedPriority": "Priorità (calcolata)",
@@ -1239,6 +1392,13 @@
       "filterByBoard": "Filtra per bacheca",
       "addCategory": "Aggiungi categoria",
       "importStandardCategories": "Importa dalle categorie standard",
+      "copyToBoard": "Copia categorie su un’altra scheda",
+      "copyTitle": "Copia categorie su un’altra scheda",
+      "copySourceBoard": "Seleziona scheda di origine",
+      "copyTargetBoard": "Seleziona scheda di destinazione",
+      "copySelected": "Copia selezionate",
+      "copySuccess": "Copiate {{created}} categorie; {{skipped}} già presenti ignorate.",
+      "copyFailed": "Impossibile copiare le categorie",
       "editCategory": "Modifica categoria",
       "categoryName": "Nome categoria *",
       "enterCategoryName": "Inserisci il nome della categoria",
@@ -1299,17 +1459,10 @@
       "parentHelpWithBoard": "Seleziona una categoria padre per creare una sottocategoria, oppure lascia vuoto per il livello superiore",
       "parentHelpWithoutBoard": "Seleziona prima una bacheca oppure scegli una categoria padre per ereditarne la bacheca",
       "creating": "Creazione...",
-      "copyToBoard": "Copia categorie su un’altra scheda",
-      "copyTitle": "Copia categorie su un’altra scheda",
       "copySourceLabel": "Seleziona scheda di origine",
       "copyTargetLabel": "Seleziona scheda di destinazione",
-      "copySelected": "Copia selezionate",
-      "copySuccess": "Copiate {{created}} categorie; {{skipped}} già presenti ignorate.",
-      "copyFailed": "Impossibile copiare le categorie",
       "copyEmpty": "Nessuna categoria in questa scheda.",
       "copying": "Copia in corso…",
-      "copySourceBoard": "Seleziona scheda di origine",
-      "copyTargetBoard": "Seleziona scheda di destinazione",
       "copyBoardTypeMismatch": "Le categorie dei ticket possono essere copiate solo tra bacheche dello stesso tipo di categoria.",
       "copyConflicts_one": "{{count}} categoria ignorata ha una categoria padre diversa nella scheda di destinazione.",
       "copyConflicts_other": "{{count}} categorie ignorate hanno una categoria padre diversa nella scheda di destinazione.",
@@ -1645,7 +1798,9 @@
       "agentAlreadyAssigned": "Questo utente è già assegnato come operatore aggiuntivo.",
       "teamNotFound": "Team non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "teamLeadNotFound": "Il team selezionato non ha un responsabile. Scegliere un altro team o assegnare prima un responsabile.",
-      "commentNotFound": "Commento non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare."
+      "commentNotFound": "Commento non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "boardNotFound": "Bacheca non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "boardInactive": "La bacheca di destinazione è inattiva. Scegliere una bacheca attiva."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Il ticket {{tickets}} è già un ticket principale di raggruppamento e non può essere aggiunto come ticket figlio. Sciogliere prima il raggruppamento oppure usarlo come ticket principale.",
@@ -1672,7 +1827,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio del ticket: {{field}}.",
       "referenceMissing": "Uno dei record del ticket selezionati non esiste più. Aggiornare la pagina e riprovare.",
       "conflict": "Questa modifica del ticket è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
-      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare."
+      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare.",
+      "priorityItilBoardCustom": "La priorità ‘{{priority}}’ è una priorità ITIL, ma la bacheca ‘{{board}}’ usa priorità personalizzate.",
+      "priorityCustomBoardItil": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL."
     },
     "board": {
       "invalidReference": "La bacheca, lo stato o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",
@@ -1681,7 +1838,14 @@
       "referenceInvalid": "La bacheca, lo stato, la priorità, l’incaricato, il team o il criterio SLA selezionati non sono più validi. Aggiornare la pagina e riprovare.",
       "duplicateName": "Esiste già una bacheca con questo nome.",
       "duplicate": "Esiste già una bacheca o uno stato con le stesse impostazioni.",
-      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare."
+      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare.",
+      "notificationEmailInvalid": "La regola di notifica {{rule}} contiene un indirizzo e-mail non valido (massimo {{max}} caratteri)",
+      "notificationEmailLimit": "La regola di notifica {{rule}} può contenere al massimo {{max}} indirizzi e-mail",
+      "notificationRecipientRequired": "La regola di notifica {{rule}} deve notificare almeno un utente, un team o un indirizzo e-mail",
+      "notificationEmailIsUser": "Regola di notifica {{rule}}: {{address}} è l'indirizzo e-mail di un utente Alga. Scegli invece l'utente.",
+      "notificationEmailIsContact": "Regola di notifica {{rule}}: {{address}} appartiene a un contatto o a una sede di un cliente e non può essere un destinatario.",
+      "notificationEmailClientDomain": "Regola di notifica {{rule}}: {{address}} appartiene al dominio e-mail di un cliente e non può essere un destinatario.",
+      "notificationEmailInboundMailbox": "Regola di notifica {{rule}}: {{address}} è una casella in entrata collegata e non può essere un destinatario."
     },
     "material": {
       "invalidValue": "Uno dei valori del materiale selezionati non è valido. Aggiornare la pagina e riprovare.",
@@ -1692,7 +1856,9 @@
       "valueNotAllowed": "Uno dei valori del materiale non è consentito. Controllare il modulo e riprovare."
     },
     "settings": {
-      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket"
+      "createDenied": "Autorizzazione negata: impossibile creare bacheche",
+      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket",
+      "deleteDenied": "Autorizzazione negata: impossibile eliminare bacheche"
     },
     "list": {
       "filtersInvalid": "I filtri dell’elenco ticket non sono più validi. Aggiornare la pagina e riprovare."
@@ -1948,12 +2114,12 @@
       "noDueDate": "Nessuna scadenza",
       "escalated": "Con escalation",
       "notAssigned": "Non assegnato",
+      "additionalAgentsTooltip": "Agenti aggiuntivi:",
+      "unknownAgent": "Agente sconosciuto",
       "resolutionSla": "SLA di risoluzione:",
       "responseWaitingOnUs": "In attesa da parte nostra",
       "responseWaitingOnClient": "In attesa del cliente",
       "responseNone": "Nessuna risposta necessaria",
-      "additionalAgentsTooltip": "Agenti aggiuntivi:",
-      "unknownAgent": "Agente sconosciuto",
       "category": "Categoria",
       "selectDestinationStatus": "Seleziona uno stato per la nuova bacheca prima di salvare.",
       "viewSchedule": "Vedi agenda"
@@ -1989,6 +2155,8 @@
       "viewAll": "Vedi tutto",
       "viewAllCount": "Vedi tutti {{count}}",
       "timeLogged": "Tempo registrato",
+      "acrossEntries_one": "su {{count}} voce",
+      "acrossEntries_other": "su {{count}} voci",
       "addTimeEntry": "Aggiungi inserimento ore",
       "teamAndWatchers": "Team e osservatori",
       "addAgent": "Aggiungi un agente…",
@@ -2023,8 +2191,6 @@
       "clientVisible": "Visibile al cliente",
       "addDocument": "Aggiungi un documento",
       "timeLoggedPerDay": "Tempo registrato per giorno: {{details}}",
-      "acrossEntries_one": "su {{count}} voce",
-      "acrossEntries_other": "su {{count}} voci",
       "team": "Team",
       "billable": "Fatturabile",
       "nothingBillable": "Ancora nulla di fatturabile",
@@ -2057,49 +2223,12 @@
       "changeLocation": "Cambia sede",
       "addDescriptionPrompt": "Aggiungi una descrizione: qual è il problema e di cosa ha bisogno il cliente?",
       "projectTasks": "Attività di progetto",
-      "timeAndBilling": "Tempo e fatturazione"
+      "timeAndBilling": "Tempo e fatturazione",
+      "useContactLocation": "Usa la sede del contatto",
+      "remote": "Remota"
     },
     "timeline": {
       "subtitle": "Risposte, tempo e modifiche di sistema in un unico posto",
-      "filterEverything": "Tutto",
-      "filterReplies": "Risposte",
-      "filterTime": "Tempo",
-      "filterSystem": "Sistema",
-      "filterAlerts": "Avvisi",
-      "oldestFirst": "Prima i più vecchi",
-      "newestFirst": "Prima i più recenti",
-      "replyTo": "Rispondi a {{name}}",
-      "writeReply": "Scrivi una risposta",
-      "modeInternal": "Interno",
-      "sending": "Invio…",
-      "send": "Invia",
-      "systemActor": "Sistema",
-      "someone": "Qualcuno",
-      "ticketUpdated": "Ticket aggiornato",
-      "fieldChanged": "{{actor}} ha modificato {{field}}: {{from}} → {{to}}",
-      "fieldSet": "{{field}} impostato su {{to}}",
-      "actorEvent": "{{actor}} · {{eventName}}",
-      "bundleStatusNotPropagated": "{{actor}} ha modificato lo stato del master del bundle (ticket figli non aggiornati)",
-      "bundleStatusClosed": "{{actor}} ha chiuso il master del bundle e {{count}} ticket figli",
-      "bundleStatusReopened": "{{actor}} ha riaperto il master del bundle e {{count}} ticket figli",
-      "duplicatedFrom": "{{actor}} ha creato questo ticket come duplicato di #{{number}}",
-      "duplicatedTo": "{{actor}} ha duplicato questo ticket come #{{number}}",
-      "title": "Cronologia",
-      "replyVisibility": "Visibilità della risposta",
-      "modeClient": "Cliente",
-      "toggleSortOrder": "Cambia ordine",
-      "nothingYet": "Ancora niente. Il ticket è stato aperto {{when}}.",
-      "recently": "di recente",
-      "nothingInLane": "Ancora niente in questa corsia.",
-      "replyingToWithText": "Risposta a {{name}}: {{text}}",
-      "replyingTo": "Risposta a {{name}}",
-      "unknownAuthor": "Sconosciuto",
-      "threadReply": "Conversazione · {{count}} risposta",
-      "threadReplies": "Conversazione · {{count}} risposte",
-      "logged": "registrato",
-      "monitoringActor": "Monitoraggio",
-      "occurrence": "(occorrenza {{count}})",
-      "loadError": "Impossibile caricare la cronologia",
       "fieldCleared": "rimosso {{field}}",
       "field": {
         "title": "titolo",
@@ -2147,6 +2276,45 @@
         "auto_close_warning_sent": "avviso di chiusura automatica inviato",
         "bundle_child_added": "ticket figlio aggiunto al bundle"
       },
+      "filterEverything": "Tutto",
+      "filterReplies": "Risposte",
+      "filterTime": "Tempo",
+      "filterSystem": "Sistema",
+      "filterAlerts": "Avvisi",
+      "oldestFirst": "Prima i più vecchi",
+      "newestFirst": "Prima i più recenti",
+      "replyTo": "Rispondi a {{name}}",
+      "writeReply": "Scrivi una risposta",
+      "modeInternal": "Interno",
+      "sending": "Invio…",
+      "send": "Invia",
+      "systemActor": "Sistema",
+      "someone": "Qualcuno",
+      "ticketUpdated": "Ticket aggiornato",
+      "fieldChanged": "{{actor}} ha modificato {{field}}: {{from}} → {{to}}",
+      "fieldSet": "{{field}} impostato su {{to}}",
+      "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} ha modificato lo stato del master del bundle (ticket figli non aggiornati)",
+      "bundleStatusClosed": "{{actor}} ha chiuso il master del bundle e {{count}} ticket figli",
+      "bundleStatusReopened": "{{actor}} ha riaperto il master del bundle e {{count}} ticket figli",
+      "duplicatedFrom": "{{actor}} ha creato questo ticket come duplicato di #{{number}}",
+      "duplicatedTo": "{{actor}} ha duplicato questo ticket come #{{number}}",
+      "title": "Cronologia",
+      "replyVisibility": "Visibilità della risposta",
+      "modeClient": "Cliente",
+      "toggleSortOrder": "Cambia ordine",
+      "nothingYet": "Ancora niente. Il ticket è stato aperto {{when}}.",
+      "recently": "di recente",
+      "nothingInLane": "Ancora niente in questa corsia.",
+      "replyingToWithText": "Risposta a {{name}}: {{text}}",
+      "replyingTo": "Risposta a {{name}}",
+      "unknownAuthor": "Sconosciuto",
+      "threadReply": "Conversazione · {{count}} risposta",
+      "threadReplies": "Conversazione · {{count}} risposte",
+      "logged": "registrato",
+      "monitoringActor": "Monitoraggio",
+      "occurrence": "(occorrenza {{count}})",
+      "loadError": "Impossibile caricare la cronologia",
       "closeStatus": "Stato di chiusura",
       "noStatusChange": "Non modificare lo stato",
       "showAllActivity": "Mostra tutta l'attività",
@@ -2164,14 +2332,6 @@
       "who": "Persone",
       "linked": "Elementi collegati",
       "empty": "Ancora niente qui"
-    }
-  },
-  "notifications": {
-    "suppression": {
-      "contactLabel": "Non notificare il cliente",
-      "contactHelper": "Salta l'e-mail al cliente, l'invito al sondaggio e la notifica del portale clienti",
-      "internalLabel": "Non notificare anche agenti e osservatori",
-      "internalHelper": "Salta anche le loro e-mail e notifiche in-app"
     }
   },
   "externalLinks": {
@@ -2681,15 +2841,17 @@
       "fromTicket": "Precompilato dal ticket #{{number}}. Non viene salvato nulla finché non fai clic su Salva.",
       "inlineImages": "La descrizione contiene immagini che appartengono al ticket di origine. Potrebbero non essere più visualizzate se quel ticket viene eliminato. Rimuovile o ricaricale se il modello deve sopravvivere al ticket.",
       "viewOnly": "Puoi visualizzare questo modello ma non modificarlo.",
-      "referenceProblems": "Alcuni campi di questo modello puntano a elementi che non esistono più. Restano vuoti quando il modello viene usato. Correggili e salva:",
+      "referenceProblems": "Alcuni campi di questo modello non sono validi: fanno riferimento a elementi che non esistono più o non sono compatibili tra loro (ad esempio una priorità che non corrisponde alla bacheca). Correggili e salva:",
       "inactiveWarning": "Inattivo: nascosto nel selettore dei modelli; ancora usato da {{count}} pianificazioni.",
       "sharedWarning": "Le modifiche si applicano a ogni pianificazione ricorrente che usa questo modello, a partire dal prossimo ticket creato.",
-      "boardChangeWarning": "Cambiare la bacheca azzera priorità e categoria e può rendere non valido lo stato delle pianificazioni che usano questo modello. Tali pianificazioni falliscono finché non le modifichi. Pianificazioni interessate: {{schedules}}."
+      "boardChangeWarning": "Cambiare la bacheca azzera priorità e categoria e può rendere non valido lo stato delle pianificazioni che usano questo modello. Tali pianificazioni falliscono finché non le modifichi. Pianificazioni interessate: {{schedules}}.",
+      "priorityTypeMismatchItil": "La priorità ‘{{priority}}’ è una priorità ITIL, ma la bacheca ‘{{board}}’ usa priorità personalizzate. Il salvataggio verrà rifiutato finché non cambi la priorità o la bacheca.",
+      "priorityTypeMismatchCustom": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL. Il salvataggio verrà rifiutato finché non cambi la priorità o la bacheca."
     },
     "errors": {
       "notFound": "Modello di ticket non trovato",
       "duplicateName": "Esiste già un modello chiamato {{name}}",
-      "invalidReferences": "Il modello fa riferimento a una bacheca, una categoria o una priorità non disponibile",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "I modelli di ticket non sono disponibili",
       "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria",
       "inUseBySchedules": "Usato da {{count}} pianificazione/i ricorrente/i: {{schedules}}. Assegna prima un altro modello o archiviale."
@@ -2727,6 +2889,13 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} g {{hours}} h",
       "days": "{{days}} g"
+    },
+    "cell": {
+      "breached": "SLA violato",
+      "paused": "SLA in pausa",
+      "atRisk": "A rischio",
+      "onTrack": "Nei tempi previsti",
+      "remaining": "{{magnitude}} rimanenti"
     }
   },
   "cannedResponses": {
@@ -2838,5 +3007,266 @@
       "notAvailable": "Questa risposta predefinita non è disponibile per questo ticket.",
       "notATeamMember": "Puoi gestire le risposte di team solo per i team di cui fai parte."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplica #{{number}} per i contatti",
+    "titleLoading": "Duplica per i contatti",
+    "loading": "Caricamento…",
+    "loadFailed": "Impossibile caricare il ticket da duplicare. Riprova.",
+    "createFailed": "Impossibile creare le copie. Riprova.",
+    "templateLabel": "Modello del titolo",
+    "insertToken": "Inserisci:",
+    "nameHint": "Sostituisci \"{{name}}\" con {{token}} per personalizzare ogni copia.",
+    "replace": "Sostituisci",
+    "contactsLabel": "Contatti",
+    "contactsPlaceholder": "Seleziona contatti…",
+    "addBlankRow": "Aggiungi copia senza contatto",
+    "count": "{{count}} di {{max}}",
+    "capReached": "Massimo {{max}} copie per lotto.",
+    "columns": {
+      "contact": "Contatto",
+      "title": "Titolo"
+    },
+    "resetRow": "Ripristina il modello",
+    "removeRow": "Rimuovi copia",
+    "copyChecklist": "Copia le voci della checklist (non spuntate)",
+    "cancel": "Annulla",
+    "review": "Rivedi",
+    "back": "Indietro",
+    "create_one": "Crea {{count}} ticket",
+    "create_other": "Crea {{count}} ticket",
+    "creating_one": "Creazione di {{count}} ticket…",
+    "creating_other": "Creazione di {{count}} ticket…",
+    "done": "Fatto",
+    "retryFailed_one": "Riprova quelle non riuscite ({{count}})",
+    "retryFailed_other": "Riprova quelle non riuscite ({{count}})",
+    "errors": {
+      "contactRequired": "Questo titolo usa {{token}} ma la copia non ha un contatto.",
+      "unknownToken": "Segnaposto sconosciuto: {{tokens}}",
+      "empty": "Il titolo non può essere vuoto.",
+      "unresolvedToken": "Il titolo contiene ancora un segnaposto {{placeholder}}."
+    },
+    "summary": {
+      "client": "Cliente",
+      "board": "Bacheca",
+      "category": "Categoria",
+      "priority": "Priorità",
+      "assignee": "Assegnatario",
+      "team": "Team",
+      "additionalAgents": "Agenti aggiuntivi",
+      "tags": "Tag",
+      "checklist": "Elenco di controllo",
+      "checklistCopy_one": "Copia {{count}} voce (non spuntata)",
+      "checklistCopy_other": "Copia {{count}} voci (non spuntate)",
+      "checklistSkip": "Non copiata",
+      "customFields": "Campi personalizzati",
+      "status": "Stato",
+      "statusBoardDefault": "Predefinito della bacheca",
+      "none": "Nessuno",
+      "notCopied": "Commenti, registrazioni di tempo, allegati e scadenza non vengono copiati.",
+      "unresolved": "Nome non disponibile"
+    },
+    "results": {
+      "created_one": "{{count}} ticket creato",
+      "created_other": "{{count}} ticket creati",
+      "failed_one": "{{count}} copia non riuscita",
+      "failed_other": "{{count}} copie non riuscite"
+    },
+    "discardTitle": "Annullare queste copie?",
+    "discardMessage": "Le copie impostate non sono ancora state create. Annullarle e chiudere?",
+    "discardConfirm": "Annulla copie",
+    "discardKeep": "Continua a modificare"
+  },
+  "sharedSla": {
+    "title": "Livello di servizio",
+    "msp": "Livello di servizio dell’MSP",
+    "customer": "Livello di servizio del cliente",
+    "state": {
+      "running": "In corso",
+      "paused": "In pausa",
+      "met": "Rispettato",
+      "breached": "Violato"
+    },
+    "target": {
+      "response": "Prima risposta",
+      "resolution": "Risoluzione"
+    },
+    "elapsed": "Trascorso: {{time}}",
+    "dueAt": "Scadenza: {{date}}",
+    "completedAt": "Rispettato il {{date}}",
+    "breached": "Violato",
+    "targetPaused": "In pausa",
+    "noTarget": "Nessun obiettivo",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "Il timer parte quando il ticket viene escalato.",
+    "unavailable": "Questo livello di servizio non è più disponibile.",
+    "notConfigured": "Nessun livello di servizio applicabile.",
+    "empty": "Per questo ticket non è ancora monitorato alcun livello di servizio.",
+    "loadError": "Impossibile caricare il livello di servizio."
+  },
+  "activityTimeline": {
+    "actor": {
+      "user": "Un utente",
+      "contact": "Un contatto",
+      "apiClient": "Client API",
+      "workflow": "Workflow",
+      "system": "Sistema"
+    },
+    "fields": {
+      "status": "stato",
+      "priority": "priorità",
+      "assignee": "assegnatario",
+      "team": "team",
+      "board": "bacheca",
+      "category": "categoria",
+      "subcategory": "sottocategoria",
+      "client": "cliente",
+      "contact": "contatto",
+      "dueDate": "scadenza",
+      "responseState": "stato risposta",
+      "closedAt": "data di chiusura",
+      "closedBy": "chiuso da",
+      "title": "titolo",
+      "url": "URL"
+    },
+    "externalSystemFallback": "un sistema esterno",
+    "annotation": {
+      "silentAll": "modalità silenziosa — nessuna notifica",
+      "silentContact": "modalità silenziosa — contatto non avvisato"
+    },
+    "events": {
+      "created": "{{actor}} ha creato il ticket",
+      "createdFromTemplateNamed": "{{actor}} ha creato questo ticket dal modello \"{{templateName}}\"",
+      "createdFromTemplate": "{{actor}} ha creato questo ticket da un modello",
+      "duplicatedFromNumber": "{{actor}} ha creato questo ticket come duplicato di #{{ticketNumber}}",
+      "duplicatedFrom": "{{actor}} ha creato questo ticket come duplicato di un altro ticket",
+      "duplicatedToNumber": "{{actor}} ha duplicato questo ticket creando #{{ticketNumber}}",
+      "duplicatedTo": "{{actor}} ha duplicato questo ticket",
+      "closed": "{{actor}} ha chiuso il ticket",
+      "reopened": "{{actor}} ha riaperto il ticket",
+      "reopenedByEmail": "Attivato da una risposta email in entrata",
+      "bundleReopened": "Ticket principale del gruppo riaperto",
+      "bundleReopenedSubtitle": "Attivato da una risposta a un ticket figlio",
+      "bundleStatusNotPropagated": "{{actor}} ha modificato lo stato del ticket principale del gruppo (ticket figli non aggiornati)",
+      "bundleStatusPropagated": "{{actor}} ha {{action}} il ticket principale del gruppo e {{count}} ticket figli",
+      "bundleAction": {
+        "reopened": "riaperto",
+        "closed": "chiuso"
+      },
+      "statusChanged": "{{actor}} ha modificato lo stato",
+      "statusChangedSubtitle": "Stato modificato",
+      "priorityChanged": "{{actor}} ha modificato la priorità",
+      "priorityChangedSubtitle": "Priorità modificata",
+      "assigned": "{{actor}} ha assegnato il ticket",
+      "unassigned": "{{actor}} ha rimosso l'assegnazione del ticket",
+      "boardMoved": "{{actor}} ha spostato il ticket in un'altra bacheca",
+      "responseStateUpdated": "{{actor}} ha aggiornato lo stato risposta",
+      "internalNoteAdded": "{{actor}} ha aggiunto una nota interna",
+      "replied": "{{actor}} ha risposto",
+      "repliedViaEmail": "Ricevuta tramite email in entrata",
+      "repliedViaPortal": "Ricevuta tramite il portale clienti",
+      "commentAdded": "{{actor}} ha aggiunto un commento",
+      "commentEdited": "{{actor}} ha modificato un commento",
+      "documentAttached": "{{actor}} ha allegato un documento",
+      "documentRemoved": "{{actor}} ha rimosso un documento",
+      "inboundEmailReceived": "Email in entrata ricevuta",
+      "updated": "{{actor}} ha aggiornato il ticket",
+      "externalLinkAdded": "{{actor}} ha collegato {{reference}}",
+      "externalLinkUpdated": "{{actor}} ha aggiornato il collegamento a {{reference}}",
+      "externalLinkRemoved": "{{actor}} ha rimosso il collegamento a {{reference}}",
+      "fallback": "{{actor}} • {{eventType}}"
+    },
+    "comment": {
+      "added": "Commento aggiunto",
+      "internalNoteAdded": "Nota interna aggiunta",
+      "customerReply": "Risposta del cliente",
+      "inboundEmailReply": "Risposta email in entrata",
+      "actor": "Vedi la scheda Conversazione"
+    },
+    "filters": {
+      "events": {
+        "all": "Tutti gli eventi",
+        "created": "Ticket creato",
+        "updated": "Ticket aggiornato",
+        "statusChanged": "Stato modificato",
+        "closed": "Chiuso",
+        "reopened": "Riaperto",
+        "priorityChanged": "Priorità modificata",
+        "assigned": "Assegnato",
+        "unassigned": "Assegnazione rimossa",
+        "boardMoved": "Spostamento tra bacheche",
+        "responseState": "Stato risposta",
+        "messageAdded": "Commento aggiunto",
+        "commentAdded": "Commento aggiunto",
+        "commentEdited": "Commento modificato",
+        "internalNote": "Nota interna",
+        "customerReply": "Risposta del cliente",
+        "documentAttached": "Documento allegato",
+        "documentRemoved": "Documento rimosso",
+        "inboundEmail": "Email in entrata",
+        "createdFromTemplate": "Creato da modello",
+        "duplicatedFrom": "Duplicato da",
+        "duplicatedTo": "Duplicato in",
+        "bundleReopened": "Gruppo riaperto",
+        "bundleStatusPropagated": "Stato del gruppo propagato"
+      },
+      "sources": {
+        "all": "Tutte le origini",
+        "clientPortal": "Portale clienti",
+        "inboundEmail": "Email in entrata",
+        "workflow": "Workflow",
+        "system": "Sistema",
+        "internalNote": "Nota interna"
+      },
+      "actors": {
+        "all": "Tutti gli autori",
+        "user": "Utente",
+        "contact": "Contatto",
+        "emailSender": "Mittente email",
+        "workflow": "Workflow",
+        "system": "Sistema"
+      },
+      "entries": {
+        "all": "Tutte le voci",
+        "activity": "Solo attività",
+        "comments": "Solo commenti"
+      },
+      "entryType": "Tipo",
+      "eventType": "Evento",
+      "source": "Origine",
+      "actorType": "Autore",
+      "reset": "Reimposta filtri"
+    },
+    "columns": {
+      "when": "Quando",
+      "event": "Evento",
+      "source": "Origine",
+      "actor": "Autore"
+    },
+    "actions": {
+      "hide": "Nascondi",
+      "details": "Dettagli"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare la cronologia delle attività del ticket.",
+      "loadFailedPrefix": "Impossibile caricare la cronologia delle attività:"
+    },
+    "empty": {
+      "noActivity": "Nessuna attività per ora. I nuovi eventi appariranno qui man mano che il ticket viene modificato.",
+      "noMatches": "Nessuna voce corrisponde ai filtri attuali."
+    }
+  },
+  "bundle": {
+    "toggleChildren": "Mostra/nascondi i ticket figli del gruppo",
+    "bundledTo": "Raggruppato → {{ticketNumber}}",
+    "master": "Principale",
+    "openChildrenShort": "aperti"
+  },
+  "statusChange": {
+    "title": "Aggiorna stato del ticket",
+    "message": "Vuoi davvero modificare lo stato da \"{{from}}\" a \"{{to}}\"?"
   }
 }

@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({ rbac: true, record: null as unknown, allowed: 
 vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(async () => ({ user_id: 'u1', tenant: 't1', user_type: 'internal' })),
 }));
+vi.mock('@alga-psa/users/actions', () => ({ findUserByIdForApi: vi.fn() }));
 vi.mock('@/lib/api/middleware/runWithApiKeyOrSession', () => ({
   runWithApiKeyOrSession: async (_r: unknown, fn: () => Promise<unknown>) => fn(),
 }));
@@ -18,7 +19,7 @@ vi.mock('@/lib/api/services/AssetService', () => ({
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => state.rbac) }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => state.allowed),
+  authorizeApiResourceRead: vi.fn(async () => ({ allowed: state.allowed, redactedFields: [] })),
 }));
 
 const { guardAssetReadForRequest } = await import('@/lib/api/controllers/assetReadGuard');

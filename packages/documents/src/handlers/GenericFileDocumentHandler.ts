@@ -3,6 +3,11 @@ import { BaseDocumentHandler } from './BaseDocumentHandler';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { documentPreviewErrorMessage } from './previewErrors';
 import path from 'path';
+import type { RenderContent } from '../lib/renderHtmlToPng';
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
 /**
  * Handler for generic file types that don't have specific handlers
@@ -103,11 +108,11 @@ export class GenericFileDocumentHandler extends BaseDocumentHandler {
       
       return `
         <div class="file-document-info">
-          <h3>${fileType}</h3>
-          <p>Filename: ${document.document_name || metadata.original_name || 'Unknown'}</p>
-          <p>Type: ${document.mime_type || metadata.mime_type || 'Unknown'}</p>
+          <h3>${escapeHtml(fileType)}</h3>
+          <p>Filename: ${escapeHtml(document.document_name || metadata.original_name || 'Unknown')}</p>
+          <p>Type: ${escapeHtml(document.mime_type || metadata.mime_type || 'Unknown')}</p>
           <p>Size: ${document.file_size ? Math.round(document.file_size / 1024) + ' KB' : 'Unknown'}</p>
-          <p><a href="/api/documents/download/${document.file_id}" target="_blank">Download File</a></p>
+          <p><a href="/api/documents/download/${escapeHtml(document.file_id)}" target="_blank">Download File</a></p>
           <p class="note">Preview not available for this file type. Please download to view.</p>
         </div>
       `;
@@ -226,7 +231,7 @@ export class GenericFileDocumentHandler extends BaseDocumentHandler {
    * @param fileExtension The file extension
    * @returns HTML content for the placeholder
    */
-  private generatePlaceholderHTML(document: IDocument, fileType: string, fileExtension: string): string {
+  private generatePlaceholderHTML(document: IDocument, fileType: string, fileExtension: string): RenderContent {
     const fileName = document.document_name || 'Unknown';
     const fileSize = document.file_size ? Math.round(document.file_size / 1024) + ' KB' : 'Unknown size';
     
@@ -243,22 +248,6 @@ export class GenericFileDocumentHandler extends BaseDocumentHandler {
       icon = '📝';
     }
     
-    return `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 20px; text-align: center; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #e0e0e0; width: 100%; height: 100%;">
-        <div style="font-size: 64px; margin-bottom: 15px;">${icon}</div>
-        <div style="background-color: #607d8b; color: white; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
-          <strong>${fileType}</strong>
-        </div>
-        <div style="font-size: 14px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px;">
-          ${fileName}
-        </div>
-        <div style="font-size: 12px; color: #666;">
-          ${fileSize}
-        </div>
-        <div style="margin-top: 15px; font-size: 12px; color: #999;">
-          Preview not available. Download to view.
-        </div>
-      </div>
-    `;
+    return { kind: 'file-placeholder', fileName, fileType, fileSize, icon };
   }
 }

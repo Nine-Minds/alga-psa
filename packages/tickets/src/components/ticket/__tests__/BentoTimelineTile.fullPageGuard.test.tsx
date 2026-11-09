@@ -199,10 +199,18 @@ function scrollHeaderOffscreen() {
 
 type Placement = 'top' | 'bottom';
 
+// The pager paints in the same commit that lands the adjacent-ticket lookup, but
+// its record shortcuts are (re-)registered in that commit's passive effects —
+// until those run the registry still holds the initial, disabled action. The
+// list layout's guard test settles them the same way; this file skipped the
+// flush and a `]` press in the gap navigated nowhere (three CI shards, 10/21–10/30).
+const flushEffects = () => act(async () => {});
+
 async function renderPage(props: React.ComponentProps<typeof FullPage> = {}) {
   const result = render(<FullPage {...props} />);
   // Navigation renders once the adjacent-ticket lookup resolves.
   await screen.findByLabelText('Previous ticket');
+  await flushEffects();
   return result;
 }
 
@@ -214,6 +222,8 @@ async function openComposer(placement: Placement = 'top') {
   }
   const editor = await screen.findByRole('textbox', { name: 'Comment editor' });
   expect(document.getElementById(placement === 'top' ? `${TILE_ID}-composer-top` : `${TILE_ID}-composer-dock`)).not.toBeNull();
+  // The open composer owns its dialog scope from a passive effect too.
+  await flushEffects();
   return editor;
 }
 

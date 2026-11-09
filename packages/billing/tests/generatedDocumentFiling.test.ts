@@ -202,11 +202,19 @@ describe('generated document filing', () => {
     for (const key of Object.keys(tableChains)) delete tableChains[key];
 
     const pageMock = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-filing-test')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    getBrowserMock.mockResolvedValue({ newPage: vi.fn().mockResolvedValue(pageMock) });
+    getBrowserMock.mockResolvedValue({
+      createBrowserContext: vi.fn().mockResolvedValue({
+        newPage: vi.fn().mockResolvedValue(pageMock),
+        close: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
     releaseBrowserMock.mockResolvedValue(undefined);
 
     createTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: TENANT_ID });
