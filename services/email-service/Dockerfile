@@ -17,6 +17,7 @@ COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
 COPY services/email-service/package.json ./services/email-service/
 COPY server/package.json ./server/
+COPY packages/conversations/package.json ./packages/conversations/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
 COPY packages/ee/package.json ./packages/ee/

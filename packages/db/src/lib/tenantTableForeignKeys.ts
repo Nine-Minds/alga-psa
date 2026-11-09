@@ -221,6 +221,7 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'contacts', parent: 'contacts', column: 'manager_contact_id', deleteRule: 'NO ACTION', name: 'contacts_tenant_manager_contact_id_foreign' },
   { child: 'contacts', parent: 'inbound_ticket_defaults', column: 'inbound_ticket_defaults_id', deleteRule: 'NO ACTION', name: 'fk_contacts_inbound_ticket_defaults' },
   { child: 'contacts', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'contacts_tenant_foreign' },
+  { child: 'conversation_files', parent: 'conversation_file_publications', column: 'publication_operation_id', deleteRule: 'NO ACTION', name: 'conversation_files_publication_fk' },
   { child: 'contract_discount_assignments', parent: 'client_contracts', column: 'client_contract_id', deleteRule: 'CASCADE', name: 'contract_discount_assignments_tenant_client_contract_id_foreign' },
   { child: 'contract_discount_assignments', parent: 'discounts', column: 'discount_id', deleteRule: 'CASCADE', name: 'contract_discount_assignments_tenant_discount_id_foreign' },
   { child: 'contract_discount_assignments', parent: 'tenants', column: '', deleteRule: 'CASCADE', name: 'contract_discount_assignments_tenant_foreign' },

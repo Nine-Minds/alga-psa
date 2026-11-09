@@ -46,6 +46,7 @@ COPY packages/billing/package.json ./packages/billing/
 COPY packages/block-content/package.json ./packages/block-content/
 COPY packages/clients/package.json ./packages/clients/
 COPY packages/co-managed/package.json ./packages/co-managed/
+COPY packages/conversations/package.json ./packages/conversations/
 COPY packages/documents/package.json ./packages/documents/
 COPY packages/email/package.json ./packages/email/
 COPY packages/integrations/package.json ./packages/integrations/

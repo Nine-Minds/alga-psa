@@ -153,6 +153,7 @@ export interface CoManagedAttachmentTransferContext {
   comment: CoManagedCommentReference; audience: CommentAudience; action: 'update'; draftOperationId?: string;
   assertWriteAuthority: () => Promise<void>;
 }
+// LEVERAGE: pattern conversation-file-engine — the owner-qualified engine in packages/conversations (files/transfer.ts) is the second instance of this reserve/upload/ready transfer; converge later.
 export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor: { tenant: string; userId: string },
   inputResource: CoManagedSharedResource, input: CoManagedAttachmentUpload,
   withAuthority: <T>(work: (context: CoManagedAttachmentTransferContext) => Promise<T>) => Promise<T>,

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@alga-psa/co-managed": "*",
+    "@alga-psa/conversations": "*",
     "@alga-psa/shared": "^1.0.0",
     "@alga-psa/storage": "*",
     "@alga-psa/workflow-streams": "*",

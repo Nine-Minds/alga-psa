@@ -714,6 +714,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'co_management_private_threads', deletion: 'ordered' },
   { table: 'co_management_private_command_receipts', deletion: 'ordered' },
   { table: 'co_management_conversation_attachments', deletion: 'ordered' },
+  { table: 'conversation_files', deletion: 'ordered' },
+  { table: 'conversation_file_publications', deletion: 'ordered' },
   { table: 'co_management_conversation_drafts', deletion: 'ordered' },
   { table: 'co_management_thread_transfers', deletion: 'ordered' },
   { table: 'co_managed_archive_files', deletion: 'ordered', clientKeyed: true },

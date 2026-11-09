@@ -1,0 +1,29 @@
+{
+  "name": "@alga-psa/conversations",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/conversations/src",
+  "projectType": "library",
+  "tags": [
+    "scope:conversations",
+    "type:horizontal"
+  ],
+  "implicitDependencies": [
+    "!server"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "packages/conversations/**/*.{ts,tsx}"
+        ]
+      }
+    }
+  }
+}

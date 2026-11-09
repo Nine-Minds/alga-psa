@@ -378,6 +378,12 @@
       "@alga-psa/licensing/*": [
         "../packages/licensing/src/*"
       ],
+      "@alga-psa/conversations": [
+        "../packages/conversations/src"
+      ],
+      "@alga-psa/conversations/*": [
+        "../packages/conversations/src/*"
+      ],
       "@alga-psa/co-managed": [
         "../packages/co-managed/src"
       ],

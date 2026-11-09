@@ -23,6 +23,8 @@
       "@alga-psa/authorization/*": ["packages/authorization/src/*"],
       "@alga-psa/tickets": ["packages/tickets/src"],
       "@alga-psa/tickets/*": ["packages/tickets/src/*"],
+      "@alga-psa/conversations": ["packages/conversations/src"],
+      "@alga-psa/conversations/*": ["packages/conversations/src/*"],
       "@alga-psa/co-managed": ["packages/co-managed/src"],
       "@alga-psa/co-managed/*": ["packages/co-managed/src/*"],
       "@alga-psa/types": ["packages/types/src"],
