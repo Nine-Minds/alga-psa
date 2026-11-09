@@ -14,7 +14,8 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { assertReplyAudience, lockLabelledThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { commentThreadPayloadLabel, insertCommentThread } from '@alga-psa/shared/lib/commentThreadInsert';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -3019,25 +3020,19 @@ export class TicketService extends BaseService<ITicket> {
         // A bare service principal's comment defaults to internal: public text speaks for a human.
         apiIsInternal = data.is_internal ?? isBareServicePrincipal(context);
         // `{}` with zero SQL natively; fails closed for requester-visible staff comments in co-managed.
-        // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
-        apiThreadAudience = await nativeThreadAudience(trx, context.tenant, {
+        apiThreadAudience = await insertCommentThread(trx, context.tenant, {
+          threadId: apiThreadId,
+          ticketId,
+          rootCommentId: apiCommentId,
           isInternal: apiIsInternal,
-          authorType: apiAuthor.authorType,
-          audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
-        });
-
-        await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
-          tenant: context.tenant,
-          thread_id: apiThreadId,
-          ticket_id: ticketId,
-          project_task_id: null,
-          root_comment_id: apiCommentId,
-          is_internal: apiIsInternal,
-          ...apiThreadAudience,
-          reply_count: 0,
-          last_activity_at: apiStampIso,
-          created_at: apiStampIso,
-          created_by: context.userId || null,
+          createdBy: context.userId || null,
+          at: apiStampIso,
+          audience: {
+            kind: 'native',
+            isInternal: apiIsInternal,
+            authorType: apiAuthor.authorType,
+            requested: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
+          },
         });
       }
 
@@ -3181,9 +3176,7 @@ export class TicketService extends BaseService<ITicket> {
         tenantId: context.tenant, occurredAt: new Date().toISOString(), ticketId, commentId: comment.comment_id, userId: context.userId,
         comment: { content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
-        ...(apiThreadAudience.collaboration_audience
-          ? { collaboration_audience: apiThreadAudience.collaboration_audience, thread_id: apiThreadId }
-          : {}),
+        ...commentThreadPayloadLabel(apiThreadAudience, apiThreadId),
       });
       if (scheduledPublication) {
         if (apiThreadAudience.collaboration_audience) {
