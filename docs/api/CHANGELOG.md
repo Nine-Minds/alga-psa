@@ -2,6 +2,20 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-09 — Quote status can no longer be set with PUT; new cancel command
+
+**Affected endpoints:** `PUT /api/v1/quotes/{id}`, new `POST /api/v1/quotes/{id}/cancel`
+
+`PUT /api/v1/quotes/{id}` used to accept a `status` field. A caller with only `billing:update` could therefore move a quote from `pending_approval` to `approved` or `sent` and skip the `/approve` route, which requires `quotes:approve` and applies the self-approval policy. Quote status is now changed only through the named lifecycle commands, each with its own permission check and activity row.
+
+**Changes:**
+
+- `PUT /quotes/{id}` no longer accepts `status`, and the request body is now strict. A body that contains `status`, or any other unknown field, returns `400 VALIDATION_ERROR` (`unrecognized_keys`) and nothing is written, including the other fields in the same request. This applies to every role. Editable fields such as `title` or `po_number` behave as before.
+- To change status, use the command for that transition: `/submit-for-approval`, `/approve`, `/send`, or the new `/cancel`.
+- `POST /quotes/{id}/cancel` cancels a quote. It takes an optional `reason` (up to 2000 characters) and requires `billing:update`. A quote can be cancelled from `draft`, `pending_approval`, `approved`, `sent`, `accepted`, `rejected` or `expired`. Cancelling an already-cancelled quote returns `200` and changes nothing. Cancelling a `converted`, `superseded` or `archived` quote returns `409`. A successful cancel records `status_changed` and `cancelled` entries in `GET /quotes/{id}/activities`.
+
+**Migration note:** If an integration cancels quotes with `PUT {"status": "cancelled"}`, switch it to `POST /quotes/{id}/cancel`. Any integration that sends `status` on `PUT` now gets `400`.
+
 ## 2026-11-09 — Bulk invoice operations limited to finalize and cancel
 
 **Affected endpoint:** `POST /api/v1/financial/bulk/invoices`
