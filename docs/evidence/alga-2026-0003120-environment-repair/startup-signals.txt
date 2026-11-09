@@ -1,2 +1,0 @@
-Credential vault encryption configuration validated
-[dev-server] ready on http://0.0.0.0:3578 (custom upgrade handler active)

@@ -1,4 +1,0 @@
-credential callback HTTP 302
-PASS authenticated session: {"email": "qa@emeraldcity.oz", "user_type": "internal", "tenant": "05d46c3f-c06d-42af-b090-45c9527b08aa", "id": "da1f9e12-5a26-43a6-ab0a-c3547431b265"}
-asset settings HTTP 200
-PASS authenticated settings route HTTP 200; hydrated data is verified separately in the browser
