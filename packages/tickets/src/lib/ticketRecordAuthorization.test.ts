@@ -19,7 +19,22 @@ vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityMock(...args),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  // LEVERAGE: pattern authorization-snapshot-test-fixture — repeated bundle snapshot adapters can move to a shared test helper.
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action,
+    templateKey: rule.template_key, constraintKey: rule.constraint_key,
+    constraints: rule.config.constraints ?? [], redactedFields: rule.config.redactedFields ?? [],
+    selectedBoardIds: rule.config.selectedBoardIds, selectedClientIds: rule.config.selectedClientIds,
+  }),
   resolveBundleNarrowingRulesForEvaluation: resolveBundleRulesMock,
+  loadAuthorizationEvaluationSnapshot: async (...args: any[]) => ({
+    roleIds: [], teamIds: [], managedUserIds: [],
+    rules: (await resolveBundleRulesMock(...args)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action,
+      template_key: rule.templateKey, constraint_key: rule.constraintKey ?? null,
+      config: { selectedBoardIds: rule.selectedBoardIds, selectedClientIds: rule.selectedClientIds },
+    })),
+  }),
 }));
 
 function fakeTrx(ticket: Record<string, unknown> | null = null) {
@@ -133,10 +148,9 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
     await expect(authorizeTicketRecordAccess({
       trx, tenant: 'tenant-1', user: internal, ticketId: 't1', action: 'delete',
     })).rejects.toThrow('bundle policy database unavailable');
-    expect(resolveBundleRulesMock).toHaveBeenCalledExactlyOnceWith(trx, expect.objectContaining({
-      subject: expect.objectContaining({ tenant: 'tenant-1', userId: 'internal-1' }),
-      resource: { type: 'ticket', action: 'delete', id: 't1' },
-    }));
+    expect(resolveBundleRulesMock).toHaveBeenCalledExactlyOnceWith(trx, {
+      tenant: 'tenant-1', userId: 'internal-1', apiKeyId: null,
+    });
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 

@@ -44,7 +44,22 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 // This suite supplies policy results at the resolver boundary; its fake DB only
 // models ticket/comment persistence. Policy lookup failures must propagate.
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  // LEVERAGE: pattern authorization-snapshot-test-fixture — repeated bundle snapshot adapters can move to a shared test helper.
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action,
+    templateKey: rule.template_key, constraintKey: rule.constraint_key,
+    constraints: rule.config.constraints ?? [], redactedFields: rule.config.redactedFields ?? [],
+    selectedBoardIds: rule.config.selectedBoardIds, selectedClientIds: rule.config.selectedClientIds,
+  }),
   resolveBundleNarrowingRulesForEvaluation: resolveBundleRulesMock,
+  loadAuthorizationEvaluationSnapshot: async (...args: any[]) => ({
+    roleIds: [], teamIds: [], managedUserIds: [],
+    rules: (await resolveBundleRulesMock(...args)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action,
+      template_key: rule.templateKey, constraint_key: rule.constraintKey ?? null,
+      config: { selectedBoardIds: rule.selectedBoardIds, selectedClientIds: rule.selectedClientIds },
+    })),
+  }),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -892,9 +907,9 @@ describe('updateTicketWithCache live updates', () => {
         await expect(result).resolves.toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
       }
 
-      expect(resolveBundleRulesMock).toHaveBeenCalledWith(trx, expect.objectContaining({
-        resource: { type: 'ticket', action: 'update', id: 'ticket-1' },
-      }));
+      expect(resolveBundleRulesMock).toHaveBeenCalledWith(trx, {
+        tenant: 'tenant-1', userId: 'user-1', apiKeyId: null,
+      });
       expect(trx).not.toHaveBeenCalledWith('comment_threads');
       expect(trx).not.toHaveBeenCalledWith('comments');
       expect(ticketUpdates).toEqual([]);
