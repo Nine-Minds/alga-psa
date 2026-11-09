@@ -13,18 +13,6 @@ function read(relativePath: string): string {
 }
 
 describe('panel, drawer, and record shortcut migration contract', () => {
-  it.each([
-    'server/src/context/DrawerContext.tsx',
-    'packages/ui/src/context/DrawerContext.tsx',
-  ])('migrates %s drawer key handling to registered panel actions', (relativePath) => {
-    const source = read(relativePath);
-    expect(source).toContain("useShortcutScope('panel', state.isOpen)");
-    expect(source).toContain("useCatalogShortcut('panel.close'");
-    expect(source).toContain("useCatalogShortcut('drawer.historyBack'");
-    expect(source).toContain("useCatalogShortcut('drawer.historyForward'");
-    expect(source).not.toContain("window.addEventListener('keydown', handleKeyDown)");
-  });
-
   it('defines record navigation defaults as brackets with Alt+Arrow only as optional alternates', () => {
     expect(getShortcutCatalogEntry('record.previous')?.defaultBindings).toEqual(['[']);
     expect(getShortcutCatalogEntry('record.next')?.defaultBindings).toEqual([']']);

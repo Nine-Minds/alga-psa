@@ -44,8 +44,14 @@ describe('drawer scope ownership', () => {
         </KeyboardShortcutsProvider>,
       );
     });
+    // The registered panel shortcuts are inert while no drawer owns the panel scope.
+    fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+    fireEvent.keyDown(document, { key: 'ArrowLeft', code: 'ArrowLeft', altKey: true });
+    expect(screen.queryByRole('heading', { name: 'First: workspace' })).toBeNull();
+
     act(() => ancestor.openDrawer(<FeatureDetails label="First" />));
     act(() => ancestor.openDrawer(<FeatureDetails label="Second" />, undefined, onClose));
+    expect(screen.getAllByRole('button', { name: 'Close drawer' })).toHaveLength(1);
 
     fireEvent.keyDown(document, { key: 'ArrowLeft', code: 'ArrowLeft', altKey: true });
     expect(screen.getByRole('heading', { name: 'First: workspace' })).toBeTruthy();
@@ -53,6 +59,9 @@ describe('drawer scope ownership', () => {
     expect(screen.getByRole('heading', { name: 'Second: workspace' })).toBeTruthy();
     fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Second: workspace' })).toBeNull());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    // Closing releases panel scope; an additional Escape must not close anything else.
+    fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
