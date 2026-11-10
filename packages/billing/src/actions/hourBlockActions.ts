@@ -599,6 +599,7 @@ export const manuallyExpireHourBlock = withAuth(async (
         .where({ block_id: blockId, tenant })
         .update({ status: 'expired', expiration_date: expirationDate, updated_at: nowIso })
         .returning('*');
+      if (!updated) throw new Error(`Hour block with ID ${blockId} could not be expired`);
 
       await writeAudit(trx, tenant, {
         blockId,
