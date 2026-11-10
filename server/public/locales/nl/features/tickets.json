@@ -2387,7 +2387,9 @@
       "builtInGroup": "Ingebouwde systemen",
       "customGroup": "Aangepaste systemen",
       "urlPreview": "Opent:",
-      "urlPreviewIncomplete": "Vul de velden hierboven in om de link te bekijken."
+      "urlPreviewIncomplete": "Vul de velden hierboven in om de link te bekijken.",
+      "title": "Titel",
+      "titlePlaceholder": "Optioneel, bijv. de naam van het artikel"
     },
     "errors": {
       "ticketNotFound": "Ticket niet gevonden",
@@ -2799,7 +2801,8 @@
       "details": "Sjabloon",
       "ticket": "Ticket",
       "checklist": "Controlelijst",
-      "customFields": "Aangepaste velden"
+      "customFields": "Aangepaste velden",
+      "links": "Documentatiekoppelingen"
     },
     "fields": {
       "name": "Sjabloonnaam",
@@ -2854,13 +2857,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
       "subcategoryNeedsCategory": "Een subcategorie vereist een categorie",
-      "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze."
+      "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze.",
+      "duplicateLink": "Deze sjabloon heeft die documentatiekoppeling al."
     },
     "usage": {
       "schedules": "In gebruik door {{count}} schema's",
       "paused": "gepauzeerd",
       "tickets": "{{count}} tickets aangemaakt met deze sjabloon",
       "scheduleThis": "Deze sjabloon inplannen…"
+    },
+    "links": {
+      "help": "Worden als verwijzingen gekopieerd naar elk ticket dat uit deze sjabloon wordt gemaakt. Latere wijzigingen aan de sjabloon veranderen bestaande tickets niet.",
+      "empty": "Geen documentatiekoppelingen.",
+      "add": "Koppeling toevoegen",
+      "remove": "Koppeling verwijderen",
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
+      "dialogTitle": "Documentatiekoppeling toevoegen",
+      "pickFromHudu": "Kiezen uit Hudu",
+      "huduPickerTitle": "Een Hudu-artikel kiezen",
+      "huduSearch": "Hudu-artikelen zoeken...",
+      "huduLoading": "Hudu-artikelen laden...",
+      "huduDisconnected": "Hudu is niet verbonden. U kunt nog steeds een koppeling toevoegen door de gegevens in te voeren.",
+      "huduError": "Hudu is niet bereikbaar. Probeer het later opnieuw.",
+      "huduEmpty": "Geen Hudu-artikelen gevonden.",
+      "huduSelect": "Selecteren",
+      "huduPrev": "Vorige",
+      "huduNext": "Volgende"
     }
   },
   "enums": {

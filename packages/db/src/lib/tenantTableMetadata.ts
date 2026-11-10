@@ -137,6 +137,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   canned_response_favorites: { scope: 'tenant' },
   ticket_templates: { scope: 'tenant' },
   ticket_template_checklist_items: { scope: 'tenant' },
+  ticket_template_links: { scope: 'tenant' },
   client_merges: { scope: 'tenant' },
   client_billing_settings: { scope: 'tenant' },
   client_contracts: { scope: 'tenant' },

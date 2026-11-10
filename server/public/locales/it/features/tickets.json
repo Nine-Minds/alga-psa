@@ -2387,7 +2387,9 @@
       "builtInGroup": "Sistemi integrati",
       "customGroup": "Sistemi personalizzati",
       "urlPreview": "Apre:",
-      "urlPreviewIncomplete": "Compila i campi sopra per visualizzare l'anteprima del collegamento."
+      "urlPreviewIncomplete": "Compila i campi sopra per visualizzare l'anteprima del collegamento.",
+      "title": "Titolo",
+      "titlePlaceholder": "Facoltativo, ad es. il nome dell'articolo"
     },
     "errors": {
       "ticketNotFound": "Ticket non trovato",
@@ -2799,7 +2801,8 @@
       "details": "Modello",
       "ticket": "Ticket",
       "checklist": "Lista di controllo",
-      "customFields": "Campi personalizzati"
+      "customFields": "Campi personalizzati",
+      "links": "Collegamenti alla documentazione"
     },
     "fields": {
       "name": "Nome del modello",
@@ -2854,13 +2857,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "I modelli di ticket non sono disponibili",
       "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria",
-      "inUseBySchedules": "Usato da {{count}} pianificazione/i ricorrente/i: {{schedules}}. Assegna prima un altro modello o archiviale."
+      "inUseBySchedules": "Usato da {{count}} pianificazione/i ricorrente/i: {{schedules}}. Assegna prima un altro modello o archiviale.",
+      "duplicateLink": "Questo modello contiene già quel collegamento alla documentazione."
     },
     "usage": {
       "schedules": "Usato da {{count}} pianificazioni",
       "paused": "in pausa",
       "tickets": "{{count}} ticket creati da questo modello",
       "scheduleThis": "Pianifica questo modello…"
+    },
+    "links": {
+      "help": "Copiati come riferimenti su ogni ticket creato da questo modello. Le modifiche successive al modello non cambiano i ticket esistenti.",
+      "empty": "Nessun collegamento alla documentazione.",
+      "add": "Aggiungi collegamento",
+      "remove": "Rimuovi collegamento",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "dialogTitle": "Aggiungi collegamento alla documentazione",
+      "pickFromHudu": "Scegli da Hudu",
+      "huduPickerTitle": "Scegli un articolo Hudu",
+      "huduSearch": "Cerca articoli Hudu...",
+      "huduLoading": "Caricamento degli articoli Hudu...",
+      "huduDisconnected": "Hudu non è connesso. Puoi comunque aggiungere un collegamento inserendone i dettagli.",
+      "huduError": "Impossibile raggiungere Hudu. Riprova più tardi.",
+      "huduEmpty": "Nessun articolo Hudu trovato.",
+      "huduSelect": "Seleziona",
+      "huduPrev": "Precedente",
+      "huduNext": "Successivo"
     }
   },
   "enums": {

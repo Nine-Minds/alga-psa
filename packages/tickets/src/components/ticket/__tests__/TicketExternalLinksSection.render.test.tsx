@@ -103,6 +103,24 @@ describe('TicketExternalLinksSection behaviour', () => {
     expect(anchor).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
+  it('shows the link title as the main text, with the system and reference beneath, and a safe link-out', () => {
+    render(
+      <TicketExternalLinksSection
+        id="ticket-external-links"
+        ticketId="t1"
+        initialLinks={[link({
+          system: 'hudu', external_id: '123', realm: null, relationship: 'reference', actor: null,
+          title: 'Patching runbook', url: 'https://docs.example.hudu.com/a/runbook-123',
+          display: { label: 'Hudu', icon: 'BookOpen', href: 'https://docs.example.hudu.com/a/runbook-123', realmLabel: null },
+        })]}
+      />,
+    );
+
+    expect(screen.getByText('Patching runbook')).toBeInTheDocument();
+    expect(screen.getByText('Hudu · 123')).toBeInTheDocument();
+    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://docs.example.hudu.com/a/runbook-123');
+  });
+
   it('T131: shows the no-URL fallback without inventing a link when no href resolves', () => {
     render(
       <TicketExternalLinksSection

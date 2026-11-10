@@ -2389,7 +2389,9 @@
       "builtInGroup": "Systemy wbudowane",
       "customGroup": "Systemy niestandardowe",
       "urlPreview": "Otwiera:",
-      "urlPreviewIncomplete": "Wypełnij powyższe pola, aby wyświetlić podgląd łącza."
+      "urlPreviewIncomplete": "Wypełnij powyższe pola, aby wyświetlić podgląd łącza.",
+      "title": "Tytuł",
+      "titlePlaceholder": "Opcjonalnie, np. nazwa artykułu"
     },
     "errors": {
       "ticketNotFound": "Nie znaleziono zgłoszenia",
@@ -2801,7 +2803,8 @@
       "details": "Szablon",
       "ticket": "Zgłoszenie",
       "checklist": "Lista kontrolna",
-      "customFields": "Pola niestandardowe"
+      "customFields": "Pola niestandardowe",
+      "links": "Łącza do dokumentacji"
     },
     "fields": {
       "name": "Nazwa szablonu",
@@ -2856,13 +2859,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Szablony zgłoszeń są niedostępne",
       "subcategoryNeedsCategory": "Podkategoria wymaga kategorii",
-      "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je."
+      "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je.",
+      "duplicateLink": "Ten szablon ma już to łącze do dokumentacji."
     },
     "usage": {
       "schedules": "Używany przez {{count}} harmonogramów",
       "paused": "wstrzymany",
       "tickets": "{{count}} zgłoszeń utworzonych z tego szablonu",
       "scheduleThis": "Zaplanuj ten szablon…"
+    },
+    "links": {
+      "help": "Kopiowane jako odwołania do każdego zgłoszenia utworzonego z tego szablonu. Późniejsze zmiany szablonu nie zmieniają istniejących zgłoszeń.",
+      "empty": "Brak łączy do dokumentacji.",
+      "add": "Dodaj łącze",
+      "remove": "Usuń łącze",
+      "moveUp": "W górę",
+      "moveDown": "W dół",
+      "dialogTitle": "Dodaj łącze do dokumentacji",
+      "pickFromHudu": "Wybierz z Hudu",
+      "huduPickerTitle": "Wybierz artykuł z Hudu",
+      "huduSearch": "Szukaj artykułów w Hudu...",
+      "huduLoading": "Ładowanie artykułów z Hudu...",
+      "huduDisconnected": "Hudu nie jest połączone. Nadal możesz dodać łącze, wpisując jego dane.",
+      "huduError": "Nie można połączyć się z Hudu. Spróbuj ponownie później.",
+      "huduEmpty": "Nie znaleziono artykułów w Hudu.",
+      "huduSelect": "Wybierz",
+      "huduPrev": "Poprzednia",
+      "huduNext": "Następna"
     }
   },
   "enums": {

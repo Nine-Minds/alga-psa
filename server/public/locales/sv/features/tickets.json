@@ -2241,7 +2241,9 @@
       "builtInGroup": "Inbyggda system",
       "customGroup": "Anpassade system",
       "urlPreview": "Öppnar:",
-      "urlPreviewIncomplete": "Fyll i fälten ovan för att förhandsgranska länken."
+      "urlPreviewIncomplete": "Fyll i fälten ovan för att förhandsgranska länken.",
+      "title": "Titel",
+      "titlePlaceholder": "Valfritt, t.ex. artikelns namn"
     },
     "errors": {
       "ticketNotFound": "Ärendet hittades inte",
@@ -2653,7 +2655,8 @@
       "details": "Mall",
       "ticket": "Ärende",
       "checklist": "Checklista",
-      "customFields": "Anpassade fält"
+      "customFields": "Anpassade fält",
+      "links": "Dokumentationslänkar"
     },
     "fields": {
       "name": "Mallnamn",
@@ -2708,13 +2711,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Ärendemallar är inte tillgängliga",
       "subcategoryNeedsCategory": "En underkategori kräver en kategori",
-      "inUseBySchedules": "Används av {{count}} återkommande schema(n): {{schedules}}. Peka dem på en annan mall eller arkivera dem först."
+      "inUseBySchedules": "Används av {{count}} återkommande schema(n): {{schedules}}. Peka dem på en annan mall eller arkivera dem först.",
+      "duplicateLink": "Den här mallen har redan den dokumentationslänken."
     },
     "usage": {
       "schedules": "Används av {{count}} scheman",
       "paused": "pausad",
       "tickets": "{{count}} ärenden skapade från mallen",
       "scheduleThis": "Schemalägg den här mallen…"
+    },
+    "links": {
+      "help": "Kopieras som referenser till varje ärende som skapas från den här mallen. Senare ändringar i mallen ändrar inte befintliga ärenden.",
+      "empty": "Inga dokumentationslänkar.",
+      "add": "Lägg till länk",
+      "remove": "Ta bort länk",
+      "moveUp": "Flytta upp",
+      "moveDown": "Flytta ner",
+      "dialogTitle": "Lägg till dokumentationslänk",
+      "pickFromHudu": "Välj från Hudu",
+      "huduPickerTitle": "Välj en Hudu-artikel",
+      "huduSearch": "Sök i Hudu-artiklar...",
+      "huduLoading": "Läser in Hudu-artiklar...",
+      "huduDisconnected": "Hudu är inte anslutet. Du kan ändå lägga till en länk genom att ange dess uppgifter.",
+      "huduError": "Det gick inte att nå Hudu. Försök igen senare.",
+      "huduEmpty": "Inga Hudu-artiklar hittades.",
+      "huduSelect": "Välj",
+      "huduPrev": "Föregående",
+      "huduNext": "Nästa"
     }
   },
   "enums": {

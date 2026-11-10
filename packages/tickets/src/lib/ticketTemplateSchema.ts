@@ -24,6 +24,40 @@ export const ticketTitleSchema = z
     });
   });
 
+const templateLinkUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .refine((value) => /^https?:\/\//i.test(value), 'URL must use http or https');
+
+/**
+ * A documentation link a template carries. Always copied onto tickets as a `reference`, so there is
+ * no `relationship` (or portal visibility) here: an origin/mirror on a template would claim identity
+ * with every generated ticket. Keep in step with `server/src/lib/api/schemas/ticketTemplate.ts`.
+ */
+export const ticketTemplateLinkSchema = z
+  .object({
+    /** Registry key: built-in or `custom:<slug>`. Resolved against the tenant's systems on save. */
+    system: z.string().trim().min(1, 'System is required').max(100),
+    external_id: z.string().trim().min(1, 'External ID is required').max(2000),
+    realm: z.string().trim().max(500).nullable().optional().transform((value) => value || null),
+    /** Stored absolute; copied verbatim onto tickets and never re-resolved at creation. */
+    url: templateLinkUrlSchema.nullable().optional().transform((value) => value ?? null),
+    title: z.string().trim().max(500).nullable().optional().transform((value) => value || null),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional().transform((value) => value ?? null),
+  })
+  .strict();
+
+export type TicketTemplateLinkInput = z.input<typeof ticketTemplateLinkSchema>;
+export type ParsedTicketTemplateLink = z.output<typeof ticketTemplateLinkSchema>;
+
+export const MAX_TEMPLATE_LINKS = 50;
+
+/** The identity of a template link within one template (also the DB unique key). */
+export function templateLinkKey(link: { system: string; external_id: string }): string {
+  return `${link.system.trim()}\u0000${link.external_id.trim()}`;
+}
+
 export const ticketTemplateInputSchema = z
   .object({
     name: z.string().trim().min(1, 'Name is required').max(200),
@@ -62,6 +96,8 @@ export const ticketTemplateInputSchema = z
       )
       .max(200)
       .default([]),
+    /** Documentation links copied onto every ticket created from the template. PUT replaces the stored list. */
+    links: z.array(ticketTemplateLinkSchema).max(MAX_TEMPLATE_LINKS).default([]),
   })
   .strict()
   .superRefine((input, ctx) => {
@@ -73,6 +109,19 @@ export const ticketTemplateInputSchema = z
         params: { messageKey: 'features/tickets:templates.errors.subcategoryNeedsCategory' },
       });
     }
+    const seen = new Set<string>();
+    input.links.forEach((link, index) => {
+      const key = templateLinkKey(link);
+      if (seen.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['links', index],
+          message: 'Duplicate documentation link',
+          params: { messageKey: 'features/tickets:templates.errors.duplicateLink' },
+        });
+      }
+      seen.add(key);
+    });
   });
 
 export type TicketTemplateInput = z.input<typeof ticketTemplateInputSchema>;

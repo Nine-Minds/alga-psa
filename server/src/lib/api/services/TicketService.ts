@@ -2035,7 +2035,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           ticketResult.ticket_id,
           data.external_links ?? null,
-          context.userId,
+          context.userId ? { type: 'user', userId: context.userId } : { type: 'system' },
         );
 
         await stampViaPrincipalRow(trx, context, 'tickets', { ticket_id: ticketResult.ticket_id }, 'entered_via_principal_id');
@@ -3115,7 +3115,7 @@ export class TicketService extends BaseService<ITicket> {
             entity_type: 'comment' as const,
             comment_id: comment.comment_id,
           })),
-          context.userId,
+          context.userId ? { type: 'user', userId: context.userId } : { type: 'system' },
         );
       }
 
