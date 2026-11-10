@@ -61,14 +61,21 @@ vi.mock('knex', async (importOriginal) => {
 vi.mock('../../../../packages/billing/src/services/browserPoolService', () => ({
   browserPoolService: {
     getBrowser: async () => ({
-      newPage: async () => ({
-        setContent: async (html: string) => {
-          rec.pages.push(html);
-        },
-        emulateMediaType: async () => undefined,
-        // The worksheet overflow check; the stub page has no layout, so nothing is clipped.
-        evaluate: async () => [],
-        pdf: async () => Buffer.from('%PDF-1.4 stub'),
+      // Rendering runs in an isolated context with JS disabled and requests intercepted.
+      createBrowserContext: async () => ({
+        newPage: async () => ({
+          setJavaScriptEnabled: async () => undefined,
+          setRequestInterception: async () => undefined,
+          on: () => undefined,
+          setContent: async (html: string) => {
+            rec.pages.push(html);
+          },
+          emulateMediaType: async () => undefined,
+          // The worksheet overflow check; the stub page has no layout, so nothing is clipped.
+          evaluate: async () => [],
+          pdf: async () => Buffer.from('%PDF-1.4 stub'),
+          close: async () => undefined,
+        }),
         close: async () => undefined,
       }),
     }),
