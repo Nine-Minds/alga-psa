@@ -4207,6 +4207,50 @@
     "saving": "Saving...",
     "cancel": "Cancel"
   },
+  "loginPolicy": {
+    "title": "Sign-in policy",
+    "description": "Control how staff and client portal users may sign in with a password. These rules are enforced on the server.",
+    "requireSso": {
+      "title": "Require single sign-on for MSP staff",
+      "body": "Internal users must sign in with Google, Microsoft or your Keycloak provider. Password sign-in and password reset are blocked, except for the break-glass administrators below.",
+      "signOutWarning": "Turning on “Require single sign-on” signs out every internal user who signed in with a password, except break-glass administrators. Turning on a two-factor requirement does not sign anyone out; it applies at their next sign-in."
+    },
+    "require2faInternal": {
+      "title": "Require two-factor authentication for MSP staff password sign-in",
+      "body": "Staff without an authenticator are asked to set one up at their next sign-in."
+    },
+    "require2faClient": {
+      "title": "Require two-factor authentication for client portal password sign-in",
+      "body": "Client portal users without an authenticator are asked to set one up at their next sign-in. The single sign-on requirement never applies to client portal users."
+    },
+    "knownDeviceSkip": {
+      "title": "Allow known devices to skip the code",
+      "body": "Users who chose to trust a device are not asked for a code on that device. Break-glass administrators always need a code."
+    },
+    "breakGlass": {
+      "title": "Break-glass administrators",
+      "body": "These administrators can still sign in with a password when single sign-on is required. They must be active administrators with two-factor authentication enabled, and they always need a code.",
+      "noEligible": "No eligible administrators. An administrator must be active and have two-factor authentication enabled.",
+      "noLongerEligible": "No longer eligible.",
+      "remove": "Remove",
+      "reasons": {
+        "no_two_factor": "Two-factor authentication was reset or is missing.",
+        "inactive": "The user is deactivated.",
+        "not_admin": "The user is no longer an administrator.",
+        "not_internal": "The user is not an internal user.",
+        "not_found": "The user no longer exists."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Configure at least one single sign-on provider before requiring single sign-on.",
+      "break_glass_required": "Select at least one break-glass administrator before requiring single sign-on.",
+      "break_glass_invalid_user": "Break-glass users must be active administrators with two-factor authentication enabled."
+    },
+    "errors": {
+      "load": "Unable to load the sign-in policy.",
+      "save": "Unable to save the sign-in policy."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {
@@ -4527,6 +4571,28 @@
       "backToEmail": "Back to Email settings",
       "title": "Email and identity providers",
       "description": "Register your own Google or Microsoft application for inbound email, and staff sign-in. These credentials belong to your workspace."
+    }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Asset numbering",
+      "description": "One tenant-wide sequence is formatted with each client’s prefix. Previewing and printing do not allocate numbers. Abandoned issued numbers leave gaps and are never reused.",
+      "clientPrefixes": "Client prefixes",
+      "noPrefix": "No prefix",
+      "prefixSaved": "Client prefix saved",
+      "uniquenessEnabled": "Asset tag uniqueness is active",
+      "legacyAudit": "Legacy tag audit",
+      "legacyAuditHelp": "Existing tags are preserved. Reconcile duplicates by editing the affected asset tags; review blank tags without changing them if they are intentionally blank.",
+      "reconciliationNote": "Human reconciliation note",
+      "markReviewed": "Mark reviewed",
+      "noLegacyIssues": "No blank or duplicate tags were found at migration time.",
+      "activate": "Activate unique asset tags",
+      "saveFailed": "Could not save prefix",
+      "activationFailed": "Resolve duplicate tags before activation",
+      "continuationReview": "Legacy review scanned {{scanned}} stored tags; {{numeric}} have numeric suffixes. The highest suffix is {{maximum}}; review a starting value of {{next}}. This is an advisory only. Enter and save the approved continuation value above; no sequence value is consumed by this review.",
+      "continuationExamples": "Examples: {{examples}}",
+      "blankTag": "(blank tag)",
+      "normalizedTag": "Normalized: {{tag}}"
     }
   }
 }

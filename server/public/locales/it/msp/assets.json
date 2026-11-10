@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Di proprietà del cliente",
       "msp": "Di proprietà dell'MSP"
+    },
+    "create": {
+      "success": "Asset {{tag}} creato",
+      "autoTag": "Assegna il prossimo tag automatico",
+      "preview": "Anteprima del prossimo tag: {{tag}} (l’anteprima non riserva un numero)",
+      "selectClient": "Seleziona un cliente per l’anteprima",
+      "addAnother": "Salva e aggiungi un altro",
+      "submit": "Crea asset"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Fornitore",
       "purchaseCost": "Costo di acquisto",
       "orderNumber": "N. ordine",
-      "ownership": "Proprietà"
+      "ownership": "Proprietà",
+      "autoAssetTag": "Assegna automaticamente",
+      "assetTagPreviewLoading": "Seleziona un cliente per visualizzare il prossimo tag",
+      "previewNotReserved": "Solo anteprima; assegnato al salvataggio"
     },
     "placeholders": {
       "workstationOsType": "ad esempio Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Permesso negato: impossibile aggiornare gli asset"
     },
     "asset": {
+      "tagAlreadyExists": "Questa etichetta del bene è già in uso o riservata. Scansionala per trovare il bene esistente oppure inserisci un’altra etichetta.",
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "clientNotFound": "Cliente non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "maintenanceNotFound": "Pianificazione della manutenzione non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Scansiona tag asset",
+    "input": "Scansiona o inserisci un tag",
+    "loading": "Ricerca in corso…",
+    "find": "Trova asset",
+    "ambiguous": "Più asset visibili hanno questo tag. Chiedi a un amministratore di risolvere i tag duplicati.",
+    "notFound": "Nessun asset visibile corrisponde esattamente a questo tag.",
+    "failed": "Impossibile cercare questo tag. Verifica i permessi di accesso e riprova."
+  },
+  "fullIntake": {
+    "title": "Aggiungi asset",
+    "description": "Scegli un numero del tenant o mantieni un tag già stampato.",
+    "back": "Torna agli asset"
+  },
+  "labelFirstIntake": {
+    "start": "Acquisizione con etichetta preliminare",
+    "title": "Avvia acquisizione con etichetta preliminare",
+    "help": "Crea una scheda asset permanente con i dati minimi, quindi stampa due copie della sua etichetta. Scansiona una delle copie in seguito per completare la stessa scheda.",
+    "client": "Cliente",
+    "clientRequired": "Scegli un cliente per continuare.",
+    "createFailed": "Impossibile creare la scheda di acquisizione.",
+    "name": "Breve descrizione (facoltativa)",
+    "creating": "Creazione in corso…",
+    "createPrint": "Crea e stampa la coppia"
   }
 }

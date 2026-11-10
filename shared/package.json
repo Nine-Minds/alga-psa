@@ -77,6 +77,7 @@
     "./lib/sla/holidayRows": "./dist/lib/sla/holidayRows.js",
     "./lib/ticketStatusClock": "./dist/lib/ticketStatusClock.js",
     "./lib/ticketStatusClock.js": "./dist/lib/ticketStatusClock.js",
+    "./lib/email/sanitizeEmailHtml": "./dist/lib/email/sanitizeEmailHtml.js",
     "./lib/ticketActivity": "./dist/lib/ticketActivity/index.js",
     "./lib/ticketActivity/index.js": "./dist/lib/ticketActivity/index.js",
     "./lib/ticketQuery/ticketQuerySchema": "./dist/lib/ticketQuery/ticketQuerySchema.js",

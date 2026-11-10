@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Page } from 'puppeteer';
+import type { BrowserContext, Page } from 'puppeteer';
 import type { Knex } from 'knex';
 
 import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
@@ -22,6 +22,8 @@ import {
   getUserInfoForEmail,
   resolveEmailLocale,
 } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/core/rendering/isolatedRendering';
+import { sanitizeEmailHtml } from '@alga-psa/shared/lib/email/sanitizeEmailHtml';
 
 import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
@@ -1319,6 +1321,11 @@ export class PDFGenerationService {
         }
       }
 
+      // Stored document content can contain raw HTML even when its MIME type is
+      // Markdown. Sanitize only that untrusted fragment so generated invoice
+      // templates can retain their trusted inline SVG barcodes and QR codes.
+      htmlContent = (await sanitizeEmailHtml(htmlContent)) ?? '';
+
       const escapedTitle = (document.document_name || 'Document')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -1329,7 +1336,7 @@ export class PDFGenerationService {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${document.document_name || 'Document'}</title>
+    <title>${escapedTitle}</title>
     <style>
 ${PDF_FONT_FACE_CSS}
       body { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 5mm; }
@@ -1368,12 +1375,18 @@ ${PDF_FONT_FACE_CSS}
   // ---- Puppeteer -----------------------------------------------------------
 
   private async generatePDFBuffer(htmlContent: string, templateAst?: TemplateAst | null): Promise<Buffer> {
+    const isolatedHtml = await prepareHtmlForIsolatedRendering(htmlContent);
     const browser = await browserPoolService.getBrowser();
+    let context: BrowserContext | null = null;
     let page: Page | null = null;
 
     try {
-      page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: 'load' });
+      // Browser instances are pooled, but document state must never be. A fresh
+      // context keeps cookies, cache, storage, and service workers export-local.
+      context = await browser.createBrowserContext();
+      page = await context.newPage();
+      await configureIsolatedPage(page);
+      await page.setContent(isolatedHtml, { waitUntil: 'load' });
       const pdfBuffer = await page.pdf(
         templateAst ? resolvePdfPrintOptionsFromAst(templateAst) : DEFAULT_DOCUMENT_PDF_OPTIONS
       );
@@ -1381,6 +1394,9 @@ ${PDF_FONT_FACE_CSS}
     } finally {
       if (page) {
         await page.close().catch(() => undefined);
+      }
+      if (context) {
+        await context.close().catch(() => undefined);
       }
       await browserPoolService.releaseBrowser(browser).catch(() => undefined);
     }

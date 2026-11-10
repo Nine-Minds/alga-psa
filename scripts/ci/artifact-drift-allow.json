@@ -1,6 +1,66 @@
 [
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
+    "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
+    "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/assigned_to/type",
+    "reason": "Mobile 2.0 task detail offers Unassign, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; callers still sending a uuid are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/assigned_to/type",
+    "reason": "Mobile 2.0 task detail offers Unassign, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; callers still sending a uuid are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/due_date/type",
+    "reason": "Mobile 2.0 task detail offers a clearable due date, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/due_date/type",
+    "reason": "Mobile 2.0 task detail offers a clearable due date, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/priority_id/type",
+    "reason": "Mobile 2.0 task detail offers a clearable priority, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/priority_id/type",
+    "reason": "Mobile 2.0 task detail offers a clearable priority, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/category_id/type",
+    "reason": "Re-classifying a ticket has to be able to clear the classification, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/category_id/type",
+    "reason": "Re-classifying a ticket has to be able to clear the classification, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/subcategory_id/type",
+    "reason": "Picking a category with no children must drop the old subcategory in the same request, so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/subcategory_id/type",
+    "reason": "Picking a category with no children must drop the old subcategory in the same request, so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1schedules/get/parameters",
     "reason": "alga-2026-0002797: GET /api/v1/schedules documented the generic WorkV1ListQuery placeholders (page, limit, sort, order, fields, search, query), which listScheduleEntries() never read; the spec now documents the parsed filters (start_date, end_date, user_id). Clients sending the old params still get 200 (they were and remain ignored)."
   },
@@ -93,56 +153,6 @@
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/barcode/anyOf/2",
     "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
-    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
-    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
-    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
-    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
-    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
-    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
-    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
-    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
-    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
-    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
@@ -651,6 +661,196 @@
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
+    "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
+    "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/author/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/author/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1quotes~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0002902: this request body was the untyped QuotesContractsGenericBodyV1 record (any keys, any values), which is exactly why Leap Forward Technologies could not learn the real field names from the spec. It now points at a schema generated from the runtime zod shape (UpdateQuoteBodyV1, from updateQuoteApiSchema). Nothing the server accepts changed: the typed schema documents the fields the controller already parsed, where the generic record documented none of them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1quotes~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0002902: this request body was the untyped QuotesContractsGenericBodyV1 record (any keys, any values), which is exactly why Leap Forward Technologies could not learn the real field names from the spec. It now points at a schema generated from the runtime zod shape (UpdateQuoteBodyV1, from updateQuoteApiSchema). Nothing the server accepts changed: the typed schema documents the fields the controller already parsed, where the generic record documented none of them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1quotes~1{id}~1items/post/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0002902: this request body was the untyped QuotesContractsGenericBodyV1 record (any keys, any values), which is exactly why Leap Forward Technologies could not learn the real field names from the spec. It now points at a schema generated from the runtime zod shape (QuoteItemBodyV1, from createQuoteItemSchema). Nothing the server accepts changed: the typed schema documents the fields the controller already parsed, where the generic record documented none of them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1quotes~1{id}~1items/post/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0002902: this request body was the untyped QuotesContractsGenericBodyV1 record (any keys, any values), which is exactly why Leap Forward Technologies could not learn the real field names from the spec. It now points at a schema generated from the runtime zod shape (QuoteItemBodyV1, from createQuoteItemSchema). Nothing the server accepts changed: the typed schema documents the fields the controller already parsed, where the generic record documented none of them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1quotes~1{id}~1items~1{itemId}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0002902: this request body was the untyped QuotesContractsGenericBodyV1 record (any keys, any values), which is exactly why Leap Forward Technologies could not learn the real field names from the spec. It now points at a schema generated from the runtime zod shape (QuoteItemBodyV1, from createQuoteItemSchema; PUT takes any subset of it). Nothing the server accepts changed: the typed schema documents the fields the controller already parsed, where the generic record documented none of them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1quotes~1{id}~1items~1{itemId}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0002902: this request body was the untyped QuotesContractsGenericBodyV1 record (any keys, any values), which is exactly why Leap Forward Technologies could not learn the real field names from the spec. It now points at a schema generated from the runtime zod shape (QuoteItemBodyV1, from createQuoteItemSchema; PUT takes any subset of it). Nothing the server accepts changed: the typed schema documents the fields the controller already parsed, where the generic record documented none of them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/client_id/type",
+    "reason": "alga-2026-0002902: CreateQuoteBodyV1 is now built from the real createQuoteApiSchema, where client_id is .nullable(), so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers sending a string are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/client_id/type",
+    "reason": "alga-2026-0002902: CreateQuoteBodyV1 is now built from the real createQuoteApiSchema, where client_id is .nullable(), so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers sending a string are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/valid_until/type",
+    "reason": "alga-2026-0002902: CreateQuoteBodyV1 is now built from the real createQuoteApiSchema, where valid_until is .nullable(), so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers sending a string are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/valid_until/type",
+    "reason": "alga-2026-0002902: CreateQuoteBodyV1 is now built from the real createQuoteApiSchema, where valid_until is .nullable(), so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers sending a string are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/notes/type",
+    "reason": "alga-2026-0002902: `notes` was published in the create body but never persisted - zod stripped it. It survives as a deprecated alias folded onto internal_notes in ApiQuoteController.create() for one release, and is nullable like its target, so the type widens from string to [string, null]. Widening a request field only takes more input than before."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/notes/type",
+    "reason": "alga-2026-0002902: `notes` was published in the create body but never persisted - zod stripped it. It survives as a deprecated alias folded onto internal_notes in ApiQuoteController.create() for one release, and is nullable like its target, so the type widens from string to [string, null]. Widening a request field only takes more input than before."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/terms/type",
+    "reason": "alga-2026-0002902: `terms` was published in the create body but never persisted - zod stripped it. It survives as a deprecated alias folded onto terms_and_conditions in ApiQuoteController.create() for one release, and is nullable like its target, so the type widens from string to [string, null]. Widening a request field only takes more input than before."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/terms/type",
+    "reason": "alga-2026-0002902: `terms` was published in the create body but never persisted - zod stripped it. It survives as a deprecated alias folded onto terms_and_conditions in ApiQuoteController.create() for one release, and is nullable like its target, so the type widens from string to [string, null]. Widening a request field only takes more input than before."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/quote_number/type",
+    "reason": "alga-2026-0002902: `quote_number` was published in the create body but the server has always assigned quote numbers itself, so it is now documented as deprecated-and-ignored (tolerated and dropped before parsing) and typed nullable, widening from string to [string, null]. Widening a request field only takes more input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/quote_number/type",
+    "reason": "alga-2026-0002902: `quote_number` was published in the create body but the server has always assigned quote numbers itself, so it is now documented as deprecated-and-ignored (tolerated and dropped before parsing) and typed nullable, widening from string to [string, null]. Widening a request field only takes more input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/items/items",
+    "reason": "alga-2026-0002902: inline items were documented as a bare object with free-form additionalProperties and now $ref QuoteItemBodyV1, generated from createQuoteItemSchema, so every line field - including the location_id this card made persist - is finally named. The payload the server accepts is unchanged; only the documentation of it is."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/properties/items/items",
+    "reason": "alga-2026-0002902: inline items were documented as a bare object with free-form additionalProperties and now $ref QuoteItemBodyV1, generated from createQuoteItemSchema, so every line field - including the location_id this card made persist - is finally named. The payload the server accepts is unchanged; only the documentation of it is."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/required",
+    "reason": "alga-2026-0002902: `title` has always been required by createQuoteApiSchema (z.string().trim().min(1).max(500)) and POST /api/v1/quotes has always answered 400 without it. The old hand-written body omitted it from required, so this records the runtime rule the spec was missing rather than a new constraint."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateQuoteBodyV1/required",
+    "reason": "alga-2026-0002902: `title` has always been required by createQuoteApiSchema (z.string().trim().min(1).max(500)) and POST /api/v1/quotes has always answered 400 without it. The old hand-written body omitted it from required, so this records the runtime rule the spec was missing rather than a new constraint."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetCreateRequest/properties/asset_tag/minLength",
+    "reason": "PR 4210: omitted or empty asset tags request automatic tenant-wide numbering. Removing the nonempty constraint expands accepted requests; existing explicit tags remain supported."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetCreateRequest/properties/asset_tag/minLength",
+    "reason": "PR 4210: omitted or empty asset tags request automatic tenant-wide numbering. Removing the nonempty constraint expands accepted requests; existing explicit tags remain supported."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/components/schemas/InvoiceCreateBody/properties/subtotal",
     "reason": "security-review PR #3985 (InvoiceService.create): header totals are derived from the invoice items by the billing engine; a posted subtotal is ignored, so it is no longer documented as an input."
   },
@@ -731,76 +931,6 @@
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
-    "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
-    "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/assigned_to/type",
-    "reason": "Mobile 2.0 task detail offers Unassign, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; callers still sending a uuid are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/assigned_to/type",
-    "reason": "Mobile 2.0 task detail offers Unassign, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; callers still sending a uuid are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/due_date/type",
-    "reason": "Mobile 2.0 task detail offers a clearable due date, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/due_date/type",
-    "reason": "Mobile 2.0 task detail offers a clearable due date, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/priority_id/type",
-    "reason": "Mobile 2.0 task detail offers a clearable priority, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/priority_id/type",
-    "reason": "Mobile 2.0 task detail offers a clearable priority, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/category_id/type",
-    "reason": "Re-classifying a ticket has to be able to clear the classification, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/category_id/type",
-    "reason": "Re-classifying a ticket has to be able to clear the classification, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/subcategory_id/type",
-    "reason": "Picking a category with no children must drop the old subcategory in the same request, so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/subcategory_id/type",
-    "reason": "Picking a category with no children must drop the old subcategory in the same request, so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers are unaffected."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
-    "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
-    "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines~1{contractLineId}/delete/parameters",
     "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the required contractLineId path parameter consumed by the existing detach route and controller; the URL cannot identify a line without it."
   },
@@ -828,26 +958,6 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/CreateContractBodyV1/properties/end_date/type",
     "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the nullable end_date accepted by createContractSchema and stored as an open-ended client assignment; this expands the accepted input."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/user_id",
-    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
-    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/author/properties/user_id",
-    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/user_id",
-    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
-  },
-  {
-    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
-    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/author/properties/user_id",
-    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",

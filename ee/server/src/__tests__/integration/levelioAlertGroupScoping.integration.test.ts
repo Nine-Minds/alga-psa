@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Level.io alert → group-scoped rule integration coverage.
  *
@@ -200,7 +201,7 @@ beforeAll(async () => {
     },
   ]);
 
-  await tenantTable('assets').insert({
+  await insertTestAssets(db, {
     tenant: tenantId,
     asset_id: assetId,
     asset_type: 'server',

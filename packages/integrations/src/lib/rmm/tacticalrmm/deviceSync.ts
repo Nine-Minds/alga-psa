@@ -18,6 +18,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { applyRmmSignedInUserAssignment } from '@alga-psa/shared/rmm/autoAssignFromSignedInUser';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 import { computeTacticalAgentStatus } from './agentStatus';
@@ -506,12 +507,11 @@ export async function upsertTacticalAssetExtension(
 }
 
 export async function createTacticalAssetRecord(
-  trx: Knex | Knex.Transaction,
+  knex: Knex,
   args: {
     tenant: string;
     clientId: string;
     assetType: 'workstation' | 'server';
-    assetTag: string;
     name: string;
     serialNumber: string;
     location: string;
@@ -519,23 +519,25 @@ export async function createTacticalAssetRecord(
     status?: string;
   }
 ): Promise<{ asset_id: string }> {
-  const now = new Date().toISOString();
-  const [asset] = await tenantScopedTable(trx, 'assets', args.tenant)
-    .insert({
-      tenant: args.tenant,
-      asset_type: args.assetType,
-      client_id: args.clientId,
-      asset_tag: args.assetTag,
-      name: args.name,
-      status: args.status ?? 'active',
-      location: args.location,
-      serial_number: args.serialNumber,
-      created_at: now,
-      updated_at: now,
-    })
-    .returning(['asset_id']);
-
-  return { asset_id: String(asset.asset_id) };
+  return knex.transaction(async (trx) => {
+    const now = new Date().toISOString();
+    const identity = await prepareAssetIdentity(trx, { tenant: args.tenant, clientId: args.clientId });
+    const [asset] = await tenantScopedTable(trx, 'assets', args.tenant)
+      .insert({
+        tenant: args.tenant,
+        asset_type: args.assetType,
+        client_id: args.clientId,
+        ...identity,
+        name: args.name,
+        status: args.status ?? 'active',
+        location: args.location,
+        serial_number: args.serialNumber,
+        created_at: now,
+        updated_at: now,
+      })
+      .returning(['asset_id']);
+    return { asset_id: String(asset.asset_id) };
+  });
 }
 
 /**
@@ -749,7 +751,6 @@ export async function runTacticalRmmDeviceSync(
               tenant,
               clientId: algaClientId,
               assetType,
-              assetTag: `tactical:${agentId}`,
               name: deviceName,
               serialNumber: hardware.serial_number ?? '',
               location: siteName || '',

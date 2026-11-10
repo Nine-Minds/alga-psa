@@ -539,7 +539,9 @@ export class AssetMigrationApplier implements EntityApplier {
     const assetInput = {
       asset_type: assetTypeSlug,
       client_id: clientId,
-      asset_tag: record.serial_number ?? record.source_record_id,
+      // The source record id is an import identity, not a physical label.
+      // AMP currently has no physical-tag field, so creation allocates from
+      // the shared tenant sequence while serial_number remains explicit.
       name: record.name,
       // FR-B2: keep the source lifecycle state when the tenant has a status
       // with that slug or label; otherwise fall back to `active`.

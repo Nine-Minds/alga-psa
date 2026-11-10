@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Propriedade do cliente",
       "msp": "Propriedade do MSP"
+    },
+    "create": {
+      "success": "Ativo {{tag}} criado",
+      "autoTag": "Atribuir a próxima etiqueta automática",
+      "preview": "Prévia da próxima etiqueta: {{tag}} (a prévia não reserva um número)",
+      "selectClient": "Selecione um cliente para visualizar a prévia",
+      "addAnother": "Salvar e adicionar outro",
+      "submit": "Criar ativo"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Fornecedor",
       "purchaseCost": "Custo de compra",
       "orderNumber": "N.º do pedido",
-      "ownership": "Propriedade"
+      "ownership": "Propriedade",
+      "autoAssetTag": "Atribuir automaticamente",
+      "assetTagPreviewLoading": "Selecione um cliente para visualizar a próxima etiqueta",
+      "previewNotReserved": "Somente prévia; atribuída ao salvar"
     },
     "placeholders": {
       "workstationOsType": "por exemplo, Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Permissão negada: não é possível atualizar os ativos"
     },
     "asset": {
+      "tagAlreadyExists": "Esta etiqueta de ativo já está em uso ou reservada. Digitalize-a para encontrar o ativo existente ou introduza outra etiqueta.",
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
       "clientNotFound": "Cliente não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
       "maintenanceNotFound": "Agenda de manutenção não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Digitalizar etiqueta de ativo",
+    "input": "Digitalize ou insira uma etiqueta",
+    "loading": "Buscando…",
+    "find": "Encontrar ativo",
+    "ambiguous": "Mais de um ativo visível tem esta etiqueta. Peça a um administrador para resolver as etiquetas duplicadas.",
+    "notFound": "Nenhum ativo visível corresponde exatamente a esta etiqueta.",
+    "failed": "Não foi possível buscar esta etiqueta. Verifique suas permissões de acesso e tente novamente."
+  },
+  "fullIntake": {
+    "title": "Adicionar ativo",
+    "description": "Escolha um número do locatário ou mantenha uma etiqueta já impressa.",
+    "back": "Voltar aos ativos"
+  },
+  "labelFirstIntake": {
+    "start": "Recebimento com etiqueta prévia",
+    "title": "Iniciar recebimento com etiqueta prévia",
+    "help": "Crie um registro permanente do ativo com os dados mínimos e imprima duas cópias da etiqueta. Digitalize qualquer cópia depois para completar este mesmo registro.",
+    "client": "Cliente",
+    "clientRequired": "Escolha um cliente para continuar.",
+    "createFailed": "Não foi possível criar o registro de recebimento.",
+    "name": "Descrição breve (opcional)",
+    "creating": "Criando…",
+    "createPrint": "Criar e imprimir o par"
   }
 }

@@ -501,7 +501,10 @@ export interface CreateAssetRequest {
    */
   asset_type: string;
   client_id: string;
-  asset_tag: string;
+  /** Omit or leave blank to allocate from the tenant asset sequence. */
+  asset_tag?: string;
+  /** Existing durable label reservation to commit to this new asset. */
+  asset_number_reservation_id?: string;
   name: string;
   status: string;
   /** Who owns the device. Defaults to 'client' server-side. */

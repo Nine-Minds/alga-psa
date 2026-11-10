@@ -1,6 +1,5 @@
 import dns from 'node:dns/promises';
 import { isIP } from 'node:net';
-
 export { isGlobalUnicastAddress } from '../net/publicAddress';
 import { isGlobalUnicastAddress } from '../net/publicAddress';
 

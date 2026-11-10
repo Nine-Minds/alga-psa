@@ -24,38 +24,6 @@ export interface ReceiveEquipmentResult {
   event: IAssetCustodyEvent;
 }
 
-const MAX_TAG_ATTEMPTS = 25;
-
-/**
- * `<ticket_number>-EQ<n>`: n is one more than the highest suffix already used for this ticket, then
- * re-checked against every asset tag in the tenant (case-insensitive) and incremented until free.
- *
- * Uniqueness under concurrency comes from the caller holding the ticket row lock (`FOR UPDATE`, taken in
- * `receiveEquipmentForTicket`) for the whole transaction: two receives on one ticket serialise, so the
- * second sees the first's asset. The lock is keyed by tenant, so it is also correct on Citus.
- */
-export async function nextEquipmentTag(trx: Knex.Transaction, tenant: string, ticketNumber: string): Promise<string> {
-  const prefix = `${ticketNumber}-EQ`;
-  const rows = await tenantDb(trx, tenant)
-    .table('assets')
-    .whereLike('asset_tag', `${prefix.replace(/[\\%_]/g, '\\$&')}%`)
-    .select<Array<{ asset_tag: string }>>('asset_tag');
-  let max = 0;
-  for (const { asset_tag } of rows) {
-    const suffix = asset_tag.slice(prefix.length);
-    if (/^\d+$/.test(suffix)) max = Math.max(max, Number(suffix));
-  }
-  for (let attempt = 1; attempt <= MAX_TAG_ATTEMPTS; attempt += 1) {
-    const candidate = `${prefix}${max + attempt}`;
-    const taken = await tenantDb(trx, tenant)
-      .table('assets')
-      .whereRaw('lower(asset_tag) = lower(?)', [candidate])
-      .first('asset_id');
-    if (!taken) return candidate;
-  }
-  throw new CustodyError('tag_generation_failed', 'Could not generate a free equipment tag. Enter a tag manually.');
-}
-
 /**
  * An attribute validation error is thrown as JSON with `attributes.<key>` paths. Re-throw it with each issue
  * mapped to the translated "Missing required asset field: {{field}}" key, naming the field by the label from
@@ -111,7 +79,9 @@ export async function receiveEquipmentForTicket(
 
   if (input.new_asset) {
     const n = input.new_asset;
-    const assetTag = n.asset_tag ?? (await nextEquipmentTag(trx, tenant, String(ticket.ticket_number)));
+    // New equipment participates in the tenant-wide sequence; a supplied
+    // physical/scanned identifier is retained by createAssetInTransaction.
+    const assetTag = n.asset_tag ?? '';
     // Intake creates a lightweight held asset: the dialog has no custom-field inputs, so do not require
     // every custom attribute. Any attributes that are supplied are still schema-validated.
     const created = await createAssetInTransaction(trx, tenant, actorUserId, {

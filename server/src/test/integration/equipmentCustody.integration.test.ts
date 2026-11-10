@@ -1,3 +1,5 @@
+import { clientAssetPrefix, formatAssetTag, previewNextAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * alga-2026-0002683 C4 - equipment custody and ticket intake (real DB).
  *
@@ -225,7 +227,7 @@ async function custodyMutationSnapshot(tenant: string): Promise<Record<string, n
 
 async function newAsset(fx: Fx, over: Record<string, unknown> = {}) {
   const assetId = randomUUID();
-  await table(fx.tenantId, 'assets').insert({
+  await insertTestAssets(db, {
     tenant: fx.tenantId, asset_id: assetId, asset_type: 'unknown', client_id: fx.clientId,
     asset_tag: `TAG-${assetId.slice(0, 6)}`, name: 'Fixture device', status: 'active', location: '',
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...over,
@@ -595,9 +597,10 @@ describe('equipment custody (integration)', () => {
     const before = await counts(fx.tenantId);
 
     // Mode 1: a brand-new minimal asset.
+    const preview = await previewNextAssetTag(db, fx.tenantId, fx.clientId);
     const created = unwrap<any>(await receiveEquipment(intake(fx)));
     expect(created.createdAsset).toBe(true);
-    expect(created.asset.asset_tag).toMatch(/-EQ1$/);
+    expect(created.asset.asset_tag).toBe(preview.tag);
     const row = await table(fx.tenantId, 'assets').where({ asset_id: created.asset.asset_id }).first();
     expect(row).toMatchObject({ status: 'held_by_msp', ownership: 'client', client_id: fx.clientId });
     expect(row.stock_unit_id ?? null).toBeNull();
@@ -841,16 +844,19 @@ describe('equipment custody (integration)', () => {
   it('generates distinct tags for concurrent receives on one ticket, with no stock rows', async () => {
     const fx = await seedFixture();
     const before = await counts(fx.tenantId);
-    const ticket = await table(fx.tenantId, 'tickets').where({ ticket_id: fx.ticketId }).first();
+    const preview = await previewNextAssetTag(db, fx.tenantId, fx.clientId);
+    const prefix = await clientAssetPrefix(db, fx.tenantId, fx.clientId);
     const run = (name: string) =>
       db.transaction(async (trx) => {
         const result = await receiveInTransaction(trx, fx, intake(fx, { new_asset: { name, asset_type: 'unknown' } }) as any);
-        // Hold the transaction open briefly so the two overlap and the ticket row lock is what serialises them.
+        // Hold both transactions open to exercise the shared sequence lock.
         await new Promise((resolve) => setTimeout(resolve, 150));
         return result;
       });
     const [one, two] = await Promise.all([run('Dock A'), run('Dock B')]);
-    expect([one.asset.asset_tag, two.asset.asset_tag].sort()).toEqual([`${ticket.ticket_number}-EQ1`, `${ticket.ticket_number}-EQ2`]);
+    expect([one.asset.asset_tag, two.asset.asset_tag].sort()).toEqual([
+      preview.tag, formatAssetTag(String(preview.value + 1).padStart(preview.padding, '0'), prefix),
+    ]);
     expect(await counts(fx.tenantId)).toEqual(before);
   });
 
@@ -900,11 +906,12 @@ describe('equipment custody (integration)', () => {
 
   it('skips a generated tag already used by an unrelated asset in the tenant', async () => {
     const fx = await seedFixture();
-    const ticket = await table(fx.tenantId, 'tickets').where({ ticket_id: fx.ticketId }).first();
-    // Different case, different client: the numeric-suffix scan misses it, the tenant-wide check must not.
-    await newAsset(fx, { client_id: fx.otherClientId, asset_tag: `${ticket.ticket_number}-eq1`.toLowerCase() });
+    const preview = await previewNextAssetTag(db, fx.tenantId, fx.clientId);
+    const prefix = await clientAssetPrefix(db, fx.tenantId, fx.clientId);
+    // A claim under another client must also block the next tenant-wide number.
+    await newAsset(fx, { client_id: fx.otherClientId, asset_tag: preview.tag.toLowerCase() });
     const r = unwrap<any>(await receiveEquipment(intake(fx)));
-    expect(r.asset.asset_tag).toBe(`${ticket.ticket_number}-EQ2`);
+    expect(r.asset.asset_tag).toBe(formatAssetTag(String(preview.value + 1).padStart(preview.padding, '0'), prefix));
   });
 
   it('record-level filtering: an unreadable asset is dropped from the queue (rows and counts), label parts and reads', async () => {
@@ -1028,7 +1035,7 @@ describe('equipment custody (integration)', () => {
     await table(fx.tenantId, 'asset_statuses').where({ slug: 'held_by_msp' }).del();
 
     const assetId = randomUUID();
-    await table(fx.tenantId, 'assets').insert({
+    await insertTestAssets(db, {
       tenant: fx.tenantId, asset_id: assetId, asset_type: 'unknown', client_id: fx.clientId, asset_tag: 'LEGACY-1',
       name: 'Legacy device', status: 'active', location: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });

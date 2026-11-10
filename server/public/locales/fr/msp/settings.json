@@ -4207,6 +4207,50 @@
     "saving": "Enregistrement…",
     "cancel": "Annuler"
   },
+  "loginPolicy": {
+    "title": "Politique de connexion",
+    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter avec un mot de passe. Ces règles sont appliquées côté serveur.",
+    "requireSso": {
+      "title": "Exiger l’authentification unique pour le personnel du MSP",
+      "body": "Les utilisateurs internes doivent se connecter avec Google, Microsoft ou votre fournisseur Keycloak. La connexion par mot de passe et la réinitialisation du mot de passe sont bloquées, sauf pour les administrateurs d’urgence ci-dessous.",
+      "signOutWarning": "L’activation de « Exiger l’authentification unique » déconnecte tous les utilisateurs internes connectés avec un mot de passe, sauf les administrateurs d’urgence. L’activation d’une exigence à deux facteurs ne déconnecte personne ; elle s’applique à la prochaine connexion."
+    },
+    "require2faInternal": {
+      "title": "Exiger l’authentification à deux facteurs pour la connexion par mot de passe du personnel du MSP",
+      "body": "Le personnel sans application d’authentification devra en configurer une à sa prochaine connexion."
+    },
+    "require2faClient": {
+      "title": "Exiger l’authentification à deux facteurs pour la connexion par mot de passe du portail client",
+      "body": "Les utilisateurs du portail client sans application d’authentification devront en configurer une à leur prochaine connexion. L’exigence d’authentification unique ne s’applique jamais aux utilisateurs du portail client."
+    },
+    "knownDeviceSkip": {
+      "title": "Autoriser les appareils connus à ignorer le code",
+      "body": "Les utilisateurs qui ont choisi de faire confiance à un appareil n’ont pas à saisir de code sur cet appareil. Les administrateurs d’urgence ont toujours besoin d’un code."
+    },
+    "breakGlass": {
+      "title": "Administrateurs d’urgence",
+      "body": "Ces administrateurs peuvent toujours se connecter avec un mot de passe lorsque l’authentification unique est exigée. Ils doivent être des administrateurs actifs avec l’authentification à deux facteurs activée et ont toujours besoin d’un code.",
+      "noEligible": "Aucun administrateur éligible. Un administrateur doit être actif et avoir activé l’authentification à deux facteurs.",
+      "noLongerEligible": "N'est plus éligible.",
+      "remove": "Retirer",
+      "reasons": {
+        "no_two_factor": "L'authentification à deux facteurs a été réinitialisée ou est absente.",
+        "inactive": "L'utilisateur est désactivé.",
+        "not_admin": "L'utilisateur n'est plus administrateur.",
+        "not_internal": "L'utilisateur n'est pas un utilisateur interne.",
+        "not_found": "L'utilisateur n'existe plus."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Configurez au moins un fournisseur d’authentification unique avant de l’exiger.",
+      "break_glass_required": "Sélectionnez au moins un administrateur d’urgence avant d’exiger l’authentification unique.",
+      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée."
+    },
+    "errors": {
+      "load": "Impossible de charger la politique de connexion.",
+      "save": "Impossible d’enregistrer la politique de connexion."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {
@@ -4527,6 +4571,28 @@
       "backToEmail": "Retour aux paramètres e-mail",
       "title": "Fournisseurs d'e-mail et d'identité",
       "description": "Enregistrez votre propre application Google ou Microsoft pour les e-mails entrants et la connexion du personnel. Ces identifiants appartiennent à votre espace de travail."
+    }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numérotation des actifs",
+      "description": "Une séquence unique pour le locataire est formatée avec le préfixe de chaque client. L’aperçu et l’impression n’attribuent aucun numéro. Les numéros attribués puis abandonnés laissent des trous et ne sont jamais réutilisés.",
+      "clientPrefixes": "Préfixes des clients",
+      "noPrefix": "Aucun préfixe",
+      "prefixSaved": "Préfixe du client enregistré",
+      "uniquenessEnabled": "L’unicité des étiquettes d’actifs est activée",
+      "legacyAudit": "Audit des étiquettes existantes",
+      "legacyAuditHelp": "Les étiquettes existantes sont conservées. Résolvez les doublons en modifiant les étiquettes des actifs concernés ; examinez les étiquettes vides sans les modifier si elles sont volontairement vides.",
+      "reconciliationNote": "Note de rapprochement manuel",
+      "markReviewed": "Marquer comme vérifié",
+      "noLegacyIssues": "Aucune étiquette vide ou en double n’a été trouvée lors de la migration.",
+      "activate": "Activer les étiquettes d’actifs uniques",
+      "saveFailed": "Impossible d’enregistrer le préfixe",
+      "activationFailed": "Résolvez les doublons d’étiquettes avant l’activation",
+      "continuationReview": "L’examen des données existantes a analysé {{scanned}} étiquettes enregistrées ; {{numeric}} ont un suffixe numérique. Le suffixe le plus élevé est {{maximum}} ; examinez une valeur de départ de {{next}}. Il s’agit d’une simple recommandation. Saisissez et enregistrez ci-dessus la valeur de continuation approuvée ; cet examen ne consomme aucune valeur de la séquence.",
+      "continuationExamples": "Exemples : {{examples}}",
+      "blankTag": "(étiquette vide)",
+      "normalizedTag": "Normalisée : {{tag}}"
     }
   }
 }

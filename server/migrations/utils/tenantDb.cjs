@@ -15,6 +15,11 @@
 
 const TENANT_TABLE_METADATA = {
   assets: { scope: 'tenant' },
+  asset_tag_audit: { scope: 'tenant' },
+  asset_tag_activation: { scope: 'tenant' },
+  asset_number_reservations: { scope: 'tenant' },
+  asset_tag_legacy_bindings: { scope: 'tenant' },
+  asset_tag_claims: { scope: 'tenant' },
   accounting_export_batches: { scope: 'tenant' },
   accounting_export_artifacts: { scope: 'tenant' },
   accounting_export_errors: { scope: 'tenant' },

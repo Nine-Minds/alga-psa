@@ -42,6 +42,7 @@ import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/ass
 import { getAuthorizedAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import type { AssetAuthUser } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
+import { claimAssetTag, prepareAssetIdentity, normalizeAssetTag, assetTagClaimsRequired } from '@alga-psa/shared/services/assetNumbering';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -458,7 +459,7 @@ export class AssetService extends BaseService<any> {
 
   async create(data: CreateAssetWithExtensionData, context: ServiceContext): Promise<any> {
     // LEVERAGE: friction rest-asset-write-path — converge REST writes with createAssetRecord/updateAssetRecord for shared history and workflow behavior.
-    const { extension_data, attributes, ...assetData } = data;
+    const { extension_data, attributes, asset_number_reservation_id: reservationId, ...assetData } = data;
     const knex = await this.getDbForContext(context);
 
     const typeEntry = await resolveRestAssetType(knex, context.tenant, assetData.asset_type);
@@ -502,8 +503,12 @@ export class AssetService extends BaseService<any> {
     // without the contact the caller asked for, and a failed extension write
     // must not leave a committed asset with no extension row.
     const asset = await knex.transaction(async (trx) => {
+      const identity = await prepareAssetIdentity(trx, {
+        tenant: context.tenant, clientId: assetColumns.client_id,
+        assetTag: assetColumns.asset_tag, reservationId,
+      });
       const [created] = await scopedTable(trx, context.tenant, this.tableName)
-        .insert(assetRecord)
+        .insert({ ...assetRecord, ...identity })
         .returning('*');
 
       if (requestedContactId) {
@@ -659,6 +664,16 @@ export class AssetService extends BaseService<any> {
     // committed without its FR-E5 group removal (or the other way round), and a
     // failed extension write left the rest of the same PUT committed.
     const after = await knex.transaction(async (trx) => {
+      if (Object.prototype.hasOwnProperty.call(updateData, 'asset_tag')) {
+        const physicalTag = String(updateData.asset_tag ?? '');
+        const normalizedTag = normalizeAssetTag(physicalTag);
+        updateData.asset_tag_normalized = normalizedTag || null;
+        if (normalizedTag !== normalizeAssetTag(String(before?.asset_tag ?? ''))) {
+          updateData.asset_tag_legacy_exempt = false;
+          updateData.asset_tag_managed = await assetTagClaimsRequired(trx, context.tenant);
+          await claimAssetTag(trx, { tenant: context.tenant, assetTag: physicalTag, ownerKind: 'asset', ownerId: id });
+        }
+      }
       const [updated] = await scopedTable(trx, context.tenant, this.tableName)
         .where({ [this.primaryKey]: id })
         .update(updateData)

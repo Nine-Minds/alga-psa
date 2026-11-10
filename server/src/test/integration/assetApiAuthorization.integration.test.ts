@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
@@ -110,7 +111,7 @@ async function invoke(handler: Function, req: NextRequest, params?: Record<strin
 
 async function createAsset(clientId: string, name: string) {
   const assetId = randomUUID();
-  await table('assets').insert({ tenant, asset_id: assetId, asset_tag: `TAG-${assetId}`, serial_number: `SER-${assetId}`, name, status: 'active', asset_type: 'workstation', client_id: clientId, created_at: db.fn.now(), updated_at: db.fn.now() });
+  await insertTestAssets(connection.db!, { tenant, asset_id: assetId, asset_tag: `TAG-${assetId}`, serial_number: `SER-${assetId}`, name, status: 'active', asset_type: 'workstation', client_id: clientId, created_at: db.fn.now(), updated_at: db.fn.now() });
   return assetId;
 }
 
@@ -295,7 +296,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
           tenant: foreignTenant, asset_id: assetId, asset_tag: `FOREIGN-${assetId}`, serial_number: `FOREIGN-${assetId}`,
           name, status: 'active', asset_type: 'workstation', client_id: foreignClient,
         });
-        await tenantDb(db, foreignTenant).table('assets').insert([
+        await insertTestAssets(db, [
           foreignAsset(foreignParent, 'Foreign parent'), foreignAsset(foreignChild, 'Foreign child'),
         ]);
         await tenantDb(db, foreignTenant).table('asset_relationships').insert({

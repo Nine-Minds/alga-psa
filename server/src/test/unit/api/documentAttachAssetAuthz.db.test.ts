@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * POST /api/v1/documents -> asset attach must run the same record-level read
  * authorization as the asset routes (alga-2026-0002947). A denied asset answers
@@ -73,7 +74,7 @@ let noUpdateKey: string;
 
 async function insertAsset(trx: Knex, clientId: string): Promise<string> {
   const id = randomUUID();
-  await trx('assets').insert({
+  await insertTestAssets(trx, {
     tenant, asset_id: id, client_id: clientId, asset_type: 'workstation',
     asset_tag: `tag-${id}`, name: 'Attach target', status: 'active',
   });

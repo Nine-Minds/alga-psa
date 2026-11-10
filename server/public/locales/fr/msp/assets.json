@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Propriété du client",
       "msp": "Propriété du MSP"
+    },
+    "create": {
+      "success": "Actif {{tag}} créé",
+      "autoTag": "Attribuer la prochaine étiquette automatique",
+      "preview": "Aperçu de la prochaine étiquette : {{tag}} (l’aperçu ne réserve pas de numéro)",
+      "selectClient": "Sélectionnez un client pour afficher l’aperçu",
+      "addAnother": "Enregistrer et ajouter un autre actif",
+      "submit": "Créer un actif"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Fournisseur",
       "purchaseCost": "Coût d'achat",
       "orderNumber": "N° de commande",
-      "ownership": "Propriété"
+      "ownership": "Propriété",
+      "autoAssetTag": "Attribuer automatiquement",
+      "assetTagPreviewLoading": "Sélectionnez un client pour prévisualiser la prochaine étiquette",
+      "previewNotReserved": "Aperçu uniquement ; attribution à l’enregistrement"
     },
     "placeholders": {
       "workstationOsType": "par exemple, Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Autorisation refusée : impossible de mettre à jour les actifs"
     },
     "asset": {
+      "tagAlreadyExists": "Cette étiquette d’actif est déjà utilisée ou réservée. Scannez-la pour retrouver l’actif existant ou saisissez une autre étiquette.",
       "notFoundRefresh": "Actif introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
       "clientNotFound": "Client introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
       "maintenanceNotFound": "Planning de maintenance introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Scanner une étiquette d’actif",
+    "input": "Scanner ou saisir une étiquette",
+    "loading": "Recherche en cours…",
+    "find": "Rechercher un actif",
+    "ambiguous": "Plusieurs actifs visibles portent cette étiquette. Demandez à un administrateur de résoudre les doublons.",
+    "notFound": "Aucun actif visible ne correspond exactement à cette étiquette.",
+    "failed": "Impossible de rechercher cette étiquette. Vérifiez vos droits d’accès et réessayez."
+  },
+  "fullIntake": {
+    "title": "Ajouter un actif",
+    "description": "Choisissez un numéro du locataire ou conservez une étiquette déjà imprimée.",
+    "back": "Retour aux actifs"
+  },
+  "labelFirstIntake": {
+    "start": "Réception par étiquette préalable",
+    "title": "Démarrer la réception par étiquette préalable",
+    "help": "Créez une fiche d’actif permanente avec les informations minimales, puis imprimez deux exemplaires de son étiquette. Scannez l’un des exemplaires plus tard pour compléter cette même fiche.",
+    "client": "Client",
+    "clientRequired": "Choisissez un client pour continuer.",
+    "createFailed": "Impossible de créer la fiche de réception.",
+    "name": "Description courte (facultatif)",
+    "creating": "Création en cours…",
+    "createPrint": "Créer et imprimer la paire"
   }
 }
