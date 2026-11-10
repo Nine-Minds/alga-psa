@@ -2184,6 +2184,7 @@
     "loading": "Controles laden…",
     "empty": "Er zijn nog geen controles op locatie die overeenkomen met deze weergave.",
     "columns": {
+      "audit": "Controle",
       "client": "Klant",
       "location": "Locatie",
       "status": "Status",
@@ -2236,6 +2237,7 @@
     },
     "detail": {
       "backToClient": "Terug naar controles voor deze klant",
+      "reference": "Controle",
       "untitledClient": "Klant",
       "location": "Locatie",
       "startedBy": "Gestart door",
