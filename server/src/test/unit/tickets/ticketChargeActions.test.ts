@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   permission: vi.fn(),
+  recordAccess: vi.fn(),
   connect: vi.fn(),
   facade: vi.fn(),
   consume: vi.fn(),
@@ -16,6 +17,9 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: mocks.permission,
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
+vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccess: mocks.recordAccess,
+}));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.connect,
   tenantDb: mocks.facade,
@@ -74,6 +78,7 @@ let tables: Record<string, ReturnType<typeof query>>;
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.permission.mockResolvedValue(true);
+  mocks.recordAccess.mockResolvedValue({});
   mocks.connect.mockResolvedValue({ knex: {} });
   mocks.consume.mockResolvedValue({ consumed: true });
   mocks.signal.mockResolvedValue(null);
@@ -81,10 +86,10 @@ beforeEach(() => {
     tickets: query({ client_id: 'client-a' }),
     service_catalog: query({ service_id: serviceId }),
     service_prices: query({ rate: '2500' }),
-    ticket_fixed_fee_services: query({ rate: '2500', is_billed: false }),
+    ticket_fixed_fee_services: query({ rate: '2500', is_billed: false, ticket_id: ticketId }),
     'ticket_fixed_fee_services as f': query(undefined, [{ entry_id: entryId }]),
     ticket_materials: query({
-      service_id: serviceId, client_id: 'client-a', quantity: 4, rate: 2500, is_billed: false,
+      ticket_id: ticketId, service_id: serviceId, client_id: 'client-a', quantity: 4, rate: 2500, is_billed: false,
     }),
     product_inventory_settings: query({ track_stock: true, is_serialized: false }),
     stock_movements: query(undefined, [{
@@ -159,6 +164,25 @@ describe('ticket fixed-fee actions', () => {
     expect(mocks.movement).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['read', () => listTicketFixedFeeServices(ticketId), 'read'],
+    ['add', () => addTicketFixedFeeService(input), 'update'],
+    ['edit', () => updateTicketFixedFeeService(entryId, { quantity: 3, description: '' }), 'update'],
+    ['remove', () => deleteTicketFixedFeeService(entryId), 'update'],
+  ] as const)('checks record-level access before it can %s fixed-fee charges', async (_name, action, access) => {
+    mocks.recordAccess.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+    expect(await action()).toHaveProperty('permissionError');
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-a',
+      user: expect.anything(),
+      ticketId,
+      action: access,
+    }));
+    expect(tables.ticket_fixed_fee_services.insert).not.toHaveBeenCalled();
+    expect(tables.ticket_fixed_fee_services.update).not.toHaveBeenCalled();
+    expect(tables.ticket_fixed_fee_services.delete).not.toHaveBeenCalled();
+  });
+
   it.each([0, -1, 1.5, 2147483648, NaN])('rejects invalid quantity %s', async (quantity) => {
     expect(await addTicketFixedFeeService({ ...input, quantity })).toHaveProperty('actionError');
     expect(mocks.connect).not.toHaveBeenCalled();
@@ -166,6 +190,10 @@ describe('ticket fixed-fee actions', () => {
 
   it('uses the catalog currency price and derives client from the ticket', async () => {
     await addTicketFixedFeeService(input);
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      ticketId,
+      action: 'update',
+    }));
     expect(mocks.facade).toHaveBeenCalledWith({}, 'tenant-a');
     expect(tables.service_catalog.where).toHaveBeenCalledWith({
       service_id: serviceId, item_kind: 'service', billing_method: 'fixed', is_active: true,
@@ -185,17 +213,29 @@ describe('ticket fixed-fee actions', () => {
 
   it('lists only the requested ticket through the tenant facade', async () => {
     expect(await listTicketFixedFeeServices(ticketId)).toEqual([{ entry_id: entryId }]);
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      ticketId,
+      action: 'read',
+    }));
     expect(tables['ticket_fixed_fee_services as f'].where).toHaveBeenCalledWith('f.ticket_id', ticketId);
   });
 
   it('conditionally deletes only unbilled entries', async () => {
     tables.ticket_fixed_fee_services.delete.mockResolvedValue(0);
     expect(await deleteTicketFixedFeeService(entryId)).toHaveProperty('actionError');
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      ticketId,
+      action: 'update',
+    }));
     expect(tables.ticket_fixed_fee_services.where).toHaveBeenCalledWith({ entry_id: entryId, is_billed: false });
   });
 
   it('locks and updates quantity/description without changing the catalog price', async () => {
     await updateTicketFixedFeeService(entryId, { quantity: 3, description: ' Custom setup ' });
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      ticketId,
+      action: 'update',
+    }));
     expect(tables.ticket_fixed_fee_services.forUpdate).toHaveBeenCalled();
     expect(tables.ticket_fixed_fee_services.update).toHaveBeenCalledWith({
       quantity: 3, description: 'Custom setup', updated_at: expect.any(String),
@@ -215,6 +255,19 @@ describe('ticket fixed-fee actions', () => {
 });
 
 describe('ticket material editing', () => {
+  it('requires record-level ticket authorization before editing a material', async () => {
+    mocks.recordAccess.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+    expect(await updateTicketMaterial(entryId, { quantity: 4, description: ' Changed ' })).toHaveProperty('permissionError');
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-a',
+      ticketId,
+      action: 'update',
+    }));
+    expect(tables.ticket_materials.update).not.toHaveBeenCalled();
+    expect(mocks.consume).not.toHaveBeenCalled();
+    expect(mocks.movement).not.toHaveBeenCalled();
+  });
+
   it('does not touch stock on a description-only edit', async () => {
     await updateTicketMaterial(entryId, { quantity: 4, description: ' Changed ' });
     expect(tables.product_inventory_settings.first).not.toHaveBeenCalled();
