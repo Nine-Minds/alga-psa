@@ -798,7 +798,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       )}
     >
       <DialogContent>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {error && <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
@@ -1297,12 +1297,18 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                                 className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]"
                               >
                                 <span className="font-medium">{o.vendor_name || o.vendor_id}</span>
-                                {o.vendor_sku && <span className="font-mono text-xs text-gray-500">{o.vendor_sku}</span>}
+                                {o.vendor_sku && (
+                                  <span className="font-mono text-xs text-[rgb(var(--color-text-600))]">
+                                    {o.vendor_sku}
+                                  </span>
+                                )}
                                 <span className="ml-auto tabular-nums">
                                   {o.unit_cost != null ? money(Number(o.unit_cost), o.cost_currency) : '—'}
                                 </span>
                                 {o.is_preferred && (
-                                  <span className="text-xs rounded bg-green-100 text-green-800 px-1.5 py-0.5">Preferred</span>
+                                  <span className="rounded px-1.5 py-0.5 text-xs border-[rgb(var(--badge-success-border))] bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]">
+                                    Preferred
+                                  </span>
                                 )}
                               </div>
                             ))}
@@ -1321,7 +1327,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                             id="quick-add-product-kit-pricing-mode"
                             value={inv.kit_pricing_mode}
                             onChange={(e) => handleKitPricingChange(e.target.value as KitPricingMode)}
-                            className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-white px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm"
                           >
                             <option value="sum">
                               {t('quickAddProduct.fields.inventory.kitPricingSum', {

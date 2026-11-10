@@ -56,3 +56,12 @@ describe('inventory master-data actions keep their seeded permission gates (F053
     expect(src).toContain(`hasPermission(user, '${resource}', action)`);
   });
 });
+
+describe('serialized restock authorizes its consuming material parent', () => {
+  it('requires parent update permission and ticket record access before removing the line', () => {
+    const src = read('../actions/restockReturnActions.ts');
+    expect(src).toContain("hasPermission(user, parentType, 'update')");
+    expect(src).toContain('authorizeTicketRecordAccess');
+    expect(src).toContain('tenantDb(trx, tenant)');
+  });
+});
