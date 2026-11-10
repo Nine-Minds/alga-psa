@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantClientOwnership } from '@alga-psa/db';
+import { tenantClientOwnership } from '@alga-psa/db/tenantTableManifest';
 import type { DiscriminatorClientResolver } from './clientPath';
 import { BUILTIN_CLIENT_RESOLVERS } from './builtinClientResolvers';
 

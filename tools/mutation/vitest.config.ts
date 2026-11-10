@@ -10,6 +10,8 @@ export default defineConfig({
   resolve: { alias: {
     // The kernel imports the user-type predicates; resolve them from source (dist is not built here).
     '@alga-psa/types': `${root}packages/types/src/index.ts`,
+    // Client resolvers read the tenant table manifest, a dependency-free leaf module.
+    '@alga-psa/db/tenantTableManifest': `${root}packages/db/src/lib/tenantTableManifest.ts`,
     '@alga-psa/authorization/kernel': `${root}packages/authorization/src/kernel/index.ts`,
     '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy': `${root}shared/billingClients/calendarMonthEndClosePolicy.ts`,
   } },
