@@ -6,10 +6,15 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
-const nxBin = path.resolve(process.cwd(), 'node_modules/.bin/nx');
+const nxPackageRoot = path.resolve(process.cwd(), 'node_modules/nx');
+const nxPackage = JSON.parse(fs.readFileSync(path.join(nxPackageRoot, 'package.json'), 'utf8'));
+if (typeof nxPackage.bin?.nx !== 'string') {
+  throw new Error('The installed Nx package must declare its nx CLI entry point');
+}
+const nxBin = path.resolve(nxPackageRoot, nxPackage.bin.nx);
 
 async function runNx(args: string[]) {
-  const { stdout } = await execFileAsync(nxBin, args, {
+  const { stdout } = await execFileAsync(process.execPath, [nxBin, ...args], {
     cwd: process.cwd(),
     env: {
       ...process.env,
