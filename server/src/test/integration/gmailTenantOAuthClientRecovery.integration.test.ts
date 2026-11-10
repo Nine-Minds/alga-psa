@@ -15,7 +15,7 @@
  * Google is mocked everywhere; no real network calls.
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach, afterEach } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -216,6 +216,14 @@ describeDb('Gmail tenant OAuth client + error recovery (DB-backed)', () => {
     gmailMock.registerWatch.mockReset().mockResolvedValue({ success: true });
     axiosMock.post.mockReset();
     enqueueMock.enqueueUnifiedInboundEmailQueueJob.mockReset().mockResolvedValue({ job: {}, queueDepth: 1 });
+  });
+
+  afterEach(() => {
+    // T003 stubs configureGmailProvider for the callback import. The server
+    // integration config shuffles tests, so drop that stub and the module
+    // registry here or a later T005/T006 renewal would run against it.
+    vi.doUnmock('@alga-psa/integrations/actions/email-actions/configureGmailProvider');
+    vi.resetModules();
   });
 
   it('T003: callback stores the issuing client_id; a later client change fails without calling Google', async () => {
