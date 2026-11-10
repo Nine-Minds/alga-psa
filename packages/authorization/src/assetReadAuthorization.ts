@@ -6,8 +6,10 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   type AuthorizationRecord,
+  type AuthorizationRequestCache,
   type AuthorizationSubject,
 } from './kernel';
+import { resolveAuthorizationSubject } from './subject/resolver';
 import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { createBundleNarrowingProvider } from './bundles/narrowingProvider';
@@ -30,8 +32,6 @@ export type AssetAuthUser = {
   apiKeyId?: string | null;
   client_id?: string | null;
   role_ids?: string[];
-  portfolio_client_ids?: string[];
-  portfolioClientIds?: string[];
   roles?: Array<{ role_id?: string } | string>;
 };
 
@@ -43,54 +43,15 @@ export type AssetReadAuthorizationContext = {
   requestCache: RequestLocalAuthorizationCache;
 };
 
-function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-  return user.roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
+/** Asset callers' entry to the shared resolver; kept so the asset surface keeps its name. */
 export async function resolveAuthorizationSubjectForUser(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
-  apiKeyId?: string
+  apiKeyId?: string,
+  requestCache?: AuthorizationRequestCache
 ): Promise<AuthorizationSubject> {
-  const db = tenantDb(trx, tenant);
-  let roleIds = extractRoleIdsFromUser(user);
-  roleIds = Array.from(new Set([...roleIds, ...(user.role_ids ?? [])]));
-  if (roleIds.length === 0) {
-    const roleRows = await db.table('user_roles').where({ user_id: user.user_id }).select<{ role_id: string }[]>('role_id');
-    roleIds = roleRows.map((row) => row.role_id);
-  }
-
-  const [teamRows, managedRows] = await Promise.all([
-    db.table('team_members').where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id'),
-    db.table('users').where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id'),
-  ]);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? user.client_id ?? null,
-    portfolioClientIds: Array.from(new Set([
-      ...(user.portfolio_client_ids ?? []),
-      ...(user.portfolioClientIds ?? []),
-      ...((user.clientId ?? user.client_id) ? [user.clientId ?? user.client_id!] : []),
-    ])),
-    ...((apiKeyId ?? user.apiKeyId) ? { apiKeyId: apiKeyId ?? user.apiKeyId } : {}),
-  };
+  return resolveAuthorizationSubject(trx, { tenant, user, apiKeyId, requestCache });
 }
 
 export async function resolveAssetAuthorizationRecords(
@@ -146,10 +107,11 @@ export async function createAssetReadContext(
   tenant: string,
   user: AssetAuthUser
 ): Promise<AssetReadAuthorizationContext> {
+  const requestCache = new RequestLocalAuthorizationCache();
   return {
-    subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
+    subject: await resolveAuthorizationSubjectForUser(trx, tenant, user, undefined, requestCache),
     authorizationKernel: createAssetReadKernel(trx),
-    requestCache: new RequestLocalAuthorizationCache(),
+    requestCache,
   };
 }
 
@@ -157,7 +119,8 @@ export async function createAssetReadContext(
 export async function createAssetReadContextWithRules(
   trx: Knex | Knex.Transaction,
   subject: AuthorizationSubject,
-  rules: readonly BundleNarrowingRule[]
+  rules: readonly BundleNarrowingRule[],
+  requestCache: RequestLocalAuthorizationCache = new RequestLocalAuthorizationCache()
 ): Promise<AssetReadAuthorizationContext> {
   return {
     subject,
@@ -168,7 +131,7 @@ export async function createAssetReadContextWithRules(
       }),
       rbacEvaluator: async () => true,
     }),
-    requestCache: new RequestLocalAuthorizationCache(),
+    requestCache,
   };
 }
 

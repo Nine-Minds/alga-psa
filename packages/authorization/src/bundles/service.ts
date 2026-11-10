@@ -3,6 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import type { AuthorizationEvaluationInput, AuthorizationSubject, RelationshipTemplateKey } from '../kernel';
 import type { BundleNarrowingRule } from '../kernel/providers/bundleProvider';
 import { assertBundleRuleCatalogInput } from './catalog';
+import { publishedAssignmentsQuery } from './publishedAssignments';
+import { peekTenantAuthorizationScope } from '../subject/tenantScope';
 
 export type AuthorizationBundleTargetType = 'role' | 'team' | 'user' | 'api_key';
 
@@ -1010,11 +1012,7 @@ function assignedBundlesForSubjectQuery(
   subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
   memberships: { roleIds: string[] | Knex.QueryBuilder; teamIds: string[] | Knex.QueryBuilder },
 ): Knex.QueryBuilder {
-  const db = tenantDb(knex, subject.tenant);
-  const query = db.table('authorization_bundle_assignments as a');
-  db.tenantJoin(query, 'authorization_bundles as b', 'b.bundle_id', 'a.bundle_id');
-  return query.where('a.status', 'active').where('b.status', 'active')
-    .whereNotNull('b.published_revision_id')
+  return publishedAssignmentsQuery(knex, subject.tenant)
     .where(function () {
       this.where({ 'a.target_type': 'user', 'a.target_id': subject.userId })
         .orWhere(function () {
@@ -1038,6 +1036,13 @@ export async function resolveBundleNarrowingRulesForEvaluation(
   const userId = input.subject.userId;
 
   if (!tenant || !userId) {
+    return emptyRuleSet();
+  }
+
+  // Fast path: this request already learned the tenant has no published assignment, so no
+  // subject can have bundle rules. Never taken when retaining locks, and never inferred: only
+  // a probe result the subject resolver cached for this request counts.
+  if (!options.lock && peekTenantAuthorizationScope(input.requestCache, tenant)?.publishedAssignments === false) {
     return emptyRuleSet();
   }
 
@@ -1117,6 +1122,7 @@ export interface AuthorizationEvaluationSnapshot {
   roleIds: string[];
   teamIds: string[];
   managedUserIds: string[];
+  portfolioClientIds: string[];
   rules: BundleRuleRow[];
 }
 
@@ -1137,6 +1143,7 @@ export function authorizationEvaluationSnapshotQuery(
   const roles = db.table('user_roles').where({ user_id: userId }).select('role_id');
   const teams = db.table('team_members').where({ user_id: userId }).select('team_id');
   const managed = db.table('users').where({ reports_to: userId }).select('user_id');
+  const portfolio = db.table('user_client_portfolios').where({ user_id: userId }).orderBy('client_id', 'asc').select('client_id');
 
   const assignments = assignedBundlesForSubjectQuery(knex, subject, {
     roleIds: knex.select('role_id').from('evaluation_roles'),
@@ -1153,11 +1160,12 @@ export function authorizationEvaluationSnapshotQuery(
     .with('evaluation_roles', roles)
     .with('evaluation_teams', teams)
     .select(knex.raw(`jsonb_build_object(
-      'roleIds', (?), 'teamIds', (?), 'managedUserIds', (?), 'rules', (?)
+      'roleIds', (?), 'teamIds', (?), 'managedUserIds', (?), 'portfolioClientIds', (?), 'rules', (?)
     )`, [
       aggregate(knex.select('role_id').from('evaluation_roles'), 'role_id'),
       aggregate(knex.select('team_id').from('evaluation_teams'), 'team_id'),
       aggregate(managed, 'user_id'),
+      aggregate(portfolio, 'client_id'),
       aggregate(rules, 'facts'),
     ]));
 }

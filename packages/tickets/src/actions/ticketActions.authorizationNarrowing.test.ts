@@ -197,6 +197,10 @@ function buildTrx(params: {
       return queryBuilder;
     }
 
+    if (table === 'user_client_portfolios') {
+      return { where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue([]) }) }) };
+    }
+
     if (table === 'user_roles' || table === 'team_members') {
       return {
         where: vi.fn().mockReturnValue({

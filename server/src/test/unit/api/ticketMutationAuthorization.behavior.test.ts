@@ -29,6 +29,23 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
   })),
 }));
 
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (
+    _knex: unknown,
+    input: { tenant: string; user: { user_id: string; user_type?: string; role_ids?: string[] }; apiKeyId?: string | null },
+  ) => ({
+    tenant: input.tenant,
+    userId: input.user.user_id,
+    userType: input.user.user_type === 'client' ? 'client' : input.user.user_type === 'service' ? 'service' : 'internal',
+    roleIds: input.user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    clientId: null,
+    portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
 vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
   resolveAuthorizationSubjectForUser: vi.fn(async (
     _knex: unknown,

@@ -178,6 +178,16 @@ function buildTrx(params: {
       return builder;
     }
 
+    if (table === 'user_roles' || table === 'team_members' || table === 'user_client_portfolios') {
+      // Authorization subject lookups (no roles, teams or stored portfolio); `tenantDb` pre-applies `.where({ tenant })`.
+      const builder: any = {
+        where: () => builder,
+        orderBy: () => builder,
+        select: async () => [],
+      };
+      return builder;
+    }
+
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
 }
