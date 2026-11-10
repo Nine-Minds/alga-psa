@@ -234,7 +234,7 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
 
     expect(screen.getByText('Current')).toBeTruthy();
 
-    const searchInput = screen.getByPlaceholderText('Search data fields…') as HTMLInputElement;
+    const searchInput = screen.getByPlaceholderText('Search fields...') as HTMLInputElement;
     fireEvent.change(searchInput, { target: { value: 'recurring service period' } });
     fireEvent.click(screen.getByText('Recurring Service Period'));
 
@@ -307,7 +307,7 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
 
     render(<Wrapper />);
 
-    const searchInput = screen.getByPlaceholderText('Search data fields…') as HTMLInputElement;
+    const searchInput = screen.getByPlaceholderText('Search fields...') as HTMLInputElement;
     fireEvent.change(searchInput, { target: { value: 'customer address' } });
     fireEvent.click(screen.getByText('Customer Address'));
 
