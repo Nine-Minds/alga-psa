@@ -386,6 +386,7 @@ const TENANT_TABLE_METADATA = {
   priorities: { scope: 'tenant' },
   project_materials: { scope: 'tenant' },
   project_phases: { scope: 'tenant' },
+  project_staging_lines: { scope: 'tenant' },
   project_status_mappings: { scope: 'tenant' },
   project_team_assignments: { scope: 'tenant' },
   project_templates: { scope: 'tenant' },

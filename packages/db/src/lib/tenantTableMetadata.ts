@@ -462,6 +462,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   project_materials: { scope: 'tenant' },
   project_phase_rate_overrides: { scope: 'tenant' },
   project_phases: { scope: 'tenant' },
+  project_staging_lines: { scope: 'tenant' },
   project_status_mappings: { scope: 'tenant' },
   project_team_assignments: { scope: 'tenant' },
   project_templates: { scope: 'tenant' },
