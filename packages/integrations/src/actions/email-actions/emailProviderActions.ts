@@ -729,7 +729,7 @@ async function persistImapConfig(
     await secretProvider.setTenantSecret(tenant, `imap_password_${providerId}`, config.password);
   }
 
-  if (credentialsInvalidated) {
+  if (tokenEndpointChanged) {
     // Best-effort cleanup; the durable issuer marker below is the security
     // boundary because composite secret providers may still read fallback keys.
     await Promise.all([oldSecretNames.clientSecret, oldSecretNames.refreshToken].map(async (name) => {
@@ -784,7 +784,9 @@ async function persistImapConfig(
           ? false
           : Boolean(existing?.oauth_reauthorization_required),
       oauth_client_id: config.oauth_client_id || null,
-      oauth_client_secret: credentialsInvalidated ? null : (config.oauth_client_secret || null),
+      // The application secret can be supplied before a mailbox grants tokens.
+      // Endpoint changes clear it even if a stale form submits it again.
+      oauth_client_secret: tokenEndpointChanged ? null : (config.oauth_client_secret || null),
       oauth_scopes: config.oauth_scopes || null,
       access_token: credentialsInvalidated ? null : (config.access_token || null),
       refresh_token: credentialsInvalidated ? null : (config.refresh_token || null),
@@ -824,7 +826,7 @@ async function persistImapConfig(
           ? false
           : trx.raw('imap_email_provider_config.oauth_reauthorization_required'),
       oauth_client_id: config.oauth_client_id || null,
-      oauth_client_secret: credentialsInvalidated ? null : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
+      oauth_client_secret: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
       oauth_scopes: config.oauth_scopes || null,
       connection_timeout_ms: trx.raw('COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms)'),
       socket_keepalive: trx.raw('COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive)'),

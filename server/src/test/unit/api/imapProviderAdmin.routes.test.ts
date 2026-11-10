@@ -5,11 +5,14 @@ const mocks = vi.hoisted(() => ({
   user: null as any,
   permission: false,
   issuerBound: true,
+  clientSecret: null as string | null,
+  tokenResponse: {} as Record<string, unknown>,
   dbReads: [] as string[],
   writes: [] as string[],
   secretReads: [] as string[],
   secretWrites: [] as Array<[string, string]>,
   posts: [] as string[],
+  tokenBodies: [] as URLSearchParams[],
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: () => mocks.user }));
@@ -34,7 +37,7 @@ vi.mock('@alga-psa/db', () => ({
               oauth_client_id: 'client-id',
               oauth_credentials_token_url: mocks.issuerBound ? 'https://auth.example.test/token' : null,
               oauth_credentials_secret_version: 0,
-              oauth_client_secret: null,
+              oauth_client_secret: mocks.clientSecret,
               refresh_token: null,
             },
         update: async (changes: any) => { mocks.writes.push(`${name}:${JSON.stringify(changes)}`); return 1; },
@@ -55,7 +58,14 @@ vi.mock('@alga-psa/core/secrets', () => ({
     setTenantSecret: async (_tenant: string, name: string, value: string) => { mocks.secretWrites.push([name, value]); },
   }),
 }));
-vi.mock('axios', () => ({ default: { post: async (url: string) => { mocks.posts.push(url); return { data: { access_token: 'access-token', expires_in: 300 } }; } } }));
+vi.mock('axios', () => ({ default: { post: async (url: string, body: URLSearchParams) => {
+  mocks.posts.push(url);
+  mocks.tokenBodies.push(body);
+  if (mocks.clientSecret && body.get('client_secret') !== mocks.clientSecret) {
+    throw new Error('invalid_client: client secret required');
+  }
+  return { data: mocks.tokenResponse };
+} } }));
 vi.mock('@alga-psa/shared/services/email/imapOutboundTarget', () => ({
   isImapOauthCredentialIssuerBound: (config: any) => config.oauth_credentials_token_url === config.oauth_token_url,
   getImapOauthSecretNames: () => ({ clientSecret: 'scoped-client', refreshToken: 'scoped-refresh' }),
@@ -82,11 +92,14 @@ describe('IMAP provider route administration boundary', () => {
     mocks.user = admin;
     mocks.permission = false;
     mocks.issuerBound = true;
+    mocks.clientSecret = null;
+    mocks.tokenResponse = { access_token: 'access-token', expires_in: 300 };
     mocks.dbReads.length = 0;
     mocks.writes.length = 0;
     mocks.secretReads.length = 0;
     mocks.secretWrites.length = 0;
     mocks.posts.length = 0;
+    mocks.tokenBodies.length = 0;
   });
 
   const cases = [
@@ -136,10 +149,26 @@ describe('IMAP provider route administration boundary', () => {
 
     const response = await GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(callbackState)}`, 'GET'));
 
-    expect(response.status).toBe(307);
+    expect(response.status).toBe(400);
     expect(mocks.secretReads).toEqual([]);
     expect(mocks.secretWrites).toEqual([]);
-    expect(mocks.writes.some((write) => write.includes('"oauth_credentials_token_url":null'))).toBe(true);
-    expect(mocks.writes.some((write) => write.includes('"oauth_reauthorization_required":true'))).toBe(true);
+    expect(mocks.writes).toEqual([]);
+  });
+
+  it('uses a freshly configured client secret to obtain the first mailbox refresh token', async () => {
+    mocks.permission = true;
+    mocks.issuerBound = false;
+    mocks.clientSecret = 'fresh-client-secret';
+    mocks.tokenResponse = { access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 300 };
+    const { GET } = await import('@/app/api/email/oauth/imap/callback/route');
+
+    const response = await GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(callbackState)}`, 'GET'));
+
+    expect(response.status).toBe(307);
+    expect(mocks.tokenBodies[0].get('client_secret')).toBe('fresh-client-secret');
+    expect(mocks.secretReads).toEqual([]);
+    expect(mocks.secretWrites).toContainEqual(['scoped-client', 'fresh-client-secret']);
+    expect(mocks.secretWrites).toContainEqual(['scoped-refresh', 'new-refresh']);
+    expect(mocks.writes.some((write) => write.includes('"oauth_reauthorization_required":false'))).toBe(true);
   });
 });

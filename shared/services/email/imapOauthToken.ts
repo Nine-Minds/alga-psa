@@ -13,6 +13,7 @@ import {
   assertImapOauthCredentialIssuerBound,
   assertSafeImapOauthTokenEndpoint,
   getImapOauthSecretNames,
+  isImapOauthCredentialIssuerBound,
 } from './imapOutboundTarget';
 
 function asNonEmptyString(value: unknown): string | null {
@@ -21,21 +22,45 @@ function asNonEmptyString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export async function getImapOauthSecrets(provider: {
-  id: string;
+type ImapOauthCredentialConfig = {
+  id?: string;
+  email_provider_id?: string;
   tenant: string;
   oauth_token_url?: string | null;
   oauth_credentials_token_url?: string | null;
   oauth_credentials_secret_version?: number | null;
-}): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
-  assertImapOauthCredentialIssuerBound(provider);
+  oauth_client_secret?: string | null;
+  refresh_token?: string | null;
+};
+
+/**
+ * A newly saved application secret can start authorization before mailbox
+ * tokens exist. Persistence clears this DB value on endpoint changes. Secret
+ * store fallbacks and existing refresh tokens require an active issuer binding.
+ */
+export async function getImapOauthAuthorizationCredentials(
+  provider: ImapOauthCredentialConfig,
+): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
+  if (!isImapOauthCredentialIssuerBound(provider)) {
+    return {
+      clientSecret: provider.oauth_credentials_token_url == null ? provider.oauth_client_secret || null : null,
+      refreshToken: null,
+    };
+  }
   const names = getImapOauthSecretNames(provider);
   const secretProvider = await getSecretProviderInstance();
   const clientSecret =
-    (await secretProvider.getTenantSecret(provider.tenant, names.clientSecret)) ?? null;
+    (await secretProvider.getTenantSecret(provider.tenant, names.clientSecret)) || provider.oauth_client_secret || null;
   const refreshToken =
-    (await secretProvider.getTenantSecret(provider.tenant, names.refreshToken)) ?? null;
+    (await secretProvider.getTenantSecret(provider.tenant, names.refreshToken)) || provider.refresh_token || null;
   return { clientSecret, refreshToken };
+}
+
+export async function getImapOauthSecrets(
+  provider: ImapOauthCredentialConfig,
+): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
+  assertImapOauthCredentialIssuerBound(provider);
+  return getImapOauthAuthorizationCredentials(provider);
 }
 
 export async function refreshImapAccessToken(params: {
@@ -63,25 +88,17 @@ export async function refreshImapAccessToken(params: {
   assertImapOauthCredentialIssuerBound(provider);
   const tokenTarget = await assertSafeImapOauthTokenEndpoint(provider.oauth_token_url);
 
-  const { clientSecret, refreshToken } = await getImapOauthSecrets({
-    id: provider.id,
-    tenant: provider.tenant,
-    oauth_token_url: provider.oauth_token_url,
-    oauth_credentials_token_url: provider.oauth_credentials_token_url,
-    oauth_credentials_secret_version: provider.oauth_credentials_secret_version,
-  });
-  const effectiveRefreshToken = refreshToken || provider.refresh_token;
-  const effectiveClientSecret = clientSecret || provider.oauth_client_secret;
-  if (!effectiveRefreshToken) {
+  const { clientSecret, refreshToken } = await getImapOauthSecrets(provider);
+  if (!refreshToken) {
     throw new Error('IMAP OAuth refresh token missing');
   }
 
   const paramsBody = new URLSearchParams();
   paramsBody.append('grant_type', 'refresh_token');
-  paramsBody.append('refresh_token', effectiveRefreshToken);
+  paramsBody.append('refresh_token', refreshToken);
   paramsBody.append('client_id', provider.oauth_client_id);
-  if (effectiveClientSecret) {
-    paramsBody.append('client_secret', effectiveClientSecret);
+  if (clientSecret) {
+    paramsBody.append('client_secret', clientSecret);
   }
 
   const response = await axios.post(provider.oauth_token_url, paramsBody, {

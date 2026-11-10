@@ -5,10 +5,10 @@ import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import {
-  isImapOauthCredentialIssuerBound,
   assertSafeImapOauthTokenEndpoint,
   getImapOauthSecretNames,
 } from '@alga-psa/shared/services/email/imapOutboundTarget';
+import { getImapOauthAuthorizationCredentials } from '@alga-psa/shared/services/email/imapOauthToken';
 import axios from 'axios';
 import https from 'node:https';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
@@ -84,14 +84,11 @@ export async function GET(request: NextRequest) {
     }
 
     const secretProvider = await getSecretProviderInstance();
-    const existingSecretNames = getImapOauthSecretNames(imapConfig);
-    const credentialsIssuerBound = isImapOauthCredentialIssuerBound(imapConfig);
-    const clientSecret = credentialsIssuerBound
-      ? await secretProvider.getTenantSecret(tenant, existingSecretNames.clientSecret)
-      : undefined;
-    const existingRefreshToken = credentialsIssuerBound
-      ? await secretProvider.getTenantSecret(tenant, existingSecretNames.refreshToken) || imapConfig.refresh_token || undefined
-      : undefined;
+    const { clientSecret, refreshToken: existingRefreshToken } = await getImapOauthAuthorizationCredentials({
+      ...imapConfig,
+      id: state.providerId,
+      tenant,
+    });
 
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
@@ -120,7 +117,6 @@ export async function GET(request: NextRequest) {
 
     const accessToken = tokenResponse.data.access_token;
     const refreshToken = tokenResponse.data.refresh_token || existingRefreshToken;
-    const hasIssuerBoundRefreshToken = Boolean(refreshToken);
     const expiresIn = Number(tokenResponse.data.expires_in || 3600);
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
@@ -130,11 +126,17 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!refreshToken) {
+      return NextResponse.json(
+        { error: 'IMAP OAuth did not return a refresh token. Reauthorize the mailbox with offline access.' },
+        { status: 400 }
+      );
+    }
 
     const boundSecretNames = getImapOauthSecretNames({
       id: state.providerId,
       oauth_token_url: imapConfig.oauth_token_url,
-      oauth_credentials_secret_version: hasIssuerBoundRefreshToken ? 1 : 0,
+      oauth_credentials_secret_version: 1,
     });
     if (clientSecret) {
       await secretProvider.setTenantSecret(tenant, boundSecretNames.clientSecret, clientSecret);
@@ -149,9 +151,9 @@ export async function GET(request: NextRequest) {
         access_token: accessToken,
         refresh_token: refreshToken || null,
         token_expires_at: expiresAt,
-        oauth_credentials_token_url: hasIssuerBoundRefreshToken ? imapConfig.oauth_token_url : null,
-        oauth_credentials_secret_version: hasIssuerBoundRefreshToken ? 1 : 0,
-        oauth_reauthorization_required: !hasIssuerBoundRefreshToken,
+        oauth_credentials_token_url: imapConfig.oauth_token_url,
+        oauth_credentials_secret_version: 1,
+        oauth_reauthorization_required: false,
         updated_at: knex.fn.now(),
       });
 

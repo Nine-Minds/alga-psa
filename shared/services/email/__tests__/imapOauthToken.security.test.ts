@@ -21,7 +21,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-import { refreshImapAccessToken } from '../imapOauthToken';
+import { getImapOauthAuthorizationCredentials, refreshImapAccessToken } from '../imapOauthToken';
 
 const provider = {
   id: 'imap-1',
@@ -72,5 +72,37 @@ describe('shared IMAP OAuth refresh outbound policy', () => {
     })).rejects.toThrow(/reauthorized/);
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
     expect(mocks.post).not.toHaveBeenCalled();
+  });
+
+  it('uses only the configured application secret before mailbox authorization', async () => {
+    const credentials = await getImapOauthAuthorizationCredentials({
+      ...provider,
+      oauth_credentials_token_url: null,
+      oauth_client_secret: 'fresh-client-secret',
+      refresh_token: 'unbound-refresh-must-not-be-used',
+    });
+
+    expect(credentials).toEqual({ clientSecret: 'fresh-client-secret', refreshToken: null });
+    expect(mocks.getTenantSecret).not.toHaveBeenCalled();
+  });
+
+  it('keeps background refresh blocked while an application secret awaits mailbox authorization', async () => {
+    await expect(refreshImapAccessToken({
+      provider: { ...provider, oauth_credentials_token_url: null, oauth_client_secret: 'fresh-client-secret' },
+      db: {} as any,
+    })).rejects.toThrow(/reauthorized/);
+
+    expect(mocks.getTenantSecret).not.toHaveBeenCalled();
+    expect(mocks.post).not.toHaveBeenCalled();
+  });
+
+  it('does not forward a DB client secret marked as belonging to a different issuer', async () => {
+    await expect(getImapOauthAuthorizationCredentials({
+      ...provider,
+      oauth_credentials_token_url: 'https://old-issuer.example.test/token',
+      oauth_client_secret: 'old-client-secret',
+    })).resolves.toEqual({ clientSecret: null, refreshToken: null });
+
+    expect(mocks.getTenantSecret).not.toHaveBeenCalled();
   });
 });

@@ -13,6 +13,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { ImapFlow } from 'imapflow';
+import { NextRequest } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getImapOauthSecretNames } from '@alga-psa/shared/services/email/imapOutboundTarget';
 import { tenantDb } from '@alga-psa/db';
@@ -23,6 +24,13 @@ import { createEmailProvider, testEmailProviderConnection, updateEmailProvider }
 // covered behaviorally in the action unit suite, so grant the action boundary
 // here rather than depending on the test fixture user's roles.
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: async () => ({ user_id: 'admin-1', tenant: testTenant, user_type: 'internal' }),
+}));
+vi.mock('@/lib/productAccess', () => ({
+  assertTenantProductAccess: async () => {},
+  isProductAccessError: () => false,
+}));
 vi.mock('axios', () => ({ default: { post: vi.fn() } }));
 vi.mock('imapflow', () => ({
   ImapFlow: vi.fn(function ImapFlow() {
@@ -459,6 +467,91 @@ describe('Email Provider Creation', () => {
   });
 
   describe('IMAP OAuth issuer binding', () => {
+    it('authorizes a new confidential client and reauthorizes it after an endpoint change without using old fallbacks', async () => {
+      const issuerA = 'https://93.184.216.34/issuer-a/token';
+      const issuerB = 'https://93.184.216.34/issuer-b/token';
+      const original = {
+        tenant: testTenant, providerType: 'imap' as const, providerName: 'IMAP confidential OAuth',
+        mailbox: 'imap-confidential@example.test', isActive: true,
+        imapConfig: {
+          host: '93.184.216.34', port: 993, secure: true, auth_type: 'oauth2',
+          username: 'imap-confidential@example.test', oauth_token_url: issuerA,
+          oauth_client_id: 'confidential-client', oauth_client_secret: 'initial-client-secret',
+        },
+      };
+      const created = await createEmailProvider(original as any, true);
+      expect(created).toHaveProperty('provider.id');
+      const providerId = created.provider.id;
+      const secretProvider = await getSecretProviderInstance();
+      const names = [0, 1].flatMap((version) => [issuerA, issuerB].map((endpoint) =>
+        getImapOauthSecretNames({ id: providerId, oauth_token_url: endpoint, oauth_credentials_secret_version: version })
+      ));
+      const secretNames = [...new Set(names.flatMap((name) => [name.clientSecret, name.refreshToken]))];
+      const environmentKeys = secretNames.map((name) => `TENANT_${testTenant}_${name}`);
+      const { GET } = await import('@/app/api/email/oauth/imap/callback/route');
+      const callback = () => {
+        const state = Buffer.from(JSON.stringify({
+          tenant: testTenant, userId: 'admin-1', providerId,
+          redirectUri: 'https://app.example.test/api/email/oauth/imap/callback',
+          timestamp: Date.now(), nonce: 'test-nonce',
+        })).toString('base64');
+        return GET(new NextRequest(`https://app.example.test/api/email/oauth/imap/callback?code=fresh-code&state=${encodeURIComponent(state)}`));
+      };
+
+      try {
+        for (const key of environmentKeys) process.env[key] = 'old-fallback-credential';
+        const getSecretSpy = vi.spyOn(secretProvider, 'getTenantSecret');
+        try {
+          for (const [endpoint, clientSecret, refreshToken] of [
+            [issuerA, 'initial-client-secret', 'first-refresh'],
+            [issuerB, 'replacement-client-secret', 'second-refresh'],
+          ]) {
+            if (endpoint === issuerB) {
+              await updateEmailProvider(providerId, {
+                ...original,
+                imapConfig: { ...original.imapConfig, oauth_token_url: issuerB },
+              } as any, true);
+              const invalidated = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
+              expect(invalidated.oauth_client_secret).toBeNull();
+              expect(invalidated.oauth_credentials_token_url).toBeNull();
+
+              await updateEmailProvider(providerId, {
+                ...original,
+                imapConfig: { ...original.imapConfig, oauth_token_url: issuerB, oauth_client_secret: clientSecret },
+              } as any, true);
+            }
+
+            const pending = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
+            expect(pending.oauth_client_secret).toBe(clientSecret);
+            expect(pending.oauth_credentials_token_url).toBeNull();
+            expect(pending.refresh_token).toBeNull();
+            getSecretSpy.mockClear();
+            vi.mocked(axios.post).mockClear();
+            vi.mocked(axios.post).mockImplementation(async (_url, body) => {
+              if ((body as URLSearchParams).get('client_secret') !== clientSecret) {
+                throw new Error('invalid_client: client secret required');
+              }
+              return { data: { access_token: 'fresh-access', refresh_token: refreshToken, expires_in: 3600 } } as any;
+            });
+
+            expect((await callback()).status).toBe(307);
+            expect(getSecretSpy).not.toHaveBeenCalled();
+            expect(vi.mocked(axios.post)).toHaveBeenCalledWith(endpoint, expect.any(URLSearchParams), expect.objectContaining({ maxRedirects: 0, proxy: false }));
+            const authorized = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
+            expect(authorized.oauth_credentials_token_url).toBe(endpoint);
+            expect(authorized.oauth_credentials_secret_version).toBe(1);
+            expect(authorized.oauth_reauthorization_required).toBe(false);
+            expect(authorized.refresh_token).toBe(refreshToken);
+          }
+        } finally {
+          getSecretSpy.mockRestore();
+        }
+      } finally {
+        for (const key of environmentKeys) delete process.env[key];
+        await Promise.all(secretNames.map((name) => secretProvider.deleteTenantSecret(testTenant, name)));
+      }
+    });
+
     it('preserves credentials on the same endpoint and commits their clearing when the endpoint changes', async () => {
       const original = {
         tenant: testTenant,
