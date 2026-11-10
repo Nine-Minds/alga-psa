@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplicate",
       "archive": "Archive",
-      "unarchive": "Unarchive"
+      "unarchive": "Unarchive",
+      "delete": "Delete"
     },
     "lifecycleLabels": {
       "published": "Published",
@@ -418,7 +419,8 @@
         "applyFailed": "Failed to apply answer mapping",
         "applied": "Answer mapping applied"
       }
-    }
+    },
+    "delete": "Delete"
   },
   "icons": {
     "file-text": "General Request",
@@ -461,7 +463,8 @@
       "workflowConfigurationUpdated": "Workflow configuration updated",
       "formBehaviorConfigUpdated": "Form behavior config updated",
       "visibilityConfigUpdated": "Visibility config updated",
-      "audienceUpdated": "Audience updated"
+      "audienceUpdated": "Audience updated",
+      "definitionDeleted": "Service request form deleted"
     },
     "error": {
       "loadFailed": "Failed to load service requests",
@@ -485,7 +488,11 @@
       "visibilityNotObject": "Visibility config must be a JSON object",
       "visibilityInvalid": "Invalid visibility JSON",
       "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
-      "audienceSaveFailed": "Failed to update audience"
+      "audienceSaveFailed": "Failed to update audience",
+      "deleteFailed": "Failed to delete service request form"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "\"{{name}}\" and all of its versions will be permanently removed. This cannot be undone."
   }
 }

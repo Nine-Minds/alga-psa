@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplicar",
       "archive": "Archivar",
-      "unarchive": "Desarchivar"
+      "unarchive": "Desarchivar",
+      "delete": "Eliminar"
     },
     "lifecycleLabels": {
       "published": "Publicada",
@@ -418,7 +419,8 @@
         "applyFailed": "No se pudo aplicar la asignación de respuestas",
         "applied": "Asignación de respuestas aplicada"
       }
-    }
+    },
+    "delete": "Eliminar"
   },
   "icons": {
     "file-text": "Solicitud general",
@@ -461,7 +463,8 @@
       "workflowConfigurationUpdated": "Configuración del flujo de trabajo actualizada",
       "formBehaviorConfigUpdated": "Configuración del comportamiento del formulario actualizada",
       "visibilityConfigUpdated": "Configuración de visibilidad actualizada",
-      "audienceUpdated": "Audiencia actualizada"
+      "audienceUpdated": "Audiencia actualizada",
+      "definitionDeleted": "Formulario de solicitud de servicio eliminado"
     },
     "error": {
       "loadFailed": "No se pudieron cargar las solicitudes de servicio",
@@ -485,7 +488,11 @@
       "visibilityNotObject": "La configuración de visibilidad debe ser un objeto JSON",
       "visibilityInvalid": "JSON de visibilidad no válido",
       "saveAllPartial": "Algunas secciones no se pudieron guardar: {{sections}}",
-      "audienceSaveFailed": "No se pudo actualizar la audiencia"
+      "audienceSaveFailed": "No se pudo actualizar la audiencia",
+      "deleteFailed": "No se pudo eliminar el formulario de solicitud de servicio"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "«{{name}}» y todas sus versiones se eliminarán de forma permanente. Esta acción no se puede deshacer."
   }
 }

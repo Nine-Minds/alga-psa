@@ -1,0 +1,120 @@
+[
+  {
+    "id": "F001",
+    "description": "DELETION_CONFIGS gains a service_request_definition entry (supportsArchive true, supportsInactive false) with a blocking 'submission' dependency on service_request_submissions.definition_id",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "service_request_definition config has a blocking 'checklist apply rule' dependency counted via countPredicateReferences('checklist_template_apply_rules', 'where', 'service_request_definition_id')",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 1",
+      "Users and Primary Flows > 4"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "preCheckDeletion maps entity type service_request_definition to the 'service' permission resource (delete action)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 2",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "deleteServiceRequestDefinitionFromManagement validates and deletes in one transaction via deleteEntityWithValidation('service_request_definition', ...) and returns DeletionValidationResult & { deleted }",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Domain delete returns a NOT_FOUND result for a definition that does not exist in the tenant",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 3"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Domain delete clears service_request_audience tag references and the definition row (tenant-scoped) inside the transaction; versions and answer mappings cascade",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 3",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "An FK violation (23503) during the delete is caught and turned into the re-validated blocked result instead of a raw error",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "SERVICE_REQUEST_DEFINITION_DELETED is published only when the delete succeeded, so the search index row is removed",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 3"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "deleteServiceRequestDefinitionAction server action gated on requireServiceRequestPermission(user, 'delete') (MSP-only) delegates to the domain delete",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 4",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Shared service-request delete dialog component wraps DeleteEntityDialog + useDeletionValidation('service_request_definition'): validates on open, confirm calls the delete action, 'archive' alternative calls the archive action, archive alternative stripped for already-archived forms, custom translated confirmation message",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Management list row menu has a Delete item (Trash2 icon, after Archive/Unarchive) that opens the shared dialog; success reloads the list and toasts",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 5",
+      "Users and Primary Flows > 1"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Definition editor header has a Delete button using the shared dialog; success navigates back to /msp/service-requests",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 6",
+      "Users and Primary Flows > 3"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "New strings (management.actions.delete, editor.delete, deleteDialog.confirmation, messages.success.definitionDeleted, messages.error.deleteFailed) added to msp/service-requests.json in every locale, pseudo-locales regenerated, validate-translations passes",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Existing caller (serviceRequestAudienceScoping integration test) still compiles and passes against the new return shape",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 3"
+    ]
+  }
+]

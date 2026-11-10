@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Dupliceren",
       "archive": "Archiveren",
-      "unarchive": "Dearchiveren"
+      "unarchive": "Dearchiveren",
+      "delete": "Verwijderen"
     },
     "lifecycleLabels": {
       "published": "Gepubliceerd",
@@ -418,7 +419,8 @@
         "applyFailed": "Antwoordtoewijzing toepassen mislukt",
         "applied": "Antwoordtoewijzing toegepast"
       }
-    }
+    },
+    "delete": "Verwijderen"
   },
   "icons": {
     "file-text": "Algemene aanvraag",
@@ -461,7 +463,8 @@
       "workflowConfigurationUpdated": "Workflowconfiguratie bijgewerkt",
       "formBehaviorConfigUpdated": "Configuratie formuliergedrag bijgewerkt",
       "visibilityConfigUpdated": "Zichtbaarheidsconfiguratie bijgewerkt",
-      "audienceUpdated": "Doelgroep bijgewerkt"
+      "audienceUpdated": "Doelgroep bijgewerkt",
+      "definitionDeleted": "Serviceaanvraagformulier verwijderd"
     },
     "error": {
       "loadFailed": "Serviceaanvragen konden niet worden geladen",
@@ -485,7 +488,11 @@
       "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
       "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
       "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
-      "audienceSaveFailed": "Doelgroep bijwerken mislukt"
+      "audienceSaveFailed": "Doelgroep bijwerken mislukt",
+      "deleteFailed": "Serviceaanvraagformulier verwijderen mislukt"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "‘{{name}}’ en alle bijbehorende versies worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt."
   }
 }

@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplica",
       "archive": "Archivia",
-      "unarchive": "Ripristina"
+      "unarchive": "Ripristina",
+      "delete": "Elimina"
     },
     "lifecycleLabels": {
       "published": "Pubblicato",
@@ -418,7 +419,8 @@
         "applyFailed": "Impossibile applicare la mappatura",
         "applied": "Mappatura delle risposte applicata"
       }
-    }
+    },
+    "delete": "Elimina"
   },
   "icons": {
     "file-text": "Richiesta generica",
@@ -461,7 +463,8 @@
       "workflowConfigurationUpdated": "Configurazione del workflow aggiornata",
       "formBehaviorConfigUpdated": "Configurazione del comportamento del modulo aggiornata",
       "visibilityConfigUpdated": "Configurazione della visibilità aggiornata",
-      "audienceUpdated": "Destinatari aggiornati"
+      "audienceUpdated": "Destinatari aggiornati",
+      "definitionDeleted": "Modulo di richiesta di servizio eliminato"
     },
     "error": {
       "loadFailed": "Impossibile caricare le richieste di servizio",
@@ -485,7 +488,11 @@
       "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
       "visibilityInvalid": "JSON della visibilità non valido",
       "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}",
-      "audienceSaveFailed": "Impossibile aggiornare i destinatari"
+      "audienceSaveFailed": "Impossibile aggiornare i destinatari",
+      "deleteFailed": "Impossibile eliminare il modulo di richiesta di servizio"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "«{{name}}» e tutte le sue versioni verranno rimossi definitivamente. L'operazione non può essere annullata."
   }
 }

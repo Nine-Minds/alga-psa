@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "⟦Ḓŭƥŀīƈȧŧḗ⟧",
       "archive": "⟦Ȧřƈħīṽḗ⟧",
-      "unarchive": "⟦Ŭƞȧřƈħīṽḗ⟧"
+      "unarchive": "⟦Ŭƞȧřƈħīṽḗ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ⟧"
     },
     "lifecycleLabels": {
       "published": "⟦Ƥŭƀŀīşħḗḓ⟧",
@@ -418,7 +419,8 @@
         "applyFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȧƥƥŀẏ ȧƞşẇḗř ḿȧƥƥīƞɠ⟧",
         "applied": "⟦Ȧƞşẇḗř ḿȧƥƥīƞɠ ȧƥƥŀīḗḓ⟧"
       }
-    }
+    },
+    "delete": "⟦Ḓḗŀḗŧḗ⟧"
   },
   "icons": {
     "file-text": "⟦Ɠḗƞḗřȧŀ Řḗʠŭḗşŧ⟧",
@@ -461,7 +463,8 @@
       "workflowConfigurationUpdated": "⟦Ẇȯřķƒŀȯẇ ƈȯƞƒīɠŭřȧŧīȯƞ ŭƥḓȧŧḗḓ⟧",
       "formBehaviorConfigUpdated": "⟦Ƒȯřḿ ƀḗħȧṽīȯř ƈȯƞƒīɠ ŭƥḓȧŧḗḓ⟧",
       "visibilityConfigUpdated": "⟦Ṽīşīƀīŀīŧẏ ƈȯƞƒīɠ ŭƥḓȧŧḗḓ⟧",
-      "audienceUpdated": "⟦Ȧŭḓīḗƞƈḗ ŭƥḓȧŧḗḓ⟧"
+      "audienceUpdated": "⟦Ȧŭḓīḗƞƈḗ ŭƥḓȧŧḗḓ⟧",
+      "definitionDeleted": "⟦Şḗřṽīƈḗ řḗʠŭḗşŧ ƒȯřḿ ḓḗŀḗŧḗḓ⟧"
     },
     "error": {
       "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şḗřṽīƈḗ řḗʠŭḗşŧş⟧",
@@ -485,7 +488,11 @@
       "visibilityNotObject": "⟦Ṽīşīƀīŀīŧẏ ƈȯƞƒīɠ ḿŭşŧ ƀḗ ȧ ĴŞȮȠ ȯƀĵḗƈŧ⟧",
       "visibilityInvalid": "⟦Īƞṽȧŀīḓ ṽīşīƀīŀīŧẏ ĴŞȮȠ⟧",
       "saveAllPartial": "⟦Şȯḿḗ şḗƈŧīȯƞş ƈȯŭŀḓƞ'ŧ ƀḗ şȧṽḗḓ: {{sections}}⟧",
-      "audienceSaveFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ȧŭḓīḗƞƈḗ⟧"
+      "audienceSaveFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ȧŭḓīḗƞƈḗ⟧",
+      "deleteFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ şḗřṽīƈḗ řḗʠŭḗşŧ ƒȯřḿ⟧"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "⟦\"{{name}}\" ȧƞḓ ȧŀŀ ȯƒ īŧş ṽḗřşīȯƞş ẇīŀŀ ƀḗ ƥḗřḿȧƞḗƞŧŀẏ řḗḿȯṽḗḓ. Ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
   }
 }
