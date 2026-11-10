@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   previewAssetAuditScope: vi.fn(),
   getClientLocationsForAssets: vi.fn(),
   push: vi.fn(),
+  lastColumns: [] as any[],
 }));
 
 vi.mock('../../actions/assetAuditActions', () => ({
@@ -68,25 +69,29 @@ vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   ),
 }));
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({ id, data, columns, onPageChange, onRowClick }: any) => (
-    <div id={id}>
-      <button id={`${id}-next-page`} type="button" onClick={() => onPageChange(2)}>
-        Next page
-      </button>
-      {data.map((row: any, index: number) => (
-        <div key={row.audit_id ?? index} id={`${id}-row-${row.audit_id}`}>
-          <button type="button" id={`${id}-open-${row.audit_id}`} onClick={() => onRowClick(row)}>
-            open
-          </button>
-          {columns.map((column: any, columnIndex: number) => (
-            <span key={columnIndex}>
-              {column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex] ?? '')}
-            </span>
-          ))}
-        </div>
-      ))}
-    </div>
-  ),
+  DataTable: ({ id, data, columns, onPageChange, onRowClick }: any) => {
+    // The column definitions are the subject of the fit test below.
+    h.lastColumns = columns;
+    return (
+      <div id={id}>
+        <button id={`${id}-next-page`} type="button" onClick={() => onPageChange(2)}>
+          Next page
+        </button>
+        {data.map((row: any, index: number) => (
+          <div key={row.audit_id ?? index} id={`${id}-row-${row.audit_id}`}>
+            <button type="button" id={`${id}-open-${row.audit_id}`} onClick={() => onRowClick(row)}>
+              open
+            </button>
+            {columns.map((column: any, columnIndex: number) => (
+              <span key={columnIndex}>
+                {column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex] ?? '')}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  },
 }));
 vi.mock('@alga-psa/ui/components/bento', () => ({
   BentoChip: ({ children }: any) => <span>{children}</span>,
@@ -99,6 +104,9 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   ),
 }));
 
+const { computeColumnFit, getColumnId, getColumnLayout } = await import(
+  '@alga-psa/ui/components/dataTableColumnFit'
+);
 const { AssetAuditsList } = await import('./AssetAuditsList');
 
 const audit = (overrides: Record<string, unknown> = {}) => ({
@@ -214,6 +222,39 @@ describe('AssetAuditsList', () => {
 
     await waitFor(() => expect(h.listAssetAudits).toHaveBeenCalled());
     expect(document.getElementById('asset-audits-start-audit-button')).toBeNull();
+  });
+
+  it('opens the audit from its own first column, not from the client name', async () => {
+    renderList();
+    await waitFor(() => expect(document.getElementById('asset-audits-audit-link-au-1')).not.toBeNull());
+
+    const link = document.getElementById('asset-audits-audit-link-au-1')!;
+    expect(link).toHaveTextContent('#au-1');
+
+    fireEvent.click(link);
+
+    expect(h.push).toHaveBeenCalledWith('/msp/assets/audits/au-1');
+  });
+
+  it('keeps the audit column when embedded in one client', async () => {
+    renderList({ clientId: 'acme', embedded: true });
+
+    await waitFor(() => expect(document.getElementById('asset-audits-audit-link-au-1')).not.toBeNull());
+  });
+
+  // The table hides any column that does not fit rather than scrolling, and a
+  // percentage width is never taken below the width of its own title — which is
+  // how four 7% count columns pushed "Started by", "Started" and "Completed"
+  // off a 1600px screen. Every column now declares a minimum it can shrink to.
+  it.each([1400, 1100])('fits every column in a %ipx table', async (containerWidth) => {
+    renderList();
+    await waitFor(() => expect(h.lastColumns.length).toBeGreaterThan(0));
+
+    const columns = h.lastColumns;
+    const layout = getColumnLayout(columns, containerWidth);
+    const { visibleColumnIds } = computeColumnFit(columns, containerWidth, layout);
+
+    expect(visibleColumnIds).toEqual(columns.map((column) => getColumnId(column)));
   });
 
   it('links the client column to the client Audits tab', async () => {

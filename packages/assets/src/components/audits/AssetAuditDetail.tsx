@@ -53,6 +53,7 @@ import {
   auditStatusTone,
   formatAuditDate,
   formatAuditDateTime,
+  formatAuditRef,
   useAssetAuditCapability,
   useAssetAuditDetail,
 } from './auditClient';
@@ -255,6 +256,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
       {
         title: t('assetAudits.items.columns.asset', { defaultValue: 'Asset' }),
         dataIndex: 'asset_name',
+        minWidth: '160px',
         render: (_value: unknown, row: AssetAuditItemRecord) => (
           <button
             id={`${id}-asset-link-${row.asset_id}`}
@@ -272,11 +274,13 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
       {
         title: t('assetAudits.items.columns.type', { defaultValue: 'Type' }),
         dataIndex: 'asset_type',
+        minWidth: '110px',
         render: (value: unknown) => assetTypeLabel(value as string | null),
       },
       {
         title: t('assetAudits.items.columns.serial', { defaultValue: 'Serial / tag' }),
         dataIndex: 'serial_number',
+        minWidth: '120px',
         render: (_value: unknown, row: AssetAuditItemRecord) => (
           <span className="font-mono text-xs">
             {[row.serial_number, row.asset_tag].filter(Boolean).join(' / ') || '—'}
@@ -286,6 +290,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
       {
         title: t('assetAudits.items.columns.result', { defaultValue: 'Result' }),
         dataIndex: 'result',
+        minWidth: '104px',
         render: (value: unknown) => (
           <BentoChip tone={auditResultTone(value as AssetAuditItemResult)}>
             {auditResultLabel(t, value as AssetAuditItemResult)}
@@ -295,16 +300,19 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
       {
         title: t('assetAudits.items.columns.method', { defaultValue: 'Method' }),
         dataIndex: 'method',
+        minWidth: '96px',
         render: (value: unknown) => auditMethodLabel(t, value as string | null),
       },
       {
         title: t('assetAudits.items.columns.markedBy', { defaultValue: 'Marked by' }),
         dataIndex: 'marked_by_name',
+        minWidth: '120px',
         render: (value: unknown) => (value as string) || '—',
       },
       {
         title: t('assetAudits.items.columns.markedAt', { defaultValue: 'Marked at' }),
         dataIndex: 'marked_at',
+        minWidth: '130px',
         render: (value: unknown) => formatAuditDateTime(value as string | null, i18n?.language),
       },
       {
@@ -312,6 +320,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
         dataIndex: 'asset_id',
         sortable: false,
         width: '18%',
+        minWidth: '180px',
         render: (_value: unknown, row: AssetAuditItemRecord) => (
           <div className="flex flex-wrap gap-1">
             {mayAct && row.result === 'expected' ? (
@@ -451,6 +460,13 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
           />
         </div>
         <div className="grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
+          {/* The same handle the list shows in its first column, so a row and
+              the page it opens can be told to be the same run. */}
+          <BentoLabelValue
+            id={`${id}-reference`}
+            label={t('assetAudits.detail.reference', { defaultValue: 'Audit' })}
+            value={formatAuditRef(audit.audit_id)}
+          />
           <BentoLabelValue
             id={`${id}-location`}
             label={t('assetAudits.detail.location', { defaultValue: 'Location' })}
@@ -646,12 +662,16 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
         </DialogContent>
       </Dialog>
 
+      {/* `allowOverflow` keeps the dialog body from scrolling the asset list out
+          of sight: the picker is the whole point of this dialog, so its list has
+          to be allowed to stand outside the body it is anchored in. */}
       <Dialog
         id={`${id}-add-unexpected-dialog`}
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
         title={t('assetAudits.detail.addUnexpected', { defaultValue: 'Add unexpected asset' })}
-        className="max-w-md"
+        className="max-w-xl"
+        allowOverflow
       >
         <DialogContent>
           <p className="mb-2 text-sm text-[rgb(var(--color-text-600))]">
@@ -669,6 +689,10 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
             }}
             loadOptions={loadAssetOptions}
             limit={10}
+            // Anchored to the dialog itself rather than to the scrollable body,
+            // so the candidates are on screen the moment the list opens.
+            dropdownMode="overlay"
+            maxListHeight="16rem"
             placeholder={t('assetAudits.detail.addUnexpectedPlaceholder', { defaultValue: 'Find an asset…' })}
             searchPlaceholder={t('assetAudits.items.searchPlaceholder', {
               defaultValue: 'Search by name, tag or serial',

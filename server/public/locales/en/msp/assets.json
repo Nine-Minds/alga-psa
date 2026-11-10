@@ -2184,6 +2184,7 @@
     "loading": "Loading audits…",
     "empty": "No site audits match this view yet.",
     "columns": {
+      "audit": "Audit",
       "client": "Client",
       "location": "Location",
       "status": "Status",
@@ -2236,6 +2237,7 @@
     },
     "detail": {
       "backToClient": "Back to client audits",
+      "reference": "Audit",
       "untitledClient": "Client",
       "location": "Location",
       "startedBy": "Started by",

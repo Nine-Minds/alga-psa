@@ -20,6 +20,7 @@ const h = vi.hoisted(() => ({
   push: vi.fn(),
   toastSuccess: vi.fn(),
   toastPlain: vi.fn(),
+  lastColumns: [] as any[],
 }));
 
 vi.mock('../../actions/assetAuditActions', () => ({
@@ -77,8 +78,8 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   ),
 }));
 vi.mock('@alga-psa/ui/components/AsyncSearchableSelect', () => ({
-  AsyncSearchableSelect: ({ id, onChange }: any) => (
-    <button id={id} type="button" onClick={() => onChange('as-9')}>
+  AsyncSearchableSelect: ({ id, onChange, dropdownMode }: any) => (
+    <button id={id} type="button" data-dropdown-mode={dropdownMode} onClick={() => onChange('as-9')}>
       choose asset
     </button>
   ),
@@ -95,9 +96,9 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   ),
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ id, isOpen, title, children }: any) =>
+  Dialog: ({ id, isOpen, title, children, allowOverflow }: any) =>
     isOpen ? (
-      <div id={id} role="dialog">
+      <div id={id} role="dialog" data-allow-overflow={allowOverflow ? 'true' : 'false'}>
         <h2>{title}</h2>
         {children}
       </div>
@@ -110,6 +111,7 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 // table asked not to paginate would therefore hide everything past row 10.
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ id, data, columns, pagination, currentPage, pageSize, onPageChange }: any) => {
+    h.lastColumns = columns;
     const size = pagination === false ? 10 : (pageSize ?? 10);
     const page = pagination === false ? 1 : (currentPage ?? 1);
     const visible = data.slice((page - 1) * size, page * size);
@@ -157,6 +159,9 @@ vi.mock('@alga-psa/ui/components/bento', () => ({
   BentoTileEmpty: ({ id, children }: any) => <p id={id}>{children}</p>,
 }));
 
+const { computeColumnFit, getColumnId, getColumnLayout } = await import(
+  '@alga-psa/ui/components/dataTableColumnFit'
+);
 const { AssetAuditDetail } = await import('./AssetAuditDetail');
 
 const item = (overrides: Record<string, unknown> = {}) => ({
@@ -231,6 +236,8 @@ describe('AssetAuditDetail', () => {
     renderDetail();
 
     expect(await screen.findByText('Acme Corp')).toBeInTheDocument();
+    // The same handle the list links from, so a row and this page read as one run.
+    expect(document.getElementById('asset-audit-reference')).toHaveTextContent('#au-1');
     expect(document.getElementById('asset-audit-location')).toHaveTextContent('HQ');
     expect(document.getElementById('asset-audit-started-by')).toHaveTextContent('Ada Lovelace');
     expect(document.getElementById('asset-audit-notes')).toHaveTextContent('Quarterly walk');
@@ -238,6 +245,22 @@ describe('AssetAuditDetail', () => {
     expect(document.getElementById('asset-audit-stat-present')).toHaveTextContent('1');
     // While the run is open the third stat is what is left to find, not missing.
     expect(document.getElementById('asset-audit-stat-missing')).toHaveTextContent('remaining');
+  });
+
+  // The items table hides what does not fit rather than scrolling, so every
+  // column declares the width it may shrink to instead of losing "Marked at".
+  it.each([1400, 1100])('fits every item column in a %ipx table', async (containerWidth) => {
+    renderDetail();
+    await waitFor(() => expect(h.lastColumns.length).toBeGreaterThan(0));
+
+    const columns = h.lastColumns;
+    const { visibleColumnIds } = computeColumnFit(
+      columns,
+      containerWidth,
+      getColumnLayout(columns, containerWidth),
+    );
+
+    expect(visibleColumnIds).toEqual(columns.map((column) => getColumnId(column)));
   });
 
   it('names a location-less scope', async () => {
@@ -393,7 +416,17 @@ describe('AssetAuditDetail', () => {
     await waitFor(() => expect(document.getElementById('asset-audit-add-unexpected-button')).not.toBeNull());
 
     fireEvent.click(document.getElementById('asset-audit-add-unexpected-button')!);
-    fireEvent.click(document.getElementById('asset-audit-add-unexpected-select')!);
+
+    // The candidate list is anchored to the dialog rather than to its
+    // scrollable body, so it is on screen instead of below the fold.
+    const select = document.getElementById('asset-audit-add-unexpected-select')!;
+    expect(select).toHaveAttribute('data-dropdown-mode', 'overlay');
+    expect(document.getElementById('asset-audit-add-unexpected-dialog')).toHaveAttribute(
+      'data-allow-overflow',
+      'true',
+    );
+
+    fireEvent.click(select);
 
     await waitFor(() => expect(h.addUnexpectedAuditAsset).toHaveBeenCalledWith('au-1', 'as-9'));
   });

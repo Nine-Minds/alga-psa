@@ -24,6 +24,7 @@ import {
   auditStatusLabel,
   auditStatusTone,
   formatAuditDate,
+  formatAuditRef,
   useAssetAuditCapability,
   useAssetAuditList,
 } from './auditClient';
@@ -35,6 +36,11 @@ const AUDIT_STATUSES: AssetAuditStatus[] = ['in_progress', 'completed', 'cancell
 /**
  * One of the four result counts. Missing and unexpected carry a tone when
  * non-zero: a run that found everything should read as quietly as it went.
+ *
+ * Counted columns are narrow and shrinkable: a percentage width is never taken
+ * below the width its own title would need, so four of them at 7% claimed
+ * 168px each and pushed "Started by", "Started" and "Completed" off the table
+ * on a 1600px screen.
  */
 function countColumn(
   key: 'expected_count' | 'present_count' | 'missing_count' | 'unexpected_count',
@@ -44,7 +50,8 @@ function countColumn(
   return {
     title,
     dataIndex: key,
-    width: '7%',
+    width: '92px',
+    minWidth: '64px',
     render: (value: unknown) => {
       const count = Number(value ?? 0);
       const emphasise = Boolean(tone) && count > 0;
@@ -135,12 +142,36 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
 
   const columns: ColumnDefinition<AssetAuditRecord>[] = useMemo(
     () => [
+      // The run itself comes first and is the obvious link: the client name used
+      // to be the only thing on the row that looked clickable, which sent people
+      // to the client drawer when they meant to open the audit.
+      {
+        title: t('assetAudits.columns.audit', { defaultValue: 'Audit' }),
+        dataIndex: 'audit_id',
+        sortable: false,
+        width: '110px',
+        minWidth: '96px',
+        render: (_value: unknown, row: AssetAuditRecord) => (
+          <button
+            id={`${id}-audit-link-${row.audit_id}`}
+            type="button"
+            className="text-left font-mono text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+            onClick={(event) => {
+              event.stopPropagation();
+              router.push(`/msp/assets/audits/${row.audit_id}`);
+            }}
+          >
+            {formatAuditRef(row.audit_id)}
+          </button>
+        ),
+      } as ColumnDefinition<AssetAuditRecord>,
       ...(clientId
         ? []
         : [
             {
               title: t('assetAudits.columns.client', { defaultValue: 'Client' }),
               dataIndex: 'client_name',
+              minWidth: '140px',
               render: (_value: unknown, row: AssetAuditRecord) => (
                 <button
                   id={`${id}-client-link-${row.audit_id}`}
@@ -159,6 +190,7 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
       {
         title: t('assetAudits.columns.location', { defaultValue: 'Location' }),
         dataIndex: 'location_name',
+        minWidth: '120px',
         render: (_value: unknown, row: AssetAuditRecord) =>
           row.location_id
             ? row.location_name || '—'
@@ -167,6 +199,8 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
       {
         title: t('assetAudits.columns.status', { defaultValue: 'Status' }),
         dataIndex: 'status',
+        width: '120px',
+        minWidth: '100px',
         render: (value: unknown) => (
           <BentoChip tone={auditStatusTone(value as AssetAuditStatus)}>
             {auditStatusLabel(t, value as AssetAuditStatus)}
@@ -176,16 +210,19 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
       {
         title: t('assetAudits.columns.startedBy', { defaultValue: 'Started by' }),
         dataIndex: 'started_by_name',
+        minWidth: '120px',
         render: (value: unknown) => (value as string) || '—',
       },
       {
         title: t('assetAudits.columns.started', { defaultValue: 'Started' }),
         dataIndex: 'started_at',
+        minWidth: '100px',
         render: (value: unknown) => formatAuditDate(value as string, i18n?.language),
       },
       {
         title: t('assetAudits.columns.completed', { defaultValue: 'Completed' }),
         dataIndex: 'completed_at',
+        minWidth: '100px',
         render: (value: unknown) => formatAuditDate(value as string | null, i18n?.language),
       },
       countColumn('expected_count', t('assetAudits.columns.expected', { defaultValue: 'Expected' })),

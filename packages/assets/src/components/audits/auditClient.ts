@@ -149,6 +149,17 @@ export function useAssetAuditScopePreview(scope: {
   return { expectedCount: data ?? null, isLoading };
 }
 
+/**
+ * Short handle for a run. An audit carries no name of its own, so the head of
+ * its id identifies it the way a ticket id does elsewhere in the app — and it is
+ * the head of the detail URL too, so the reference on screen matches the address
+ * bar of the page it opens.
+ */
+export function formatAuditRef(auditId: string | null | undefined): string {
+  const id = String(auditId ?? '').trim();
+  return id ? `#${id.slice(0, 8)}` : '—';
+}
+
 /** Calendar day of an instant, in the viewer's locale. Em dash when absent. */
 export function formatAuditDate(iso: string | null | undefined, locale?: string): string {
   if (!iso) return '—';
