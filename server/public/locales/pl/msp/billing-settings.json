@@ -1196,6 +1196,18 @@
         "kit": "Zestaw",
         "createsAsset": "Tworzy zasób przy dostawie",
         "defaultAssetType": "Domyślny typ zasobu",
+        "specDefaults": "Domyślne specyfikacje dostarczonych zasobów",
+        "specDefaultsHint": "Stosowane, gdy dostarczona jednostka seryjna automatycznie tworzy swój zasób.",
+        "spec": {
+          "deviceType": "Typ urządzenia",
+          "os_type": "Typ systemu operacyjnego",
+          "os_version": "Wersja systemu operacyjnego",
+          "cpu_model": "Model CPU",
+          "storage_type": "Typ pamięci masowej",
+          "management_ip": "IP zarządzania",
+          "firmware_version": "Wersja firmware",
+          "model": "Model"
+        },
         "reorderPoint": "Punkt ponownego zamówienia",
         "reorderQuantity": "Ilość ponownego zamówienia",
         "kitPricingMode": "Tryb wyceny zestawu",
