@@ -7,14 +7,13 @@ import { createAssetReadContext, filterReadableAssets } from '@alga-psa/authoriz
 import { canReadCommentAttachment, isPublicAttachmentComment } from './ticketCommentAttachments';
 import {
   BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   type AuthorizationRecord,
   type AuthorizationSubject,
   type RelationshipRule,
 } from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { createBundleNarrowingProvider } from '@alga-psa/authorization/bundles/narrowingProvider';
 
 // Shared by initial ticket loading and subsequent document actions.
 // LEVERAGE: pattern tenant-scoped-table — document actions and shared authorization repeat this typed facade.
@@ -60,34 +59,21 @@ async function resolveAuthorizationSubjectForUser(
   tenant: string,
   user: UserWithOptionalRoles
 ): Promise<AuthorizationSubject> {
+  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where('user_id', user.user_id)
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
+    const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+      .where('user_id', user.user_id)
+      .select<{ role_id: string }[]>('role_id');
+    roleIds = roleRows.map((row) => row.role_id);
   }
 
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-      .where('user_id', user.user_id)
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, 'users', tenant)
-      .where('reports_to', user.user_id)
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
+  const teamRows = await tenantScopedTable(trx, 'team_members', tenant)
+    .where('user_id', user.user_id)
+    .select<{ team_id: string }[]>('team_id');
+  const managedRows = await tenantScopedTable(trx, 'users', tenant)
+    .where('reports_to', user.user_id)
+    .select<{ user_id: string }[]>('user_id');
 
   return {
     tenant,
@@ -373,15 +359,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     builtinProvider: new BuiltinAuthorizationKernelProvider({
       relationshipRules,
     }),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
+    bundleProvider: createBundleNarrowingProvider(trx),
     rbacEvaluator: async () => true,
   });
   const requestCache = new RequestLocalAuthorizationCache();

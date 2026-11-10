@@ -16,13 +16,12 @@ import type { IProject, IUserWithRoles } from '@alga-psa/types';
 import ProjectModel from '../models/project';
 import {
   BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   type AuthorizationRecord,
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { createBundleNarrowingProvider } from '@alga-psa/authorization/bundles/narrowingProvider';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -52,21 +51,18 @@ async function resolveAuthorizationSubjectForUser(
   tenant: string,
   user: IUserWithRoles
 ): Promise<AuthorizationSubject> {
+  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(conn, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
+    const roleRows = await tenantScopedTable(conn, 'user_roles', tenant)
+      .where({ user_id: user.user_id })
+      .select<{ role_id: string }[]>('role_id');
+    roleIds = roleRows.map((row) => row.role_id);
   }
 
   const [teamRows, managedRows] = await Promise.all([
-    tenantScopedTable(conn, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    tenantScopedTable(conn, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    tenantScopedTable(conn, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id'),
+    tenantScopedTable(conn, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id'),
   ]);
 
   return {
@@ -115,15 +111,7 @@ export async function createProjectReadDecider(
   const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(conn, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
+    bundleProvider: createBundleNarrowingProvider(conn),
     rbacEvaluator: async () => true,
   });
   const requestCache = new RequestLocalAuthorizationCache();
