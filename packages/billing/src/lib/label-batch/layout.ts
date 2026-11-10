@@ -64,10 +64,16 @@ export interface LabelBatchGeometry {
   placements: LabelCellPlacement[];
 }
 
+/** Machine-readable reasons a layout is refused, so a dialog never matches on message text. */
+export type LabelLayoutErrorCode = 'template-size-mismatch';
+
 export class LabelLayoutError extends Error {
-  constructor(message: string) {
+  readonly code?: LabelLayoutErrorCode;
+
+  constructor(message: string, code?: LabelLayoutErrorCode) {
     super(message);
     this.name = 'LabelLayoutError';
+    if (code) this.code = code;
   }
 }
 
@@ -112,6 +118,29 @@ export function resolveLayoutPageSizeMm(layout: LabelBatchLayout): { widthMm: nu
   const problem = validateCustomPageSize(layout.paper);
   if (problem) throw new LabelLayoutError(problem);
   return customPageSizeToMm(layout.paper);
+}
+
+/**
+ * The one page size every template in a batch declares, for printing at the template's own label
+ * size. Null when any template declares none, declares an unusable one, or they disagree - the
+ * caller then keeps its own default rather than guessing a size.
+ */
+export function resolveCommonTemplatePageSize(
+  sizes: ReadonlyArray<CustomPageSize | null | undefined>
+): CustomPageSize | null {
+  let agreed: { size: CustomPageSize; widthMm: number; heightMm: number } | null = null;
+  for (const size of sizes) {
+    if (!size || validateCustomPageSize(size) !== null) return null;
+    const mm = customPageSizeToMm(size);
+    if (!agreed) {
+      agreed = { size, ...mm };
+      continue;
+    }
+    if (Math.abs(agreed.widthMm - mm.widthMm) > EPSILON_MM || Math.abs(agreed.heightMm - mm.heightMm) > EPSILON_MM) {
+      return null;
+    }
+  }
+  return agreed?.size ?? null;
 }
 
 /** The size of one label cell, in millimetres. */

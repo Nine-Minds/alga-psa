@@ -34,8 +34,9 @@ import {
   STANDARD_LABEL_RMA_CODE,
   STANDARD_LABEL_STOCK_UNIT_CODE,
   STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+  getStandardLabelTemplateAstByCode,
 } from '../label-template-ast/standardTemplates';
-import type { LabelBatchLayout } from './layout';
+import { resolveCommonTemplatePageSize, type LabelBatchLayout } from './layout';
 
 const BASE = 'https://psa.example.com';
 const DPI = 300;
@@ -335,6 +336,26 @@ describe('label PDF end to end', () => {
     expect(pages).toHaveLength(1);
     expect(pages[0].width).toBeCloseTo(4 * PT_PER_IN, 0);
     expect(pages[0].height).toBeCloseTo(2 * PT_PER_IN, 0);
+    expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+  }, 120_000);
+
+  it('prints a 62 x 80 mm template on pages of exactly that size (Brother QL-800 / DK-2205)', async () => {
+    // A tenant template designed for a 62 x 80 mm continuous roll, printed with the layout derived
+    // from the template itself - the path a request that carries no layout takes.
+    const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_WORK_TAG_CODE)!;
+    const printSettings = (ast.metadata as { printSettings: { customPageSize: unknown } }).printSettings;
+    printSettings.customPageSize = { width: 62, height: 80, unit: 'mm' };
+    const pageSize = resolveCommonTemplatePageSize([printSettings.customPageSize as never]);
+    expect(pageSize).toEqual({ width: 62, height: 80, unit: 'mm' });
+
+    const item: LabelPrintItem = { ...ticketLabel(11), templateCode: 'custom-62x80', templateAst: ast };
+    const { pages, rasters } = await printLabels([item, item], { kind: 'one-per-page', pageSize: pageSize! }, 'template-62x80');
+
+    expect(pages).toHaveLength(2);
+    for (const page of pages) {
+      expect(page.width).toBeCloseTo((62 / 25.4) * PT_PER_IN, 0);
+      expect(page.height).toBeCloseTo((80 / 25.4) * PT_PER_IN, 0);
+    }
     expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
   }, 120_000);
 

@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { recordUrl, type LabelViewModel } from '@alga-psa/types';
 
 import { composeLabelSheets } from './composeLabelSheets';
-import { LabelLayoutError, planLabelBatch, resolveLabelBatchPdfOptions, type GridLayout } from './layout';
+import {
+  LabelLayoutError,
+  planLabelBatch,
+  resolveCommonTemplatePageSize,
+  resolveLabelBatchPdfOptions,
+  type GridLayout,
+} from './layout';
 import { LabelRenderError, assertCanonicalLabelUrl } from './renderLabelBatchHtml';
 
 const grid = (overrides: Partial<GridLayout> = {}): GridLayout => ({
@@ -70,6 +76,37 @@ describe('planLabelBatch', () => {
   });
 });
 
+describe('resolveCommonTemplatePageSize', () => {
+  it('returns the size a thermal label template declares (62 x 80 mm, 29 x 90 mm)', () => {
+    const brother = { width: 62, height: 80, unit: 'mm' } as const;
+    expect(resolveCommonTemplatePageSize([brother])).toEqual(brother);
+    expect(resolveCommonTemplatePageSize([brother, { ...brother }])).toEqual(brother);
+    const small = { width: 29, height: 90, unit: 'mm' } as const;
+    expect(resolveCommonTemplatePageSize([small, small])).toEqual(small);
+  });
+
+  it('agrees across units within 0.01 mm (4 x 2 in is 101.6 x 50.8 mm)', () => {
+    const inches = { width: 4, height: 2, unit: 'in' } as const;
+    expect(resolveCommonTemplatePageSize([inches, { width: 101.6, height: 50.8, unit: 'mm' }])).toEqual(inches);
+    expect(resolveCommonTemplatePageSize([inches, { width: 101.62, height: 50.8, unit: 'mm' }])).toBeNull();
+  });
+
+  it('is null when the templates disagree, when one declares no size, and when none is declared', () => {
+    const brother = { width: 62, height: 80, unit: 'mm' } as const;
+    expect(resolveCommonTemplatePageSize([brother, { width: 62, height: 100, unit: 'mm' }])).toBeNull();
+    expect(resolveCommonTemplatePageSize([brother, undefined])).toBeNull();
+    expect(resolveCommonTemplatePageSize([brother, null])).toBeNull();
+    expect(resolveCommonTemplatePageSize([])).toBeNull();
+  });
+
+  it('is null for a size outside the 10 - 1200 mm range or of the wrong shape', () => {
+    expect(resolveCommonTemplatePageSize([{ width: 9, height: 80, unit: 'mm' }])).toBeNull();
+    expect(resolveCommonTemplatePageSize([{ width: 62, height: 1300, unit: 'mm' }])).toBeNull();
+    expect(resolveCommonTemplatePageSize([{ width: 62, height: 80, unit: 'cm' } as never])).toBeNull();
+    expect(resolveCommonTemplatePageSize([{ width: Number.NaN, height: 80, unit: 'mm' }])).toBeNull();
+  });
+});
+
 describe('composeLabelSheets', () => {
   const cell = (n: number, designed?: { widthMm: number; heightMm: number }) => ({
     html: `<p>cell-${n}</p>`,
@@ -91,10 +128,23 @@ describe('composeLabelSheets', () => {
     expect(html).not.toMatch(/class="label-cell"[^>]*padding/);
   });
 
-  it('refuses a template designed for a bigger label than its cell', () => {
-    expect(() => composeLabelSheets([cell(0, { widthMm: 101.6, heightMm: 50.8 })], grid({ labelWidth: 2.625, labelHeight: 1 }))).toThrow(
-      /designed for/,
+  it('refuses a template designed for a bigger label than its cell, with a code the dialog can read', () => {
+    const tooSmall = () =>
+      composeLabelSheets([cell(0, { widthMm: 101.6, heightMm: 50.8 })], grid({ labelWidth: 2.625, labelHeight: 1 }));
+    expect(tooSmall).toThrow(/designed for/);
+    try {
+      tooSmall();
+    } catch (error) {
+      expect((error as LabelLayoutError).code).toBe('template-size-mismatch');
+    }
+  });
+
+  it('accepts a 62 x 80 mm template on a page of its own declared size', () => {
+    const { geometry } = composeLabelSheets(
+      [cell(0, { widthMm: 62, heightMm: 80 })],
+      { kind: 'one-per-page', pageSize: { width: 62, height: 80, unit: 'mm' } },
     );
+    expect([geometry.pageWidthMm, geometry.pageHeightMm]).toEqual([62, 80]);
   });
 });
 
