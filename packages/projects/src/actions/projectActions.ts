@@ -55,6 +55,7 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import type { ProjectAuthorizationAction } from '../lib/projectReadAuthorization';
 import { createProjectReadDecider } from '../lib/projectReadAuthorization';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
@@ -346,13 +347,27 @@ async function assertProjectReadAllowed(
   user: IUserWithRoles,
   projectId: string
 ): Promise<IProject> {
+  return assertProjectActionAllowed(trx, tenant, user, projectId, 'read');
+}
+
+/**
+ * Loads the project and throws unless the caller's record-level decision allows `action` on it.
+ * A refused write reports the same error as an unreadable project, so it does not reveal which rule denied.
+ */
+async function assertProjectActionAllowed(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  projectId: string,
+  action: ProjectAuthorizationAction
+): Promise<IProject> {
   const project = await ProjectModel.getById(trx, tenant, projectId);
   if (!project) {
     throw new Error('Project not found');
   }
 
-  const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-  if (!await authorizeProjectRead(project)) {
+  const authorizeProject = await createProjectReadAuthorizer(trx, tenant, user, action);
+  if (!await authorizeProject(project)) {
     throw new Error('Permission denied: Cannot read project');
   }
 
@@ -1745,7 +1760,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         if (denied) return denied;
 
         const { beforeProject, updatedProject, billingCloseResult, activeStagingClaims } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            const beforeProject = await assertProjectActionAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
             // If status was updated, fetch the status details
@@ -1878,7 +1893,7 @@ export const deleteProject = withAuth(async (
         if (denied) return denied;
 
         const result = await deleteEntityWithValidation('project', projectId, knex, tenant, async (trx, tenantId) => {
-            await assertProjectReadAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId);
+            await assertProjectActionAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId, 'delete');
 
             await deleteEntityTags(trx, projectId, 'project');
 

@@ -26,6 +26,11 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
       state.seenActions.push(input.resource.action);
       return { allowed: !state.deniedActions.has(input.resource.action) };
     }),
+    // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+    authorizeMutation: vi.fn(async (input: any) => {
+      state.seenActions.push(input.resource.action);
+      return { allowed: !state.deniedActions.has('read') && !state.deniedActions.has(input.resource.action) };
+    }),
   })),
 }));
 

@@ -22,7 +22,12 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 import { isAssetActionAllowed, isAssetReadAllowed } from './assetReadAuthorization';
 
 function contextWith(authorizeResource: ReturnType<typeof vi.fn<(req: any) => Promise<{ allowed: boolean }>>>) {
-  return { subject: {} as any, authorizationKernel: { authorizeResource } as any, requestCache: {} as any };
+  // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+  const authorizeMutation = async (req: any) => {
+    const read = await authorizeResource({ ...req, resource: { ...req.resource, action: 'read' } });
+    return read.allowed ? authorizeResource(req) : read;
+  };
+  return { subject: {} as any, authorizationKernel: { authorizeResource, authorizeMutation } as any, requestCache: {} as any };
 }
 
 describe('isAssetActionAllowed', () => {

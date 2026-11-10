@@ -92,7 +92,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@shared/lib/documentAuthorization', () => ({
-  authorizeAndRedactDocuments: async (_trx: unknown, _tenant: string, _user: unknown, docs: Row[]) =>
+  authorizeAndRedactDocumentsForAction: async (_trx: unknown, _tenant: string, _user: unknown, docs: Row[]) =>
     docs.filter((doc) => state.readable.has(doc.document_id)),
 }));
 vi.mock('../src/lib/meetingDocumentAdmission', () => ({

@@ -140,7 +140,7 @@ vi.mock('@alga-psa/authorization/assetReadAuthorization', async (importOriginal)
   };
 });
 vi.mock('@shared/lib/documentAuthorization', () => ({
-  authorizeAndRedactDocuments: vi.fn(async (_trx: unknown, _tenant: string, _user: unknown, docs: Array<{ document_id: string }>) =>
+  authorizeAndRedactDocumentsForAction: vi.fn(async (_trx: unknown, _tenant: string, _user: unknown, docs: Array<{ document_id: string }>) =>
     docs.filter((doc) => !h.deniedDocuments.has(doc.document_id) && h.rows.documents.some((row) => row.document_id === doc.document_id && row.tenant === 'tenant-1'))),
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(), publishWorkflowEvent: vi.fn() }));

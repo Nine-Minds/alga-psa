@@ -123,12 +123,17 @@ export async function authorizeApiResourceAction(input: {
   );
   subject.tenant = input.tenant;
 
-  const decision = await kernel.authorizeResource({
+  const evaluation = {
     knex: input.knex as any,
     subject,
     resource: { type: input.resource, action: input.action },
     record: input.recordContext,
-  });
+  };
+  // A write is decided by the kernel's mutation path, which also requires the
+  // subject's read rules to allow the record before an update or delete.
+  const decision = input.action === 'read'
+    ? await kernel.authorizeResource(evaluation)
+    : await kernel.authorizeMutation(evaluation);
 
   return decision.allowed;
 }

@@ -22,7 +22,7 @@ vi.mock('@alga-psa/db', async (original) => ({
   ...(await original<object>()), createTenantKnex: async () => ({ knex: h.fake.knex, tenant: CO_MANAGED_TENANT }),
 }));
 vi.mock('@alga-psa/authorization/kernel', async (original) => ({
-  ...(await original<object>()), createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
+  ...(await original<object>()), createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }), authorizeMutation: async () => ({ allowed: true }) }),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', async (original) => ({
   ...(await original<object>()),

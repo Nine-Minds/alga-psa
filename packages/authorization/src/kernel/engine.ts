@@ -44,6 +44,16 @@ function createRbacAllowedReasons(input: AuthorizationEvaluationInput): Authoriz
 
 type RuleProviders = Pick<AuthorizationKernelFactoryInput, 'builtinProvider' | 'bundleProvider'>;
 
+interface RecordRulesResult extends Pick<AuthorizationDecision, 'allowed' | 'scope' | 'redactedFields' | 'reasons'> {
+  /** Set when a bundle guard refuses the mutation carried by the input; null otherwise. */
+  mutationDeniedReason: AuthorizationReason | null;
+}
+
+interface CoreEvaluation {
+  decision: AuthorizationDecision;
+  mutationDeniedReason: AuthorizationReason | null;
+}
+
 /**
  * The record-level rules for one resource action: built-in relationship rules
  * intersected with bundle narrowing. RBAC is not consulted here; this is what a
@@ -52,26 +62,23 @@ type RuleProviders = Pick<AuthorizationKernelFactoryInput, 'builtinProvider' | '
 async function evaluateRecordRules(
   input: AuthorizationEvaluationInput,
   deps: RuleProviders
-): Promise<Pick<AuthorizationDecision, 'allowed' | 'scope' | 'redactedFields' | 'reasons'>> {
+): Promise<RecordRulesResult> {
   const builtinResult = await deps.builtinProvider.evaluate(input);
   const bundleResult = deps.bundleProvider
     ? await deps.bundleProvider.evaluateNarrowing(input)
-    : {
-        scope: {
-          allowAll: true,
-          denied: false,
-          constraints: [],
-        },
-        reasons: [] as AuthorizationReason[],
-      };
+    : null;
 
-  const scope = intersectAuthorizationScopes(builtinResult.scope, bundleResult.scope);
+  const scope = intersectAuthorizationScopes(
+    builtinResult.scope,
+    bundleResult?.scope ?? { allowAll: true, denied: false, constraints: [] }
+  );
 
   return {
     allowed: builtinResult.allowed && !scope.denied,
     scope,
-    redactedFields: [...(bundleResult.redactedFields ?? [])],
-    reasons: [...builtinResult.reasons, ...bundleResult.reasons],
+    redactedFields: [...(bundleResult?.redactedFields ?? [])],
+    reasons: [...builtinResult.reasons, ...(bundleResult?.reasons ?? [])],
+    mutationDeniedReason: bundleResult?.mutationDeniedReason ?? null,
   };
 }
 
@@ -114,7 +121,7 @@ async function findDeniedPrerequisite(
 async function evaluateCore(
   input: AuthorizationEvaluationInput,
   deps: Pick<AuthorizationKernelFactoryInput, 'builtinProvider' | 'bundleProvider' | 'rbacEvaluator'>
-): Promise<AuthorizationDecision> {
+): Promise<CoreEvaluation> {
   const requestCache = getRequestCache(input.requestCache);
 
   const hasRbacAccess = await requestCache.getOrLoad(
@@ -126,14 +133,17 @@ async function evaluateCore(
 
   if (!hasRbacAccess) {
     return {
-      allowed: false,
-      scope: {
-        allowAll: false,
-        denied: true,
-        constraints: [],
+      decision: {
+        allowed: false,
+        scope: {
+          allowAll: false,
+          denied: true,
+          constraints: [],
+        },
+        redactedFields: [],
+        reasons: createRbacDeniedReasons(input),
       },
-      redactedFields: [],
-      reasons: createRbacDeniedReasons(input),
+      mutationDeniedReason: null,
     };
   }
 
@@ -141,14 +151,17 @@ async function evaluateCore(
   const redactionResult = await deps.builtinProvider.resolveFieldRedactions(input);
 
   return {
-    allowed: rules.allowed,
-    scope: rules.scope,
-    redactedFields: [...new Set([...redactionResult.fields, ...rules.redactedFields])],
-    reasons: [
-      ...createRbacAllowedReasons(input),
-      ...rules.reasons,
-      ...redactionResult.reasons,
-    ],
+    decision: {
+      allowed: rules.allowed,
+      scope: rules.scope,
+      redactedFields: [...new Set([...redactionResult.fields, ...rules.redactedFields])],
+      reasons: [
+        ...createRbacAllowedReasons(input),
+        ...rules.reasons,
+        ...redactionResult.reasons,
+      ],
+    },
+    mutationDeniedReason: rules.mutationDeniedReason,
   };
 }
 
@@ -200,6 +213,10 @@ class DefaultAuthorizationKernel implements AuthorizationKernel {
     if (input.jointSubject) {
       return this.authorizeJointly(input, (subjectInput) => this.authorizeResource(subjectInput), combineDecisions);
     }
+    return (await this.evaluate(input)).decision;
+  }
+
+  private evaluate(input: AuthorizationEvaluationInput): Promise<CoreEvaluation> {
     return evaluateCore(input, {
       builtinProvider: this.builtinProvider,
       bundleProvider: this.bundleProvider,
@@ -244,7 +261,9 @@ class DefaultAuthorizationKernel implements AuthorizationKernel {
       };
     }
 
-    const resourceDecision = await this.authorizeResource(input);
+    // One evaluation of the requested action yields both the record decision and
+    // any bundle guard on the mutation, so the subject's rules are loaded once.
+    const { decision: resourceDecision, mutationDeniedReason } = await this.evaluate(input);
     if (!resourceDecision.allowed) {
       return {
         allowed: false,
@@ -260,14 +279,10 @@ class DefaultAuthorizationKernel implements AuthorizationKernel {
       };
     }
 
-    const bundleMutation = this.bundleProvider
-      ? await this.bundleProvider.evaluateNarrowing(input)
-      : null;
-
-    if (bundleMutation?.mutationDeniedReason) {
+    if (mutationDeniedReason) {
       return {
         allowed: false,
-        reasons: [...resourceDecision.reasons, ...mutationDecision.reasons, bundleMutation.mutationDeniedReason],
+        reasons: [...resourceDecision.reasons, ...mutationDecision.reasons, mutationDeniedReason],
       };
     }
 

@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead, authorizeApiResource } from 'server/src/lib/api/controllers/authorizationKernel';
 
 const authorizeResourceMock = vi.fn();
+const authorizeMutationMock = vi.fn();
 const resolveSubjectMock = vi.hoisted(() => vi.fn());
 
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
     authorizeResource: authorizeResourceMock,
+    authorizeMutation: authorizeMutationMock,
   })),
 }));
 
@@ -131,9 +133,11 @@ describe('api authorization kernel helper', () => {
     expect(allowed).toEqual({ allowed: true, redactedFields: ['description'] });
   });
 
-  it('evaluates independent action decisions without turning writes into reads', async () => {
+  it('sends writes to the kernel mutation decision with their own action, and reads to the resource decision', async () => {
     authorizeResourceMock.mockReset();
-    authorizeResourceMock.mockImplementation(async ({ resource }: { resource: { action: string } }) => ({
+    authorizeMutationMock.mockReset();
+    authorizeResourceMock.mockResolvedValue({ allowed: false, redactedFields: [] });
+    authorizeMutationMock.mockImplementation(async ({ resource }: { resource: { action: string } }) => ({
       allowed: resource.action === 'update',
     }));
     const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', recordContext: { id: 'r1' } };
@@ -145,20 +149,21 @@ describe('api authorization kernel helper', () => {
     expect(updateAllowed).toBe(true);
     expect(deleteAllowed).toBe(false);
     expect(readAllowed.allowed).toBe(false);
-    const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
-    expect(actions).toEqual(['update', 'delete', 'read']);
+    // The mutation decision is where the kernel requires read before update and delete.
+    expect(authorizeMutationMock.mock.calls.map((c) => c[0].resource.action)).toEqual(['update', 'delete']);
+    expect(authorizeResourceMock.mock.calls.map((c) => c[0].resource.action)).toEqual(['read']);
   });
 
   it('API-key and session principals reach the kernel with the same resource/action', async () => {
-    authorizeResourceMock.mockReset();
-    authorizeResourceMock.mockResolvedValue({ allowed: false });
+    authorizeMutationMock.mockReset();
+    authorizeMutationMock.mockResolvedValue({ allowed: false });
     const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', action: 'update', recordContext: { id: 'r1' } };
 
     const viaKey = await authorizeApiResource({ ...base, apiKeyId: 'k1' });
     const viaSession = await authorizeApiResource(base);
 
     expect(viaKey).toBe(viaSession);
-    const [a, b] = authorizeResourceMock.mock.calls.map((c) => c[0]);
+    const [a, b] = authorizeMutationMock.mock.calls.map((c) => c[0]);
     expect(a.resource).toEqual(b.resource);
     expect(a.subject.apiKeyId).toBe('k1');
     expect(b.subject.apiKeyId).toBeUndefined();
@@ -169,8 +174,9 @@ describe('authorizeApiResourceAction', () => {
   it('asks the kernel for the requested action, and authorizeApiResourceRead delegates with read', async () => {
     const { vi: v } = await import('vitest');
     const authorizeResource = v.fn(async () => ({ allowed: true }));
+    const authorizeMutation = v.fn(async () => ({ allowed: true }));
     v.doMock('server/src/lib/authorization/kernel', () => ({
-      getAuthorizationKernel: async () => ({ authorizeResource }),
+      getAuthorizationKernel: async () => ({ authorizeResource, authorizeMutation }),
     }));
     v.doMock('@alga-psa/authorization/assetReadAuthorization', () => ({
       resolveAuthorizationSubjectForUser: async (_knex: unknown, tenant: string, user: any, apiKeyId?: string) => ({
@@ -189,8 +195,10 @@ describe('authorizeApiResourceAction', () => {
     const base = { knex: {} as any, tenant: 't', user: { user_id: 'u' }, resource: 'ticket', recordContext: { id: 'x' } as any };
     await mod.authorizeApiResourceAction({ ...base, action: 'update' });
     await mod.authorizeApiResourceRead(base);
-    expect((authorizeResource.mock.calls as any[]).map(([a]) => a.resource)).toEqual([
+    expect((authorizeMutation.mock.calls as any[]).map(([a]) => a.resource)).toEqual([
       { type: 'ticket', action: 'update' },
+    ]);
+    expect((authorizeResource.mock.calls as any[]).map(([a]) => a.resource)).toEqual([
       { type: 'ticket', action: 'read' },
     ]);
     v.doUnmock('server/src/lib/authorization/kernel');

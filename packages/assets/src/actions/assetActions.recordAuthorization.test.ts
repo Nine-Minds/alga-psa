@@ -233,12 +233,20 @@ vi.mock('@alga-psa/authorization/kernel', () => ({
     constructor(_opts: unknown) {}
   },
   RequestLocalAuthorizationCache: class {},
-  createAuthorizationKernel: () => ({
-    authorizeResource: async (req: any) => {
+  createAuthorizationKernel: () => {
+    const authorizeResource = async (req: any) => {
       h.kernel.requests.push({ type: req.resource.type, action: req.resource.action, id: req.resource.id });
       return { allowed: !h.kernel.denied.has(`${req.resource.type}:${req.resource.action}`) && !h.kernel.denied.has(`${req.resource.type}:${req.resource.action}:${req.resource.id}`) };
-    },
-  }),
+    };
+    return {
+      authorizeResource,
+      // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+      authorizeMutation: async (req: any) => {
+        const read = await authorizeResource({ ...req, resource: { ...req.resource, action: 'read' } });
+        return read.allowed ? authorizeResource(req) : read;
+      },
+    };
+  },
 }));
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
@@ -370,7 +378,7 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
 
     expect(result.permissionError).toBe('Permission denied: Cannot associate documents with assets');
     expect(h.dbState.document_associations).toEqual([]);
-    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'update']);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'update']);
   });
 
   it('document detachment checks delete authorization before deleting the association', async () => {
@@ -388,6 +396,6 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
 
     expect(result.permissionError).toBe('Permission denied: Cannot remove documents from assets');
     expect(h.dbState.document_associations).toHaveLength(1);
-    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'delete']);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'delete']);
   });
 });
