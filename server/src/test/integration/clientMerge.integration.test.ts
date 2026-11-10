@@ -1098,6 +1098,120 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
       .toEqual(before);
   }, HOOK_TIMEOUT);
 
+  it('T001: re-points a drop-ship purchase order with its sales order and counts it', async () => {
+    const target = await seedClient('Drop Ship Group');
+    const source = await seedClient('Drop Ship North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const vendorId = uuidv4();
+    await table('vendors').insert({ tenant: tenantId, vendor_id: vendorId, vendor_name: 'Drop Ship Vendor' });
+    const soId = uuidv4();
+    await table('sales_orders').insert({
+      tenant: tenantId, so_id: soId, so_number: `SO-${soId.slice(0, 8)}`, client_id: source,
+    });
+    const poId = uuidv4();
+    const snapshot = { line1: '1 Original Way' };
+    await table('purchase_orders').insert({
+      tenant: tenantId, po_id: poId, po_number: `PO-${poId.slice(0, 8)}`, vendor_id: vendorId,
+      is_drop_ship: true, drop_ship_client_id: source, drop_ship_address: JSON.stringify(snapshot),
+    });
+    // An unrelated order for the target must be untouched.
+    const otherPoId = uuidv4();
+    await table('purchase_orders').insert({
+      tenant: tenantId, po_id: otherPoId, po_number: `PO-${otherPoId.slice(0, 8)}`, vendor_id: vendorId,
+      is_drop_ship: true, drop_ship_client_id: target,
+    });
+
+    const preview = await db.transaction((trx) =>
+      previewClientMerge(trx, tenantId, { sourceClientId: source, targetClientId: target }));
+    expect((preview as any).counts['drop-ship purchase order']).toBe(1);
+
+    const result = await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(result.counts['drop-ship purchase order']).toBe(1);
+    expect((await table('sales_orders').where({ so_id: soId }).first()).client_id).toBe(target);
+    const po = await table('purchase_orders').where({ po_id: poId }).first();
+    expect(po.drop_ship_client_id).toBe(target);
+    expect(po.drop_ship_address).toEqual(snapshot);
+    expect((await table('purchase_orders').where({ po_id: otherPoId }).first()).drop_ship_client_id).toBe(target);
+    expect(await table('purchase_orders').where({ drop_ship_client_id: source })).toEqual([]);
+  }, HOOK_TIMEOUT);
+
+  it.each([
+    ['with', true],
+    ['without', false],
+  ])('T002: moves owned contracts into a target %s its own system-managed default contract', async (_label, targetHasDefault) => {
+    const target = await seedClient(`Contract Group ${_label}`);
+    const source = await seedClient(`Contract North ${_label}`);
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const seedContract = async (owner: string, name: string, isDefault: boolean) => {
+      const contractId = uuidv4();
+      await table('contracts').insert({
+        tenant: tenantId, contract_id: contractId, contract_name: name, billing_frequency: 'monthly',
+        owner_client_id: owner, is_system_managed_default: isDefault,
+      });
+      return contractId;
+    };
+    const sourceDefault = await seedContract(source, 'Source default', true);
+    const sourceOwned = await seedContract(source, 'Source owned', false);
+    const targetDefault = targetHasDefault ? await seedContract(target, 'Target default', true) : null;
+
+    const result = await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(result.counts['owned contract']).toBe(2);
+    expect(await table('contracts').where({ owner_client_id: source })).toEqual([]);
+    const after = async (id: string) => table('contracts').where({ contract_id: id }).first();
+    expect((await after(sourceOwned))).toMatchObject({ owner_client_id: target, is_system_managed_default: false });
+    // The target keeps exactly one default: its own if it had one, else the source's moves in as the default.
+    expect((await after(sourceDefault))).toMatchObject({
+      owner_client_id: target,
+      is_system_managed_default: !targetHasDefault,
+    });
+    if (targetDefault) expect(await after(targetDefault)).toMatchObject({ owner_client_id: target, is_system_managed_default: true });
+  }, HOOK_TIMEOUT);
+
+  it('T005: moves telephony records and search scope with the client', async () => {
+    const target = await seedClient('Telephony Group');
+    const source = await seedClient('Telephony North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const callId = uuidv4();
+    await table('telephony_call_records').insert({
+      tenant: tenantId, call_record_id: callId, provider: 'test', provider_call_id: callId,
+      direction: 'inbound', matched_client_id: source,
+    });
+    const chatId = uuidv4();
+    await table('telephony_chat_records').insert({
+      tenant: tenantId, chat_record_id: chatId, provider: 'test', provider_chat_id: chatId,
+      matched_client_id: source,
+    });
+    const objectId = uuidv4();
+    await table('app_search_index').insert({
+      tenant: tenantId, object_type: 'ticket', object_id: objectId, title: 'T', url: '/t',
+      client_scope_id: source, search_vector: db.raw(`to_tsvector('english', 'T')`),
+      source_updated_at: db.fn.now(),
+    });
+
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(await table('telephony_call_records').where({ matched_client_id: source })).toEqual([]);
+    expect(await table('telephony_chat_records').where({ matched_client_id: source })).toEqual([]);
+    expect(await table('app_search_index').where({ client_scope_id: source })).toEqual([]);
+    expect((await table('telephony_call_records').where({ call_record_id: callId }).first()).matched_client_id).toBe(target);
+    expect((await table('app_search_index').where({ object_id: objectId }).first()).client_scope_id).toBe(target);
+
+    // Anything deliberately left behind has to say why.
+    const { CLIENT_KEYED_TABLES_LEFT_BEHIND } = await import('@alga-psa/clients/lib/clientMergePlan');
+    for (const entry of CLIENT_KEYED_TABLES_LEFT_BEHIND) expect(entry.reason.trim().length, entry.table).toBeGreaterThan(0);
+  }, HOOK_TIMEOUT);
+
   it('TM019: accounts for every client-keyed table in the schema', async () => {
     // A table nobody thought about does not fail loudly — its rows just stay on
     // the archived client, keeping a live write path aimed at a tombstone. The
@@ -1106,39 +1220,56 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     // passes again.
     const {
       CLIENT_OWNED_MOVE_TABLES,
-      PROFILE_HISTORY_TABLES,
-      CLIENT_KEYED_TABLES_LEFT_BEHIND,
-      CLIENT_KEYED_TABLES_HANDLED_EXPLICITLY,
+      CLIENT_MERGE_ROSTER,
+      CLIENT_REFERENCE_COLUMNS_WITHOUT_FK,
+      classifiedClientColumns,
     } = await import('@alga-psa/clients/lib/clientMergePlan');
 
+    // T004: every column that is a foreign key to clients, whatever its name, plus
+    // every plain `client_id` column (some have no foreign key), plus the declared
+    // no-FK client references (which must exist, or the roster is stale).
     const { rows } = await db.raw(`
-      SELECT c.relname AS table_name
+      SELECT DISTINCT c.relname AS table_name, a.attname AS column_name
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
-      JOIN pg_attribute a ON a.attrelid = c.oid
-        AND a.attname = 'client_id' AND a.attnum > 0 AND NOT a.attisdropped
+      JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
       WHERE c.relkind = 'r'
-      ORDER BY c.relname
+        AND (
+          a.attname = 'client_id'
+          OR EXISTS (
+            SELECT 1 FROM pg_constraint k
+            WHERE k.conrelid = c.oid
+              AND k.contype = 'f'
+              AND k.confrelid = 'clients'::regclass
+              AND a.attnum = ANY (k.conkey)
+              AND a.attname <> 'tenant'
+          )
+        )
+      ORDER BY 1, 2
     `);
+    const found = rows as Array<{ table_name: string; column_name: string }>;
+    const classified = classifiedClientColumns(CLIENT_MERGE_ROSTER);
 
-    const accounted = new Set<string>([
-      ...CLIENT_OWNED_MOVE_TABLES.map((entry) => entry.table),
-      ...PROFILE_HISTORY_TABLES.map((entry) => entry.table),
-      ...CLIENT_KEYED_TABLES_LEFT_BEHIND.map((entry) => entry.table),
-      ...CLIENT_KEYED_TABLES_HANDLED_EXPLICITLY,
-    ]);
-
-    const unaccounted = (rows as Array<{ table_name: string }>)
-      .map((row) => row.table_name)
-      .filter((name) => !accounted.has(name));
-
+    // `clients` itself carries self-references (merged_into_client_id and similar).
+    const unaccounted = found
+      .filter((row) => row.table_name !== 'clients')
+      .map((row) => `${row.table_name}.${row.column_name}`)
+      .filter((pair) => !classified.has(pair));
     expect(unaccounted).toEqual([]);
+
+    // The snapshot cannot see a column with no foreign key, so those are declared and verified here.
+    for (const { table: t, column } of CLIENT_REFERENCE_COLUMNS_WITHOUT_FK) {
+      expect(found.some((row) => row.table_name === t && row.column_name === column)
+        || (await db.schema.hasColumn(t, column)), `${t}.${column} exists`).toBe(true);
+      expect(classified.has(`${t}.${column}`), `${t}.${column} classified`).toBe(true);
+    }
 
     // Every table the merge claims to move has to still be there, or the merge
     // aborts the transaction on a missing relation. The edition-optional ones
     // are exempt: that is what the flag means.
     const required = CLIENT_OWNED_MOVE_TABLES.filter((entry) => !entry.editionOptional).map((entry) => entry.table);
-    const present = new Set((rows as Array<{ table_name: string }>).map((row) => row.table_name));
+    const present = new Set(found.map((row) => row.table_name));
+    for (const { table: t } of CLIENT_OWNED_MOVE_TABLES) if (await db.schema.hasTable(t)) present.add(t);
     expect(required.filter((name) => !present.has(name))).toEqual([]);
   }, HOOK_TIMEOUT);
 });

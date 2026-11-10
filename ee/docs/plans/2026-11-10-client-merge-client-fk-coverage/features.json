@@ -1,0 +1,58 @@
+[
+  {
+    "id": "F001",
+    "description": "A roster entry can name the column that references the client, defaulting to `client_id`, and the generic mover updates that column.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Merging a client re-points `purchase_orders.drop_ship_client_id` from the absorbed client to the surviving client.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "`contracts` (`owner_client_id`) is classified in the roster as handled explicitly, with the existing owned-contract and default-contract demotion behaviour unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "The roster completeness check fails when any foreign key whose parent is `clients`, under any column name, has no roster classification.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "The schema-drift integration check covers every column that references `clients`, not only columns named `client_id`.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Each reported non-FK client column (`telephony_call_records.matched_client_id`, `telephony_chat_records.matched_client_id`, `app_search_index.client_scope_id`) is verified, then either moved on merge or listed as left behind with a reason.",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "The merge result counts report drop-ship purchase orders moved.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  }
+]
