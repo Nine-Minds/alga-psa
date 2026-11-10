@@ -514,6 +514,69 @@ describe('document association cross-client authorization', () => {
     }
   });
 
+  it('restricts client contract mutations to their exclusive client scope while preserving MSP sharing', async () => {
+    const ownAssignmentId = uuidv4();
+    const sharedAssignmentId = uuidv4();
+    await table('client_contracts').insert([
+      { tenant: tenantId, client_contract_id: ownAssignmentId, client_id: clientAId, contract_id: contractUnassignedId, start_date: new Date('2026-01-01'), is_active: true },
+      { tenant: tenantId, client_contract_id: sharedAssignmentId, client_id: clientAId, contract_id: contractBId, start_date: new Date('2026-01-01'), is_active: true },
+    ]);
+    const clientUser = createMockUser('client', {
+      user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
+    });
+    const grants = new Set(['document:read', 'document:create', 'document:update', 'billing:read', 'billing:update']);
+    const actAs = (user: ReturnType<typeof createMockUser>) => {
+      setMockUser(user, [...grants]);
+      setupCommonMocks({
+        tenantId, userId: user.user_id, user,
+        permissionCheck: (_user, resource, action) => grants.has(`${resource}:${action}`),
+      });
+    };
+    const viewerB = createMockUser('client', { user_id: clientBUserId, tenant: tenantId, clientId: clientBId });
+    const { authorizeAndRedactDocuments } = await import('@shared/lib/documentAuthorization');
+    const readableByB = async () => {
+      const documents = await table('documents').where({ document_id: documentAId });
+      return db.transaction((trx) => authorizeAndRedactDocuments(trx, tenantId, viewerB, documents));
+    };
+
+    try {
+      actAs(clientUser);
+      // A client can still manage documents on a contract assigned only to them.
+      expect(await createDocumentAssociations(contractUnassignedId, 'contract', [documentAId])).toEqual({ success: true });
+      expect(await removeDocumentAssociations(contractUnassignedId, 'contract', [documentAId])).toEqual({ success: true });
+
+      const associationsBefore = await table('document_associations').where({ document_id: documentAId }).orderBy('association_id');
+      const foldersBefore = await table('document_folders').where({ entity_type: 'contract', entity_id: contractBId }).orderBy('folder_id');
+      expect(await createDocumentAssociations(contractBId, 'contract', [documentAId])).toHaveProperty('permissionError');
+      storageMocks.uploadFile.mockClear();
+      const form = new FormData();
+      form.set('file', new File(['shared contract injection'], 'shared-contract-injection.txt', { type: 'text/plain' }));
+      expect(await uploadDocument(form, { userId: clientAUserId, contractId: contractBId })).toHaveProperty('permissionError');
+      expect(storageMocks.uploadFile).not.toHaveBeenCalled();
+      expect(await table('documents').where({ document_name: 'shared-contract-injection.txt' })).toHaveLength(0);
+      expect(await table('document_associations').where({ document_id: documentAId }).orderBy('association_id')).toEqual(associationsBefore);
+      expect(await table('document_folders').where({ entity_type: 'contract', entity_id: contractBId }).orderBy('folder_id')).toEqual(foldersBefore);
+      expect(await readableByB()).toHaveLength(0);
+
+      // MSPs may intentionally publish a document to every client of a contract.
+      const mspUser = createMockUser('internal', { user_id: mspUserId, tenant: tenantId });
+      actAs(mspUser);
+      expect(await createDocumentAssociations(contractBId, 'contract', [documentAId])).toEqual({ success: true });
+      expect((await readableByB()).map((document) => document.document_id)).toContain(documentAId);
+
+      const sharedAssociations = await table('document_associations').where({ document_id: documentAId }).orderBy('association_id');
+      actAs(clientUser);
+      expect(await removeDocumentAssociations(contractBId, 'contract', [documentAId])).toHaveProperty('permissionError');
+      expect(await table('document_associations').where({ document_id: documentAId }).orderBy('association_id')).toEqual(sharedAssociations);
+
+      actAs(mspUser);
+      expect(await removeDocumentAssociations(contractBId, 'contract', [documentAId])).toEqual({ success: true });
+      expect(await readableByB()).toHaveLength(0);
+    } finally {
+      await table('client_contracts').whereIn('client_contract_id', [ownAssignmentId, sharedAssignmentId]).del();
+    }
+  });
+
   it('denies asset association writes when record policy denies access despite asset:update', async () => {
     assetDeniedByPolicyId = uuidv4();
     await table('assets').insert({

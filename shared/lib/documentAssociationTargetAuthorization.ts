@@ -231,10 +231,12 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
       if (!contract) return false;
       if (user.user_type !== 'client') return true;
       if (!user.clientId) return false;
-      return Boolean(await dbTable(conn, tenant, 'client_contracts')
-        .select('client_contract_id')
-        .where({ contract_id: id, client_id: user.clientId })
-        .first());
+      const clientIdsByTarget = await resolveAssociationTargetClientIds(conn, tenant, [{ entity_type: 'contract', entity_id: id }]);
+      const clientIds = clientIdsByTarget.get(associationKey('contract', id)) ?? [];
+      // Contract documents reach every assigned client. A client's assignment
+      // permits reading, but mutations must not publish to or detach for others.
+      return clientIds.includes(user.clientId) &&
+        (action === 'read' || clientIds.every((clientId) => clientId === user.clientId));
     },
   },
   opportunity: {
