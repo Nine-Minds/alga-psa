@@ -38,8 +38,9 @@ async function removeConsumingMaterialLine(
   performedBy: string | null,
   user: IUserWithRoles,
 ): Promise<void> {
-  const movement = await trx('stock_movements')
-    .where({ tenant, unit_id: unitId, movement_type: 'consume' })
+  const db = tenantDb(trx, tenant);
+  const movement = await db.table('stock_movements')
+    .where({ unit_id: unitId, movement_type: 'consume' })
     .whereIn('source_doc_type', ['ticket_material', 'project_material'])
     .orderBy('created_at', 'desc')
     .first('source_doc_id', 'source_doc_type');
@@ -50,8 +51,8 @@ async function removeConsumingMaterialLine(
   const pk = parentType === 'ticket' ? 'ticket_material_id' : 'project_material_id';
   const parentCol = parentType === 'ticket' ? 'ticket_id' : 'project_id';
 
-  const material = await trx(table)
-    .where({ tenant, [pk]: movement.source_doc_id })
+  const material = await db.table(table)
+    .where({ [pk]: movement.source_doc_id })
     .forUpdate()
     .first('is_billed', parentCol);
   // Already billed (or the row was deleted out from under us): leave history alone.
@@ -72,18 +73,11 @@ async function removeConsumingMaterialLine(
     throw new Error('The unit is installed on a billed material line; credit or unbilled the invoice before restocking it');
   }
 
-  const db = tenantDb(trx, tenant);
-  if (parentType === 'ticket') {
-    await db.table('ticket_materials').where(pk, movement.source_doc_id).del();
-  } else {
-    await db.table('project_materials').where(pk, movement.source_doc_id).del();
-  }
-
-  // Mirror deleteMaterial's companion cleanups: staging release (project only) and
-  // un-assigning the delivered asset from the entity it was installed on.
+  // Release the staging reference before deleting the material: its foreign key
+  // does not cascade.
   if (parentType === 'project') {
-    await trx('project_staging_lines')
-      .where({ tenant, project_material_id: movement.source_doc_id })
+    await db.table('project_staging_lines')
+      .where({ project_material_id: movement.source_doc_id })
       .update({
         status: 'released',
         project_material_id: null,
@@ -92,6 +86,7 @@ async function removeConsumingMaterialLine(
         updated_at: trx.fn.now(),
       });
   }
+  await db.table(table).where(pk, movement.source_doc_id).del();
   await detachDeliveredAssetAssociation(trx, tenant, unitId, parentType, material[parentCol]);
 
   const base = parentType === 'ticket' ? '/msp/tickets' : '/msp/projects';
