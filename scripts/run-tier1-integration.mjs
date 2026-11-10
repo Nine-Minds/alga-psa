@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { applyFlakyPolicy, resetFlakyPublication } from './lib/flaky-policy.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
-import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
+import { isIntegrationTest, reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
 import { collectedTestsFromJournal } from './lib/vitest-progress-reporter.mjs';
 import { readShardDurations } from './lib/server-unit-durations.mjs';
@@ -53,7 +53,7 @@ function collectIntegrationFiles(args) {
       const file = path.relative(serverDir, path.resolve(serverDir, entry.file)).split(path.sep).join('/');
       if (!isIntegrationPath(file)) throw new Error(`Unexpected affected file: ${file}`);
       return file;
-    });
+    }).filter(file => isIntegrationTest(path.relative(repoRoot, path.resolve(serverDir, file)).split(path.sep).join('/')));
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }
@@ -141,7 +141,7 @@ const total = Number(process.env.INTEGRATION_SHARD_TOTAL || '1');
 try {
   const complete = collectIntegrationFiles(selection).map(file => ({ file: path.join(serverDir, file) }));
   allFiles = complete.map(entry => path.relative(repoRoot, entry.file).split(path.sep).join('/')).sort();
-  const candidates = repositoryTestFiles(repoRoot).filter(file =>
+  const candidates = repositoryTestFiles(repoRoot).filter(isIntegrationTest).filter(file =>
     coveredByManifest(path.relative(serverDir, path.join(repoRoot, file)).split(path.sep).join('/'), selection));
   const discovery = reconcileDiscovery({ root: repoRoot, candidates, collections: [{ runner: 'integration', status: 'passed', files: complete }] });
   save('discovery', discovery);

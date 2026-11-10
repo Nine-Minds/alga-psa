@@ -4,6 +4,7 @@ import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 export default defineConfig({
   entry: {
     'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'lib/email/sanitizeEmailHtml': 'lib/email/sanitizeEmailHtml.ts',
     'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
     'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
     'lib/ticketQuery/ticketQuerySchema': 'lib/ticketQuery/ticketQuerySchema.ts',

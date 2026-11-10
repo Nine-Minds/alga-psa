@@ -5,7 +5,7 @@
  * `pdftoppm` and `pdfinfo` (poppler) on PATH. Both are required: this test fails, not skips, when they are absent.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import jsQR from 'jsqr';
@@ -382,6 +382,26 @@ describe('label PDF end to end', () => {
       expect(decodeQr(cell)).toBe(items[i].viewModel.url);
       expect(decodeCode128(cell)).toBe(items[i].viewModel.code128Value);
     });
+  }, 120_000);
+
+  it('renders adjacent physical asset pairs and preserves each tag barcode', async () => {
+    const first = assetLabel(31, 'FTS-000431');
+    const second = assetLabel(32, 'NORTH-000432');
+    const items = [first, first, second, second];
+    const { html, geometry, pages, rasters, pdf } = await printLabels(items, LETTER_2X5, 'asset-paired-evidence');
+    expect(pages).toHaveLength(1);
+    expect(geometry.placements.map((p) => [p.column, p.row])).toEqual([[0, 0], [1, 0], [0, 1], [1, 1]]);
+    geometry.placements.forEach((placement, index) => {
+      const cell = crop(rasters[0], mmToPx(placement.leftMm), mmToPx(placement.topMm), mmToPx(placement.widthMm), mmToPx(placement.heightMm));
+      expect(decodeCode128(cell)).toBe(items[index].viewModel.code128Value);
+      expect(decodeQr(cell)).toBe(items[index].viewModel.url);
+    });
+    expect(items.map((item) => item.viewModel.identifier)).toEqual(['FTS-000431', 'FTS-000431', 'NORTH-000432', 'NORTH-000432']);
+    expect(html.match(/FTS-000431/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(html.match(/NORTH-000432/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    const evidenceDir = path.resolve(process.cwd(), '../../docs/evidence/alga-2026-0003120-draft');
+    mkdirSync(evidenceDir, { recursive: true });
+    writeFileSync(path.join(evidenceDir, 'paired-asset-labels.pdf'), pdf);
   }, 120_000);
 
   it('Code 128 on a single 4x2in label decodes', async () => {

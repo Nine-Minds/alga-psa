@@ -14,6 +14,7 @@ const NOW_ISO = '2026-06-12T12:00:00.000Z';
 
 type Row = Record<string, any>;
 
+// LEVERAGE: pattern asset-actions-inmemory-harness — identity operations also require shared query semantics in these action doubles.
 const h = vi.hoisted(() => {
   const TENANT = 'a0000000-0000-4000-8000-00000000000a';
 
@@ -52,6 +53,7 @@ const h = vi.hoisted(() => {
       { tenant: TENANT, status_id: 'st-retired', slug: 'retired', label: 'Retired', kind: 'archived', is_builtin: true, is_active: true, display_order: 4 },
     ];
     updateCalls.length = 0;
+    dbState.tenants = [{ tenant: TENANT, asset_tag_claims_required: false }];
     uuidCounter = 0;
   };
 
@@ -60,10 +62,14 @@ const h = vi.hoisted(() => {
   const isRaw = (value: unknown): value is { __raw: true; sql: string; bindings: string } =>
     Boolean(value && typeof value === 'object' && (value as any).__raw === true);
 
+  // LEVERAGE: pattern asset-action-query-fake — These action suites duplicate an in-memory SQL adapter.
   class QB {
     private readonly table: string;
     private objWheres: Array<Record<string, any>> = [];
     private inWheres: Array<{ col: string; vals: any[] }> = [];
+    private notWheres: Array<{ col: string; value: unknown }> = [];
+
+    whereNot(col: string, value: unknown) { this.notWheres.push({ col: stripPrefix(col), value }); return this; }
 
     constructor(tableSpec: string) {
       this.table = tableSpec.split(' as ')[0];
@@ -85,6 +91,10 @@ const h = vi.hoisted(() => {
       this.objWheres.push(normalized);
       return this;
     }
+
+    forKeyShare() { return this; }
+
+    whereRaw(_sql: string, values: unknown[]) { return this.where({ asset_tag_normalized: values[0] }); }
 
     andWhere(arg1: any, arg2?: any) {
       return this.where(arg1, arg2);
@@ -123,6 +133,8 @@ const h = vi.hoisted(() => {
       return this;
     }
 
+    forUpdate() { return this; }
+
     orderBy() {
       return this;
     }
@@ -135,6 +147,7 @@ const h = vi.hoisted(() => {
       for (const { col, vals } of this.inWheres) {
         rows = rows.filter((row) => vals.includes(row[col]));
       }
+      for (const { col, value } of this.notWheres) rows = rows.filter(row => row[col] !== value);
       for (const { col, isNull } of this.nullWheres) {
         rows = rows.filter((row) => (isNull ? row[col] === null || row[col] === undefined : row[col] !== null && row[col] !== undefined));
       }
@@ -161,6 +174,13 @@ const h = vi.hoisted(() => {
       this.rows.push(...incoming);
       const result: any = Promise.resolve(incoming);
       result.returning = () => Promise.resolve(incoming);
+      result.onConflict = (cols: string[]) => ({ ignore: async () => {
+        for (const row of incoming) {
+          if (this.rows.some(existing => existing !== row && cols.every(col => existing[col] === row[col]))) {
+            this.rows.splice(this.rows.indexOf(row), 1);
+          }
+        }
+      } });
       return result;
     }
 
@@ -359,12 +379,10 @@ describe('createAsset with custom asset types (T313)', () => {
   });
 
   it('rejects an unregistered slug with a typed invalid_asset_type error and inserts nothing', async () => {
-    await expect(createAsset({ ...baseCreateRequest, asset_type: 'door_access' })).rejects.toThrow(
-      /invalid_asset_type/
-    );
-
-    await createAsset({ ...baseCreateRequest, asset_type: 'door_access' }).catch((error: Error) => {
-      expect(JSON.parse(error.message)).toEqual({ kind: 'invalid_asset_type', asset_type: 'door_access' });
+    const result = await createAsset({ ...baseCreateRequest, asset_type: 'door_access' });
+    expect(result).toMatchObject({
+      actionError: 'Asset type "door_access" is not available. Choose a valid asset type.',
+      messageKey: 'msp/assets:errors.asset.typeUnavailableNamed',
     });
 
     expect(h.dbState.assets).toHaveLength(0);
@@ -373,13 +391,11 @@ describe('createAsset with custom asset types (T313)', () => {
   it('enforces required schema fields for custom types', async () => {
     seedCloudAccountType();
 
-    await createAsset({ ...baseCreateRequest, attributes: { seats: 3 } }).catch((error: Error) => {
-      const parsed = JSON.parse(error.message);
-      expect(parsed.kind).toBe('validation');
-      expect(parsed.issues).toEqual([
-        { path: ['attributes', 'account_name'], message: 'Account Name is required', code: 'required' },
-      ]);
-    });
+    const result = await createAsset({ ...baseCreateRequest, attributes: { seats: 3 } });
+    expect(isAssetValidationError(result)).toBe(true);
+    expect((result as unknown as AssetValidationError).validationIssues).toEqual([
+      { path: ['attributes', 'account_name'], message: 'Account Name is required', code: 'required' },
+    ]);
 
     expect(h.dbState.assets).toHaveLength(0);
   });
@@ -387,23 +403,21 @@ describe('createAsset with custom asset types (T313)', () => {
   it('rejects schema-kind mismatches for custom types', async () => {
     seedCloudAccountType();
 
-    await createAsset({
+    const result = await createAsset({
       ...baseCreateRequest,
       attributes: { account_name: 'ok', seats: 'five' },
-    }).catch((error: Error) => {
-      const parsed = JSON.parse(error.message);
-      expect(parsed.kind).toBe('validation');
-      expect(parsed.issues[0].path).toEqual(['attributes', 'seats']);
     });
+    expect(isAssetValidationError(result)).toBe(true);
+    expect((result as unknown as AssetValidationError).validationIssues[0].path).toEqual(['attributes', 'seats']);
 
     expect(h.dbState.assets).toHaveLength(0);
   });
 
   it('validates workstation additional fields during create', async () => {
     h.dbState.asset_type_registry.push({ tenant: TENANT, slug: 'workstation', name: 'Workstation', is_builtin: true, fields_schema: JSON.stringify([{ key: 'sc_session', label: 'ScreenConnect Session', kind: 'number' }]) });
-    const rejection = await createAsset({ ...baseCreateRequest, asset_type: 'workstation', attributes: { sc_session: 'bad' } }).then(() => null, (error: Error) => error);
-    expect(rejection).toBeInstanceOf(Error);
-    expect(JSON.parse((rejection as Error).message).issues[0].path).toEqual(['attributes', 'sc_session']);
+    const rejection = await createAsset({ ...baseCreateRequest, asset_type: 'workstation', attributes: { sc_session: 'bad' } });
+    expect(isAssetValidationError(rejection)).toBe(true);
+    expect((rejection as unknown as AssetValidationError).validationIssues[0].path).toEqual(['attributes', 'sc_session']);
     expect(h.dbState.assets).toHaveLength(0);
   });
 

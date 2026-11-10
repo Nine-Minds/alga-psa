@@ -13,7 +13,7 @@ export function repositoryTestFiles(root) {
 
 // These tests are excluded from the DB-less unit job. Server unit-directory
 // DB tests need the same positive assignment as colocated package DB tests.
-// Integration/infrastructure directories retain their own database lanes.
+// Explicit .db suites use this lane even under the integration directory.
 export function isWorkspaceDbTest(file) {
   if (/^server\/src\/(app|components|lib|services)\//.test(file)) {
     return /\.(db|integration)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
@@ -21,8 +21,16 @@ export function isWorkspaceDbTest(file) {
   if (/^server\/migrations\/__tests__\//.test(file)) {
     return /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit|server\/src\/test\/contract|services\/workflow-worker\/src)\//.test(file)
+  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/(unit|integration|contract)|services\/workflow-worker\/src)\//.test(file)
     && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
+}
+
+// Directory-based integration selection must not claim suites whose explicit
+// DB contract belongs to the workspace runner (including its schema setup).
+export function isIntegrationTest(file) {
+  return (file.startsWith('server/src/test/integration/')
+    || file.startsWith('ee/temporal-workflows/src/__tests__/integration/'))
+    && !isWorkspaceDbTest(file);
 }
 
 export function isNodeToolingTest(file) {
@@ -59,6 +67,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       'ee/temporal-workflows/src/__tests__/db-subpath-source-mapping.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
+      'ee/temporal-workflows/src/activities/__tests__/worker-email-resolution.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/tenant-creation-product-bootstrap.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/tenant-email-ingestion-workflow.contract.test.ts',

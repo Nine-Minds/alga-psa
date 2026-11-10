@@ -293,9 +293,11 @@ describe('TicketTemplateEditor with ?fromTicket', () => {
     render(<TicketTemplateEditor templateId={UUID(40)} />);
 
     expect(await screen.findByTestId('priority-value')).toHaveTextContent(storedPriorityId);
-    expect(document.getElementById('ticket-template-priority-type-warning')).toHaveTextContent(
-      'Priority ‘Urgent’ is a custom priority but board ‘Service Desk’ uses ITIL priorities'
-    );
+    await waitFor(() => {
+      expect(document.getElementById('ticket-template-priority-type-warning')).toHaveTextContent(
+        'Priority ‘Urgent’ is a custom priority but board ‘Service Desk’ uses ITIL priorities'
+      );
+    });
     expect(document.getElementById('ticket-template-reference-problems')).toHaveTextContent(
       'Priority ‘Urgent’ is a custom priority but board ‘Service Desk’ uses ITIL priorities'
     );

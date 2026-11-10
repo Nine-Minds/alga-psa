@@ -24,6 +24,10 @@ vi.mock('@alga-psa/db', async (original) => ({
 vi.mock('@alga-psa/authorization/kernel', async (original) => ({
   ...(await original<object>()), createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
 }));
+vi.mock('@alga-psa/authorization/bundles/service', async (original) => ({
+  ...(await original<object>()),
+  loadAuthorizationEvaluationSnapshot: async () => ({ roleIds: [], teamIds: [], managedUserIds: [], rules: [] }),
+}));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(), publishWorkflowEvent: vi.fn(), publishStoredWorkflowEvent: vi.fn(),

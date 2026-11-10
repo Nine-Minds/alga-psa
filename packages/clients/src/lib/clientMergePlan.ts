@@ -406,6 +406,8 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // moves, so its custody (open or closed) follows; one open record per asset,
   // not per client, so a move cannot collide.
   { table: 'asset_custody', label: 'equipment custody record' },
+  // The destination client changes; the reserved physical label stays fixed.
+  { table: 'asset_number_reservations', label: 'asset number reservation' },
   // A site audit is a record of walking one client's location. The location and
   // the audited assets both move, so the audit follows them; audits are keyed by
   // audit_id alone, so nothing can collide. Its items are keyed by audit, not client.

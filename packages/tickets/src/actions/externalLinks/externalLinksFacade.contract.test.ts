@@ -62,7 +62,6 @@ describe('external links tenant facade contract', () => {
     expect(actionsSource).toContain('authorizeTicketAccess(user, trx, tenant, rows[0].ticket_id, \'read\')');
 
     expect(authorizationSource).toContain('createAuthorizationKernel');
-    expect(authorizationSource).toContain('resolveBundleNarrowingRulesForEvaluation');
     expect(authorizationSource).toContain('authorizeResource');
   });
 

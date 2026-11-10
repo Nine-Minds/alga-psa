@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { builtWorkflowPayload } from '@alga-psa/event-schemas';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -44,7 +45,7 @@ describe('date trigger scan and workflow launch integration', () => {
       await trx('clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'Date scan launch fixture', client_since: '2020-10-31', created_at: '2020-10-31T00:00:00Z', updated_at: '2020-10-31T00:00:00Z' });
       await trx('contracts').insert({ tenant: tenantId, contract_id: contractId, contract_name: 'Date scan launch contract' });
       await trx('client_contracts').insert({ tenant: tenantId, client_contract_id: clientContractId, client_id: clientId, contract_id: contractId, start_date: '2020-01-01', end_date: '2027-01-01', decision_due_date: '2026-11-30', renewal_cycle_key: null, renewal_mode: 'manual', is_active: true });
-      await trx('assets').insert({ tenant: tenantId, asset_id: assetId, asset_tag: `date-${assetId}`, name: 'Warranty fixture', status: 'active', asset_type: 'hardware', client_id: clientId, warranty_end_date: `${fireDate}T18:00:00Z` });
+      await insertTestAssets(trx, { tenant: tenantId, asset_id: assetId, asset_tag: `date-${assetId}`, name: 'Warranty fixture', status: 'active', asset_type: 'hardware', client_id: clientId, warranty_end_date: `${fireDate}T18:00:00Z` });
 
       for (let i = 0; i < fixtures.length; i += 1) {
         const fixture = fixtures[i];

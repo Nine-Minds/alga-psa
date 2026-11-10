@@ -1,36 +1,30 @@
 import puppeteer, { type Browser } from 'puppeteer';
 import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
-import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
+import {
+  configureIsolatedPage,
+  ISOLATED_RENDERER_BROWSER_ARGS,
+  prepareHtmlForIsolatedRendering,
+  type IsolatedRenderingOptions,
+} from '@alga-psa/core/rendering/isolatedRendering';
+
+export {
+  applyRenderingResourcePolicy,
+  configureIsolatedPage,
+  ISOLATED_RENDERER_BROWSER_ARGS,
+  prepareHtmlForIsolatedRendering,
+  resolveRemoteAssets,
+} from '@alga-psa/core/rendering/isolatedRendering';
 
 export type RenderContent =
   | { kind: 'text'; text: string }
   | { kind: 'rich-html'; html: string }
   | { kind: 'file-placeholder'; fileName: string; fileType: string; fileSize: string; icon: string };
 
-export interface RenderHtmlToPngOptions {
+export interface RenderHtmlToPngOptions extends IsolatedRenderingOptions {
   width?: number;
   height?: number;
-  /**
-   * 'inline' (default): fetch remote http(s) images ourselves through safeFetch and embed the bytes.
-   * 'block': render without any remote asset at all.
-   */
-  remoteAssets?: 'inline' | 'block';
-  /**
-   * Resolve a remote asset URL to bytes. Defaults to safeFetch's public-only fetch.
-   * Injectable so tests can assert the rewritten HTML without the network.
-   */
-  fetchAsset?: (url: string) => Promise<{ bytes: Buffer; contentType: string }>;
 }
-
-const PLACEHOLDER_STYLE =
-  'display:inline-block;min-width:60px;min-height:30px;padding:4px;background:#e5e7eb;color:#6b7280;' +
-  'font-size:12px;border:1px solid #d1d5db;box-sizing:border-box;';
-// 1x1 transparent PNG used for blocked CSS url() references.
-const TRANSPARENT_PIXEL =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-
-const REMOTE_URL = /^\s*https?:\/\//i;
 
 const purifier = createDOMPurify(new JSDOM('').window);
 const FAILURE_PLACEHOLDER = Buffer.from(
@@ -84,86 +78,18 @@ function toHtml(content: RenderContent): string {
     <div style="margin-top: 15px; font-size: 12px; color: #999;">Preview not available. Download to view.</div>
   </div>`;
 }
-type AssetResolver = (url: string) => Promise<string | null>;
-
-function makeResolver(opts: RenderHtmlToPngOptions): AssetResolver {
-  const cache = new Map<string, Promise<string | null>>();
-  const fetchAsset = opts.fetchAsset ?? ((url: string) => fetchPublicBytes(url));
-  return (url) => {
-    let hit = cache.get(url);
-    if (!hit) {
-      hit = fetchAsset(url)
-        .then(({ bytes, contentType }) =>
-          /^image\//i.test(contentType) ? `data:${contentType};base64,${bytes.toString('base64')}` : null
-        )
-        .catch(() => null); // a blocked asset must never fail the preview
-      cache.set(url, hit);
-    }
-    return hit;
-  };
-}
-
-async function replaceAsync(
-  input: string,
-  re: RegExp,
-  fn: (match: RegExpExecArray) => Promise<string>
-): Promise<string> {
-  const matches = [...input.matchAll(re)] as RegExpExecArray[];
-  const replacements = await Promise.all(matches.map(fn));
-  let out = '';
-  let last = 0;
-  matches.forEach((m, i) => {
-    out += input.slice(last, m.index) + replacements[i];
-    last = m.index! + m[0].length;
-  });
-  return out + input.slice(last);
-}
-
-async function resolveCssUrls(value: string, resolve: AssetResolver, mode: 'inline' | 'block'): Promise<string> {
-  return replaceAsync(value, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, async (match) => {
-    const url = match[2].trim();
-    const dataUri = mode === 'inline' ? await resolve(url) : null;
-    return `url("${dataUri ?? TRANSPARENT_PIXEL}")`;
-  });
-}
-
-async function rewriteCssDeclaration(style: CSSStyleDeclaration, resolve: AssetResolver, mode: 'inline' | 'block'): Promise<void> {
-  const declarations = Array.from({ length: style.length }, (_, index) => style[index]);
-  for (const property of declarations) {
-    const value = style.getPropertyValue(property);
-    const rewritten = await resolveCssUrls(value, resolve, mode);
-    if (rewritten !== value) {
-      style.setProperty(property, rewritten, style.getPropertyPriority(property));
-    }
-  }
-}
-
-async function rewriteCssRules(rules: CSSRuleList, resolve: AssetResolver, mode: 'inline' | 'block'): Promise<void> {
-  for (const rule of Array.from(rules)) {
-    const cssRule = rule as CSSRule & { style?: CSSStyleDeclaration; cssRules?: CSSRuleList };
-    if (cssRule.style) {
-      await rewriteCssDeclaration(cssRule.style, resolve, mode);
-    } else if (cssRule.cssRules) {
-      await rewriteCssRules(cssRule.cssRules, resolve, mode);
-    }
-  }
-}
-
 function isSandboxUnavailable(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /no usable sandbox|failed to move to new namespace|namespace.*operation not permitted/i.test(message);
 }
 
 async function launchBrowser(): Promise<Browser> {
-  const args = [
-    '--disable-dev-shm-usage',
-    '--disable-gpu',
-    '--disable-features=IsolateOrigins',
-    '--disable-site-isolation-trials',
-    // Defense in depth below interception. A dead proxy prevents Chromium preconnects.
-    '--proxy-server=socks5://127.0.0.1:1',
-    '--proxy-bypass-list=<-loopback>',
-  ];
+  // Retain the shared network-isolation flags while preferring Chromium's sandbox
+  // whenever this runtime supports it. The pooled PDF renderer uses the exported
+  // argument list directly for root/container compatibility.
+  const args = ISOLATED_RENDERER_BROWSER_ARGS.filter(
+    (argument) => argument !== '--no-sandbox' && argument !== '--disable-setuid-sandbox'
+  );
   const launchOptions: any = {
     headless: true,
     args,
@@ -197,59 +123,6 @@ async function launchBrowser(): Promise<Browser> {
 }
 
 /**
- * Rewrites remote http(s) image references from `<img src>` and parsed CSS declarations.
- * Text nodes and ordinary metadata attributes are never interpreted as CSS or resource URLs.
- * With 'inline' they become data: URIs (fetched via safeFetch); anything refused, failed or
- * non-image becomes a neutral placeholder. With 'block' all remote references are replaced.
- * Other remote-loading constructs (iframe/script/link/@import) are denied by request
- * interception in the browser; this function only decides what survives as an image.
- */
-export async function resolveRemoteAssets(
-  html: string,
-  opts: Pick<RenderHtmlToPngOptions, 'remoteAssets' | 'fetchAsset'> = {}
-): Promise<string> {
-  const mode = opts.remoteAssets ?? 'inline';
-  const resolve: AssetResolver = mode === 'inline' ? makeResolver(opts) : async () => null;
-  const dom = new JSDOM(`<body>${html}</body>`);
-  const document = dom.window.document;
-
-  for (const image of Array.from(document.querySelectorAll('img[src]'))) {
-    const src = image.getAttribute('src') ?? '';
-    if (!REMOTE_URL.test(src)) continue;
-    const dataUri = mode === 'inline' ? await resolve(src.trim()) : null;
-    if (dataUri) {
-      image.setAttribute('src', dataUri);
-    } else {
-      const placeholder = document.createElement('span');
-      placeholder.setAttribute('style', PLACEHOLDER_STYLE);
-      placeholder.setAttribute('role', 'img');
-      const alt = image.getAttribute('alt') ?? '';
-      placeholder.setAttribute('aria-label', alt);
-      placeholder.textContent = alt;
-      image.replaceWith(placeholder);
-    }
-  }
-
-  for (const image of Array.from(document.querySelectorAll('img[srcset]'))) {
-    if (/https?:\/\//i.test(image.getAttribute('srcset') ?? '')) image.removeAttribute('srcset');
-  }
-
-  for (const element of Array.from(document.querySelectorAll('[style]'))) {
-    await rewriteCssDeclaration((element as HTMLElement).style, resolve, mode);
-  }
-
-  for (const styleElement of Array.from(document.querySelectorAll('style'))) {
-    const sheet = styleElement.sheet;
-    if (sheet) {
-      await rewriteCssRules(sheet.cssRules, resolve, mode);
-      styleElement.textContent = Array.from(sheet.cssRules, (rule) => rule.cssText).join('\n');
-    }
-  }
-
-  return document.body.innerHTML;
-}
-
-/**
  * Renders HTML to a PNG using headless Chromium with the network closed:
  * JavaScript is disabled and every request except data:/blob:/about: is aborted, so
  * caller-controlled HTML cannot make the server issue requests (SSRF) or read responses back.
@@ -262,21 +135,12 @@ export async function renderHtmlToPng(content: RenderContent, opts: RenderHtmlTo
   try {
     // Escape structured values and sanitize all supported rich HTML before resolving image URLs.
     const sanitizedHtml = toHtml(content);
-    const safeHtml = await withTimeout(resolveRemoteAssets(sanitizedHtml, opts), 6000, 'Asset resolution');
+    const safeHtml = await withTimeout(prepareHtmlForIsolatedRendering(sanitizedHtml, opts), 6000, 'Asset resolution');
     browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setViewport({ width, height });
 
-    // Deny network by default.
-    await page.setJavaScriptEnabled(false);
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const url = req.url();
-      if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) {
-        return void req.continue();
-      }
-      return void req.abort('blockedbyclient');
-    });
+    await configureIsolatedPage(page);
 
     const styledHtml = `
         <style>

@@ -5,7 +5,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
+import { isMspPrincipalUserType, MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import type { CalendarProviderConfig, IUserWithRoles, RmmProvider } from '@alga-psa/types';
 import { CALENDAR_PROFILE_TAB, isCalendarEnterpriseEdition } from '../lib/calendarAvailability';
 import { isAccountingReconnectRequired } from '../lib/accountingReconnectHeuristic';
@@ -50,7 +50,7 @@ export interface IntegrationHealthAlert {
   reason: IntegrationHealthReason;
   providerName: string;
   /**
-   * Mailbox for email, calendar id for calendar sync, sync error for RMM,
+   * Mailbox for email, calendar id for calendar sync, provider for RMM,
    * organisation/realm for accounting.
    */
   detail: string;
@@ -202,9 +202,8 @@ const calendarSyncSource: IntegrationHealthSource = async ({ user, tenant }) => 
  * credentials are still stored, so only a human re-auth clears that one.
  */
 const rmmSource: IntegrationHealthSource = async ({ user, tenant, knex }) => {
-  // Same gate as getNinjaOneConnectionStatus, which is what the RMM settings
-  // cards this banner links to read their state through.
-  const permitted = await hasPermission(user, 'settings', 'read', knex);
+  // This source reads tenant-wide integration state and is MSP-only.
+  const permitted = await hasPermission(user, 'system_settings', 'read', knex);
   if (!permitted) {
     return [];
   }
@@ -213,7 +212,7 @@ const rmmSource: IntegrationHealthSource = async ({ user, tenant, knex }) => {
   const rows = await tenantDb(knex, tenant)
     .table('rmm_integrations')
     .where('is_active', true)
-    .select('integration_id', 'provider', 'sync_status', 'sync_error', 'settings');
+    .select('integration_id', 'provider', 'sync_status', 'settings');
 
   const alerts: IntegrationHealthAlert[] = [];
 
@@ -238,7 +237,7 @@ const rmmSource: IntegrationHealthSource = async ({ user, tenant, knex }) => {
     };
 
     if (row.sync_status === 'error') {
-      push('rmm_sync_error', row.sync_error ?? providerName);
+      push('rmm_sync_error', providerName);
     }
 
     // Deliberately the same condition as isIntegrationReconnectRequired in the
@@ -434,6 +433,10 @@ export const getIntegrationHealthAlerts = withAuth(async (
   user,
   { tenant }
 ): Promise<IntegrationHealthAlert[]> => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return [];
+  }
+
   const { knex } = await createTenantKnex();
 
   const results = await Promise.all(

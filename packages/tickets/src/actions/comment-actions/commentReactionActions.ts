@@ -26,8 +26,8 @@ export const toggleCommentReaction = withAuth(async (
   const userId = user.user_id;
 
   return withTransaction(db, async (trx) => {
-    // Reacting writes to the comment's thread: the caller must be able to see that comment.
-    // Missing, hidden and unauthorized comments all produce the same denial.
+// The target resolver applies ticket record authorization and client-visible comment/thread
+    // rules in one batched path; missing, hidden and unauthorized comments share one denial.
     const { authorized } = await resolveReactionTargets(trx, tenant, user as any, [commentId], 'update');
     const target = authorized.get(commentId);
     if (!target) throw new Error('Permission denied: Cannot access ticket');
@@ -79,7 +79,6 @@ export const getCommentsReactionsBatch = withAuth(async (
   // Only reactions on comments the caller may read; hidden/missing IDs are silently omitted.
   const { authorized } = await resolveReactionTargets(db, tenant, user as any, commentIds, 'read');
   if (authorized.size === 0) return { reactions: {}, userNames: {} };
-
   const rows = await tenantDb(db, tenant).table('comment_reactions')
     .whereIn('comment_id', [...authorized.keys()])
     .select('comment_id', 'emoji', 'user_id')

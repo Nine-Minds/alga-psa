@@ -50,6 +50,10 @@
       "import": "./src/lib/documentPreviewGenerator.ts",
       "types": "./src/lib/documentPreviewGenerator.ts"
     },
+    "./lib/renderHtmlToPng": {
+      "import": "./src/lib/renderHtmlToPng.ts",
+      "types": "./src/lib/renderHtmlToPng.ts"
+    },
     "./lib/documentPreviewProvenance": {
       "import": "./src/lib/documentPreviewProvenance.ts",
       "types": "./src/lib/documentPreviewProvenance.ts"

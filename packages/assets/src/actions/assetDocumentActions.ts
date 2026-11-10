@@ -43,8 +43,7 @@ export const associateDocumentWithAsset = withAuth(async (
                 .forUpdate()
                 .first('asset_id', 'client_id');
             const context = await createAssetReadContext(trx, tenant, user as any);
-            if (!asset ||
-                !await isAssetMutationAllowed(trx, tenant, context, asset, 'update')) {
+            if (!asset || !await isAssetMutationAllowed(trx, tenant, context, asset, 'update')) {
                 return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
             }
 

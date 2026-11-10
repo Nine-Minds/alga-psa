@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Im Kundeneigentum",
       "msp": "Im MSP-Eigentum"
+    },
+    "create": {
+      "success": "Asset {{tag}} erstellt",
+      "autoTag": "Nächsten automatischen Tag zuweisen",
+      "preview": "Vorschau des nächsten Tags: {{tag}} (die Vorschau reserviert keine Nummer)",
+      "selectClient": "Kunden für die Vorschau auswählen",
+      "addAnother": "Speichern und weiteres Asset hinzufügen",
+      "submit": "Asset erstellen"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Lieferant",
       "purchaseCost": "Kaufpreis",
       "orderNumber": "Bestellnr.",
-      "ownership": "Eigentum"
+      "ownership": "Eigentum",
+      "autoAssetTag": "Automatisch zuweisen",
+      "assetTagPreviewLoading": "Wählen Sie einen Kunden, um den nächsten Tag als Vorschau anzuzeigen",
+      "previewNotReserved": "Nur Vorschau; Zuweisung beim Speichern"
     },
     "placeholders": {
       "workstationOsType": "z. B. Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Zugriff verweigert: Assets können nicht aktualisiert werden"
     },
     "asset": {
+      "tagAlreadyExists": "Dieses Asset-Tag wird bereits verwendet oder ist reserviert. Scannen Sie es, um das vorhandene Asset zu finden, oder geben Sie ein anderes Tag ein.",
       "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "clientNotFound": "Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "maintenanceNotFound": "Wartungsplan nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Asset-Tag scannen",
+    "input": "Tag scannen oder eingeben",
+    "loading": "Suche läuft…",
+    "find": "Asset suchen",
+    "ambiguous": "Mehrere sichtbare Assets haben diesen Tag. Bitten Sie einen Administrator, die doppelten Tags zu bereinigen.",
+    "notFound": "Kein sichtbares Asset stimmt genau mit diesem Tag überein.",
+    "failed": "Dieser Tag konnte nicht gesucht werden. Prüfen Sie Ihre Zugriffsrechte und versuchen Sie es erneut."
+  },
+  "fullIntake": {
+    "title": "Asset hinzufügen",
+    "description": "Wählen Sie eine Mandantennummer oder behalten Sie einen bereits gedruckten Tag bei.",
+    "back": "Zurück zu Assets"
+  },
+  "labelFirstIntake": {
+    "start": "Erfassung per Etikett",
+    "title": "Erfassung per Etikett starten",
+    "help": "Erstellen Sie einen dauerhaften Asset-Datensatz mit Mindestangaben und drucken Sie zwei Exemplare seines Etiketts. Scannen Sie später eines davon, um denselben Datensatz zu vervollständigen.",
+    "client": "Kunde",
+    "clientRequired": "Wählen Sie einen Kunden, um fortzufahren.",
+    "createFailed": "Der Erfassungsdatensatz konnte nicht erstellt werden.",
+    "name": "Kurzbeschreibung (optional)",
+    "creating": "Wird erstellt…",
+    "createPrint": "Erstellen und Etikettenpaar drucken"
   }
 }

@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const TENANT = 'a0000000-0000-4000-8000-00000000000a';
 const CLIENT_ID = 'b0000000-0000-4000-8000-00000000000b';
 const ASSET_ID = 'f0000000-0000-4000-8000-00000000000f';
+const OTHER_ASSET_ID = 'f0000000-0000-4000-8000-000000000010';
 const NOW_ISO = '2026-06-12T12:00:00.000Z';
 
 type Row = Record<string, any>;
@@ -32,6 +33,7 @@ const h = vi.hoisted(() => {
     for (const key of Object.keys(dbState)) delete dbState[key];
     for (const table of [
       'assets', 'asset_type_registry', 'asset_history', 'asset_relationships', 'asset_associations',
+      'document_associations',
       'team_members', 'users', 'user_roles', 'clients', 'workstation_assets', 'network_device_assets',
       'server_assets', 'mobile_device_assets', 'printer_assets',
     ]) {
@@ -86,6 +88,8 @@ const h = vi.hoisted(() => {
     join(_table: any, _fn: any) { return this; }
     leftJoin(_table: any, _fn: any) { return this; }
     orderBy() { return this; }
+    // Single-threaded fixture queries do not contend for row locks.
+    forUpdate() { return this; }
 
     private filtered(): Row[] {
       let rows = [...this.rows];
@@ -232,7 +236,7 @@ vi.mock('@alga-psa/authorization/kernel', () => ({
   createAuthorizationKernel: () => ({
     authorizeResource: async (req: any) => {
       h.kernel.requests.push({ type: req.resource.type, action: req.resource.action, id: req.resource.id });
-      return { allowed: !h.kernel.denied.has(`${req.resource.type}:${req.resource.action}`) };
+      return { allowed: !h.kernel.denied.has(`${req.resource.type}:${req.resource.action}`) && !h.kernel.denied.has(`${req.resource.type}:${req.resource.action}:${req.resource.id}`) };
     },
   }),
 }));
@@ -245,7 +249,8 @@ vi.mock('@alga-psa/authorization/pagination', () => ({ buildAuthorizationAwarePa
 vi.mock('../lib/assetFactsService', () => ({ listAvailableAssetFactsForAsset: vi.fn(async () => []) }));
 
 
-import { updateAsset, deleteAsset } from './assetActions';
+import { updateAsset, deleteAsset, createAssetRelationship } from './assetActions';
+import { associateDocumentWithAsset, removeDocumentFromAsset } from './assetDocumentActions';
 
 function seedAsset(): Row {
   const row: Row = {
@@ -280,7 +285,7 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
     expect(h.kernel.requests.map((r) => r.action)).toContain('update');
   });
 
-  it('updateAsset succeeds for a subject allowed to read and update', async () => {
+  it('updateAsset succeeds for a subject allowed to update, deciding with action update', async () => {
     seedAsset();
 
     const result = (await updateAsset(ASSET_ID, { name: 'Renamed' })) as any;
@@ -319,11 +324,70 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
     expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'delete']);
   });
 
-  it('deleteAsset succeeds when read and delete are both allowed', async () => {
+  it('deleteAsset succeeds for an asset allowed by the delete rule', async () => {
     seedAsset();
+
     const result = (await deleteAsset(ASSET_ID)) as any;
-    expect(result.success).toBe(true);
-    expect(h.dbState.assets).toHaveLength(0);
+
+    expect(result.deleted).toBe(true);
+    expect(h.dbState.assets).toEqual([]);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'delete']);
+  });
+
+  it('createAssetRelationship authorizes both assets before inserting and leaves no partial relation when the second is denied', async () => {
+    seedAsset();
+    h.dbState.assets.push({ ...h.dbState.assets[0], asset_id: OTHER_ASSET_ID, name: 'Other asset' });
+    h.kernel.denied.add(`asset:update:${OTHER_ASSET_ID}`);
+
+    const result = (await createAssetRelationship({
+      parent_asset_id: ASSET_ID,
+      child_asset_id: OTHER_ASSET_ID,
+      relationship_type: 'connected_to',
+    } as any)) as any;
+
+    expect(result.permissionError ?? result.message ?? JSON.stringify(result)).toContain('Permission denied: Cannot update assets');
+    expect(h.kernel.requests).toEqual([
+      { type: 'asset', action: 'read', id: ASSET_ID },
+      { type: 'asset', action: 'read', id: ASSET_ID },
+      { type: 'asset', action: 'update', id: ASSET_ID },
+      { type: 'asset', action: 'read', id: OTHER_ASSET_ID },
+      { type: 'asset', action: 'read', id: OTHER_ASSET_ID },
+      { type: 'asset', action: 'update', id: OTHER_ASSET_ID },
+    ]);
+    expect(h.dbState.asset_relationships).toEqual([]);
+  });
+
+  it('document attachment checks update authorization before inserting the association', async () => {
+    seedAsset();
+    h.kernel.denied.add('asset:update');
+
+    const result = (await associateDocumentWithAsset({
+      tenant: TENANT,
+      entity_type: 'asset',
+      entity_id: ASSET_ID,
+      document_id: 'e0000000-0000-4000-8000-00000000000e',
+    } as any)) as any;
+
+    expect(result.permissionError).toBe('Permission denied: Cannot associate documents with assets');
+    expect(h.dbState.document_associations).toEqual([]);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'update']);
+  });
+
+  it('document detachment checks delete authorization before deleting the association', async () => {
+    seedAsset();
+    h.dbState.document_associations.push({
+      tenant: TENANT,
+      association_id: 'e0000000-0000-4000-8000-00000000000e',
+      entity_type: 'asset',
+      entity_id: ASSET_ID,
+      document_id: 'e0000000-0000-4000-8000-00000000000d',
+    });
+    h.kernel.denied.add('asset:delete');
+
+    const result = (await removeDocumentFromAsset('e0000000-0000-4000-8000-00000000000e')) as any;
+
+    expect(result.permissionError).toBe('Permission denied: Cannot remove documents from assets');
+    expect(h.dbState.document_associations).toHaveLength(1);
     expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'delete']);
   });
 });

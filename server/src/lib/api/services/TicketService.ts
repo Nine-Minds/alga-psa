@@ -38,7 +38,6 @@ import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/lo
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
-import type { IUserWithRoles } from '@alga-psa/types';
 import type { IUserWithRoles as TicketServiceUser } from '@alga-psa/types';
 import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -558,7 +557,7 @@ export class TicketService extends BaseService<ITicket> {
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
-    const user = context.user as IUserWithRoles | undefined;
+    const user = context.user as TicketServiceUser | undefined;
     if (!user) {
       throw new ForbiddenError('Authenticated user context is required to delete tickets');
     }

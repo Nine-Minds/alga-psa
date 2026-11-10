@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -245,7 +246,7 @@ beforeAll(async () => {
     auto_create_tickets: true,
   });
 
-  await tenantTable('assets').insert({
+  await insertTestAssets(db, {
     tenant: tenantId,
     asset_id: assetId,
     asset_type: 'workstation',

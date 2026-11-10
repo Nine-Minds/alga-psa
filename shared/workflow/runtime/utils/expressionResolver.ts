@@ -1,13 +1,15 @@
 import type { Expr } from '../types';
 import type { ExpressionContext } from '../expressionEngine';
-import { compileExpression } from '../expressionEngine';
+import { EvaluationBusyError, compileExpression, evaluateWorkflowExpression } from '../expressionEngine';
 
 export async function resolveExpressions(value: unknown, ctx: ExpressionContext): Promise<unknown> {
   if (isExpr(value)) {
     const compiled = compileExpression(value);
     try {
-      return await compiled.evaluate(ctx);
+      return await evaluateWorkflowExpression(compiled, ctx);
     } catch (error) {
+      // Admission fails closed: a busy rejection is not an expression error.
+      if (error instanceof EvaluationBusyError) throw error;
       throw { category: 'ExpressionError', message: error instanceof Error ? error.message : String(error) };
     }
   }

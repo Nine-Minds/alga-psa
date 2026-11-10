@@ -4207,6 +4207,50 @@
     "saving": "Wird gespeichert…",
     "cancel": "Abbrechen"
   },
+  "loginPolicy": {
+    "title": "Anmelderichtlinie",
+    "description": "Legen Sie fest, wie sich Mitarbeitende und Kundenportal-Benutzer per Passwort anmelden dürfen. Diese Regeln werden auf dem Server durchgesetzt.",
+    "requireSso": {
+      "title": "Single Sign-On für MSP-Mitarbeitende erzwingen",
+      "body": "Interne Benutzer müssen sich mit Google, Microsoft oder Ihrem Keycloak-Anbieter anmelden. Passwort-Anmeldung und Passwort-Zurücksetzen sind gesperrt, außer für die unten genannten Notfall-Administratoren.",
+      "signOutWarning": "Wenn Sie „Single Sign-On erzwingen“ aktivieren, werden alle internen Benutzer abgemeldet, die sich per Passwort angemeldet haben, außer Notfall-Administratoren. Eine Zwei-Faktor-Pflicht meldet niemanden ab; sie gilt ab der nächsten Anmeldung."
+    },
+    "require2faInternal": {
+      "title": "Zwei-Faktor-Authentifizierung für Passwort-Anmeldung von MSP-Mitarbeitenden erzwingen",
+      "body": "Mitarbeitende ohne Authenticator werden bei der nächsten Anmeldung aufgefordert, einen einzurichten."
+    },
+    "require2faClient": {
+      "title": "Zwei-Faktor-Authentifizierung für Passwort-Anmeldung im Kundenportal erzwingen",
+      "body": "Kundenportal-Benutzer ohne Authenticator werden bei der nächsten Anmeldung aufgefordert, einen einzurichten. Die Single-Sign-On-Pflicht gilt nie für Kundenportal-Benutzer."
+    },
+    "knownDeviceSkip": {
+      "title": "Bekannten Geräten das Überspringen des Codes erlauben",
+      "body": "Benutzer, die einem Gerät vertraut haben, werden auf diesem Gerät nicht nach einem Code gefragt. Notfall-Administratoren benötigen immer einen Code."
+    },
+    "breakGlass": {
+      "title": "Notfall-Administratoren",
+      "body": "Diese Administratoren können sich weiterhin per Passwort anmelden, wenn Single Sign-On erzwungen wird. Sie müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein und benötigen immer einen Code.",
+      "noEligible": "Keine geeigneten Administratoren. Ein Administrator muss aktiv sein und die Zwei-Faktor-Authentifizierung aktiviert haben.",
+      "noLongerEligible": "Nicht mehr berechtigt.",
+      "remove": "Entfernen",
+      "reasons": {
+        "no_two_factor": "Die Zwei-Faktor-Authentifizierung wurde zurückgesetzt oder fehlt.",
+        "inactive": "Der Benutzer ist deaktiviert.",
+        "not_admin": "Der Benutzer ist kein Administrator mehr.",
+        "not_internal": "Der Benutzer ist kein interner Benutzer.",
+        "not_found": "Der Benutzer existiert nicht mehr."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Richten Sie mindestens einen Single-Sign-On-Anbieter ein, bevor Sie Single Sign-On erzwingen.",
+      "break_glass_required": "Wählen Sie mindestens einen Notfall-Administrator aus, bevor Sie Single Sign-On erzwingen.",
+      "break_glass_invalid_user": "Notfall-Benutzer müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein."
+    },
+    "errors": {
+      "load": "Die Anmelderichtlinie konnte nicht geladen werden.",
+      "save": "Die Anmelderichtlinie konnte nicht gespeichert werden."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {
@@ -4527,6 +4571,28 @@
       "backToEmail": "Zurück zu den E-Mail-Einstellungen",
       "title": "E-Mail- und Identitätsanbieter",
       "description": "Registrieren Sie Ihre eigene Google- oder Microsoft-Anwendung für eingehende E-Mails und die Anmeldung von Mitarbeitern. Diese Anmeldedaten gehören zu Ihrem Arbeitsbereich."
+    }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Asset-Nummerierung",
+      "description": "Eine mandantenweite Nummernfolge wird mit dem Präfix des jeweiligen Kunden formatiert. Vorschau und Druck vergeben keine Nummern. Nicht verwendete vergebene Nummern hinterlassen Lücken und werden nie erneut verwendet.",
+      "clientPrefixes": "Kundenpräfixe",
+      "noPrefix": "Kein Präfix",
+      "prefixSaved": "Kundenpräfix gespeichert",
+      "uniquenessEnabled": "Eindeutige Asset-Tags sind aktiviert",
+      "legacyAudit": "Prüfung bestehender Tags",
+      "legacyAuditHelp": "Bestehende Tags bleiben erhalten. Bereinigen Sie Duplikate durch Bearbeiten der betroffenen Asset-Tags. Prüfen Sie leere Tags, ohne sie zu ändern, wenn sie absichtlich leer sind.",
+      "reconciliationNote": "Manuelle Bereinigungsnotiz",
+      "markReviewed": "Als geprüft markieren",
+      "noLegacyIssues": "Bei der Migration wurden keine leeren oder doppelten Tags gefunden.",
+      "activate": "Eindeutige Asset-Tags aktivieren",
+      "saveFailed": "Präfix konnte nicht gespeichert werden",
+      "activationFailed": "Bereinigen Sie doppelte Tags vor der Aktivierung",
+      "continuationReview": "Die Bestandsprüfung hat {{scanned}} gespeicherte Tags geprüft; {{numeric}} haben numerische Suffixe. Das höchste Suffix ist {{maximum}}; prüfen Sie den Startwert {{next}}. Dies ist nur ein Hinweis. Geben Sie oben den genehmigten Fortsetzungswert ein und speichern Sie ihn. Diese Prüfung verbraucht keinen Wert der Nummernfolge.",
+      "continuationExamples": "Beispiele: {{examples}}",
+      "blankTag": "(leerer Tag)",
+      "normalizedTag": "Normalisiert: {{tag}}"
     }
   }
 }

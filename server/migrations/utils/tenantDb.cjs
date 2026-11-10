@@ -15,6 +15,11 @@
 
 const TENANT_TABLE_METADATA = {
   assets: { scope: 'tenant' },
+  asset_tag_audit: { scope: 'tenant' },
+  asset_tag_activation: { scope: 'tenant' },
+  asset_number_reservations: { scope: 'tenant' },
+  asset_tag_legacy_bindings: { scope: 'tenant' },
+  asset_tag_claims: { scope: 'tenant' },
   accounting_export_batches: { scope: 'tenant' },
   accounting_export_artifacts: { scope: 'tenant' },
   accounting_export_errors: { scope: 'tenant' },
@@ -412,6 +417,8 @@ const TENANT_TABLE_METADATA = {
   rmm_alerts: { scope: 'tenant' },
   rmm_condition_states: { scope: 'tenant' },
   rmm_condition_transitions: { scope: 'tenant' },
+  unifi_console_routes: { scope: 'tenant' },
+  unifi_credentials: { scope: 'tenant' },
   rmm_integrations: { scope: 'tenant' },
   rmm_maintenance_windows: { scope: 'tenant' },
   rmm_organization_mappings: { scope: 'tenant' },

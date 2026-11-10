@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Propiedad del cliente",
       "msp": "Propiedad del MSP"
+    },
+    "create": {
+      "success": "Activo {{tag}} creado",
+      "autoTag": "Asignar la siguiente etiqueta automática",
+      "preview": "Vista previa de la siguiente etiqueta: {{tag}} (la vista previa no reserva un número)",
+      "selectClient": "Seleccione un cliente para ver la vista previa",
+      "addAnother": "Guardar y añadir otro",
+      "submit": "Crear activo"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Proveedor",
       "purchaseCost": "Coste de compra",
       "orderNumber": "N.º de pedido",
-      "ownership": "Propiedad"
+      "ownership": "Propiedad",
+      "autoAssetTag": "Asignar automáticamente",
+      "assetTagPreviewLoading": "Seleccione un cliente para ver la siguiente etiqueta",
+      "previewNotReserved": "Solo vista previa; se asigna al guardar"
     },
     "placeholders": {
       "workstationOsType": "por ejemplo, Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Permiso denegado: no se pueden actualizar los activos"
     },
     "asset": {
+      "tagAlreadyExists": "Esta etiqueta de activo ya está en uso o reservada. Escanéela para encontrar el activo existente o introduzca otra etiqueta.",
       "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "clientNotFound": "No se encontró el cliente. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "maintenanceNotFound": "No se encontró el plan de mantenimiento. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Escanear etiqueta de activo",
+    "input": "Escanear o introducir una etiqueta",
+    "loading": "Buscando…",
+    "find": "Buscar activo",
+    "ambiguous": "Más de un activo visible tiene esta etiqueta. Pida a un administrador que resuelva las etiquetas duplicadas.",
+    "notFound": "Ningún activo visible coincide exactamente con esta etiqueta.",
+    "failed": "No se pudo buscar esta etiqueta. Compruebe sus permisos y vuelva a intentarlo."
+  },
+  "fullIntake": {
+    "title": "Añadir activo",
+    "description": "Elija un número del inquilino o conserve una etiqueta ya impresa.",
+    "back": "Volver a activos"
+  },
+  "labelFirstIntake": {
+    "start": "Recepción con etiqueta previa",
+    "title": "Iniciar recepción con etiqueta previa",
+    "help": "Cree un registro permanente del activo con los datos mínimos e imprima dos copias de su etiqueta. Escanee cualquiera de ellas más adelante para completar este mismo registro.",
+    "client": "Cliente",
+    "clientRequired": "Elija un cliente para continuar.",
+    "createFailed": "No se pudo crear el registro de recepción.",
+    "name": "Descripción breve (opcional)",
+    "creating": "Creando…",
+    "createPrint": "Crear e imprimir el par"
   }
 }

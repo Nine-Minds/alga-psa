@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Client-owned",
       "msp": "MSP-owned"
+    },
+    "create": {
+      "success": "Asset {{tag}} created",
+      "autoTag": "Assign next automatic tag",
+      "preview": "Next tag preview: {{tag}} (preview does not reserve a number)",
+      "selectClient": "Select a client to preview",
+      "addAnother": "Save and add another",
+      "submit": "Create asset"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Vendor",
       "purchaseCost": "Purchase cost",
       "orderNumber": "Order no.",
-      "ownership": "Ownership"
+      "ownership": "Ownership",
+      "autoAssetTag": "Assign automatically",
+      "assetTagPreviewLoading": "Select a client to preview the next tag",
+      "previewNotReserved": "Preview only; assigned on save"
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Permission denied: Cannot update assets"
     },
     "asset": {
+      "tagAlreadyExists": "This asset tag is already in use or reserved. Scan it to find the existing asset, or enter a different tag.",
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
       "clientNotFound": "Client not found. It may have been deleted. Please refresh and try again.",
       "maintenanceNotFound": "Maintenance schedule not found. It may have been deleted. Please refresh and try again.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Scan asset tag",
+    "input": "Scan or enter a tag",
+    "loading": "Looking up…",
+    "find": "Find asset",
+    "ambiguous": "More than one visible asset has this tag. Ask an administrator to reconcile the duplicate tags.",
+    "notFound": "No visible asset matches this exact tag.",
+    "failed": "Could not look up this tag. Check your access and try again."
+  },
+  "fullIntake": {
+    "title": "Add asset",
+    "description": "Choose a tenant number or keep an existing printed tag.",
+    "back": "Back to assets"
+  },
+  "labelFirstIntake": {
+    "start": "Label-first intake",
+    "title": "Start label-first intake",
+    "help": "Create a minimal durable asset record, then print two copies of its tag. Scan either copy later to finish this same record.",
+    "client": "Client",
+    "clientRequired": "Choose a client to continue.",
+    "createFailed": "Could not create the intake record.",
+    "name": "Short description (optional)",
+    "creating": "Creating…",
+    "createPrint": "Create and print pair"
   }
 }

@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Kundägd",
       "msp": "MSP-ägd"
+    },
+    "create": {
+      "success": "Tillgång {{tag}} skapad",
+      "autoTag": "Tilldela nästa automatiska inventarienummer",
+      "preview": "Förhandsgranskning av nästa inventarienummer: {{tag}} (förhandsgranskningen reserverar inget nummer)",
+      "selectClient": "Välj en kund för förhandsgranskning",
+      "addAnother": "Spara och lägg till en till",
+      "submit": "Skapa tillgång"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Leverantör",
       "purchaseCost": "Inköpskostnad",
       "orderNumber": "Ordernr.",
-      "ownership": "Ägarskap"
+      "ownership": "Ägarskap",
+      "autoAssetTag": "Tilldela automatiskt",
+      "assetTagPreviewLoading": "Välj en kund för att förhandsgranska nästa inventarienummer",
+      "previewNotReserved": "Endast förhandsgranskning; tilldelas vid sparande"
     },
     "placeholders": {
       "workstationOsType": "t.ex. Windows, macOS, Linux",
@@ -1951,6 +1962,7 @@
       "updateAssets": "Åtkomst nekad: kan inte uppdatera tillgångar"
     },
     "asset": {
+      "tagAlreadyExists": "Den här tillgångsetiketten används redan eller är reserverad. Skanna den för att hitta den befintliga tillgången eller ange en annan etikett.",
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "clientNotFound": "Kunden hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "maintenanceNotFound": "Underhållsschemat hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
@@ -2321,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Skanna inventarienummer",
+    "input": "Skanna eller ange ett inventarienummer",
+    "loading": "Söker…",
+    "find": "Hitta tillgång",
+    "ambiguous": "Flera synliga tillgångar har detta inventarienummer. Be en administratör att åtgärda dubbletterna.",
+    "notFound": "Ingen synlig tillgång matchar detta inventarienummer exakt.",
+    "failed": "Det gick inte att söka efter detta inventarienummer. Kontrollera dina åtkomsträttigheter och försök igen."
+  },
+  "fullIntake": {
+    "title": "Lägg till tillgång",
+    "description": "Välj ett nummer för klientorganisationen eller behåll en befintlig utskriven etikett.",
+    "back": "Tillbaka till tillgångar"
+  },
+  "labelFirstIntake": {
+    "start": "Mottagning med etikett först",
+    "title": "Starta mottagning med etikett först",
+    "help": "Skapa en beständig tillgångspost med minimala uppgifter och skriv ut två exemplar av etiketten. Skanna något av exemplaren senare för att slutföra samma post.",
+    "client": "Kund",
+    "clientRequired": "Välj en kund för att fortsätta.",
+    "createFailed": "Det gick inte att skapa mottagningsposten.",
+    "name": "Kort beskrivning (valfritt)",
+    "creating": "Skapar…",
+    "createPrint": "Skapa och skriv ut paret"
   }
 }

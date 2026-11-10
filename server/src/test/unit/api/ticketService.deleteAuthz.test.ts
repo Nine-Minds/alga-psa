@@ -8,7 +8,22 @@ const deleteTicketChildRecordsMock = vi.hoisted(() => vi.fn(async () => undefine
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: unknown[]) => hasPermissionMock(...args) }));
 vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: (...args: unknown[]) => hasPermissionMock(...args) }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  // LEVERAGE: pattern authorization-snapshot-test-fixture — repeated bundle snapshot adapters can move to a shared test helper.
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action,
+    templateKey: rule.template_key, constraintKey: rule.constraint_key,
+    constraints: rule.config.constraints ?? [], redactedFields: rule.config.redactedFields ?? [],
+    selectedBoardIds: rule.config.selectedBoardIds, selectedClientIds: rule.config.selectedClientIds,
+  }),
   resolveBundleNarrowingRulesForEvaluation: (...args: unknown[]) => resolveBundleRulesMock(...args),
+  loadAuthorizationEvaluationSnapshot: async (...args: unknown[]) => ({
+    roleIds: [], teamIds: [], managedUserIds: [],
+    rules: (await resolveBundleRulesMock(...args)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action,
+      template_key: rule.templateKey, constraint_key: rule.constraintKey ?? null,
+      config: { selectedBoardIds: rule.selectedBoardIds, selectedClientIds: rule.selectedClientIds },
+    })),
+  }),
 }));
 vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: vi.fn(async () => ({
@@ -82,6 +97,21 @@ describe('TicketService.delete authorization', () => {
     expect(missingDb.getTicket()).toBeNull();
     expect(invisibleDb.getTicket()).toMatchObject({ contact_name_id: 'another-contact' });
     expect(deleteTicketChildRecordsMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a delete without an authenticated user before touching the ticket', async () => {
+    const service = new TicketService();
+    const db = fakeKnex(ticketRow());
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+
+    await expect(service.delete('retained-ticket-id', {
+      tenant: 'tenant-1', userId: 'anonymous', user: undefined,
+    })).rejects.toThrow('Authenticated user context is required to delete tickets');
+
+    expect(deleteEntityWithValidationMock).not.toHaveBeenCalled();
+    expect(deleteTicketChildRecordsMock).not.toHaveBeenCalled();
+    expect(db.ticketDelete).not.toHaveBeenCalled();
+    expect(db.getTicket()).toMatchObject({ ticket_id: 'retained-ticket-id' });
   });
 
   it('blocks dependency validation and deletion when policy resolution fails', async () => {

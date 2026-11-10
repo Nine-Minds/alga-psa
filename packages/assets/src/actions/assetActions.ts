@@ -116,7 +116,8 @@ import {
     type AssetAuthorizationAction,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
-import { getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
+import { prepareAssetIdentity, claimAssetTag, normalizeAssetTag, assetTagClaimsRequired } from '../lib/assetNumbering';
+import { getAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
     assertBillingProfileForClient,
@@ -574,18 +575,7 @@ async function authorizeAssetDecision(
     asset: AssetAuthorizationInput,
     action: AssetAction
 ) {
-    const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
-    return context.authorizationKernel.authorizeResource({
-        subject: context.subject,
-        resource: {
-            type: 'asset',
-            action,
-            id: asset.asset_id,
-        },
-        record: assetRecords.get(asset.asset_id),
-        requestCache: context.requestCache,
-        knex: trx,
-    });
+    return { allowed: await isSharedAssetActionAllowed(trx, tenant, context, asset, action) };
 }
 
 async function authorizeAssetReadDecision(
@@ -1163,12 +1153,18 @@ export async function createAssetInTransaction(
                 await applyPurchaseCostCurrency(trx, tenant, procurement);
             }
 
+            const identity = await prepareAssetIdentity(trx, {
+                tenant, clientId: validatedData.client_id,
+                assetTag: validatedData.asset_tag,
+                reservationId: validatedData.asset_number_reservation_id,
+            });
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
                 asset_type: validatedData.asset_type,
                 client_id: validatedData.client_id,
-                asset_tag: validatedData.asset_tag,
+                ...identity,
                 name: validatedData.name,
                 status: validatedData.status,
                 ownership: validatedData.ownership ?? 'client',
@@ -1341,7 +1337,7 @@ export const createAsset = withAuth(async (
         throw new Error('Permission denied: Cannot create assets');
     }
 
-    return createAssetRecord(knex, tenant, user.user_id, data, options);
+    return await createAssetRecord(knex, tenant, user.user_id, data, options);
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -1535,6 +1531,17 @@ export async function updateAssetRecord(
                     baseUpdateData[key] = value;
                 }
             });
+
+            if (Object.prototype.hasOwnProperty.call(baseUpdateData, 'asset_tag')) {
+                const nextTag = String(baseUpdateData.asset_tag ?? '');
+                const normalizedTag = normalizeAssetTag(nextTag);
+                baseUpdateData.asset_tag_normalized = normalizedTag || null;
+                if (normalizedTag !== normalizeAssetTag(asset.asset_tag ?? '')) {
+                    baseUpdateData.asset_tag_legacy_exempt = false;
+                    baseUpdateData.asset_tag_managed = await assetTagClaimsRequired(trx, tenant);
+                    await claimAssetTag(trx, { tenant, assetTag: nextTag, ownerKind: 'asset', ownerId: asset_id });
+                }
+            }
 
             if (attributesPayload !== undefined) {
                 // jsonb merge (not replace) so sibling namespaces like
@@ -1781,6 +1788,10 @@ export async function deleteAssetRecord(
                 throw new Error('Asset not found');
             }
 
+            // Serialize asset deletion with group mutations and membership writers before
+            // removing anything that belongs to this asset.
+            await removeAssetFromAnyGroup(trx as Knex.Transaction, tenantId, asset_id, { actorUserId });
+
             // C4: custody is a chain of custody, so an asset that is physically here cannot be deleted, and
             // closed episodes (append-only events with FKs to the asset) keep the row alive as history.
             const custodyRows = await tenantScopedTable(trx as Knex.Transaction, 'asset_custody', tenantId)
@@ -1813,7 +1824,6 @@ export async function deleteAssetRecord(
             // FR-C1 / FR-E6: the assignment history and group membership point
             // at the asset row, so both go before it.
             await tenantScopedTable(trx as Knex.Transaction, 'asset_assignments', tenantId).where({ asset_id }).delete();
-            await tenantScopedTable(trx as Knex.Transaction, 'asset_group_members', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_schedules', tenantId).where({ asset_id }).delete();
@@ -3802,7 +3812,7 @@ export const removeAssetAssociation = withAuth(async (
 
     try {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'update');
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'delete');
 
             await tenantScopedTable(trx, 'asset_associations', tenant)
                 .where({

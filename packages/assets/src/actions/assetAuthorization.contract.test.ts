@@ -28,7 +28,6 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(source).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
     expect(source).toContain('return await resolveBundleNarrowingRulesForEvaluation(trx, input);');
-    expect(source).toContain('record: assetRecords.get(asset.asset_id),');
   });
 
   it('T016: applies asset-level read authorization to relationship, maintenance, history, linked-ticket, entity-list, and summary-metric surfaces', () => {

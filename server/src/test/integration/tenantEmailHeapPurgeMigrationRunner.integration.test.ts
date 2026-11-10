@@ -1,18 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import knex, { type Knex } from 'knex';
+import type { Knex } from 'knex';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { randomUUID } from 'node:crypto';
 
-import { verifyTestDatabase } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const originalMigration = '20261013120000_purge_tenant_email_settings_local_heap.cjs';
 const forwardMigration = '20261104120000_purge_tenant_email_settings_local_heap.cjs';
-// Match the integration test database default used by dbConfig. CI's shard
-// runner sets the connection details but intentionally relies on this default.
-const testDatabaseName = process.env.TEST_DB_NAME || 'test_database';
 
 let db: Knex;
 let migrationDirectory: string;
@@ -44,21 +41,9 @@ async function removeMigrationHistory(tableName: string): Promise<void> {
 }
 
 describe('tenant email heap purge migration history compatibility', () => {
-  beforeAll(() => {
-    verifyTestDatabase(testDatabaseName);
-    if (!process.env.DB_PASSWORD_ADMIN) {
-      throw new Error('Set DB_PASSWORD_ADMIN for the dedicated TEST_DB_NAME database before running this integration test.');
-    }
-    db = knex({
-      client: 'pg',
-      connection: {
-        host: process.env.DB_HOST || 'localhost',
-        port: Number(process.env.DB_PORT || 5432),
-        user: process.env.DB_USER_ADMIN || 'postgres',
-        password: process.env.DB_PASSWORD_ADMIN,
-        database: testDatabaseName,
-      },
-    });
+  beforeAll(async () => {
+    // Own the bootstrap so this suite also runs first in a fresh CI shard.
+    db = await createTestDbConnection({ runSeeds: false });
 
     migrationDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'tenant-email-migrations-'));
     const sourceDirectory = path.resolve(process.cwd(), 'migrations');
@@ -82,8 +67,10 @@ describe('tenant email heap purge migration history compatibility', () => {
       });
       await db(tableName).insert({ name: originalMigration, batch: 1 });
 
-      await expect(runMigrationSet(tableName)).resolves.toBeDefined();
+      await expect(runMigrationSet(tableName)).resolves.toEqual([expect.any(Number), [forwardMigration]]);
 
+      expect(await completedMigrations(tableName)).toEqual([originalMigration, forwardMigration]);
+      await expect(runMigrationSet(tableName)).resolves.toEqual([expect.any(Number), []]);
       expect(await completedMigrations(tableName)).toEqual([originalMigration, forwardMigration]);
     } finally {
       await removeMigrationHistory(tableName);
@@ -93,8 +80,13 @@ describe('tenant email heap purge migration history compatibility', () => {
   it('applies both migration identities on a fresh database', async () => {
     const tableName = migrationTableName();
     try {
-      await expect(runMigrationSet(tableName)).resolves.toBeDefined();
+      await expect(runMigrationSet(tableName)).resolves.toEqual([
+        expect.any(Number),
+        [originalMigration, forwardMigration],
+      ]);
 
+      expect(await completedMigrations(tableName)).toEqual([originalMigration, forwardMigration]);
+      await expect(runMigrationSet(tableName)).resolves.toEqual([expect.any(Number), []]);
       expect(await completedMigrations(tableName)).toEqual([originalMigration, forwardMigration]);
     } finally {
       await removeMigrationHistory(tableName);

@@ -160,4 +160,16 @@ describe('updateBoard portal status-configuration guard', () => {
     expect(saveBoardTicketStatusesForBoardMock).not.toHaveBeenCalled();
     expect(boardUpdates).toHaveLength(0);
   });
+
+  it('denies a client principal before checking permissions or mutating the board', async () => {
+    currentUser = { user_id: 'client-1', user_type: 'client', tenant: 'tenant-1' };
+    hasPermissionMock.mockResolvedValue(true);
+
+    const { updateBoard } = await import('./boardActions');
+    const result = await updateBoard('board-a', { board_name: 'Renamed' } as any);
+
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(boardUpdates).toHaveLength(0);
+  });
 });
