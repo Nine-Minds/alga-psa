@@ -51,6 +51,7 @@
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
+    "swr": "^2.3.0",
     "zod": "^4.6.7"
   },
   "peerDependencies": {

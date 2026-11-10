@@ -65,6 +65,7 @@ export default function TicketChargeEditDialog({
             <Button id={`${id}-increase-button`} type="button" variant="outline" disabled={saving || quantityLocked || !valid || Number(value) >= 2147483647}
               aria-label={t('fixedFeeServices.increaseQuantity')} onClick={() => setValue(String(Number(value) + 1))}><Plus className="h-4 w-4" /></Button>
           </div>
+          {quantityLocked && <p className="text-sm text-[rgb(var(--color-text-500))]">{t('chargeEdit.errors.serialized')}</p>}
           <Label htmlFor={`${id}-description-input`}>{t('fixedFeeServices.description')}</Label>
           <Input id={`${id}-description-input`} value={text} maxLength={2000} disabled={saving} onChange={(event) => setText(event.target.value)} />
           {error && <p role="alert" className="text-sm text-[rgb(var(--badge-error-text))]">{error}</p>}
