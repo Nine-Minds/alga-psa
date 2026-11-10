@@ -10,6 +10,12 @@ const mocks = vi.hoisted(() => ({
   signal: vi.fn(),
   publish: vi.fn(),
   tenantJoin: vi.fn(),
+  TicketRecordAccessDeniedError: class extends Error {
+    constructor() {
+      super('Permission denied: Cannot access ticket');
+      this.name = 'TicketRecordAccessDeniedError';
+    }
+  },
 }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: unknown[]) => unknown) =>
@@ -19,6 +25,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
   authorizeTicketRecordAccess: mocks.recordAccess,
+  TicketRecordAccessDeniedError: mocks.TicketRecordAccessDeniedError,
 }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.connect,
@@ -48,6 +55,7 @@ import {
   addTicketFixedFeeService, deleteTicketFixedFeeService,
   listTicketFixedFeeServices, updateTicketFixedFeeService,
 } from '@alga-psa/tickets/actions/ticketFixedFeeActions';
+import { TicketRecordAccessDeniedError } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { getTicketCatalogCategories, searchServiceCatalogForPicker, updateTicketMaterial } from '@alga-psa/tickets/actions/materialCatalogActions';
 
 const ticketId = '123e4567-e89b-42d3-a456-426614174000';
@@ -170,7 +178,7 @@ describe('ticket fixed-fee actions', () => {
     ['edit', () => updateTicketFixedFeeService(entryId, { quantity: 3, description: '' }), 'update'],
     ['remove', () => deleteTicketFixedFeeService(entryId), 'update'],
   ] as const)('checks record-level access before it can %s fixed-fee charges', async (_name, action, access) => {
-    mocks.recordAccess.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+    mocks.recordAccess.mockRejectedValue(new TicketRecordAccessDeniedError());
     expect(await action()).toHaveProperty('permissionError');
     expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
       tenant: 'tenant-a',
@@ -218,6 +226,12 @@ describe('ticket fixed-fee actions', () => {
       action: 'read',
     }));
     expect(tables['ticket_fixed_fee_services as f'].where).toHaveBeenCalledWith('f.ticket_id', ticketId);
+  });
+
+  it('does not convert unexpected authorization or database failures into permission errors', async () => {
+    const databaseError = new Error('database unavailable');
+    mocks.recordAccess.mockRejectedValue(databaseError);
+    await expect(listTicketFixedFeeServices(ticketId)).rejects.toBe(databaseError);
   });
 
   it('conditionally deletes only unbilled entries', async () => {
