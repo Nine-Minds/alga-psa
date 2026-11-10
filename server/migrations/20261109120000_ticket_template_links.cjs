@@ -33,19 +33,46 @@ async function addConstraint(knex, tableName, constraintName, definition) {
   await knex.raw(`ALTER TABLE ${tableName} ADD CONSTRAINT ${constraintName} ${definition}`);
 }
 
+/** Index definition as Postgres reports it, or null when the index does not exist. */
+async function indexDefinition(knex, indexName) {
+  const result = await knex.raw('SELECT indexdef FROM pg_indexes WHERE indexname = ?', [indexName]);
+  return result.rows?.[0]?.indexdef ?? null;
+}
+
+/** A failed CREATE INDEX CONCURRENTLY leaves an invalid index that IF NOT EXISTS would then skip. */
+async function dropIndexIfInvalid(knex, indexName) {
+  const result = await knex.raw(
+    `SELECT NOT i.indisvalid AS invalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE c.relname = ?`,
+    [indexName]
+  );
+  if (result.rows?.[0]?.invalid) await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${indexName}`);
+}
+
+const LEGACY_EXTERNAL_UNIQUE = 'external_entity_links_external_unique_legacy';
+
 exports.up = async function up(knex) {
   // --- 1 + 2: relationship-scoped uniqueness ---------------------------------
-  await knex.raw('DROP INDEX IF EXISTS external_entity_links_external_unique');
+  // external_entity_links already holds data, so every index here is built CONCURRENTLY, and the
+  // old tenant-wide index stays in force (under a legacy name) until its partial replacement is
+  // built: origin/mirror rows are never without their uniqueness rule while this runs.
+  await dropIndexIfInvalid(knex, 'external_entity_links_reference_unique');
   await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS external_entity_links_external_unique
-    ON ${LINKS} (tenant, system, external_id, COALESCE(external_parent_id, ''), entity_type)
-    WHERE relationship IN ('origin', 'mirror')
-  `);
-  await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS external_entity_links_reference_unique
+    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS external_entity_links_reference_unique
     ON ${LINKS} (tenant, entity_type, entity_id, system, external_id, COALESCE(external_parent_id, ''))
     WHERE relationship = 'reference'
   `);
+
+  const current = await indexDefinition(knex, 'external_entity_links_external_unique');
+  if (current && !/\bWHERE\b/i.test(current)) {
+    await knex.raw(`ALTER INDEX external_entity_links_external_unique RENAME TO ${LEGACY_EXTERNAL_UNIQUE}`);
+  }
+  await dropIndexIfInvalid(knex, 'external_entity_links_external_unique');
+  await knex.raw(`
+    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS external_entity_links_external_unique
+    ON ${LINKS} (tenant, system, external_id, COALESCE(external_parent_id, ''), entity_type)
+    WHERE relationship IN ('origin', 'mirror')
+  `);
+  await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${LEGACY_EXTERNAL_UNIQUE}`);
 
   // --- 3: title ---------------------------------------------------------------
   await knex.raw(`ALTER TABLE ${LINKS} ADD COLUMN IF NOT EXISTS title text NULL`);
@@ -91,7 +118,7 @@ exports.up = async function up(knex) {
 
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists(TEMPLATE_LINKS);
-  await knex.raw('DROP INDEX IF EXISTS external_entity_links_reference_unique');
+  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS external_entity_links_reference_unique');
   // Restoring the tenant-wide rule fails if multiple tickets now share a reference; remove those
   // duplicates (keeping the oldest row per record) so the rollback is possible.
   await knex.raw(`
@@ -106,9 +133,9 @@ exports.down = async function down(knex) {
     ) d
     WHERE l.tenant = d.tenant AND l.link_id = d.link_id AND d.rn > 1
   `);
-  await knex.raw('DROP INDEX IF EXISTS external_entity_links_external_unique');
+  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS external_entity_links_external_unique');
   await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS external_entity_links_external_unique
+    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS external_entity_links_external_unique
     ON ${LINKS} (tenant, system, external_id, COALESCE(external_parent_id, ''), entity_type)
   `);
   await knex.raw(`ALTER TABLE ${LINKS} DROP COLUMN IF EXISTS title`);
