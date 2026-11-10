@@ -38,6 +38,10 @@
       "import": "./dist/bundles/service.js",
       "types": "./src/bundles/service.ts"
     },
+    "./bundles/narrowingProvider": {
+      "import": "./dist/bundles/narrowingProvider.js",
+      "types": "./src/bundles/narrowingProvider.ts"
+    },
     "./bundles/starterBundles": {
       "import": "./dist/bundles/starterBundles.js",
       "types": "./src/bundles/starterBundles.ts"

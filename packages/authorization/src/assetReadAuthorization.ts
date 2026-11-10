@@ -10,6 +10,7 @@ import {
 } from './kernel';
 import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
+import { createBundleNarrowingProvider } from './bundles/narrowingProvider';
 import { projectReadableRecord } from './recordProjection';
 
 /**
@@ -136,15 +137,7 @@ export async function resolveAssetAuthorizationRecords(
 export function createAssetReadKernel(trx: Knex | Knex.Transaction) {
   return createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
+    bundleProvider: createBundleNarrowingProvider(trx),
     rbacEvaluator: async () => true,
   });
 }
