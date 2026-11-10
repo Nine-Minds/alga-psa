@@ -223,8 +223,8 @@
       },
       "audit": {
         "any": "Dowolny wynik audytu",
-        "present": "Ostatni audyt: obecny",
-        "missing": "Ostatni audyt: brakujący",
+        "present": "Ostatni wynik audytu: obecny",
+        "missing": "Ostatni wynik audytu: brakujący",
         "never": "Nigdy nie audytowano",
         "stale": "Nie audytowano od 90 dni"
       }
@@ -1711,8 +1711,8 @@
       "groupLocationMoved": "Przeniesiono do {{location}} wraz z {{group}}",
       "groupLocationCleared": "Lokalizacja wyczyszczona wraz z {{group}}",
       "audit": "Audyt",
-      "auditPresent": "Audyt: obecny",
-      "auditMissing": "Audyt: brakujący",
+      "auditPresent": "Wynik audytu: obecny",
+      "auditMissing": "Wynik audytu: brakujący",
       "auditMethod": "Metoda oznaczenia: {{method}}"
     },
     "changeTypes": {
