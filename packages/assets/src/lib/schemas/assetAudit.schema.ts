@@ -38,9 +38,13 @@ export const assetAuditListFiltersSchema = z.object({
   location_id: z.string().guid().optional(),
   no_location: z.boolean().optional(),
   status: assetAuditStatusSchema.optional(),
-  /** ISO instants; the UI computes day boundaries in the viewer's time zone. */
-  started_from: z.string().min(1).optional(),
-  started_to: z.string().min(1).optional(),
+  /**
+   * ISO instants; the UI computes day boundaries in the viewer's time zone.
+   * Validated as strictly as the v1 query schema, so a malformed value is
+   * refused here instead of reaching the SQL comparison.
+   */
+  started_from: z.string().datetime({ offset: true }).optional(),
+  started_to: z.string().datetime({ offset: true }).optional(),
 });
 
 export const markAssetAuditItemSchema = z.object({
