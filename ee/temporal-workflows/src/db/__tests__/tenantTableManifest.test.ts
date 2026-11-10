@@ -38,10 +38,10 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder(TENANT_TABLE_MANIFEST)).toEqual(literal);
   });
 
-  it('has 617 unique ordered names', () => {
+  it('has 618 unique ordered names', () => {
     const order = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
-    expect(order).toHaveLength(617);
-    expect(new Set(order).size).toBe(617);
+    expect(order).toHaveLength(618);
+    expect(new Set(order).size).toBe(618);
   });
 
   it('deletes asset numbering dependents before assets and their immutable claims', () => {
