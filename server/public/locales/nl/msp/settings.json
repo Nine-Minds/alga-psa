@@ -4209,7 +4209,7 @@
   },
   "loginPolicy": {
     "title": "Aanmeldbeleid",
-    "description": "Bepaal hoe medewerkers en klantportaalgebruikers zich met een wachtwoord mogen aanmelden. Deze regels worden op de server afgedwongen.",
+    "description": "Bepaal hoe medewerkers en klantportaalgebruikers zich mogen aanmelden, met een wachtwoord of single sign-on. Deze regels worden op de server afgedwongen.",
     "requireSso": {
       "title": "Single sign-on verplichten voor MSP-medewerkers",
       "body": "Interne gebruikers moeten zich aanmelden met Google, Microsoft of uw Keycloak-provider. Aanmelden met een wachtwoord en het opnieuw instellen van wachtwoorden zijn geblokkeerd, behalve voor de noodbeheerders hieronder.",
@@ -4241,10 +4241,21 @@
         "not_found": "De gebruiker bestaat niet meer."
       }
     },
+    "clientPortalSso": {
+      "title": "Aanmeldopties voor het klantportaal",
+      "body": "Kies welke single sign-on-providers op de aanmeldpagina van het klantportaal verschijnen. Alleen providers waarmee uw organisatie zich kan aanmelden worden getoond. Aanmelden met een wachtwoord blijft ongewijzigd.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Er zijn geen single sign-on-providers geconfigureerd voor uw organisatie. Stel er een in via de single sign-on-instellingen om die in het klantportaal aan te bieden."
+    },
     "guard": {
       "sso_provider_required": "Stel minstens één single sign-on-provider in voordat u single sign-on verplicht stelt.",
       "break_glass_required": "Selecteer minstens één noodbeheerder voordat u single sign-on verplicht stelt.",
-      "break_glass_invalid_user": "Noodgebruikers moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld."
+      "break_glass_invalid_user": "Noodgebruikers moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld.",
+      "client_portal_sso_provider_invalid": "Kies alleen ondersteunde single sign-on-providers."
     },
     "errors": {
       "load": "Het aanmeldbeleid kan niet worden geladen.",

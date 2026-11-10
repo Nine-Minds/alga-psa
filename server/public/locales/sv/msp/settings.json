@@ -4209,7 +4209,7 @@
   },
   "loginPolicy": {
     "title": "Inloggningspolicy",
-    "description": "Styr hur personal och användare i kundportalen får logga in med lösenord. Reglerna tillämpas på servern.",
+    "description": "Styr hur personal och användare i kundportalen får logga in, med lösenord eller enkel inloggning (SSO). Reglerna tillämpas på servern.",
     "requireSso": {
       "title": "Kräv enkel inloggning (SSO) för MSP-personal",
       "body": "Interna användare måste logga in med Google, Microsoft eller din Keycloak-leverantör. Lösenordsinloggning och lösenordsåterställning blockeras, förutom för nödadministratörerna nedan.",
@@ -4241,10 +4241,21 @@
         "not_found": "Användaren finns inte längre."
       }
     },
+    "clientPortalSso": {
+      "title": "Inloggningsalternativ i kundportalen",
+      "body": "Välj vilka leverantörer av enkel inloggning som visas på kundportalens inloggningssida. Bara leverantörer som din organisation kan logga in med visas. Inloggning med lösenord påverkas inte.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Inga leverantörer av enkel inloggning är konfigurerade för din organisation. Konfigurera en i inställningarna för enkel inloggning för att erbjuda den i kundportalen."
+    },
     "guard": {
       "sso_provider_required": "Konfigurera minst en leverantör av enkel inloggning innan du kräver enkel inloggning.",
       "break_glass_required": "Välj minst en nödadministratör innan du kräver enkel inloggning.",
-      "break_glass_invalid_user": "Nödanvändare måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad."
+      "break_glass_invalid_user": "Nödanvändare måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad.",
+      "client_portal_sso_provider_invalid": "Välj bara leverantörer av enkel inloggning som stöds."
     },
     "errors": {
       "load": "Det gick inte att läsa in inloggningspolicyn.",

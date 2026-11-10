@@ -14,7 +14,11 @@ import {
   type LoginPolicyUpdate,
 } from "@ee/lib/actions/auth/loginPolicy";
 
-type GuardErrorCode = "sso_provider_required" | "break_glass_required" | "break_glass_invalid_user";
+type GuardErrorCode =
+  | "sso_provider_required"
+  | "break_glass_required"
+  | "break_glass_invalid_user"
+  | "client_portal_sso_provider_invalid";
 type SaveErrorCode = GuardErrorCode | "save_failed";
 
 /**
@@ -77,6 +81,10 @@ export default function LoginPolicySettings() {
 
   const { policy, eligibleBreakGlassAdmins } = state;
   const ineligibleBreakGlassUsers = state.ineligibleBreakGlassUsers ?? [];
+  const availableClientPortalSsoProviders = state.availableClientPortalSsoProviders ?? [];
+  // No saved list means every available provider is offered.
+  const effectiveClientPortalSsoProviders =
+    policy.clientPortalSsoProviders ?? availableClientPortalSsoProviders;
 
   const toggles: Array<{
     id: string;
@@ -172,6 +180,44 @@ export default function LoginPolicySettings() {
                 />
               );
             })
+          )}
+        </div>
+
+        <div
+          className="space-y-2 rounded-lg border border-muted-foreground/20 p-4"
+          id="login-policy-client-portal-sso"
+          role="group"
+          aria-labelledby="login-policy-client-portal-sso-title"
+        >
+          <p className="text-sm font-medium" id="login-policy-client-portal-sso-title">
+            {t("loginPolicy.clientPortalSso.title")}
+          </p>
+          <p className="text-sm text-muted-foreground">{t("loginPolicy.clientPortalSso.body")}</p>
+          {availableClientPortalSsoProviders.length === 0 ? (
+            <p className="text-sm text-muted-foreground" id="login-policy-client-portal-sso-none">
+              {t("loginPolicy.clientPortalSso.noneAvailable")}
+            </p>
+          ) : (
+            availableClientPortalSsoProviders.map((providerId) => (
+              <Checkbox
+                key={providerId}
+                id={`login-policy-client-portal-sso-${providerId}`}
+                checked={effectiveClientPortalSsoProviders.includes(providerId)}
+                disabled={pending}
+                label={t(`loginPolicy.clientPortalSso.providers.${providerId}`)}
+                onChange={(event) => {
+                  const chosen = new Set(effectiveClientPortalSsoProviders);
+                  if (event.target.checked) chosen.add(providerId);
+                  else chosen.delete(providerId);
+                  // Save the full resulting list; the server normalizes the order.
+                  void save({
+                    clientPortalSsoProviders: availableClientPortalSsoProviders.filter((id) =>
+                      chosen.has(id)
+                    ),
+                  });
+                }}
+              />
+            ))
           )}
         </div>
 

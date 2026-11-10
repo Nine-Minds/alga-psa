@@ -51,8 +51,8 @@ const nextConfig = {
       // Event schemas package
       '@alga-psa/event-schemas': '../../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../../packages/event-schemas/src/',
-      // SSO provider buttons - always use EE implementation in EE server
-      '@alga-psa/auth/sso/entry': './src/components/auth/SsoProviderButtons.tsx',
+      // SSO provider buttons - one shared component for both editions (edition is decided at render time)
+      '@alga-psa/auth/sso/entry': '../../packages/auth/src/components/SsoProviderButtons.tsx',
       '@alga-psa/ee-stubs': './src',
       '@alga-psa/ee-stubs/': './src/',
       '@alga-psa/workflows/entry': './src/workflows/entry.tsx',
@@ -137,8 +137,8 @@ const nextConfig = {
           : path.join(__dirname, '../../packages/integrations/src/entra/routes/oss/entry.ts'),
         // Event schemas package
         '@alga-psa/event-schemas': path.join(__dirname, '../../packages/event-schemas/src'),
-        // SSO provider buttons - always use EE implementation in EE server
-        '@alga-psa/auth/sso/entry': path.join(__dirname, 'src/components/auth/SsoProviderButtons.tsx'),
+        // SSO provider buttons - one shared component for both editions (edition is decided at render time)
+        '@alga-psa/auth/sso/entry': path.join(__dirname, '../../packages/auth/src/components/SsoProviderButtons.tsx'),
         '@alga-psa/ee-stubs': path.join(__dirname, 'src'),
         '@alga-psa/ee-stubs/': path.join(__dirname, 'src/'),
         '@alga-psa/workflows/entry': path.join(__dirname, 'src/workflows/entry.tsx'),

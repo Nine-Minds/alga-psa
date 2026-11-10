@@ -4209,7 +4209,7 @@
   },
   "loginPolicy": {
     "title": "Anmelderichtlinie",
-    "description": "Legen Sie fest, wie sich Mitarbeitende und Kundenportal-Benutzer per Passwort anmelden dürfen. Diese Regeln werden auf dem Server durchgesetzt.",
+    "description": "Legen Sie fest, wie sich Mitarbeitende und Kundenportal-Benutzer per Passwort oder Single Sign-on anmelden dürfen. Diese Regeln werden auf dem Server durchgesetzt.",
     "requireSso": {
       "title": "Single Sign-On für MSP-Mitarbeitende erzwingen",
       "body": "Interne Benutzer müssen sich mit Google, Microsoft oder Ihrem Keycloak-Anbieter anmelden. Passwort-Anmeldung und Passwort-Zurücksetzen sind gesperrt, außer für die unten genannten Notfall-Administratoren.",
@@ -4241,10 +4241,21 @@
         "not_found": "Der Benutzer existiert nicht mehr."
       }
     },
+    "clientPortalSso": {
+      "title": "Anmeldeoptionen im Kundenportal",
+      "body": "Wählen Sie, welche Single-Sign-on-Anbieter auf der Anmeldeseite Ihres Kundenportals erscheinen. Aufgeführt sind nur Anbieter, über die sich Ihre Organisation anmelden kann. Die Anmeldung per Passwort bleibt unverändert.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Für Ihre Organisation ist kein Single-Sign-on-Anbieter konfiguriert. Richten Sie in den Single-Sign-on-Einstellungen einen ein, um ihn im Kundenportal anzubieten."
+    },
     "guard": {
       "sso_provider_required": "Richten Sie mindestens einen Single-Sign-On-Anbieter ein, bevor Sie Single Sign-On erzwingen.",
       "break_glass_required": "Wählen Sie mindestens einen Notfall-Administrator aus, bevor Sie Single Sign-On erzwingen.",
-      "break_glass_invalid_user": "Notfall-Benutzer müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein."
+      "break_glass_invalid_user": "Notfall-Benutzer müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein.",
+      "client_portal_sso_provider_invalid": "Wählen Sie nur unterstützte Single-Sign-on-Anbieter."
     },
     "errors": {
       "load": "Die Anmelderichtlinie konnte nicht geladen werden.",

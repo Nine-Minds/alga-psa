@@ -4217,7 +4217,7 @@
   },
   "loginPolicy": {
     "title": "Zasady logowania",
-    "description": "Określ, w jaki sposób pracownicy i użytkownicy portalu klienta mogą logować się za pomocą hasła. Te reguły są egzekwowane na serwerze.",
+    "description": "Określ, w jaki sposób pracownicy i użytkownicy portalu klienta mogą logować się za pomocą hasła lub logowania jednokrotnego. Te reguły są egzekwowane na serwerze.",
     "requireSso": {
       "title": "Wymagaj logowania jednokrotnego dla pracowników MSP",
       "body": "Użytkownicy wewnętrzni muszą logować się przez Google, Microsoft lub dostawcę Keycloak. Logowanie hasłem i resetowanie hasła są zablokowane, z wyjątkiem administratorów awaryjnych wskazanych poniżej.",
@@ -4249,10 +4249,21 @@
         "not_found": "Użytkownik już nie istnieje."
       }
     },
+    "clientPortalSso": {
+      "title": "Opcje logowania w portalu klienta",
+      "body": "Wybierz, którzy dostawcy logowania jednokrotnego pojawiają się na stronie logowania portalu klienta. Wyświetlani są tylko dostawcy, za pomocą których może logować się Twoja organizacja. Logowanie hasłem pozostaje bez zmian.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Dla Twojej organizacji nie skonfigurowano żadnego dostawcy logowania jednokrotnego. Skonfiguruj go w ustawieniach logowania jednokrotnego, aby udostępnić go w portalu klienta."
+    },
     "guard": {
       "sso_provider_required": "Skonfiguruj co najmniej jednego dostawcę logowania jednokrotnego, zanim go wymusisz.",
       "break_glass_required": "Wybierz co najmniej jednego administratora awaryjnego, zanim wymusisz logowanie jednokrotne.",
-      "break_glass_invalid_user": "Użytkownicy awaryjni muszą być aktywnymi administratorami z włączonym uwierzytelnianiem dwuskładnikowym."
+      "break_glass_invalid_user": "Użytkownicy awaryjni muszą być aktywnymi administratorami z włączonym uwierzytelnianiem dwuskładnikowym.",
+      "client_portal_sso_provider_invalid": "Wybierz tylko obsługiwanych dostawców logowania jednokrotnego."
     },
     "errors": {
       "load": "Nie udało się wczytać zasad logowania.",

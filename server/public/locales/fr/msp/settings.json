@@ -4209,7 +4209,7 @@
   },
   "loginPolicy": {
     "title": "Politique de connexion",
-    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter avec un mot de passe. Ces règles sont appliquées côté serveur.",
+    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter, avec un mot de passe ou l’authentification unique. Ces règles sont appliquées côté serveur.",
     "requireSso": {
       "title": "Exiger l’authentification unique pour le personnel du MSP",
       "body": "Les utilisateurs internes doivent se connecter avec Google, Microsoft ou votre fournisseur Keycloak. La connexion par mot de passe et la réinitialisation du mot de passe sont bloquées, sauf pour les administrateurs d’urgence ci-dessous.",
@@ -4241,10 +4241,21 @@
         "not_found": "L'utilisateur n'existe plus."
       }
     },
+    "clientPortalSso": {
+      "title": "Options de connexion du portail client",
+      "body": "Choisissez les fournisseurs d’authentification unique affichés sur la page de connexion du portail client. Seuls les fournisseurs avec lesquels votre organisation peut se connecter sont listés. La connexion par mot de passe n’est pas modifiée.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Aucun fournisseur d’authentification unique n’est configuré pour votre organisation. Configurez-en un dans les paramètres d’authentification unique pour le proposer sur le portail client."
+    },
     "guard": {
       "sso_provider_required": "Configurez au moins un fournisseur d’authentification unique avant de l’exiger.",
       "break_glass_required": "Sélectionnez au moins un administrateur d’urgence avant d’exiger l’authentification unique.",
-      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée."
+      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée.",
+      "client_portal_sso_provider_invalid": "Choisissez uniquement des fournisseurs d’authentification unique pris en charge."
     },
     "errors": {
       "load": "Impossible de charger la politique de connexion.",

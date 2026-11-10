@@ -4,6 +4,7 @@ export type LoginPolicyErrorCode =
   | 'sso_provider_required'
   | 'break_glass_required'
   | 'break_glass_invalid_user'
+  | 'client_portal_sso_provider_invalid'
   | 'save_failed';
 
 export interface LoginPolicyState {
@@ -14,6 +15,7 @@ export interface LoginPolicyState {
     allowKnownDevice2faSkip: boolean;
     passwordBreakGlassUserIds: string[];
     passwordAuthDisabledAt: string | null;
+    clientPortalSsoProviders: Array<'google' | 'azure-ad' | 'keycloak'> | null;
   };
   eligibleBreakGlassAdmins: Array<{ userId: string; name: string; email: string }>;
   ineligibleBreakGlassUsers: Array<{
@@ -23,6 +25,7 @@ export interface LoginPolicyState {
     reason?: 'inactive' | 'not_admin' | 'no_two_factor' | 'not_internal' | 'not_found';
   }>;
   hasConfiguredSsoProvider: boolean;
+  availableClientPortalSsoProviders: Array<'google' | 'azure-ad' | 'keycloak'>;
 }
 
 export type LoginPolicyUpdate = Partial<
@@ -45,10 +48,12 @@ export async function getLoginPolicyAction(): Promise<LoginPolicyState> {
       allowKnownDevice2faSkip: false,
       passwordBreakGlassUserIds: [],
       passwordAuthDisabledAt: null,
+      clientPortalSsoProviders: null,
     },
     eligibleBreakGlassAdmins: [],
     ineligibleBreakGlassUsers: [],
     hasConfiguredSsoProvider: false,
+    availableClientPortalSsoProviders: [],
   };
 }
 
