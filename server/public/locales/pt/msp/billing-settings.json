@@ -1194,6 +1194,18 @@
         "kit": "Kit",
         "createsAsset": "Cria ativo na entrega",
         "defaultAssetType": "Tipo de ativo padrão",
+        "specDefaults": "Especificações padrão dos ativos entregues",
+        "specDefaultsHint": "Aplicado quando uma unidade serializada entregue cria automaticamente seu ativo.",
+        "spec": {
+          "deviceType": "Tipo de dispositivo",
+          "os_type": "Tipo de SO",
+          "os_version": "Versão do SO",
+          "cpu_model": "Modelo de CPU",
+          "storage_type": "Tipo de armazenamento",
+          "management_ip": "IP de gerenciamento",
+          "firmware_version": "Versão do firmware",
+          "model": "Modelo"
+        },
         "reorderPoint": "Ponto de reposição",
         "reorderQuantity": "Quantidade de reposição",
         "kitPricingMode": "Modo de preço do kit",
