@@ -54,6 +54,18 @@
       "import": "./dist/lib/unitOfMeasure.js",
       "types": "./src/lib/unitOfMeasure.ts"
     },
+    "./assetCacheKeys": {
+      "import": "./dist/lib/assetCacheKeys.js",
+      "types": "./src/lib/assetCacheKeys.ts"
+    },
+    "./builtinAssetSpecs": {
+      "import": "./dist/lib/builtinAssetSpecs.js",
+      "types": "./src/lib/builtinAssetSpecs.ts"
+    },
+    "./numberInput": {
+      "import": "./dist/lib/numberInput.js",
+      "types": "./src/lib/numberInput.ts"
+    },
     "./secrets": {
       "import": "./dist/lib/secrets/index.js",
       "types": "./src/lib/secrets/index.ts"

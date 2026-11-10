@@ -114,6 +114,14 @@ beforeEach(() => {
 });
 
 describe('addMaterial post-commit effects', () => {
+  it.each([2, 1.5])('rejects serialized quantity %s before inserting or consuming stock', async (quantity) => {
+    const root = makeRootConnection();
+    await expect(addMaterial(root, TENANT, { ...input, quantity }, 'user-1')).rejects.toThrow('one unit at a time');
+    expect(h.insertedMaterials).toHaveLength(0);
+    expect(h.recordStockConsumption).not.toHaveBeenCalled();
+    expect(h.createAsset).not.toHaveBeenCalled();
+  });
+
   it('keeps effects pending until the outer commit, then runs each once with the root connection', async () => {
     const root = makeRootConnection();
     const result = await withTransaction(root, async (outerTrx: Knex.Transaction) => {

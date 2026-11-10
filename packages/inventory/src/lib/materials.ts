@@ -2,6 +2,7 @@ import {
   admitOperationalWrite,
   registerAfterCommit,
   registerAfterCommitWithConnection,
+  tenantDb,
   withTransaction,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -151,26 +152,28 @@ export async function listMaterials(
 ): Promise<MaterialRow[]> {
   const cfg = PARENTS[parentType];
   return runInTransaction(db, async (trx: Knex.Transaction) => {
-    const query = trx(`${cfg.table} as m`)
-      .leftJoin('service_catalog as sc', function () {
-        this.on('m.service_id', '=', 'sc.service_id').andOn('m.tenant', '=', 'sc.tenant');
-      })
-      .where({ 'm.tenant': tenant, [`m.${cfg.parentCol}`]: parentId })
+    const scoped = tenantDb(trx, tenant);
+    const query = scoped.table(`${cfg.table} as m`)
+      .where({ [`m.${cfg.parentCol}`]: parentId })
       .select(
         'm.*',
         'sc.service_name as service_name',
         'sc.sku as sku',
         'sc.cost as catalog_unit_cost',
         'sc.cost_currency as catalog_cost_currency',
+        trx.raw(`(COALESCE(pis.is_serialized, false) OR EXISTS (
+          SELECT 1 FROM stock_movements sm
+          WHERE sm.tenant = m.tenant AND sm.source_doc_type = ?
+            AND sm.source_doc_id = m.?? AND sm.unit_id IS NOT NULL
+        )) as is_serialized`, [cfg.sourceDocType, cfg.pk]),
       )
       .orderBy('m.created_at', 'desc');
+    scoped.tenantJoin(query, 'service_catalog as sc', 'm.service_id', 'sc.service_id', { type: 'left' });
+    scoped.tenantJoin(query, 'product_inventory_settings as pis', 'm.service_id', 'pis.service_id', { type: 'left' });
     if (parentType === 'project') {
       // C6: which materials were installed from staging (the drawer marks them).
-      query
-        .leftJoin('project_staging_lines as psl', function () {
-          this.on('psl.project_material_id', '=', 'm.project_material_id').andOn('psl.tenant', '=', 'm.tenant');
-        })
-        .select('psl.staging_line_id as from_staging_line_id');
+      scoped.tenantJoin(query, 'project_staging_lines as psl', 'm.project_material_id', 'psl.project_material_id', { type: 'left' });
+      query.select('psl.staging_line_id as from_staging_line_id');
     }
     return (await query) as MaterialRow[];
   });
@@ -228,7 +231,7 @@ export async function addMaterial(
       if (!input.unit_id) {
         throw new MaterialValidationError('A serial-numbered unit must be selected for this product', 'unit_id');
       }
-      if (quantity !== 1) {
+      if (Number(input.quantity) !== 1) {
         throw new MaterialValidationError('Serialized products are added one unit at a time', 'quantity');
       }
     }

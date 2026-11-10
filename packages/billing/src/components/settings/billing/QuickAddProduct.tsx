@@ -58,6 +58,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
+import { BuiltinAssetSpecFields } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
+import { BUILTIN_ASSET_SPEC_FIELDS, normalizeAssetSpecValues, type AssetSpecValues } from '@alga-psa/core/builtinAssetSpecs';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
@@ -72,43 +74,6 @@ const DEFAULT_ASSET_TYPE_OPTIONS = [
   { value: 'server', label: 'Server' },
   { value: 'mobile_device', label: 'Mobile device' },
   { value: 'printer', label: 'Printer' },
-];
-
-// Spec fields surfaced per default asset type. Values land in
-// product_inventory_settings.default_asset_metadata and are merged over QuickAddAsset's
-// "unknown" fill when a delivered serialized unit auto-creates its asset, so the asset
-// starts out filled out. Only text fields are editable here (see assetDefaultMetadata.ts).
-const SPEC_FIELDS_BY_ASSET_TYPE: Record<string, { key: string; label: string }[]> = {
-  workstation: [
-    { key: 'os_type', label: 'OS type' },
-    { key: 'os_version', label: 'OS version' },
-    { key: 'cpu_model', label: 'CPU model' },
-    { key: 'storage_type', label: 'Storage type' },
-  ],
-  network_device: [
-    { key: 'management_ip', label: 'Management IP' },
-    { key: 'firmware_version', label: 'Firmware version' },
-  ],
-  server: [
-    { key: 'os_type', label: 'OS type' },
-    { key: 'os_version', label: 'OS version' },
-    { key: 'cpu_model', label: 'CPU model' },
-  ],
-  mobile_device: [
-    { key: 'os_type', label: 'OS type' },
-    { key: 'os_version', label: 'OS version' },
-    { key: 'model', label: 'Model' },
-  ],
-  printer: [{ key: 'model', label: 'Model' }],
-};
-
-// Mirrors the network_device.device_type enum in the createAsset schema.
-const NETWORK_DEVICE_TYPE_OPTIONS = [
-  { value: 'switch', label: 'Switch' },
-  { value: 'router', label: 'Router' },
-  { value: 'firewall', label: 'Firewall' },
-  { value: 'access_point', label: 'Access point' },
-  { value: 'load_balancer', label: 'Load balancer' },
 ];
 
 type ReturnedActionError = ActionMessageError | ActionPermissionError;
@@ -183,7 +148,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     kit_pricing_mode: KitPricingMode;
     default_asset_type: string;
     /** flat spec field map (os_type, model, ...) for the selected default asset type */
-    default_asset_metadata: Record<string, string>;
+    default_asset_metadata: AssetSpecValues;
   };
   const defaultInvDraft = (): InvDraft => ({
     is_serialized: false,
@@ -283,9 +248,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               reorder_quantity: s.reorder_quantity != null ? String(s.reorder_quantity) : '',
               kit_pricing_mode: s.kit_pricing_mode ?? 'sum',
               default_asset_type: s.default_asset_type ?? '',
-              default_asset_metadata: Object.fromEntries(
-                Object.entries(s.default_asset_metadata ?? {}).map(([k, v]) => [k, v == null ? '' : String(v)]),
-              ),
+              default_asset_metadata: normalizeAssetSpecValues(s.default_asset_type ?? '', s.default_asset_metadata),
             });
           } else {
             setInventoryEnabled(false);
@@ -293,7 +256,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
             setInv(defaultInvDraft());
           }
         })
-        .catch((e) => console.error('[QuickAddProduct] Failed to load inventory settings:', e));
+        .catch((e) => {
+          handleError(e);
+          setError(getErrorMessage(e));
+        });
     } else if (isOpen && !product) {
       setInventoryEnabled(false);
       setTrackInventory(false);
@@ -302,12 +268,9 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     }
   }, [isOpen, product]);
 
-  // Trim spec values and drop empties; null when nothing was filled in.
-  const cleanSpecMetadata = (m: Record<string, string>): Record<string, unknown> | null => {
-    const entries = Object.entries(m)
-      .map(([k, v]) => [k, v.trim()] as const)
-      .filter(([, v]) => v !== '');
-    return entries.length > 0 ? Object.fromEntries(entries) : null;
+  const cleanSpecMetadata = (metadata: AssetSpecValues): AssetSpecValues | null => {
+    const values = normalizeAssetSpecValues(inv.default_asset_type, metadata);
+    return Object.keys(values).length > 0 ? values : null;
   };
 
   // Persist a partial inventory patch (edit mode, once a settings row exists).
@@ -322,6 +285,15 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       .catch((e) => {
         toast.error(e?.message || 'Failed to update inventory settings');
       });
+  };
+
+  const persistSpecMetadata = (values: AssetSpecValues) => {
+    try {
+      persistInventoryPatch({ default_asset_metadata: cleanSpecMetadata(values) });
+    } catch (cause) {
+      handleError(cause);
+      setError(getErrorMessage(cause));
+    }
   };
 
   const handleTrackInventoryChange = async (checked: boolean) => {
@@ -1168,15 +1140,15 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                             options={DEFAULT_ASSET_TYPE_OPTIONS}
                             value={inv.default_asset_type}
                             onValueChange={(value) => {
-                              setInv((prev) => ({ ...prev, default_asset_type: value }));
-                              persistInventoryPatch({ default_asset_type: value || null });
+                              setInv((prev) => ({ ...prev, default_asset_type: value, default_asset_metadata: {} }));
+                              persistInventoryPatch({ default_asset_type: value || null, default_asset_metadata: null });
                             }}
                           />
                         </div>
                       )}
 
                       {inv.creates_asset_on_delivery &&
-                        (SPEC_FIELDS_BY_ASSET_TYPE[inv.default_asset_type] || inv.default_asset_type === 'network_device') && (
+                        BUILTIN_ASSET_SPEC_FIELDS[inv.default_asset_type] && (
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                               {t('quickAddProduct.fields.inventory.specDefaults', {
@@ -1189,65 +1161,17 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                                   'Applied when a delivered serialized unit automatically creates its asset.',
                               })}
                             </p>
-                            {inv.default_asset_type === 'network_device' && (
-                              <div>
-                                <label
-                                  htmlFor="quick-add-product-spec-device-type"
-                                  className="block text-xs text-[rgb(var(--color-text-700))] mb-1"
-                                >
-                                  {t('quickAddProduct.fields.inventory.spec.deviceType', { defaultValue: 'Device type' })}
-                                </label>
-                                <CustomSelect
-                                  id="quick-add-product-spec-device-type"
-                                  options={NETWORK_DEVICE_TYPE_OPTIONS}
-                                  value={inv.default_asset_metadata.device_type || 'switch'}
-                                  onValueChange={(value) => {
-                                    setInv((prev) => ({
-                                      ...prev,
-                                      default_asset_metadata: { ...prev.default_asset_metadata, device_type: value },
-                                    }));
-                                    persistInventoryPatch({
-                                      default_asset_metadata: cleanSpecMetadata({
-                                        ...inv.default_asset_metadata,
-                                        device_type: value,
-                                      }),
-                                    });
-                                  }}
-                                />
-                              </div>
-                            )}
-                            <div className="grid grid-cols-2 gap-2">
-                              {(SPEC_FIELDS_BY_ASSET_TYPE[inv.default_asset_type] || []).map((field) => (
-                                <div key={field.key}>
-                                  <label
-                                    htmlFor={`quick-add-product-spec-${field.key}`}
-                                    className="block text-xs text-[rgb(var(--color-text-700))] mb-1"
-                                  >
-                                    {t(`quickAddProduct.fields.inventory.spec.${field.key}`, {
-                                      defaultValue: field.label,
-                                    })}
-                                  </label>
-                                  <Input
-                                    id={`quick-add-product-spec-${field.key}`}
-                                    value={inv.default_asset_metadata[field.key] ?? ''}
-                                    onChange={(e) =>
-                                      setInv((prev) => ({
-                                        ...prev,
-                                        default_asset_metadata: {
-                                          ...prev.default_asset_metadata,
-                                          [field.key]: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    onBlur={() =>
-                                      persistInventoryPatch({
-                                        default_asset_metadata: cleanSpecMetadata(inv.default_asset_metadata),
-                                      })
-                                    }
-                                  />
-                                </div>
-                              ))}
-                            </div>
+                            <BuiltinAssetSpecFields
+                              idPrefix="quick-add-product-spec"
+                              assetType={inv.default_asset_type}
+                              values={inv.default_asset_metadata}
+                              onChange={(key, value, commit) => {
+                                const values = { ...inv.default_asset_metadata, [key]: value };
+                                setInv((prev) => ({ ...prev, default_asset_metadata: values }));
+                                if (commit) persistSpecMetadata(values);
+                              }}
+                              onBlur={() => persistSpecMetadata(inv.default_asset_metadata)}
+                            />
                           </div>
                         )}
 

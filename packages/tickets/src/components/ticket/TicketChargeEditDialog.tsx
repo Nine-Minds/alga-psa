@@ -10,10 +10,11 @@ import { getErrorMessage, handleError, isActionMessageError, isActionPermissionE
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function TicketChargeEditDialog({
-  id, quantity, description, onClose, onSave,
+  id, quantity, description, onClose, onSave, quantityLocked = false,
 }: {
   id: string;
   quantity: number;
+  quantityLocked?: boolean;
   description: string | null | undefined;
   onClose: () => void;
   onSave: (input: { quantity: number; description: string }) => Promise<unknown>;
@@ -57,13 +58,14 @@ export default function TicketChargeEditDialog({
         <form id={`${id}-form`} onSubmit={(event) => void save(event)} className="mt-2 space-y-3">
           <Label htmlFor={`${id}-quantity-input`}>{t('fixedFeeServices.quantity')}</Label>
           <div className="flex items-center gap-2">
-            <Button id={`${id}-decrease-button`} type="button" variant="outline" disabled={saving || !valid || Number(value) <= 1}
+            <Button id={`${id}-decrease-button`} type="button" variant="outline" disabled={quantityLocked || saving || !valid || Number(value) <= 1}
               aria-label={t('fixedFeeServices.decreaseQuantity')} onClick={() => setValue(String(Number(value) - 1))}><Minus className="h-4 w-4" /></Button>
             <Input id={`${id}-quantity-input`} type="number" min={1} max={2147483647} step={1} required value={value}
-              disabled={saving} onChange={(event) => setValue(event.target.value)} />
-            <Button id={`${id}-increase-button`} type="button" variant="outline" disabled={saving || !valid || Number(value) >= 2147483647}
+              disabled={quantityLocked || saving} onChange={(event) => setValue(event.target.value)} />
+            <Button id={`${id}-increase-button`} type="button" variant="outline" disabled={quantityLocked || saving || !valid || Number(value) >= 2147483647}
               aria-label={t('fixedFeeServices.increaseQuantity')} onClick={() => setValue(String(Number(value) + 1))}><Plus className="h-4 w-4" /></Button>
           </div>
+          {quantityLocked && <p className="text-sm text-[rgb(var(--color-text-500))]">{t('chargeEdit.errors.serialized')}</p>}
           <Label htmlFor={`${id}-description-input`}>{t('fixedFeeServices.description')}</Label>
           <Input id={`${id}-description-input`} value={text} maxLength={2000} disabled={saving} onChange={(event) => setText(event.target.value)} />
           {error && <p role="alert" className="text-sm text-[rgb(var(--badge-error-text))]">{error}</p>}

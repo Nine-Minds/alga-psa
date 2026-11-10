@@ -114,13 +114,14 @@ describe('delivered inventory asset identity', () => {
       serviceId: 'service-1', serviceName: 'Laptop', clientId: 'client-1',
     });
     expect(h.createAsset.mock.calls[0][0].workstation).toEqual({
-      os_type: 'Windows',
+      os_type: 'windows',
       os_version: '11 Pro',
       cpu_model: '',
       cpu_cores: null,
       ram_gb: null,
       storage_type: '',
       storage_capacity_gb: null,
+      gpu_model: '',
       installed_software: [],
     });
   });

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSWRConfig } from 'swr';
+import { matchEntityAssetsCacheKeys } from '@alga-psa/core/assetCacheKeys';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -66,6 +68,9 @@ export default function TicketMaterialsCard({
   initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
+  const { mutate } = useSWRConfig();
+  const refreshAssets = () => mutate(matchEntityAssetsCacheKeys('ticket', ticketId))
+    .catch((cause) => handleError(cause));
   // A read-only ticket screen lists materials but offers no add or delete.
   const readOnly = useTicketScreenReadOnly();
   const {
@@ -106,6 +111,7 @@ export default function TicketMaterialsCard({
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   // Per-location on-hand for the selected tracked product (F013), advisory only.
   const [availability, setAvailability] = useState<ProductAvailability | null>(null);
+  const serializedProduct = Boolean(availability?.is_serialized || availableUnits.length || selectedUnitId);
   // Inline add error (F018) — e.g. insufficient stock — shown in the form so the user's inputs survive.
   const [addError, setAddError] = useState<string | null>(null);
   // Soft-reservation refusal awaiting the user's override confirmation (B1).
@@ -224,9 +230,9 @@ export default function TicketMaterialsCard({
 
   // Load available serialized stock units when a product is selected
   useEffect(() => {
+    setAvailableUnits([]);
+    setSelectedUnitId('');
     if (!selectedProductId) {
-      setAvailableUnits([]);
-      setSelectedUnitId('');
       return;
     }
     let cancelled = false;
@@ -236,6 +242,7 @@ export default function TicketMaterialsCard({
         if (!cancelled) {
           setAvailableUnits(units);
           setSelectedUnitId('');
+          if (units.length) setQuantity(1);
         }
       } catch {
         if (!cancelled) setAvailableUnits([]);
@@ -247,15 +254,18 @@ export default function TicketMaterialsCard({
   // Per-location on-hand for the selected product (F013). Advisory only — a failure
   // (e.g. the availability action unavailable) leaves the form fully usable.
   useEffect(() => {
+    setAvailability(null);
     if (!selectedProductId) {
-      setAvailability(null);
       return;
     }
     let cancelled = false;
     (async () => {
       try {
         const [result] = await getProductAvailability([selectedProductId]);
-        if (!cancelled) setAvailability(result ?? null);
+        if (!cancelled) {
+          setAvailability(result ?? null);
+          if (result?.is_serialized) setQuantity(1);
+        }
       } catch {
         if (!cancelled) setAvailability(null);
       }
@@ -283,7 +293,7 @@ export default function TicketMaterialsCard({
       return;
     }
 
-    if (availableUnits.length > 0 && !selectedUnitId) {
+    if (serializedProduct && !selectedUnitId) {
       toast.error(t('validation.materials.unitRequired', 'Please select a serial/unit to deliver'));
       return;
     }
@@ -295,7 +305,7 @@ export default function TicketMaterialsCard({
         ticket_id: ticketId,
         client_id: clientId,
         service_id: selectedProductId,
-        quantity,
+        quantity: serializedProduct ? 1 : quantity,
         rate: selectedPrice.rate,
         currency_code: selectedPrice.currency_code,
         description: description.trim() || null,
@@ -338,6 +348,7 @@ export default function TicketMaterialsCard({
       setAvailableUnits([]);
       setSelectedUnitId('');
       await loadMaterials();
+      await refreshAssets();
     } catch (error) {
       // Inline so the user keeps their inputs and sees the exact reason (e.g. the
       // available quantity the backend reports for insufficient stock) (F018).
@@ -361,6 +372,7 @@ export default function TicketMaterialsCard({
         return;
       }
       toast.success(t('materials.removeSuccess', 'Material removed'));
+      await refreshAssets();
     } catch (error) {
       // Revert on failure
       setMaterials(previousMaterials);
@@ -470,7 +482,9 @@ export default function TicketMaterialsCard({
                   id={`${id}-quantity`}
                   type="number"
                   min={1}
-                  value={quantity}
+                  max={serializedProduct ? 1 : undefined}
+                  disabled={serializedProduct}
+                  value={serializedProduct ? 1 : quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                 />
               </div>
@@ -484,7 +498,7 @@ export default function TicketMaterialsCard({
               </div>
             </div>
 
-            {availableUnits.length > 0 && (
+            {serializedProduct && (
               <div className="space-y-2">
                 <Label>{t('materials.serialUnit', 'Serial / MAC (serialized product)')}</Label>
                 <CustomSelect
@@ -627,6 +641,7 @@ export default function TicketMaterialsCard({
       {editingMaterial && !readOnly && updateTicketMaterial && (
         <TicketChargeEditDialog key={editingMaterial.ticket_material_id} id={`${id}-edit-dialog`}
           quantity={editingMaterial.quantity} description={editingMaterial.description}
+          quantityLocked={editingMaterial.is_serialized === true}
           onClose={() => setEditingMaterial(null)}
           onSave={async (input) => {
             const result = await updateTicketMaterial(editingMaterial.ticket_material_id, input);
