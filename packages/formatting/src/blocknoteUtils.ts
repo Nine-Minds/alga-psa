@@ -86,14 +86,6 @@ function isEffectivelyEmpty(html: string, text: string): boolean {
   return cleanedHtml.length === 0 && cleanedText.length === 0;
 }
 
-/** @deprecated Conversion no longer throws; unsupported blocks render UNSUPPORTED_RICH_TEXT_PLACEHOLDER. */
-export class UnsupportedRichTextBlockError extends Error {
-  constructor(type: unknown) {
-    super(`Cannot export rich-text block "${String(type)}". Replace it with supported content or a link before exporting.`);
-    this.name = 'UnsupportedRichTextBlockError';
-  }
-}
-
 // One unrepresentable block must not abort a whole email or worksheet, nor
 // vanish silently: it is replaced by a visible marker and logged.
 export const UNSUPPORTED_RICH_TEXT_PLACEHOLDER = '[Unsupported content]';
