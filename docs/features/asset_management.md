@@ -22,6 +22,18 @@ schemas, and the Hudu import mapping.
 - Client association
 - Status management
 
+### Asset Tags and Numbering
+
+The `asset_tag` is the physical identifier printed on an asset's label. It is kept separate from the serial number and from integration identities (RMM device IDs and external entity mappings), which never become the printed tag.
+
+- **Automatic numbering.** When an asset is created without a tag, the tag is allocated from one tenant-wide `ASSET` sequence (`next_number`, default: no prefix, 5 digits, starting at 1) and formatted with the client's optional asset prefix in front (`formatAssetTag` in `shared/services/assetNumbering.ts`). There are no per-client counters. The allocator skips any sequence value whose formatted tag is already used or claimed, and issued numbers are never reused, so abandoned numbers leave gaps.
+- **Client prefixes.** `clients.asset_prefix` holds up to 10 letters, digits, or hyphens, stored uppercase and unique per tenant. A prefix applies only when a tag is allocated; changing a client's prefix, or moving an asset to another client, never renumbers existing tags.
+- **Manual tags.** A supplied tag is kept as entered. Tags are compared in normalized form (leading/trailing spaces trimmed, ASCII letters uppercased) and must be unique in the tenant. Each tag is held by a row in `asset_tag_claims`, keyed by `(tenant, normalized_tag)`; a conflicting create or tag edit fails with `ASSET_TAG_CONFLICT` (HTTP 409 from the REST API).
+- **Previews and reservations.** Previews read the next value without consuming it, and printing labels never allocates numbers. A durable reservation (`asset_number_reservations`, 15-minute expiry) claims a tag for a printed label; expiry is bookkeeping only, and the claim is never released for reuse, so a printed label can still be scanned and committed to its asset.
+- **One write path.** Manual creation (quick add, full add at `/msp/assets/new`, label-first intake), the REST API, CSV import, inventory delivery, ticket equipment intake, Hudu import, inbound webhook upserts, and RMM ingestion (shared ingestion, NinjaOne, Tactical RMM, Level) all prepare the asset's identity through `prepareAssetIdentity`. Integrations allocate a tag for newly discovered devices and do not change the tag of an existing asset on resync. CSV import uses only an explicitly mapped asset-tag column; it no longer falls back to the serial number or a row identifier.
+- **Label-first intake and scan lookup.** Label-first intake creates a minimal `unknown`-type asset for a client with the next tag and opens the asset label dialog. Asset labels print two adjacent copies per asset by default (configurable from 1 to 10). The dashboard's tag lookup normalizes the scanned value, opens the single visible matching asset, reports ambiguity when more than one visible asset matches, and completes a printed reservation by creating its asset.
+- **Legacy tags and activation.** The migration preserves all existing tags and records blank tags and every member of a duplicate group in `asset_tag_audit`. Administrators reconcile duplicates under **Settings → Assets → Asset numbering**, mark audit rows reviewed with a note, and select **Activate unique asset tags**. Activation refuses unreviewed duplicates, remaining duplicate tags, and tags held by a pending printed label; it keeps intentionally blank legacy records. See [Asset numbering rollout](../asset-numbering-rollout.md) for deployment order and enforcement details.
+
 ### Location Linking
 
 Assets can be linked to a saved client location record (`client_locations`) via the `location_id` UUID field, in addition to the free-text `location` string. When a saved location is selected in the UI, the formatted address is auto-populated into the free-text field but can be overridden with a more specific descriptor (e.g. "Server room — Rack 3").
@@ -81,7 +93,7 @@ CREATE TABLE assets (
     asset_id UUID DEFAULT gen_random_uuid() NOT NULL,
     type_id UUID NOT NULL,
     client_id UUID NOT NULL, -- Client association
-    asset_tag TEXT NOT NULL,
+    asset_tag TEXT NOT NULL,      -- Physical label; normalized copy in asset_tag_normalized
     serial_number TEXT,
     name TEXT NOT NULL,
     status TEXT NOT NULL,
