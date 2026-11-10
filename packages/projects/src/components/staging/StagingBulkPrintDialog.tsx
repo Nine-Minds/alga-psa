@@ -13,7 +13,7 @@ import {
   isLabelLayoutPresetId,
   type LabelLayoutPresetId,
 } from '@alga-psa/ui/components/labels/labelLayoutPresets';
-import { useLabelPrint } from '@alga-psa/ui/components/labels/useLabelPrint';
+import { LABEL_TEMPLATE_SIZE_MISMATCH, useLabelPrint } from '@alga-psa/ui/components/labels/useLabelPrint';
 import { MAX_LABELS_PER_REQUEST } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
@@ -43,12 +43,14 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
   const [includeUnboxed, setIncludeUnboxed] = useState(true);
   const [preset, setPreset] = useState<LabelLayoutPresetId>(DEFAULT_LABEL_LAYOUT_PRESET);
   const [message, setMessage] = useState<{ kind: 'error' | 'info'; text: string } | null>(null);
+  const [sizeMismatch, setSizeMismatch] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setChosen(new Set(initialBoxIds ?? boxes.map((b) => b.container_id)));
     setIncludeUnboxed(!initialBoxIds);
     setMessage(null);
+    setSizeMismatch(false);
   }, [isOpen, boxes, initialBoxIds]);
 
   const plan = useMemo(
@@ -56,11 +58,22 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
     [boxes, lines, canReadInventory, chosen, includeUnboxed],
   );
 
-  const handlePrint = async () => {
+  const handlePrint = async (layoutPreset: LabelLayoutPresetId = preset) => {
     setMessage(null);
-    const outcome = await print({ labels: plan.labels, layout: LABEL_LAYOUT_PRESETS[preset].layout });
+    setSizeMismatch(false);
+    // No layout = print at the template's own size.
+    const layout = LABEL_LAYOUT_PRESETS[layoutPreset].layout;
+    const outcome = await print({ labels: plan.labels, ...(layout ? { layout } : {}) });
     if (outcome.status === 'failed') {
-      setMessage({ kind: 'error', text: outcome.message || st('failed', 'The labels could not be printed.') });
+      const mismatch = outcome.code === LABEL_TEMPLATE_SIZE_MISMATCH && layoutPreset !== 'template-preferred';
+      setSizeMismatch(mismatch);
+      setMessage({
+        kind: 'error',
+        text: [
+          outcome.message || st('failed', 'The labels could not be printed.'),
+          mismatch ? st('sizeMismatch', 'This layout is smaller than the label this template is designed for.') : '',
+        ].filter(Boolean).join(' '),
+      });
       return;
     }
     if (outcome.skipped > 0 || outcome.popupBlocked) {
@@ -141,7 +154,24 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
         )}
         {message && (
           <Alert variant={message.kind === 'error' ? 'destructive' : 'info'} id="staging-print-message">
-            <AlertDescription>{message.text}</AlertDescription>
+            <AlertDescription>
+              {message.text}
+              {sizeMismatch && (
+                <Button
+                  id="staging-print-match-template-size"
+                  variant="link"
+                  size="sm"
+                  onClick={() => {
+                    setPreset('template-preferred');
+                    void handlePrint('template-preferred');
+                  }}
+                >
+                  {t('common:labels.layout.template-preferred', {
+                    defaultValue: LABEL_LAYOUT_PRESETS['template-preferred'].defaultLabel,
+                  })}
+                </Button>
+              )}
+            </AlertDescription>
           </Alert>
         )}
       </DialogContent>
@@ -149,7 +179,7 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
         <Button id="staging-print-cancel" variant="outline" onClick={onClose}>
           {t('common:actions.cancel', 'Cancel')}
         </Button>
-        <Button id="staging-print-submit" onClick={handlePrint} disabled={isPrinting || plan.labels.length === 0 || plan.overCap}>
+        <Button id="staging-print-submit" onClick={() => void handlePrint()} disabled={isPrinting || plan.labels.length === 0 || plan.overCap}>
           {isPrinting && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
           {st('submit', 'Print')}
         </Button>
