@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IProductInventorySettings, KitPricingMode } from '@alga-psa/types';
@@ -12,6 +12,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { resolveTenantCurrency } from '../lib';
+import { normalizeAssetSpecValues } from '@alga-psa/core/builtinAssetSpecs';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
@@ -238,6 +239,18 @@ export const updateInventorySettings = withAuth(
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
         const update: Record<string, unknown> = { updated_at: trx.fn.now() };
+        const scoped = tenantDb(trx, tenant);
+        if ('default_asset_metadata' in patch || 'default_asset_type' in patch) {
+          const current = await scoped.table('product_inventory_settings')
+            .where({ service_id: serviceId }).forUpdate().first();
+          if (!current) throw new Error('Inventory not enabled for this product');
+          const assetType = patch.default_asset_type !== undefined ? patch.default_asset_type : current.default_asset_type;
+          const metadata = patch.default_asset_metadata !== undefined
+            ? patch.default_asset_metadata
+            : assetType === current.default_asset_type ? current.default_asset_metadata : null;
+          const values = normalizeAssetSpecValues(assetType ?? '', metadata);
+          update.default_asset_metadata = Object.keys(values).length ? JSON.stringify(values) : null;
+        }
         for (const k of [
           'track_stock',
           'creates_asset_on_delivery',
@@ -248,16 +261,12 @@ export const updateInventorySettings = withAuth(
           'kit_pricing_mode',
           'kit_fixed_price',
           'default_asset_type',
-          'default_asset_metadata',
         ] as const) {
           if (k in patch) {
-            const value = (patch as any)[k];
-            update[k] = (k === 'default_asset_metadata' && value != null && typeof value === 'object')
-              ? JSON.stringify(value)
-              : value;
+            update[k] = patch[k];
           }
         }
-        const [row] = await trx('product_inventory_settings').where({ tenant, service_id: serviceId }).update(update).returning('*');
+        const [row] = await scoped.table('product_inventory_settings').where({ service_id: serviceId }).update(update).returning('*');
         if (!row) throw new Error('Inventory not enabled for this product');
         return row as IProductInventorySettings;
       });

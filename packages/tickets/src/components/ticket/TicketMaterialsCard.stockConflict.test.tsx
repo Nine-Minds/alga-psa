@@ -2,9 +2,12 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { configure, render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { IServicePrice } from '@alga-psa/types';
+import useSWR, { SWRConfig } from 'swr';
+import { entityAssetsCacheKey } from '@alga-psa/core/assetCacheKeys';
+import TicketMaterialsCard from './TicketMaterialsCard';
 
 configure({ asyncUtilTimeout: 5000 });
 
@@ -76,7 +79,18 @@ vi.mock('../../actions/materialCatalogActions', () => ({
   addTicketMaterial: vi.fn(async () => undefined),
   deleteTicketMaterial: vi.fn(async () => undefined),
   listAvailableStockUnitsForMaterial: vi.fn(async () => []),
+  updateTicketMaterial: vi.fn(async () => undefined),
+  getTicketCatalogCategories: vi.fn(async () => []),
 }));
+
+vi.mock('./TicketDataSourceContext', async () => {
+  const materials = await import('../../actions/materialCatalogActions');
+  const availability = await import('@alga-psa/inventory/actions/availabilityActions');
+  return {
+    useTicketScreenReadOnly: () => false,
+    useTicketDataSource: () => ({ materials: { ...materials, ...availability } }),
+  };
+});
 
 const conflict = (overrides: Record<string, unknown>) => ({
   stockConflict: {
@@ -86,7 +100,6 @@ const conflict = (overrides: Record<string, unknown>) => ({
 });
 
 async function openFormAndSubmit() {
-  const TicketMaterialsCard = (await import('./TicketMaterialsCard')).default;
   render(<TicketMaterialsCard ticketId="ticket-1" clientId="client-1" />);
   fireEvent.click(await screen.findByRole('button', { name: 'Add Material' }));
   fireEvent.change(await screen.findByTestId('async-searchable-select'), { target: { value: 'service-1' } });
@@ -96,16 +109,20 @@ async function openFormAndSubmit() {
 }
 
 describe('TicketMaterialsCard stock reserved or held for sales orders (B1)', () => {
+  afterEach(cleanup);
   beforeEach(async () => {
     cleanup();
     mockProducts = [{ service_id: 'service-1', service_name: 'Widget', sku: null, track_stock: true, free_total: 2, on_hand_total: 10 }];
     mockPrices = [{ service_id: 'service-1', currency_code: 'USD', rate: 1500 } as IServicePrice];
     const actions = await import('../../actions/materialCatalogActions');
     vi.mocked(actions.addTicketMaterial).mockReset();
+    vi.mocked(actions.listTicketMaterials).mockResolvedValue([]);
+    vi.mocked(actions.listAvailableStockUnitsForMaterial).mockResolvedValue([]);
+    const availability = await import('@alga-psa/inventory/actions/availabilityActions');
+    vi.mocked(availability.getProductAvailability).mockResolvedValue([]);
   });
 
   it('picker badge shows free stock, not on-hand', async () => {
-    const TicketMaterialsCard = (await import('./TicketMaterialsCard')).default;
     render(<TicketMaterialsCard ticketId="ticket-1" clientId="client-1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Add Material' }));
     expect(await screen.findByText(/Widget \[Available: 2\]/)).toBeInTheDocument();
@@ -137,5 +154,57 @@ describe('TicketMaterialsCard stock reserved or held for sales orders (B1)', () 
     expect(await screen.findByText(/Only 3 available\. 7 on hand is on hard hold for sales orders or projects/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add anyway' })).not.toBeInTheDocument();
     expect(actions.addTicketMaterial).toHaveBeenCalledTimes(1);
+  });
+
+  it('locks serialized add quantity to one even when availability arrives after quantity was entered', async () => {
+    const actions = await import('../../actions/materialCatalogActions');
+    const availability = await import('@alga-psa/inventory/actions/availabilityActions');
+    vi.mocked(availability.getProductAvailability).mockResolvedValue([{
+      service_id: 'service-1', is_serialized: true, track_stock: true,
+      on_hand_total: 1, available_total: 1, reorder_point: null, locations: [],
+    }]);
+    vi.mocked(actions.listAvailableStockUnitsForMaterial).mockResolvedValue([{
+      unit_id: 'unit-1', serial_number: 'SERIAL-1',
+    } as import('@alga-psa/types').IStockUnit]);
+    render(<TicketMaterialsCard ticketId="ticket-1" clientId="client-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Material' }));
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '5' } });
+    fireEvent.change(await screen.findByTestId('async-searchable-select'), { target: { value: 'service-1' } });
+    await waitFor(() => {
+      expect(screen.getByLabelText('Quantity')).toBeDisabled();
+      expect(screen.getByLabelText('Quantity')).toHaveValue(1);
+    });
+    fireEvent.change(await screen.findByTestId('ticket-materials-card-unit-select'), { target: { value: 'unit-1' } });
+    const submit = screen.getAllByRole('button', { name: 'Add Material' });
+    fireEvent.click(submit[submit.length - 1]);
+    await waitFor(() => expect(actions.addTicketMaterial).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: 1, unit_id: 'unit-1' }),
+    ));
+  });
+
+  it('refreshes the mounted asset list in the same add operation without refreshing the page', async () => {
+    const actions = await import('../../actions/materialCatalogActions');
+    let assets: string[] = [];
+    const loadAssets = vi.fn(async () => assets);
+    function AssetsCard() {
+      const { data = [] } = useSWR(entityAssetsCacheKey('ticket', 'ticket-1'), loadAssets);
+      return <div data-testid="linked-assets">{data.join(',')}</div>;
+    }
+    vi.mocked(actions.addTicketMaterial).mockImplementation(async () => {
+      assets = ['SERIAL-1'];
+      return { ticket_material_id: 'material-1' } as import('@alga-psa/types').ITicketMaterial;
+    });
+    render(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+      <AssetsCard />
+      <TicketMaterialsCard ticketId="ticket-1" clientId="client-1" />
+    </SWRConfig>);
+    await waitFor(() => expect(loadAssets).toHaveBeenCalledOnce());
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Material' }));
+    fireEvent.change(await screen.findByTestId('async-searchable-select'), { target: { value: 'service-1' } });
+    await waitFor(() => expect(document.getElementById('ticket-materials-card-save-add-btn')).not.toBeDisabled());
+    const submit = screen.getAllByRole('button', { name: 'Add Material' });
+    fireEvent.click(submit[submit.length - 1]);
+    await waitFor(() => expect(screen.getByTestId('linked-assets')).toHaveTextContent('SERIAL-1'));
+    expect(loadAssets).toHaveBeenCalledTimes(2);
   });
 });

@@ -24,6 +24,16 @@ For stock-tracked materials, increasing quantity consumes additional stock from 
 
 Serialized material quantities cannot be changed. Add or remove individual units instead. You can still edit the description without changing the quantity.
 
+## Serialized material delivery (part 2/2)
+
+Selecting a serialized product locks the add quantity to one and requires an available serial/MAC unit. The edit dialog also locks its quantity while leaving its description editable. These restrictions are enforced on the server as well.
+
+Adding or removing a delivered serialized material refreshes the ticket's Assets card immediately, in both Grid and Entry views; no page reload is required. Project material delivery uses the same asset-cache refresh.
+
+For products configured to create an asset on delivery, choose a default asset type and fill in its default specs in the product dialog. OS, storage, network-device, and mobile-OS dropdowns reuse the controls and canonical values from the asset forms. Numeric specs (including CPU cores, RAM, storage, and port counts) and boolean capabilities retain their types when saved and when creating the asset. Unspecified numbers remain unknown, not zero. Changing the default asset type clears the previous type's specs. Existing text-only defaults such as `Windows` and `SSD` are normalized to their matching asset dropdown values.
+
+Deploy the default asset metadata migration with part 2/2 before using product spec defaults.
+
 ## Invoice the charges
 
 Use **Quick invoice** on the ticket to select eligible unbilled fixed-fee services alongside billable time and products. Review the selected total before creating the invoice. Fixed-fee entries whose currency differs from the invoice currency are excluded, with a notice in the dialog.

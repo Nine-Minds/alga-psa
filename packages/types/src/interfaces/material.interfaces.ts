@@ -15,6 +15,8 @@ export interface ITicketMaterial extends TenantEntity {
   service_id: string;
   service_name?: string;
   sku?: string | null;
+  /** Read-only inventory context; serialized materials always represent one unit. */
+  is_serialized?: boolean;
   quantity: number;
   rate: number; // cents
   currency_code: string;

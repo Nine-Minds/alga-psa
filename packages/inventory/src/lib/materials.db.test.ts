@@ -137,7 +137,8 @@ describe('F048 canonical materials service (T005)', () => {
     await inTx(async (trx) => {
       const serialized = await makeTrackedProduct(trx, `vitest-lock-${randomUUID().slice(0, 8)}`, 0, { is_serialized: true });
       const ordinary = await makeTrackedProduct(trx, `vitest-unlocked-${randomUUID().slice(0, 8)}`, 0);
-      await trx('ticket_materials').insert([
+      const formerlySerialized = await makeTrackedProduct(trx, `vitest-linked-${randomUUID().slice(0, 8)}`, 0);
+      const rows = await trx('ticket_materials').insert([
         {
           tenant: TENANT, ticket_id: TICKET, client_id: CLIENT, service_id: serialized,
           quantity: 1, rate: 100, currency_code: 'USD', is_billed: false,
@@ -146,11 +147,25 @@ describe('F048 canonical materials service (T005)', () => {
           tenant: TENANT, ticket_id: TICKET, client_id: CLIENT, service_id: ordinary,
           quantity: 2, rate: 100, currency_code: 'USD', is_billed: false,
         },
-      ]);
+        {
+          tenant: TENANT, ticket_id: TICKET, client_id: CLIENT, service_id: formerlySerialized,
+          quantity: 1, rate: 100, currency_code: 'USD', is_billed: false,
+        },
+      ]).returning(['ticket_material_id', 'service_id']);
+      const linkedMaterial = rows.find((row) => row.service_id === formerlySerialized);
+      if (!linkedMaterial) throw new Error('Expected the formerly serialized ticket material');
+      const [unit] = await trx('stock_units').insert({
+        tenant: TENANT, service_id: formerlySerialized, serial_number: `vitest-${randomUUID()}`, status: 'delivered',
+      }).returning('unit_id');
+      await trx('stock_movements').insert({
+        tenant: TENANT, movement_type: 'consume', service_id: formerlySerialized, quantity: 1,
+        unit_id: unit.unit_id, source_doc_type: 'ticket_material', source_doc_id: linkedMaterial.ticket_material_id,
+      });
 
-      const materials = await listTicketMaterials(trx);
-      expect(materials.find((row) => row.service_id === serialized)?.quantity_locked).toBe(true);
-      expect(materials.find((row) => row.service_id === ordinary)?.quantity_locked).toBe(false);
+      const materials = await listMaterials(trx, TENANT, 'ticket', TICKET);
+      expect(materials.find((row) => row.service_id === serialized)).toMatchObject({ quantity_locked: true });
+      expect(materials.find((row) => row.service_id === ordinary)).toMatchObject({ quantity_locked: false });
+      expect(materials.find((row) => row.service_id === formerlySerialized)).toMatchObject({ quantity_locked: true });
     });
   });
 
