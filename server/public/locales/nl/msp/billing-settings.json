@@ -1196,16 +1196,6 @@
         "defaultAssetType": "Standaard assettype",
         "specDefaults": "Standaardspecificaties voor geleverde assets",
         "specDefaultsHint": "Wordt toegepast wanneer een geleverde serialized eenheid automatisch zijn asset aanmaakt.",
-        "spec": {
-          "deviceType": "Apparaattype",
-          "os_type": "Besturingssysteemtype",
-          "os_version": "Besturingssysteemversie",
-          "cpu_model": "CPU-model",
-          "storage_type": "Opslagtype",
-          "management_ip": "Beheer-IP",
-          "firmware_version": "Firmware-versie",
-          "model": "Model"
-        },
         "reorderPoint": "Bestelpunt",
         "reorderQuantity": "Bestelhoeveelheid",
         "kitPricingMode": "Kitprijsmodus",
