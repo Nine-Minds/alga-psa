@@ -226,7 +226,6 @@ export const updateInventorySettings = withAuth(
         | 'kit_pricing_mode'
         | 'kit_fixed_price'
         | 'default_asset_type'
-        | 'default_asset_metadata'
       >
     >,
   ): Promise<IProductInventorySettings | ProductInventorySettingsActionError> => {
@@ -248,14 +247,8 @@ export const updateInventorySettings = withAuth(
           'kit_pricing_mode',
           'kit_fixed_price',
           'default_asset_type',
-          'default_asset_metadata',
         ] as const) {
-          if (k in patch) {
-            const value = (patch as any)[k];
-            update[k] = (k === 'default_asset_metadata' && value != null && typeof value === 'object')
-              ? JSON.stringify(value)
-              : value;
-          }
+          if (k in patch) update[k] = (patch as any)[k];
         }
         const [row] = await trx('product_inventory_settings').where({ tenant, service_id: serviceId }).update(update).returning('*');
         if (!row) throw new Error('Inventory not enabled for this product');

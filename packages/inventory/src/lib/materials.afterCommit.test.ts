@@ -125,12 +125,7 @@ describe('addMaterial post-commit effects', () => {
     });
 
     expect(result).toMatchObject({ ticket_material_id: 'material-1' });
-    expect(h.createAsset).toHaveBeenCalledExactlyOnceWith(root, TENANT, {
-      ...pendingAsset,
-      parentType: input.parent_type,
-      parentId: input.parent_id,
-      createdBy: 'user-1',
-    });
+    expect(h.createAsset).toHaveBeenCalledExactlyOnceWith(root, TENANT, pendingAsset);
     expect(root.rootProbeCount).toBe(1);
     expect(h.publishInventoryEvent).toHaveBeenCalledExactlyOnceWith('INVENTORY_STOCK_LOW', pendingStockLow);
   });
