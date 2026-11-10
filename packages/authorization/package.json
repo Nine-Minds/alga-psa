@@ -50,6 +50,14 @@
       "import": "./dist/portfolios/service.js",
       "types": "./src/portfolios/service.ts"
     },
+    "./subject": {
+      "import": "./dist/subject/index.js",
+      "types": "./src/subject/index.ts"
+    },
+    "./subject/*": {
+      "import": "./dist/subject/*.js",
+      "types": "./src/subject/*.ts"
+    },
     "./adapters/rbac": {
       "import": "./dist/adapters/rbac.js",
       "types": "./src/adapters/rbac.ts"
@@ -69,6 +77,10 @@
     "./ticketRecordAuthorization": {
       "import": "./dist/ticketRecordAuthorization.js",
       "types": "./src/ticketRecordAuthorization.ts"
+    },
+    "./recordProjection": {
+      "import": "./dist/recordProjection.js",
+      "types": "./src/recordProjection.ts"
     },
     "./rbac": {
       "import": "./dist/rbac.js",

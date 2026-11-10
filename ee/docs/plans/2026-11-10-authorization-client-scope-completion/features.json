@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "One function in the authorization package resolves the subject for a user (user type, teams, managed users, client portfolio), and the ticket, project, asset, document and credential paths all use it; no caller passes a hard-coded empty portfolio.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Subject, portfolio and ownership foundations"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "A tenant with no published bundle assignments and no portfolio rows runs zero additional queries on ticket list, ticket detail, client list, search and time-entry paths, recorded as query-budget entries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Subject, portfolio and ownership foundations"
     ]

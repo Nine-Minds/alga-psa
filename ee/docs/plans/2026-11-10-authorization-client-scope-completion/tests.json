@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB integration: tickets, projects, assets and documents evaluated for the same user receive the same subject, including a non-empty portfolio.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "Query budget: a tenant with no assignments and no portfolios runs the same statement count as main on the five measured paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]

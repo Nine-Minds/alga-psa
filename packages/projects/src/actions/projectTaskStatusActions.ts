@@ -247,6 +247,7 @@ function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
     .filter((value): value is string => Boolean(value));
 }
 
+// LEVERAGE: pattern authorization-subject-resolution — swallows lookup failures where the project read path fails closed (S5 scope); the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
 async function resolveAuthorizationSubjectForUser(
   trx: Knex.Transaction,
   tenant: string,

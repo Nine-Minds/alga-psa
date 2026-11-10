@@ -184,12 +184,14 @@ function buildTrx(usersQueries: Array<{ columns: string[] | null }>) {
       };
     }
 
-    if (table === 'user_roles' || table === 'team_members') {
-      return {
-        where: vi.fn().mockReturnValue({
-          select: vi.fn().mockResolvedValue([]),
-        }),
+    if (table === 'user_roles' || table === 'team_members' || table === 'user_client_portfolios') {
+      // Authorization subject lookups (no roles, teams or stored portfolio); `tenantDb` pre-applies `.where({ tenant })`.
+      const builder: any = {
+        where: () => builder,
+        orderBy: () => builder,
+        select: async () => [],
       };
+      return builder;
     }
 
     if (table === 'ticket_resources') {

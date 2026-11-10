@@ -11,6 +11,13 @@ vi.mock('@/lib/db', () => ({ runWithTenant: vi.fn(async (_tenant: string, callba
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@/lib/api/controllers/authorizationKernel', async (original) => ({ ...(await original<any>()), authorizeApiResourceRead: vi.fn(async ({ recordContext }: any) => state.decision(recordContext.id)) }));
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...(await original<any>()),
+  resolveAuthorizationSubject: vi.fn(async (_knex: unknown, input: any) => ({
+    tenant: input.tenant, userId: input.user.user_id, userType: 'internal', roleIds: [], teamIds: [],
+    managedUserIds: [], clientId: null, portfolioClientIds: [], ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => [{ redactedFields: ['tickets.status_id'] }]) }));
 vi.mock('@/lib/api/services/TicketService', () => ({ TicketService: class { list = async () => ({ data: state.tickets, total: state.tickets.length }); } }));
 

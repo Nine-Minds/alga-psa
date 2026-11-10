@@ -4,4 +4,5 @@ export * from './bundles/service';
 export * from './bundles/narrowingProvider';
 export * from './bundles/starterBundles';
 export * from './portfolios/service';
+export * from './subject';
 export * from './pagination';

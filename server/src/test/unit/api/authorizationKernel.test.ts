@@ -10,14 +10,14 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
   })),
 }));
 
-vi.mock('@alga-psa/authorization/assetReadAuthorization', async (original) => ({
-  ...await original<typeof import('@alga-psa/authorization/assetReadAuthorization')>(),
-  resolveAuthorizationSubjectForUser: (...args: unknown[]) => resolveSubjectMock(...args),
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (...args: unknown[]) => resolveSubjectMock(...args),
 }));
 
 describe('api authorization kernel helper', () => {
   beforeEach(() => {
-    resolveSubjectMock.mockImplementation(async (_knex, tenant, user, apiKeyId) => ({
+    resolveSubjectMock.mockImplementation(async (_knex, { tenant, user, apiKeyId }) => ({
       tenant,
       userId: user.user_id,
       userType: 'internal',
@@ -56,18 +56,22 @@ describe('api authorization kernel helper', () => {
     });
   });
 
-  it('preserves client and portfolio identifiers from snake_case and camelCase payloads', () => {
-    const snakeCase = buildAuthorizationPrincipalSubject({
-      tenant: 'tenant-1',
-      user_id: 'user-1',
-      user_type: 'client',
-      client_id: 'client-snake',
-      portfolio_client_ids: ['portfolio-a', 'portfolio-b'],
-    });
+  it('preserves client identifiers from snake_case and camelCase payloads; the portfolio comes from loaded facts, not the payload', () => {
+    const snakeCase = buildAuthorizationPrincipalSubject(
+      {
+        tenant: 'tenant-1',
+        user_id: 'user-1',
+        user_type: 'internal',
+        client_id: 'client-snake',
+        portfolio_client_ids: ['ignored-payload-portfolio'],
+      },
+      undefined,
+      ['portfolio-a', 'portfolio-b']
+    );
 
     expect(snakeCase).toMatchObject({
       clientId: 'client-snake',
-      portfolioClientIds: ['portfolio-a', 'portfolio-b'],
+      portfolioClientIds: ['portfolio-a', 'portfolio-b', 'client-snake'],
     });
 
     const camelCase = buildAuthorizationPrincipalSubject({
@@ -75,12 +79,13 @@ describe('api authorization kernel helper', () => {
       user_id: 'user-2',
       user_type: 'client',
       clientId: 'client-camel',
-      portfolioClientIds: ['portfolio-c'],
+      portfolioClientIds: ['ignored-payload-portfolio'],
     });
 
+    // A client user's own client is always in their portfolio; nothing else is read off the payload.
     expect(camelCase).toMatchObject({
       clientId: 'client-camel',
-      portfolioClientIds: ['portfolio-c'],
+      portfolioClientIds: ['client-camel'],
     });
   });
 
@@ -172,8 +177,9 @@ describe('authorizeApiResourceAction', () => {
     v.doMock('server/src/lib/authorization/kernel', () => ({
       getAuthorizationKernel: async () => ({ authorizeResource }),
     }));
-    v.doMock('@alga-psa/authorization/assetReadAuthorization', () => ({
-      resolveAuthorizationSubjectForUser: async (_knex: unknown, tenant: string, user: any, apiKeyId?: string) => ({
+    v.doMock('@alga-psa/authorization/subject', async () => ({
+      ...(await vi.importActual<typeof import('@alga-psa/authorization/subject')>('@alga-psa/authorization/subject')),
+      resolveAuthorizationSubject: async (_knex: unknown, { tenant, user, apiKeyId }: any) => ({
         tenant,
         userId: user.user_id,
         userType: user.user_type,
@@ -194,6 +200,6 @@ describe('authorizeApiResourceAction', () => {
       { type: 'ticket', action: 'read' },
     ]);
     v.doUnmock('server/src/lib/authorization/kernel');
-    v.doUnmock('@alga-psa/authorization/assetReadAuthorization');
+    v.doUnmock('@alga-psa/authorization/subject');
   });
 });
