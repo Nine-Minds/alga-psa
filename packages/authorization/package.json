@@ -38,9 +38,17 @@
       "import": "./dist/bundles/service.js",
       "types": "./src/bundles/service.ts"
     },
+    "./bundles/narrowingProvider": {
+      "import": "./dist/bundles/narrowingProvider.js",
+      "types": "./src/bundles/narrowingProvider.ts"
+    },
     "./bundles/starterBundles": {
       "import": "./dist/bundles/starterBundles.js",
       "types": "./src/bundles/starterBundles.ts"
+    },
+    "./portfolios/service": {
+      "import": "./dist/portfolios/service.js",
+      "types": "./src/portfolios/service.ts"
     },
     "./adapters/rbac": {
       "import": "./dist/adapters/rbac.js",
@@ -61,6 +69,10 @@
     "./ticketRecordAuthorization": {
       "import": "./dist/ticketRecordAuthorization.js",
       "types": "./src/ticketRecordAuthorization.ts"
+    },
+    "./recordProjection": {
+      "import": "./dist/recordProjection.js",
+      "types": "./src/recordProjection.ts"
     },
     "./rbac": {
       "import": "./dist/rbac.js",

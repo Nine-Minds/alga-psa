@@ -107,6 +107,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
+import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { assertAllowedTicketUpdateOptions, AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
@@ -348,16 +349,17 @@ async function createTicketAuthorizationContext(
   };
 }
 
-async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+/** Each readable ticket with the fields its reader's policy redacts. */
+async function authorizeTicketReads<T extends Partial<ITicket> & { ticket_id?: string | null }>(
   trx: Knex.Transaction,
   context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
   tickets: T[]
-): Promise<T[]> {
+): Promise<Array<{ ticket: T; redactedFields: string[] }>> {
 
   const decisions = await Promise.all(
     tickets.map((ticket) => {
       if (!ticket.ticket_id) {
-        return Promise.resolve({ allowed: false });
+        return Promise.resolve({ allowed: false, redactedFields: [] as string[] });
       }
 
       return context.authorizationKernel.authorizeResource({
@@ -376,7 +378,45 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
     })
   );
 
-  return tickets.filter((_, index) => decisions[index]?.allowed);
+  // A redaction that hides the ticket's identity hides the ticket, as on REST.
+  return tickets.flatMap((ticket, index) => {
+    const decision = decisions[index];
+    if (!decision?.allowed) return [];
+    const redactedFields = decision.redactedFields ?? [];
+    return projectReadableRecord('ticket', ticket, redactedFields) ? [{ ticket, redactedFields }] : [];
+  });
+}
+
+/**
+ * The tickets the reader may see, each as the reader may see it: fields the
+ * decision redacts are omitted the way the REST ticket endpoints omit them, and
+ * a ticket whose identity is redacted is dropped. Without redactions the rows
+ * are returned untouched.
+ */
+async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+  trx: Knex.Transaction,
+  context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
+  tickets: T[]
+): Promise<T[]> {
+  const authorized = await authorizeTicketReads(trx, context, tickets);
+  return authorized.flatMap(({ ticket, redactedFields }) => {
+    const projected = projectReadableRecord('ticket', ticket, redactedFields);
+    return projected ? [projected] : [];
+  });
+}
+
+/**
+ * List rows for authorized tickets. The projection runs on the mapped row, so a
+ * display default (`'Unknown'`) is never emitted in place of a redacted field.
+ */
+function readableTicketListItems<T extends Partial<ITicket>>(
+  reads: Array<{ ticket: T; redactedFields: string[] }>
+): ITicketListItem[] {
+  return reads.flatMap(({ ticket, redactedFields }) => {
+    const [item] = mapTicketListItems([ticket]);
+    const readable = projectReadableRecord('ticket', item, redactedFields);
+    return readable ? [readable] : [];
+  });
 }
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
@@ -390,6 +430,13 @@ function applyTicketReadAuthorizationSql(
   // Built-in narrowing for client-portal users mirrors createTicketAuthorizationContext.
   const builtinRules: RelationshipRule[] =
     context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
+
+  // SQL narrowing preserves row authorization but has no per-row redaction
+  // metadata. Use the kernel path whenever a policy carries field redactions,
+  // as the REST ticket list does.
+  if (context.ticketReadBundleNarrowingRules.some((rule) => (rule.redactedFields?.length ?? 0) > 0)) {
+    return { supported: false, reason: 'bundle rule redacts fields' };
+  }
 
   return compileTenantScopedResourceReadAuthorizationSql(query, {
     resourceType: 'ticket',
@@ -486,11 +533,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       tenant,
       user as IUserWithRoles
     );
-    const [authorizedTicket] = await filterAuthorizedTickets(trx, authorizationContext, [ticket]);
+    const [ticketRead] = await authorizeTicketReads(trx, authorizationContext, [ticket]);
 
-    if (!authorizedTicket) {
+    if (!ticketRead) {
       throw new Error('Permission denied: Cannot view ticket');
     }
+    const ticketRedactions = ticketRead.redactedFields;
+    // A related record is derived from a ticket field: hiding the field hides the record.
+    const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
+      isRecordFieldHidden('ticket', field, ticketRedactions) ? null : value;
 
     // Fetch all related data in parallel
     const [
@@ -1079,11 +1130,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Return all data in a single consolidated object
     return {
-      ticket: {
+      ticket: projectReadableRecord('ticket', {
         ...normalizedTicketData,
         tenant,
         location
-      },
+      }, ticketRedactions),
       bundle: {
         isBundleChild,
         isBundleMaster,
@@ -1099,13 +1150,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       aggregatedChildClientComments: filteredAggregatedChildClientComments,
       comments,
       documents,
-      client,
+      client: whenTicketFieldVisible('client_name', client),
       contacts,
-      contactInfo,
+      contactInfo: whenTicketFieldVisible('contact_name', contactInfo),
       displayTags,
-      createdByUser,
+      createdByUser: whenTicketFieldVisible('entered_by_name', createdByUser),
       updatedByUser,
-      board,
+      board: whenTicketFieldVisible('board_name', board),
       additionalAgents: resources,
       availableAgents: users,
       userMap,
@@ -2101,13 +2152,13 @@ export const getTicketsForList = withAuth(async (
         tenant,
         validatedFilters
       );
-      const authorizedTickets = await filterAuthorizedTickets(trx, authorizationContext, tickets);
+      const authorizedTickets = await authorizeTicketReads(trx, authorizationContext, tickets);
       totalCount = authorizedTickets.length;
       const paginatedAuthorizedTickets = authorizedTickets.slice(
         (page - 1) * pageSize,
         (page - 1) * pageSize + pageSize
       );
-      ticketListItems = mapTicketListItems(paginatedAuthorizedTickets);
+      ticketListItems = readableTicketListItems(paginatedAuthorizedTickets);
     }
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
@@ -2224,29 +2275,29 @@ export const loadTicketListItemsByIds = withAuth(async (
 
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
-      let rows: any[];
+      let items: ITicketListItem[];
       if (authSqlResult.supported) {
-        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user))
+        items = mapTicketListItems(await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
-          .clearOrder();
+          .clearOrder());
       } else {
         const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder();
-        rows = await filterAuthorizedTickets(trx, authorizationContext, candidates);
+        items = readableTicketListItems(await authorizeTicketReads(trx, authorizationContext, candidates));
       }
 
-      const byId = new Map<string, any>();
-      for (const row of rows) {
-        if (row?.ticket_id) {
-          byId.set(row.ticket_id, row);
+      const byId = new Map<string, ITicketListItem>();
+      for (const item of items) {
+        if (item?.ticket_id) {
+          byId.set(item.ticket_id, item);
         }
       }
       const ordered = requestedIds
         .map((id) => byId.get(id))
-        .filter((row): row is any => Boolean(row));
+        .filter((item): item is ITicketListItem => Boolean(item));
 
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+      return enrichTicketListItems(trx, tenant, ordered);
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {
@@ -3950,9 +4001,10 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         .where({ 't.master_ticket_id': masterTicketId })
         .orderBy('t.updated_at', 'desc');
 
-      const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+      const authorizedRows = await authorizeTicketReads(trx, authorizationContext, rows as any[]);
 
-      const mapped = authorizedRows.map((ticket: any): ITicketListItem => {
+      // The projection runs on the mapped row, so a display default is never emitted in place of a redacted field.
+      const mapped = authorizedRows.flatMap(({ ticket, redactedFields }): ITicketListItem[] => {
         const {
           status_id,
           priority_id,
@@ -3973,7 +4025,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           ...rest
         } = ticket;
 
-        return {
+        const item: ITicketListItem = {
           ...rest,
           status_id: status_id || null,
           priority_id: priority_id || null,
@@ -3995,6 +4047,8 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           bundle_distinct_client_count: 0,
           bundle_master_ticket_number: bundle_master_ticket_number ?? null,
         };
+        const readable = projectReadableRecord('ticket', item, redactedFields);
+        return readable ? [readable] : [];
       });
 
       // Same enrichment as the list page: avatars, logos, ticket tags and chip tags, so an expanded

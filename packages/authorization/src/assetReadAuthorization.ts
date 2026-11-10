@@ -5,13 +5,17 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  type AuthorizationDecision,
   type AuthorizationEvaluationInput,
   type AuthorizationKernel,
+  type AuthorizationMutationDecision,
   type AuthorizationRecord,
   type AuthorizationSubject,
 } from './kernel';
 import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
+import { createBundleNarrowingProvider } from './bundles/narrowingProvider';
+import { projectReadableRecord } from './recordProjection';
 
 /**
  * Asset read authorization, shared by the asset server actions and the label code paths.
@@ -137,15 +141,7 @@ export async function resolveAssetAuthorizationRecords(
 export function createAssetReadKernel(trx: Knex | Knex.Transaction) {
   return createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
+    bundleProvider: createBundleNarrowingProvider(trx),
     rbacEvaluator: async () => true,
   });
 }
@@ -208,16 +204,23 @@ export async function isAssetClientReadAllowed(
  * the mutation decision, where the kernel refuses a record the subject's read rules do not allow
  * before it evaluates the write rules.
  */
+async function isAssetRequestDecision(
+  kernel: AuthorizationKernel,
+  request: Omit<AuthorizationEvaluationInput, 'resource'> & { resource: { type: 'asset'; id?: string } },
+  action: AssetAuthorizationAction
+): Promise<AuthorizationDecision | AuthorizationMutationDecision> {
+  const evaluation = { ...request, resource: { ...request.resource, action } };
+  return action === 'read'
+    ? kernel.authorizeResource(evaluation)
+    : kernel.authorizeMutation(evaluation);
+}
+
 async function isAssetRequestAllowed(
   kernel: AuthorizationKernel,
   request: Omit<AuthorizationEvaluationInput, 'resource'> & { resource: { type: 'asset'; id?: string } },
   action: AssetAuthorizationAction
 ): Promise<boolean> {
-  const evaluation = { ...request, resource: { ...request.resource, action } };
-  const decision = action === 'read'
-    ? await kernel.authorizeResource(evaluation)
-    : await kernel.authorizeMutation(evaluation);
-  return decision.allowed;
+  return (await isAssetRequestDecision(kernel, request, action)).allowed;
 }
 
 /**
@@ -246,7 +249,49 @@ export async function isAssetActionAllowed(
 /**
  * Batch authorization for one asset action. Records are resolved with one association query, while the
  * authorization kernel still evaluates each record separately (including bundle and same-team rules).
+ * Decisions align with the input rows so callers can retain field policies through pagination and enrichment.
  */
+export async function authorizeAssetsForAction<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+  action: 'read',
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
+): Promise<AuthorizationDecision[]>;
+export async function authorizeAssetsForAction<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+  action: AssetAuthorizationAction,
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
+): Promise<Array<AuthorizationDecision | AuthorizationMutationDecision>>;
+export async function authorizeAssetsForAction<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+  action: AssetAuthorizationAction,
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
+): Promise<Array<AuthorizationDecision | AuthorizationMutationDecision>> {
+  if (assets.length === 0) return [];
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
+  return Promise.all(assets.map(async (asset) => {
+    let record = records.get(asset.asset_id);
+    if (options?.resolveMultiUserOwnersIndividually && action === 'read' && (record?.assignedUserIds?.length ?? 0) > 1) {
+      record = (await resolveAssetAuthorizationRecords(trx, tenant, [asset])).get(asset.asset_id);
+    }
+    return isAssetRequestDecision(context.authorizationKernel, {
+      subject: context.subject,
+      resource: { type: 'asset', id: asset.asset_id },
+      record,
+      requestCache: context.requestCache,
+      knex: trx as Knex,
+    }, action);
+  }));
+}
+
 export async function filterAssetsAllowedForAction<T extends AssetAuthorizationInput>(
   trx: Knex | Knex.Transaction,
   tenant: string,
@@ -255,23 +300,8 @@ export async function filterAssetsAllowedForAction<T extends AssetAuthorizationI
   action: AssetAuthorizationAction,
   options?: { resolveMultiUserOwnersIndividually?: boolean }
 ): Promise<T[]> {
-  if (assets.length === 0) return [];
-  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
-  const allowed = await Promise.all(assets.map(async (asset) => {
-    const record = records.get(asset.asset_id);
-    // The association query has no ordering, so batching can change which user is treated as the owner.
-    if (options?.resolveMultiUserOwnersIndividually && action === 'read' && (record?.assignedUserIds?.length ?? 0) > 1) {
-      return isAssetReadAllowed(trx, tenant, context, asset);
-    }
-    return isAssetRequestAllowed(context.authorizationKernel, {
-      subject: context.subject,
-      resource: { type: 'asset', id: asset.asset_id },
-      record,
-      requestCache: context.requestCache,
-      knex: trx as Knex,
-    }, action);
-  }));
-  return assets.filter((_, index) => allowed[index]);
+  const decisions = await authorizeAssetsForAction(trx, tenant, context, assets, action, options);
+  return assets.filter((_, index) => decisions[index].allowed);
 }
 
 const CLIENT_SCOPE_TEMPLATES = new Set(['same_client', 'client_portfolio', 'selected_clients']);
@@ -366,4 +396,23 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   options?: { resolveMultiUserOwnersIndividually?: boolean }
 ): Promise<T[]> {
   return filterAssetsAllowedForAction(trx, tenant, context, assets, 'read', options);
+}
+
+/**
+ * The assets the caller may read, each as the caller may see it: fields the read decision redacts are omitted
+ * the way the REST asset endpoints omit them, and an asset whose identity is redacted (or that is not readable)
+ * is dropped. Rows of a caller without redactions are returned untouched.
+ */
+export async function projectReadableAssets<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[]
+): Promise<T[]> {
+  const decisions = await authorizeAssetsForAction(trx, tenant, context, assets, 'read');
+  const projected = assets.map((asset, index) => {
+    const decision = decisions[index];
+    return decision.allowed ? projectReadableRecord('asset', asset, decision.redactedFields) : null;
+  });
+  return projected.filter((asset): asset is NonNullable<typeof asset> => asset !== null) as T[];
 }
