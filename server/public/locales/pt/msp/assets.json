@@ -69,7 +69,7 @@
     "assetAuditMethod": {
       "scan": "Leitura de código",
       "manual": "Manual",
-      "register": "Cadastrado no local"
+      "register": "Cadastro no local"
     }
   },
   "assetAlertsSection": {
