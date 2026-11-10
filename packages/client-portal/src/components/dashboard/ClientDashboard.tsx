@@ -106,6 +106,16 @@ function activityVisuals(type: RecentActivity['type']): {
 }
 
 /**
+ * Optional translated description for an activity row
+ * (`descriptions.<type>.<status>`), used when the server sends none. Only
+ * `service_request.failed` defines one; other rows resolve to '' and render
+ * no description line.
+ */
+function activityDescriptionKey(activity: RecentActivity): string {
+  return `dashboard.activity.descriptions.${activity.type}.${activity.status}`;
+}
+
+/**
  * Resolve the i18n key for an activity row. Some types have status-specific
  * variants (`quote.accepted`, `appointment.declined`); fall back to the
  * type-only key when the status doesn't have a dedicated translation.
@@ -114,10 +124,6 @@ function activityVisuals(type: RecentActivity['type']): {
  * (`titles.quote.{sent,accepted,…,_default}`); the type-only types
  * (`ticket`, `invoice`, `asset`, `project`) keep a flat string.
  */
-function activityDescriptionKey(activity: RecentActivity): string {
-  return `dashboard.activity.descriptions.${activity.type}.${activity.status}`;
-}
-
 function activityTitleKey(activity: RecentActivity): string {
   const validStatusByType: Partial<Record<RecentActivityType, ReadonlySet<string>>> = {
     quote: new Set(['sent', 'accepted', 'rejected', 'expired']),
