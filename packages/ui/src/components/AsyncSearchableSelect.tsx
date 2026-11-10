@@ -28,6 +28,11 @@ export interface SelectOption {
   };
 }
 
+/** The overlay list's minimum width (18rem), so rows stay readable under a narrow trigger. */
+const OVERLAY_MIN_WIDTH_PX = 288;
+/** Space kept between an overlay list and the viewport edge. */
+const OVERLAY_EDGE_GAP_PX = 8;
+
 type LoadOptionsResult = {
   options: SelectOption[];
   total: number;
@@ -184,11 +189,18 @@ export function AsyncSearchableSelect({
     const rect = triggerRef.current.getBoundingClientRect();
     const container = getResolvedPortalContainer();
 
+    // The list is never narrower than a readable minimum: a content-sized trigger in a toolbar
+    // ("All Clients", "3 clients") would otherwise squeeze every row to a few characters. A list
+    // wider than its trigger shifts left as needed to stay inside the viewport.
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const width = Math.min(Math.max(rect.width, OVERLAY_MIN_WIDTH_PX), Math.max(viewportWidth - 2 * OVERLAY_EDGE_GAP_PX, rect.width));
+    const left = Math.max(OVERLAY_EDGE_GAP_PX, Math.min(rect.left, viewportWidth - width - OVERLAY_EDGE_GAP_PX));
+
     if (!container || container === document.body) {
       setOverlayPosition({
         top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
+        left,
+        width,
       });
       return;
     }
@@ -196,8 +208,8 @@ export function AsyncSearchableSelect({
     const containerRect = container.getBoundingClientRect();
     setOverlayPosition({
       top: rect.bottom - containerRect.top + 4,
-      left: rect.left - containerRect.left,
-      width: rect.width,
+      left: left - containerRect.left,
+      width,
     });
   }, [getResolvedPortalContainer]);
 
