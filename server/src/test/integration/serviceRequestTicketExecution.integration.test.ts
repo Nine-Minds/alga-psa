@@ -160,6 +160,7 @@ async function createPublishedDefinition(args: {
   versionId: string;
   executionConfig: Record<string, unknown>;
   linkedServiceId?: string | null;
+  formSchemaSnapshot?: Record<string, unknown>;
 }) {
   await tenantTable(args.tenant, 'service_request_definitions').insert({
     tenant: args.tenant,
@@ -182,7 +183,7 @@ async function createPublishedDefinition(args: {
     definition_id: args.definitionId,
     version_number: 1,
     name: 'Employee Onboarding',
-    form_schema_snapshot: {
+    form_schema_snapshot: args.formSchemaSnapshot ?? {
       fields: [
         { key: 'request_title', type: 'short-text', label: 'Request Title', required: true },
         { key: 'notes', type: 'long-text', label: 'Notes', required: false },
@@ -307,6 +308,53 @@ describe('service request ticket-only execution', () => {
     expect(ticketDescription).toContain('Portal Service Request');
     expect(ticketDescription).toContain('request_title: New Hire Laptop');
     expect(ticketDescription).toContain('notes: Ship before Monday');
+  });
+
+  it('renders the ticket subject template and description prefix by field type', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      formSchemaSnapshot: {
+        fields: [
+          { key: 'employee_name', type: 'short-text', label: 'Employee Name', required: true },
+          { key: 'start_date', type: 'date', label: 'Start Date' },
+          {
+            key: 'hardware',
+            type: 'select',
+            label: 'Hardware',
+            options: [{ value: 'laptop', label: 'Laptop' }, { value: 'desktop', label: 'Desktop' }],
+          },
+        ],
+      },
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleTemplate: 'New Hire for Employee: {{employee_name}}, {{start_date}} ({{hardware}})',
+        descriptionPrefix: 'Requested for {{employee_name}}',
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: { employee_name: 'Jane Doe', start_date: '2026-03-02', hardware: 'laptop' },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, March 2, 2026 (Laptop)');
+    const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
+    expect(ticketDescription?.startsWith('Requested for Jane Doe')).toBe(true);
   });
 
   it('T027: ticket-only execution failure keeps submission persisted with failed status and error summary', async () => {

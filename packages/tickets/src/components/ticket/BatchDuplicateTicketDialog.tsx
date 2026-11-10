@@ -240,6 +240,7 @@ export default function BatchDuplicateTicketDialog({
   };
 
   // Inserts at the caret (replacing any selection); appends when the input has no caret position.
+  // LEVERAGE: pattern template-token-insert — caret insert of {{token}} into a text box; @alga-psa/ui TemplateTokenInput does this (also completes a started {{ and tracks caret intent)
   const insertToken = (token: string) => {
     const input = templateRef.current;
     const text = `{{${token}}}`;

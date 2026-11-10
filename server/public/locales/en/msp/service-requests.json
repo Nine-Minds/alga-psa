@@ -150,7 +150,12 @@
         "priorityCalculated": "Priority (Calculated)",
         "selectImpactAndUrgency": "Select impact and urgency",
         "priorityFormula": "{{label}} (Impact {{impact}} x Urgency {{urgency}})",
-        "titleFieldKey": "Title Field Key",
+        "ticketSubject": "Ticket subject",
+        "ticketSubjectHelp": "Answers are filled in when the request is submitted. Leave blank to use the first answer.",
+        "insertField": "Insert field",
+        "noInsertableFields": "This form has no fields to insert yet.",
+        "unknownFields": "Unknown field: {{fields}}",
+        "unknownFieldsBlocked": "Fix the unknown fields in the ticket subject or description prefix before saving.",
         "descriptionPrefix": "Description Prefix",
         "save": "Save Ticket Routing"
       },

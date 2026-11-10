@@ -28,6 +28,7 @@ const OPEN_PLACEHOLDER_BEFORE_CARET = /\{\{\s*([A-Za-z_$][A-Za-z0-9_$.[\]-]*)?$/
  * Inserts `{{path}}` at the caret. A placeholder the user already started (`{{vars.cl`) is
  * completed instead of duplicated.
  */
+// LEVERAGE: pattern template-token-insert — origin of the caret-intent insert now generalized in @alga-psa/ui TemplateTokenInput; candidate to build on it
 export const insertTextTemplateField = (
   text: string,
   selectionStart: number,

@@ -151,6 +151,7 @@ function CannedResponseEditorBody({ cannedResponseId }: CannedResponseEditorProp
 
   const patch = (changes: Partial<FormState>) => setForm((current) => ({ ...current, ...changes }));
 
+  // LEVERAGE: pattern template-token-insert — merge-field insertion menu; @alga-psa/ui TemplateTokenInput is the shared version for plain text boxes (this one targets BlockNote)
   const insertMergeField = (key: MergeFieldKey) => {
     const editor = bodyEditorRef.current;
     if (!editor) return;

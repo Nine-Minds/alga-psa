@@ -150,7 +150,12 @@
         "priorityCalculated": "Priorytet (obliczony)",
         "selectImpactAndUrgency": "Wybierz wpływ i pilność",
         "priorityFormula": "{{label}} (Wpływ {{impact}} x Pilność {{urgency}})",
-        "titleFieldKey": "Klucz pola tytułu",
+        "ticketSubject": "Temat zgłoszenia",
+        "ticketSubjectHelp": "Odpowiedzi są wstawiane po przesłaniu wniosku. Pozostaw puste, aby użyć pierwszej odpowiedzi.",
+        "insertField": "Wstaw pole",
+        "noInsertableFields": "Ten formularz nie ma jeszcze pól do wstawienia.",
+        "unknownFields": "Nieznane pole: {{fields}}",
+        "unknownFieldsBlocked": "Przed zapisaniem popraw nieznane pola w temacie zgłoszenia lub prefiksie opisu.",
         "descriptionPrefix": "Prefiks opisu",
         "save": "Zapisz routing zgłoszeń"
       },
