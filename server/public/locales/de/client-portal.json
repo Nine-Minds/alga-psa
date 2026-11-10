@@ -165,6 +165,11 @@
           "cancelled": "Termin abgesagt: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Diese Anfrage konnte nicht verarbeitet werden. Wenden Sie sich an Ihren Dienstleister, um Hilfe zu erhalten."
+        }
+      },
       "algadeskEmptyHint": "Wenn Tickets aktualisiert werden, sehen Sie sie hier."
     },
     "devices": {

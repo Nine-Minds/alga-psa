@@ -13,7 +13,7 @@ describe('client-portal/service-requests namespace loads server-side', () => {
     expect(t('catalog.title')).toBe('Service Requests');
     expect(t('detail.formTitle')).toBe('Request Form');
     expect(t('detail.submit')).toBe('Submit Request');
-    expect(t('detail.noInitialValues')).toBe('No static defaults configured.');
+    expect(t('submissionDetail.unnamedAttachment')).toBe('Attachment');
   });
 
   it('resolves localized strings in German', async () => {
@@ -21,6 +21,7 @@ describe('client-portal/service-requests namespace loads server-side', () => {
 
     expect(t('catalog.title')).toBe('Service-Anfragen');
     expect(t('detail.formTitle')).toBe('Anfrageformular');
+    expect(t('submissionDetail.unnamedAttachment')).toBe('Anhang');
   });
 
   it('falls back to English when a key is missing in the locale', async () => {

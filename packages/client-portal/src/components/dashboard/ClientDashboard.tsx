@@ -114,6 +114,10 @@ function activityVisuals(type: RecentActivity['type']): {
  * (`titles.quote.{sent,accepted,…,_default}`); the type-only types
  * (`ticket`, `invoice`, `asset`, `project`) keep a flat string.
  */
+function activityDescriptionKey(activity: RecentActivity): string {
+  return `dashboard.activity.descriptions.${activity.type}.${activity.status}`;
+}
+
 function activityTitleKey(activity: RecentActivity): string {
   const validStatusByType: Partial<Record<RecentActivityType, ReadonlySet<string>>> = {
     quote: new Set(['sent', 'accepted', 'rejected', 'expired']),
@@ -607,11 +611,16 @@ export function ClientDashboard({
                             {timeAgo(activity.timestamp, t, formatDate)}
                           </div>
                         </div>
-                        {activity.description && (
-                          <div className="mt-0.5 text-xs text-[rgb(var(--color-text-600))] line-clamp-2">
-                            {activity.description}
-                          </div>
-                        )}
+                        {(() => {
+                          const description =
+                            activity.description ||
+                            t(activityDescriptionKey(activity), { defaultValue: '' });
+                          return description ? (
+                            <div className="mt-0.5 text-xs text-[rgb(var(--color-text-600))] line-clamp-2">
+                              {description}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     </li>
                   );

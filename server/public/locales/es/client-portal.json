@@ -165,6 +165,11 @@
           "cancelled": "Cita cancelada: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "No se pudo procesar esta solicitud. Póngase en contacto con su proveedor de servicios para obtener ayuda."
+        }
+      },
       "algadeskEmptyHint": "Cuando los tickets se actualicen, los verá aquí."
     },
     "devices": {

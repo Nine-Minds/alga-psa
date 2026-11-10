@@ -165,6 +165,11 @@
           "cancelled": "Appuntamento annullato: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Non è stato possibile elaborare questa richiesta. Contatta il tuo fornitore di servizi per assistenza."
+        }
+      },
       "algadeskEmptyHint": "Quando i ticket vengono aggiornati, li vedrai qui."
     },
     "devices": {

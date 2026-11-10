@@ -159,6 +159,11 @@
           "cancelled": "Consulta cancelada: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Não foi possível processar esta solicitação. Entre em contato com o seu provedor de serviços para obter ajuda."
+        }
+      },
       "algadeskEmptyHint": "Quando os tickets forem atualizados, você os verá aqui."
     },
     "devices": {

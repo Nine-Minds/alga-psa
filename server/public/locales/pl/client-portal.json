@@ -165,6 +165,11 @@
           "cancelled": "Wizyta anulowana: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Nie udało się przetworzyć tego zgłoszenia. Skontaktuj się ze swoim dostawcą usług, aby uzyskać pomoc."
+        }
+      },
       "algadeskEmptyHint": "Gdy zgłoszenia zostaną zaktualizowane, zobaczysz je tutaj."
     },
     "devices": {

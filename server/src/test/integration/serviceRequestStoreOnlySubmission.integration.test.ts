@@ -404,13 +404,13 @@ describe('service request store-only submissions', () => {
     expect(detail?.submitted_payload).toEqual(REPRESENTATIVE_PAYLOAD);
     expect(detail?.form_schema_snapshot).toEqual(REPRESENTATIVE_FORM_SCHEMA);
     expect(detail?.created_ticket_id).toBeNull();
-    expect(detail?.workflow_execution_id).toBeNull();
+    expect(detail).not.toHaveProperty('workflow_execution_id');
     expect(detail?.attachments).toHaveLength(1);
     expect(detail?.attachments[0]).toMatchObject({
       field_key: 'evidence',
-      file_id: fileId,
       file_name: 'evidence.pdf',
     });
+    expect(detail?.attachments[0]).not.toHaveProperty('file_id');
   });
 
   it('rejects whitespace-only required long-text answers before creating a submission', async () => {
@@ -507,14 +507,15 @@ describe('service request store-only submissions', () => {
       fixture.clientId,
       result.submissionId
     );
-    expect(clientDetail?.definition_version_number).toBe(1);
+    expect(clientDetail).not.toHaveProperty('definition_version_number');
     expect(clientDetail?.audit_events.map((event) => event.operation)).toEqual([
       'service_request_submission_created',
       'service_request_submission_execution_succeeded',
     ]);
     for (const event of clientDetail?.audit_events ?? []) {
       expect(event.timestamp).toBeTruthy();
-      expect(event.user_id).toBe(fixture.requesterUserId);
+      expect(event).not.toHaveProperty('user_id');
+      expect(event).not.toHaveProperty('details');
       expect(event.actor_name).toBe(`requester-${fixture.tenant.slice(0, 8)}`);
     }
 
@@ -616,7 +617,7 @@ describe('service request store-only submissions', () => {
       fixture.clientId,
       submissionId
     );
-    expect(clientDetail?.definition_version_number).toBe(1);
+    expect(clientDetail).not.toHaveProperty('definition_version_number');
     expect(clientDetail?.audit_events).toEqual([]);
 
     const adminDetail = await getServiceRequestSubmissionDetailForDefinition(

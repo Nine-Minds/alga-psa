@@ -9,7 +9,6 @@
     "newRequestHeading": "Nieuw verzoek indienen"
   },
   "detail": {
-    "version": "Versie {{version}}",
     "submitted": "Aanvraag ingediend",
     "requestIdLabel": "Aanvraag-ID: ",
     "ticketIdLabel": "Ticket-ID: ",
@@ -20,9 +19,7 @@
     "datePlaceholder": "Selecteer een datum",
     "optionLabel": "Optie {{index}}",
     "submit": "Aanvraag indienen",
-    "requiredField": "Dit veld is verplicht.",
-    "initialValuesTitle": "Beginwaarden",
-    "noInitialValues": "Geen statische standaardwaarden geconfigureerd."
+    "requiredField": "Dit veld is verplicht."
   },
   "myRequests": {
     "title": "Mijn aanvragen",
@@ -49,16 +46,12 @@
     "requestIdLabel": "Aanvraag-ID:",
     "statusSection": "Status",
     "submittedAt": "Ingediend: {{date}}",
-    "executionStatus": "Uitvoeringsstatus: {{status}}",
     "ticketLabel": "Ticket:",
-    "workflowLabel": "Workflow: {{id}}",
     "submittedAnswersTitle": "Ingediende antwoorden",
     "noResponse": "Geen antwoord",
     "attachmentsTitle": "Bijlagen",
     "noAttachments": "Geen bijlagen toegevoegd.",
-    "fileIdLabel": "Bestand-ID: {{id}}",
     "fileTypeLabel": "Type: {{mime}}",
-    "versionLabel": "Versie {{version}}",
     "historyTitle": "Geschiedenis",
     "historyEmpty": "Nog geen geschiedenis vastgelegd.",
     "historyActor": "door {{actor}}",
@@ -66,7 +59,8 @@
       "service_request_submission_created": "Verzoek ingediend",
       "service_request_submission_execution_succeeded": "Verwerking voltooid",
       "service_request_submission_execution_failed": "Verwerking mislukt"
-    }
+    },
+    "unnamedAttachment": "Bijlage"
   },
   "recent": {
     "title": "Uw recente verzoeken",

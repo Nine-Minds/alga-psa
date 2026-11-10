@@ -9,7 +9,6 @@
     "newRequestHeading": "Invia una nuova richiesta"
   },
   "detail": {
-    "version": "Versione {{version}}",
     "submitted": "Richiesta inviata",
     "requestIdLabel": "ID richiesta: ",
     "ticketIdLabel": "ID ticket: ",
@@ -20,9 +19,7 @@
     "datePlaceholder": "Seleziona una data",
     "optionLabel": "Opzione {{index}}",
     "submit": "Invia richiesta",
-    "requiredField": "Questo campo è obbligatorio.",
-    "initialValuesTitle": "Valori iniziali",
-    "noInitialValues": "Nessun valore predefinito statico configurato."
+    "requiredField": "Questo campo è obbligatorio."
   },
   "myRequests": {
     "title": "Le mie richieste",
@@ -49,16 +46,12 @@
     "requestIdLabel": "ID richiesta:",
     "statusSection": "Stato",
     "submittedAt": "Inviata: {{date}}",
-    "executionStatus": "Stato di esecuzione: {{status}}",
     "ticketLabel": "Ticket:",
-    "workflowLabel": "ID workflow: {{id}}",
     "submittedAnswersTitle": "Risposte inviate",
     "noResponse": "Nessuna risposta",
     "attachmentsTitle": "Allegati",
     "noAttachments": "Nessun allegato incluso.",
-    "fileIdLabel": "ID file: {{id}}",
     "fileTypeLabel": "Tipo: {{mime}}",
-    "versionLabel": "Versione {{version}}",
     "historyTitle": "Cronologia",
     "historyEmpty": "Nessuna cronologia registrata.",
     "historyActor": "da {{actor}}",
@@ -66,7 +59,8 @@
       "service_request_submission_created": "Richiesta inviata",
       "service_request_submission_execution_succeeded": "Elaborazione completata",
       "service_request_submission_execution_failed": "Elaborazione non riuscita"
-    }
+    },
+    "unnamedAttachment": "Allegato"
   },
   "recent": {
     "title": "Le tue richieste recenti",
