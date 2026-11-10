@@ -257,7 +257,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         local: 'client_id',
         foreign: 'client_id',
         attributes: {
-          id: uuidColumn('client_id', ['equals', 'in']),
+          id: uuidColumn('client_id', ['equals', 'in', 'not_in']),
           tags: tagSet({ taggedType: 'client', local: 'client_id' }),
         },
       },

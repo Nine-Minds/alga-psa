@@ -33,9 +33,7 @@ type LoadOptionsResult = {
   total: number;
 };
 
-interface AsyncSearchableSelectProps {
-  value: string;
-  onChange: (value: string, option?: SelectOption) => void;
+interface AsyncSearchableSelectBaseProps {
   loadOptions: (args: { search: string; page: number; limit: number }) => Promise<LoadOptionsResult>;
   limit?: number;
   placeholder?: string;
@@ -65,9 +63,35 @@ interface AsyncSearchableSelectProps {
   selectedTrailing?: React.ReactNode;
 }
 
+/** One value: picking a row commits it and closes the list. */
+interface AsyncSearchableSingleProps {
+  value: string;
+  onChange: (value: string, option?: SelectOption) => void;
+  values?: undefined;
+  onValuesChange?: undefined;
+}
+
+/**
+ * Many values: picking a row toggles it and the list stays open. The trigger shows `selectedLabel`
+ * (the caller owns the wording: a name, a count) once anything is selected, and the footer gains a
+ * Clear action. Rows are never fetched for selected values that are off the loaded page; the caller
+ * hydrates labels for those.
+ */
+interface AsyncSearchableMultiProps {
+  values: string[];
+  onValuesChange: (values: string[]) => void;
+  value?: undefined;
+  onChange?: undefined;
+}
+
+export type AsyncSearchableSelectProps = AsyncSearchableSelectBaseProps &
+  (AsyncSearchableSingleProps | AsyncSearchableMultiProps);
+
 export function AsyncSearchableSelect({
-  value,
+  value: singleValue,
   onChange,
+  values,
+  onValuesChange,
   loadOptions,
   limit = 10,
   placeholder,
@@ -92,6 +116,14 @@ export function AsyncSearchableSelect({
   triggerId,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
+  const isMulti = values !== undefined;
+  const selectedValues = useMemo(
+    () => (values !== undefined ? values : singleValue ? [singleValue] : []),
+    [values, singleValue],
+  );
+  // Single mode keeps its string; multi mode has no one value, so the trigger keys off the list.
+  const value = isMulti ? (selectedValues.length > 0 ? selectedValues.join(',') : '') : (singleValue ?? '');
+  const isSelected = (optionValue: string) => selectedValues.includes(optionValue);
   const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
   const resolvedEmptyMessage = emptyMessage ?? t('form.noResults', { defaultValue: 'No results found' });
   const [open, setOpen] = useState(false);
@@ -110,9 +142,9 @@ export function AsyncSearchableSelect({
   const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const selectedOption = useMemo(() => {
-    if (!value) return undefined;
+    if (isMulti || !value) return undefined;
     return options.find((o) => o.value === value);
-  }, [options, value]);
+  }, [options, value, isMulti]);
 
   const resolvedSearchPlaceholder =
     searchPlaceholder ?? t('form.searchPlaceholder', { defaultValue: 'Search...' });
@@ -349,7 +381,15 @@ export function AsyncSearchableSelect({
                   disabled={option.disabled}
                   onSelect={() => {
                     if (option.disabled) return;
-                    onChange(option.value, option);
+                    if (isMulti) {
+                      onValuesChange!(
+                        isSelected(option.value)
+                          ? selectedValues.filter((v) => v !== option.value)
+                          : [...selectedValues, option.value],
+                      );
+                      return;
+                    }
+                    onChange!(option.value, option);
                     setOpen(false);
                   }}
                   aria-disabled={option.disabled || undefined}
@@ -358,7 +398,7 @@ export function AsyncSearchableSelect({
                     option.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
                     'hover:bg-[rgb(var(--color-border-100))]',
                     'aria-selected:bg-[rgb(var(--color-border-100))]',
-                    value === option.value && 'bg-[rgb(var(--color-border-100))]'
+                    isSelected(option.value) && 'bg-[rgb(var(--color-border-100))]'
                   )}
                 >
                   {/* cmdk overwrites `id` on Command.Item, so the stable option id lives on this child; clicks bubble to the item. */}
@@ -390,7 +430,7 @@ export function AsyncSearchableSelect({
                     </span>
                     {option.trailing}
                   </span>
-                  {value === option.value && <Check className="w-4 h-4 text-primary-600" />}
+                  {isSelected(option.value) && <Check className="w-4 h-4 text-primary-600" aria-label="selected" />}
                 </Command.Item>
               ))}
 
@@ -414,9 +454,21 @@ export function AsyncSearchableSelect({
           )}
         </Command.List>
 
-        {footerContent && (
+        {(footerContent || (isMulti && selectedValues.length > 0)) && (
           <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))]">
-            {footerContent({ search, close: () => setOpen(false) })}
+            {isMulti && selectedValues.length > 0 && (
+              <Button
+                id={`${id ?? "async-searchable-select"}-clear`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start rounded-none"
+                onClick={() => onValuesChange!([])}
+              >
+                {t('actions.clear', { defaultValue: 'Clear' })}
+              </Button>
+            )}
+            {footerContent?.({ search, close: () => setOpen(false) })}
           </div>
         )}
       </Command>
@@ -459,7 +511,7 @@ export function AsyncSearchableSelect({
           <span className="flex items-center gap-2 min-w-0">
             {value ? selectedIcon : null}
             <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
-              {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
+              {selectedOption?.label ?? selectedLabel ?? (value && !isMulti ? value : resolvedPlaceholder)}
             </span>
             {value ? selectedTrailing : null}
           </span>

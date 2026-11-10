@@ -214,6 +214,8 @@
   "resetFilters": "⟦Řḗşḗŧ⟧",
   "filters": {
     "allStatuses": "⟦Ȧŀŀ Şŧȧŧŭşḗş⟧",
+    "allClients": "⟦Ȧŀŀ Ƈŀīḗƞŧş⟧",
+    "unknownClient": "⟦Ŭƞķƞȯẇƞ ƈŀīḗƞŧ⟧",
     "allOpen": "⟦Ȧŀŀ Ȯƥḗƞ Ŧīƈķḗŧş⟧",
     "allClosed": "⟦Ȧŀŀ Ƈŀȯşḗḓ Ŧīƈķḗŧş⟧",
     "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",

@@ -157,6 +157,7 @@
   },
   "pickers": {
     "addNewClient": "Lägg till ny kund",
+    "clientsSelectedCount": "{{count}} kunder",
     "addNewContact": "Lägg till ny kontakt",
     "loadingUsers": "Läser in användare…",
     "errorLoadingUsers": "Det gick inte att läsa in användare",

@@ -20,6 +20,7 @@ import type { ITicketListFilters } from '@alga-psa/types';
  *   M   master     b1  Open    p1  -             unassigned            c2/k2       SLA on track
  *   CH1 child of M b1  Open    p1  -             unassigned            c1/k1(VIP)  tag urgent
  *   CH2 child of M b1  Open    p1  -             unassigned            c2/k2       SLA paused
+ *   T5  noClient   b1  Open    p1  -             unassigned            -/-         (no client, contact, category, due date or SLA)
  *   (b2 is an inactive board; c1 carries the client VIP tag; k1 the contact VIP tag)
  */
 
@@ -61,7 +62,7 @@ type OptimizedActions = typeof import('@alga-psa/tickets/actions/optimizedTicket
 let optimized: OptimizedActions;
 let db: Knex;
 
-const TICKET_NAMES = ['T1', 'T2', 'T3', 'T4', 'M', 'CH1', 'CH2'] as const;
+const TICKET_NAMES = ['T1', 'T2', 'T3', 'T4', 'T5', 'M', 'CH1', 'CH2'] as const;
 type TicketName = (typeof TICKET_NAMES)[number];
 
 interface Fixture {
@@ -92,7 +93,7 @@ interface Fixture {
 
 let fx: Fixture;
 let idToName: Map<string, TicketName>;
-let foreign: { tenantId: string; vipContactTag: string; locationId: string };
+let foreign: { tenantId: string; vipContactTag: string; locationId: string; clientId: string };
 
 const DAY = 24 * 3600 * 1000;
 
@@ -256,6 +257,7 @@ async function seedFixture(): Promise<void> {
       due_date: new Date(startOfTodayUtc + (23 * 60 + 58) * 60 * 1000), response_state: 'awaiting_internal',
       sla_policy_id: slaPolicy, sla_response_due_at: new Date(now - DAY),
     }),
+    ticket('T5', { board_id: b1, status_id: sOpen1, client_id: null, contact_name_id: null }),
     ticket('CH1', { board_id: b1, status_id: sOpen1, client_id: c1, contact_name_id: k1, master_ticket_id: ids.M }),
     ticket('CH2', {
       board_id: b1, status_id: sOpen1, client_id: c2, contact_name_id: k2, master_ticket_id: ids.M,
@@ -311,7 +313,7 @@ async function seedFixture(): Promise<void> {
   await db('contact_locations').insert({
     tenant: other.tenantId, contact_name_id: foreignContact, location_id: foreignLocation, is_primary: true,
   });
-  foreign = { tenantId: other.tenantId, vipContactTag: foreignVip, locationId: foreignLocation };
+  foreign = { tenantId: other.tenantId, vipContactTag: foreignVip, locationId: foreignLocation, clientId: foreignClient };
 }
 
 const base: ITicketListFilters = {
@@ -349,26 +351,26 @@ interface MatrixCase {
   bundled: TicketName[];
 }
 
-const EVERY: TicketName[] = ['CH1', 'CH2', 'M', 'T1', 'T2', 'T3', 'T4'];
-const TOP: TicketName[] = ['M', 'T1', 'T2', 'T3', 'T4'];
+const EVERY: TicketName[] = ['CH1', 'CH2', 'M', 'T1', 'T2', 'T3', 'T4', 'T5'];
+const TOP: TicketName[] = ['M', 'T1', 'T2', 'T3', 'T4', 'T5'];
 
 const CASES: MatrixCase[] = [
   { id: 'baseline', filters: () => ({}), individual: EVERY, bundled: TOP },
 
   // Boards
-  { id: 'board-include-b1', filters: (f) => ({ boardIds: [f.b1] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2'], bundled: ['M', 'T1', 'T2'] },
+  { id: 'board-include-b1', filters: (f) => ({ boardIds: [f.b1] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T5'], bundled: ['M', 'T1', 'T2', 'T5'] },
   { id: 'board-include-legacy-single', filters: (f) => ({ boardId: f.b2 }), individual: ['T3'], bundled: ['T3'] },
   { id: 'board-include-no-board', filters: () => ({ boardIds: ['no-board'] }), individual: ['T4'], bundled: ['T4'] },
-  { id: 'board-include-b1-and-no-board', filters: (f) => ({ boardIds: [f.b1, 'no-board'] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T4'], bundled: ['M', 'T1', 'T2', 'T4'] },
+  { id: 'board-include-b1-and-no-board', filters: (f) => ({ boardIds: [f.b1, 'no-board'] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T4', 'T5'], bundled: ['M', 'T1', 'T2', 'T4', 'T5'] },
   { id: 'board-include-inactive-explicit-beats-state', filters: (f) => ({ boardIds: [f.b2], boardFilterState: 'active' }), individual: ['T3'], bundled: ['T3'] },
   { id: 'board-exclude-b1', filters: (f) => ({ excludeBoardIds: [f.b1] }), individual: ['T3', 'T4'], bundled: ['T3', 'T4'] },
-  { id: 'board-exclude-no-board', filters: () => ({ excludeBoardIds: ['no-board'] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T3'], bundled: ['M', 'T1', 'T2', 'T3'] },
-  { id: 'board-state-active', filters: () => ({ boardFilterState: 'active' }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2'], bundled: ['M', 'T1', 'T2'] },
+  { id: 'board-exclude-no-board', filters: () => ({ excludeBoardIds: ['no-board'] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T3', 'T5'], bundled: ['M', 'T1', 'T2', 'T3', 'T5'] },
+  { id: 'board-state-active', filters: () => ({ boardFilterState: 'active' }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T5'], bundled: ['M', 'T1', 'T2', 'T5'] },
   { id: 'board-state-inactive', filters: () => ({ boardFilterState: 'inactive' }), individual: ['T3'], bundled: ['T3'] },
 
   // Status
-  { id: 'status-open-only', filters: () => ({ statusId: undefined, showOpenOnly: true }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3', 'T4'], bundled: ['M', 'T1', 'T3', 'T4'] },
-  { id: 'status-by-name-spans-boards', filters: () => ({ statusId: createTicketStatusNameFilterValue('Open') }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3', 'T4'], bundled: ['M', 'T1', 'T3', 'T4'] },
+  { id: 'status-open-only', filters: () => ({ statusId: undefined, showOpenOnly: true }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3', 'T4', 'T5'], bundled: ['M', 'T1', 'T3', 'T4', 'T5'] },
+  { id: 'status-by-name-spans-boards', filters: () => ({ statusId: createTicketStatusNameFilterValue('Open') }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3', 'T4', 'T5'], bundled: ['M', 'T1', 'T3', 'T4', 'T5'] },
   { id: 'status-by-id', filters: (f) => ({ statusId: f.sClosed1 }), individual: ['T2'], bundled: ['T2'] },
 
   // Priority
@@ -378,24 +380,24 @@ const CASES: MatrixCase[] = [
   { id: 'category-parent-matches-subcategorized', filters: (f) => ({ categoryIds: [f.catA] }), individual: ['T1', 'T2'], bundled: ['T1', 'T2'] },
   { id: 'category-subcategory', filters: (f) => ({ categoryIds: [f.catA1] }), individual: ['T2'], bundled: ['T2'] },
   { id: 'category-legacy-single', filters: (f) => ({ categoryId: f.catB }), individual: ['T3'], bundled: ['T3'] },
-  { id: 'category-none', filters: () => ({ categoryIds: ['no-category'] }), individual: ['CH1', 'CH2', 'M', 'T4'], bundled: ['M', 'T4'] },
-  { id: 'category-b-or-none', filters: (f) => ({ categoryIds: [f.catB, 'no-category'] }), individual: ['CH1', 'CH2', 'M', 'T3', 'T4'], bundled: ['M', 'T3', 'T4'] },
-  { id: 'category-exclude-parent-keeps-uncategorized', filters: (f) => ({ excludeCategoryIds: [f.catA] }), individual: ['CH1', 'CH2', 'M', 'T3', 'T4'], bundled: ['M', 'T3', 'T4'] },
-  { id: 'category-exclude-subcategory', filters: (f) => ({ excludeCategoryIds: [f.catA1] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3', 'T4'], bundled: ['M', 'T1', 'T3', 'T4'] },
+  { id: 'category-none', filters: () => ({ categoryIds: ['no-category'] }), individual: ['CH1', 'CH2', 'M', 'T4', 'T5'], bundled: ['M', 'T4', 'T5'] },
+  { id: 'category-b-or-none', filters: (f) => ({ categoryIds: [f.catB, 'no-category'] }), individual: ['CH1', 'CH2', 'M', 'T3', 'T4', 'T5'], bundled: ['M', 'T3', 'T4', 'T5'] },
+  { id: 'category-exclude-parent-keeps-uncategorized', filters: (f) => ({ excludeCategoryIds: [f.catA] }), individual: ['CH1', 'CH2', 'M', 'T3', 'T4', 'T5'], bundled: ['M', 'T3', 'T4', 'T5'] },
+  { id: 'category-exclude-subcategory', filters: (f) => ({ excludeCategoryIds: [f.catA1] }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3', 'T4', 'T5'], bundled: ['M', 'T1', 'T3', 'T4', 'T5'] },
   { id: 'category-exclude-none', filters: () => ({ excludeCategoryIds: ['no-category'] }), individual: ['T1', 'T2', 'T3'], bundled: ['T1', 'T2', 'T3'] },
 
   // Assignment
   { id: 'assignee-user', filters: (f) => ({ assignedToIds: [f.agentX] }), individual: ['T1'], bundled: ['T1'] },
   { id: 'assignee-team', filters: (f) => ({ assignedTeamIds: [f.team] }), individual: ['T2'], bundled: ['T2'] },
-  { id: 'assignee-unassigned-means-no-assigned-to', filters: () => ({ includeUnassigned: true }), individual: ['CH1', 'CH2', 'M', 'T2', 'T3'], bundled: ['M', 'T2', 'T3'] },
-  { id: 'assignee-user-or-unassigned', filters: (f) => ({ assignedToIds: [f.agentX], includeUnassigned: true }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T3'], bundled: ['M', 'T1', 'T2', 'T3'] },
+  { id: 'assignee-unassigned-means-no-assigned-to', filters: () => ({ includeUnassigned: true }), individual: ['CH1', 'CH2', 'M', 'T2', 'T3', 'T5'], bundled: ['M', 'T2', 'T3', 'T5'] },
+  { id: 'assignee-user-or-unassigned', filters: (f) => ({ assignedToIds: [f.agentX], includeUnassigned: true }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T3', 'T5'], bundled: ['M', 'T1', 'T2', 'T3', 'T5'] },
   { id: 'assignee-user-or-team', filters: (f) => ({ assignedToIds: [f.agentX], assignedTeamIds: [f.team] }), individual: ['T1', 'T2'], bundled: ['T1', 'T2'] },
 
   // Due date (the actor's time zone is UTC)
   { id: 'due-overdue', filters: () => ({ dueDateFilter: 'overdue' }), individual: ['T2'], bundled: ['T2'] },
   { id: 'due-upcoming-7d', filters: () => ({ dueDateFilter: 'upcoming' }), individual: ['T3', 'T4'], bundled: ['T3', 'T4'] },
   { id: 'due-today', filters: () => ({ dueDateFilter: 'today' }), individual: ['T4'], bundled: ['T4'] },
-  { id: 'due-none', filters: () => ({ dueDateFilter: 'no_due_date' }), individual: ['CH1', 'CH2', 'M', 'T1'], bundled: ['M', 'T1'] },
+  { id: 'due-none', filters: () => ({ dueDateFilter: 'no_due_date' }), individual: ['CH1', 'CH2', 'M', 'T1', 'T5'], bundled: ['M', 'T1', 'T5'] },
   { id: 'due-before', filters: () => ({ dueDateFilter: 'before', dueDateTo: new Date(Date.now()).toISOString() }), individual: ['T2'], bundled: ['T2'] },
   { id: 'due-after', filters: () => ({ dueDateFilter: 'after', dueDateFrom: new Date(Date.now()).toISOString() }), individual: ['T3', 'T4'], bundled: ['T3', 'T4'] },
   { id: 'due-custom-range', filters: () => ({ dueDateFilter: 'custom', dueDateFrom: new Date(Date.now() - 3 * DAY).toISOString(), dueDateTo: new Date(Date.now()).toISOString() }), individual: ['T2'], bundled: ['T2'] },
@@ -403,17 +405,29 @@ const CASES: MatrixCase[] = [
   // Response state
   { id: 'response-awaiting-client', filters: () => ({ responseState: 'awaiting_client' }), individual: ['T2'], bundled: ['T2'] },
   { id: 'response-awaiting-internal', filters: () => ({ responseState: 'awaiting_internal' }), individual: ['T4'], bundled: ['T4'] },
-  { id: 'response-none-means-null', filters: () => ({ responseState: 'none' }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3'], bundled: ['M', 'T1', 'T3'] },
+  { id: 'response-none-means-null', filters: () => ({ responseState: 'none' }), individual: ['CH1', 'CH2', 'M', 'T1', 'T3', 'T5'], bundled: ['M', 'T1', 'T3', 'T5'] },
 
   // SLA (a bundled master matches on its own SLA only)
   { id: 'sla-has', filters: () => ({ slaStatusFilter: 'has_sla' }), individual: ['CH2', 'M', 'T4'], bundled: ['M', 'T4'] },
-  { id: 'sla-none', filters: () => ({ slaStatusFilter: 'no_sla' }), individual: ['CH1', 'T1', 'T2', 'T3'], bundled: ['T1', 'T2', 'T3'] },
+  { id: 'sla-none', filters: () => ({ slaStatusFilter: 'no_sla' }), individual: ['CH1', 'T1', 'T2', 'T3', 'T5'], bundled: ['T1', 'T2', 'T3', 'T5'] },
   { id: 'sla-breached', filters: () => ({ slaStatusFilter: 'breached' }), individual: ['T4'], bundled: ['T4'] },
   { id: 'sla-on-track', filters: () => ({ slaStatusFilter: 'on_track' }), individual: ['M'], bundled: ['M'] },
   { id: 'sla-paused', filters: () => ({ slaStatusFilter: 'paused' }), individual: ['CH2'], bundled: [] },
 
   // Client, contact and ticket tags roll up to a bundle master through its children
   { id: 'client-id', filters: (f) => ({ clientId: f.c1 }), individual: ['CH1', 'T1', 'T3'], bundled: ['M', 'T1', 'T3'] },
+  // Client include / exclude as a `where` row. A ticket with no client (T5) never matches "any of"
+  // and always matches "none of"; in the bundled view "none of c1" hides M because its child CH1 is c1.
+  { id: 'client-where-any-of-c1', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [f.c1] }] } }), individual: ['CH1', 'T1', 'T3'], bundled: ['M', 'T1', 'T3'] },
+  { id: 'client-where-any-of-c2', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [f.c2] }] } }), individual: ['CH2', 'M', 'T2', 'T4'], bundled: ['M', 'T2', 'T4'] },
+  { id: 'client-where-any-of-c1-c2-excludes-no-client', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [f.c1, f.c2] }] } }), individual: ['CH1', 'CH2', 'M', 'T1', 'T2', 'T3', 'T4'], bundled: ['M', 'T1', 'T2', 'T3', 'T4'] },
+  { id: 'client-where-none-of-c1-keeps-no-client-and-hides-bundle', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [f.c1] }] } }), individual: ['CH2', 'M', 'T2', 'T4', 'T5'], bundled: ['T2', 'T4', 'T5'] },
+  { id: 'client-where-none-of-c1-c2-leaves-only-no-client', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [f.c1, f.c2] }] } }), individual: ['T5'], bundled: ['T5'] },
+  { id: 'client-where-other-tenant-client-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [foreign.clientId] }] } }), individual: [], bundled: [] },
+  { id: 'client-where-none-of-other-tenant-client-keeps-everything', filters: () => ({ where: { join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [foreign.clientId] }] } }), individual: EVERY, bundled: TOP },
+  // Legacy clientId still compiles for server callers, and an explicit row wins over it.
+  { id: 'client-legacy-id-with-where-row-row-wins', filters: (f) => ({ clientId: f.c1, where: { join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [f.c2] }] } }), individual: ['CH2', 'M', 'T2', 'T4'], bundled: ['M', 'T2', 'T4'] },
+  { id: 'client-legacy-id-with-not-in-row-row-wins', filters: (f) => ({ clientId: f.c1, where: { join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [f.c1] }] } }), individual: ['CH2', 'M', 'T2', 'T4', 'T5'], bundled: ['T2', 'T4', 'T5'] },
   { id: 'contact-id', filters: (f) => ({ contactId: f.k1 }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
   { id: 'ticket-tags-legacy-text', filters: () => ({ tags: ['urgent'] }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
   { id: 'ticket-tags-where-empty-in-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'tags', operator: 'in', value: [] }] } }), individual: [], bundled: [] },
@@ -421,10 +435,10 @@ const CASES: MatrixCase[] = [
 
   // New predicate dimensions
   { id: 'contact-tags-any-of-vip', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'in', value: [f.vipContactTag] }] } }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
-  { id: 'contact-tags-none-of-vip-keeps-no-contact', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'not_in', value: [f.vipContactTag] }] } }), individual: ['CH2', 'M', 'T2', 'T3', 'T4'], bundled: ['T2', 'T3', 'T4'] },
-  { id: 'contact-tags-none', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'is_empty' }] } }), individual: ['CH2', 'M', 'T2', 'T4'], bundled: ['T2', 'T4'] },
+  { id: 'contact-tags-none-of-vip-keeps-no-contact', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'not_in', value: [f.vipContactTag] }] } }), individual: ['CH2', 'M', 'T2', 'T3', 'T4', 'T5'], bundled: ['T2', 'T3', 'T4', 'T5'] },
+  { id: 'contact-tags-none', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'is_empty' }] } }), individual: ['CH2', 'M', 'T2', 'T4', 'T5'], bundled: ['T2', 'T4', 'T5'] },
   { id: 'client-tags-any-of-vip', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.tags', operator: 'in', value: [f.vipClientTag] }] } }), individual: ['CH1', 'T1', 'T3'], bundled: ['M', 'T1', 'T3'] },
-  { id: 'client-tags-none-of-vip', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.tags', operator: 'not_in', value: [f.vipClientTag] }] } }), individual: ['CH2', 'M', 'T2', 'T4'], bundled: ['T2', 'T4'] },
+  { id: 'client-tags-none-of-vip', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'client.tags', operator: 'not_in', value: [f.vipClientTag] }] } }), individual: ['CH2', 'M', 'T2', 'T4', 'T5'], bundled: ['T2', 'T4', 'T5'] },
   { id: 'where-combines-with-legacy-keys', filters: (f) => ({ boardIds: [f.b1], where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'in', value: [f.vipContactTag] }] } }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
   { id: 'where-two-clauses-and', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'in', value: [f.vipContactTag] }, { path: 'client.tags', operator: 'not_in', value: [f.vipClientTag] }] } }), individual: [], bundled: [] },
   { id: 'where-ticket-tags-by-definition-id', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'tags', operator: 'in', value: [f.urgentTag] }] } }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
@@ -434,14 +448,14 @@ const CASES: MatrixCase[] = [
   // through a child (SEMANTICS.md, "self or any child").
   { id: 'location-in-warehouse', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'in', value: [f.locWarehouse] }] } }), individual: ['T1'], bundled: ['T1'] },
   { id: 'location-in-both-c1-locations', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'in', value: [f.locWarehouse, f.locHeadOffice] }] } }), individual: ['T1', 'T3'], bundled: ['T1', 'T3'] },
-  { id: 'location-is-empty', filters: () => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'is_empty' }] } }), individual: ['CH1', 'CH2', 'M', 'T2', 'T4'], bundled: ['M', 'T2', 'T4'] },
+  { id: 'location-is-empty', filters: () => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'is_empty' }] } }), individual: ['CH1', 'CH2', 'M', 'T2', 'T4', 'T5'], bundled: ['M', 'T2', 'T4', 'T5'] },
   // not_in is exactly NOT in, so a ticket with no location is included.
-  { id: 'location-not-in-warehouse-keeps-no-location', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'not_in', value: [f.locWarehouse] }] } }), individual: ['CH1', 'CH2', 'M', 'T2', 'T3', 'T4'], bundled: ['M', 'T2', 'T3', 'T4'] },
+  { id: 'location-not-in-warehouse-keeps-no-location', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'not_in', value: [f.locWarehouse] }] } }), individual: ['CH1', 'CH2', 'M', 'T2', 'T3', 'T4', 'T5'], bundled: ['M', 'T2', 'T3', 'T4', 'T5'] },
 
   // Where the requester works: a set two hops out, which does roll up to a bundle master
   { id: 'contact-locations-any-of-warehouse', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'in', value: [f.locWarehouse] }] } }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
-  { id: 'contact-locations-none-of-warehouse-keeps-no-contact', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'not_in', value: [f.locWarehouse] }] } }), individual: ['CH2', 'M', 'T2', 'T3', 'T4'], bundled: ['T2', 'T3', 'T4'] },
-  { id: 'contact-locations-none', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'is_empty' }] } }), individual: ['CH2', 'M', 'T2', 'T4'], bundled: ['T2', 'T4'] },
+  { id: 'contact-locations-none-of-warehouse-keeps-no-contact', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'not_in', value: [f.locWarehouse] }] } }), individual: ['CH2', 'M', 'T2', 'T3', 'T4', 'T5'], bundled: ['T2', 'T3', 'T4', 'T5'] },
+  { id: 'contact-locations-none', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'is_empty' }] } }), individual: ['CH2', 'M', 'T2', 'T4', 'T5'], bundled: ['T2', 'T4', 'T5'] },
   { id: 'contact-locations-other-tenant-location-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'in', value: [foreign.locationId] }] } }), individual: [], bundled: [] },
 ];
 
@@ -449,6 +463,11 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
   beforeAll(async () => {
     wireLocalTestDbEnv();
     db = await createTestDbConnection({ runSeeds: false });
+    // A freshly migrated schema enforces tickets.client_id NOT NULL (the cleanup migration sets it
+    // only where no row is NULL), but databases that carry client-less tickets exist and the client
+    // filter must keep them under "None of". The disposable test database drops the constraint so
+    // the T5 fixture (no client) can be seeded.
+    await db.raw('ALTER TABLE tickets ALTER COLUMN client_id DROP NOT NULL');
     optimized = await import('@alga-psa/tickets/actions/optimizedTicketActions');
     await seedFixture();
     allowAll();
@@ -497,10 +516,10 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
     const seen: TicketName[] = [];
     for (let page = 1; page <= 3; page += 1) {
       const result = await list(filters, page, 2);
-      expect(result.totalCount).toBe(5);
+      expect(result.totalCount).toBe(6);
       seen.push(...result.tickets.map((row) => idToName.get(row.ticket_id) as TicketName));
     }
-    expect([...seen].sort()).toEqual(['CH1', 'CH2', 'M', 'T1', 'T2']);
+    expect([...seen].sort()).toEqual(['CH1', 'CH2', 'M', 'T1', 'T2', 'T5']);
   });
 
   it('assignedToMe matches assignee, additional agent and team member, and is bypassed with project:read', async () => {
@@ -553,6 +572,22 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
       });
       expect(atWarehouse.names.every((name) => name === 'T1')).toBe(true);
       expect(atWarehouse.total).toBe(atWarehouse.names.length);
+
+      // T002: a client.id row can narrow a portal user's own-client scope but never widen it.
+      const noneOfOwn = await names({
+        ...base,
+        bundleView: 'individual',
+        where: { join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [fx.c1] }] },
+      });
+      expect(noneOfOwn.names).toEqual([]);
+      expect(noneOfOwn.total).toBe(0);
+      const anyOfBoth = await names({
+        ...base,
+        bundleView: 'individual',
+        where: { join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [fx.c1, fx.c2] }] },
+      });
+      expect(anyOfBoth.names.every((name) => ['CH1', 'T1', 'T3'].includes(name))).toBe(true);
+      expect(anyOfBoth.total).toBe(anyOfBoth.names.length);
     } finally {
       authMocks.user = { user_id: fx.actorId, user_type: 'internal', tenant: fx.tenantId };
     }

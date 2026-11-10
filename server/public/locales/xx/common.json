@@ -155,6 +155,7 @@
   },
   "pickers": {
     "addNewClient": "⟦Ȧḓḓ ƞḗẇ ƈŀīḗƞŧ⟧",
+    "clientsSelectedCount": "⟦{{count}} ƈŀīḗƞŧş⟧",
     "addNewContact": "⟦Ȧḓḓ ƞḗẇ ƈȯƞŧȧƈŧ⟧",
     "loadingUsers": "⟦Ŀȯȧḓīƞɠ ŭşḗřş...⟧",
     "errorLoadingUsers": "⟦Ḗřřȯř ŀȯȧḓīƞɠ ŭşḗřş⟧",

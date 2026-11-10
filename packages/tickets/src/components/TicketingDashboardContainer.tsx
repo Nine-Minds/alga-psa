@@ -29,7 +29,7 @@ import {
   TICKETS_LAST_ACTIVE_BOARD_SETTING,
 } from '../lib/boardTabs';
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
-import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
+import { foldLegacyClientId, normalizeAssignedToIds } from '../lib/ticketFilterUtils';
 import { decodeTicketWhere, encodeTicketWhere } from '../lib/ticketWhereUrl';
 import {
   DEFAULT_TICKET_LIST_SORT_KEY,
@@ -112,7 +112,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
   const assignedTo = normalizeAssignedToIds(params.get('assignedToIds'));
   const decodedWhere = decodeTicketWhere(params.get('where'));
 
-  const filters: Partial<ITicketListFilters> = {
+  const filters: Partial<ITicketListFilters> = foldLegacyClientId({
     boardId: params.get('boardId') || undefined,
     where: decodedWhere.where,
     boardIds: decodeCsvParam(params.get('boardIds')),
@@ -143,7 +143,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     showOpenOnly: isTicketStatusOpenFilter(params.get('statusId') || TICKET_STATUS_FILTER_OPEN),
     sortBy,
     sortDirection,
-  };
+  });
 
   return {
     filters,
@@ -264,7 +264,6 @@ export default function TicketingDashboardContainer({
       bundleView: initialFilters?.bundleView ?? 'bundled',
       boardId: undefined,
       categoryId: undefined,
-      clientId: undefined,
       assignedToIds: undefined,
       assignedTeamIds: undefined,
       includeUnassigned: false,
@@ -377,7 +376,7 @@ export default function TicketingDashboardContainer({
     if (filters.excludeBoardIds && Array.isArray(filters.excludeBoardIds) && filters.excludeBoardIds.length > 0) {
       params.set('excludeBoardIds', filters.excludeBoardIds.join(','));
     }
-    if (filters.clientId) params.set('clientId', filters.clientId);
+    // The client filter travels in `where` (client.id); a legacy `clientId` is folded on the way in.
     if (filters.contactId) params.set('contactId', filters.contactId);
     if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);

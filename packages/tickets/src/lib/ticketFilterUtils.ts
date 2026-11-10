@@ -1,4 +1,7 @@
 import type { ITicketListFilters } from '@alga-psa/types';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { migrateTicketFilters } from '@alga-psa/list-views';
+import { setWhereTagSelection, type WhereSelection } from './ticketWhereFilters';
 import { decodeTicketWhere } from './ticketWhereUrl';
 import {
   isTicketStatusOpenFilter,
@@ -97,40 +100,59 @@ export function normalizeAssignedToIdList(
   return normalized.length > 0 ? normalized : undefined;
 }
 
+/** Whether a client row lets a ticket with this client through. No row allows everyone. */
+export function clientRowAllows(selection: WhereSelection | null | undefined, clientId: string | null | undefined): boolean {
+  if (!selection || selection.ids.length === 0) return true;
+  const listed = !!clientId && selection.ids.includes(clientId);
+  return selection.mode === 'in' ? listed : !listed;
+}
+
 /**
- * The combined client+contact filter update a client-filter change produces.
+ * The combined client+contact filter update a change to the client row produces.
  *
- * The two filters are cross-linked: the contact picker only ever offers
- * contacts of the selected client, so a contact left over from a *different*
- * client would be an impossible-by-construction combination that silently
- * empties the list. Clearing it is the only honest outcome, and clearing it
- * here — as one update rather than a follow-up — keeps the change to a single
- * debounced fetch with no intermediate state where the stale contact still
- * applies.
+ * The two filters are cross-linked: a contact whose client the client row forbids would be an
+ * impossible-by-construction combination that silently empties the list. Clearing it is the only
+ * honest outcome, and clearing it here, as one update rather than a follow-up, keeps the change to a
+ * single debounced fetch with no intermediate state where the stale contact still applies.
  *
  * Keeping rules, in order:
- * - nothing selected → nothing to decide;
- * - no client selected (cleared, or never set) → every contact is reachable,
- *   so the contact stands;
- * - the contact belongs to the next client → it stands;
- * - anything else, *including unknown ownership* → cleared. Unknown means the
- *   contact is not in the loaded option list, which for a client-scoped list is
- *   precisely the evidence that it is not that client's contact.
+ * - no contact selected → nothing to decide;
+ * - no client row (cleared, or never set) → every contact is reachable, so the contact stands;
+ * - the row allows the contact's client (`in`: listed; `not_in`: not listed) → it stands;
+ * - anything else, *including unknown ownership* → cleared. Unknown means the contact is not in the
+ *   loaded option list, which is precisely the evidence that the row does not reach it.
+ *
+ * The returned `clientId: undefined` retires the legacy single-client key in the same update, so a
+ * stale `clientId` can never survive next to the row that replaced it.
  */
 export function contactFilterUpdateForClientChange(params: {
-  /** The client filter after the change; '' / null / undefined = no client. */
-  nextClientId: string | null | undefined;
+  /** The `where` before the change; clauses other than the client row are kept. */
+  currentWhere: PredicateGroup | undefined;
+  /** The client row after the change; null / empty = no client row. */
+  nextSelection: WhereSelection | null | undefined;
   /** The contact filter currently applied, if any. */
   currentContactId: string | null | undefined;
   /** The client the current contact belongs to, when known. */
   contactClientId?: string | null;
-}): { clientId?: string; contactId?: string } {
-  const clientId = params.nextClientId || undefined;
+}): { where: PredicateGroup | undefined; clientId: undefined; contactId?: string } {
+  const selection = params.nextSelection && params.nextSelection.ids.length > 0 ? params.nextSelection : null;
+  const where = setWhereTagSelection(params.currentWhere, 'client.id', selection);
   const contactId = params.currentContactId || undefined;
 
-  if (!contactId) return { clientId, contactId: undefined };
-  if (!clientId) return { clientId, contactId };
-  return { clientId, contactId: params.contactClientId === clientId ? contactId : undefined };
+  if (!contactId || !selection) return { where, clientId: undefined, contactId };
+  return {
+    where,
+    clientId: undefined,
+    contactId: clientRowAllows(selection, params.contactClientId) ? contactId : undefined,
+  };
+}
+
+/**
+ * Folds a legacy `clientId` into the `client.id` where row. A URL is a v2 filter document, so this
+ * is the v2→v3 step of `migrateTicketFilters` itself (the one fold) rather than a second copy of it.
+ */
+export function foldLegacyClientId<T extends Partial<ITicketListFilters>>(filters: T): T {
+  return (migrateTicketFilters(filters as Record<string, unknown>, 2) ?? filters) as T;
 }
 
 /**
@@ -148,7 +170,7 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
   const statusId = params.get('statusId') || TICKET_STATUS_FILTER_OPEN;
   const assignedTo = normalizeAssignedToIds(params.get('assignedToIds'));
 
-  return {
+  return foldLegacyClientId({
     boardId: params.get('boardId') || undefined,
     boardIds: params.get('boardIds') ? params.get('boardIds')!.split(',').filter(Boolean) : undefined,
     excludeBoardIds: params.get('excludeBoardIds') ? params.get('excludeBoardIds')!.split(',').filter(Boolean) : undefined,
@@ -175,5 +197,5 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
     sortDirection: (params.get('sortDirection') as 'asc' | 'desc') || 'desc',
     bundleView: (params.get('bundleView') as 'bundled' | 'individual') || 'bundled',
     where: decodeTicketWhere(params.get('where')).where,
-  };
+  });
 }

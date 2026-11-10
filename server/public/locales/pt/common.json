@@ -157,6 +157,7 @@
   },
   "pickers": {
     "addNewClient": "Adicionar novo cliente",
+    "clientsSelectedCount": "{{count}} clientes",
     "addNewContact": "Adicionar novo contato",
     "loadingUsers": "Carregando usuários...",
     "errorLoadingUsers": "Erro ao carregar usuários",

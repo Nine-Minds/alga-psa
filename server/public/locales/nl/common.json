@@ -1449,6 +1449,7 @@
   },
   "pickers": {
     "addNewClient": "Nieuwe klant toevoegen",
+    "clientsSelectedCount": "{{count}} klanten",
     "addNewContact": "Nieuwe contactpersoon toevoegen",
     "loadingUsers": "Gebruikers laden...",
     "errorLoadingUsers": "Fout bij laden van gebruikers",
