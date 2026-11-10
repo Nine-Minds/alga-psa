@@ -97,6 +97,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -281,6 +282,16 @@ async function authorizeTicketRead(
   user: IUserWithRoles,
   ticket: Partial<ITicket>
 ): Promise<boolean> {
+  return (await decideTicketRead(trx, tenant, user, ticket)).allowed;
+}
+
+/** The read decision with the fields it redacts, for reads that return the ticket itself. */
+async function decideTicketRead(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  ticket: Partial<ITicket>
+): Promise<{ allowed: boolean; redactedFields: string[] }> {
   const requestCache = new RequestLocalAuthorizationCache();
   const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
@@ -305,7 +316,7 @@ async function authorizeTicketRead(
 
   if (user.user_type === 'client' && user.clientId) {
     if (ticket.client_id !== user.clientId) {
-      return false;
+      return { allowed: false, redactedFields: [] };
     }
   }
 
@@ -323,7 +334,7 @@ async function authorizeTicketRead(
     knex: trx,
   });
 
-  return authorizationDecision.allowed;
+  return { allowed: authorizationDecision.allowed, redactedFields: authorizationDecision.redactedFields ?? [] };
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -2230,10 +2241,17 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           })
         )
       );
-      const authorizedTickets = tickets.filter((_ticket: any, index: number) => decisions[index]?.allowed);
+      // A redaction that hides the ticket's identity hides the ticket, as on REST.
+      const authorizedTickets = tickets.flatMap((ticket: any, index: number) => {
+        const redactedFields: string[] = decisions[index]?.redactedFields ?? [];
+        return decisions[index]?.allowed && projectReadableRecord('ticket', ticket, redactedFields)
+          ? [{ ticket, redactedFields }]
+          : [];
+      });
 
-      // Transform and validate the data
-      const ticketListItems = authorizedTickets.map((ticket: any): ITicketListItem => {
+      // Transform and validate the data. The projection runs on the mapped row, so a display
+      // default ('Unknown') is never emitted in place of a redacted field.
+      const ticketListItems = authorizedTickets.flatMap(({ ticket, redactedFields }: { ticket: any; redactedFields: string[] }): ITicketListItem[] => {
         const {
           status_id,
           priority_id,
@@ -2250,7 +2268,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           ...rest
         } = ticket;
 
-        return {
+        const item: ITicketListItem = {
           status_id: status_id || null,
           priority_id: priority_id || null,
           board_id: board_id || null,
@@ -2272,6 +2290,8 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           estimated_hours: rest.estimated_hours === null || rest.estimated_hours === undefined ? undefined : rest.estimated_hours,
           due_date: rest.due_date === null || rest.due_date === undefined ? undefined : rest.due_date
         };
+        const readable = projectReadableRecord('ticket', item, redactedFields);
+        return readable ? [readable] : [];
       });
 
       return ticketListItems as ITicketListItem[];
@@ -3062,7 +3082,8 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         throw new Error('Ticket not found');
       }
 
-      if (!await authorizeTicketRead(trx, tenant, user as IUserWithRoles, ticket)) {
+      const ticketRead = await decideTicketRead(trx, tenant, user as IUserWithRoles, ticket);
+      if (!ticketRead.allowed) {
         throw new Error('Permission denied: Cannot view ticket');
       }
 
@@ -3124,7 +3145,13 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       view_source: 'ticket_by_id'
     }, user.user_id);
 
-      return convertDates(detailedTicket);
+      // Fields the decision redacts are omitted the way the REST ticket endpoints omit them;
+      // a redaction that hides the ticket's identity hides the ticket.
+      const readableTicket = projectReadableRecord('ticket', convertDates(detailedTicket), ticketRead.redactedFields);
+      if (!readableTicket) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+      return readableTicket;
     });
 
     return result;

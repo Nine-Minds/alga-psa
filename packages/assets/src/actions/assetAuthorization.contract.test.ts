@@ -20,9 +20,9 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain(': applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);');
     expect(source).toContain('const countRow = await listQuery.clone()');
     expect(source).toContain(".count<{ count: string }>('assets.asset_id as count')");
-    expect(source).toContain('filterReadableAssets(trx, tenant, context, rows, {');
+    // List authorization, batching, pagination and redaction are exercised against the real kernel
+    // and database in server/src/test/integration/assetTypeCounts.integration.test.ts.
     expect(source).toContain('resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,');
-    expect(source).toContain('authorizeRecord: async ({ asset, readable }) => {');
     expect(source).toContain('const sourceTotal = Number(countRow.count);');
     expect(source).toContain('total: authorizedPage.total,');
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
