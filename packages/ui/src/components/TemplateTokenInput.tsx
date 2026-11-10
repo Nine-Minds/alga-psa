@@ -41,29 +41,22 @@ export function insertTemplateToken(
 
 /**
  * Tracks whether the caret sits where the author put it. Choosing a menu item blurs the box, and a native
- * input reports a caret (0, 0) even when it was never clicked, so "never placed a caret" is tracked
- * separately: the click or keyboard focus that enters the box does not count, typing and later clicks do.
+ * input reports a caret even when the author never placed one, so "never placed a caret" is tracked
+ * separately. A click places the caret (including the click that focuses the box), and so does typing or
+ * moving with the keyboard. Keyboard focus (Tab) does not: the browser selects the whole text, and an
+ * insert must not replace it.
  */
 function createCaretIntent() {
   let deliberate = false;
-  let focusing = false;
   return {
     onFocus() {
-      focusing = true;
       deliberate = false;
     },
-    onMouseUp(element: CaretElement | null) {
-      if (focusing) {
-        focusing = false;
-        // Dragging a selection while focusing is deliberate; a plain focusing click is not.
-        deliberate = Boolean(element && element.selectionStart !== element.selectionEnd);
-        return;
-      }
+    onMouseUp() {
       deliberate = true;
     },
     onKeyDown(key: string) {
       if (NON_PLACING_KEYS.has(key)) return;
-      focusing = false;
       deliberate = true;
     },
     onInserted() {
@@ -130,22 +123,36 @@ export function TemplateTokenInput({
 
   const handlers = {
     onFocus: () => intent.onFocus(),
-    onMouseUp: () => intent.onMouseUp(elementRef.current),
+    onMouseUp: () => intent.onMouseUp(),
     onKeyDown: (event: React.KeyboardEvent) => intent.onKeyDown(event.key),
   };
 
-  const insert = (token: string) => {
+  // Caret to restore once the menu has closed. The menu hands focus back to its trigger on close, so the
+  // text box is refocused from onCloseAutoFocus rather than straight after the insert.
+  const pendingCaretRef = useRef<number | null>(null);
+
+  const restoreCaret = (caret: number) => {
     const element = elementRef.current;
+    element?.focus();
+    element?.setSelectionRange(caret, caret);
+    // Refocusing isn't the author placing the caret, but the caret after the token is theirs.
+    intent.onInserted();
+  };
+
+  const insert = (token: string) => {
     // At the caret the author placed, otherwise at the end of the text.
-    const { start, end } = intent.insertionRange(element, value.length);
+    const { start, end } = intent.insertionRange(elementRef.current, value.length);
     const next = insertTemplateToken(value, start, end, token);
+    pendingCaretRef.current = next.caret;
     onChange(next.text);
-    window.requestAnimationFrame(() => {
-      element?.focus();
-      element?.setSelectionRange(next.caret, next.caret);
-      // Refocusing isn't the author placing the caret, but the caret after the token is theirs.
-      intent.onInserted();
-    });
+  };
+
+  const handleMenuCloseAutoFocus = (event: Event) => {
+    const caret = pendingCaretRef.current;
+    if (caret === null) return;
+    pendingCaretRef.current = null;
+    event.preventDefault();
+    restoreCaret(caret);
   };
 
   const errorId = error ? `${id}-error` : undefined;
@@ -162,6 +169,7 @@ export function TemplateTokenInput({
               label={label}
               value={value}
               rows={rows}
+              wrapperClassName="mb-0"
               placeholder={placeholder}
               disabled={disabled}
               aria-invalid={error ? true : undefined}
@@ -199,7 +207,11 @@ export function TemplateTokenInput({
               {insertLabel}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
+          <DropdownMenuContent
+            align="end"
+            className="max-h-72 overflow-y-auto"
+            onCloseAutoFocus={handleMenuCloseAutoFocus}
+          >
             {tokens.map((option) => (
               <DropdownMenuItem
                 key={option.token}

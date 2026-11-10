@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TemplateTokenInput, insertTemplateToken, type TemplateTokenOption } from './TemplateTokenInput';
 
@@ -66,6 +66,44 @@ describe('TemplateTokenInput', () => {
     await openMenu(user);
     await user.click(await screen.findByText('Employee Name'));
     expect(input.value).toBe('Hello {{employee_name}}');
+  });
+
+  it('inserts at the caret placed by the click that focuses the box', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="Hello World" />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    // The focusing click put the caret between the words.
+    input.setSelectionRange(6, 6);
+    await openMenu(user);
+    await user.click(await screen.findByText('Employee Name'));
+    expect(input.value).toBe('Hello {{employee_name}}World');
+  });
+
+  it('appends after keyboard focus, which selects nothing deliberately', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="Hello" />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.tab();
+    expect(document.activeElement).toBe(input);
+    input.setSelectionRange(0, 5);
+    await openMenu(user);
+    await user.click(await screen.findByText('Start Date'));
+    expect(input.value).toBe('Hello{{start_date}}');
+  });
+
+  it('returns focus to the box with the caret after the inserted token', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="Hello World" />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(6, 6);
+    await openMenu(user);
+    await user.click(await screen.findByText('Employee Name'));
+    await waitFor(() => expect(document.activeElement).toBe(input));
+    expect(input.selectionStart).toBe('Hello {{employee_name}}'.length);
+    await user.keyboard('!');
+    expect(input.value).toBe('Hello {{employee_name}}!World');
   });
 
   it('completes a started {{emp', async () => {
