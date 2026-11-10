@@ -187,7 +187,10 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
 
     it('aborts persistence when an edit or another invoice changed the source', async () => {
       tables.ticket_fixed_fee_services.update.mockResolvedValue(0);
-      await expect(persist()).rejects.toThrow('changed or was already billed');
+      await expect(persist()).rejects.toMatchObject({
+        code: 'SOURCE_CHANGED',
+        message: expect.stringContaining('changed or was already billed'),
+      });
     });
   });
 

@@ -430,6 +430,7 @@
       "FIXED_LINE_RATE_UNRESOLVED": "La ligne à tarif forfaitaire {{lines}} n'a pas de tarif. Définissez un tarif sur la ligne de contrat (ou un prix pour ses services dans la devise du contrat), puis réessayez.",
       "FIXED_LINE_NO_SERVICES": "La ligne à tarif fixe {{lines}} a un tarif mais aucun service sur lequel le facturer. Ajoutez un service à la ligne de contrat, puis réessayez.",
       "SOURCE_ALREADY_BILLED": "Certains éléments sélectionnés ne sont plus facturables (déjà facturés, non approuvés ou supprimés). Actualisez et réessayez.",
+      "SOURCE_CHANGED": "Un produit ou un service à tarif fixe a été modifié ou déjà facturé. Actualisez les éléments facturables et réessayez.",
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
       "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",

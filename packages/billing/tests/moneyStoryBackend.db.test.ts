@@ -379,6 +379,21 @@ describe('S5 money story backend', () => {
       margin_ratio: 0.55,
     });
     expect(afterReturn.find((row) => row.item_id === soItemId)?.cogs_total).toBe(7_000);
+
+    await insertFiltered('stock_movements', {
+      tenant: TENANT,
+      movement_id: randomUUID(),
+      movement_type: 'return_restock',
+      service_id: SERVICE_B,
+      quantity: 1,
+      cogs_cost: 1_000,
+      source_doc_type: 'ticket_material',
+      source_doc_id: materialId,
+      performed_by: USER,
+      created_at: createdAt,
+    });
+    const afterPositiveReturn = await getInvoiceLineCogsForTenant(trx, TENANT, invoiceId);
+    expect(afterPositiveReturn.find((row) => row.item_id === materialItemId)?.cogs_total).toBe(3_500);
   });
 
   it('T017: vendor_bill export builds a QBO Bill payload, records line status, and is mapping-idempotent', async () => {
