@@ -46,6 +46,10 @@
       "import": "./dist/bundles/starterBundles.js",
       "types": "./src/bundles/starterBundles.ts"
     },
+    "./portfolios/service": {
+      "import": "./dist/portfolios/service.js",
+      "types": "./src/portfolios/service.ts"
+    },
     "./adapters/rbac": {
       "import": "./dist/adapters/rbac.js",
       "types": "./src/adapters/rbac.ts"

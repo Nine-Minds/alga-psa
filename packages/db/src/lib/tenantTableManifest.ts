@@ -1,7 +1,7 @@
 /**
  * Tenant table manifest and FK ordering engine.
  *
- * One declarative entry per tenant table. Deletion, export, scope and client-merge
+ * One declarative entry per tenant table. Deletion, export, scope and client-ownership
  * facts hang off that entry instead of each lifecycle consumer keeping a private
  * list. Declaration order is the authoring rank: it is the deletion order, and
  * `computeTenantDeletionOrder()` validates it against the restrictive foreign keys
@@ -36,6 +36,46 @@ export interface TenantTableReference {
   resolution: 'null-before-delete';
 }
 
+/** One step from a table to a parent that is closer to the client. */
+export interface ClientOwnershipHop {
+  /** The referencing column on the table the hop starts from. */
+  column: string;
+  /** The parent table the hop lands on. */
+  table: string;
+  /** The parent column `column` matches. Defaults to the same name as `column`. */
+  parentColumn?: string;
+  /** `false` where the schema declares no foreign key for this link, so only this declaration states it. */
+  enforced?: false;
+}
+
+/** One to three hops ending on `clients` or on a table that names its client column. */
+export type ClientOwnershipChain = readonly ClientOwnershipHop[];
+
+/**
+ * How a row reaches a client.
+ *
+ * - `column`: the table carries the client itself, in the named column.
+ * - `parent`: the client is the parent's, up to three hops away.
+ * - `alternatives`: several parents can each lead to a client; a row follows the ones
+ *   it has a value for. Whether one or all of them must be in scope is the reader's rule.
+ * - `resolver`: polymorphic. `discriminator` names the kind of record `id` points at;
+ *   the named resolver maps a discriminator value to a client. Resolvers are registered
+ *   by the packages that own the kinds, not here.
+ * - `exempt`: the table has a client-looking column or foreign key and is deliberately
+ *   not client-owned. `column` names the column the reason is about.
+ */
+export type ClientOwnership =
+  | { by: 'column'; column: string; enforced?: false }
+  | { by: 'parent'; chain: ClientOwnershipChain }
+  | { by: 'alternatives'; parents: readonly ClientOwnershipChain[] }
+  | { by: 'resolver'; resolver: string; discriminator: string; id: string }
+  | { by: 'exempt'; reason: string; column?: string };
+
+/** The table every ownership declaration leads to. */
+export const CLIENT_TABLE = 'clients';
+/** Longest parent chain a declaration may state. */
+export const MAX_CLIENT_OWNERSHIP_HOPS = 3;
+
 export interface TenantTableEntry {
   table: string;
   /** `ordered`: deleted by the loop in declared order. `excluded`: never deleted by it (reason required). */
@@ -47,8 +87,11 @@ export interface TenantTableEntry {
   /** Position in the tenant export, ascending. */
   export?: { rank: number };
   citus?: 'distributed' | 'local' | 'unstated';
-  /** Keyed on `client_id`; must be classified by the client merge plan. */
-  clientKeyed?: boolean;
+  /**
+   * How a row of this table reaches a client, or why it does not. Every table with a
+   * foreign key to `clients` carries one (`clientOwnershipViolations()`).
+   */
+  clientKeyed?: ClientOwnership;
   references?: readonly TenantTableReference[];
   block?: string;
   note?: string;
@@ -269,8 +312,128 @@ export function tenantExportOrder(manifest: readonly TenantTableEntry[] = TENANT
 }
 let exportOrderCache: readonly string[] | undefined;
 
+/** The ownership declaration for `table`, if it has one. */
+export function tenantClientOwnership(table: string): ClientOwnership | undefined {
+  return getTenantTableManifestEntry(table)?.clientKeyed;
+}
+
+/**
+ * Every table that names a client column, with that column: `column` declarations and
+ * exemptions that say which column they are about. `owned` is false for the exemptions.
+ */
+export function tenantClientColumns(
+  manifest: readonly TenantTableEntry[] = TENANT_TABLE_MANIFEST,
+): readonly { table: string; column: string; owned: boolean }[] {
+  const columns: { table: string; column: string; owned: boolean }[] = [];
+  for (const { table, clientKeyed } of manifest) {
+    if (clientKeyed?.by === 'column') columns.push({ table, column: clientKeyed.column, owned: true });
+    else if (clientKeyed?.by === 'exempt' && clientKeyed.column) columns.push({ table, column: clientKeyed.column, owned: false });
+  }
+  return columns;
+}
+
+/** Tables carrying a `client_id` column: the set the client merge plan must classify. */
 export function tenantClientKeyedTables(manifest: readonly TenantTableEntry[] = TENANT_TABLE_MANIFEST): readonly string[] {
-  return manifest.filter(entry => entry.clientKeyed).map(entry => entry.table);
+  return tenantClientColumns(manifest).filter(entry => entry.column === 'client_id').map(entry => entry.table);
+}
+
+const fkColumns = (fk: TenantTableForeignKey) => fk.column.split(',');
+
+/**
+ * Structural check of the ownership declarations against the foreign-key snapshot.
+ * Returns one message per problem; empty when the manifest is sound.
+ *
+ * - A foreign key to `clients` needs a declaration that accounts for its column: the
+ *   declared column, a hop onto `clients` through it, or an exemption.
+ * - A declared column or hop is backed by a foreign key, or says `enforced: false`; never both.
+ * - A chain is one to three hops over manifest tables, visits no table twice, and ends
+ *   on `clients` or on a table that declares its client column.
+ */
+export function clientOwnershipViolations(
+  manifest: readonly TenantTableEntry[] = TENANT_TABLE_MANIFEST,
+  foreignKeys: readonly TenantTableForeignKey[] = TENANT_TABLE_FOREIGN_KEYS,
+): string[] {
+  const byTable = new Map(manifest.map(entry => [entry.table, entry]));
+  const hasForeignKey = (child: string, column: string, parent: string) =>
+    foreignKeys.some(fk => fk.child === child && fk.parent === parent && fkColumns(fk).includes(column));
+  const violations: string[] = [];
+
+  const checkLink = (where: string, child: string, column: string, parent: string, enforced: false | undefined) => {
+    const backed = hasForeignKey(child, column, parent);
+    if (!backed && enforced !== false) violations.push(`${where}: no foreign key ${child}.${column} -> ${parent}; fix the declaration or mark it enforced: false`);
+    if (backed && enforced === false) violations.push(`${where}: ${child}.${column} -> ${parent} is a foreign key; drop enforced: false`);
+  };
+
+  const checkChain = (where: string, start: string, chain: ClientOwnershipChain) => {
+    if (chain.length < 1 || chain.length > MAX_CLIENT_OWNERSHIP_HOPS) {
+      violations.push(`${where}: a chain has 1 to ${MAX_CLIENT_OWNERSHIP_HOPS} hops, found ${chain.length}`);
+      return;
+    }
+    const seen = new Set([start]);
+    let from = start;
+    for (const hop of chain) {
+      if (!byTable.has(hop.table)) violations.push(`${where}: ${hop.table} is not a manifest table`);
+      if (seen.has(hop.table)) violations.push(`${where}: ${hop.table} appears twice in the chain`);
+      seen.add(hop.table);
+      checkLink(where, from, hop.column, hop.table, hop.enforced);
+      from = hop.table;
+    }
+    if (from !== CLIENT_TABLE && byTable.get(from)?.clientKeyed?.by !== 'column') {
+      violations.push(`${where}: the chain ends on ${from}, which is not ${CLIENT_TABLE} and declares no client column`);
+    }
+  };
+
+  /** The columns through which a declaration reaches `clients` directly; null when it covers any column. */
+  const directColumns = (ownership: ClientOwnership): readonly string[] | null => {
+    const first = (chain: ClientOwnershipChain) => (chain[0]?.table === CLIENT_TABLE ? [chain[0].column] : []);
+    switch (ownership.by) {
+      case 'column': return [ownership.column];
+      case 'parent': return first(ownership.chain);
+      case 'alternatives': return ownership.parents.flatMap(first);
+      case 'resolver': return [];
+      case 'exempt': return ownership.column ? [ownership.column] : null;
+    }
+  };
+
+  for (const { table, clientKeyed } of manifest) {
+    if (!clientKeyed) continue;
+    const where = `${table}.clientKeyed`;
+    switch (clientKeyed.by) {
+      case 'column':
+        // `clients` names its own key; there is no parent to check it against.
+        if (table !== CLIENT_TABLE) checkLink(where, table, clientKeyed.column, CLIENT_TABLE, clientKeyed.enforced);
+        break;
+      case 'parent':
+        checkChain(where, table, clientKeyed.chain);
+        break;
+      case 'alternatives':
+        if (clientKeyed.parents.length < 2) violations.push(`${where}: alternatives need at least two parents; use by: 'parent' for one`);
+        clientKeyed.parents.forEach((chain, index) => checkChain(`${where}[${index}]`, table, chain));
+        break;
+      case 'resolver':
+        if (!clientKeyed.resolver || !clientKeyed.discriminator || !clientKeyed.id) violations.push(`${where}: a resolver declaration names the resolver, the discriminator column and the id column`);
+        break;
+      case 'exempt':
+        if (!clientKeyed.reason.trim()) violations.push(`${where}: an exemption states its reason`);
+        break;
+    }
+  }
+
+  const reported = new Set<string>();
+  for (const fk of foreignKeys) {
+    if (fk.parent !== CLIENT_TABLE || fk.child === CLIENT_TABLE) continue;
+    const ownership = byTable.get(fk.child)?.clientKeyed;
+    const covered = ownership ? directColumns(ownership) : [];
+    for (const column of fkColumns(fk)) {
+      const key = `${fk.child}.${column}`;
+      if (reported.has(key) || covered === null || covered.includes(column)) continue;
+      reported.add(key);
+      violations.push(ownership
+        ? `${key}: foreign key to ${CLIENT_TABLE} is not covered by the table's ${ownership.by} declaration`
+        : `${key}: foreign key to ${CLIENT_TABLE} with no ownership declaration or exemption`);
+    }
+  }
+  return violations;
 }
 
 export function getTenantTableManifestEntry(table: string): TenantTableEntry | undefined {
@@ -288,9 +451,9 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'email_sender_routes', deletion: 'ordered' },
   { table: 'email_sender_addresses', deletion: 'ordered' },
   { table: 'rma_events', deletion: 'ordered' },
-  { table: 'rma_cases', deletion: 'ordered', clientKeyed: true },
+  { table: 'rma_cases', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'asset_custody_events', deletion: 'ordered' },
-  { table: 'asset_custody', deletion: 'ordered', clientKeyed: true },
+  { table: 'asset_custody', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'sessions', deletion: 'ordered' },
   { table: 'staging_container_members', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'staging_containers', deletion: 'ordered', scope: { scope: 'tenant' } },
@@ -303,20 +466,20 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'vendor_bill_lines', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'po_landed_costs', deletion: 'ordered' },
   { table: 'purchase_order_lines', deletion: 'ordered' },
-  { table: 'sales_order_lines', deletion: 'ordered' },
+  { table: 'sales_order_lines', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'so_id', table: 'sales_orders' }] } },
   { table: 'document_template_assignments', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'vendor_products', deletion: 'ordered' },
   { table: 'ghost_usage_reviews', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'project_staging_lines', deletion: 'ordered', scope: { scope: 'tenant' } },
-  { table: 'stock_units', deletion: 'ordered', clientKeyed: true, references: [{ table: 'project_staging_lines', column: 'allocated_staging_line_id', onDelete: 'NO ACTION', resolution: 'null-before-delete' }] },
+  { table: 'stock_units', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' }, references: [{ table: 'project_staging_lines', column: 'allocated_staging_line_id', onDelete: 'NO ACTION', resolution: 'null-before-delete' }] },
   { table: 'count_sessions', deletion: 'ordered' },
   { table: 'vendor_bills', deletion: 'ordered', scope: { scope: 'tenant' } },
-  { table: 'sales_orders', deletion: 'ordered', clientKeyed: true },
+  { table: 'sales_orders', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'stock_transfers', deletion: 'ordered' },
-  { table: 'purchase_orders', deletion: 'ordered' },
+  { table: 'purchase_orders', deletion: 'ordered', clientKeyed: { by: 'column', column: 'drop_ship_client_id' } },
   { table: 'document_templates', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'stock_locations', deletion: 'ordered' },
-  { table: 'app_search_index', deletion: 'ordered' },
+  { table: 'app_search_index', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_scope_id', enforced: false } },
   { table: 'workflow_task_history', deletion: 'ordered' },
   { table: 'workflow_form_schemas', deletion: 'ordered' },
   { table: 'workflow_run_steps', deletion: 'ordered' },
@@ -347,16 +510,16 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'marketing_suppressions', deletion: 'ordered' },
   { table: 'marketing_channels', deletion: 'ordered' },
   { table: 'marketing_campaigns', deletion: 'ordered' },
-  { table: 'interactions', deletion: 'ordered', export: { rank: 42 }, clientKeyed: true },
+  { table: 'interactions', deletion: 'ordered', export: { rank: 42 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'interaction_types', deletion: 'ordered' },
-  { table: 'task_checklist_items', deletion: 'ordered' },
+  { table: 'task_checklist_items', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'task_id', table: 'project_tasks' }, { column: 'phase_id', table: 'project_phases' }, { column: 'project_id', table: 'projects' }] } },
   { table: 'project_task_dependencies', deletion: 'ordered' },
-  { table: 'task_resources', deletion: 'ordered' },
-  { table: 'project_ticket_links', deletion: 'ordered' },
+  { table: 'task_resources', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'task_id', table: 'project_tasks' }, { column: 'phase_id', table: 'project_phases' }, { column: 'project_id', table: 'projects' }] } },
+  { table: 'project_ticket_links', deletion: 'ordered', clientKeyed: { by: 'alternatives', parents: [[{ column: 'project_id', table: 'projects' }], [{ column: 'ticket_id', table: 'tickets' }]] } },
   { table: 'project_task_comment_reactions', deletion: 'ordered' },
-  { table: 'project_task_comments', deletion: 'ordered', export: { rank: 14 } },
-  { table: 'project_materials', deletion: 'ordered', export: { rank: 15 }, clientKeyed: true },
-  { table: 'ticket_materials', deletion: 'ordered', export: { rank: 6 }, clientKeyed: true },
+  { table: 'project_task_comments', deletion: 'ordered', export: { rank: 14 }, clientKeyed: { by: 'parent', chain: [{ column: 'task_id', table: 'project_tasks' }, { column: 'phase_id', table: 'project_phases' }, { column: 'project_id', table: 'projects' }] } },
+  { table: 'project_materials', deletion: 'ordered', export: { rank: 15 }, clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'ticket_materials', deletion: 'ordered', export: { rank: 6 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'project_template_checklist_items', deletion: 'ordered' },
   { table: 'project_template_dependencies', deletion: 'ordered' },
   { table: 'project_template_task_resources', deletion: 'ordered' },
@@ -367,23 +530,23 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'quote_activities', deletion: 'ordered' },
   { table: 'quote_access_links', deletion: 'ordered' },
   { table: 'quote_decisions', deletion: 'ordered' },
-  { table: 'quote_items', deletion: 'ordered' },
+  { table: 'quote_items', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'quote_id', table: 'quotes' }] } },
   { table: 'quote_document_template_assignments', deletion: 'ordered' },
   { table: 'quote_document_templates', deletion: 'ordered' },
   { table: 'standard_quote_document_templates', deletion: 'ordered' },
-  { table: 'quotes', deletion: 'ordered', clientKeyed: true },
+  { table: 'quotes', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'opportunity_meeting_reviews', deletion: 'ordered' },
   { table: 'opportunity_commitments', deletion: 'ordered' },
   { table: 'opportunity_steps', deletion: 'ordered' },
   { table: 'opportunity_step_templates', deletion: 'ordered' },
   { table: 'opportunity_evidence', deletion: 'ordered' },
-  { table: 'opportunity_qbr_triggers', deletion: 'ordered', clientKeyed: true },
-  { table: 'opportunity_suggestions', deletion: 'ordered', clientKeyed: true },
+  { table: 'opportunity_qbr_triggers', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'opportunity_suggestions', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'opportunity_meeting_sessions', deletion: 'ordered' },
   { table: 'opportunity_settings', deletion: 'ordered' },
-  { table: 'opportunities', deletion: 'ordered', clientKeyed: true, references: [{ table: 'opportunity_suggestions', column: 'suggestion_id', onDelete: 'NO ACTION', resolution: 'null-before-delete' }] },
+  { table: 'opportunities', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' }, references: [{ table: 'opportunity_suggestions', column: 'suggestion_id', onDelete: 'NO ACTION', resolution: 'null-before-delete' }] },
   { table: 'invoice_adjustment_operations', deletion: 'ordered' },
-  { table: 'invoice_charges', deletion: 'ordered' },
+  { table: 'invoice_charges', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'invoice_id', table: 'invoices' }] } },
   { table: 'invoice_annotations', deletion: 'ordered', export: { rank: 18 } },
   { table: 'invoice_time_entries', deletion: 'ordered', export: { rank: 19 } },
   { table: 'invoice_usage_records', deletion: 'ordered' },
@@ -391,7 +554,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'invoice_charge_fixed_details', deletion: 'ordered' },
   { table: 'invoice_items', deletion: 'ordered', export: { rank: 17 } },
   { table: 'invoice_autopay_attempts', deletion: 'ordered' },
-  { table: 'billing_profile_autopay', deletion: 'ordered', clientKeyed: true },
+  { table: 'billing_profile_autopay', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'invoice_payment_links', deletion: 'ordered' },
   { table: 'invoice_payments', deletion: 'ordered' },
   { table: 'payment_confirmation_emails', deletion: 'ordered' },
@@ -399,16 +562,16 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'hour_block_audit', deletion: 'ordered' },
   { table: 'hour_block_service_scopes', deletion: 'ordered' },
   { table: 'hour_block_time_allocations', deletion: 'ordered' },
-  { table: 'hour_blocks', deletion: 'ordered', clientKeyed: true },
-  { table: 'contract_line_block_issuances', deletion: 'ordered', clientKeyed: true },
+  { table: 'hour_blocks', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'contract_line_block_issuances', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'time_tracking_session_segments', deletion: 'ordered' },
   { table: 'time_tracking_sessions', deletion: 'ordered' },
   { table: 'time_entry_suggestion_dismissals', deletion: 'ordered' },
   { table: 'time_sheet_notes', deletion: 'ordered' },
   { table: 'time_sheet_comments', deletion: 'ordered', export: { rank: 10 } },
   { table: 'time_entry_change_requests', deletion: 'ordered' },
-  { table: 'co_managed_time_work_references', deletion: 'ordered', clientKeyed: true },
-  { table: 'time_entries', deletion: 'ordered', export: { rank: 8 } },
+  { table: 'co_managed_time_work_references', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'time_entries', deletion: 'ordered', export: { rank: 8 }, clientKeyed: { by: 'resolver', resolver: 'work_item', discriminator: 'work_item_type', id: 'work_item_id' } },
   { table: 'time_sheets', deletion: 'ordered', export: { rank: 9 } },
   { table: 'user_cost_rates', deletion: 'ordered' },
   { table: 'document_block_content', deletion: 'ordered', export: { rank: 28 } },
@@ -422,9 +585,9 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'ticket_comment_email_deliveries', deletion: 'ordered' },
   { table: 'comment_reactions', deletion: 'ordered' },
   { table: 'vectors', deletion: 'ordered' },
-  { table: 'email_reply_tokens', deletion: 'ordered' },
-  { table: 'comments', deletion: 'ordered', export: { rank: 7 } },
-  { table: 'comment_threads', deletion: 'ordered' },
+  { table: 'email_reply_tokens', deletion: 'ordered', clientKeyed: { by: 'alternatives', parents: [[{ column: 'ticket_id', table: 'tickets' }], [{ column: 'project_id', table: 'projects' }], [{ column: 'comment_id', table: 'comments' }, { column: 'ticket_id', table: 'tickets' }]] } },
+  { table: 'comments', deletion: 'ordered', export: { rank: 7 }, clientKeyed: { by: 'parent', chain: [{ column: 'ticket_id', table: 'tickets' }] } },
+  { table: 'comment_threads', deletion: 'ordered', clientKeyed: { by: 'alternatives', parents: [[{ column: 'ticket_id', table: 'tickets' }], [{ column: 'project_task_id', table: 'project_tasks', parentColumn: 'task_id' }, { column: 'phase_id', table: 'project_phases' }, { column: 'project_id', table: 'projects' }]] } },
   { table: 'gmail_processed_history', deletion: 'ordered' },
   { table: 'email_processed_attachments', deletion: 'ordered' },
   { table: 'email_processed_messages', deletion: 'ordered' },
@@ -438,11 +601,11 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'teams_audit_events', deletion: 'ordered' },
   { table: 'teams_conversation_references', deletion: 'ordered' },
   { table: 'teams_integrations', deletion: 'ordered' },
-  { table: 'microsoft_profiles', deletion: 'ordered', clientKeyed: true },
+  { table: 'microsoft_profiles', deletion: 'ordered', clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
   { table: 'telephony_call_artifacts', deletion: 'ordered' },
-  { table: 'telephony_call_intents', deletion: 'ordered', clientKeyed: true },
-  { table: 'telephony_call_records', deletion: 'ordered' },
-  { table: 'telephony_chat_records', deletion: 'ordered' },
+  { table: 'telephony_call_intents', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
+  { table: 'telephony_call_records', deletion: 'ordered', clientKeyed: { by: 'column', column: 'matched_client_id', enforced: false } },
+  { table: 'telephony_chat_records', deletion: 'ordered', clientKeyed: { by: 'column', column: 'matched_client_id', enforced: false } },
   { table: 'telephony_providers', deletion: 'ordered' },
   { table: 'authorization_bundle_assignments', deletion: 'ordered' },
   { table: 'authorization_bundle_rules', deletion: 'ordered' },
@@ -457,6 +620,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'user_notification_preferences', deletion: 'ordered' },
   { table: 'user_internal_notification_preferences', deletion: 'ordered' },
   { table: 'user_preferences', deletion: 'ordered' },
+  { table: 'user_client_portfolios', deletion: 'ordered', clientKeyed: true },
   { table: 'role_permissions', deletion: 'ordered' },
   { table: 'user_roles', deletion: 'ordered', export: { rank: 41 } },
   { table: 'user_auth_accounts', deletion: 'ordered' },
@@ -473,14 +637,14 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'availability_settings', deletion: 'ordered' },
   { table: 'calendar_event_mappings', deletion: 'ordered' },
   { table: 'calendar_provider_health', deletion: 'ordered' },
-  { table: 'google_calendar_provider_config', deletion: 'ordered', clientKeyed: true },
-  { table: 'microsoft_calendar_provider_config', deletion: 'ordered', clientKeyed: true },
+  { table: 'google_calendar_provider_config', deletion: 'ordered', clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
+  { table: 'microsoft_calendar_provider_config', deletion: 'ordered', clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
   { table: 'calendar_providers', deletion: 'ordered' },
-  { table: 'tag_mappings', deletion: 'ordered', export: { rank: 46 } },
+  { table: 'tag_mappings', deletion: 'ordered', export: { rank: 46 }, clientKeyed: { by: 'resolver', resolver: 'tagged_entity', discriminator: 'tagged_type', id: 'tagged_id' } },
   { table: 'tag_references', deletion: 'ordered' },
   { table: 'tag_display_rules', deletion: 'ordered' },
-  { table: 'ticket_resources', deletion: 'ordered', export: { rank: 5 } },
-  { table: 'ticket_watchers', deletion: 'ordered' },
+  { table: 'ticket_resources', deletion: 'ordered', export: { rank: 5 }, clientKeyed: { by: 'parent', chain: [{ column: 'ticket_id', table: 'tickets' }] } },
+  { table: 'ticket_watchers', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'ticket_id', table: 'tickets' }] } },
   { table: 'document_fetch_hosts', deletion: 'ordered' },
   { table: 'client_portal_visibility_group_boards', deletion: 'ordered' },
   { table: 'import_job_items', deletion: 'ordered' },
@@ -514,18 +678,18 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'external_entity_mappings', deletion: 'ordered' },
   { table: 'import_sources', deletion: 'ordered' },
   { table: 'recurring_ticket_client_assets', deletion: 'ordered' },
-  { table: 'recurring_ticket_occurrences', deletion: 'ordered', clientKeyed: true },
-  { table: 'recurring_ticket_definition_clients', deletion: 'ordered', clientKeyed: true },
+  { table: 'recurring_ticket_occurrences', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
+  { table: 'recurring_ticket_definition_clients', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'recurring_ticket_definitions', deletion: 'ordered' },
   { table: 'ticket_template_checklist_items', deletion: 'ordered' },
-  { table: 'ticket_templates', deletion: 'ordered', clientKeyed: true },
+  { table: 'ticket_templates', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'canned_response_favorites', deletion: 'ordered' },
   { table: 'canned_responses', deletion: 'ordered' },
   { table: 'asset_remote_access_links', deletion: 'ordered', export: { rank: 30 } },
   { table: 'asset_maintenance_occurrences', deletion: 'ordered', export: { rank: 35 } },
   { table: 'asset_maintenance_notifications', deletion: 'ordered' },
   { table: 'asset_maintenance_history', deletion: 'ordered' },
-  { table: 'asset_service_history', deletion: 'ordered' },
+  { table: 'asset_service_history', deletion: 'ordered', clientKeyed: { by: 'alternatives', parents: [[{ column: 'asset_id', table: 'assets' }], [{ column: 'ticket_id', table: 'tickets' }]] } },
   { table: 'asset_ticket_associations', deletion: 'ordered' },
   { table: 'asset_document_associations', deletion: 'ordered' },
   { table: 'asset_relationships', deletion: 'ordered' },
@@ -543,27 +707,27 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'asset_assignments', deletion: 'ordered' },
   { table: 'asset_group_members', deletion: 'ordered' },
   { table: 'asset_group_contacts', deletion: 'ordered' },
-  { table: 'asset_groups', deletion: 'ordered', clientKeyed: true },
+  { table: 'asset_groups', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'asset_audit_items', deletion: 'ordered' },
-  { table: 'asset_audits', deletion: 'ordered', clientKeyed: true },
+  { table: 'asset_audits', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'software_catalog', deletion: 'ordered' },
   { table: 'rmm_condition_transitions', deletion: 'ordered' },
   { table: 'rmm_condition_states', deletion: 'ordered' },
   { table: 'unifi_console_routes', deletion: 'ordered' },
   { table: 'unifi_credentials', deletion: 'ordered' },
   { table: 'rmm_webhook_events', deletion: 'ordered' },
-  { table: 'rmm_maintenance_windows', deletion: 'ordered', clientKeyed: true },
+  { table: 'rmm_maintenance_windows', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'rmm_alert_rules', deletion: 'ordered' },
   { table: 'rmm_alerts', deletion: 'ordered' },
-  { table: 'rmm_organization_mappings', deletion: 'ordered', clientKeyed: true },
+  { table: 'rmm_organization_mappings', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'rmm_integrations', deletion: 'ordered' },
-  { table: 'survey_responses', deletion: 'ordered', clientKeyed: true },
-  { table: 'survey_invitations', deletion: 'ordered', clientKeyed: true },
+  { table: 'survey_responses', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'survey_invitations', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'survey_triggers', deletion: 'ordered' },
   { table: 'survey_templates', deletion: 'ordered' },
   { table: 'online_meeting_artifacts', deletion: 'ordered' },
   { table: 'online_meetings', deletion: 'ordered' },
-  { table: 'appointment_requests', deletion: 'ordered', clientKeyed: true },
+  { table: 'appointment_requests', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'external_entity_links', deletion: 'ordered' },
   { table: 'tenant_external_systems', deletion: 'ordered' },
   { table: 'list_views', deletion: 'ordered' },
@@ -586,35 +750,35 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'stripe_accounts', deletion: 'ordered' },
   { table: 'payment_webhook_events', deletion: 'ordered' },
   { table: 'payment_provider_configs', deletion: 'ordered' },
-  { table: 'client_payment_customers', deletion: 'ordered', clientKeyed: true },
+  { table: 'client_payment_customers', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'tenant_reactivation_tokens', deletion: 'ordered' },
   { table: 'pending_reactivation_refunds', deletion: 'ordered' },
   { table: 'prepaid_balance_alert_deliveries', deletion: 'ordered' },
-  { table: 'prepaid_balance_alerts', deletion: 'ordered', clientKeyed: true },
+  { table: 'prepaid_balance_alerts', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'credit_allocations', deletion: 'ordered' },
-  { table: 'credit_tracking', deletion: 'ordered', export: { rank: 21 }, clientKeyed: true },
-  { table: 'usage_period_total_requests', deletion: 'ordered', clientKeyed: true },
-  { table: 'usage_period_totals', deletion: 'ordered', clientKeyed: true },
+  { table: 'credit_tracking', deletion: 'ordered', export: { rank: 21 }, clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'usage_period_total_requests', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
+  { table: 'usage_period_totals', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'usage_measurement_revisions', deletion: 'ordered' },
   { table: 'contract_line_unit_pricing_revision_history', deletion: 'ordered' },
-  { table: 'contract_recurring_unit_adjustments', deletion: 'ordered', clientKeyed: true },
+  { table: 'contract_recurring_unit_adjustments', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'contract_line_unit_pricing_revisions', deletion: 'ordered' },
   { table: 'billing_semantics_locks', deletion: 'ordered' },
-  { table: 'usage_tracking', deletion: 'ordered', clientKeyed: true },
-  { table: 'bucket_usage', deletion: 'ordered', clientKeyed: true },
-  { table: 'bucket_usage_unmappable_archive', deletion: 'ordered', scope: { scope: 'tenant' }, clientKeyed: true },
+  { table: 'usage_tracking', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'bucket_usage', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'bucket_usage_unmappable_archive', deletion: 'ordered', scope: { scope: 'tenant' }, clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'recurring_service_periods', deletion: 'ordered' },
-  { table: 'transactions', deletion: 'ordered', export: { rank: 20 }, clientKeyed: true },
+  { table: 'transactions', deletion: 'ordered', export: { rank: 20 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'accounting_export_artifacts', deletion: 'ordered' },
   { table: 'accounting_export_errors', deletion: 'ordered' },
-  { table: 'accounting_export_lines', deletion: 'ordered', clientKeyed: true },
+  { table: 'accounting_export_lines', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'accounting_export_batches', deletion: 'ordered' },
   { table: 'accounting_sync_operations', deletion: 'ordered' },
   { table: 'accounting_sync_cycles', deletion: 'ordered' },
   { table: 'contract_line_bucket_services', deletion: 'ordered' },
   { table: 'contract_line_buckets', deletion: 'ordered' },
   { table: 'contract_template_discount_copies', deletion: 'ordered' },
-  { table: 'client_contracts', deletion: 'ordered', clientKeyed: true },
+  { table: 'client_contracts', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'contract_line_service_rate_tiers', deletion: 'ordered' },
   { table: 'contract_line_service_bucket_config', deletion: 'ordered' },
   { table: 'contract_line_service_hourly_config', deletion: 'ordered' },
@@ -627,15 +791,15 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'service_catalog_mode_defaults', deletion: 'ordered' },
   { table: 'service_rate_tiers', deletion: 'ordered' },
   { table: 'service_prices', deletion: 'ordered' },
-  { table: 'contract_line_discounts', deletion: 'ordered', clientKeyed: true },
+  { table: 'contract_line_discounts', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'contract_discount_assignments', deletion: 'ordered' },
   { table: 'discounts', deletion: 'ordered' },
-  { table: 'client_billing_cycles', deletion: 'ordered', clientKeyed: true },
-  { table: 'client_billing_settings', deletion: 'ordered', clientKeyed: true },
+  { table: 'client_billing_cycles', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'client_billing_settings', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'contract_line_prepaid_blocks', deletion: 'ordered' },
   { table: 'contract_line_services', deletion: 'ordered', export: { rank: 24 } },
   { table: 'contract_lines', deletion: 'ordered', export: { rank: 23 } },
-  { table: 'contracts', deletion: 'ordered', export: { rank: 22 } },
+  { table: 'contracts', deletion: 'ordered', export: { rank: 22 }, clientKeyed: { by: 'column', column: 'owner_client_id' } },
   { table: 'contract_line_preset_prepaid_blocks', deletion: 'ordered' },
   { table: 'contract_line_preset_fixed_config', deletion: 'ordered' },
   { table: 'contract_line_preset_services', deletion: 'ordered' },
@@ -658,16 +822,16 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'contract_template_pricing_schedules', deletion: 'ordered' },
   { table: 'contract_template_services', deletion: 'ordered' },
   { table: 'contract_templates', deletion: 'ordered' },
-  { table: 'client_tax_rates', deletion: 'ordered', clientKeyed: true },
-  { table: 'client_tax_settings', deletion: 'ordered', clientKeyed: true },
-  { table: 'client_inbound_email_domains', deletion: 'ordered', clientKeyed: true },
-  { table: 'client_name_aliases', deletion: 'ordered', clientKeyed: true },
-  { table: 'tenant_companies', deletion: 'ordered', clientKeyed: true },
-  { table: 'entra_contact_reconciliation_queue', deletion: 'ordered', clientKeyed: true },
-  { table: 'entra_contact_links', deletion: 'ordered', clientKeyed: true },
+  { table: 'client_tax_rates', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'client_tax_settings', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'client_inbound_email_domains', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
+  { table: 'client_name_aliases', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
+  { table: 'tenant_companies', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'entra_contact_reconciliation_queue', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'entra_contact_links', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'entra_managed_tenant_user_filters', deletion: 'ordered' },
-  { table: 'entra_client_tenant_mappings', deletion: 'ordered', clientKeyed: true },
-  { table: 'entra_sync_run_tenants', deletion: 'ordered', clientKeyed: true },
+  { table: 'entra_client_tenant_mappings', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'entra_sync_run_tenants', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'entra_sync_runs', deletion: 'ordered' },
   { table: 'entra_managed_tenants', deletion: 'ordered' },
   { table: 'entra_partner_connections', deletion: 'ordered' },
@@ -678,10 +842,10 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'project_billing_cap_usage', deletion: 'ordered' },
   { table: 'project_billing_configs', deletion: 'ordered' },
   { table: 'project_phase_rate_overrides', deletion: 'ordered' },
-  { table: 'project_tasks', deletion: 'ordered', export: { rank: 13 } },
-  { table: 'project_phases', deletion: 'ordered', export: { rank: 12 } },
+  { table: 'project_tasks', deletion: 'ordered', export: { rank: 13 }, clientKeyed: { by: 'parent', chain: [{ column: 'phase_id', table: 'project_phases' }, { column: 'project_id', table: 'projects' }] } },
+  { table: 'project_phases', deletion: 'ordered', export: { rank: 12 }, clientKeyed: { by: 'parent', chain: [{ column: 'project_id', table: 'projects' }] } },
   { table: 'project_status_mappings', deletion: 'ordered' },
-  { table: 'projects', deletion: 'ordered', export: { rank: 11 }, clientKeyed: true },
+  { table: 'projects', deletion: 'ordered', export: { rank: 11 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'workflow_tasks', deletion: 'ordered', export: { rank: 47 } },
   { table: 'workflow_form_definitions', deletion: 'ordered' },
   { table: 'workflow_task_definitions', deletion: 'ordered' },
@@ -690,7 +854,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'service_request_answer_mapping_versions', deletion: 'ordered' },
   { table: 'service_request_answer_mappings', deletion: 'ordered' },
   { table: 'service_request_submission_attachments', deletion: 'ordered' },
-  { table: 'service_request_submissions', deletion: 'ordered', clientKeyed: true },
+  { table: 'service_request_submissions', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'service_request_definition_versions', deletion: 'ordered' },
   { table: 'service_request_definitions', deletion: 'ordered' },
   { table: 'co_management_board_scopes', deletion: 'ordered' },
@@ -716,16 +880,16 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'co_management_conversation_attachments', deletion: 'ordered' },
   { table: 'co_management_conversation_drafts', deletion: 'ordered' },
   { table: 'co_management_thread_transfers', deletion: 'ordered' },
-  { table: 'co_managed_archive_files', deletion: 'ordered', clientKeyed: true },
-  { table: 'co_managed_project_task_references', deletion: 'ordered', clientKeyed: true },
+  { table: 'co_managed_archive_files', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
+  { table: 'co_managed_project_task_references', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'collaboration_actor_references', deletion: 'ordered' },
-  { table: 'co_managed_participation_evidence', deletion: 'ordered', clientKeyed: true },
+  { table: 'co_managed_participation_evidence', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'portable_restore_suspensions', deletion: 'ordered' },
   { table: 'portable_workspace_restores', deletion: 'ordered' },
   { table: 'portable_workspace_restore_uploads', deletion: 'ordered' },
   { table: 'co_management_ticket_handoffs', deletion: 'ordered' },
   { table: 'co_management_ticket_work', deletion: 'ordered' },
-  { table: 'co_managed_ticket_references', deletion: 'ordered', clientKeyed: true },
+  { table: 'co_managed_ticket_references', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'sla_organization_notification_events', deletion: 'ordered' },
   { table: 'sla_organization_events', deletion: 'ordered' },
   { table: 'sla_organization_obligations', deletion: 'ordered' },
@@ -744,20 +908,20 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'document_folder_template_items', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'document_entity_folder_init', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'document_folder_templates', deletion: 'ordered', scope: { scope: 'tenant' } },
-  { table: 'document_associations', deletion: 'ordered' },
+  { table: 'document_associations', deletion: 'ordered', clientKeyed: { by: 'resolver', resolver: 'document_entity', discriminator: 'entity_type', id: 'entity_id' } },
   { table: 'credential_associations', deletion: 'ordered' },
   { table: 'credential_access_grants', deletion: 'ordered' },
-  { table: 'credentials', deletion: 'ordered', clientKeyed: true },
+  { table: 'credentials', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'asset_maintenance_schedules', deletion: 'ordered', export: { rank: 34 } },
   { table: 'asset_tag_audit', deletion: 'ordered', export: { rank: 29.1 }, citus: 'distributed' },
   { table: 'asset_tag_activation', deletion: 'ordered', export: { rank: 29.2 }, citus: 'distributed' },
-  { table: 'asset_number_reservations', deletion: 'ordered', export: { rank: 28.3 }, clientKeyed: true, citus: 'distributed' },
-  { table: 'assets', deletion: 'ordered', export: { rank: 29 }, clientKeyed: true, references: [{ table: 'stock_units', column: 'stock_unit_id', onDelete: 'NO ACTION', resolution: 'null-before-delete' }] },
+  { table: 'asset_number_reservations', deletion: 'ordered', export: { rank: 28.3 }, clientKeyed: { by: 'column', column: 'client_id', enforced: false }, citus: 'distributed' },
+  { table: 'assets', deletion: 'ordered', export: { rank: 29 }, clientKeyed: { by: 'column', column: 'client_id' }, references: [{ table: 'stock_units', column: 'stock_unit_id', onDelete: 'NO ACTION', resolution: 'null-before-delete' }] },
   { table: 'asset_tag_legacy_bindings', deletion: 'ordered', export: { rank: 28.2 }, citus: 'distributed' },
   { table: 'asset_tag_claims', deletion: 'ordered', export: { rank: 28.1 }, citus: 'distributed' },
   { table: 'vendors', deletion: 'ordered' },
-  { table: 'payment_methods', deletion: 'ordered', clientKeyed: true },
-  { table: 'schedule_entries', deletion: 'ordered', export: { rank: 37 } },
+  { table: 'payment_methods', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'schedule_entries', deletion: 'ordered', export: { rank: 37 }, clientKeyed: { by: 'resolver', resolver: 'work_item', discriminator: 'work_item_type', id: 'work_item_id' } },
   { table: 'calendar_shares', deletion: 'ordered' },
   { table: 'calendars', deletion: 'ordered' },
   { table: 'service_catalog', deletion: 'ordered', export: { rank: 43 } },
@@ -769,7 +933,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'layout_blocks', deletion: 'ordered' },
   { table: 'template_sections', deletion: 'ordered' },
   { table: 'invoice_templates', deletion: 'ordered' },
-  { table: 'invoices', deletion: 'ordered', export: { rank: 16 }, clientKeyed: true },
+  { table: 'invoices', deletion: 'ordered', export: { rank: 16 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'file_upload_session_files', deletion: 'ordered' },
   { table: 'file_upload_sessions', deletion: 'ordered' },
   { table: 'external_files', deletion: 'ordered' },
@@ -780,7 +944,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'ticket_checklist_items', deletion: 'ordered' },
   { table: 'checklist_template_apply_rules', deletion: 'ordered' },
   { table: 'checklist_template_items', deletion: 'ordered' },
-  { table: 'checklist_templates', deletion: 'ordered', clientKeyed: true },
+  { table: 'checklist_templates', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'board_close_rules', deletion: 'ordered' },
   { table: 'board_notification_rule_recipients', deletion: 'ordered' },
   { table: 'board_notification_rule_statuses', deletion: 'ordered' },
@@ -789,9 +953,9 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'ticket_bundle_settings', deletion: 'ordered' },
   { table: 'ticket_entity_links', deletion: 'ordered' },
   { table: 'ticket_bundle_status_propagations', deletion: 'ordered' },
-  { table: 'tickets', deletion: 'ordered', export: { rank: 4 }, clientKeyed: true },
+  { table: 'tickets', deletion: 'ordered', export: { rank: 4 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'contact_locations', deletion: 'ordered' },
-  { table: 'client_locations', deletion: 'ordered', clientKeyed: true },
+  { table: 'client_locations', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'categories', deletion: 'ordered' },
   { table: 'boards', deletion: 'ordered' },
   { table: 'statuses', deletion: 'ordered', references: [{ table: 'boards', column: 'board_id', onDelete: 'NO ACTION', resolution: 'null-before-delete' }] },
@@ -805,19 +969,19 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'teams', deletion: 'ordered', export: { rank: 38 } },
   { table: 'tenant_secrets_audit_log', deletion: 'ordered' },
   { table: 'tenant_secrets', deletion: 'ordered' },
-  { table: 'contact_phone_numbers', deletion: 'ordered' },
-  { table: 'contact_additional_email_addresses', deletion: 'ordered' },
+  { table: 'contact_phone_numbers', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'contact_name_id', table: 'contacts' }] } },
+  { table: 'contact_additional_email_addresses', deletion: 'ordered', clientKeyed: { by: 'parent', chain: [{ column: 'contact_name_id', table: 'contacts' }] } },
   { table: 'contact_phone_type_definitions', deletion: 'ordered' },
-  { table: 'client_portal_visibility_groups', deletion: 'ordered', clientKeyed: true },
+  { table: 'client_portal_visibility_groups', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'portal_invitations', deletion: 'ordered' },
   { table: 'user_invitations', deletion: 'ordered' },
   { table: 'client_portal_user_billing_profiles', deletion: 'ordered' },
   { table: 'billing_profile_contacts', deletion: 'ordered' },
-  { table: 'client_billing_profiles', deletion: 'ordered', clientKeyed: true },
+  { table: 'client_billing_profiles', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'client_merges', deletion: 'ordered' },
-  { table: 'client_tax_id_migration_conflicts', deletion: 'ordered', clientKeyed: true },
-  { table: 'clients', deletion: 'ordered', export: { rank: 3 }, clientKeyed: true, references: [{ table: 'users', column: 'account_manager_id', onDelete: 'NONE', resolution: 'null-before-delete' }] },
-  { table: 'contacts', deletion: 'ordered', export: { rank: 1 }, clientKeyed: true, references: [{ table: 'clients', column: 'client_id', onDelete: 'CASCADE', resolution: 'null-before-delete' }] },
+  { table: 'client_tax_id_migration_conflicts', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
+  { table: 'clients', deletion: 'ordered', export: { rank: 3 }, clientKeyed: { by: 'column', column: 'client_id' }, references: [{ table: 'users', column: 'account_manager_id', onDelete: 'NONE', resolution: 'null-before-delete' }] },
+  { table: 'contacts', deletion: 'ordered', export: { rank: 1 }, clientKeyed: { by: 'column', column: 'client_id' }, references: [{ table: 'clients', column: 'client_id', onDelete: 'CASCADE', resolution: 'null-before-delete' }] },
   { table: 'contact_email_type_definitions', deletion: 'ordered' },
   { table: 'password_reset_tokens', deletion: 'ordered' },
   { table: 'resources', deletion: 'ordered' },
@@ -827,9 +991,9 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'mcp_agent_audit', deletion: 'ordered' },
   { table: 'agent_idp_providers', deletion: 'ordered' },
   { table: 'agents', deletion: 'ordered' },
-  { table: 'mcp_oauth_auth_codes', deletion: 'ordered', scope: { scope: 'tenant' }, clientKeyed: true },
+  { table: 'mcp_oauth_auth_codes', deletion: 'ordered', scope: { scope: 'tenant' }, clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
   { table: 'mcp_oauth_refresh_tokens', deletion: 'ordered', scope: { scope: 'tenant' } },
-  { table: 'mcp_oauth_grants', deletion: 'ordered', scope: { scope: 'tenant' }, clientKeyed: true },
+  { table: 'mcp_oauth_grants', deletion: 'ordered', scope: { scope: 'tenant' }, clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
   { table: 'users', deletion: 'ordered', export: { rank: 0 } },
   { table: 'sla_policies', deletion: 'ordered' },
   { table: 'business_hours_schedules', deletion: 'ordered' },
@@ -843,8 +1007,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'portal_domain_session_otts', deletion: 'ordered' },
   { table: 'portal_domains', deletion: 'ordered' },
   { table: 'policies', deletion: 'ordered' },
-  { table: 'google_email_provider_config', deletion: 'ordered', clientKeyed: true },
-  { table: 'microsoft_email_provider_config', deletion: 'ordered', clientKeyed: true },
+  { table: 'google_email_provider_config', deletion: 'ordered', clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
+  { table: 'microsoft_email_provider_config', deletion: 'ordered', clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
   { table: 'imap_email_provider_config', deletion: 'ordered' },
   { table: 'email_provider_health', deletion: 'ordered' },
   { table: 'email_provider_configs', deletion: 'ordered' },
@@ -882,7 +1046,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'default_billing_settings', deletion: 'ordered' },
   { table: 'notification_settings', deletion: 'ordered' },
   { table: 'inbound_email_rules', deletion: 'ordered' },
-  { table: 'inbound_ticket_defaults', deletion: 'ordered', clientKeyed: true, references: [{ table: 'clients', column: 'client_id', onDelete: 'CASCADE', resolution: 'null-before-delete' }] },
+  { table: 'inbound_ticket_defaults', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' }, references: [{ table: 'clients', column: 'client_id', onDelete: 'CASCADE', resolution: 'null-before-delete' }] },
   { table: 'user_type_rates', deletion: 'ordered' },
   { table: 'next_number', deletion: 'ordered' },
   { table: 'event_catalog', deletion: 'ordered' },

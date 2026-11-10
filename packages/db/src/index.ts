@@ -25,13 +25,18 @@ export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
 export { getTenantTableScope, parseTableExpression, registerTenantTables, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
 export {
+  CLIENT_TABLE,
+  MAX_CLIENT_OWNERSHIP_HOPS,
   TENANT_TABLE_MANIFEST,
   TenantManifestCycleError,
+  clientOwnershipViolations,
   computeTenantDeletionOrder,
   deletionEdges,
   getTenantTableManifestEntry,
   placeTenantTable,
+  tenantClientColumns,
   tenantClientKeyedTables,
+  tenantClientOwnership,
   tenantDeletionOrder,
   tenantExportOrder,
 } from './lib/tenantTableManifest';
