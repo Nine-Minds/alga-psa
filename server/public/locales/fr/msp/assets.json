@@ -2184,6 +2184,7 @@
     "loading": "Chargement des audits…",
     "empty": "Aucun audit sur site ne correspond à cette vue pour le moment.",
     "columns": {
+      "audit": "Audit",
       "client": "Client",
       "location": "Emplacement",
       "status": "Statut",
@@ -2236,6 +2237,7 @@
     },
     "detail": {
       "backToClient": "Revenir aux audits du client",
+      "reference": "Audit",
       "untitledClient": "Client",
       "location": "Emplacement",
       "startedBy": "Démarré par",
