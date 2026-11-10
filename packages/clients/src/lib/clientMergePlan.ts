@@ -355,6 +355,12 @@ export function planContractMove(
 export interface ClientOwnedMoveTable {
   table: string;
   label: string;
+  /**
+   * The column that references the client. Defaults to `client_id`; set it where
+   * the table names the reference differently (`purchase_orders.drop_ship_client_id`).
+   * The generic mover, the conflict-key handling and the result counts all read it.
+   */
+  clientColumn?: string;
   /** NULL billing profiles on these rows are stamped with the moved default. */
   stampsBillingProfile?: boolean;
   /**
@@ -372,6 +378,12 @@ export interface ClientOwnedMoveTable {
   /** Present in one edition only; skipped when the table is not installed. */
   editionOptional?: boolean;
 }
+
+export const DEFAULT_CLIENT_COLUMN = 'client_id';
+
+/** The column a roster entry uses to reference the client. */
+export const clientColumnOf = (entry: { clientColumn?: string }): string =>
+  entry.clientColumn ?? DEFAULT_CLIENT_COLUMN;
 
 /**
  * Tables keyed on `client_id` whose rows simply follow the client.
@@ -512,6 +524,35 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
     editionOptional: true,
   },
   { table: 'entra_sync_run_tenants', label: 'Entra sync run client', editionOptional: true },
+  // A drop-ship purchase order is raised with `drop_ship_client_id = so.client_id`
+  // (dropShipActions.createDropShipForSoLine). The sales order moves, so the order
+  // raised for it must follow or it keeps naming an archived client. The
+  // `drop_ship_address` jsonb is a snapshot supplied at creation, not derived from
+  // the client, and is deliberately left as written.
+  { table: 'purchase_orders', label: 'drop-ship purchase order', clientColumn: 'drop_ship_client_id' },
+  // Client references with no foreign key (see CLIENT_REFERENCE_COLUMNS_WITHOUT_FK).
+  // Telephony call and chat ledgers: `matched_client_id` is read live to pick the
+  // client for a ticket raised from the record, and the ticket-link action rejects a
+  // ticket whose client differs from it. Tickets move, so the record must follow.
+  { table: 'telephony_call_records', label: 'telephony call record', clientColumn: 'matched_client_id' },
+  { table: 'telephony_chat_records', label: 'telephony chat record', clientColumn: 'matched_client_id' },
+  // The search ACL filters on `client_scope_id` for client-portal principals. The
+  // scoped objects (tickets, comments, invoices, contracts...) move with the client,
+  // so a scope left on the absorbed client hides them from the surviving client's users.
+  { table: 'app_search_index', label: 'search index entry', clientColumn: 'client_scope_id' },
+];
+
+/**
+ * Client references that carry no foreign key, so the foreign-key snapshot cannot
+ * see them. Each must also be classified by one of the roster lists; the
+ * completeness check and the schema-drift test verify the columns exist and are
+ * covered.
+ */
+// LEVERAGE: friction client-reference-columns-no-fk — columns with no FK are invisible to the FK snapshot, so they need a hand-kept list; a generated column catalogue would remove it
+export const CLIENT_REFERENCE_COLUMNS_WITHOUT_FK: Array<{ table: string; column: string }> = [
+  { table: 'telephony_call_records', column: 'matched_client_id' },
+  { table: 'telephony_chat_records', column: 'matched_client_id' },
+  { table: 'app_search_index', column: 'client_scope_id' },
 ];
 
 /**
@@ -600,12 +641,20 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
  * through the matrix above — a rename on collision, a polymorphic key, a
  * profile demotion. Listed so the schema-drift check can see the whole picture.
  */
-export const CLIENT_KEYED_TABLES_HANDLED_EXPLICITLY = [
-  'clients',
-  'client_billing_profiles',
-  'client_contracts',
-  'client_portal_visibility_groups',
-] as const;
+export const CLIENT_KEYED_TABLES_HANDLED_EXPLICITLY: ReadonlyArray<{
+  table: string;
+  /** Defaults to `client_id`. */
+  clientColumn?: string;
+}> = [
+  { table: 'clients' },
+  { table: 'client_billing_profiles' },
+  { table: 'client_contracts' },
+  { table: 'client_portal_visibility_groups' },
+  // Demotes the source's system-managed default contract when the target already
+  // owns one (one per owner), then re-points `owner_client_id`; see the "owned
+  // contract" step in clientMergeEngine.
+  { table: 'contracts', clientColumn: 'owner_client_id' },
+];
 
 /**
  * Billing history that hangs off a moved profile. For a row that already names a
@@ -643,3 +692,53 @@ export const PROFILE_HISTORY_TABLES: Array<{
   // row's client_id must follow it. One row per profile, so no key collision.
   { table: 'billing_profile_autopay', label: 'autopay authorization', editionOptional: true },
 ];
+
+export interface ClientForeignKeyRow {
+  child: string;
+  parent: string;
+  column: string;
+}
+
+export interface ClientMergeRoster {
+  moved: ReadonlyArray<{ table: string; clientColumn?: string }>;
+  leftBehind: ReadonlyArray<{ table: string; clientColumn?: string }>;
+  handledExplicitly: ReadonlyArray<{ table: string; clientColumn?: string }>;
+  profileHistory: ReadonlyArray<{ table: string; clientColumn?: string }>;
+}
+
+export const CLIENT_MERGE_ROSTER: ClientMergeRoster = {
+  moved: CLIENT_OWNED_MOVE_TABLES,
+  leftBehind: CLIENT_KEYED_TABLES_LEFT_BEHIND,
+  handledExplicitly: CLIENT_KEYED_TABLES_HANDLED_EXPLICITLY,
+  profileHistory: PROFILE_HISTORY_TABLES,
+};
+
+/** Every (table, column) pair some roster list classifies, as `table.column`. */
+export function classifiedClientColumns(roster: ClientMergeRoster): Set<string> {
+  const pairs = new Set<string>();
+  for (const list of [roster.moved, roster.leftBehind, roster.handledExplicitly, roster.profileHistory]) {
+    for (const entry of list) pairs.add(`${entry.table}.${clientColumnOf(entry)}`);
+  }
+  return pairs;
+}
+
+/**
+ * Completeness check: every foreign key whose parent is `clients` (any column name,
+ * duplicate constraints collapsed), plus every declared no-FK reference column,
+ * must be classified by the roster. Returns the `table.column` pairs that are not.
+ * Pure: takes the snapshot and the roster as inputs.
+ */
+export function findUnclassifiedClientReferences(
+  foreignKeys: ReadonlyArray<ClientForeignKeyRow>,
+  roster: ClientMergeRoster,
+  columnsWithoutFk: ReadonlyArray<{ table: string; column: string }> = [],
+): string[] {
+  const classified = classifiedClientColumns(roster);
+  const required = new Set<string>();
+  for (const fk of foreignKeys) {
+    // `clients` referencing itself is the client row, not a reference to merge.
+    if (fk.parent === 'clients' && fk.child !== 'clients') required.add(`${fk.child}.${fk.column}`);
+  }
+  for (const c of columnsWithoutFk) required.add(`${c.table}.${c.column}`);
+  return [...required].filter((pair) => !classified.has(pair)).sort();
+}

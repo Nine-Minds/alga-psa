@@ -4,6 +4,7 @@ import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
   CLIENT_OWNED_MOVE_TABLES,
+  clientColumnOf,
   PROFILE_HISTORY_TABLES,
   evaluateMergeGuards,
   planBillingProfileMoves,
@@ -315,6 +316,7 @@ async function moveClientOwnedRows(
   movedDefaultProfileId: string | null,
   billingStrategy: ClientMergeBillingStrategy = 'source_profile',
 ): Promise<number> {
+  const clientColumn = clientColumnOf(entry);
   if (entry.editionOptional && !(await tableInstalled(trx, entry.table))) return 0;
 
   // FR-F5: `target_default` deliberately leaves the NULLs alone so they inherit
@@ -324,31 +326,31 @@ async function moveClientOwnedRows(
     // because leaving them NULL would re-attribute them to the parent's default
     // the next time the attribution chain ran.
     await scoped(trx, tenant, entry.table)
-      .where({ client_id: sourceClientId })
+      .where({ [clientColumn]: sourceClientId })
       .whereNull('billing_profile_id')
       .update({ billing_profile_id: movedDefaultProfileId });
   }
 
   if (!entry.conflictKeyColumns) {
     return scoped(trx, tenant, entry.table)
-      .where({ client_id: sourceClientId })
-      .update({ client_id: targetClientId });
+      .where({ [clientColumn]: sourceClientId })
+      .update({ [clientColumn]: targetClientId });
   }
 
   const keyColumns = entry.conflictKeyColumns;
   // With no key columns the client is the whole key, so any row on the target
   // collides with any row on the source; they share the empty key.
-  const selectColumns = keyColumns.length > 0 ? keyColumns : ['client_id'];
+  const selectColumns = keyColumns.length > 0 ? keyColumns : [clientColumn];
   const keyOf = (row: Record<string, unknown>) => keyColumns.map((column) => String(row[column])).join('::');
   const whereRow = (row: Record<string, unknown>) => {
-    const where: Record<string, unknown> = { client_id: sourceClientId };
+    const where: Record<string, unknown> = { [clientColumn]: sourceClientId };
     for (const column of keyColumns) where[column] = row[column];
     return where;
   };
 
   const readKeys = async (clientId: string) =>
     (await scoped(trx, tenant, entry.table)
-      .where({ client_id: clientId })
+      .where({ [clientColumn]: clientId })
       .select(...selectColumns)) as Array<Record<string, unknown>>;
 
   const taken = new Set((await readKeys(targetClientId)).map(keyOf));
@@ -364,7 +366,7 @@ async function moveClientOwnedRows(
       continue;
     }
     taken.add(keyOf(row));
-    moved += await scoped(trx, tenant, entry.table).where(whereRow(row)).update({ client_id: targetClientId });
+    moved += await scoped(trx, tenant, entry.table).where(whereRow(row)).update({ [clientColumn]: targetClientId });
   }
 
   return moved;
@@ -716,7 +718,7 @@ export async function previewClientMerge(
   for (const entry of CLIENT_OWNED_MOVE_TABLES) {
     counts[entry.label] = entry.editionOptional && !(await tableInstalled(trx, entry.table))
       ? 0
-      : await countRows(trx, tenant, entry.table, { client_id: source.clientId });
+      : await countRows(trx, tenant, entry.table, { [clientColumnOf(entry)]: source.clientId });
   }
   for (const entry of PROFILE_HISTORY_TABLES) {
     counts[entry.label] = entry.editionOptional && !(await tableInstalled(trx, entry.table))

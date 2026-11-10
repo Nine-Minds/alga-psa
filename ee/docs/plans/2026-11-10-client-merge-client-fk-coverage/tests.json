@@ -1,0 +1,45 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: merging a client with a sales order and its drop-ship purchase order leaves both naming the surviving client, and the result counts include the purchase order.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F007"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: merging a client that owns a contract, into a target with and without its own system-managed default contract, behaves as before.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Contract: every foreign key to `clients` in the snapshot is classified by the roster; a fixture foreign key with an unclassified column name makes the check fail.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration (schema drift): every column in the live schema that references `clients` is classified, replacing the `attname = 'client_id'` filter.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: after a merge, no row in a table chosen to move among the three reported columns references the absorbed client, and each column left behind has a stated reason in the roster.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  }
+]
