@@ -2184,6 +2184,7 @@
     "loading": "Caricamento degli audit…",
     "empty": "Nessun audit di sede corrisponde ancora a questa vista.",
     "columns": {
+      "audit": "Audit",
       "client": "Cliente",
       "location": "Sede",
       "status": "Stato",
@@ -2236,6 +2237,7 @@
     },
     "detail": {
       "backToClient": "Torna agli audit del cliente",
+      "reference": "Audit",
       "untitledClient": "Cliente",
       "location": "Sede",
       "startedBy": "Avviato da",
