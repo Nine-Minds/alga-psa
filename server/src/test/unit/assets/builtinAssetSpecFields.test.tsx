@@ -34,7 +34,9 @@ function ProductSpecs({ assetType }: { assetType: string }) {
 }
 
 describe.each(['light', 'dark'])('shared builtin asset specs (%s theme)', (theme) => {
-  beforeEach(() => document.documentElement.classList.toggle('dark', theme === 'dark'));
+  beforeEach(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  });
   afterEach(() => document.documentElement.classList.remove('dark'));
   it('uses the same OS options in the asset select and product defaults and delivers all workstation fields', () => {
     render(<>
