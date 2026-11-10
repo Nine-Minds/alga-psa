@@ -2,10 +2,11 @@
 
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { tenantDb, withTransaction, createTenantKnex } from '@alga-psa/db';
+import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { IStockMovement, IStockUnit, IProductInventorySettings } from '@alga-psa/types';
+import { IStockMovement, IStockUnit, IProductInventorySettings, IUserWithRoles } from '@alga-psa/types';
 import {
   type ActionMessageError,
   type ActionPermissionError,
@@ -14,7 +15,7 @@ import { recordStockMovement, ensureStockLevel, assertLocationWritable } from '.
 import { detachDeliveredAssetAssociation } from '../lib/assetLink';
 import { restockReturnActionErrorFrom } from './loanerRestockErrors';
 
-async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
+async function requireInvPerm(user: IUserWithRoles, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
     throw new Error(`Permission denied: inventory ${action} required`);
   }
@@ -35,6 +36,7 @@ async function removeConsumingMaterialLine(
   tenant: string,
   unitId: string,
   performedBy: string | null,
+  user: IUserWithRoles,
 ): Promise<void> {
   const movement = await trx('stock_movements')
     .where({ tenant, unit_id: unitId, movement_type: 'consume' })
@@ -54,11 +56,28 @@ async function removeConsumingMaterialLine(
     .first('is_billed', parentCol);
   // Already billed (or the row was deleted out from under us): leave history alone.
   if (!material) return;
+  if (!(await hasPermission(user, parentType, 'update'))) {
+    throw new Error(`Permission denied: ${parentType} update required`);
+  }
+  if (parentType === 'ticket') {
+    await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user,
+      ticketId: material[parentCol],
+      action: 'update',
+    });
+  }
   if (material.is_billed) {
     throw new Error('The unit is installed on a billed material line; credit or unbilled the invoice before restocking it');
   }
 
-  await trx(table).where({ tenant, [pk]: movement.source_doc_id }).delete();
+  const db = tenantDb(trx, tenant);
+  if (parentType === 'ticket') {
+    await db.table('ticket_materials').where(pk, movement.source_doc_id).del();
+  } else {
+    await db.table('project_materials').where(pk, movement.source_doc_id).del();
+  }
 
   // Mirror deleteMaterial's companion cleanups: staging release (project only) and
   // un-assigning the delivered asset from the entity it was installed on.
@@ -142,7 +161,7 @@ export const restockReturn = withAuth(
         const targetLocation = input.location_id ?? unit.location_id ?? null;
         if (!targetLocation) throw new Error('location_id is required to restock this unit');
         // Restocking writes into the location — van scoping applies (F036).
-        await assertLocationWritable(trx, tenant, (user as any)?.user_id, targetLocation);
+        await assertLocationWritable(trx, tenant, user.user_id, targetLocation);
         await ensureStockLevel(trx, tenant, unit.service_id, targetLocation);
         const movement = await recordStockMovement(trx, tenant, {
           movement_type: 'return_restock',
@@ -165,7 +184,7 @@ export const restockReturn = withAuth(
         // common MSP "put it back" flow). This restock IS the stock reversal, so the
         // material row is removed here — otherwise the line would linger and a later
         // material delete would double-restore stock. Billed lines fail fast instead.
-        await removeConsumingMaterialLine(trx, tenant, input.unit_id, (user as any)?.user_id ?? null);
+        await removeConsumingMaterialLine(trx, tenant, input.unit_id, user.user_id, user);
 
         return {
           movement,
@@ -192,7 +211,7 @@ export const restockReturn = withAuth(
         throw new Error('This product is serialized; provide unit_id to restock a specific unit');
       }
       // Restocking writes into the location — van scoping applies (F036).
-      await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
+      await assertLocationWritable(trx, tenant, user.user_id, input.location_id);
       await ensureStockLevel(trx, tenant, input.service_id, input.location_id);
       const movement = await recordStockMovement(trx, tenant, {
         movement_type: 'return_restock',
