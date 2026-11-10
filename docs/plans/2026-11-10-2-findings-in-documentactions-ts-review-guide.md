@@ -33,7 +33,7 @@ Asset targets also require the existing asset record-read policy after coarse `a
 - A client with coarse document read/update permissions can read a document, but a document `update` bundle rule denies association creation/removal and parent-document upload with no persisted changes.
 - An MSP can associate to an existing unassigned contract; a nonexistent contract target is denied.
 - Client A can create and remove associations on its exclusive contract, but cannot create, upload, or remove documents on a contract assigned to both A and B. Denied operations leave associations and folders unchanged and do not upload storage. Client B cannot read the attempted injection. An MSP can deliberately share the document through that contract, after which Client B can read it; client removal remains denied. This regression failed on `9103399b93` because client association creation returned `{ success: true }`.
-- Two uploads released through a shared storage barrier both complete their first entity-folder initialization. Both documents, task associations, four default folders, and external storage rows persist, and uploaded files are not cleaned up on success.
+- Two first uploads contend with an uncommitted folder initializer. The test observes both uploads blocked on the initializer's unique folder keys in PostgreSQL before releasing it, guaranteeing a real insert conflict. Both uploads complete; their documents, task associations, four default folders, and external storage rows persist, and uploaded files are not cleaned up on success.
 
 From `server/`, the following isolated run passed all 7 integration tests and 10 existing authorization contract tests:
 
@@ -49,6 +49,8 @@ TEST_DB_NAME=takeover_doc_assoc_final DB_NAME_SERVER=takeover_doc_assoc_final \
 
 `npm run typecheck --workspace=@alga-psa/documents`, `npm run typecheck --workspace=@alga-psa/shared`, and `npm run build --workspace=@alga-psa/documents` passed. `git diff --check` passed. The app server was not started.
 
+The full server typecheck passed with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck --workspace=server`. Earlier attempts exhausted their 4 GB and 8 GB heaps; use the 12 GB setting for this checkout.
+
 ## Review first
 
 1. Inspect the permission-resource mapping, contract existence and complete client audience checks, asset record policy, and shared ticket SQL scope in `shared/lib/documentAssociationTargetAuthorization.ts`.
@@ -58,6 +60,5 @@ TEST_DB_NAME=takeover_doc_assoc_final DB_NAME_SERVER=takeover_doc_assoc_final \
 
 ## Uncertainty / unverified behavior
 
-- The full server typecheck passed with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck --workspace=server`. Earlier attempts exhausted their 4 GB and 8 GB heaps; use the 12 GB setting for this checkout. The focused documents/shared workspace typechecks and documents build also passed.
 - The integration case verifies the corrected billing/opportunities permission resources behaviorally, but does not seed every supported association target type.
 - `getDocumentsByEntity` and `getDocumentCountsForEntities` remain outside this plan's requested read-surface scope, as identified in the approved plan.

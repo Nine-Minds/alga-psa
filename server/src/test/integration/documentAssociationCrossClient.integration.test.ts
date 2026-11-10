@@ -697,9 +697,6 @@ describe('document association cross-client authorization', () => {
       { tenant: tenantId, default_folder_id: uuidv4(), entity_type: 'project_task', folder_path: '/Concurrent Tasks/Reference', folder_name: 'Reference', sort_order: 3, is_client_visible: false },
     ]);
 
-    let arrivalCount = 0;
-    let releaseUploads!: () => void;
-    const uploadBarrier = new Promise<void>((resolve) => { releaseUploads = resolve; });
     storageMocks.deleteFile.mockClear();
     storageMocks.uploadFile.mockImplementation(async (_tenant: string, buffer: Buffer, fileName: string) => {
       const fileId = uuidv4();
@@ -708,9 +705,6 @@ describe('document association cross-client authorization', () => {
         tenant: tenantId, file_id: fileId, file_name: fileName, original_name: fileName, mime_type: 'text/plain',
         file_size: buffer.length, storage_path: `test/${fileId}`, uploaded_by_id: mspUserId,
       });
-      arrivalCount += 1;
-      if (arrivalCount === 2) releaseUploads();
-      await uploadBarrier;
       return { file_id: fileId, storage_path: `test/${fileId}` };
     });
 
@@ -719,11 +713,46 @@ describe('document association cross-client authorization', () => {
       form.set('file', new File([name], name, { type: 'text/plain' }));
       return form;
     };
-    const results = await Promise.all([
-      uploadDocument(makeForm('folder-concurrent-a.txt'), { userId: mspUserId, projectTaskId: taskAId }),
-      uploadDocument(makeForm('folder-concurrent-b.txt'), { userId: mspUserId, projectTaskId: taskAId }),
-    ]);
-    expect(results.map((result) => result).every((result) => 'success' in result && result.success)).toBe(true);
+    const initializer = await db.transaction();
+    const uploads: Array<ReturnType<typeof uploadDocument>> = [];
+    try {
+      const { rows: [{ pid: initializerPid }] } = await initializer.raw('select pg_backend_pid() as pid');
+      const parentFolderId = uuidv4();
+      // An uncommitted initializer is invisible to both uploads' folder reads,
+      // but holds the unique keys their inserts must contend for.
+      await tenantDb(initializer, tenantId).table('document_folders').insert([
+        { tenant: tenantId, folder_id: parentFolderId, entity_id: taskAId, entity_type: 'project_task', folder_path: '/Concurrent Tasks', folder_name: 'Concurrent Tasks', parent_folder_id: null, created_by: mspUserId },
+        ...['Deliverables', 'Specifications', 'Reference'].map((name) => ({
+          tenant: tenantId, folder_id: uuidv4(), entity_id: taskAId, entity_type: 'project_task',
+          folder_path: `/Concurrent Tasks/${name}`, folder_name: name, parent_folder_id: parentFolderId, created_by: mspUserId,
+        })),
+      ]);
+      uploads.push(
+        uploadDocument(makeForm('folder-concurrent-a.txt'), { userId: mspUserId, projectTaskId: taskAId }),
+        uploadDocument(makeForm('folder-concurrent-b.txt'), { userId: mspUserId, projectTaskId: taskAId }),
+      );
+      const pendingUploads = Promise.allSettled(uploads);
+      const deadline = Date.now() + 10_000;
+      let blockedUploads = 0;
+      while (Date.now() < deadline) {
+        const { rows: [{ count }] } = await db.raw(`
+          select count(*)::int as count from pg_stat_activity
+          where datname = current_database() and ? = any(pg_blocking_pids(pid))
+        `, [initializerPid]);
+        blockedUploads = count;
+        if (blockedUploads === 2) break;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(blockedUploads).toBe(2);
+      await initializer.commit();
+      for (const result of await pendingUploads) {
+        expect(result.status).toBe('fulfilled');
+        if (result.status === 'fulfilled') expect(result.value).toHaveProperty('success', true);
+      }
+    } finally {
+      if (!initializer.isCompleted()) await initializer.rollback();
+      await Promise.allSettled(uploads);
+    }
     const uploaded = await table('documents').where({ created_by: mspUserId })
       .whereIn('document_name', ['folder-concurrent-a.txt', 'folder-concurrent-b.txt'])
       .select('document_id', 'document_name', 'file_id');
