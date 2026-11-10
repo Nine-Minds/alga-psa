@@ -21,21 +21,14 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(source).not.toContain('compileResourceReadAuthorizationSql,');
   });
 
-  it('uses structural tenant scoping for the authorization subject and the shared response-state engine', () => {
+  it('resolves the authorization subject through the shared resolver and the shared response-state engine', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
-    const authStart = source.indexOf('async function resolveAuthorizationSubjectForUser');
-    const authEnd = source.indexOf('function toTicketAuthorizationRecord', authStart);
 
-    expect(authStart).toBeGreaterThanOrEqual(0);
-    expect(authEnd).toBeGreaterThan(authStart);
-
-    const authSection = source.slice(authStart, authEnd);
-
-    expect(authSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
-    expect(authSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");
-    expect(authSection).toContain("tenantScopedTable(trx, 'users', tenant)");
-    expect(authSection).not.toContain(".where({ tenant, user_id: user.user_id })");
-    expect(authSection).not.toContain(".where({ tenant, reports_to: user.user_id })");
+    // No local subject builder: the one resolver (structurally tenant scoped via tenantDb) owns the lookups.
+    expect(source).not.toContain('async function resolveAuthorizationSubjectForUser');
+    expect(source).not.toContain('portfolioClientIds: []');
+    expect(source).toContain("from '@alga-psa/authorization/subject'");
+    expect(source).toContain('await resolveAuthorizationSubject(trx, { tenant, user, requestCache })');
 
     // Comment-driven response state goes through the shared engine (structurally
     // tenant scoped via tenantDb); no local copy and no direct state write.

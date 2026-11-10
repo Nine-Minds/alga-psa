@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const kernel = vi.hoisted(() => ({ authorizeResource: vi.fn(), authorizeMutation: vi.fn() }));
 
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: () => ({ table: () => ({ where: () => ({ select: async () => [] }) }) }),
+  tenantDb: () => ({
+    table: () => {
+      const builder: any = { where: () => builder, orderBy: () => builder, select: async () => [] };
+      return builder;
+    },
+  }),
 }));
 vi.mock('@alga-psa/authorization/kernel', () => ({
   BuiltinAuthorizationKernelProvider: class {},

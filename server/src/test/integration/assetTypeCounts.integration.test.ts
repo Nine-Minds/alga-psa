@@ -673,7 +673,12 @@ describe('listAssets filtered type counts', () => {
       expect(result.total).toBe(69);
       expect(result.asset_type_counts).toEqual({ workstation: 69, server: 68 });
       expect(queries.filter((sql) => /\bfrom "asset_associations"/i.test(sql))).toHaveLength(3);
-      expect(queries.filter((sql) => /\bfrom "authorization_bundle_assignments"/i.test(sql))).toHaveLength(1);
+      // The tenant-scope probe (exists over published assignments) runs once per
+      // request; the bundle assignment load itself runs once for the whole scan.
+      const assignmentQueries = queries.filter((sql) => /\bfrom "authorization_bundle_assignments"/i.test(sql));
+      const scopeProbes = assignmentQueries.filter((sql) => /^select exists\(/i.test(sql));
+      expect(scopeProbes).toHaveLength(1);
+      expect(assignmentQueries.filter((sql) => !scopeProbes.includes(sql))).toHaveLength(1);
       const countQueries = queries.filter((sql) => /count\("assets"\."asset_id"\).*from "assets"/i.test(sql));
       expect(countQueries.length).toBeGreaterThan(0);
       expect(countQueries.length).toBeLessThanOrEqual(3);

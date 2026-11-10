@@ -17,6 +17,7 @@ vi.mock('@alga-psa/db', () => ({
       const query: any = {
         where: () => query,
         whereIn: () => query,
+        orderBy: () => query,
         modify: () => query,
         select: () => query,
         first: async () => undefined,

@@ -19,9 +19,11 @@ describe('document action helper tenant-scoped query contract', () => {
     expect(helperSection).toContain("tenantScopedTable(trx, 'contacts as c', tenant)");
     expect(helperSection).toContain("tenantScopedTable(knex, 'document_folders', tenant)");
     expect(helperSection).toContain("tenantScopedTable(knex, 'document_default_folders', tenant)");
-    expect(helperSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
-    expect(helperSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");
-    expect(helperSection).toContain("tenantScopedTable(trx, 'users', tenant)");
+    // The subject is resolved by the one shared resolver, not by lookups in this module.
+    const sharedAuthorization = readFileSync(resolve(__dirname, '../../../shared/lib/documentAuthorization.ts'), 'utf8');
+    expect(sharedAuthorization).toContain('resolveAuthorizationSubject(trx, { tenant, user, requestCache })');
+    expect(sharedAuthorization).not.toContain('portfolioClientIds');
+    expect(helperSection).not.toContain("'user_roles'");
     expect(helperSection).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
     expect(helperSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
     expect(helperSection).toContain("tenantScopedTable(trx, 'tickets', tenant)");
