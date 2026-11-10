@@ -86,6 +86,55 @@ function isEffectivelyEmpty(html: string, text: string): boolean {
   return cleanedHtml.length === 0 && cleanedText.length === 0;
 }
 
+// One unrepresentable block must not abort a whole email or worksheet, nor
+// vanish silently: it is replaced by a visible marker and logged.
+export const UNSUPPORTED_RICH_TEXT_PLACEHOLDER = '[Unsupported content]';
+
+function unsupportedBlock(type: unknown): string {
+  console.warn(`[BlockNoteUtils] Replacing unsupported rich-text block with a placeholder: ${String(type)}`);
+  return UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
+}
+
+function tableCellContent(cell: unknown): unknown[] {
+  if (Array.isArray(cell)) return cell;
+  if (typeof cell === 'string') return [{ type: 'text', text: cell, styles: {} }];
+  if (cell && typeof cell === 'object' && 'type' in cell && cell.type === 'tableCell') {
+    const content = 'content' in cell ? cell.content : undefined;
+    if (content === undefined) return [];
+    if (Array.isArray(content)) return content;
+    if (typeof content === 'string') return [{ type: 'text', text: content, styles: {} }];
+  }
+  return [{ type: 'text', text: unsupportedBlock('invalid table cell'), styles: {} }];
+}
+
+const TABLE_STYLE = 'border-collapse:collapse;max-width:100%;';
+const TABLE_CELL_STYLE = 'border:1px solid #9ca3af;padding:6px 10px;vertical-align:top;';
+const LINK_ONLY_BLOCK_TYPES = new Set(['video', 'audio', 'file', 'embed']);
+
+function tableCellAttributes(props: Record<string, unknown> = {}): string {
+  let attributes = '';
+  for (const name of ['colspan', 'rowspan'] as const) {
+    const value = props[name];
+    if (typeof value === 'number' && Number.isInteger(value) && value > 1 && value <= 1000) {
+      attributes += ` ${name}="${value}"`;
+    }
+  }
+  const alignment = sanitizeTextAlignment(props.textAlignment);
+  return `${attributes} style="${TABLE_CELL_STYLE}${alignment ? `text-align:${alignment};` : ''}"`;
+}
+
+function mediaLink(props: Record<string, unknown>, type: string): { url: string; label: string } | null {
+  const url = sanitizeHref(props.url ?? props.src);
+  if (!url) {
+    unsupportedBlock(type);
+    return null;
+  }
+  const label = [props.caption, props.name, props.alt].find(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0,
+  );
+  return { url, label: label ?? url };
+}
+
 // Email clients inherit wildly different `p { margin }` defaults, and an empty
 // BlockNote paragraph (`<p><br></p>`) renders as a full blank line *plus* two
 // paragraph margins — roughly four times the gap the author typed. Normalize
@@ -143,8 +192,8 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
       // "\n" inside text/link nodes; both renderers would collapse them and
       // swallow the following text into the link.
       const normalized = Array.isArray(input) ? splitEmbeddedNewlineBlocks(input) : input;
-      const htmlResult = convertBlockNoteToHTML(normalized);
-      const textResult = convertBlockNoteToMarkdown(normalized);
+      const htmlResult = convertBlockContentToHTML(normalized);
+      const textResult = convertBlockContentToMarkdown(normalized);
 
       if (!isEffectivelyEmpty(htmlResult || '', textResult || '')) {
         return { html: normalizeBlockHtmlForEmail(htmlResult), text: textResult };
@@ -168,15 +217,16 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
     if (trimmed.length === 0) {
       return { html: '', text: '' };
     }
+    let parsed: unknown;
     try {
-      const parsed = JSON.parse(content);
-      return convertSafely(parsed);
+      parsed = JSON.parse(content);
     } catch {
       return {
         html: normalizeBlockHtmlForEmail(`<p>${escapeHtml(content)}</p>`),
         text: content,
       };
     }
+    return convertSafely(parsed);
   }
 
   return convertSafely(content);
@@ -430,7 +480,11 @@ function extractStyledTextFromContent(content: any[]): string {
  * @returns The markdown representation as a string
  */
 function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
-  return blocks.map((block) => {
+  const convertBlock = (block: Block | PartialBlock): string => {
+    if (LINK_ONLY_BLOCK_TYPES.has(String(block.type))) {
+      const link = mediaLink(block.props ?? {}, String(block.type));
+      return link ? `[${link.label}](${link.url})` : UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
+    }
     // Check for block-level styling (like paragraph background color)
     let blockWrapper = (content: string): string => content;
 
@@ -499,10 +553,19 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         }
         break;
 
+      case 'quote':
+        return extractStyledTextFromContent(block.content as unknown[]).split('\n').map(line => `> ${line}`).join('\n');
+
+      case 'toggleListItem':
+        return `- ${extractStyledTextFromContent(block.content as unknown[])}`;
+
+      case 'divider':
+        return '---';
+
       case 'codeBlock':
         if (block.content && Array.isArray(block.content)) {
           const language = (block.props as any)?.language || '';
-          content = '```' + language + '\n' + extractStyledTextFromContent(block.content) + '\n```';
+          content = '```' + language + '\n' + inlineContentToPlainText(block.content) + '\n```';
           return blockWrapper(content);
         }
         break;
@@ -521,14 +584,24 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         return `![${alt}](${url})`;
       }
 
-      default:
-        // Unknown block type
-        console.log(`[BlockNoteUtils] Unknown block type: ${block.type}`);
-        return '';
+      default: {
+        const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
+        console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+        if (typeof unknownBlock.content === 'string') return unknownBlock.content;
+        if (Array.isArray(unknownBlock.content)) return extractStyledTextFromContent(unknownBlock.content);
+        if (unknownBlock.children?.length) return '';
+        return unsupportedBlock(unknownBlock.type);
+      }
     }
 
     return '';
-  }).join('\n\n'); // Don't filter empty strings to preserve empty paragraphs
+  };
+  return blocks.map((block) => {
+    const ownContent = convertBlock(block);
+    return block.children?.length
+      ? `${ownContent}\n\n${customBlocksToMarkdown(block.children)}`
+      : ownContent;
+  }).join('\n\n');
 }
 
 /**
@@ -543,7 +616,7 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
 
     // Validate table structure
     if (!content || typeof content !== 'object' || !content.rows) {
-      return '[Invalid table structure]';
+      return unsupportedBlock('invalid table');
     }
 
     const rows = content.rows || [];
@@ -567,7 +640,7 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
       // Add cells for this row
       let rowMarkdown = '|';
       for (let colIndex = 0; colIndex < numCols; colIndex++) {
-        const cell = cells[colIndex] || [];
+        const cell = tableCellContent(cells[colIndex] ?? []);
         let cellText = ' ';
 
         // Extract styled text from cell content
@@ -763,6 +836,16 @@ export function convertBlockNoteToHTML(blocks: any): string {
       let content = '';
       let isListItem = false;
 
+      if (LINK_ONLY_BLOCK_TYPES.has(String(block.type))) {
+        flushListBuffer();
+        const link = mediaLink(block.props ?? {}, String(block.type));
+        output.push(link
+          ? `<p${styleAttribute}><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a></p>`
+          : `<p${styleAttribute}>${escapeHtml(UNSUPPORTED_RICH_TEXT_PLACEHOLDER)}</p>`);
+        if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
+        return;
+      }
+
       switch (block.type) {
         case 'paragraph':
           flushListBuffer();
@@ -824,7 +907,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
           flushListBuffer();
           const checked = (block.props as any)?.checked;
           content = extractStyledTextToHTML(block.content as any[]);
-          output.push(`<div${styleAttribute}>[${checked ? 'x' : ' '}] ${content}</div>`);
+          output.push(`<div${styleAttribute}><span style="font-family:Arial,sans-serif;">${checked ? '&#9745;' : '&#9744;'}</span> ${checked ? `<s>${content}</s>` : content}</div>`);
           if (block.children && (block.children as any[]).length > 0) {
             processBlocksRecursive(block.children as Block[], currentLevel + 1);
           }
@@ -838,30 +921,43 @@ export function convertBlockNoteToHTML(blocks: any): string {
             ? (rawTable as { rows: Array<{ cells: any[] }> })
             : null;
           if (!tableContent || !Array.isArray(tableContent.rows)) {
-            output.push('<!-- Invalid table structure -->');
+            output.push(`<p${styleAttribute}>${escapeHtml(unsupportedBlock('invalid table'))}</p>`);
             break;
           }
-          let tableHTML = '<table><tbody>';
-          tableContent.rows.forEach((row) => {
+          let tableHTML = `<table style="${TABLE_STYLE}"><tbody>`;
+          const headerRows = 'headerRows' in tableContent ? Number(tableContent.headerRows) : 0;
+          const headerCols = 'headerCols' in tableContent ? Number(tableContent.headerCols) : 0;
+          tableContent.rows.forEach((row, rowIndex) => {
             tableHTML += '<tr>';
             const cells = Array.isArray(row?.cells) ? row.cells : [];
-            cells.forEach((cellContent) => {
-              const inlineArray = Array.isArray(cellContent) ? cellContent : [];
-              tableHTML += `<td>${extractStyledTextToHTML(inlineArray as any[])}</td>`;
+            cells.forEach((cell, columnIndex) => {
+              const inlineArray = tableCellContent(cell);
+              const tag = rowIndex < headerRows || columnIndex < headerCols ? 'th' : 'td';
+              const props = !Array.isArray(cell) && cell?.type === 'tableCell' ? cell.props : undefined;
+              tableHTML += `<${tag}${tableCellAttributes(props)}>${extractStyledTextToHTML(inlineArray)}</${tag}>`;
             });
             tableHTML += '</tr>';
           });
           tableHTML += '</tbody></table>';
           output.push(blockStylesArray.length > 0 ? `<div${styleAttribute}>${tableHTML}</div>` : tableHTML);
           break;
+        case 'quote':
+        case 'toggleListItem': {
+          flushListBuffer();
+          const tag = block.type === 'quote' ? 'blockquote' : 'div';
+          output.push(`<${tag}${styleAttribute}>${extractStyledTextToHTML(block.content as unknown[])}`);
+          if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          output.push(`</${tag}>`);
+          break;
+        }
+        case 'divider':
+          flushListBuffer();
+          output.push('<hr>');
+          break;
         case 'codeBlock':
           flushListBuffer();
           const language = (block.props as any)?.language || '';
-          const codeText = escapeHtml(
-            (block.content as any[])
-              .map(item => item.text || '')
-              .join('\n')
-          );
+          const codeText = escapeHtml(inlineContentToPlainText(block.content));
           content = `<code class="language-${escapeHtml(String(language))}">${codeText}</code>`;
           output.push(`<pre${styleAttribute}>${content}</pre>`);
           break;
@@ -886,23 +982,20 @@ export function convertBlockNoteToHTML(blocks: any): string {
           );
           break;
         }
-        default:
+        default: {
           flushListBuffer();
-          const anyBlock = block as any;
-          console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${anyBlock?.type}`);
-          if (anyBlock?.content && Array.isArray(anyBlock.content)) {
-             content = extractStyledTextToHTML(anyBlock.content as any[]);
-             output.push(`<div${styleAttribute}>${content}</div>`);
-          } else if (anyBlock?.content && typeof anyBlock.content === 'string') {
-             const escapedContent = escapeHtml(anyBlock.content);
-             output.push(`<div${styleAttribute}>${escapedContent}</div>`);
-          } else {
-             output.push(`<!-- Unsupported block type: ${escapeHtml(String(anyBlock?.type))} -->`);
+          const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
+          console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+          if (Array.isArray(unknownBlock.content)) {
+            output.push(`<div${styleAttribute}>${extractStyledTextToHTML(unknownBlock.content)}</div>`);
+          } else if (typeof unknownBlock.content === 'string') {
+            output.push(`<div${styleAttribute}>${escapeHtml(unknownBlock.content)}</div>`);
+          } else if (!unknownBlock.children?.length) {
+            output.push(`<div${styleAttribute}>${escapeHtml(unsupportedBlock(unknownBlock.type))}</div>`);
           }
-          if (anyBlock?.children && (anyBlock.children as any[]).length > 0) {
-            processBlocksRecursive(anyBlock.children as Block[], currentLevel + 1);
-          }
+          if (unknownBlock.children?.length) processBlocksRecursive(unknownBlock.children as Block[], currentLevel + 1);
           break;
+        }
       }
       if (!isListItem) {
         flushListBuffer();
@@ -966,6 +1059,7 @@ function renderPMInlineContent(nodes: PMNode[] | undefined): string {
     if (node.type === 'text' && node.text != null) {
       return renderPMMarks(escapeHtml(node.text), node.marks);
     }
+    if (node.type === 'hard_break' || node.type === 'hardBreak') return '<br>';
     if (node.type === 'mention') {
       const { userId, username, displayName } = (node.attrs ?? {}) as {
         userId?: string; username?: string; displayName?: string;
@@ -1017,6 +1111,48 @@ function renderPMNode(node: PMNode): string {
       return `<li>${inner}</li>`;
     }
 
+    case 'task_list':
+    case 'taskList':
+      return (node.content ?? []).map(renderPMNode).join('\n');
+
+    case 'task_item':
+    case 'taskItem': {
+      const inner = (node.content ?? []).map(renderPMNode).join('\n');
+      const checked = node.attrs?.checked === true;
+      return `<div><span style="font-family:Arial,sans-serif;">${checked ? '&#9745;' : '&#9744;'}</span> ${checked ? `<s>${inner}</s>` : inner}</div>`;
+    }
+
+    case 'table':
+      return `<table style="${TABLE_STYLE}"><tbody>${(node.content ?? []).map(renderPMNode).join('')}</tbody></table>`;
+
+    case 'table_row':
+    case 'tableRow':
+      return `<tr>${(node.content ?? []).map(renderPMNode).join('')}</tr>`;
+
+    case 'table_cell':
+    case 'tableCell':
+    case 'table_header':
+    case 'tableHeader': {
+      const tag = node.type === 'table_header' || node.type === 'tableHeader' ? 'th' : 'td';
+      return `<${tag}${tableCellAttributes(node.attrs)}>${(node.content ?? []).map(renderPMNode).join('\n')}</${tag}>`;
+    }
+
+    case 'image':
+      return convertBlockNoteToHTML([{
+        type: 'image',
+        props: { url: node.attrs?.src ?? node.attrs?.url, name: node.attrs?.alt, caption: node.attrs?.caption },
+      }]);
+
+    case 'video':
+    case 'audio':
+    case 'file':
+    case 'embed': {
+      const link = mediaLink(node.attrs ?? {}, node.type);
+      return link
+        ? `<p><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a></p>`
+        : `<p>${escapeHtml(UNSUPPORTED_RICH_TEXT_PLACEHOLDER)}</p>`;
+    }
+
     case 'blockquote': {
       const inner = (node.content ?? []).map(renderPMNode).join('\n');
       return `<blockquote>${inner}</blockquote>`;
@@ -1027,7 +1163,7 @@ function renderPMNode(node: PMNode): string {
       const lang = node.attrs?.language ? ` class="language-${escapeHtml(String(node.attrs.language))}"` : '';
       const code = (node.content ?? [])
         .map(n => escapeHtml(n.text ?? ''))
-        .join('\n');
+        .join('');
       return `<pre><code${lang}>${code}</code></pre>`;
     }
 
@@ -1056,7 +1192,7 @@ function renderPMNode(node: PMNode): string {
       // Unknown block — try to render children
       if (node.content) return (node.content).map(renderPMNode).join('\n');
       if (node.text != null) return escapeHtml(node.text);
-      return `<!-- unsupported node type: ${escapeHtml(String(node.type))} -->`;
+      return `<p>${escapeHtml(unsupportedBlock(node.type))}</p>`;
     }
   }
 }
@@ -1240,6 +1376,25 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
       return src ? `![${alt}](${src})` : '';
     }
 
+    case 'video':
+    case 'audio':
+    case 'file':
+    case 'embed': {
+      const link = mediaLink(node.attrs ?? {}, node.type);
+      return link ? `[${link.label}](${link.url})` : UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
+    }
+
+    case 'table': {
+      const rows = (node.content ?? []).map(row =>
+        `| ${(row.content ?? []).map(cell =>
+          (cell.content ?? []).map(child => renderPMNodeMarkdown(child)).join(' ').replace(/\|/g, '\\|').replace(/\n/g, ' '),
+        ).join(' | ')} |`,
+      );
+      if (!rows.length) return '';
+      rows.splice(1, 0, `| ${(node.content?.[0]?.content ?? []).map(() => '---').join(' | ')} |`);
+      return rows.join('\n');
+    }
+
     case 'text':
       return renderPMMarksMarkdown(node.text ?? '', node.marks);
 
@@ -1253,7 +1408,7 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
     default: {
       if (node.content) return (node.content).map(child => renderPMNodeMarkdown(child)).join('\n');
       if (node.text != null) return node.text;
-      return '';
+      return unsupportedBlock(node.type);
     }
   }
 }
@@ -1375,7 +1530,7 @@ function blockTextContent(block: any): string {
     return rows
       .map((row: any) =>
         (Array.isArray(row?.cells) ? row.cells : [])
-          .map((cell: any) => inlineContentToPlainText(cell))
+          .map((cell: unknown) => inlineContentToPlainText(tableCellContent(cell)))
           .join(' | ')
       )
       .join('\n');
