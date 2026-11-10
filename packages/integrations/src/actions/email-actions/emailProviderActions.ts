@@ -219,6 +219,16 @@ const PROVIDER_COLUMNS = [
 ];
 
 function redactProviderCredentials(provider: EmailProvider): EmailProvider {
+  const imapConfig = provider.imapConfig;
+  const oauthAuthorizationStatus = imapConfig
+    ? imapConfig.oauth_credentials_token_url != null &&
+      imapConfig.oauth_credentials_token_url !== imapConfig.oauth_token_url
+      ? 'reauthorization_required'
+      : imapConfig.oauth_credentials_token_url === imapConfig.oauth_token_url &&
+        Boolean(imapConfig.access_token || imapConfig.refresh_token)
+        ? 'connected'
+        : 'not_connected'
+    : undefined;
   const redact = <T extends object | undefined>(config: T): T => {
     if (!config) return config;
     const {
@@ -237,7 +247,9 @@ function redactProviderCredentials(provider: EmailProvider): EmailProvider {
     ...provider,
     microsoftConfig: redact(provider.microsoftConfig),
     googleConfig: redact(provider.googleConfig),
-    imapConfig: redact(provider.imapConfig),
+    imapConfig: imapConfig
+      ? { ...redact(imapConfig), oauth_authorization_status: oauthAuthorizationStatus }
+      : undefined,
   };
 }
 
@@ -654,7 +666,13 @@ async function persistImapConfig(
   const existing = await tenantDb(trx, tenant)
     .table('imap_email_provider_config')
     .where({ email_provider_id: providerId })
-    .first('oauth_token_url', 'oauth_credentials_token_url', 'oauth_credentials_secret_version');
+    .first(
+      'oauth_token_url',
+      'oauth_credentials_token_url',
+      'oauth_credentials_secret_version',
+      'oauth_client_secret',
+      'refresh_token'
+    );
   const tokenEndpointChanged = Boolean(
     existing && config.oauth_token_url != null && existing.oauth_token_url !== config.oauth_token_url
   );
@@ -662,13 +680,22 @@ async function persistImapConfig(
   const hasNewOauthCredentials = Boolean(
     config.oauth_client_secret || config.refresh_token || config.access_token
   );
+  const existingIssuerBound = Boolean(
+    existing?.oauth_token_url &&
+    existing.oauth_credentials_token_url === existing.oauth_token_url &&
+    !tokenEndpointChanged
+  );
+  const shouldMigrateLegacySecrets = Boolean(
+    hasNewOauthCredentials && existingIssuerBound &&
+    Number(existing?.oauth_credentials_secret_version || 0) < 1
+  );
   const credentialsTokenUrl = tokenEndpointChanged
-    ? null
+    ? (existing?.oauth_credentials_token_url ?? null)
     : hasNewOauthCredentials
       ? (config.oauth_token_url ?? existing?.oauth_token_url ?? null)
       : (existing?.oauth_credentials_token_url ?? null);
   const credentialsSecretVersion = tokenEndpointChanged
-    ? 0
+    ? Number(existing?.oauth_credentials_secret_version || 0)
     : hasNewOauthCredentials
       ? 1
       : Number(existing?.oauth_credentials_secret_version || 0);
@@ -682,6 +709,12 @@ async function persistImapConfig(
     oauth_token_url: config.oauth_token_url ?? existing?.oauth_token_url,
     oauth_credentials_secret_version: credentialsSecretVersion,
   });
+  const legacyClientSecret = shouldMigrateLegacySecrets
+    ? (await secretProvider.getTenantSecret(tenant, oldSecretNames.clientSecret) || existing?.oauth_client_secret)
+    : null;
+  const legacyRefreshToken = shouldMigrateLegacySecrets
+    ? (await secretProvider.getTenantSecret(tenant, oldSecretNames.refreshToken) || existing?.refresh_token)
+    : null;
 
   if (config.password && typeof config.password === 'string') {
     await secretProvider.setTenantSecret(tenant, `imap_password_${providerId}`, config.password);
@@ -700,12 +733,18 @@ async function persistImapConfig(
         });
       }
     }));
-  } else if (config.oauth_client_secret && typeof config.oauth_client_secret === 'string') {
-    await secretProvider.setTenantSecret(tenant, currentSecretNames.clientSecret, config.oauth_client_secret);
+  } else {
+    const clientSecretToPersist = config.oauth_client_secret || legacyClientSecret;
+    if (clientSecretToPersist && typeof clientSecretToPersist === 'string') {
+      await secretProvider.setTenantSecret(tenant, currentSecretNames.clientSecret, clientSecretToPersist);
+    }
   }
 
-  if (!tokenEndpointChanged && config.refresh_token && typeof config.refresh_token === 'string') {
-    await secretProvider.setTenantSecret(tenant, currentSecretNames.refreshToken, config.refresh_token);
+  if (!tokenEndpointChanged) {
+    const refreshTokenToPersist = config.refresh_token || legacyRefreshToken;
+    if (refreshTokenToPersist && typeof refreshTokenToPersist === 'string') {
+      await secretProvider.setTenantSecret(tenant, currentSecretNames.refreshToken, refreshTokenToPersist);
+    }
   }
 
   const folderFiltersArray = config.folder_filters || [];
@@ -760,10 +799,10 @@ async function persistImapConfig(
       oauth_authorize_url: config.oauth_authorize_url || null,
       oauth_token_url: config.oauth_token_url ?? existing?.oauth_token_url ?? null,
       oauth_credentials_token_url: tokenEndpointChanged
-        ? null
+        ? (existing?.oauth_credentials_token_url ?? null)
         : (credentialsTokenUrl ?? trx.raw('COALESCE(EXCLUDED.oauth_credentials_token_url, imap_email_provider_config.oauth_credentials_token_url)')),
       oauth_credentials_secret_version: tokenEndpointChanged
-        ? 0
+        ? credentialsSecretVersion
         : trx.raw('GREATEST(EXCLUDED.oauth_credentials_secret_version, imap_email_provider_config.oauth_credentials_secret_version)'),
       oauth_client_id: config.oauth_client_id || null,
       oauth_client_secret: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
@@ -885,8 +924,12 @@ export const getEmailProviders = withAuth(async (
             'folder_filters',
             'oauth_authorize_url',
             'oauth_token_url',
+            'oauth_credentials_token_url',
+            'oauth_credentials_secret_version',
             'oauth_client_id',
             'oauth_scopes',
+            'access_token',
+            'refresh_token',
             'token_expires_at',
             'uid_validity',
             'last_uid',
@@ -907,6 +950,15 @@ export const getEmailProviders = withAuth(async (
 
         if (imapConfig) {
           imapConfig.folder_filters = imapConfig.folder_filters || [];
+          if (
+            imapConfig.oauth_credentials_token_url === imapConfig.oauth_token_url &&
+            imapConfig.oauth_token_url
+          ) {
+            const names = getImapOauthSecretNames(imapConfig);
+            const secrets = await getSecretProviderInstance();
+            const storedRefreshToken = await secrets.getTenantSecret(tenant, names.refreshToken);
+            if (storedRefreshToken) imapConfig.refresh_token = storedRefreshToken;
+          }
           provider.imapConfig = imapConfig;
         }
       }

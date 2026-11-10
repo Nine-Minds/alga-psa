@@ -155,11 +155,15 @@ describe('email provider action authorization', () => {
     mocks.providerRows = [{ id: 'provider-1', providerType: 'imap', tenant: 'tenant-1' }];
     mocks.providerConfigs.imap_email_provider_config = {
       email_provider_id: 'provider-1',
+      oauth_token_url: 'https://issuer.example.test/token',
+      oauth_credentials_token_url: 'https://issuer.example.test/token',
+      oauth_credentials_secret_version: 1,
       oauth_client_id: 'client-id',
       oauth_client_secret: 'secret-value',
       access_token: 'access-value',
       refresh_token: 'refresh-value',
     };
+    mocks.secretLookup.mockResolvedValue('refresh-value');
     const actions = await import('./emailProviderActions');
 
     const result = await actions.getEmailProviders();
@@ -169,5 +173,28 @@ describe('email provider action authorization', () => {
     expect(result.providers[0].imapConfig).not.toHaveProperty('oauth_client_secret');
     expect(result.providers[0].imapConfig).not.toHaveProperty('access_token');
     expect(result.providers[0].imapConfig).not.toHaveProperty('refresh_token');
+    expect(result.providers[0].imapConfig).toHaveProperty('oauth_authorization_status', 'connected');
+    expect(JSON.stringify(result)).not.toContain('refresh-value');
+    expect(JSON.stringify(result)).not.toContain('secret-value');
+  });
+
+  it('reports reauthorization when a saved issuer no longer matches the token endpoint', async () => {
+    mocks.hasPermission.mockResolvedValue(true);
+    mocks.providerRows = [{ id: 'provider-1', providerType: 'imap', tenant: 'tenant-1' }];
+    mocks.providerConfigs.imap_email_provider_config = {
+      email_provider_id: 'provider-1',
+      oauth_token_url: 'https://new-issuer.example.test/token',
+      oauth_credentials_token_url: 'https://old-issuer.example.test/token',
+      oauth_credentials_secret_version: 1,
+      oauth_client_id: 'client-id',
+      refresh_token: 'old-refresh-value',
+    };
+    const actions = await import('./emailProviderActions');
+
+    const result = await actions.getEmailProviders();
+
+    expect(result.providers[0].imapConfig).toHaveProperty('oauth_authorization_status', 'reauthorization_required');
+    expect(result.providers[0].imapConfig).not.toHaveProperty('refresh_token');
+    expect(mocks.secretLookup).not.toHaveBeenCalled();
   });
 });

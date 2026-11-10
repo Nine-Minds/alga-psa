@@ -518,12 +518,60 @@ describe('Email Provider Creation', () => {
       expect(changed.provider.imapConfig).not.toHaveProperty('access_token');
       row = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
       expect(row.oauth_token_url).toBe('https://issuer-two.example.test/token');
-      expect(row.oauth_credentials_token_url).toBeNull();
-      expect(row.oauth_credentials_secret_version).toBe(0);
+      expect(row.oauth_credentials_token_url).toBe('https://issuer-one.example.test/token');
+      expect(row.oauth_credentials_secret_version).toBe(1);
       expect(row.oauth_client_secret).toBeNull();
       expect(row.refresh_token).toBeNull();
       expect(row.access_token).toBeNull();
       expect(row.token_expires_at).toBeNull();
+    });
+
+    it('migrates legacy same-issuer secrets when saving same-endpoint OAuth credentials', async () => {
+      const endpoint = 'https://legacy-issuer.example.test/token';
+      const original = {
+        tenant: testTenant,
+        providerType: 'imap' as const,
+        providerName: 'IMAP legacy credential migration',
+        mailbox: 'imap-legacy-migration@example.test',
+        isActive: true,
+        imapConfig: {
+          host: 'imap.example.test', port: 993, secure: true, auth_type: 'oauth2',
+          username: 'imap-legacy-migration@example.test', oauth_token_url: endpoint,
+          oauth_client_id: 'legacy-client', oauth_client_secret: 'old-client-secret',
+          refresh_token: 'legacy-refresh-token', access_token: 'old-access-token',
+        },
+      };
+      const created = await createEmailProvider(original as any, true);
+      const providerId = created.provider.id;
+      const secretProvider = await getSecretProviderInstance();
+      const legacy = getImapOauthSecretNames({ id: providerId, oauth_token_url: endpoint, oauth_credentials_secret_version: 0 });
+      const scoped = getImapOauthSecretNames({ id: providerId, oauth_token_url: endpoint, oauth_credentials_secret_version: 1 });
+
+      await secretProvider.setTenantSecret(testTenant, legacy.clientSecret, 'legacy-secret-store-client');
+      await secretProvider.setTenantSecret(testTenant, legacy.refreshToken, 'legacy-secret-store-refresh');
+      await secretProvider.deleteTenantSecret(testTenant, scoped.clientSecret);
+      await secretProvider.deleteTenantSecret(testTenant, scoped.refreshToken);
+      await tenantTable('imap_email_provider_config').where({ email_provider_id: providerId }).update({
+        oauth_credentials_token_url: endpoint,
+        oauth_credentials_secret_version: 0,
+        oauth_client_secret: null,
+        refresh_token: null,
+      });
+
+      await updateEmailProvider(providerId, {
+        ...original,
+        imapConfig: { ...original.imapConfig, oauth_client_secret: 'new-client-secret', refresh_token: undefined, access_token: undefined },
+      } as any, true);
+
+      expect(await secretProvider.getTenantSecret(testTenant, scoped.clientSecret)).toBe('new-client-secret');
+      expect(await secretProvider.getTenantSecret(testTenant, scoped.refreshToken)).toBe('legacy-secret-store-refresh');
+      const migrated = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
+      expect(migrated.oauth_credentials_token_url).toBe(endpoint);
+      expect(migrated.oauth_credentials_secret_version).toBe(1);
+      expect(migrated.refresh_token).toBeNull();
+      await Promise.all([
+        legacy.clientSecret, legacy.refreshToken, scoped.clientSecret, scoped.refreshToken,
+      ].map((name) => secretProvider.deleteTenantSecret(testTenant, name)));
     });
 
     it('does not forward environment fallback credentials after changing the token endpoint', async () => {
