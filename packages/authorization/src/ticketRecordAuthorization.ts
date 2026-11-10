@@ -206,7 +206,7 @@ export async function authorizeTicketRecordAccess(input: {
   });
 
   if (!decision.allowed) {
-    throw new Error('Permission denied: Cannot access ticket');
+    throw new TicketRecordAccessDeniedError();
   }
 
   if (input.action === 'delete' && !(await hasPermission(
@@ -222,6 +222,15 @@ export async function authorizeTicketRecordAccess(input: {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export class TicketRecordAccessDeniedError extends Error {
+  readonly code = 'PERMISSION_DENIED';
+
+  constructor() {
+    super('Permission denied: Cannot access ticket');
+    this.name = 'TicketRecordAccessDeniedError';
+  }
+}
 
 /** The actor passed the coarse permission but not the per-record update decision. */
 export class TicketWatcherPermissionError extends Error {
