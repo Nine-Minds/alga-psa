@@ -78,6 +78,9 @@ function evaluateTemplateForRule(
  * Closed bundles are the bundles whose rules carry baseline 'closed'. The provider derives them from the
  * rule list it already receives: publishBundleRevision refuses an empty revision, so a published closed
  * revision always has at least one rule and therefore always shows up here. (Pinned by closedBaseline.matrix.test.ts.)
+ * Therefore a `resolveRules` implementation must return the subject's full assigned rule set, unfiltered; filtering
+ * rules out makes a closed bundle look like it does not name a resource (false deny) or hides it (false allow).
+ * To neutralise a rule, keep it and change it (e.g. `templateKey: null`) instead of dropping it.
  * A rule with no bundleId cannot be attributed to a bundle and is never treated as closed.
  */
 function groupClosedBundles(rules: BundleNarrowingRule[]): Map<string, BundleNarrowingRule[]> {

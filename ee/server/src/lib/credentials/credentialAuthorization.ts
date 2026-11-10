@@ -173,12 +173,8 @@ export function buildCredentialAuthorizationKernel(
       relationshipRules: getCredentialBuiltinRelationshipRules(isRestricted),
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        if (input.resource.type === 'credential' && input.resource.action === 'read') {
-          return context.bundleNarrowingRules;
-        }
-        return [];
-      },
+      // Full assigned rule set, unfiltered: closed-baseline evaluation derives closed bundles from it.
+      resolveRules: async () => context.bundleNarrowingRules,
     }),
     rbacEvaluator: async () => true,
   });
