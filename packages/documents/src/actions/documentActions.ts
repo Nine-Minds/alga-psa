@@ -5,6 +5,7 @@ import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments,
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission, checkMultiplePermissions } from '@alga-psa/auth';
+import { createAssetReadContext, isAssetMutationAllowed } from '@alga-psa/authorization/assetReadAuthorization';
 import { Knex } from 'knex';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
@@ -43,6 +44,7 @@ import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { documentPreviewErrorMessage } from '@alga-psa/documents/handlers/previewErrors';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
+import { validateDocumentPreviewProvenance } from '../lib/documentPreviewProvenance';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
@@ -152,6 +154,11 @@ const SEARCHABLE_ASSOCIATION_ENTITY_TYPES = new Set<SearchableDocumentAssociatio
   'contract',
   'quote',
   'opportunity',
+]);
+
+const DOCUMENT_ASSOCIATION_ENTITY_TYPES = new Set<DocumentAssociationEntityType>([
+  'user', 'ticket', 'client', 'contact', 'asset', 'project_task', 'contract', 'tenant',
+  'quote', 'invoice', 'sales_order', 'document', 'opportunity',
 ]);
 
 // LEVERAGE: pattern tenant-scoped-table — document actions and shared authorization repeat this typed facade.
@@ -2352,7 +2359,12 @@ export const createDocumentAssociations = withAuth(async (
 ): Promise<{ success: boolean } | DocumentActionError> => {
   try {
     // Check permission for document updates (associating documents is an update operation)
-    if (!await hasPermission(user, 'document', 'update')) {
+    if (!await hasPermission(user, 'document', 'update') || !DOCUMENT_ASSOCIATION_ENTITY_TYPES.has(entity_type)) {
+      return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+    }
+
+    if (typeof entity_id !== 'string' || !entity_id.trim() || !Array.isArray(document_ids) ||
+        document_ids.some((id) => typeof id !== 'string' || !id.trim())) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
     if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
@@ -2373,7 +2385,22 @@ export const createDocumentAssociations = withAuth(async (
       if (entity_type === 'asset') {
         const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
         if (assetAuthorization) return assetAuthorization;
+        if (!await hasPermission(user, 'document', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'update', trx)) {
+          return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+        }
+
+        const asset = await tenantScopedTable(trx, 'assets', tenant)
+          .where({ asset_id: entity_id })
+          .forUpdate()
+          .first('asset_id', 'client_id');
+        const assetContext = await createAssetReadContext(trx, tenant, user);
+        if (!asset || !await isAssetMutationAllowed(trx, tenant, assetContext, asset, 'update')) {
+          return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+        }
       }
+
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
         trx,
         tenant,
@@ -2386,9 +2413,12 @@ export const createDocumentAssociations = withAuth(async (
       }
 
       return await Promise.all(
-        associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
-          DocumentAssociation.create(trx, association)
-        )
+        associations.map(async (association): Promise<Pick<IDocumentAssociation, 'association_id'>> => {
+          const [row] = await tenantScopedTable(trx, 'document_associations', tenant)
+            .insert({ ...association, association_id: uuidv4() })
+            .returning(['association_id']);
+          return row;
+        })
       );
     });
 
@@ -2452,7 +2482,12 @@ export const removeDocumentAssociations = withAuth(async (
 ) => {
   try {
     // Check permission for document updates (removing associations is an update operation)
-    if (!await hasPermission(user, 'document', 'update')) {
+    if (!await hasPermission(user, 'document', 'update') || !DOCUMENT_ASSOCIATION_ENTITY_TYPES.has(entity_type)) {
+      return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+    }
+
+    if (typeof entity_id !== 'string' || !entity_id.trim() ||
+        (document_ids !== undefined && (!Array.isArray(document_ids) || document_ids.some((id) => typeof id !== 'string' || !id.trim())))) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
     if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
@@ -2462,10 +2497,6 @@ export const removeDocumentAssociations = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (entity_type === 'asset') {
-        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
-        if (assetAuthorization) return assetAuthorization;
-      }
       let query = tenantScopedTable(trx, 'document_associations', tenant)
         .where('entity_id', entity_id)
         .andWhere('entity_type', entity_type);
@@ -2474,7 +2505,38 @@ export const removeDocumentAssociations = withAuth(async (
         query = query.whereIn('document_id', document_ids);
       }
 
-      const rows = await query.clone().select('association_id', 'document_id');
+      const rows = await query.clone().forUpdate().select('association_id', 'document_id', 'entity_id', 'entity_type');
+
+      if (entity_type === 'asset') {
+        if (rows.length > 0) {
+          const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
+          if (assetAuthorization) return assetAuthorization;
+        }
+        if (!await hasPermission(user, 'document', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'delete', trx)) {
+          return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+        }
+        if (rows.some((row: { entity_type: string }) => row.entity_type !== 'asset')) {
+          return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+        }
+
+        const assetIds: string[] = Array.from(new Set<string>(rows.map((row: { entity_id: string }) => row.entity_id)));
+        const assets = assetIds.length === 0 ? [] : await tenantScopedTable(trx, 'assets', tenant)
+          .whereIn('asset_id', assetIds)
+          .forUpdate()
+          .select('asset_id', 'client_id');
+        if (assets.length !== assetIds.length) {
+          return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+        }
+
+        const assetContext = await createAssetReadContext(trx, tenant, user);
+        for (const asset of assets) {
+          if (!await isAssetMutationAllowed(trx, tenant, assetContext, asset, 'delete')) {
+            return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+          }
+        }
+      }
 
       const targetedDocumentIds = rows.map((row: { document_id: string }) => row.document_id);
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
@@ -2488,7 +2550,14 @@ export const removeDocumentAssociations = withAuth(async (
         return authorizationResult;
       }
 
-      await query.delete();
+      if (entity_type === 'asset') {
+        const associationIds = rows.map((row: { association_id: string }) => row.association_id);
+        if (associationIds.length > 0) {
+          await tenantScopedTable(trx, 'document_associations', tenant).whereIn('association_id', associationIds).delete();
+        }
+      } else {
+        await query.delete();
+      }
       return rows;
     });
 
@@ -2505,8 +2574,8 @@ export const removeDocumentAssociations = withAuth(async (
               eventType: 'DOCUMENT_DETACHED',
               payload: buildDocumentDetachedPayload({
                 documentId: row.document_id,
-                entityType: entity_type,
-                entityId: entity_id,
+                entityType: row.entity_type,
+                entityId: row.entity_id,
                 detachedByUserId: user.user_id,
                 detachedAt: occurredAt,
                 reason: 'manual_remove',
@@ -2911,6 +2980,7 @@ export const uploadDocument = withAuth(async (
       try {
         const previewResult = await generateDocumentPreviews(document, buffer);
         if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
+          await validateDocumentPreviewProvenance(knex, tenant, document.document_id, previewResult);
           await tenantScopedTable(knex, 'documents', tenant)
             .where({ document_id: document.document_id })
             .update({

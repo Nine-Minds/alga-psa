@@ -334,6 +334,10 @@ export interface RmmSyncResult {
   items_deleted?: number;
   items_failed: number;
   errors?: string[];
+  /** UniFi multi-key: per-credential outcome (labels only, never key material). */
+  credentials?: Array<{ label: string; status: string; consolesReached: number }>;
+  /** UniFi multi-key: consoles no configured key can reach. */
+  unreachableConsoles?: Array<{ hostId: string; name: string; suggestedAction: string }>;
 }
 
 // Connection status for UI

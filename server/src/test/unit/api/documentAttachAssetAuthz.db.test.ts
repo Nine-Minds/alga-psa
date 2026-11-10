@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * POST /api/v1/documents -> asset attach must run the same record-level read
  * authorization as the asset routes (alga-2026-0002947). A denied asset answers
@@ -52,7 +53,7 @@ vi.mock('../../../lib/api/controllers/authorizationKernel', async (original) => 
   ...await original<typeof import('../../../lib/api/controllers/authorizationKernel')>(),
   authorizeApiResourceRead: async (input: { recordContext: { id?: string } }) => {
     spies.kernel(input);
-    return input.recordContext?.id !== spies.deniedAssetId;
+    return { allowed: input.recordContext?.id !== spies.deniedAssetId, redactedFields: [] };
   },
 }));
 vi.mock('../../../lib/api/services/documents/resolveSource', () => ({
@@ -73,7 +74,7 @@ let noUpdateKey: string;
 
 async function insertAsset(trx: Knex, clientId: string): Promise<string> {
   const id = randomUUID();
-  await trx('assets').insert({
+  await insertTestAssets(trx, {
     tenant, asset_id: id, client_id: clientId, asset_type: 'workstation',
     asset_tag: `tag-${id}`, name: 'Attach target', status: 'active',
   });

@@ -8,6 +8,7 @@ import type {
   RelationshipTemplateKey,
 } from './contracts';
 import type { BundleNarrowingRule } from './providers/bundleProvider';
+import { matchRulesForAction } from './actionAliases';
 import { applyTicketVisibilityFilter, ticketMatchesVisibility } from '../portal/visibility';
 
 // ---------------------------------------------------------------------------
@@ -356,7 +357,7 @@ export function compileBundleReadNarrowingSql(
   action: string,
   ctx: RelationshipSqlContext
 ): RelationshipSqlCompileResult {
-  const matching = bundleRules.filter((rule) => rule.resource === resourceType && rule.action === action);
+  const matching = matchRulesForAction(bundleRules, resourceType, action);
   for (const rule of matching) {
     const result = compileBundleRuleSql(builder, rule, ctx);
     if (!result.supported) {

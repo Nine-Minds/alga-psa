@@ -22,6 +22,14 @@ function createDuplicateLookupKnex(row: Record<string, unknown> | null) {
 }
 
 describe('inbound webhook idempotency', () => {
+  it('enforces resource limits when extracting an expression-based key', async () => {
+    await expect(extractInboundWebhookIdempotencyKey({
+      source: { type: 'jsonata', value: '[1..end]' },
+      headers: new Headers(),
+      body: { end: 5000 },
+    })).rejects.toThrow(/range exceeded max size/);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });

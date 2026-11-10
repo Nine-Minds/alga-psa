@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * Advance-replacement dead-unit leg (alga-2026-0002683, real DB). The Dell advance flow through shipping the
  * dead unit to the vendor and the vendor's receipt, the guard matrix, the shared `dead_unit_owed` status told
@@ -83,7 +84,7 @@ const ok = (r: any): any => {
 
 async function newAsset(over: Record<string, unknown> = {}) {
   const assetId = randomUUID();
-  await knex('assets').insert({
+  await insertTestAssets(knex, {
     tenant: holder.tenant, asset_id: assetId, asset_type: 'unknown', client_id: CLIENT, asset_tag: `T-${assetId.slice(0, 8)}`,
     name: 'Dell WD19 dock', serial_number: 'OLD-SERIAL', model: 'WD19', manufacturer: 'Dell', status: 'active', location: '',
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...over,

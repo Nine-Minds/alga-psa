@@ -70,9 +70,7 @@
       "message_one": "Het volgende aangepaste telefoontype wordt niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinitie verwijderen of bewaren voor toekomstig gebruik?",
       "message_other": "De volgende aangepaste telefoontypen worden niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinities verwijderen of bewaren voor toekomstig gebruik?",
       "deleteType": "Soort verwijderen",
-      "keepType": "Soort behouden",
-      "message_few": "De volgende aangepaste telefoontypen worden niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinities verwijderen of bewaren voor toekomstig gebruik?",
-      "message_many": "De volgende aangepaste telefoontypen worden niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinities verwijderen of bewaren voor toekomstig gebruik?"
+      "keepType": "Soort behouden"
     },
     "print": {
       "title": "Contacten",
@@ -418,7 +416,10 @@
       "refreshing": "Bezig met vernieuwen...",
       "resend": "Opnieuw verzenden",
       "resending": "Opnieuw verzenden...",
-      "revoke": "Intrekken"
+      "revoke": "Intrekken",
+      "cancel": "Annuleren",
+      "edit": "Bewerken",
+      "delete": "Verwijderen"
     },
     "toast": {
       "successTitle": "Succes",
@@ -460,10 +461,9 @@
         "noBaseUrl": "Basis-URL is niet geconfigureerd voor portaluitnodigingen.",
         "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt."
       },
-      "userNotFound": "Klantgebruiker niet gevonden"
-    },
-    "boardCount_few": "{{count}} borden",
-    "boardCount_many": "{{count}} borden"
+      "userNotFound": "Klantgebruiker niet gevonden",
+      "validationErrorTitle": "Validatiefout"
+    }
   },
   "quickAddContact": {
     "title": "Nieuwe contactpersoon toevoegen",
@@ -723,6 +723,118 @@
       "saved": "Contact bijgewerkt",
       "saveFailed": "Contact kon niet worden bijgewerkt",
       "saveFailedDescription": "Het contact kon niet worden bijgewerkt. Probeer het opnieuw."
+    },
+    "relative": {
+      "today": "vandaag",
+      "yesterday": "gisteren",
+      "daysAgo": "{{count}} d geleden"
+    },
+    "emailType": {
+      "primary": "Primair",
+      "other": "overig"
+    },
+    "phoneType": {
+      "other": "Overig"
+    },
+    "ticketPill": {
+      "closed": "Gesloten",
+      "urgent": "Urgent",
+      "open": "Open"
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "role": {
+      "add": "Rol toevoegen",
+      "editTitle": "Klik om de rol te bewerken"
+    },
+    "atClient": "bij",
+    "noClient": "Geen klant",
+    "noPrimaryEmail": "Geen primair e-mailadres",
+    "noPhoneNumber": "Geen telefoonnummer",
+    "contactSince": "Contact sinds {{date}}",
+    "lastTouch": "Laatste contactmoment",
+    "editContact": "Contact bewerken",
+    "openFullPage": "Volledige pagina openen",
+    "viewAll": "Alles bekijken",
+    "viewAllCount": "Alle {{count}} bekijken",
+    "reach": {
+      "title": "Bereikbaarheid",
+      "add": "E-mailadres of telefoonnummer toevoegen",
+      "email": "E-mail",
+      "phone": "Telefoon",
+      "primaryMeta": "primair",
+      "noEmails": "Geen e-mailadressen",
+      "addEmail": "E-mailadres toevoegen",
+      "noPhones": "Geen telefoonnummers",
+      "addPhone": "Telefoonnummer toevoegen"
+    },
+    "portalChip": {
+      "deactivated": "Portaal · gedeactiveerd",
+      "signedIn": "Portaal · aangemeld {{when}}",
+      "neverSignedIn": "Portaal · nooit aangemeld",
+      "invited": "Portaal · uitgenodigd",
+      "noAccess": "Geen portaaltoegang"
+    },
+    "portal": {
+      "title": "Portaaltoegang",
+      "manage": "Beheren",
+      "status": "Status",
+      "role": "Rol",
+      "clientAdmin": "Klantbeheerder",
+      "standard": "Standaard",
+      "lastSignIn": "Laatste aanmelding",
+      "invited": "Uitgenodigd",
+      "noClientAssigned": "Geen klant toegewezen",
+      "deactivated": "Gedeactiveerd",
+      "activeAccount": "Actief account",
+      "invitationSent": "Uitnodiging verzonden",
+      "noAccess": "Geen toegang"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "create": "Ticket aanmaken",
+      "createFirst": "Ticket aanmaken",
+      "empty": "Nog geen tickets",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interacties",
+      "log": "Interactie registreren",
+      "logFirst": "Interactie registreren",
+      "empty": "Geen interacties geregistreerd",
+      "fallbackTitle": "Interactie",
+      "loadError": "Interacties konden niet worden geladen. Probeer het opnieuw."
+    },
+    "documents": {
+      "title": "Documenten",
+      "add": "Document toevoegen",
+      "addFirst": "Document toevoegen",
+      "empty": "Nog geen documenten",
+      "fallbackTitle": "Document",
+      "dialogTitle": "Contactdocumenten"
+    },
+    "relatedWork": {
+      "title": "Gerelateerd werk",
+      "projects": "Projecten",
+      "quotes": "Offertes",
+      "noProjects": "Geen projecten",
+      "noQuotes": "Geen offertes",
+      "noStatus": "Geen status",
+      "noStatusLower": "geen status",
+      "projectFallback": "Project {{number}}",
+      "quoteFallback": "Offerte",
+      "empty": "Geen gerelateerde projecten of offertes"
+    },
+    "notes": {
+      "title": "Notities",
+      "edit": "Bewerken",
+      "openDocument": "Notitiedocument openen",
+      "save": "Notities opslaan",
+      "cancel": "Annuleren",
+      "empty": "Nog geen notities",
+      "add": "Notities toevoegen"
     }
   },
   "errors": {
@@ -834,8 +946,29 @@
       "scopeSummaryOwn": "Eigen",
       "managerScopeNote_one": "Hun weergave bevat ook gegevens van {{count}} persoon die aan hen rapporteert.",
       "managerScopeNote_other": "Hun weergave bevat ook gegevens van {{count}} personen die aan hen rapporteren.",
-      "managerScopeNote_few": "Hun weergave bevat ook gegevens van {{count}} personen die aan hen rapporteren.",
-      "managerScopeNote_many": "Hun weergave bevat ook gegevens van {{count}} personen die aan hen rapporteren."
+      "assignmentLabel": "Zichtbaarheidsgroep voor tickets",
+      "assignmentPlaceholder": "Selecteer een zichtbaarheidstoewijzing",
+      "assignmentUpdated": "Zichtbaarheidstoewijzing van contact bijgewerkt",
+      "assignFailed": "Zichtbaarheidsgroep toewijzen mislukt",
+      "manageLabel": "Zichtbaarheidsgroepen voor klant",
+      "manageHelp": "Maak of bewerk groepen van borden en wijs deze toe aan contacten.",
+      "nameLabel": "Groepsnaam",
+      "nameRequired": "Naam van zichtbaarheidsgroep is verplicht",
+      "descriptionLabel": "Beschrijving",
+      "descriptionPlaceholder": "Optionele beschrijving",
+      "boardsLabel": "Borden",
+      "noBoards": "Geen borden beschikbaar",
+      "createGroup": "Groep aanmaken",
+      "updateGroup": "Groep bijwerken",
+      "created": "Zichtbaarheidsgroep aangemaakt",
+      "updated": "Zichtbaarheidsgroep bijgewerkt",
+      "deleted": "Zichtbaarheidsgroep verwijderd",
+      "deleteConfirm": "Deze zichtbaarheidsgroep verwijderen?",
+      "deleteFailed": "Zichtbaarheidsgroep verwijderen mislukt",
+      "saveFailed": "Zichtbaarheidsgroep opslaan mislukt",
+      "loadFailed": "Zichtbaarheidsgroep kon niet worden geladen om te bewerken",
+      "empty": "Nog geen zichtbaarheidsgroepen",
+      "fullAccess": "Volledige toegang"
     }
   },
   "messages": {

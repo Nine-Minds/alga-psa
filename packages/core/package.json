@@ -89,6 +89,10 @@
     "./context/DocumentsCrossFeatureContext": {
       "import": "./dist/context/DocumentsCrossFeatureContext.js",
       "types": "./src/context/DocumentsCrossFeatureContext.ts"
+    },
+    "./rendering/isolatedRendering": {
+      "import": "./dist/lib/rendering/isolatedRendering.js",
+      "types": "./src/lib/rendering/isolatedRendering.ts"
     }
   },
   "scripts": {
@@ -107,7 +111,10 @@
     "uuid": "^11.1.1",
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
-    "react": "^19.2.4"
+    "react": "^19.2.4",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.5.23",
+    "postcss-value-parser": "^4.2.0"
   },
   "peerDependencies": {
     "next": "*"
@@ -120,6 +127,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/uuid": "^9.0.7",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "puppeteer": "^25.10.0"
   }
 }

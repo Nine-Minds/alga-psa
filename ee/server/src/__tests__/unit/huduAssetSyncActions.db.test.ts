@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /** Database persistence cases extracted from the mixed unit suite. */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -104,8 +105,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
     const clientId = randomUUID();
     await tenantTable(db, tenantId, 'clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'Hudu Attr Client' });
     try {
-      const [asset] = await tenantTable(db, tenantId, 'assets')
-        .insert({
+      const [asset] = await insertTestAssets(db, {
           tenant: tenantId,
           client_id: clientId,
           asset_type: 'workstation',
@@ -117,8 +117,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
             hudu_fields: [{ label: 'Old', value: 'x' }],
             hudu_synced_at: '2026-06-10T00:00:00.000Z',
           }),
-        })
-        .returning('asset_id');
+        });
 
       const at = '2026-06-12T10:00:00.000Z';
       expect(

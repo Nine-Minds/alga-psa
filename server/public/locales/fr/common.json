@@ -781,7 +781,8 @@
       "collapse": "Replier les dossiers",
       "allDocuments": "Tous les documents",
       "expand": "Afficher les dossiers",
-      "deleteTitle": "Supprimer le dossier"
+      "deleteTitle": "Supprimer le dossier",
+      "show": "Afficher les dossiers"
     },
     "folderManager": {
       "title": "Créer un nouveau dossier",
@@ -843,6 +844,28 @@
     "huduTab": {
       "documentsTabLabel": "Documents",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Utilisateur",
+    "selectOrCreate": "Sélectionnez un document ou créez-en un nouveau.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimer",
+      "edit": "Modifier",
+      "upload": "Téléverser",
+      "closePreview": "Fermer l’aperçu",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement..."
+    },
+    "viewMode": {
+      "grid": "Grille",
+      "list": "Liste"
+    },
+    "unsavedChanges": {
+      "title": "Modifications non enregistrées",
+      "message": "Voulez-vous vraiment annuler ? Les modifications non enregistrées seront perdues.",
+      "confirm": "Abandonner les modifications",
+      "cancel": "Continuer la modification"
     }
   },
   "fields": {
@@ -875,7 +898,22 @@
       "verify": "Vérifier",
       "title": "Rien de plus simple",
       "instructions": "Saisissez le code à 6 chiffres de votre application d’authentification.",
-      "digitsLeft": "{{count}} chiffres restants"
+      "digitsLeft": "{{count}} chiffres restants",
+      "enroll": {
+        "title": "Configurer l’authentification à deux facteurs",
+        "instructions": "Votre organisation exige l’authentification à deux facteurs. Scannez le code QR avec une application d’authentification, puis saisissez le code à 6 chiffres.",
+        "qrAlt": "Code QR pour votre application d’authentification",
+        "manualKey": "Ou saisissez cette clé manuellement :",
+        "cancel": "Annuler",
+        "errors": {
+          "invalid_credentials": "Votre adresse e-mail ou votre mot de passe n’est plus valide. Veuillez vous reconnecter.",
+          "enrollment_not_required": "La configuration n’est pas nécessaire pour ce compte. Veuillez vous reconnecter.",
+          "invalid_code": "Ce code n’est pas valide. Veuillez réessayer.",
+          "rate_limited": "Trop de tentatives. Veuillez patienter quelques minutes et réessayer.",
+          "captcha_required": "Veuillez d’abord effectuer la vérification sur la page de connexion.",
+          "unavailable": "La configuration est indisponible pour le moment. Veuillez réessayer."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
@@ -1426,7 +1464,16 @@
     "unnamedTeam": "Équipe sans nom",
     "userPicker": "Sélecteur d’utilisateurs",
     "noUsersFound": "Aucun utilisateur trouvé",
-    "contactRemoteLocation": "À distance"
+    "contactRemoteLocation": "À distance",
+    "selectBoard": "Sélectionner un tableau",
+    "activeBoards": "Tableaux actifs",
+    "inactiveBoards": "Tableaux inactifs",
+    "allBoards": "Tous les tableaux",
+    "boardPicker": "Sélecteur de tableaux",
+    "filterByStatus": "Filtrer par statut",
+    "statusFilter": "Filtre de statut",
+    "boards": "Tableaux",
+    "inactiveSuffix": "(Inactif)"
   },
   "serviceTypeSelect": {
     "placeholder": "Sélectionner un type de service...",
@@ -1634,7 +1681,9 @@
       "ticketTitle": "Imprimer les étiquettes de travail",
       "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",
       "unnamedAsset": "Actif sans nom",
-      "useTemplate": "Utiliser {{template}}"
+      "useTemplate": "Utiliser {{template}}",
+      "copiesPerAsset": "Exemplaires par actif",
+      "adjacentCopies": "Les exemplaires de chaque actif sont imprimés ensemble."
     }
   },
   "deleteEntity": {
@@ -1727,7 +1776,14 @@
       "assigned": "Attribué :",
       "performedBy": "par {{name}}",
       "internal": "Interne"
-    }
+    },
+    "title": "Notifications",
+    "reconnectingToServer": "Reconnexion au serveur...",
+    "refresh": "Actualiser",
+    "markAllAsRead": "Tout marquer comme lu",
+    "markAllRead": "Tout marquer comme lu",
+    "emptyTitle": "Aucune notification",
+    "emptyDescription": "Vous êtes à jour !"
   },
   "importConflicts": {
     "title": "Résoudre les conflits d'import",

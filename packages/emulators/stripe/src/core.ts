@@ -171,10 +171,40 @@ export interface WebhookDelivery {
   eventId: string;
   eventType: string;
   target: string;
+  /** Webhook endpoint that received the delivery; absent for config-level targets. */
+  endpointId?: string;
   attempt: number;
   status: number;
   response: string;
   deliveredAt: string;
+}
+
+/**
+ * Stripe webhook endpoint (`/v1/webhook_endpoints`). The signing secret is
+ * returned only by create, as in Stripe; deliveries to the endpoint are signed
+ * with it and follow the endpoint's current URL.
+ */
+export interface StripeWebhookEndpoint {
+  id: string;
+  object: 'webhook_endpoint';
+  url: string;
+  enabled_events: string[];
+  status: 'enabled' | 'disabled';
+  description: string | null;
+  metadata: Record<string, string>;
+  api_version: string | null;
+  application: null;
+  created: number;
+  livemode: false;
+  secret?: string;
+  [key: string]: unknown;
+}
+
+/** One place a signed event is sent: a config-level target or a webhook endpoint. */
+export interface WebhookDeliveryTarget {
+  url: string;
+  secret: string;
+  endpointId?: string;
 }
 
 export interface OperationFault {
@@ -219,6 +249,9 @@ export class StripeEmulatorCore implements EmulatorCore {
   readonly events = new Map<string, StripeEvent>();
   /** Subscription-mode checkout inputs retained until completion creates the subscription. */
   private readonly checkoutSubscriptions = new Map<string, { priceId: string; quantity: number }>();
+  readonly webhookEndpoints = new Map<string, StripeWebhookEndpoint>();
+  /** Endpoint signing secrets, kept apart so retrieve/list never return them. */
+  private readonly endpointSecrets = new Map<string, string>();
   readonly deliveries: WebhookDelivery[] = [];
   readonly operationFaults = new Map<string, OperationFault>();
 
@@ -237,6 +270,8 @@ export class StripeEmulatorCore implements EmulatorCore {
     this.subscriptions.clear();
     this.events.clear();
     this.checkoutSubscriptions.clear();
+    this.webhookEndpoints.clear();
+    this.endpointSecrets.clear();
     this.deliveries.length = 0;
     this.operationFaults.clear();
     this.secretKey = DEFAULT_SECRET_KEY;
@@ -650,6 +685,100 @@ export class StripeEmulatorCore implements EmulatorCore {
     return this.emitEvent('checkout.session.expired', session);
   }
 
+  // ── Webhook endpoints ─────────────────────────────────────────────────────
+
+  createWebhookEndpoint(input: {
+    id?: string;
+    url: string;
+    enabled_events: string[];
+    description?: string | null;
+    metadata?: Record<string, string>;
+    api_version?: string | null;
+    secret?: string;
+  }): StripeWebhookEndpoint {
+    if (!input.url) throw new StripeWireError(400, 'Missing required param: url.');
+    if (!input.enabled_events?.length) throw new StripeWireError(400, 'Missing required param: enabled_events.');
+    const id = input.id ?? this.newId('we');
+    const endpoint: StripeWebhookEndpoint = {
+      id,
+      object: 'webhook_endpoint',
+      url: input.url,
+      enabled_events: [...input.enabled_events],
+      status: 'enabled',
+      description: input.description ?? null,
+      metadata: { ...(input.metadata ?? {}) },
+      api_version: input.api_version ?? null,
+      application: null,
+      created: this.nowUnix(),
+      livemode: false,
+    };
+    const secret = input.secret ?? `whsec_${this.newId('sim')}`;
+    this.webhookEndpoints.set(id, endpoint);
+    this.endpointSecrets.set(id, secret);
+    return { ...endpoint, enabled_events: [...endpoint.enabled_events], secret };
+  }
+
+  private requireWebhookEndpoint(id: string): StripeWebhookEndpoint {
+    const endpoint = this.webhookEndpoints.get(id);
+    if (!endpoint) {
+      throw new StripeWireError(404, `No such webhook endpoint: '${id}'`, 'invalid_request_error', 'resource_missing');
+    }
+    return endpoint;
+  }
+
+  getWebhookEndpoint(id: string): StripeWebhookEndpoint {
+    const endpoint = this.requireWebhookEndpoint(id);
+    return { ...endpoint, enabled_events: [...endpoint.enabled_events], metadata: { ...endpoint.metadata } };
+  }
+
+  listWebhookEndpoints(): StripeList<StripeWebhookEndpoint> {
+    const data = [...this.webhookEndpoints.keys()].map((id) => this.getWebhookEndpoint(id));
+    return { object: 'list', url: '/v1/webhook_endpoints', has_more: false, data };
+  }
+
+  /** Stripe update semantics: only supplied fields change; the signing secret is kept. */
+  updateWebhookEndpoint(id: string, input: {
+    url?: string;
+    enabled_events?: string[];
+    disabled?: boolean;
+    description?: string | null;
+    metadata?: Record<string, string>;
+  }): StripeWebhookEndpoint {
+    const target = this.requireWebhookEndpoint(id);
+    if (input.url !== undefined) target.url = input.url;
+    if (input.enabled_events !== undefined) {
+      if (!input.enabled_events.length) throw new StripeWireError(400, 'enabled_events cannot be empty.');
+      target.enabled_events = [...input.enabled_events];
+    }
+    if (input.disabled !== undefined) target.status = input.disabled ? 'disabled' : 'enabled';
+    if (input.description !== undefined) target.description = input.description;
+    if (input.metadata !== undefined) target.metadata = { ...target.metadata, ...input.metadata };
+    return this.getWebhookEndpoint(id);
+  }
+
+  deleteWebhookEndpoint(id: string): { id: string; object: 'webhook_endpoint'; deleted: true } {
+    this.requireWebhookEndpoint(id);
+    this.webhookEndpoints.delete(id);
+    this.endpointSecrets.delete(id);
+    return { id, object: 'webhook_endpoint', deleted: true };
+  }
+
+  /**
+   * Where an event of this type is delivered: every config-level target
+   * (signed with the account webhook secret) plus every enabled endpoint
+   * subscribed to the type or to '*' (signed with that endpoint's secret, at
+   * its current URL).
+   */
+  webhookDeliveryTargets(eventType: string): WebhookDeliveryTarget[] {
+    const targets: WebhookDeliveryTarget[] = this.webhookTargets.map((url) => ({ url, secret: this.webhookSecret }));
+    for (const endpoint of this.webhookEndpoints.values()) {
+      if (endpoint.status !== 'enabled') continue;
+      if (!endpoint.enabled_events.includes('*') && !endpoint.enabled_events.includes(eventType)) continue;
+      targets.push({ url: endpoint.url, secret: this.endpointSecrets.get(endpoint.id) ?? '', endpointId: endpoint.id });
+    }
+    return targets;
+  }
+
   // ── Events & webhook deliveries ───────────────────────────────────────────
 
   emitEvent(type: string, object: StripeCheckoutSession | StripePaymentIntent | StripeSubscription | StripeInvoice): StripeEvent {
@@ -659,7 +788,7 @@ export class StripeEmulatorCore implements EmulatorCore {
       type,
       created: this.nowUnix(),
       livemode: false,
-      pending_webhooks: this.webhookTargets.length,
+      pending_webhooks: this.webhookDeliveryTargets(type).length,
       // Snapshot v1 event data at emission. Retries must retain the original
       // state even when the live PaymentIntent or Checkout Session changes.
       data: { object: structuredClone(object) },

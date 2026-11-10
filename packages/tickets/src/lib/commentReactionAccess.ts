@@ -87,7 +87,7 @@ export async function resolveReactionTargets(
   const ticketAllowed = new Map<string, boolean>();
   for (const ticketId of new Set(candidates.map((r) => r.ticket_id as string))) {
     try {
-      await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId, action });
+      await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId, action, conceal: 'all' });
       ticketAllowed.set(ticketId, true);
     } catch {
       ticketAllowed.set(ticketId, false);

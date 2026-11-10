@@ -1,0 +1,196 @@
+{
+  "testedSourceRevision": "ea8086eb4c993e208a5ca25c694ea081a4a809f6",
+  "principal": {
+    "id": "30391251-0000-4000-8000-000000000001",
+    "email": "smoke-authz-1251@example.com"
+  },
+  "ticket": {
+    "id": "dd1db14a-e30f-42cc-abd1-2f38523f287a",
+    "number": "TIC001280"
+  },
+  "before": {
+    "staffing": [
+      {
+        "assignment_id": "a2a8c7ce-9fb5-441c-b817-b823bf98291d",
+        "additional_user_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+        "role": "support"
+      }
+    ],
+    "audit": [
+      {
+        "audit_id": "b6d032ba-8ffe-4c01-8d9d-85ee7d0ebd66",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T13:05:22.264Z"
+      },
+      {
+        "audit_id": "1b9327eb-a0cc-4419-a605-fa1f32a7bb58",
+        "event_type": "TICKET_UNASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T13:05:39.005Z"
+      },
+      {
+        "audit_id": "329962de-52be-43b6-8ed7-21e8469216cc",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T13:05:51.199Z"
+      },
+      {
+        "audit_id": "c29128f3-89fc-4026-b28c-a5ba23e73cff",
+        "event_type": "TICKET_UNASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:06:47.551Z"
+      },
+      {
+        "audit_id": "21be0fed-ea06-4a91-9601-52cacff10bb6",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:07:14.984Z"
+      },
+      {
+        "audit_id": "e45cde78-9e21-4d55-b96b-f9ae291abffc",
+        "event_type": "TICKET_UNASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:10:05.559Z"
+      },
+      {
+        "audit_id": "f85f3793-7032-4ca1-96de-45749b0be856",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:10:06.669Z"
+      }
+    ]
+  },
+  "after": {
+    "staffing": [
+      {
+        "assignment_id": "e17b1519-5972-4e97-a29f-0dd12e936b3a",
+        "additional_user_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+        "role": "support"
+      }
+    ],
+    "audit": [
+      {
+        "audit_id": "b6d032ba-8ffe-4c01-8d9d-85ee7d0ebd66",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T13:05:22.264Z"
+      },
+      {
+        "audit_id": "1b9327eb-a0cc-4419-a605-fa1f32a7bb58",
+        "event_type": "TICKET_UNASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T13:05:39.005Z"
+      },
+      {
+        "audit_id": "329962de-52be-43b6-8ed7-21e8469216cc",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T13:05:51.199Z"
+      },
+      {
+        "audit_id": "c29128f3-89fc-4026-b28c-a5ba23e73cff",
+        "event_type": "TICKET_UNASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:06:47.551Z"
+      },
+      {
+        "audit_id": "21be0fed-ea06-4a91-9601-52cacff10bb6",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:07:14.984Z"
+      },
+      {
+        "audit_id": "e45cde78-9e21-4d55-b96b-f9ae291abffc",
+        "event_type": "TICKET_UNASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:10:05.559Z"
+      },
+      {
+        "audit_id": "f85f3793-7032-4ca1-96de-45749b0be856",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:10:06.669Z"
+      },
+      {
+        "audit_id": "e8f616df-db0b-4b1a-b02e-4d9a5461209d",
+        "event_type": "TICKET_UNASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:13:55.039Z"
+      },
+      {
+        "audit_id": "37c68018-44ce-4c4a-a713-2fd45a37c4ee",
+        "event_type": "TICKET_ASSIGNED",
+        "actor_user_id": "30391251-0000-4000-8000-000000000001",
+        "details": {
+          "role": "support",
+          "additional_agent_id": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+        },
+        "created_at": "2026-11-04T21:13:56.325Z"
+      }
+    ]
+  },
+  "teamText": "DG\nDorothy Gale",
+  "removedObserved": true,
+  "readdedObserved": true
+}

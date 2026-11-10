@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * The dashboard's "Assets by type" facet uses the list's filters and
  * transaction. This test drives the real list action against a database:
@@ -173,7 +174,7 @@ type AssetSeed = {
 
 async function seedAsset(tenantId: string, seed: AssetSeed): Promise<string> {
   const asset_id = randomUUID();
-  await table(tenantId, 'assets').insert({
+  await insertTestAssets(db, {
     tenant: tenantId,
     asset_id,
     asset_tag: `TAG-${asset_id.slice(0, 8)}`,
@@ -600,7 +601,7 @@ describe('listAssets filtered type counts', () => {
         updated_at: db.fn.now(),
       };
     });
-    await table(fixture.tenantId, 'assets').insert(assets);
+    await insertTestAssets(db, assets);
 
     const queries: string[] = [];
     const recordQuery = (query: { sql: string }) => queries.push(query.sql);

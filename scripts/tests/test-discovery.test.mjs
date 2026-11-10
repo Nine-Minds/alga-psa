@@ -56,6 +56,8 @@ test('identities outside the workspace cannot be counted as discovered tests', (
 test('DB-less unit exclusions receive a dedicated DB lane without taking over other lanes', () => {
   for (const file of [
     'server/src/test/unit/migrations/rollback.db.test.ts',
+    'server/src/test/integration/authorization/assetGroupAuthorization.db.test.ts',
+    'server/src/test/integration/rollback.db.test.ts',
     'server/src/test/contract/hotPathQueryBudget.db.test.ts',
     'server/migrations/__tests__/rollback.integration.test.ts',
     'packages/billing/tests/eligibility.db.test.ts',
@@ -65,13 +67,27 @@ test('DB-less unit exclusions receive a dedicated DB lane without taking over ot
     'services/workflow-worker/src/v2/launchSkips.db.test.ts',
   ]) assert.equal(isWorkspaceDbTest(file), true, file);
   for (const file of [
-    'server/src/test/integration/rollback.db.test.ts',
     'server/src/test/infrastructure/fixture.db.test.ts',
     'server/src/test/contract/hotPathScenario.test.ts',
     'packages/billing/tests/eligibility.test.ts',
     'tools/fixture.db.test.ts',
     'services/workflow-worker/dist/v2/launchSkips.db.test.js',
   ]) assert.equal(isWorkspaceDbTest(file), false, file);
+});
+
+test('server integration DB tests reconcile as mandatory workspace DB tests', () => {
+  const file = 'server/src/test/integration/authorization/assetGroupAuthorization.db.test.ts';
+  assert.equal(isWorkspaceDbTest(file), true);
+
+  const collection = { runner: 'workspace-db', status: 'passed', files: [`/repo/${file}`] };
+  const discovered = inspect({ candidates: [file], collections: [collection] });
+  assert.equal(discovered.status, 'passed');
+  assert.deepEqual(discovered.unmatched, []);
+  assert.deepEqual(discovered.tests, [{ file, runners: ['workspace-db'], exclusion: null }]);
+
+  const missingFromCollection = inspect({ candidates: [file], collections: [{ ...collection, files: [] }] });
+  assert.equal(missingFromCollection.status, 'failed');
+  assert.deepEqual(missingFromCollection.unmatched, [file]);
 });
 
 test('service and SDK inventory assigns unit and runtime suites without counting build output', () => {
@@ -112,8 +128,12 @@ test('questionnaire mapping deletion is required by the Temporal readiness inven
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
-  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
-  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+  const candidate = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates: candidate, collections: [] }).status, 'failed');
+  assert.equal(inspect({
+    candidates: candidate,
+    collections: [{ runner: 'temporal-readiness', status: 'passed', files: [{ file: `/repo/${file}` }] }],
+  }).status, 'passed');
 });
 
 test('tenant deletion regressions remain required in the Temporal readiness lane', () => {
@@ -151,6 +171,15 @@ test('the mutation sandbox guard executes in the required Node tooling suite', (
 
 test('migration forwarding must execute in Temporal readiness', () => {
   const file = 'ee/temporal-workflows/src/activities/__tests__/migration-apply-forwarding.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
+test('quote acceptance finalization forwarding executes in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/quote-acceptance-finalization-forwarding.test.ts';
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);

@@ -172,7 +172,16 @@
     "unnamedTeam": "Equipe sem nome",
     "userPicker": "Seletor de usuários",
     "noUsersFound": "Nenhum usuário encontrado",
-    "contactRemoteLocation": "Remoto"
+    "contactRemoteLocation": "Remoto",
+    "selectBoard": "Selecionar quadro",
+    "activeBoards": "Quadros ativos",
+    "inactiveBoards": "Quadros inativos",
+    "allBoards": "Todos os quadros",
+    "boardPicker": "Seletor de quadros",
+    "filterByStatus": "Filtrar por status",
+    "statusFilter": "Filtro de status",
+    "boards": "Quadros",
+    "inactiveSuffix": "(Inativo)"
   },
   "serviceTypeSelect": {
     "placeholder": "Selecione um tipo de serviço...",
@@ -317,7 +326,22 @@
       "verify": "Verificar",
       "title": "Muito fácil",
       "instructions": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
-      "digitsLeft": "{{count}} dígitos restantes"
+      "digitsLeft": "{{count}} dígitos restantes",
+      "enroll": {
+        "title": "Configurar a autenticação de dois fatores",
+        "instructions": "A sua organização exige autenticação de dois fatores. Leia o código QR com uma aplicação de autenticação e introduza o código de 6 dígitos.",
+        "qrAlt": "Código QR para a sua aplicação de autenticação",
+        "manualKey": "Ou introduza esta chave manualmente:",
+        "cancel": "Cancelar",
+        "errors": {
+          "invalid_credentials": "O seu e-mail ou palavra-passe deixou de ser válido. Inicie sessão novamente.",
+          "enrollment_not_required": "Esta conta não precisa de configuração. Inicie sessão novamente.",
+          "invalid_code": "Esse código não é válido. Tente novamente.",
+          "rate_limited": "Demasiadas tentativas. Aguarde alguns minutos e tente novamente.",
+          "captcha_required": "Conclua primeiro a verificação na página de início de sessão.",
+          "unavailable": "A configuração está indisponível neste momento. Tente novamente."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "O token de transferência de login está ausente ou é inválido. Faça login novamente.",
@@ -928,7 +952,8 @@
       "collapse": "Recolher pastas",
       "allDocuments": "Todos os documentos",
       "expand": "Mostrar pastas",
-      "deleteTitle": "Excluir pasta"
+      "deleteTitle": "Excluir pasta",
+      "show": "Mostrar pastas"
     },
     "folderManager": {
       "title": "Criar nova pasta",
@@ -990,6 +1015,28 @@
     "huduTab": {
       "documentsTabLabel": "Documentos",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Usuário",
+    "selectOrCreate": "Selecione um documento ou crie um novo.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimir",
+      "edit": "Editar",
+      "upload": "Carregar",
+      "closePreview": "Fechar visualização",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando..."
+    },
+    "viewMode": {
+      "grid": "Grade",
+      "list": "Lista"
+    },
+    "unsavedChanges": {
+      "title": "Alterações não salvas",
+      "message": "Tem certeza de que deseja cancelar? Todas as alterações não salvas serão perdidas.",
+      "confirm": "Descartar alterações",
+      "cancel": "Continuar editando"
     }
   },
   "surveys": {
@@ -1634,7 +1681,9 @@
       "ticketTitle": "Imprimir etiquetas de trabalho",
       "tooMany": "Você pode imprimir no máximo {{max}} etiquetas por vez.",
       "unnamedAsset": "Recurso sem nome",
-      "useTemplate": "Usar {{template}}"
+      "useTemplate": "Usar {{template}}",
+      "copiesPerAsset": "Cópias por ativo",
+      "adjacentCopies": "As cópias de cada ativo são impressas juntas."
     }
   },
   "deleteEntity": {
@@ -1727,7 +1776,14 @@
       "assigned": "Atribuído:",
       "performedBy": "por {{name}}",
       "internal": "Interno"
-    }
+    },
+    "title": "Notificações",
+    "reconnectingToServer": "Reconectando ao servidor...",
+    "refresh": "Atualizar",
+    "markAllAsRead": "Marcar todas como lidas",
+    "markAllRead": "Marcar todas como lidas",
+    "emptyTitle": "Nenhuma notificação",
+    "emptyDescription": "Você está em dia!"
   },
   "importConflicts": {
     "title": "Resolver conflitos de importação",

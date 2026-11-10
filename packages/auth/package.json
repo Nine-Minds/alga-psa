@@ -82,6 +82,18 @@
       "import": "./src/nextauth/auth.ts",
       "types": "./src/nextauth/auth.ts"
     },
+    "./lib/authPolicy": {
+      "import": "./src/lib/authPolicy.ts",
+      "types": "./src/lib/authPolicy.ts"
+    },
+    "./lib/authPolicyStore": {
+      "import": "./src/lib/authPolicyStore.ts",
+      "types": "./src/lib/authPolicyStore.ts"
+    },
+    "./lib/sso/mspSsoResolution": {
+      "import": "./src/lib/sso/mspSsoResolution.ts",
+      "types": "./src/lib/sso/mspSsoResolution.ts"
+    },
     "./lib/mspRememberedEmail": {
       "import": "./src/lib/mspRememberedEmail.ts",
       "types": "./src/lib/mspRememberedEmail.ts"
@@ -146,6 +158,7 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/authorization": "*",
     "@alga-psa/licensing": "*",
     "@alga-psa/ui": "*",
     "jose": "^6.1.3",

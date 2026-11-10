@@ -56,7 +56,12 @@
     "manageLicense": "Administrar licencia",
     "ariaLabel": "Estado de la licencia",
     "dismiss": "Descartar",
-
+    "licenseExpiresIn_few": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
+    "licenseExpiresIn_many": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
+    "trialDaysRemaining_few": "Prueba Pro activa: quedan {{count}} días.",
+    "trialDaysRemaining_many": "Prueba Pro activa: quedan {{count}} días.",
+    "trialExpiresIn_few": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
+    "trialExpiresIn_many": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
     "subscriptionEnding": "Su suscripción Pro se ha cancelado. Pro finaliza el {{date}}. Vuelva a suscribirse para conservar Pro.",
     "subscriptionEndingNoDate": "Su suscripción Pro se ha cancelado. Vuelva a suscribirse para conservar Pro.",
     "subscriptionLapsed": "Ahora usa la edición gratuita. Vuelva a suscribirse para restaurar Pro.",
@@ -69,14 +74,7 @@
     "paymentFailedEnded": "Pro ha finalizado — pago fallido. Su appliance funciona con Essentials.",
     "paymentFailedEndedEnding": "Su suscripción Pro ha finalizado — pago fallido. Pro seguirá activo hasta el {{date}}. Vuelva a suscribirse para conservar Pro.",
     "paymentFailedEndedEndingNoDate": "Su suscripción Pro ha finalizado — pago fallido. Vuelva a suscribirse para conservar Pro.",
-    "updatePaymentMethod": "Actualizar método de pago",
-"licenseExpiresIn_few": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
-    "licenseExpiresIn_many": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
-    "trialDaysRemaining_few": "Prueba Pro activa: quedan {{count}} días.",
-    "trialDaysRemaining_many": "Prueba Pro activa: quedan {{count}} días.",
-    "trialExpiresIn_few": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
-    "trialExpiresIn_many": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro."
-
+    "updatePaymentMethod": "Actualizar método de pago"
   },
   "nav": {
     "dashboard": "Panel",
@@ -204,7 +202,22 @@
       "verify": "Verificar",
       "title": "Muy fácil",
       "instructions": "Ingrese el código de 6 dígitos de su aplicación de autenticación.",
-      "digitsLeft": "{{count}} dígitos restantes"
+      "digitsLeft": "{{count}} dígitos restantes",
+      "enroll": {
+        "title": "Configurar la autenticación de dos factores",
+        "instructions": "Su organización exige autenticación de dos factores. Escanee el código QR con una aplicación de autenticación y luego introduzca el código de 6 dígitos.",
+        "qrAlt": "Código QR para su aplicación de autenticación",
+        "manualKey": "O introduzca esta clave manualmente:",
+        "cancel": "Cancelar",
+        "errors": {
+          "invalid_credentials": "Su correo electrónico o contraseña ya no es válido. Inicie sesión de nuevo.",
+          "enrollment_not_required": "Esta cuenta no necesita configuración. Inicie sesión de nuevo.",
+          "invalid_code": "Ese código no es válido. Inténtelo de nuevo.",
+          "rate_limited": "Demasiados intentos. Espere unos minutos e inténtelo de nuevo.",
+          "captcha_required": "Complete primero la verificación en la página de inicio de sesión.",
+          "unavailable": "La configuración no está disponible en este momento. Inténtelo de nuevo."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
@@ -883,7 +896,8 @@
       "collapse": "Contraer carpetas",
       "allDocuments": "Todos los documentos",
       "expand": "Mostrar carpetas",
-      "deleteTitle": "Eliminar carpeta"
+      "deleteTitle": "Eliminar carpeta",
+      "show": "Mostrar carpetas"
     },
     "folderManager": {
       "title": "Crear nueva carpeta",
@@ -945,6 +959,28 @@
     "huduTab": {
       "documentsTabLabel": "Documentos",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Usuario",
+    "selectOrCreate": "Seleccione un documento o cree uno nuevo.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimir",
+      "edit": "Editar",
+      "upload": "Subir",
+      "closePreview": "Cerrar vista previa",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando..."
+    },
+    "viewMode": {
+      "grid": "Cuadrícula",
+      "list": "Lista"
+    },
+    "unsavedChanges": {
+      "title": "Cambios sin guardar",
+      "message": "¿Está seguro de que desea cancelar? Se perderán los cambios sin guardar.",
+      "confirm": "Descartar cambios",
+      "cancel": "Continuar editando"
     }
   },
   "surveys": {
@@ -1426,7 +1462,16 @@
     "unnamedTeam": "Equipo sin nombre",
     "userPicker": "Selector de usuarios",
     "noUsersFound": "No se encontraron usuarios",
-    "contactRemoteLocation": "Remoto"
+    "contactRemoteLocation": "Remoto",
+    "selectBoard": "Seleccionar tablero",
+    "activeBoards": "Tableros activos",
+    "inactiveBoards": "Tableros inactivos",
+    "allBoards": "Todos los tableros",
+    "boardPicker": "Selector de tableros",
+    "filterByStatus": "Filtrar por estado",
+    "statusFilter": "Filtro de estado",
+    "boards": "Tableros",
+    "inactiveSuffix": "(Inactivo)"
   },
   "serviceTypeSelect": {
     "placeholder": "Seleccione un tipo de servicio...",
@@ -1634,7 +1679,9 @@
       "ticketTitle": "Imprimir etiquetas de trabajo",
       "tooMany": "Puede imprimir como máximo {{max}} etiquetas a la vez.",
       "unnamedAsset": "Activo sin nombre",
-      "useTemplate": "Usar {{template}}"
+      "useTemplate": "Usar {{template}}",
+      "copiesPerAsset": "Copias por activo",
+      "adjacentCopies": "Las copias de cada activo se imprimen juntas."
     }
   },
   "deleteEntity": {
@@ -1727,7 +1774,14 @@
       "assigned": "Asignado:",
       "performedBy": "por {{name}}",
       "internal": "Interno"
-    }
+    },
+    "title": "Notificaciones",
+    "reconnectingToServer": "Reconectando al servidor...",
+    "refresh": "Actualizar",
+    "markAllAsRead": "Marcar todas como leídas",
+    "markAllRead": "Marcar todas como leídas",
+    "emptyTitle": "No hay notificaciones",
+    "emptyDescription": "¡Está al día!"
   },
   "importConflicts": {
     "title": "Resolver conflictos de importación",

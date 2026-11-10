@@ -56,7 +56,7 @@ import {
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
-import { assertTransitionTarget, transitionTimeSheet } from './timeSheetStatus';
+import { findTransition, transitionTimeSheet } from './timeSheetStatus';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 /**
@@ -456,9 +456,23 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    // approval_status is derived state: a supplied status is a *request* for a transition, never a column write.
+    const { approval_status: requestedStatus, change_reason, detailed_feedback, ...fields } = data;
+
+    // Allow an external time source to own the record before looking it up in the native store. In particular,
+    // a delegated DRAFT update may legitimately refer to an id that does not exist in the native time_sheets table.
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
     if (delegated.handled) return delegated.value;
+
+    if (requestedStatus !== undefined) {
+      // Validated before the time-source seam: the status means the same thing to every source.
+      const current = await this.getById(id, context);
+      if (!current) {
+        throw new NotFoundError('Time sheet not found');
+      }
+      if (requestedStatus !== current.approval_status) findTransition(requestedStatus);
+    }
+
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -477,14 +491,20 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        if (data.approval_status !== undefined && data.approval_status !== existing.approval_status) {
-          assertTransitionTarget(data.approval_status);
-          await transitionTimeSheet(trx, id, data.approval_status, context, {
-            change_reason: data.change_reason,
-            detailed_feedback: data.detailed_feedback,
+        // time_sheets has no updated_at column: write only the caller's fields.
+        if (Object.keys(fields).length > 0) {
+          await this.buildTenantScopedQuery(trx, context)
+            .where({ [this.primaryKey]: id })
+            .update(fields);
+        }
+
+        // Same transaction, after the field write: a refused transition rolls the other fields back too.
+        if (requestedStatus !== undefined && requestedStatus !== existing.approval_status) {
+          await transitionTimeSheet(trx, existing, requestedStatus, context, {
+            change_reason,
+            detailed_feedback,
           });
         }
-  
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_UPDATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -561,8 +581,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        await transitionTimeSheet(trx, id, 'SUBMITTED', context, { submission_notes: data.submission_notes });
-  
+        await transitionTimeSheet(trx, timeSheet, 'SUBMITTED', context, { submission_notes: data.submission_notes });
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_SUBMITTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -594,8 +613,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        await transitionTimeSheet(trx, id, 'APPROVED', context, { approval_notes: data.approval_notes });
-  
+        await transitionTimeSheet(trx, timeSheet, 'APPROVED', context, { approval_notes: data.approval_notes });
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -627,11 +645,10 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        await transitionTimeSheet(trx, id, 'CHANGES_REQUESTED', context, {
+        await transitionTimeSheet(trx, timeSheet, 'CHANGES_REQUESTED', context, {
           change_reason: data.change_reason,
-          detailed_feedback: data.detailed_feedback,
+          detailed_feedback: data.detailed_feedback
         });
-  
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CHANGES_REQUESTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -1660,6 +1677,8 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   private async canManageTimeSheets(context: ServiceContext): Promise<boolean> {
+    // 'manage' ("Administer timesheets on behalf of other users", catalog.cjs) -- NOT 'update', which every default
+    // Technician holds and which only authorises acting on one's own sheet.
     if (!context.user) return false;
     const { knex } = await this.getKnex();
     return hasApiContextPermission(context, 'time_sheet', 'manage', knex);

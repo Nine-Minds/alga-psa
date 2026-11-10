@@ -15,6 +15,7 @@ import {
   createQuoteItemSchema,
   updateQuoteItemSchema,
   sendQuoteSchema,
+  cancelQuoteSchema,
   approvalRequestChangesSchema,
   convertQuoteSchema,
   reorderQuoteItemsSchema,
@@ -34,6 +35,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { isApiRecordFieldHidden, projectApiRecord } from './apiRecordProjection';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
   ConflictError,
@@ -105,11 +107,11 @@ export class ApiQuoteController extends ApiBaseController {
     };
   }
 
-  private async assertQuoteReadAllowed(
+  private async authorizeQuoteRead(
     apiRequest: AuthenticatedApiRequest,
     quoteId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
+  ): Promise<{ record: Record<string, any>; redactedFields: string[] }> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const quote = await this.quoteService.getById(quoteId, apiRequest.context);
 
@@ -117,7 +119,7 @@ export class ApiQuoteController extends ApiBaseController {
       throw new NotFoundError('Quote not found');
     }
 
-    const allowed = await authorizeApiResourceRead({
+    const decision = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
@@ -126,11 +128,21 @@ export class ApiQuoteController extends ApiBaseController {
       recordContext: this.buildQuoteRecordContext(quote as Record<string, any>),
     });
 
-    if (!allowed) {
+    if (!decision.allowed) {
       throw new ForbiddenError('Permission denied: Cannot read quote');
     }
 
-    return quote as Record<string, any>;
+    const projected = projectApiRecord('quote', quote as Record<string, any>, decision.redactedFields);
+    if (!projected) throw new NotFoundError('Quote not found');
+    return { record: projected as Record<string, any>, redactedFields: decision.redactedFields };
+  }
+
+  private async assertQuoteReadAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    quoteId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>> {
+    return (await this.authorizeQuoteRead(apiRequest, quoteId, knex)).record;
   }
 
   /**
@@ -235,9 +247,59 @@ export class ApiQuoteController extends ApiBaseController {
     }
   }
 
+  /**
+   * CreateQuoteBodyV1 published `notes`, `terms` and `quote_number`, none of
+   * which the create schema has, and zod dropped them silently — so callers
+   * believed they had saved notes and terms that were never persisted
+   * (alga-2026-0002902). Fold the two text aliases onto their real names for one
+   * release, and drop `quote_number` (it has always been server-assigned).
+   * The body is strict afterwards, so anything else unknown becomes a 400.
+   */
+  private applyDeprecatedCreateAliases(body: unknown): unknown {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return body;
+    }
+
+    const { notes, terms, quote_number, ...rest } = body as Record<string, unknown>;
+    const mapped: Record<string, unknown> = { ...rest };
+
+    if (notes !== undefined && mapped.internal_notes === undefined) {
+      mapped.internal_notes = notes;
+    }
+    if (terms !== undefined && mapped.terms_and_conditions === undefined) {
+      mapped.terms_and_conditions = terms;
+    }
+
+    return mapped;
+  }
+
   // ============================================================================
   // Override CRUD for quote-specific logic
   // ============================================================================
+
+  create() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.create || 'create');
+
+          const body = await this.readJsonBody(req);
+          const data = createQuoteApiSchema.parse(this.applyDeprecatedCreateAliases(body));
+
+          const created = await this.quoteService.create(data, apiRequest.context);
+
+          return createSuccessResponse(created, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        if (error instanceof ZodError) {
+          return handleApiError(new ValidationError('Validation failed', error.issues));
+        }
+        return handleApiError(error);
+      }
+    };
+  }
 
   list() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -247,15 +309,13 @@ export class ApiQuoteController extends ApiBaseController {
         return await runWithTenant(apiRequest.context.tenant, async () => {
           await this.checkPermission(apiRequest, 'read');
 
+          // alga-2026-0002902: quoteListQuerySchema was configured on the
+          // controller but never applied here, so an unknown `sort` was
+          // interpolated into orderBy() and came back as a 500.
+          const query = this.validateQuery(apiRequest, quoteListQuerySchema);
+          const { page, limit, sort, order, include_items, include_client } = query;
+
           const url = new URL(apiRequest.url);
-          const page = parseInt(url.searchParams.get('page') || '1');
-          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
-          const sort = url.searchParams.get('sort') || 'created_at';
-          const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
-
-          const include_items = url.searchParams.get('include_items') === 'true';
-          const include_client = url.searchParams.get('include_client') !== 'false'; // default true
-
           const filters: Record<string, any> = {};
           url.searchParams.forEach((value, key) => {
             if (!['page', 'limit', 'sort', 'order', 'include_items', 'include_client'].includes(key)) {
@@ -270,10 +330,10 @@ export class ApiQuoteController extends ApiBaseController {
             order,
             include_items,
             include_client,
-            status: filters.status,
-            client_id: filters.client_id,
-            is_template: filters.is_template === 'true',
-            search: filters.search,
+            status: query.status,
+            client_id: query.client_id,
+            is_template: query.is_template,
+            search: query.search,
           };
 
           const knex = await getConnection(apiRequest.context.tenant);
@@ -299,6 +359,7 @@ export class ApiQuoteController extends ApiBaseController {
                 resource: 'billing',
                 recordContext: this.buildQuoteRecordContext(quote),
               }),
+            projectRecord: (quote, redactedFields) => projectApiRecord('quote', quote, redactedFields) as Record<string, any> | null,
             scanLimit: 100,
           });
 
@@ -404,10 +465,14 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const quoteAuthorization = await this.authorizeQuoteRead(apiRequest, id, knex);
           const items = await this.quoteService.listItems(id, apiRequest.context);
-
-          return createSuccessResponse(items);
+          if (isApiRecordFieldHidden('quote', 'quote_items', quoteAuthorization.redactedFields)) return createSuccessResponse([]);
+          const projectedItems = items.flatMap((item: Record<string, any>) => {
+            const projected = projectApiRecord('quote', item, quoteAuthorization.redactedFields);
+            return projected ? [projected] : [];
+          });
+          return createSuccessResponse(projectedItems);
         });
       } catch (error) {
         return handleApiError(error);
@@ -633,6 +698,60 @@ export class ApiQuoteController extends ApiBaseController {
     };
   }
 
+  /**
+   * Archive is the alternative a blocked DELETE advertises; allowed from draft,
+   * cancelled, rejected and expired (QUOTE_ALLOWED_STATUS_TRANSITIONS), any
+   * other source status is a 409.
+   */
+  archive() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+
+          const quote = await this.quoteService.archive(id, apiRequest.context);
+
+          return createSuccessResponse(quote);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  cancel() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const body = await req.json().catch(() => ({}));
+          const data = cancelQuoteSchema.parse(body);
+
+          const quote = await this.quoteService.cancel(id, data.reason, apiRequest.context);
+
+          return createSuccessResponse(quote);
+        });
+      } catch (error) {
+        if (error instanceof ZodError) {
+          return handleApiError(new ValidationError('Validation failed', error.issues));
+        }
+        return handleApiError(error);
+      }
+    };
+  }
+
   approve() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
@@ -705,11 +824,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
-
+          const authorization = await this.authorizeQuoteRead(apiRequest, id, knex);
           const preview = await this.quoteService.getConversionPreview(id, apiRequest.context);
-
-          return createSuccessResponse(preview);
+          const projected = projectApiRecord('quote', preview, authorization.redactedFields);
+          if (!projected) throw new NotFoundError('Quote not found');
+          return createSuccessResponse(projected);
         });
       } catch (error) {
         return handleApiError(error);
@@ -759,11 +878,14 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const quoteAuthorization = await this.authorizeQuoteRead(apiRequest, id, knex);
 
           const versions = await this.quoteService.listVersions(id, apiRequest.context);
-
-          return createSuccessResponse(versions);
+          const projectedVersions = versions.flatMap((version: Record<string, any>) => {
+            const projected = projectApiRecord('quote', version, quoteAuthorization.redactedFields);
+            return projected ? [projected] : [];
+          });
+          return createSuccessResponse(projectedVersions);
         });
       } catch (error) {
         return handleApiError(error);
