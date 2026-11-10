@@ -873,6 +873,7 @@
       "pending": "In attesa",
       "error": "Impossibile caricare il documento",
       "fileError": "Impossibile caricare il file",
+      "fileTooLarge": "Questo file è di {{size}}. Il limite attuale è di {{limit}} per file.",
       "associatedEntityTypeLabel": "Associa a",
       "noAssociation": "Nessuna associazione",
       "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare.",

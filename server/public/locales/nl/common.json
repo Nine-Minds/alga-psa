@@ -756,6 +756,7 @@
       "pending": "In behandeling",
       "error": "Document kon niet worden geüpload",
       "fileError": "Bestand kon niet worden geüpload",
+      "fileTooLarge": "Dit bestand is {{size}}. De huidige limiet is {{limit}} per bestand.",
       "associatedEntityTypeLabel": "Koppelen aan",
       "noAssociation": "Geen koppeling",
       "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt.",

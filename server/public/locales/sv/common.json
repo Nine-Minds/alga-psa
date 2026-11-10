@@ -927,6 +927,7 @@
       "pending": "Väntande",
       "error": "Det gick inte att ladda upp dokumentet",
       "fileError": "Det gick inte att ladda upp filen",
+      "fileTooLarge": "Den här filen är {{size}}. Den nuvarande gränsen är {{limit}} per fil.",
       "associatedEntityTypeLabel": "Koppla till",
       "noAssociation": "Ingen koppling",
       "selectAssociatedEntityError": "Välj en entitet att koppla till innan du laddar upp.",
