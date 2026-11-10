@@ -95,7 +95,9 @@ import {
     type AuthorizationRecord,
     type AuthorizationSubject,
     type BundleNarrowingRule,
+    type AuthorizationDecision,
 } from '@alga-psa/authorization/kernel';
+import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
@@ -111,7 +113,7 @@ import {
     resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
     isAssetActionAllowed as isSharedAssetActionAllowed,
     isAssetReadAllowed as isSharedAssetReadAllowed,
-    filterReadableAssets,
+    authorizeAssetsForAction,
     projectReadableAssets,
     type AssetAuthUser as SharedAssetAuthUser,
     type AssetAuthorizationAction,
@@ -2416,7 +2418,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             }
 
             type AssetListQueryRow = Asset & { client_name: string | null };
-            type AssetListScanRow = { asset: AssetListQueryRow; readable: boolean };
+            type AssetListScanRow = { asset: AssetListQueryRow; decision: AuthorizationDecision };
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
                 const offset = (sourcePage - 1) * sourceLimit;
                 const countRow = await listQuery.clone()
@@ -2434,13 +2436,12 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
-                const readableAssets = await filterReadableAssets(trx, tenant, context, rows, {
+                const decisions = await authorizeAssetsForAction(trx, tenant, context, rows, 'read', {
                     resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,
                 });
-                const readableAssetIds = new Set(readableAssets.map((asset) => asset.asset_id));
 
                 return {
-                    data: rows.map((asset) => ({ asset, readable: readableAssetIds.has(asset.asset_id) })),
+                    data: rows.map((asset, index) => ({ asset, decision: decisions[index] })),
                     total: sourceTotal,
                 };
             };
@@ -2451,8 +2452,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 page,
                 limit,
                 fetchPage,
-                authorizeRecord: async ({ asset, readable }) => {
-                    if (!readable) return false;
+                authorizeRecord: async ({ asset, decision }) => {
+                    // Identity-hidden rows must be excluded before pagination and facet counts.
+                    if (!decision.allowed || !projectReadableRecord('asset', asset, decision.redactedFields)) return false;
                     if (requiresRecordAuthorization) {
                         const assetType = asset.asset_type ?? 'unknown';
                         assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
@@ -2505,7 +2507,11 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
         );
 
             const response = {
-                assets: await projectReadableAssets(trx, tenant, context, assetsWithExtensions),
+                // Reuse the scan's decisions after enrichment so derived fields cannot reappear,
+                // without resolving associations or evaluating authorization a second time.
+                assets: assetsWithExtensions.map((asset, index) =>
+                    projectReadableRecord('asset', asset, authorizedPage.data[index].decision.redactedFields)!
+                ),
                 total: authorizedPage.total,
                 page,
                 limit,
