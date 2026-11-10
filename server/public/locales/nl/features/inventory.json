@@ -556,6 +556,7 @@
       "invalidDateRange": "Kies een geldig datumbereik voor het rapport."
     },
     "restock": {
+      "billedMaterialLine": "Deze eenheid staat op een materiaalregel die al gefactureerd is. Maak een creditnota aan of maak de factuur ongefactureerd voordat u de eenheid aanvult.",
       "cannotRestock": "Deze eenheid kan niet worden aangevuld. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
       "cannotRestockStatus": {
         "allocated": "Deze eenheid kan niet worden aangevuld — deze is momenteel gereserveerd. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",

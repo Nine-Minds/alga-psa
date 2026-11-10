@@ -556,6 +556,7 @@
       "invalidDateRange": "Wybierz prawidłowy zakres dat raportu."
     },
     "restock": {
+      "billedMaterialLine": "Ta jednostka znajduje się na linii materiałowej, która została już zafakturowana. Wystaw notę kredytową lub cofnij fakturowanie przed uzupełnieniem zapasu.",
       "cannotRestock": "Tej jednostki nie można uzupełnić. Uzupełnić można tylko jednostki dostarczone lub zwrócone.",
       "cannotRestockStatus": {
         "allocated": "Tej jednostki nie można uzupełnić — jest obecnie zarezerwowana. Uzupełnić można tylko jednostki dostarczone lub zwrócone.",

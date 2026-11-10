@@ -74,6 +74,43 @@ const DEFAULT_ASSET_TYPE_OPTIONS = [
   { value: 'printer', label: 'Printer' },
 ];
 
+// Spec fields surfaced per default asset type. Values land in
+// product_inventory_settings.default_asset_metadata and are merged over QuickAddAsset's
+// "unknown" fill when a delivered serialized unit auto-creates its asset, so the asset
+// starts out filled out. Only text fields are editable here (see assetDefaultMetadata.ts).
+const SPEC_FIELDS_BY_ASSET_TYPE: Record<string, { key: string; label: string }[]> = {
+  workstation: [
+    { key: 'os_type', label: 'OS type' },
+    { key: 'os_version', label: 'OS version' },
+    { key: 'cpu_model', label: 'CPU model' },
+    { key: 'storage_type', label: 'Storage type' },
+  ],
+  network_device: [
+    { key: 'management_ip', label: 'Management IP' },
+    { key: 'firmware_version', label: 'Firmware version' },
+  ],
+  server: [
+    { key: 'os_type', label: 'OS type' },
+    { key: 'os_version', label: 'OS version' },
+    { key: 'cpu_model', label: 'CPU model' },
+  ],
+  mobile_device: [
+    { key: 'os_type', label: 'OS type' },
+    { key: 'os_version', label: 'OS version' },
+    { key: 'model', label: 'Model' },
+  ],
+  printer: [{ key: 'model', label: 'Model' }],
+};
+
+// Mirrors the network_device.device_type enum in the createAsset schema.
+const NETWORK_DEVICE_TYPE_OPTIONS = [
+  { value: 'switch', label: 'Switch' },
+  { value: 'router', label: 'Router' },
+  { value: 'firewall', label: 'Firewall' },
+  { value: 'access_point', label: 'Access point' },
+  { value: 'load_balancer', label: 'Load balancer' },
+];
+
 type ReturnedActionError = ActionMessageError | ActionPermissionError;
 
 function isReturnedActionError(value: unknown): value is ReturnedActionError {
@@ -145,6 +182,8 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     reorder_quantity: string;
     kit_pricing_mode: KitPricingMode;
     default_asset_type: string;
+    /** flat spec field map (os_type, model, ...) for the selected default asset type */
+    default_asset_metadata: Record<string, string>;
   };
   const defaultInvDraft = (): InvDraft => ({
     is_serialized: false,
@@ -154,6 +193,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     reorder_quantity: '',
     kit_pricing_mode: 'sum',
     default_asset_type: '',
+    default_asset_metadata: {},
   });
   const [invSectionOpen, setInvSectionOpen] = useState(false);
   const [trackInventory, setTrackInventory] = useState(false);
@@ -243,6 +283,9 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               reorder_quantity: s.reorder_quantity != null ? String(s.reorder_quantity) : '',
               kit_pricing_mode: s.kit_pricing_mode ?? 'sum',
               default_asset_type: s.default_asset_type ?? '',
+              default_asset_metadata: Object.fromEntries(
+                Object.entries(s.default_asset_metadata ?? {}).map(([k, v]) => [k, v == null ? '' : String(v)]),
+              ),
             });
           } else {
             setInventoryEnabled(false);
@@ -258,6 +301,14 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setInvSectionOpen(false);
     }
   }, [isOpen, product]);
+
+  // Trim spec values and drop empties; null when nothing was filled in.
+  const cleanSpecMetadata = (m: Record<string, string>): Record<string, unknown> | null => {
+    const entries = Object.entries(m)
+      .map(([k, v]) => [k, v.trim()] as const)
+      .filter(([, v]) => v !== '');
+    return entries.length > 0 ? Object.fromEntries(entries) : null;
+  };
 
   // Persist a partial inventory patch (edit mode, once a settings row exists).
   const persistInventoryPatch = (patch: Parameters<typeof updateInventorySettings>[1]) => {
@@ -557,10 +608,18 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
             });
             if (isReturnedActionError(inventoryResult)) {
               toast.error(`Product created, but ${getErrorMessage(inventoryResult)}`);
-            } else if (inv.kit_pricing_mode !== 'sum') {
-              const pricingResult = await updateInventorySettings(created.service_id, { kit_pricing_mode: inv.kit_pricing_mode });
-              if (isReturnedActionError(pricingResult)) {
-                toast.error(`Product created, but ${getErrorMessage(pricingResult)}`);
+            } else {
+              const createModePatch: Parameters<typeof updateInventorySettings>[1] = {};
+              if (inv.kit_pricing_mode !== 'sum') createModePatch.kit_pricing_mode = inv.kit_pricing_mode;
+              if (inv.creates_asset_on_delivery && inv.default_asset_type) {
+                createModePatch.default_asset_type = inv.default_asset_type;
+                createModePatch.default_asset_metadata = cleanSpecMetadata(inv.default_asset_metadata);
+              }
+              if (Object.keys(createModePatch).length > 0) {
+                const pricingResult = await updateInventorySettings(created.service_id, createModePatch);
+                if (isReturnedActionError(pricingResult)) {
+                  toast.error(`Product created, but ${getErrorMessage(pricingResult)}`);
+                }
               }
             }
           } catch (invErr: any) {
@@ -1115,6 +1174,82 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                           />
                         </div>
                       )}
+
+                      {inv.creates_asset_on_delivery &&
+                        (SPEC_FIELDS_BY_ASSET_TYPE[inv.default_asset_type] || inv.default_asset_type === 'network_device') && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                              {t('quickAddProduct.fields.inventory.specDefaults', {
+                                defaultValue: 'Default specs for delivered assets',
+                              })}
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                              {t('quickAddProduct.fields.inventory.specDefaultsHint', {
+                                defaultValue:
+                                  'Applied when a delivered serialized unit automatically creates its asset.',
+                              })}
+                            </p>
+                            {inv.default_asset_type === 'network_device' && (
+                              <div>
+                                <label
+                                  htmlFor="quick-add-product-spec-device-type"
+                                  className="block text-xs text-[rgb(var(--color-text-700))] mb-1"
+                                >
+                                  {t('quickAddProduct.fields.inventory.spec.deviceType', { defaultValue: 'Device type' })}
+                                </label>
+                                <CustomSelect
+                                  id="quick-add-product-spec-device-type"
+                                  options={NETWORK_DEVICE_TYPE_OPTIONS}
+                                  value={inv.default_asset_metadata.device_type || 'switch'}
+                                  onValueChange={(value) => {
+                                    setInv((prev) => ({
+                                      ...prev,
+                                      default_asset_metadata: { ...prev.default_asset_metadata, device_type: value },
+                                    }));
+                                    persistInventoryPatch({
+                                      default_asset_metadata: cleanSpecMetadata({
+                                        ...inv.default_asset_metadata,
+                                        device_type: value,
+                                      }),
+                                    });
+                                  }}
+                                />
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-2">
+                              {(SPEC_FIELDS_BY_ASSET_TYPE[inv.default_asset_type] || []).map((field) => (
+                                <div key={field.key}>
+                                  <label
+                                    htmlFor={`quick-add-product-spec-${field.key}`}
+                                    className="block text-xs text-[rgb(var(--color-text-700))] mb-1"
+                                  >
+                                    {t(`quickAddProduct.fields.inventory.spec.${field.key}`, {
+                                      defaultValue: field.label,
+                                    })}
+                                  </label>
+                                  <Input
+                                    id={`quick-add-product-spec-${field.key}`}
+                                    value={inv.default_asset_metadata[field.key] ?? ''}
+                                    onChange={(e) =>
+                                      setInv((prev) => ({
+                                        ...prev,
+                                        default_asset_metadata: {
+                                          ...prev.default_asset_metadata,
+                                          [field.key]: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    onBlur={() =>
+                                      persistInventoryPatch({
+                                        default_asset_metadata: cleanSpecMetadata(inv.default_asset_metadata),
+                                      })
+                                    }
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>

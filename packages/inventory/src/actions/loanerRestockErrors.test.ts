@@ -149,6 +149,15 @@ describe('restockReturnActionErrorFrom', () => {
       actionError: 'This product is serialized. Choose the specific unit to restock.',
       messageKey: 'features/inventory:errors.restock.serializedUnitRequired',
     });
+    expect(
+      restockReturnActionErrorFrom(
+        new Error('The unit is installed on a billed material line; credit or unbilled the invoice before restocking it'),
+      ),
+    ).toEqual({
+      actionError:
+        "This unit is on a material line that's already been billed. Credit or unbill the invoice before restocking it.",
+      messageKey: 'features/inventory:errors.restock.billedMaterialLine',
+    });
   });
 
   it('humanizes the delivered/returned guard status and keeps the eligibility hint', () => {

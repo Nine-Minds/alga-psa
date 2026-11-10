@@ -556,6 +556,7 @@
       "invalidDateRange": "Escolha um intervalo de datas de relatório válido."
     },
     "restock": {
+      "billedMaterialLine": "Esta unidade está em uma linha de material já faturada. Emita um crédito ou cancele o faturamento antes de reabastecê-la.",
       "cannotRestock": "Esta unidade não pode ser reabastecida. Apenas unidades entregues ou devolvidas podem ser reabastecidas.",
       "cannotRestockStatus": {
         "allocated": "Esta unidade não pode ser reabastecida: no momento está alocada. Apenas unidades entregues ou devolvidas podem ser reabastecidas.",
