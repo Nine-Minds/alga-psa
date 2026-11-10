@@ -57,8 +57,8 @@
     },
     "assetAuditStatus": {
       "in_progress": "En curso",
-      "completed": "Completado",
-      "cancelled": "Cancelado"
+      "completed": "Completada",
+      "cancelled": "Cancelada"
     },
     "assetAuditResult": {
       "expected": "Esperado",
@@ -2178,11 +2178,11 @@
     }
   },
   "assetAudits": {
-    "title": "Auditorías en sitio",
+    "title": "Auditorías de sitios",
     "startAudit": "Iniciar auditoría",
     "noLocation": "Sin ubicación",
     "loading": "Cargando auditorías…",
-    "empty": "Aún no hay auditorías en sitio que coincidan con esta vista.",
+    "empty": "Aún no hay auditorías de sitios que coincidan con esta vista.",
     "columns": {
       "audit": "Auditoría",
       "client": "Cliente",
@@ -2217,7 +2217,7 @@
       "all": "Todos"
     },
     "start": {
-      "title": "Iniciar auditoría en sitio",
+      "title": "Iniciar auditoría de sitio",
       "client": "Cliente",
       "clientPlaceholder": "Seleccione un cliente",
       "location": "Ubicación",
@@ -2276,8 +2276,8 @@
       "markPresent": "Marcar como presente",
       "undoMark": "Deshacer",
       "createTicket": "Crear ticket",
-      "ticketTitle": "Faltante en la auditoría en sitio: {{asset}}",
-      "ticketDescription": "No se encontró durante la auditoría en sitio iniciada el {{date}}."
+      "ticketTitle": "Faltante en la auditoría de sitio: {{asset}}",
+      "ticketDescription": "No se encontró durante la auditoría de sitio iniciada el {{date}}."
     }
   }
 }
