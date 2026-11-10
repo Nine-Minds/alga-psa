@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Client ownership for polymorphic tables (time entries, schedule entries, document associations, tag mappings) is resolved by a registered resolver per discriminator value, and an unknown discriminator resolves to no client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Subject, portfolio and ownership foundations"
     ]

@@ -4,6 +4,8 @@ export * from './providers/builtinProvider';
 export * from './providers/bundleProvider';
 export * from './relationships';
 export * from './relationshipTemplates';
+export * from './clientPath';
+export * from './clientResolvers';
 export * from './requestCache';
 export * from './scope';
 export * from './selfApproval';
