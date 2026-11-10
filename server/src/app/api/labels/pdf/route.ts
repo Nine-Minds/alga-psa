@@ -10,11 +10,15 @@
  *   labels: one label per subject, in order. The same ticket may appear several times with different
  *     `linkedAssetId` picks (ticket-work-tag only; dropped silently for other classes).
  *   overrides: only when the request names exactly one distinct recordId, else 400.
+ *   layout: omit it to print one label per page at the size the templates declare (any thermal label size);
+ *     an explicit layout is used as given, including its refusal to clip a template that is too big for it.
  * Unreadable records rule: a subject whose record is unreadable is skipped and counted PER SUBJECT in the
  * X-Label-Skipped response header; if no unique record is readable the response is the same uniform 404 for
  * every caller and every request shape.
- * 422: { error, failures?: LabelPrintFailure[] } — all-or-nothing; `failures` lists every record that
- *      cannot print with the requested template, with a `suggestedTemplateCode` where one exists.
+ * 422: { error, failures?: LabelPrintFailure[], code? } — all-or-nothing; `failures` lists every record that
+ *      cannot print with the requested template, with a `suggestedTemplateCode` where one exists. `code` is
+ *      the machine-readable refusal reason ('template-size-mismatch' when the layout is smaller than the
+ *      template's own label size), so a client never matches on the message text.
  *
  * Modelled on the sales-order document route: it lives under /api (NOT /api/v1, the API-key
  * namespace), is on the middleware API-key skip-list so the browser session cookie reaches it, and
@@ -62,7 +66,10 @@ const deps: PrintLabelsDeps = {
     if (error instanceof LabelRenderError) {
       return { message: error.message, failures: error.failures };
     }
-    if (error instanceof LabelLayoutError || error instanceof BarcodeError) {
+    if (error instanceof LabelLayoutError) {
+      return { message: error.message, ...(error.code ? { code: error.code } : {}) };
+    }
+    if (error instanceof BarcodeError) {
       return { message: error.message };
     }
     return null;
@@ -100,7 +107,11 @@ export async function POST(request: Request) {
   try {
     const result = await printLabelsAuthenticated(body as Record<string, unknown>, baseUrl);
     if (!result.ok) {
-      return json(result.status, { error: result.message, ...(result.failures ? { failures: result.failures } : {}) });
+      return json(result.status, {
+        error: result.message,
+        ...(result.failures ? { failures: result.failures } : {}),
+        ...(result.code ? { code: result.code } : {}),
+      });
     }
     return new Response(new Uint8Array(result.pdf), {
       status: 200,

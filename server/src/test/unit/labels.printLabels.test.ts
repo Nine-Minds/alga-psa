@@ -220,6 +220,74 @@ describe('printLabels', () => {
     });
   });
 
+  describe('layout: a request with none prints at the template size', () => {
+    const DEFAULT_LAYOUT = { kind: 'one-per-page', pageSize: { width: 4, height: 2, unit: 'in' } };
+    const customAst = (pageSize: { width: number; height: number; unit: 'in' | 'mm' } | null) => ({
+      kind: 'invoice-template-ast',
+      metadata: { printSettings: { paperPreset: 'Letter', marginMm: 3, ...(pageSize ? { customPageSize: pageSize } : {}) } },
+    });
+    const layoutOf = (renderPdf: ReturnType<typeof vi.fn>) => (renderPdf.mock.calls[0] as unknown[])[2];
+    const withTemplate = (s: ReturnType<typeof setup>, templateAst: unknown) =>
+      (s.deps.resolveTemplate as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true, templateCode: 'ac9f0f26-0000-4000-8000-000000000001', templateAst,
+      });
+
+    it('a custom 62 x 80 mm template prints one per page at 62 x 80 mm', async () => {
+      const s = setup([A]);
+      withTemplate(s, customAst({ width: 62, height: 80, unit: 'mm' }));
+      expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).toMatchObject({ ok: true });
+      expect(layoutOf(s.renderPdf)).toEqual({ kind: 'one-per-page', pageSize: { width: 62, height: 80, unit: 'mm' } });
+    });
+
+    it('a standard template keeps the 4 x 2 in roll page it has today', async () => {
+      const s = setup([A]);
+      expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).toMatchObject({ ok: true });
+      expect(layoutOf(s.renderPdf)).toEqual(DEFAULT_LAYOUT);
+    });
+
+    it('a template that declares no size keeps the default', async () => {
+      const s = setup([A]);
+      withTemplate(s, customAst(null));
+      await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) });
+      expect(layoutOf(s.renderPdf)).toEqual(DEFAULT_LAYOUT);
+    });
+
+    it('an explicit layout is passed through untouched', async () => {
+      const s = setup([A]);
+      withTemplate(s, customAst({ width: 62, height: 80, unit: 'mm' }));
+      const layout = { kind: 'one-per-page', pageSize: { width: 4, height: 2, unit: 'in' } };
+      await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]), layout });
+      expect(layoutOf(s.renderPdf)).toBe(layout);
+    });
+
+    it('classes whose templates disagree fall back to the default', async () => {
+      const s = setup([A]);
+      const boxes: LabelViewModelProvider = {
+        entityType: 'staging_container', labelClass: 'staging-container',
+        getLabelViewModels: vi.fn(async (_c, ids) => ids.map(() => ({ ...vm(A), labelClass: 'staging-container', entityType: 'staging_container' }) as LabelViewModel)),
+      };
+      s.deps.providers['staging-container'] = boxes;
+      (s.deps.resolveTemplate as ReturnType<typeof vi.fn>).mockImplementation(async (_t: string, cls: string) => ({
+        ok: true,
+        templateCode: `custom-${cls}`,
+        templateAst: customAst(cls === 'ticket-work-tag' ? { width: 62, height: 80, unit: 'mm' } : { width: 50, height: 25, unit: 'mm' }),
+      }));
+      await printLabels(s.deps, s.caller, {
+        labels: [{ labelClass: 'ticket-work-tag', recordId: A }, { labelClass: 'staging-container', recordId: A }],
+      });
+      expect(layoutOf(s.renderPdf)).toEqual(DEFAULT_LAYOUT);
+    });
+
+    it('the 422 carries the refusal code the renderer reported', async () => {
+      const s = setup([A]);
+      s.renderPdf.mockRejectedValueOnce(new Error('designed for 62.0 x 80.0 mm'));
+      s.deps.describeClientError = (e) => ({ message: (e as Error).message, code: 'template-size-mismatch' });
+      expect(await printLabels(s.deps, s.caller, {
+        labelClass: 'ticket-work-tag', labels: L([A]), layout: { kind: 'one-per-page', pageSize: { width: 4, height: 2, unit: 'in' } },
+      })).toEqual({ ok: false, status: 422, message: 'designed for 62.0 x 80.0 mm', code: 'template-size-mismatch' });
+    });
+  });
+
   describe('mixed items (C6 bulk print)', () => {
     const boxVm = (id: string): LabelViewModel => ({
       labelClass: 'staging-container', entityType: 'staging_container', recordId: id,
