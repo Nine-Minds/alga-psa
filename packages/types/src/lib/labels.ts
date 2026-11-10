@@ -111,6 +111,8 @@ export interface LabelViewModel {
   assetSerialNumber?: string | null;
   /** Plain-text ticket description, supplied only for a Letter ticket worksheet. */
   ticketDescription?: string | null;
+  /** Structured ticket description for rich rendering on a Letter worksheet. */
+  ticketDescriptionRichText?: unknown;
   /**
    * Ticket work tag only: where held client equipment is ("Main Office / Shelf B3", "With vendor"). Filled by the
    * linked-asset seam from the open custody episode, behind the asset read check. Never the free-text note.

@@ -37,6 +37,12 @@ const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
     category: 'Work Tag',
     description: 'Ticket description as plain text, available on full-page customer worksheets.',
   },
+  'label.ticketDescriptionRichText': {
+    path: 'label.ticketDescriptionRichText',
+    label: 'Rich ticket description',
+    category: 'Work Tag',
+    description: 'Structured ticket description for rich-text nodes on full-page customer worksheets.',
+  },
   'invoice.number': {
     path: 'invoice.number',
     label: 'Invoice Number',

@@ -27,7 +27,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
-import { convertBlockContentToHTML, flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
+import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -69,8 +69,16 @@ const isRecord = (value: unknown): value is UnknownRecord =>
  * terms projection — is not structured and renders as pre-line text.
  */
 const isStructuredBlockContent = (value: unknown): boolean => {
-  if (Array.isArray(value)) return value.length > 0;
-  return isRecord(value) && value.type === 'doc';
+  let content = value;
+  if (typeof content === 'string') {
+    try {
+      content = JSON.parse(content);
+    } catch {
+      return false;
+    }
+  }
+  if (Array.isArray(content)) return content.length > 0;
+  return isRecord(content) && content.type === 'doc';
 };
 
 /**
@@ -743,9 +751,9 @@ const nodeHasVisibleContent = (
       return !isBlankText(resolveExpressionValue(node.content, evaluation, scope, ctx));
     case 'richText': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
-      return isStructuredBlockContent(content)
-        ? !isBlankText(flattenBlockContentToPlainText(content))
-        : !isBlankText(content);
+      if (!isStructuredBlockContent(content)) return !isBlankText(content);
+      const html = convertBlockContentToHTML(content);
+      return !isBlankText(html.replace(/<[^>]*>/g, '')) || /<(?:img|table|hr)\b/.test(html);
     }
     case 'image':
       return normalizeImageSrc(resolveExpressionValue(node.src, evaluation, scope, ctx)) !== null;

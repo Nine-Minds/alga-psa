@@ -60,6 +60,90 @@ afterAll(async () => {
 });
 
 describe('Letter customer worksheet PDF', () => {
+  it('prints a rich description with visible tables, heading hierarchy and checklist states', async () => {
+    const richText = [
+      { type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'New Equipment / System Setup' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Link the device to the client asset record.' }] },
+      { type: 'heading', props: { level: 3 }, content: [{ type: 'text', text: 'Setup Requirements' }] },
+      { type: 'table', content: { type: 'tableContent', rows: [
+        { cells: [
+          { type: 'tableCell', content: [{ type: 'text', text: 'Data Transfer' }] },
+          { type: 'tableCell', content: [{ type: 'text', text: '50gb' }] },
+        ] },
+        { cells: [
+          { type: 'tableCell', content: [{ type: 'text', text: 'Software to Install' }] },
+          { type: 'tableCell', content: [{ type: 'text', text: 'Approved software or none' }] },
+        ] },
+      ] } },
+      { type: 'checkListItem', props: { checked: true }, content: [{ type: 'text', text: 'Wi-Fi' }] },
+      { type: 'checkListItem', props: { checked: false }, content: [{ type: 'text', text: 'Ethernet' }] },
+    ];
+    const { html, printOptions } = await renderLabelBatchHtml([{
+      ...item(), viewModel: { ...viewModel, ticketDescriptionRichText: JSON.stringify(richText) },
+    }], pageLayout);
+    const pdf = await renderHtmlToPdf(html, printOptions);
+    expect(await pdfPageSizes(pdf)).toHaveLength(1);
+    const printedText = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf, encoding: 'utf8' });
+    for (const value of ['New Equipment / System Setup', 'Data Transfer', '50gb', 'Wi-Fi', 'Ethernet']) {
+      expect(printedText).toContain(value);
+    }
+
+    const browser = await browserPoolService.getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.emulateMediaType('print');
+      const description = await page.$eval('#fld-details', (element) => {
+        const cells = Array.from(element.querySelectorAll('td'));
+        const table = element.querySelector('table');
+        const completed = element.querySelector('s');
+        const heading = element.querySelector('h2');
+        if (!table || !completed || !heading || !cells.length) throw new Error('Rich description structure is missing');
+        return {
+          cells: cells.map(cell => cell.textContent),
+          borderWidth: getComputedStyle(cells[0]).borderTopWidth,
+          borderCollapse: getComputedStyle(table).borderCollapse,
+          headingSize: Number.parseFloat(getComputedStyle(heading).fontSize),
+          bodySize: Number.parseFloat(getComputedStyle(element).fontSize),
+          strike: getComputedStyle(completed).textDecorationLine,
+          text: element.textContent,
+        };
+      });
+      expect(description.cells).toEqual(['Data Transfer', '50gb', 'Software to Install', 'Approved software or none']);
+      expect(description.borderWidth).toBe('1px');
+      expect(description.borderCollapse).toBe('collapse');
+      expect(description.headingSize).toBeGreaterThan(description.bodySize);
+      expect(description.strike).toContain('line-through');
+      expect(description.text).toContain('\u2611');
+      expect(description.text).toContain('\u2610');
+    } finally {
+      await page.close();
+      await browserPoolService.releaseBrowser(browser);
+    }
+  }, 120_000);
+
+  it('flows a long rich-description table across pages without clipping its rows', async () => {
+    const rows = Array.from({ length: 60 }, (_, index) => ({ cells: [
+      { type: 'tableCell', content: [{ type: 'text', text: `Requirement ${index + 1}` }] },
+      { type: 'tableCell', content: [{ type: 'text', text: `Approved configuration for requirement ${index + 1}` }] },
+    ] }));
+    const { html, printOptions } = await renderLabelBatchHtml([{
+      ...item(),
+      viewModel: {
+        ...viewModel,
+        ticketDescriptionRichText: [{ type: 'table', content: { type: 'tableContent', headerRows: 1, rows } }],
+      },
+    }], pageLayout);
+    expect(html.match(/<tr>/g)).toHaveLength(rows.length);
+    expect(html).toContain('Approved configuration for requirement 60');
+    const pdf = await renderHtmlToPdf(html, printOptions);
+    expect((await pdfPageSizes(pdf)).length).toBeGreaterThan(1);
+    const printedText = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf, encoding: 'utf8' });
+    for (let index = 1; index <= rows.length; index += 1) {
+      expect(printedText).toContain(`Approved configuration for requirement ${index}`);
+    }
+  }, 120_000);
+
   it('prints the full serial and multiline description on one Letter page with a canonical QR', async () => {
     const { html, printOptions } = await renderLabelBatchHtml([item()], pageLayout);
     const pdf = await renderHtmlToPdf(html, printOptions);

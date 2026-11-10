@@ -333,9 +333,9 @@ const buildTicketCustomerWorksheet = (paper: 'letter' | 'a4'): TemplateAst => ({
       },
       {
         id: 'fld-details',
-        type: 'text',
-        content: { type: 'binding', bindingId: 'ticketDescription' },
-        style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.6', overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' } },
+        type: 'richText',
+        content: { type: 'binding', bindingId: 'ticketDescriptionRichText' },
+        style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.6', overflowWrap: 'anywhere' } },
       },
     ],
   },

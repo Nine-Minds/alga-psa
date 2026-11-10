@@ -1,6 +1,6 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
+import { flattenBlockContentToPlainText, getMeaningfulBlockContentMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import {
   recordUrl,
   type LabelRequestContext,
@@ -83,6 +83,9 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           return null;
         }
 
+        const description = row.attributes?.description;
+        const ticketDescription = flattenBlockContentToPlainText(description).trim() || null;
+
         return {
           labelClass: 'ticket-work-tag',
           entityType: 'ticket',
@@ -94,7 +97,11 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           clientName: row.client_name ?? null,
           detail: deriveWorkReason(row.subcategory_name, row.category_name),
           ...(context.includeWorksheetDetails
-            ? { ticketDescription: flattenBlockContentToPlainText(row.attributes?.description).trim() || null }
+            ? {
+                ticketDescription,
+                ticketDescriptionRichText:
+                  ticketDescription || getMeaningfulBlockContentMarkdown(description) ? description : null,
+              }
             : {}),
           secondaryIdentifier: null,
           serialSuffix: null,

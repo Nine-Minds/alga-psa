@@ -19,6 +19,7 @@ export const LABEL_TEMPLATE_VALUE_BINDINGS: LabelTemplateValueBindings = {
   serialSuffix: { id: 'serialSuffix', kind: 'value', path: 'serialSuffix', fallback: '' },
   assetSerialNumber: { id: 'assetSerialNumber', kind: 'value', path: 'assetSerialNumber', fallback: '' },
   ticketDescription: { id: 'ticketDescription', kind: 'value', path: 'ticketDescription', fallback: '' },
+  ticketDescriptionRichText: { id: 'ticketDescriptionRichText', kind: 'value', path: 'ticketDescriptionRichText', fallback: '' },
   custodyLocation: { id: 'custodyLocation', kind: 'value', path: 'custodyLocation', fallback: '' },
   nextAction: { id: 'nextAction', kind: 'value', path: 'nextAction', fallback: '' },
   // Ticket worksheet only: the full identification of the asset the label is about, behind the asset

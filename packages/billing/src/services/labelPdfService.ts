@@ -1,4 +1,6 @@
-import type { Page } from 'puppeteer';
+import type { BrowserContext, Page } from 'puppeteer';
+import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/core/rendering/isolatedRendering';
+import logger from '@alga-psa/core/logger';
 import { PDFDocument } from 'pdf-lib';
 import { createTenantKnex } from '@alga-psa/db';
 import type { InvoicePdfPrintOptions } from '@alga-psa/types';
@@ -27,11 +29,15 @@ import { browserPoolService } from './browserPoolService';
 
 /** Print an already composed HTML document with explicit print options. */
 export async function renderHtmlToPdf(html: string, printOptions: InvoicePdfPrintOptions): Promise<Buffer> {
+  const isolatedHtml = await prepareHtmlForIsolatedRendering(html);
   const browser = await browserPoolService.getBrowser();
+  let context: BrowserContext | null = null;
   let page: Page | null = null;
   try {
-    page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load' });
+    context = await browser.createBrowserContext();
+    page = await context.newPage();
+    await configureIsolatedPage(page);
+    await page.setContent(isolatedHtml, { waitUntil: 'load' });
     await page.emulateMediaType('print');
     const clippedWorksheets = await page.evaluate(async () => {
       await document.fonts.ready;
@@ -83,9 +89,18 @@ export async function renderHtmlToPdf(html: string, printOptions: InvoicePdfPrin
     return Buffer.from(await page.pdf(printOptions));
   } finally {
     if (page) {
-      await page.close().catch(() => undefined);
+      await page.close().catch((error) => {
+        logger.warn('[LabelPdfService] Failed to close rendering page', { error });
+      });
     }
-    await browserPoolService.releaseBrowser(browser).catch(() => undefined);
+    if (context) {
+      await context.close().catch((error) => {
+        logger.warn('[LabelPdfService] Failed to close isolated rendering context', { error });
+      });
+    }
+    await browserPoolService.releaseBrowser(browser).catch((error) => {
+      logger.warn('[LabelPdfService] Failed to release rendering browser', { error });
+    });
   }
 }
 

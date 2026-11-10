@@ -65,6 +65,7 @@ describe('ticketLabelViewModelProvider worksheet details', () => {
     const [result] = await ticketLabelViewModelProvider.getLabelViewModels(context, [ticketId]);
     expect(state.selected).not.toContain('t.attributes');
     expect(result).not.toHaveProperty('ticketDescription');
+    expect(result).not.toHaveProperty('ticketDescriptionRichText');
     expect(result?.detail).toBe('Laptop');
   });
 
@@ -74,6 +75,7 @@ describe('ticketLabelViewModelProvider worksheet details', () => {
     const [result] = await ticketLabelViewModelProvider.getLabelViewModels(worksheetContext, [ticketId]);
     expect(state.selected).toContain('t.attributes');
     expect(result?.ticketDescription).toBe(description);
+    expect(result?.ticketDescriptionRichText).toBe(description);
     expect(result?.detail).toBe('Laptop');
   });
 
@@ -88,12 +90,22 @@ describe('ticketLabelViewModelProvider worksheet details', () => {
     state.row!.attributes = { description };
     const [result] = await ticketLabelViewModelProvider.getLabelViewModels(worksheetContext, [ticketId]);
     expect(result?.ticketDescription).toBe('First paragraph\nSecond paragraph');
+    expect(result?.ticketDescriptionRichText).toBe(description);
   });
 
   it.each([null, '', '  ', '[]'])('returns null for an empty description (%s)', async (description) => {
     state.row!.attributes = { description };
     const [result] = await ticketLabelViewModelProvider.getLabelViewModels(worksheetContext, [ticketId]);
     expect(result?.ticketDescription).toBeNull();
+    expect(result?.ticketDescriptionRichText).toBeNull();
+  });
+
+  it('retains image-only structured content without requiring a plain-text projection', async () => {
+    const description = [{ type: 'image', props: { url: 'https://example.com/image.png', name: 'Screenshot' } }];
+    state.row!.attributes = { description };
+    const [result] = await ticketLabelViewModelProvider.getLabelViewModels(worksheetContext, [ticketId]);
+    expect(result?.ticketDescription).toBeNull();
+    expect(result?.ticketDescriptionRichText).toBe(description);
   });
 
   it('does not read worksheet data without coarse and record-level ticket authorization', async () => {

@@ -15,6 +15,15 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   serialSuffix: '7K2Q',
   assetSerialNumber: 'LAPTOP-7K2Q',
   ticketDescription: 'The laptop no longer powers on.\nPlease diagnose the power fault.',
+  ticketDescriptionRichText: [
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'The laptop no longer powers on. ', styles: {} },
+        { type: 'text', text: 'Please diagnose the power fault.', styles: { bold: true } },
+      ],
+    },
+  ],
   // Held-equipment lines replace the reason line when present; the preview shows the common case (none) so it
   // matches the print path, which collapses the reason when custody prints.
   custodyLocation: null,

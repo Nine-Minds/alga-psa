@@ -101,9 +101,87 @@ describe('renderLabelBatchHtml failures', () => {
       expect(body).not.toContain('Asset ASSET-123');
       expect(body).toContain('1234567');
       expect(body).toContain('First paragraph\nSecond &lt;paragraph&gt;');
-      expect(body).toContain('white-space:pre-wrap');
+      expect(body).toContain('white-space:pre-line');
       // Scoped to the body because the head carries base64 font data that can contain "S/N".
       expect(body).not.toContain('S/N');
+    });
+
+    it('renders structured ticket descriptions with rich formatting', async () => {
+      const richText = [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'First paragraph with ', styles: {} },
+            { type: 'text', text: 'emphasis', styles: { bold: true } },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Second paragraph', styles: { italic: true } }],
+        },
+      ];
+      for (const content of [richText, JSON.stringify(richText)]) {
+        const { html } = await renderLabelBatchHtml(
+          [{
+            templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
+            viewModel: { ...viewModel, ticketDescriptionRichText: content },
+          }],
+          letter,
+        );
+        const body = /<body>([\s\S]*)<\/body>/.exec(html)?.[1] ?? '';
+        expect(body).toContain('<strong>emphasis</strong>');
+        expect(body).toContain('<em>Second paragraph</em>');
+        expect(body).toContain('First paragraph with');
+      }
+    });
+
+    it('renders ProseMirror descriptions and escapes unsafe content', async () => {
+      const richText = {
+        type: 'doc',
+        content: [{
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Important', marks: [{ type: 'bold' }] },
+            { type: 'text', text: '<script>alert(1)</script>' },
+            { type: 'text', text: 'unsafe link', marks: [{ type: 'link', attrs: { href: 'javascript:alert(1)' } }] },
+          ],
+        }],
+      };
+      for (const content of [richText, JSON.stringify(richText)]) {
+        const { html } = await renderLabelBatchHtml(
+          [{
+            templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
+            viewModel: { ...viewModel, ticketDescriptionRichText: content },
+          }],
+          letter,
+        );
+        const body = /<body>([\s\S]*)<\/body>/.exec(html)?.[1] ?? '';
+        expect(body).toContain('<strong>Important</strong>');
+        expect(body).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+        expect(body).not.toContain('<script>');
+        expect(body).not.toContain('javascript:');
+      }
+    });
+
+    it('preserves the ticket description table, headings and completed checklist entries', async () => {
+      const content = [
+        { type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'Setup Requirements' }] },
+        { type: 'table', content: { type: 'tableContent', rows: [
+          { cells: [
+            { type: 'tableCell', content: [{ type: 'text', text: 'Data Transfer' }] },
+            { type: 'tableCell', content: [{ type: 'text', text: '50gb' }] },
+          ] },
+        ] } },
+        { type: 'checkListItem', props: { checked: true }, content: [{ type: 'text', text: 'Wi-Fi' }] },
+      ];
+      const { html } = await renderLabelBatchHtml([{
+        templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
+        viewModel: { ...viewModel, ticketDescriptionRichText: JSON.stringify(content) },
+      }], letter);
+      expect(html).toContain('<h2>Setup Requirements</h2>');
+      expect(html).toMatch(/<td\b[^>]*>Data Transfer<\/td>/);
+      expect(html).toMatch(/<td\b[^>]*>50gb<\/td>/);
+      expect(html).toContain('<s>Wi-Fi</s>');
     });
 
     it('marks worksheet cells as full-page flow sections so long descriptions paginate', async () => {
@@ -180,13 +258,25 @@ describe('renderLabelBatchHtml failures', () => {
         content: { type: 'binding', bindingId: 'ticketDescription' },
       });
       ast.layout.children.push({
+        id: 'private-rich-test-field',
+        type: 'richText',
+        content: { type: 'binding', bindingId: 'ticketDescriptionRichText' },
+      });
+      ast.layout.children.push({
         id: 'serial-test-field',
         type: 'text',
         content: { type: 'binding', bindingId: 'assetSerialNumber' },
       });
-      const { html } = await renderLabelBatchHtml([{ templateAst: ast, viewModel }], ONE_PER_PAGE);
+      const { html } = await renderLabelBatchHtml([{
+        templateAst: ast,
+        viewModel: {
+          ...viewModel,
+          ticketDescriptionRichText: [{ type: 'paragraph', content: [{ type: 'text', text: 'Private rich description' }] }],
+        },
+      }], ONE_PER_PAGE);
       expect(html).not.toContain('1234567');
       expect(html).not.toContain('First paragraph');
+      expect(html).not.toContain('Private rich description');
     });
 
     it('treats a worksheet template resized to a tag page as a tag, and refuses a 4 x 2 output layout', async () => {

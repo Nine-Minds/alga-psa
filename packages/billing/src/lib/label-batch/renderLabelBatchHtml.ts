@@ -116,6 +116,10 @@ export function buildLabelModel(
       worksheet && !hidden.has('ticketDescription') && !hidden.has('detail')
         ? viewModel.ticketDescription ?? null
         : null,
+    ticketDescriptionRichText:
+      worksheet && !hidden.has('ticketDescription') && !hidden.has('detail')
+        ? viewModel.ticketDescriptionRichText ?? viewModel.ticketDescription ?? null
+        : null,
     custodyLocation,
     nextAction,
     tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,
