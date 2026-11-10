@@ -3,6 +3,11 @@ import { tenantDb } from '@alga-psa/db';
 import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import {
+  isImapOauthCredentialIssuerBound,
+  assertSafeImapOauthTokenEndpoint,
+  getImapOauthSecretNames,
+} from '@alga-psa/shared/services/email/imapOutboundTarget';
 import axios from 'axios';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
@@ -56,8 +61,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IMAP OAuth token configuration missing' }, { status: 400 });
     }
 
+    try {
+      await assertSafeImapOauthTokenEndpoint(imapConfig.oauth_token_url);
+    } catch {
+      return NextResponse.json({ error: 'IMAP OAuth token endpoint is not an allowed target' }, { status: 400 });
+    }
+
     const secretProvider = await getSecretProviderInstance();
-    const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${state.providerId}`);
+    const existingSecretNames = getImapOauthSecretNames(imapConfig);
+    const clientSecret = isImapOauthCredentialIssuerBound(imapConfig)
+      ? await secretProvider.getTenantSecret(tenant, existingSecretNames.clientSecret)
+      : undefined;
 
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
@@ -71,7 +85,8 @@ export async function GET(request: NextRequest) {
     let tokenResponse;
     try {
       tokenResponse = await axios.post(imapConfig.oauth_token_url, params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        maxRedirects: 0,
       });
     } catch (tokenError) {
       console.warn('IMAP OAuth token exchange failed:', tokenError);
@@ -93,8 +108,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const boundSecretNames = getImapOauthSecretNames({
+      id: state.providerId,
+      oauth_token_url: imapConfig.oauth_token_url,
+      oauth_credentials_secret_version: 1,
+    });
+    if (clientSecret) {
+      await secretProvider.setTenantSecret(tenant, boundSecretNames.clientSecret, clientSecret);
+    }
     if (refreshToken) {
-      await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${state.providerId}`, refreshToken);
+      await secretProvider.setTenantSecret(tenant, boundSecretNames.refreshToken, refreshToken);
     }
 
     await db.table('imap_email_provider_config')
@@ -103,6 +126,8 @@ export async function GET(request: NextRequest) {
         access_token: accessToken,
         refresh_token: refreshToken || null,
         token_expires_at: expiresAt,
+        oauth_credentials_token_url: imapConfig.oauth_token_url,
+        oauth_credentials_secret_version: 1,
         updated_at: knex.fn.now(),
       });
 

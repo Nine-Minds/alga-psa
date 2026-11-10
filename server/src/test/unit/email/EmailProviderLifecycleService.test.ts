@@ -8,7 +8,15 @@ const mocks = vi.hoisted(() => ({
   gmailRegister: vi.fn(),
   usePollingDelivery: vi.fn(),
   recordWebhookDeliveryMode: vi.fn(),
+  imapConstructed: vi.fn(),
   operations: [] as string[],
+}));
+
+vi.mock('imapflow', () => ({
+  ImapFlow: vi.fn(function ImapFlow() {
+    mocks.imapConstructed();
+    return { connect: vi.fn(), logout: vi.fn(), close: vi.fn() };
+  }),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -136,6 +144,7 @@ describe('EmailProviderLifecycleService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.operations.length = 0;
+    mocks.imapConstructed.mockReset();
     mocks.graphDelete.mockImplementation(async () => {
       mocks.operations.push('external:graph-delete');
     });
@@ -177,6 +186,26 @@ describe('EmailProviderLifecycleService', () => {
       expect(state[`${providerType === 'microsoft' ? 'microsoft' : 'google'}_email_provider_config`][clearedField])
         .toBeNull();
     }
+  });
+
+  it('keeps an auth-paused IMAP provider paused without connecting to a prohibited host', async () => {
+    const state = createState('imap');
+    state.provider.inbound_paused_at = '2026-07-23T17:00:00.000Z';
+    state.provider.inbound_pause_reason = 'auth_failure';
+    Object.assign(state.imap_email_provider_config, {
+      host: '127.0.0.1', port: 993, secure: true, allow_starttls: false,
+      auth_type: 'password', username: 'support@example.com',
+    });
+
+    const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+      state.provider.id,
+      'tenant-1'
+    );
+
+    expect(result).toMatchObject({ resumed: false, reconnectRequired: true });
+    expect(result.error).toMatch(/blocked private address/);
+    expect(state.provider.inbound_paused_at).toBe('2026-07-23T17:00:00.000Z');
+    expect(mocks.imapConstructed).not.toHaveBeenCalled();
   });
 
   it('T022: keeps the database pause when external teardown fails', async () => {

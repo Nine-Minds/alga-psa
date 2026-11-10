@@ -8,6 +8,11 @@ import axios from 'axios';
 import { tenantDb } from '@alga-psa/db';
 import type { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import {
+  assertImapOauthCredentialIssuerBound,
+  assertSafeImapOauthTokenEndpoint,
+  getImapOauthSecretNames,
+} from './imapOutboundTarget';
 
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -18,12 +23,17 @@ function asNonEmptyString(value: unknown): string | null {
 export async function getImapOauthSecrets(provider: {
   id: string;
   tenant: string;
+  oauth_token_url?: string | null;
+  oauth_credentials_token_url?: string | null;
+  oauth_credentials_secret_version?: number | null;
 }): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
+  assertImapOauthCredentialIssuerBound(provider);
+  const names = getImapOauthSecretNames(provider);
   const secretProvider = await getSecretProviderInstance();
   const clientSecret =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_oauth_client_secret_${provider.id}`)) ?? null;
+    (await secretProvider.getTenantSecret(provider.tenant, names.clientSecret)) ?? null;
   const refreshToken =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_refresh_token_${provider.id}`)) ?? null;
+    (await secretProvider.getTenantSecret(provider.tenant, names.refreshToken)) ?? null;
   return { clientSecret, refreshToken };
 }
 
@@ -32,6 +42,8 @@ export async function refreshImapAccessToken(params: {
     id: string;
     tenant: string;
     oauth_token_url?: string | null;
+    oauth_credentials_token_url?: string | null;
+    oauth_credentials_secret_version?: number | null;
     oauth_client_id?: string | null;
     oauth_client_secret?: string | null;
     refresh_token?: string | null;
@@ -45,9 +57,17 @@ export async function refreshImapAccessToken(params: {
     throw new Error('IMAP OAuth token URL or client ID missing');
   }
 
+  // Check the durable DB binding before reading secrets: CompositeSecretProvider
+  // may still return an environment fallback after its write provider deletes a key.
+  assertImapOauthCredentialIssuerBound(provider);
+  await assertSafeImapOauthTokenEndpoint(provider.oauth_token_url);
+
   const { clientSecret, refreshToken } = await getImapOauthSecrets({
     id: provider.id,
     tenant: provider.tenant,
+    oauth_token_url: provider.oauth_token_url,
+    oauth_credentials_token_url: provider.oauth_credentials_token_url,
+    oauth_credentials_secret_version: provider.oauth_credentials_secret_version,
   });
   const effectiveRefreshToken = refreshToken || provider.refresh_token;
   const effectiveClientSecret = clientSecret || provider.oauth_client_secret;
@@ -65,6 +85,7 @@ export async function refreshImapAccessToken(params: {
 
   const response = await axios.post(provider.oauth_token_url, paramsBody, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    maxRedirects: 0,
   });
   const accessToken = asNonEmptyString(response?.data?.access_token);
   if (!accessToken) {

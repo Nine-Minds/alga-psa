@@ -26,6 +26,7 @@ import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/Inbo
 import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics/graphFailure';
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
+import { assertImapOauthCredentialIssuerBound, assertSafeImapHost } from '@alga-psa/shared/services/email/imapOutboundTarget';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import { createHash } from 'node:crypto';
 
@@ -632,6 +633,8 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
       'ic.username',
       'ic.access_token',
       'ic.oauth_token_url',
+      'ic.oauth_credentials_token_url',
+      'ic.oauth_credentials_secret_version',
       'ic.oauth_client_id',
       'ic.oauth_client_secret',
       'ic.refresh_token',
@@ -662,6 +665,11 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
   const rejectUnauthorized = (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false';
   const oauthMechanism: 'XOAUTH2' | 'OAUTHBEARER' =
     process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+
+  await assertSafeImapHost(provider.host);
+  if (provider.auth_type === 'oauth2') {
+    assertImapOauthCredentialIssuerBound(provider);
+  }
 
   const password =
     provider.auth_type === 'oauth2'

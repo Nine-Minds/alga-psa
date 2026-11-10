@@ -20,9 +20,15 @@ const imapLogoutMock = vi.fn();
 const imapCloseMock = vi.fn();
 const imapOnMock = vi.fn();
 const getTenantSecretMock = vi.fn();
+const dnsLookupMock = vi.fn();
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
+}));
+
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: (...args: any[]) => dnsLookupMock(...args) },
+  lookup: (...args: any[]) => dnsLookupMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -245,6 +251,8 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     imapCloseMock.mockReset();
     imapOnMock.mockReset();
     getTenantSecretMock.mockReset();
+    dnsLookupMock.mockReset();
+    dnsLookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
 
     processInboundEmailInAppMock.mockResolvedValue({
       outcome: 'created',
@@ -785,6 +793,30 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       }),
       { collectDiagnostics: true }
     );
+  });
+
+  it('rejects a prohibited IMAP host before the worker constructs a socket', async () => {
+    const { db } = createDbMock({
+      imapRow: {
+        id: 'provider-imap-private', tenant: 'tenant-1', mailbox: 'support@example.com',
+        host: '127.0.0.1', port: 993, secure: true, allow_starttls: false,
+        auth_type: 'password', username: 'imap-user', access_token: null,
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+    const { fetchImapMessageForPointer } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+
+    await expect(fetchImapMessageForPointer({
+      jobId: 'job-imap-private', schemaVersion: 1, tenantId: 'tenant-1',
+      providerId: 'provider-imap-private', provider: 'imap',
+      pointer: { mailbox: 'INBOX', uid: '77', messageId: 'msg-private' },
+      enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob)).rejects.toThrow(/blocked private address/);
+
+    expect(imapConnectMock).not.toHaveBeenCalled();
+    expect(getTenantSecretMock).not.toHaveBeenCalled();
   });
 
   it('T015: first consume processes and persists consume-time idempotency marker', async () => {

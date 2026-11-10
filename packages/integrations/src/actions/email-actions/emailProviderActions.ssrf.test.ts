@@ -53,8 +53,10 @@ vi.mock('@alga-psa/core/secrets', () => ({
 const imapProvider = { ...mocks.provider };
 function setupConfig(overrides: Record<string, unknown> = {}) {
   mocks.config = {
+    email_provider_id: 'provider-1',
     host: 'imap.example.test', port: 993, secure: true, username: 'mailbox', auth_type: 'oauth2',
     oauth_token_url: 'https://login.example.test/token', oauth_client_id: 'client-id',
+    oauth_credentials_token_url: 'https://login.example.test/token', oauth_credentials_secret_version: 1,
     access_token: null, token_expires_at: null, refresh_token: 'refresh-token',
     ...overrides,
   };
@@ -77,7 +79,7 @@ beforeEach(() => {
 
 describe('IMAP outbound target protections', () => {
   it.each(['https://127.0.0.1/token', 'https://10.0.0.5/token', 'https://169.254.169.254/latest/meta-data'])('rejects OAuth token endpoint %s before reading credentials or posting', async (tokenUrl) => {
-      setupConfig({ oauth_token_url: tokenUrl });
+      setupConfig({ oauth_token_url: tokenUrl, oauth_credentials_token_url: tokenUrl });
       const { testEmailProviderConnection } = await import('./emailProviderActions');
 
       const result = await testEmailProviderConnection('provider-1');

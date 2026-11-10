@@ -13,6 +13,7 @@ import {
 import { persistIngressPointer } from './inboundEmailProducer';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { refreshImapAccessToken } from './imapOauthToken';
+import { assertImapOauthCredentialIssuerBound, assertSafeImapHost } from './imapOutboundTarget';
 import { recordAuthFailure, recordAutoPause } from './inboundEmailMetrics';
 
 export type InboundPauseReason = 'manual' | 'tenant_cancelled' | 'auth_failure';
@@ -697,6 +698,11 @@ export class EmailProviderLifecycleService {
   ): Promise<void> {
     if (!imapConfig?.host) {
       throw new Error('IMAP provider config not found');
+    }
+
+    await assertSafeImapHost(imapConfig.host);
+    if (imapConfig.auth_type === 'oauth2') {
+      assertImapOauthCredentialIssuerBound(imapConfig);
     }
 
     const knex = await getAdminConnection();

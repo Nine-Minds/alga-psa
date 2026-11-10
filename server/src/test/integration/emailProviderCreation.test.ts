@@ -11,14 +11,25 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import process from 'node:process';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
+import { ImapFlow } from 'imapflow';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getImapOauthSecretNames } from '@alga-psa/shared/services/email/imapOutboundTarget';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
+import { createEmailProvider, testEmailProviderConnection, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
 
 // This suite exercises persistence with a real database. Authorization is
 // covered behaviorally in the action unit suite, so grant the action boundary
 // here rather than depending on the test fixture user's roles.
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('axios', () => ({ default: { post: vi.fn() } }));
+vi.mock('imapflow', () => ({
+  ImapFlow: vi.fn(function ImapFlow() {
+    return { connect: vi.fn(async () => undefined), logout: vi.fn(async () => undefined), close: vi.fn() };
+  }),
+}));
+vi.mock('imapflow', () => ({ ImapFlow: vi.fn() }));
 
 let testDb: Knex;
 let testTenant: string;
@@ -482,6 +493,8 @@ describe('Email Provider Creation', () => {
       } } as any, true);
       let row = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
       expect(row.oauth_token_url).toBe('https://issuer-one.example.test/token');
+      expect(row.oauth_credentials_token_url).toBe('https://issuer-one.example.test/token');
+      expect(row.oauth_credentials_secret_version).toBe(1);
       expect(row.oauth_client_secret).toBe('stored-client-secret');
       expect(row.refresh_token).toBe('stored-refresh-token');
       expect(row.access_token).toBe('stored-access-token');
@@ -497,10 +510,123 @@ describe('Email Provider Creation', () => {
       expect(changed).toMatchObject({ setupError: expect.stringContaining('Reconnect the mailbox') });
       row = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
       expect(row.oauth_token_url).toBe('https://issuer-two.example.test/token');
+      expect(row.oauth_credentials_token_url).toBeNull();
+      expect(row.oauth_credentials_secret_version).toBe(0);
       expect(row.oauth_client_secret).toBeNull();
       expect(row.refresh_token).toBeNull();
       expect(row.access_token).toBeNull();
       expect(row.token_expires_at).toBeNull();
+    });
+
+    it('does not forward environment fallback credentials after changing the token endpoint', async () => {
+      const oldEndpoint = 'https://issuer-old.example.test/token';
+      const newEndpoint = 'https://93.184.216.34/token';
+      let oldRefreshKey: string | undefined;
+      let oldClientSecretKey: string | undefined;
+      let providerId: string | undefined;
+      vi.mocked(axios.post).mockClear();
+
+      try {
+        const original = {
+          tenant: testTenant,
+          providerType: 'imap' as const,
+          providerName: 'IMAP fallback issuer binding',
+          mailbox: 'imap-fallback-binding@example.test',
+          isActive: true,
+          imapConfig: {
+            host: '93.184.216.34', port: 993, secure: true, auth_type: 'oauth2',
+            username: 'imap-fallback-binding@example.test', oauth_token_url: oldEndpoint,
+            oauth_client_id: 'imap-fallback-client', oauth_client_secret: 'stored-client',
+            refresh_token: 'stored-refresh', access_token: 'stored-access',
+          },
+        };
+        const created = await createEmailProvider(original as any, true);
+        expect(created).toHaveProperty('provider.id');
+        providerId = created.provider.id;
+        oldRefreshKey = `TENANT_${testTenant}_imap_refresh_token_${providerId}`;
+        oldClientSecretKey = `TENANT_${testTenant}_imap_oauth_client_secret_${providerId}`;
+        process.env[oldRefreshKey] = 'fallback-old-refresh-token';
+        process.env[oldClientSecretKey] = 'fallback-old-client-secret';
+
+        await updateEmailProvider(providerId, {
+          ...original,
+          imapConfig: { ...original.imapConfig, oauth_token_url: newEndpoint, oauth_client_secret: undefined,
+            refresh_token: undefined, access_token: undefined },
+        } as any, true);
+
+        const secretProvider = await getSecretProviderInstance();
+        expect(await secretProvider.getTenantSecret(testTenant, `imap_refresh_token_${providerId}`))
+          .toBe('fallback-old-refresh-token');
+        expect(await secretProvider.getTenantSecret(testTenant, `imap_oauth_client_secret_${providerId}`))
+          .toBe('fallback-old-client-secret');
+
+        const result = await testEmailProviderConnection(providerId);
+        expect(result).toMatchObject({ success: false, errorCode: 'missing_config' });
+        expect(vi.mocked(axios.post)).not.toHaveBeenCalled();
+
+        // Reauthorizing the new issuer switches to endpoint-scoped secret
+        // names, so the still-readable legacy environment values stay inert.
+        await updateEmailProvider(providerId, {
+          ...original,
+          imapConfig: {
+            ...original.imapConfig,
+            oauth_token_url: newEndpoint,
+            oauth_client_secret: 'new-client-secret',
+            refresh_token: 'new-refresh-token',
+            access_token: undefined,
+            token_expires_at: undefined,
+          },
+        } as any, true);
+        vi.mocked(axios.post).mockResolvedValue({ data: { access_token: 'new-access-token', expires_in: 3600 } } as any);
+        const reauthorized = await testEmailProviderConnection(providerId);
+        expect(reauthorized).toMatchObject({ success: false, errorCode: 'connection_failed' });
+        expect(vi.mocked(axios.post)).toHaveBeenCalledTimes(1);
+        const tokenBody = vi.mocked(axios.post).mock.calls[0][1] as URLSearchParams;
+        expect(tokenBody.get('refresh_token')).toBe('new-refresh-token');
+        expect(tokenBody.get('client_secret')).toBe('new-client-secret');
+      } finally {
+        if (oldRefreshKey) delete process.env[oldRefreshKey];
+        if (oldClientSecretKey) delete process.env[oldClientSecretKey];
+        if (providerId) {
+          const secretProvider = await getSecretProviderInstance();
+          const names = getImapOauthSecretNames({
+            id: providerId,
+            oauth_token_url: newEndpoint,
+            oauth_credentials_secret_version: 1,
+          });
+          await secretProvider.deleteTenantSecret(testTenant, names.clientSecret);
+          await secretProvider.deleteTenantSecret(testTenant, names.refreshToken);
+        }
+      }
+    });
+
+    it('does not connect to a prohibited host when updating an auth-paused IMAP provider', async () => {
+      vi.mocked(ImapFlow).mockClear();
+      vi.mocked(axios.post).mockClear();
+      const data = {
+        tenant: testTenant,
+        providerType: 'imap' as const,
+        providerName: 'Paused private IMAP',
+        mailbox: 'paused-private@example.test',
+        isActive: true,
+        imapConfig: {
+          host: '127.0.0.1', port: 993, secure: true, auth_type: 'password',
+          username: 'paused-private@example.test',
+        },
+      };
+      const created = await createEmailProvider(data as any, true);
+      expect(created).toHaveProperty('provider.id');
+      const providerId = created.provider.id;
+      await tenantTable('email_providers').where({ id: providerId }).update({
+        inbound_paused_at: new Date(Date.now() - 60_000),
+        inbound_pause_reason: 'auth_failure',
+      });
+
+      const updated = await updateEmailProvider(providerId, data as any, true);
+
+      expect(updated.setupError).toMatch(/blocked private address/);
+      expect(vi.mocked(ImapFlow)).not.toHaveBeenCalled();
+      expect(vi.mocked(axios.post)).not.toHaveBeenCalled();
     });
   });
 });

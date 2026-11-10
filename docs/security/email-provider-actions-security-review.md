@@ -1,6 +1,6 @@
 # Email provider security fixes: human review guide
 
-Review this draft first for **private mail-target allowlist behavior**, **credential clearing across the IMAP config upsert transaction**, and **authorization coverage across every public action**.
+Review this repair first for **private mail-target allowlist behavior in every IMAP socket path**, **durable OAuth issuer binding including environment fallbacks**, and **authorization coverage across every public action**.
 
 ## Finding 1: provider actions lacked the MSP authorization boundary
 
@@ -12,28 +12,28 @@ Behavioral coverage is in `packages/integrations/src/actions/email-actions/email
 
 The reusable validation core is `shared/lib/net/outboundTarget.ts`, built as `@alga-psa/shared/lib/net/outboundTarget`. It normalizes hostnames, validates syntax and scheme, rejects localhost aliases, resolves all DNS answers, and blocks loopback, private, link-local, metadata, CGNAT, and reserved IPv4/IPv6 ranges. `server/src/lib/webhooks/ssrf.ts` delegates to it while retaining the webhook API and error class.
 
-`testEmailProviderConnection` validates the IMAP host before secret reads, OAuth refresh, or `ImapFlow` construction. It validates configurable OAuth token endpoints as HTTPS before reading credentials and uses `maxRedirects: 0`. See `docs/security/email-provider-private-target-allowlist.md` for the deployment-only `EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST` contract. Private IMAP targets are denied by default; exact host/IP entries opt in RFC 1918 IPv4 and IPv6 unique-local destinations. The allowlist cannot permit loopback, link-local/metadata, CGNAT, or reserved addresses. Token endpoints do not inherit this exception.
+The action, auth-paused lifecycle recovery, and inbound queue worker all use the shared IMAP host policy before OAuth refresh or `ImapFlow` construction. The shared token refresh validates HTTPS targets and sets `maxRedirects: 0`; the OAuth callback does the same. See `docs/security/email-provider-private-target-allowlist.md` for the deployment-only `EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST` contract. Private IMAP targets are denied by default; exact host/IP entries opt in RFC 1918 IPv4 and IPv6 unique-local destinations. The allowlist cannot permit loopback, link-local/metadata, CGNAT, or reserved addresses. Token endpoints do not inherit this exception.
 
-`persistImapConfig` compares the stored and submitted OAuth token URLs. On an actual endpoint change it deletes secret-store copies and commits `NULL` for the database `oauth_client_secret`, `refresh_token`, `access_token`, and expiry fields in the same upsert. An unchanged endpoint with omitted credential fields preserves existing database credentials. The update returns a reconnect-required `setupError` after the transaction commits, so an exception cannot roll back the clearing.
+Migration `server/migrations/20261109180000_bind_imap_oauth_credentials_to_token_endpoint.cjs` adds the issuer marker and secret-key version. It backfills existing rows once to their currently configured endpoint; rerunning the migration does not restore a marker cleared by a later change. `persistImapConfig` clears the durable `oauth_credentials_token_url` binding and commits `NULL` for database `oauth_client_secret`, `refresh_token`, `access_token`, and expiry fields on an actual endpoint change. Every consumer checks the binding before secret lookup, including cached access-token paths. Secret-store deletion is best effort because a composite provider may still expose an environment fallback. After explicit reauthorization, endpoint-scoped secret names are used; legacy fixed names are not consulted. An unchanged endpoint with omitted credential fields preserves the binding and credentials. The update returns a reconnect-required `setupError` after the transaction commits, so an exception cannot roll back the clearing.
 
-Behavioral coverage is in `packages/integrations/src/actions/email-actions/emailProviderActions.ssrf.test.ts` and `shared/lib/net/__tests__/outboundTarget.test.ts`. The database-backed merge regression is in `server/src/test/integration/emailProviderCreation.test.ts`: it verifies unchanged-endpoint preservation and persisted credential clearing after an endpoint change. Webhook and safe-fetch regressions are `server/src/lib/webhooks/__tests__/ssrf.test.ts`, `server/src/test/integration/webhookDelivery.ssrf.test.ts`, and `server/src/lib/net/__tests__/safeFetch.test.ts`.
+Behavioral coverage is in `packages/integrations/src/actions/email-actions/emailProviderActions.ssrf.test.ts`, `shared/services/email/__tests__/imapOauthToken.security.test.ts`, `server/src/test/unit/email/EmailProviderLifecycleService.test.ts`, and the worker test in `server/src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts`. Database-backed regressions in `server/src/test/integration/emailProviderCreation.test.ts` verify unchanged-endpoint preservation, committed clearing, an environment fallback that remains readable after deletion but is never forwarded before or after reauthorization, and auth-paused update rejection before socket construction. Webhook and safe-fetch regressions are `server/src/lib/webhooks/__tests__/ssrf.test.ts`, `server/src/test/integration/webhookDelivery.ssrf.test.ts`, and `server/src/lib/net/__tests__/safeFetch.test.ts`.
 
 ## Verification recorded for this draft
 
-- Affected Vitest batch: 8 files, 143 tests passed. This includes the database-backed issuer merge regression and existing webhook delivery and safe-fetch suites.
+- Final affected Vitest batch: 11 files, 177 tests passed. It includes the database-backed fallback-secret and issuer-binding regressions, lifecycle recovery, worker sockets, shared OAuth refresh, authorization, webhook delivery, and safe-fetch suites.
 - Vulnerable-baseline check: the new authorization and outbound-target suites were copied into an isolated worktree at plan revision `e54c9397a9401fbfac40d2e2d2d6afcebc469732`; 9 tests failed and 1 passed, exposing the original authorization, private-target, and redirect behavior.
 - `npm run typecheck --workspace shared`: passed.
 - `npm run typecheck --workspace packages/integrations` with `NODE_OPTIONS=--max-old-space-size=8192`: passed.
-- Targeted ESLint over changed TypeScript files: passed with 0 errors and 77 warnings (existing `any`/unused/global-process warnings plus test-mock `any`s).
+- Targeted ESLint over changed and affected TypeScript files: passed with 0 errors and 186 warnings (mostly pre-existing `any`, unused, and Node-global warnings plus test-mock `any`s).
 - `npm run build --workspace shared`: passed and emitted `shared/dist/lib/net/outboundTarget.js`.
 - `npx nx build @alga-psa/integrations`: passed with its dependencies. The Nx integrations target is a no-op because this package is consumed as source.
-- `npx nx next:build server` with an 8 GB Node heap: passed; Next reported successful compilation and static page generation. Its configuration skips type validation.
-- Server-wide `npm run typecheck --workspace server` passed with `NODE_OPTIONS=--max-old-space-size=12288`. The default 4 GB and 8 GB attempts exceeded their Node heaps.
+- `npx nx next:build server` with an 8 GB Node heap: passed; Next compiled successfully in 5.6 minutes and generated 74/74 static pages. Next skips type validation and emitted 15 existing dynamic-filesystem tracing warnings.
+- Final server-wide `npm run typecheck --workspace server` passed with `NODE_OPTIONS=--max-old-space-size=12288`. Earlier default 4 GB and 8 GB attempts exceeded their Node heaps.
 - Direct `npm run build --workspace packages/integrations` is not a usable package command: `tsup` reports “No input files.” The Nx target is the repository-supported package target.
 
 ## Limitations and operational impact
 
 - This is validate-then-connect, not pinned-DNS transport. A hostname can change DNS between validation and axios or IMAP resolution, leaving a DNS-rebinding TOCTOU risk for both transports.
 - Private IMAP configurations stop working by default until the deployment lists their exact host or IP in `EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST`.
-- Existing IMAP credentials that might have been planted before this fix are not rotated or forensically cleaned up by this change.
+- The migration treats the existing token URL as the binding for legacy credentials; it cannot determine whether an endpoint was changed before this migration was deployed. Existing potentially compromised credentials are not rotated.
 - Microsoft and Google fixed token endpoints are unchanged.
