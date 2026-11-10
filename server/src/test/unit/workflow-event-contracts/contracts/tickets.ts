@@ -189,7 +189,7 @@ export const ticketContracts = {
       },
       {
         site: 'shared/rmm/alerts/ticketCreatedEvent.ts#publishRmmTicketCreated',
-        build: () => buildRmmTicketCreatedPayload({ ticketId: ticket.ticket_id!, source: 'rmm_alert', ticketOrigin: 'internal', dueDate: null }),
+        build: () => buildRmmTicketCreatedPayload({ ticketId: ticket.ticket_id!, source: 'rmm_alert' }),
         expectFields: ['ticketOrigin'],
         ctx: { actor: { actorType: 'SYSTEM' } },
       },

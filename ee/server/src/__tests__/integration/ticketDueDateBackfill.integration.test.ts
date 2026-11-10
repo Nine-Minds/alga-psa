@@ -51,4 +51,38 @@ describe('ticket due_date backfill from attributes', () => {
       await trx.rollback();
     }
   });
+
+  it('pages past unparsable rows: every valid row is copied with a batch size smaller than the candidates', async () => {
+    const tenant = String((await db('tenants').first('tenant')).tenant);
+    const trx = await db.transaction();
+    try {
+      const clientId = uuidv4();
+      await trx('clients').insert({ tenant, client_id: clientId, client_name: 'Backfill batch client', created_at: '2020-01-01T00:00:00Z', updated_at: '2020-01-01T00:00:00Z' });
+      const boardId = uuidv4();
+      await trx('boards').insert({ tenant, board_id: boardId, board_name: 'BB', display_order: 0 });
+      const statusId = uuidv4();
+      await trx('statuses').insert({ tenant, status_id: statusId, board_id: boardId, name: 'Open', status_type: 'ticket', order_number: 1, is_closed: false });
+      const ids: { id: string; valid: boolean }[] = [];
+      // Interleave junk and valid values so whole batches can consist of rows that stay NULL.
+      for (let i = 0; i < 7; i += 1) {
+        const ticketId = uuidv4();
+        const valid = i % 3 === 2;
+        await trx('tickets').insert({
+          tenant, ticket_id: ticketId, ticket_number: `BB-${ticketId.slice(0, 8)}`, title: 't', board_id: boardId, status_id: statusId,
+          client_id: clientId, entered_at: '2026-01-01T00:00:00Z', due_date: null,
+          attributes: JSON.stringify({ due_date: valid ? `2027-03-0${i}T09:00:00.000Z` : 'not a date' }),
+        });
+        ids.push({ id: ticketId, valid });
+      }
+
+      await backfillTicketDueDatesFromAttributes(trx, () => undefined, 2);
+      for (const { id, valid } of ids) {
+        const row = await trx('tickets').where({ tenant, ticket_id: id }).first('due_date');
+        if (valid) expect(row.due_date).not.toBeNull();
+        else expect(row.due_date).toBeNull();
+      }
+    } finally {
+      await trx.rollback();
+    }
+  });
 });

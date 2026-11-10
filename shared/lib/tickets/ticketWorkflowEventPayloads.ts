@@ -153,14 +153,21 @@ export function buildApiTicketCreatedPayload(
   });
 }
 
-/** RMM alert ticket creation (shared/rmm/alerts/ticketCreatedEvent.ts). */
+/**
+ * RMM alert ticket creation (shared/rmm/alerts/ticketCreatedEvent.ts). RMM inserts set neither column, so
+ * the stored values are the column defaults: origin internal, no due date. Those are the defaults here too.
+ */
 export function buildRmmTicketCreatedPayload(input: {
   ticketId: string;
   source: string;
   dueDate?: Date | string | null;
   ticketOrigin?: string | null;
 }) {
-  return builtWorkflowPayload('TICKET_CREATED', { ticketId: input.ticketId, source: input.source, ...ticketDueDateAndOriginFields(input) });
+  return builtWorkflowPayload('TICKET_CREATED', {
+    ticketId: input.ticketId,
+    source: input.source,
+    ...ticketDueDateAndOriginFields({ dueDate: input.dueDate ?? null, ticketOrigin: input.ticketOrigin ?? 'internal' }),
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -19,7 +19,7 @@ exports.up = async function up(knex) {
   );
   if (existing.rows[0]?.indisvalid) return;
   await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${INDEX}`);
-  await knex.raw(`CREATE INDEX CONCURRENTLY ${INDEX} ON tickets (tenant, due_date) WHERE due_date IS NOT NULL`);
+  await knex.raw(`CREATE INDEX CONCURRENTLY IF NOT EXISTS ${INDEX} ON tickets (tenant, due_date) WHERE due_date IS NOT NULL`);
 };
 
 exports.down = async function down(knex) {
