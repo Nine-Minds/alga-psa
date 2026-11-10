@@ -2184,6 +2184,7 @@
     "loading": "Inventuren werden geladen…",
     "empty": "Noch keine Standortinventuren in dieser Ansicht.",
     "columns": {
+      "audit": "Inventur",
       "client": "Kunde",
       "location": "Standort",
       "status": "Status",
@@ -2236,6 +2237,7 @@
     },
     "detail": {
       "backToClient": "Zurück zu den Inventuren des Kunden",
+      "reference": "Inventur",
       "untitledClient": "Kunde",
       "location": "Standort",
       "startedBy": "Gestartet von",
