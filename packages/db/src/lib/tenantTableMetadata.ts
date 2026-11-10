@@ -667,6 +667,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   invoice_adjustment_operations: { scope: 'tenant' },
   contract_line_unit_pricing_revision_history: { scope: 'tenant' },
   contract_recurring_unit_adjustments: { scope: 'tenant' },
+  user_client_portfolios: { scope: 'tenant' },
   user_cost_rates: { scope: 'tenant' },
   user_preferences: { scope: 'tenant' },
   user_internal_notification_preferences: { scope: 'tenant' },

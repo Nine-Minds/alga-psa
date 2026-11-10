@@ -1079,6 +1079,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'usage_tracking', parent: 'service_catalog', column: 'service_id', deleteRule: 'NO ACTION', name: 'usage_tracking_tenant_service_id_foreign' },
   { child: 'user_auth_accounts', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'user_auth_accounts_tenant_foreign' },
   { child: 'user_auth_accounts', parent: 'users', column: 'user_id', deleteRule: 'NO ACTION', name: 'user_auth_accounts_tenant_user_id_foreign' },
+  { child: 'user_client_portfolios', parent: 'clients', column: 'client_id', deleteRule: 'CASCADE', name: 'user_client_portfolios_client_foreign' },
+  { child: 'user_client_portfolios', parent: 'users', column: 'user_id', deleteRule: 'CASCADE', name: 'user_client_portfolios_user_foreign' },
   { child: 'user_internal_notification_preferences', parent: 'users', column: 'user_id', deleteRule: 'CASCADE', name: 'user_internal_notification_preferences_tenant_user_id_foreign' },
   { child: 'user_invitations', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'user_invitations_tenant_foreign' },
   { child: 'user_notification_preferences', parent: 'users', column: 'user_id', deleteRule: 'CASCADE', name: 'user_notification_preferences_tenant_user_id_foreign' },
