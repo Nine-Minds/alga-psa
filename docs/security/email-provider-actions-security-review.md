@@ -44,3 +44,7 @@ Behavioral coverage is in `packages/integrations/src/actions/email-actions/email
 - The private allowlist intentionally permits an exact listed IMAP host to resolve to RFC 1918 or IPv6 unique-local addresses. Review deployments' DNS ownership and target reachability before adding entries.
 - Live OAuth vendors and on-prem mail servers were not contacted. Authorization was exercised through the actual callback with a mock token endpoint and real tenant persistence.
 - Microsoft and Google fixed token endpoints are unchanged.
+
+## Human-review preparation correction
+
+The running EE form still inferred OAuth connection state from now-redacted token fields. Human-review preparation reproduced an issuer-bound fixture showing “Not connected.” The EE form now consumes `oauth_authorization_status`, matching the shared form. `server/src/test/unit/components/EnterpriseImapProviderForm.test.tsx` renders all three safe states without credentials; the connected and reauthorization cases fail before this correction. Live preparation also confirmed the connected status after the change. The card's separately served HTML guide contains the final demonstration and its exact revision.

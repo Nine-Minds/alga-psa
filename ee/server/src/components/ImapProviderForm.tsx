@@ -198,7 +198,7 @@ export function ImapProviderForm({
   };
 
   const authType = form.watch('authType');
-  const oauthConnected = !!provider?.imapConfig?.refresh_token || !!provider?.imapConfig?.access_token;
+  const oauthAuthorizationStatus = provider?.imapConfig?.oauth_authorization_status ?? 'not_connected';
 
   const handleOauthConnect = async () => {
     if (!provider?.id) return;
@@ -333,7 +333,13 @@ export function ImapProviderForm({
                 <div className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm">
                   <div>
                     <p className="font-medium">{t('imapForm.oauth.statusLabel')}</p>
-                    <p className="text-muted-foreground">{oauthConnected ? t('imapForm.oauth.connected') : t('imapForm.oauth.notConnected')}</p>
+                    <p className="text-muted-foreground">{
+                      oauthAuthorizationStatus === 'connected'
+                        ? t('imapForm.oauth.connected')
+                        : oauthAuthorizationStatus === 'reauthorization_required'
+                          ? t('imapForm.oauth.reauthorizationRequired', { defaultValue: 'Reauthorization required' })
+                          : t('imapForm.oauth.notConnected')
+                    }</p>
                   </div>
                   <Button
                     id="imap-reconnect-oauth-btn"
