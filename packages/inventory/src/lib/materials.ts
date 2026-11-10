@@ -371,10 +371,18 @@ export async function addMaterial(
 
     if (pendingAsset) {
       // F029: delivered assets commit independently, so link them only after this transaction commits.
+      // The parent ticket/project is carried along so the asset also lands in the entity's
+      // asset section (asset_associations) once created.
+      const assetLink = {
+        ...pendingAsset,
+        parentType: input.parent_type,
+        parentId: input.parent_id,
+        createdBy: performedBy,
+      };
       registerAfterCommitWithConnection(trx, async (rootConnection) => {
         try {
           const { createAndLinkDeliveredAsset } = await import('./assetLink');
-          await createAndLinkDeliveredAsset(rootConnection, tenant, pendingAsset);
+          await createAndLinkDeliveredAsset(rootConnection, tenant, assetLink);
         } catch (e) {
           console.error(`Asset creation for delivered ${cfg.label}-material unit failed:`, e);
         }
@@ -538,6 +546,19 @@ export async function deleteMaterial(
   return runInTransaction(db, async (trx: Knex.Transaction) => {
     const removed = await removeMaterialInTransaction(trx, tenant, parentType, materialId, performedBy);
     if (!removed) return false;
+
+    // Serialized installs create a client asset linked to this ticket/project; removing the
+    // material un-assigns it again (stock side is restored by reverseStockConsumption).
+    if (removed.unit_id) {
+      const { detachDeliveredAssetAssociation } = await import('./assetLink');
+      const parentRow = await trx(cfg.table)
+        .where({ tenant, [cfg.pk]: materialId })
+        .select(cfg.parentCol)
+        .first();
+      if (parentRow) {
+        await detachDeliveredAssetAssociation(trx, tenant, removed.unit_id, parentType, parentRow[cfg.parentCol]);
+      }
+    }
 
     // C6 D8: a material installed from staging releases its line (never back to a claim: the
     // restored stock is free again, not silently re-reserved).

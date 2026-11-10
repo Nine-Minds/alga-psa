@@ -1,6 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
+import { revalidatePath } from 'next/cache';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -10,6 +11,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { recordStockMovement, ensureStockLevel, assertLocationWritable } from '../lib';
+import { detachDeliveredAssetAssociation } from '../lib/assetLink';
 import { restockReturnActionErrorFrom } from './loanerRestockErrors';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
@@ -19,6 +21,63 @@ async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 
 }
 
 export type RestockReturnActionError = ActionMessageError | ActionPermissionError;
+
+/**
+ * Find and delete the ticket/project material line that consumed this unit (its
+ * `consume` stock movement carries the source doc). Fails fast when the line is
+ * already billed — restocking a billed install would silently un-invoice hardware.
+ * Also un-assigns the unit's asset from that entity and releases any staging line
+ * that installed it, mirroring deleteMaterial. No-op when the unit was delivered
+ * straight from fulfillment (no material line).
+ */
+async function removeConsumingMaterialLine(
+  trx: Knex.Transaction,
+  tenant: string,
+  unitId: string,
+  performedBy: string | null,
+): Promise<void> {
+  const movement = await trx('stock_movements')
+    .where({ tenant, unit_id: unitId, movement_type: 'consume' })
+    .whereIn('source_doc_type', ['ticket_material', 'project_material'])
+    .orderBy('created_at', 'desc')
+    .first('source_doc_id', 'source_doc_type');
+  if (!movement) return;
+
+  const parentType = movement.source_doc_type === 'ticket_material' ? 'ticket' : 'project';
+  const table = parentType === 'ticket' ? 'ticket_materials' : 'project_materials';
+  const pk = parentType === 'ticket' ? 'ticket_material_id' : 'project_material_id';
+  const parentCol = parentType === 'ticket' ? 'ticket_id' : 'project_id';
+
+  const material = await trx(table)
+    .where({ tenant, [pk]: movement.source_doc_id })
+    .forUpdate()
+    .first('is_billed', parentCol);
+  // Already billed (or the row was deleted out from under us): leave history alone.
+  if (!material) return;
+  if (material.is_billed) {
+    throw new Error('The unit is installed on a billed material line; credit or unbilled the invoice before restocking it');
+  }
+
+  await trx(table).where({ tenant, [pk]: movement.source_doc_id }).delete();
+
+  // Mirror deleteMaterial's companion cleanups: staging release (project only) and
+  // un-assigning the delivered asset from the entity it was installed on.
+  if (parentType === 'project') {
+    await trx('project_staging_lines')
+      .where({ tenant, project_material_id: movement.source_doc_id })
+      .update({
+        status: 'released',
+        project_material_id: null,
+        released_at: trx.fn.now(),
+        released_by: performedBy,
+        updated_at: trx.fn.now(),
+      });
+  }
+  await detachDeliveredAssetAssociation(trx, tenant, unitId, parentType, material[parentCol]);
+
+  const base = parentType === 'ticket' ? '/msp/tickets' : '/msp/projects';
+  revalidatePath(`${base}/${material[parentCol]}`);
+}
 
 async function withRestockReturnActionErrors<T>(work: () => Promise<T>): Promise<T | RestockReturnActionError> {
   try {
@@ -101,6 +160,13 @@ export const restockReturn = withAuth(
             delivered_at: null,
           },
         });
+
+        // The unit may still sit on a ticket/project as an unbilled material line (the
+        // common MSP "put it back" flow). This restock IS the stock reversal, so the
+        // material row is removed here — otherwise the line would linger and a later
+        // material delete would double-restore stock. Billed lines fail fast instead.
+        await removeConsumingMaterialLine(trx, tenant, input.unit_id, (user as any)?.user_id ?? null);
+
         return {
           movement,
           restocking_fee_cents: restockingFee,

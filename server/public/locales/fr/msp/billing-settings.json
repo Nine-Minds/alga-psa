@@ -1194,6 +1194,18 @@
         "kit": "Kit",
         "createsAsset": "Crée un actif à la livraison",
         "defaultAssetType": "Type d'actif par défaut",
+        "specDefaults": "Caractéristiques par défaut des actifs livrés",
+        "specDefaultsHint": "Appliqué lorsqu'une unité sérialisée livrée crée automatiquement son actif.",
+        "spec": {
+          "deviceType": "Type d'appareil",
+          "os_type": "Type de système d'exploitation",
+          "os_version": "Version du système d’exploitation",
+          "cpu_model": "Modèle de processeur",
+          "storage_type": "Type de stockage",
+          "management_ip": "IP de gestion",
+          "firmware_version": "Version du micrologiciel",
+          "model": "Modèle"
+        },
         "reorderPoint": "Seuil de réapprovisionnement",
         "reorderQuantity": "Quantité de réapprovisionnement",
         "kitPricingMode": "Mode de tarification du kit",
