@@ -69,7 +69,7 @@ The Client Portal is a secure, multi-tenant web application that allows MSP clie
 
 **Security Measures:**
 - Password hashing using bcrypt/argon2
-- Optional Two-Factor Authentication (2FA) with TOTP
+- Optional Two-Factor Authentication (2FA) with TOTP; in EE a tenant can require it for client password sign-in (`require2faForClientUsers`, with forced enrollment at sign-in). The tenant "Require SSO for MSP staff" policy never applies to client users.
 - Session expiration management
 - Role-Based Access Control (RBAC)
 

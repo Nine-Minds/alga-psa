@@ -206,7 +206,15 @@ This document provides a high-level architectural overview of the open-source MS
     - `server/src/app/api/auth/[...nextauth]/route.ts`: NextAuth configuration
     - `server/src/app/auth/msp/signin/page.tsx`: MSP login page
     - `server/src/app/auth/client-portal/signin/page.tsx`: Client portal login page
-    - `server/src/lib/actions/useRegister.tsx`: Registration and password reset logic
+    - `packages/auth/src/actions/useRegister.tsx`: Registration and password reset logic
+  * Tenant Login Policy (EE; all-off default, so CE behaves as before):
+    - Configured in the **Sign-in policy** card under Settings > Security > Single Sign-On (`ee/server/src/components/settings/security/LoginPolicySettings.tsx`, actions in `ee/server/src/lib/actions/auth/loginPolicy.ts`; CE stub renders nothing). Stored in `tenant_settings.settings.sso`.
+    - Options: require SSO for all internal users (any configured Google, Microsoft or Keycloak provider), require TOTP for internal and/or client password sign-in, and allow the per-user known-device skip under a 2FA policy.
+    - Break-glass: listed internal users who are active, hold the Admin role and have 2FA enabled may still use a password while SSO is required, always with TOTP (no known-device skip). Eligibility is re-checked at every sign-in and password reset.
+    - Save-time guard (`validatePolicyChange`) runs on every save: requiring SSO needs a configured provider and at least one valid break-glass admin; stale stored break-glass ids are pruned; turning SSO off always succeeds.
+    - Turning SSO on stamps `passwordAuthDisabledAt` and revokes existing internal `login_method='credentials'` sessions except break-glass users (SSO and client sessions untouched); turning on a 2FA requirement revokes nothing.
+    - Enforcement: pure decisions in `packages/auth/src/lib/authPolicy.ts`, I/O and audit in `authPolicyStore.ts`, choke point in `passwordLoginGate.ts` (called from `authenticateUser` and the NextAuth credentials callbacks). Password reset request/completion is refused neutrally for internal non-break-glass users while SSO is required. Forced TOTP enrollment at sign-in: `forcedTwoFactorEnrollmentActions.ts` + `PolicyTwoFactorFlow.tsx`.
+    - Audit operations in `audit_logs`: `LOGIN_POLICY_CHANGED`, `LOGIN_POLICY_REFUSED`, `TWO_FACTOR_ENROLLED_BY_POLICY`. API keys are out of scope (neither gated nor revoked). Mobile sign-in inherits the web sign-in it hands off from.
 
 * **Settings:** Configuration settings with advanced reference data management:
   * Core Components:
