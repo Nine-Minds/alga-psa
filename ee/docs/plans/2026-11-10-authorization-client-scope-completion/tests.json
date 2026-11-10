@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "Unit, property: matrix over open bundle, closed bundle, both, and neither, against named and unnamed resources and actions, asserting every allow and deny and its reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009",

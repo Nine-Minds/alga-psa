@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "A bundle revision can be published as closed: for every subject it is assigned to, a resource and action with no matching rule in that bundle is denied; an open bundle keeps today's behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Kernel semantics"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "When a subject holds a closed bundle and an open bundle, a resource and action the closed bundle does not name is denied.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Kernel semantics"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "A denial names its cause in the decision reasons: the rule, the closed baseline, the portfolio, or a registered resolver.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Kernel semantics"
     ]
