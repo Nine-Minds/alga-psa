@@ -15,7 +15,12 @@ import { startAssetAudit } from '../../actions/assetAuditActions';
 import { getClientLocationsForAssets } from '../../actions/clientLookupActions';
 import { useAssetStatusLabel } from '../../lib/assetStatus';
 import { useAssetStatusRegistry } from '../shared/useAssetStatusOptions';
-import { auditErrorText, auditOutcome, useAssetAuditScopePreview } from './auditClient';
+import {
+  auditErrorText,
+  auditGenericErrorText,
+  auditOutcome,
+  useAssetAuditScopePreview,
+} from './auditClient';
 
 /** The "No location" choice; the service takes null for "assets with no location". */
 export const NO_LOCATION_VALUE = '__none__';
@@ -113,21 +118,29 @@ export function StartAuditDialog({
     if (!clientId) return;
     setSubmitting(true);
     setError(null);
-    const outcome = auditOutcome<{ audit_id: string }>(
-      await startAssetAudit({
-        client_id: clientId,
-        location_id: noLocation ? null : locationValue,
-        statuses: chosenStatuses,
-        ...(notes.trim() ? { notes: notes.trim() } : {}),
-      }),
-    );
-    setSubmitting(false);
-    if (!outcome.ok) {
-      setError(auditErrorText(t, outcome));
-      return;
+    // A thrown action (dropped connection, database error, server-action
+    // transport failure) answers nothing, so it is caught here: otherwise the
+    // button stays on "Starting…" for good and says nothing about why.
+    try {
+      const outcome = auditOutcome<{ audit_id: string }>(
+        await startAssetAudit({
+          client_id: clientId,
+          location_id: noLocation ? null : locationValue,
+          statuses: chosenStatuses,
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+        }),
+      );
+      if (!outcome.ok) {
+        setError(auditErrorText(t, outcome));
+        return;
+      }
+      onOpenChange(false);
+      onStarted(outcome.data.audit_id);
+    } catch {
+      setError(auditGenericErrorText(t));
+    } finally {
+      setSubmitting(false);
     }
-    onOpenChange(false);
-    onStarted(outcome.data.audit_id);
   };
 
   return (

@@ -45,6 +45,7 @@ import { useAssetStatusRegistry } from '../shared/useAssetStatusOptions';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
 import {
   auditErrorText,
+  auditGenericErrorText,
   auditMethodLabel,
   auditOutcome,
   auditResultLabel,
@@ -74,6 +75,18 @@ const SEGMENT_RESULTS: Record<Segment, AssetAuditItemResult[] | null> = {
   all: null,
 };
 
+/**
+ * The segment on screen. A closed run has no remaining items — completing one
+ * turns every unmarked `expected` into `missing`, and cancelling leaves nothing
+ * to walk — so a finished audit opens on every item instead of on an empty
+ * to-do list, and a `remaining` choice carried over from the walk is dropped
+ * the moment the run closes.
+ */
+export function effectiveAuditSegment(choice: Segment | null, isOpenRun: boolean): Segment {
+  if (isOpenRun) return choice ?? 'remaining';
+  return choice && choice !== 'remaining' ? choice : 'all';
+}
+
 /** One CSV cell: quoted, with embedded quotes doubled. */
 function csvCell(value: string | number | null | undefined): string {
   const text = value == null ? '' : String(value);
@@ -101,7 +114,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
   const { canUpdate } = useAssetAuditCapability();
   const { data: audit, error, isLoading, mutate } = useAssetAuditDetail(auditId);
 
-  const [segment, setSegment] = useState<Segment>('remaining');
+  const [segmentChoice, setSegmentChoice] = useState<Segment | null>(null);
   const [search, setSearch] = useState('');
   const [itemsPage, setItemsPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
@@ -127,6 +140,10 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
   const items = audit?.items ?? [];
   const isOpenRun = audit?.status === 'in_progress';
   const mayAct = Boolean(isOpenRun && canUpdate);
+  const segment = effectiveAuditSegment(segmentChoice, isOpenRun);
+  // "Remaining" is a question only an open run can answer, so a closed one is
+  // not offered it at all.
+  const segments = isOpenRun ? SEGMENTS : SEGMENTS.filter((key) => key !== 'remaining');
 
   const counts = useMemo(() => {
     const base: Record<Segment, number> = {
@@ -161,17 +178,27 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
     async (assetId: string | null, action: () => Promise<unknown>) => {
       setBusyAssetId(assetId);
       setActionError(null);
-      const outcome = auditOutcome<unknown>(await action());
-      setBusyAssetId(null);
-      if (!outcome.ok) {
-        setActionError(auditErrorText(t, outcome));
+      // A site walk runs on whatever connectivity the building has: a dropped
+      // request, a database error or a server-action transport failure *throws*
+      // rather than answering, so it is caught here. Without this the promise
+      // rejects unhandled, the row stays disabled and nothing is said.
+      try {
+        const outcome = auditOutcome<unknown>(await action());
+        if (!outcome.ok) {
+          setActionError(auditErrorText(t, outcome));
+          return false;
+        }
+        // Every write returns the whole audit, but the key is mutated rather
+        // than written from the response so a mark made elsewhere in the
+        // meantime is picked up in the same round trip.
+        await mutate();
+        return true;
+      } catch {
+        setActionError(auditGenericErrorText(t));
         return false;
+      } finally {
+        setBusyAssetId(null);
       }
-      // Every write returns the whole audit, but the key is mutated rather than
-      // written from the response so a mark made elsewhere in the meantime is
-      // picked up in the same round trip.
-      await mutate();
-      return true;
     },
     [mutate, t],
   );
@@ -524,10 +551,10 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
         idPrefix={`${id}-segments`}
         value={segment}
         onTabChange={(value) => {
-          setSegment(value as Segment);
+          setSegmentChoice(value as Segment);
           setItemsPage(1);
         }}
-        tabs={SEGMENTS.map((key) => ({
+        tabs={segments.map((key) => ({
           id: key,
           label: (
             <span className="inline-flex items-center gap-1.5">
@@ -618,9 +645,14 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
               disabled={closing}
               onClick={async () => {
                 setClosing(true);
-                const ok = await runAction(null, () => completeAssetAudit(auditId));
-                setClosing(false);
-                if (ok) setConfirmComplete(false);
+                try {
+                  const ok = await runAction(null, () => completeAssetAudit(auditId));
+                  if (ok) setConfirmComplete(false);
+                } finally {
+                  // The confirm button must never latch: a failure has to leave
+                  // the run closable again.
+                  setClosing(false);
+                }
               }}
             >
               {t('assetAudits.detail.complete', { defaultValue: 'Complete audit' })}
@@ -651,9 +683,12 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
               disabled={closing}
               onClick={async () => {
                 setClosing(true);
-                const ok = await runAction(null, () => cancelAssetAudit(auditId));
-                setClosing(false);
-                if (ok) setConfirmCancel(false);
+                try {
+                  const ok = await runAction(null, () => cancelAssetAudit(auditId));
+                  if (ok) setConfirmCancel(false);
+                } finally {
+                  setClosing(false);
+                }
               }}
             >
               {t('assetAudits.detail.cancelAudit', { defaultValue: 'Cancel audit' })}

@@ -59,6 +59,15 @@ function auditError(outcome: { message: string; messageKey?: string }): Error {
 }
 
 /**
+ * Localised text for a failure that carries no wording of its own: a thrown
+ * action (a dropped connection mid-walk, a database error, a server-action
+ * transport failure) never speaks to the user, so it borrows this.
+ */
+export function auditGenericErrorText(t: AuditTranslate): string {
+  return t(AUDIT_GENERIC_ERROR_KEY, { defaultValue: AUDIT_GENERIC_ERROR_TEXT });
+}
+
+/**
  * User-facing text for a failed outcome or a thrown fetch error: a server
  * refusal keeps the server's own wording, anything unusable renders the
  * translated generic message.
@@ -68,7 +77,7 @@ export function auditErrorText(t: AuditTranslate, source: unknown): string {
   const e = (source ?? undefined) as AuditErrorLike | undefined;
   if (e?.messageKey) return t(e.messageKey, { defaultValue: e.message ?? AUDIT_GENERIC_ERROR_TEXT });
   if (typeof e?.message === 'string' && e.message.trim()) return e.message;
-  return t(AUDIT_GENERIC_ERROR_KEY, { defaultValue: AUDIT_GENERIC_ERROR_TEXT });
+  return auditGenericErrorText(t);
 }
 
 export const AUDIT_LIST_KEY = 'asset-audits';

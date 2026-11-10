@@ -162,7 +162,7 @@ vi.mock('@alga-psa/ui/components/bento', () => ({
 const { computeColumnFit, getColumnId, getColumnLayout } = await import(
   '@alga-psa/ui/components/dataTableColumnFit'
 );
-const { AssetAuditDetail } = await import('./AssetAuditDetail');
+const { AssetAuditDetail, effectiveAuditSegment } = await import('./AssetAuditDetail');
 
 const item = (overrides: Record<string, unknown> = {}) => ({
   asset_id: 'as-1',
@@ -575,5 +575,111 @@ describe('AssetAuditDetail', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Audit not found');
     expect(document.getElementById('asset-audit-retry-button')).not.toBeNull();
+  });
+
+  // Completing a run turns every unmarked `expected` item into `missing`, so a
+  // finished audit has nothing "remaining": opening on that segment showed the
+  // per-asset results as "No assets in this view".
+  it('opens a finished run on every item instead of an empty Remaining view', async () => {
+    h.getAssetAudit.mockResolvedValue({
+      success: true,
+      data: auditPayload({
+        status: 'completed',
+        completed_at: '2026-03-02T13:00:00.000Z',
+        items: [
+          item({ asset_id: 'as-2', asset_name: 'Back office laptop', result: 'present', method: 'manual' }),
+          item({ asset_id: 'as-3', asset_name: 'Store tablet', result: 'missing' }),
+          item({ asset_id: 'as-4', asset_name: 'Stray printer', result: 'unexpected', method: 'manual' }),
+        ],
+      }),
+    });
+    renderDetail();
+
+    await waitFor(() => expect(document.getElementById('asset-audit-items-table-row-as-3')).not.toBeNull());
+    expect(document.getElementById('asset-audit-items-table-row-as-2')).not.toBeNull();
+    expect(document.getElementById('asset-audit-items-table-row-as-4')).not.toBeNull();
+    expect(document.getElementById('asset-audit-items-empty')).toBeNull();
+    // A closed run is never asked what is left to walk.
+    expect(document.getElementById('asset-audit-segments-remaining')).toBeNull();
+  });
+
+  // Cancelling leaves the unwalked items `expected`, so an abandoned run has to
+  // show what was marked next to what never was — not only its to-do list.
+  it('opens a cancelled run on every item too', async () => {
+    h.getAssetAudit.mockResolvedValue({
+      success: true,
+      data: auditPayload({
+        status: 'cancelled',
+        items: [
+          item({ asset_id: 'as-7', asset_name: 'Spare dock' }),
+          item({ asset_id: 'as-8', asset_name: 'Till PC', result: 'present', method: 'manual' }),
+        ],
+      }),
+    });
+    renderDetail();
+
+    await waitFor(() => expect(document.getElementById('asset-audit-items-table-row-as-8')).not.toBeNull());
+    expect(document.getElementById('asset-audit-items-table-row-as-7')).not.toBeNull();
+    expect(document.getElementById('asset-audit-segments-remaining')).toBeNull();
+  });
+
+  it('says something went wrong when a mark throws, and frees the row again', async () => {
+    h.markAssetAuditItem.mockRejectedValue(new Error('Connection terminated unexpectedly'));
+    renderDetail();
+    await waitFor(() => expect(document.getElementById('asset-audit-mark-present-button-as-1')).not.toBeNull());
+
+    fireEvent.click(document.getElementById('asset-audit-mark-present-button-as-1')!);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('An error occurred. Please try again later.');
+    // The database's own wording is never put in front of the tech.
+    expect(screen.queryByText(/Connection terminated/)).toBeNull();
+    // The row is usable again — a flaky building is the normal case here.
+    await waitFor(() =>
+      expect(document.getElementById('asset-audit-mark-present-button-as-1')).not.toBeDisabled(),
+    );
+  });
+
+  it('keeps the Complete confirmation usable when the write throws', async () => {
+    h.completeAssetAudit.mockRejectedValue(new Error('Connection terminated unexpectedly'));
+    renderDetail();
+    await waitFor(() => expect(document.getElementById('asset-audit-complete-button')).not.toBeNull());
+
+    fireEvent.click(document.getElementById('asset-audit-complete-button')!);
+    fireEvent.click(document.getElementById('asset-audit-complete-confirm-button')!);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('An error occurred. Please try again later.');
+    await waitFor(() =>
+      expect(document.getElementById('asset-audit-complete-confirm-button')).not.toBeDisabled(),
+    );
+  });
+
+  it('keeps the Cancel confirmation usable when the write throws', async () => {
+    h.cancelAssetAudit.mockRejectedValue(new Error('Connection terminated unexpectedly'));
+    renderDetail();
+    await waitFor(() => expect(document.getElementById('asset-audit-cancel-button')).not.toBeNull());
+
+    fireEvent.click(document.getElementById('asset-audit-cancel-button')!);
+    fireEvent.click(document.getElementById('asset-audit-cancel-confirm-button')!);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('An error occurred. Please try again later.');
+    await waitFor(() =>
+      expect(document.getElementById('asset-audit-cancel-confirm-button')).not.toBeDisabled(),
+    );
+  });
+});
+
+describe('effectiveAuditSegment', () => {
+  it('starts an open run on its to-do list and a closed one on every item', () => {
+    expect(effectiveAuditSegment(null, true)).toBe('remaining');
+    expect(effectiveAuditSegment(null, false)).toBe('all');
+  });
+
+  it('keeps the segment the user picked', () => {
+    expect(effectiveAuditSegment('present', true)).toBe('present');
+    expect(effectiveAuditSegment('missing', false)).toBe('missing');
+  });
+
+  it('drops a Remaining choice once the run is closed', () => {
+    expect(effectiveAuditSegment('remaining', false)).toBe('all');
   });
 });
