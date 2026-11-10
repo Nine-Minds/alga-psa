@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import React, { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { AssetSpecSelect, BuiltinAssetSpecFields } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
-import { type AssetSpecValues } from '@alga-psa/core/builtinAssetSpecs';
+import { cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { AssetSpecSelect, BuiltinAssetSpecFields, useBuiltinAssetTypeOptions } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
+import { BUILTIN_ASSET_SPEC_FIELDS, type AssetSpecValues } from '@alga-psa/core/builtinAssetSpecs';
 import { buildDefaultAssetExtension } from '@alga-psa/inventory/lib/assetDefaultMetadata';
 import type CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
@@ -23,6 +23,15 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 afterEach(cleanup);
+
+describe('shared built-in asset type options', () => {
+  it('offers every built-in with spec fields plus unknown, keyed like the asset form labels', () => {
+    const { result } = renderHook(() => useBuiltinAssetTypeOptions());
+    expect(result.current.map((option) => option.value)).toEqual(['', ...Object.keys(BUILTIN_ASSET_SPEC_FIELDS)]);
+    expect(result.current.find((option) => option.value === 'network_device')?.label).toBe('Network Device');
+    expect(result.current[0].label).toBe('Unknown');
+  });
+});
 
 function ProductSpecs({ assetType }: { assetType: string }) {
   const [values, setValues] = useState<AssetSpecValues>({});
