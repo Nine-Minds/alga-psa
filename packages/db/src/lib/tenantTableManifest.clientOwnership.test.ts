@@ -105,6 +105,12 @@ describe('client ownership declarations are structurally sound', () => {
 });
 
 describe('client ownership in the manifest', () => {
+  it('includes user portfolios in client ownership and client merge discovery', () => {
+    expect(tenantClientOwnership('user_client_portfolios')).toEqual({ by: 'column', column: 'client_id' });
+    expect(tenantClientColumns()).toContainEqual({ table: 'user_client_portfolios', column: 'client_id', owned: true });
+    expect(tenantClientKeyedTables()).toContain('user_client_portfolios');
+  });
+
   it('names the client columns that are not client_id', () => {
     expect(tenantClientOwnership('contracts')).toEqual({ by: 'column', column: 'owner_client_id' });
     expect(tenantClientOwnership('purchase_orders')).toEqual({ by: 'column', column: 'drop_ship_client_id' });
