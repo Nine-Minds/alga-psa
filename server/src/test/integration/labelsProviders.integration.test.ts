@@ -57,11 +57,19 @@ describe('C2 label integration (real providers, real storage)', () => {
   });
 
   describe('T-asset-link', () => {
-    const parts = async (user: LabelWorld['tech'], ticketIds: string[], chosen: Record<string, string> = {}) => {
+    const parts = async (
+      user: LabelWorld['tech'],
+      ticketIds: string[],
+      chosen: Record<string, string> = {},
+      includeWorksheetDetails = false,
+    ) => {
       const { getTicketLinkedAssetLabelParts } = await import('@alga-psa/assets/lib/ticketLinkedAssetLabels');
       // Keyed by ticket for readability: one subject per ticket, carrying that ticket's pick.
       const subjects = ticketIds.map((id) => ({ recordId: id, ...(chosen[id] ? { linkedAssetId: chosen[id] } : {}) }));
-      const list = await asRequest(world.tenant, () => getTicketLinkedAssetLabelParts(ctx(user), subjects));
+      const list = await asRequest(world.tenant, () => getTicketLinkedAssetLabelParts(
+        { ...ctx(user), includeWorksheetDetails },
+        subjects,
+      ));
       return Object.fromEntries(ticketIds.map((id, i) => [id, list[i]]));
     };
 
@@ -73,7 +81,7 @@ describe('C2 label integration (real providers, real storage)', () => {
         serialSuffix: '5678',
         custodyLocation: null,
         nextAction: null,
-        linkedAssetInfo: expect.objectContaining({ assetId: world.assets.a1 }),
+        linkedAssetInfo: null,
       });
       expect(r[world.tickets.a1]).toBeNull(); // no link at all
       expect(JSON.stringify(r)).not.toContain(world.serials.a1);
@@ -87,7 +95,21 @@ describe('C2 label integration (real providers, real storage)', () => {
         serialSuffix: null,
         custodyLocation: null,
         nextAction: null,
-        linkedAssetInfo: expect.objectContaining({ assetId: world.assets.a2 }),
+        linkedAssetInfo: null,
+      });
+    });
+
+    it('includes the full serial and asset details only when worksheet details are requested', async () => {
+      const ticketId = world.tickets.withOneAsset;
+      const tag = (await parts(world.tech, [ticketId]))[ticketId];
+      const worksheet = (await parts(world.tech, [ticketId], {}, true))[ticketId];
+
+      expect(tag).toMatchObject({ assetId: world.assets.a1, linkedAssetInfo: null });
+      expect(tag).not.toHaveProperty('assetSerialNumber');
+      expect(worksheet).toMatchObject({
+        assetId: world.assets.a1,
+        assetSerialNumber: world.serials.a1,
+        linkedAssetInfo: expect.objectContaining({ assetId: world.assets.a1 }),
       });
     });
 
