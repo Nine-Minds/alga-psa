@@ -2226,7 +2226,7 @@
       "statusesHint": "Om ingen status väljs omfattar inventeringen alla statusar.",
       "statusesLoading": "Läser in statusar…",
       "notes": "Anteckningar",
-      "notesPlaceholder": "Syftet med den här rundan (valfritt)",
+      "notesPlaceholder": "Syftet med den här inventeringen (valfritt)",
       "pickClient": "Välj en kund för att se vad som ingår.",
       "counting": "Räknar enheterna som ingår…",
       "countUnavailable": "Antalet enheter är inte tillgängligt just nu.",
