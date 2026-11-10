@@ -2178,7 +2178,7 @@
     }
   },
   "assetAudits": {
-    "title": "Audit delle sedi",
+    "title": "Audit di sede",
     "startAudit": "Avvia audit",
     "noLocation": "Nessuna sede",
     "loading": "Caricamento degli audit…",
@@ -2217,7 +2217,7 @@
       "all": "Tutti"
     },
     "start": {
-      "title": "Avvia audit della sede",
+      "title": "Avvia audit di sede",
       "client": "Cliente",
       "clientPlaceholder": "Seleziona un cliente",
       "location": "Sede",
@@ -2276,8 +2276,8 @@
       "markPresent": "Contrassegna come presente",
       "undoMark": "Annulla contrassegno",
       "createTicket": "Crea ticket",
-      "ticketTitle": "Mancante durante l’audit della sede: {{asset}}",
-      "ticketDescription": "Non trovato durante l’audit della sede avviato il {{date}}."
+      "ticketTitle": "Mancante durante l’audit di sede: {{asset}}",
+      "ticketDescription": "Non trovato durante l’audit di sede avviato il {{date}}."
     }
   }
 }
