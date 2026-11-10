@@ -1630,7 +1630,7 @@ async function persistFixedInvoiceCharges(
           })
           .update({ is_billed: true, billed_invoice_id: invoiceId, billed_at: now, updated_at: now });
         if (count !== 1) {
-          throw new Error('A ticket fixed-fee service changed or was already billed. Refresh and try again.');
+          throw new ManualInvoiceError('SOURCE_CHANGED', 'A ticket fixed-fee service changed or was already billed. Refresh and try again.');
         }
       }
       fixedSubtotal += netAmount;
