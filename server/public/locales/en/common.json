@@ -927,6 +927,7 @@
       "pending": "Pending",
       "error": "Failed to upload document",
       "fileError": "Failed to upload file",
+      "fileTooLarge": "This file is {{size}}. The current limit is {{limit}} per file.",
       "associatedEntityTypeLabel": "Associate With",
       "noAssociation": "No association",
       "selectAssociatedEntityError": "Select an associated entity before uploading.",
