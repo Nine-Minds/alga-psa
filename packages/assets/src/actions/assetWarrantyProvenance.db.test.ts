@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5 T023 (real DB): asset provenance for an asset with no service and no stock unit still returns its RMA
  * history; rma_number is reported separately from the vendor rma_reference.
@@ -51,7 +52,7 @@ afterAll(async () => { await knex?.destroy(); });
 describe('T023 getAssetInventoryProvenance for an asset with no service or stock unit', () => {
   it('returns RMA history newest first with rma_number (not the vendor reference); all-null for other assets', async () => {
     const assetId = randomUUID();
-    await knex('assets').insert({
+    await insertTestAssets(knex, {
       tenant: holder.tenant, asset_id: assetId, asset_type: 'unknown', client_id: CLIENT, asset_tag: `AP-${assetId.slice(0, 8)}`,
       name: 'Dell WD19 dock', serial_number: 'S1', status: 'active', location: '',
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -74,7 +75,7 @@ describe('T023 getAssetInventoryProvenance for an asset with no service or stock
 
     // an asset with no claims: empty history; a missing asset: all-null
     const bare = randomUUID();
-    await knex('assets').insert({
+    await insertTestAssets(knex, {
       tenant: holder.tenant, asset_id: bare, asset_type: 'unknown', client_id: CLIENT, asset_tag: `AP-${bare.slice(0, 8)}`,
       name: 'Bare', serial_number: 'S2', status: 'active', location: '',
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),

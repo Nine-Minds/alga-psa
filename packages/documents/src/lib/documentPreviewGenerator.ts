@@ -21,6 +21,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { deferFileUploadEvents } from '@alga-psa/storage/fileUploadTransaction';
 import { createTenantKnex, getTenantContext, tenantDb } from '@alga-psa/db';
 import type { IDocument } from '@alga-psa/types';
+import { validateDocumentPreviewProvenance } from './documentPreviewProvenance';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
@@ -297,49 +298,39 @@ async function generateImagePreviews(
       // Continue to try preview generation even if thumbnail fails
     }
 
-    // Generate preview (800x600 inside fit) - only if image is larger
+    // Generate preview (800x600 inside fit, never enlarged). Always a re-encoded
+    // JPEG derivative: a preview must never alias the uploaded original, which
+    // may be active content (e.g. SVG). On failure the preview stays null.
     try {
-      const shouldGeneratePreview =
-        (metadata.width && metadata.width > PREVIEW_SIZES.preview.width) ||
-        (metadata.height && metadata.height > PREVIEW_SIZES.preview.height);
+      const previewBuffer = await sharp(fileBuffer)
+        .resize(PREVIEW_SIZES.preview.width, PREVIEW_SIZES.preview.height, {
+          fit: PREVIEW_SIZES.preview.fit,
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: QUALITY_SETTINGS.preview })
+        .toBuffer();
 
-      if (shouldGeneratePreview) {
-        const previewBuffer = await sharp(fileBuffer)
-          .resize(PREVIEW_SIZES.preview.width, PREVIEW_SIZES.preview.height, {
-            fit: PREVIEW_SIZES.preview.fit,
-            withoutEnlargement: true,
-          })
-          .jpeg({ quality: QUALITY_SETTINGS.preview })
-          .toBuffer();
+      const previewFileName = `${document.document_id}_preview.jpg`;
+      const previewUploadResult = await StorageService.uploadFile(
+        tenant,
+        previewBuffer,
+        previewFileName,
+        {
+          mime_type: 'image/jpeg',
+          uploaded_by_id: document.created_by,
+          origin: 'system-artifact',
+          metadata: {
+            context: 'document_preview',
+            source_document_id: document.document_id,
+          },
+        }
+      );
 
-        // Upload preview to storage
-        const previewFileName = `${document.document_id}_preview.jpg`;
-        const previewUploadResult = await StorageService.uploadFile(
-          tenant,
-          previewBuffer,
-          previewFileName,
-          {
-            mime_type: 'image/jpeg',
-            uploaded_by_id: document.created_by,
-            origin: 'system-artifact',
-            metadata: {
-              context: 'document_preview',
-              source_document_id: document.document_id,
-            },
-          }
-        );
-
-        previewFileId = previewUploadResult.file_id;
-        console.log(`[generateImagePreviews] Preview generated: ${previewFileId}`);
-      } else {
-        // Image is small - use original file for preview
-        previewFileId = document.file_id || null;
-        console.log(`[generateImagePreviews] Image is small, using original as preview`);
-      }
+      previewFileId = previewUploadResult.file_id;
+      console.log(`[generateImagePreviews] Preview generated: ${previewFileId}`);
     } catch (previewError) {
       console.error('[generateImagePreviews] Preview generation failed:', previewError);
-      // Fall back to original file for preview
-      previewFileId = document.file_id || null;
+      previewFileId = null;
     }
 
     return {
@@ -740,6 +731,7 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
 
         // Generate previews
         const previewResult = await generateDocumentPreviews(doc, downloadResult.buffer);
+        await validateDocumentPreviewProvenance(knex, tenant, doc.document_id, previewResult);
 
         // Update document with preview file IDs
         await tenantDb(knex, tenant).table('documents')
@@ -808,6 +800,7 @@ export async function regenerateDocumentPreview(documentId: string): Promise<boo
 
     // Generate previews
     const previewResult = await generateDocumentPreviews(document, downloadResult.buffer);
+    await validateDocumentPreviewProvenance(knex, tenant, documentId, previewResult);
 
     // Update document with preview file IDs
     await tenantDb(knex, tenant).table('documents')

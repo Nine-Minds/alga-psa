@@ -566,6 +566,17 @@
       "projectStatus": "Stato iniziale",
       "projectTemplate": "Crea un progetto di onboarding (facoltativo)",
       "title": "Segna come vinta"
+    },
+    "declare": {
+      "title": "Sposta a {{stage}}",
+      "sourceLabel": "Fonte a supporto",
+      "noSource": "Nessuna fonte",
+      "sourceHelp": "Facoltativo. Cita un'interazione o un documento di questa trattativa. Se non è elencato, allega prima il documento alla trattativa.",
+      "submit": "Dichiara",
+      "source": "Fonte",
+      "sourceRemoved": "Fonte rimossa",
+      "interactionFallback": "Interazione",
+      "documentFallback": "Documento"
     }
   }
 }

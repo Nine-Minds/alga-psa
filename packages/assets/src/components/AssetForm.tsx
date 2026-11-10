@@ -6,7 +6,6 @@ import Link from 'next/link';
 import type {
   Asset,
   CreateAssetRequest,
-  IClient,
   IClientLocation,
   IContact,
   MobileDeviceAsset,
@@ -21,11 +20,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getAsset, updateAsset } from '../actions/assetActions';
+import { createAsset, getAsset, updateAsset } from '../actions/assetActions';
+import { previewAssetNumber } from '../actions/assetNumberingActions';
 import {
   assetActionErrorFrom,
   assetActionErrorMessage,
@@ -42,7 +43,7 @@ import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/as
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import { getAllClientsForAssets, getClientBillingProfilesForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
+import { getClientBillingProfilesForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
@@ -52,7 +53,8 @@ import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetFormProps {
-  assetId: string;
+  assetId?: string;
+  createMode?: boolean;
   /**
    * Called instead of navigating after a successful save. The /edit route
    * leaves this unset and keeps navigating to the detail page; the edit drawer
@@ -81,14 +83,24 @@ type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' |
   printer?: Omit<PrinterAsset, 'tenant' | 'asset_id'>;
 };
 
-type ClientOptionSummary = { id: string; name: string };
+function emptyBuiltinTypeFields(type: string): Partial<AssetFormData> {
+  switch (type) {
+    case 'workstation': return { workstation: { os_type: '', os_version: '', cpu_model: '', cpu_cores: null, ram_gb: null, storage_type: '', storage_capacity_gb: null, gpu_model: '', installed_software: [] } as any };
+    case 'network_device': return { network_device: { device_type: 'switch', management_ip: '', port_count: null, firmware_version: '', supports_poe: false, power_draw_watts: null, vlan_config: {}, port_config: {} } as any };
+    case 'server': return { server: { os_type: '', os_version: '', cpu_model: '', cpu_cores: null, ram_gb: null, storage_config: [], raid_config: '', is_virtual: false, hypervisor: '', network_interfaces: [], primary_ip: '', installed_services: [] } as any };
+    case 'mobile_device': return { mobile_device: { os_type: 'ios', os_version: '', model: '', imei: '', phone_number: '', carrier: '', is_supervised: false, installed_apps: [] } as any };
+    case 'printer': return { printer: { model: '', ip_address: '', is_network_printer: false, supports_color: false, supports_duplex: false, max_paper_size: null, supported_paper_types: [], monthly_duty_cycle: null, supply_levels: {} } as any };
+    default: return {};
+  }
+}
+
 
 
 const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_point', 'load_balancer'] as const;
 const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
 const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
 
-export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onSavingChange }: AssetFormProps) {
+export default function AssetForm({ assetId, createMode = false, onSaved, onCancel, hideActions, onSavingChange }: AssetFormProps) {
   const { t } = useTranslation('msp/assets');
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,9 +109,8 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [clients, setClients] = useState<ClientOptionSummary[]>([]);
-  const [clientsLoading, setClientsLoading] = useState(true);
-  const [clientsError, setClientsError] = useState<string | null>(null);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [clientLocations, setClientLocations] = useState<IClientLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
   const [locationsError, setLocationsError] = useState<string | null>(null);
@@ -117,6 +128,10 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
   const [billingProfiles, setBillingProfiles] = useState<Array<{ billing_profile_id: string; name: string }>>([]);
   // Purchase cost is stored in minor units but typed as a decimal amount.
   const [purchaseCostInput, setPurchaseCostInput] = useState('');
+  const [automaticTag, setAutomaticTag] = useState(createMode);
+  const [tagPreview, setTagPreview] = useState<string | null>(null);
+  const [addAnother, setAddAnother] = useState(false);
+  const [previewRevision, setPreviewRevision] = useState(0);
   const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
@@ -224,9 +239,15 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
   ]), [t]);
 
   useEffect(() => {
+    if (createMode) {
+      setAsset({ asset_id: '', asset_type: 'unknown', status: 'active', ownership: 'client' } as Asset);
+      setFormData((current) => ({ ...current, asset_type: 'unknown', status: 'active', ownership: 'client' }));
+      setLoading(false);
+      return;
+    }
     const loadAsset = async () => {
       try {
-        const data = unwrapAssetActionResult(await getAsset(assetId));
+        const data = unwrapAssetActionResult(await getAsset(assetId!));
         if (!data) {
           setLoadError(t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' }));
           return;
@@ -334,43 +355,16 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     };
   
     void loadAsset();
-  }, [assetId, t]);
+  }, [assetId, createMode, t]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadClients = async () => {
-      try {
-        setClientsLoading(true);
-        setClientsError(null);
-        const clientList = await getAllClientsForAssets(false);
-        if (!isMounted) return;
-        setClients(
-          clientList.map((client: IClient) => ({
-            id: client.client_id,
-            name: client.client_name,
-          }))
-        );
-      } catch (err) {
-        console.error('Error loading clients:', err);
-        if (isMounted) {
-          setClientsError(t('assetForm.errors.clientsLoadFailed', {
-            defaultValue: 'Unable to load clients'
-          }));
-        }
-      } finally {
-        if (isMounted) {
-          setClientsLoading(false);
-        }
-      }
-    };
-
-    void loadClients();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [t]);
+    if (!createMode || !automaticTag || !formData.client_id) { setTagPreview(null); return; }
+    let active = true;
+    void previewAssetNumber(formData.client_id).then((preview) => {
+      if (active) setTagPreview(preview.tag);
+    }).catch(() => { if (active) setTagPreview(null); });
+    return () => { active = false; };
+  }, [createMode, automaticTag, formData.client_id, previewRevision]);
 
   useEffect(() => {
     let isMounted = true;
@@ -545,14 +539,6 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     if (asset?.printer) return <PrinterIcon className={iconClass} />;
     return null;
   };
-
-  const clientOptions = useMemo(() => (
-    clients.map(client => ({ value: client.id, label: client.name }))
-  ), [clients]);
-
-  const selectedClient = useMemo(() => (
-    clients.find(client => client.id === formData.client_id) || null
-  ), [clients, formData.client_id]);
 
   const locationOptions = useMemo(() => {
     const options = clientLocations.map((location) => ({
@@ -1268,7 +1254,9 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
 
       // updateAsset RETURNS expected failures (validation, permission, not found)
       // rather than throwing: Next.js masks thrown messages in production builds.
-      const result = await updateAsset(assetId, cleanedData);
+      const result = createMode
+        ? await createAsset({ ...cleanedData, asset_tag: automaticTag ? '' : cleanedData.asset_tag } as CreateAssetRequest)
+        : await updateAsset(assetId!, cleanedData);
 
       if (isAssetValidationError(result)) {
         const nextFieldErrors: Record<string, string> = {};
@@ -1293,10 +1281,28 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
         return;
       }
 
+      if (createMode) {
+        const created = result as Asset;
+        toast.success(t('assetForm.create.success', { defaultValue: 'Asset {{tag}} created', tag: created.asset_tag }));
+        if (addAnother) {
+          setFormData((current) => ({ ...current, name: '', asset_tag: '', serial_number: '', manufacturer: '', model: '' }));
+          setCustomAttributes({});
+          setPurchaseCostInput('');
+          setAutomaticTag(true);
+          setPreviewRevision((revision) => revision + 1);
+          setSaveError(null);
+        } else {
+          onSaved?.();
+          router.push(`/msp/assets/${created.asset_id}`);
+          router.refresh();
+        }
+        return;
+      }
+
       // The detail page renders from the client-side asset cache, so
       // router.refresh() alone leaves its tiles on the pre-save values until a
       // reload — saving a new status kept showing the old one.
-      await mutateCache(matchAssetCacheKeys([assetId]));
+      await mutateCache(matchAssetCacheKeys([assetId!]));
 
       if (onSaved) {
         onSaved();
@@ -1341,7 +1347,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     <div id="asset-form-container" className="space-y-4">
       <div id="asset-form-header" className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">
-          {t('assetForm.heading', { defaultValue: 'Edit Asset' })}
+          {createMode ? t('fullIntake.title', { defaultValue: 'Add asset' }) : t('assetForm.heading', { defaultValue: 'Edit Asset' })}
         </h1>
       </div>
 
@@ -1374,24 +1380,24 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
                   <label htmlFor="asset-client-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                     {t('assetForm.fields.client', { defaultValue: 'Client' })}
                   </label>
-                  <CustomSelect
+                  <ClientPicker
                     id="asset-client-select"
-                    value={formData.client_id}
-                    onValueChange={handleClientChange}
-                    options={clientOptions}
-                    placeholder={clientsLoading
-                      ? t('assetForm.placeholders.loadingClients', { defaultValue: 'Loading clients…' })
-                      : t('assetForm.placeholders.selectClient', { defaultValue: 'Select client' })}
-                    disabled={clientsLoading || saving}
+                    selectedClientId={formData.client_id || null}
+                    onSelect={(id) => {
+                      // The picker can emit null (clear); an asset keeps its client.
+                      if (id) handleClientChange(id);
+                    }}
+                    filterState={clientFilterState}
+                    onFilterStateChange={setClientFilterState}
+                    clientTypeFilter={clientTypeFilter}
+                    onClientTypeFilterChange={setClientTypeFilter}
+                    placeholder={t('assetForm.placeholders.selectClient', { defaultValue: 'Select client' })}
+                    disabled={saving}
                     className="mt-1"
                   />
-                  {clientsError && (
-                    <p className="mt-2 text-sm text-red-600">{clientsError}</p>
-                  )}
-                  {selectedClient && (
+                  {formData.client_id && (
                     <div className="mt-2 text-sm text-[rgb(var(--color-text-600))] flex flex-wrap items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary-500" />
-                      <span>{selectedClient.name}</span>
                       <button
                         type="button"
                         onClick={() => void handleOpenClientDrawer()}
@@ -1539,14 +1545,18 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
                   <label htmlFor="asset_tag" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                     {t('assetForm.fields.assetTag', { defaultValue: 'Asset Tag' })}
                   </label>
-                  <Input
-                    id="asset_tag"
-                    name="asset_tag"
-                    value={formData.asset_tag}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1"
-                  />
+                  {createMode && <div className="mb-2"><Checkbox id="asset-auto-number" label={t('assetForm.create.autoTag', { defaultValue: 'Assign next automatic tag' })} checked={automaticTag} onChange={(event) => setAutomaticTag(event.target.checked)} /></div>}
+                  {createMode && automaticTag
+                    ? <p id="asset-number-preview" className="mb-2 text-sm text-[rgb(var(--color-text-600))]">{t('assetForm.create.preview', { defaultValue: 'Next tag preview: {{tag}} (preview does not reserve a number)', tag: tagPreview ?? t('assetForm.create.selectClient', { defaultValue: 'Select a client to preview' }) })}</p>
+                    : <Input
+                      id="asset_tag"
+                      name="asset_tag"
+                      value={formData.asset_tag}
+                      onChange={handleInputChange}
+                      required={!createMode || !automaticTag}
+                      className="mt-1"
+                    />}
+                  {renderFieldError('asset_tag')}
                 </div>
                 <div>
                   <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -1570,7 +1580,9 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
                     onValueChange={(value) => {
                       // D4: switching type keeps attributes values — fields
                       // not in the new schema simply stop rendering.
-                      setFormData(prev => ({ ...prev, asset_type: value }));
+                      const typeFields = createMode ? emptyBuiltinTypeFields(value) : {};
+                      setFormData(prev => ({ ...prev, asset_type: value, ...typeFields }));
+                      if (createMode) setAsset({ asset_id: '', asset_type: value, status: 'active', ownership: 'client', ...typeFields } as Asset);
                       setAttributeErrors({});
                     }}
                     options={assetTypeOptions}
@@ -1808,6 +1820,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
 
         {!hideActions && (
           <div id="form-actions" className="flex justify-end gap-2">
+            {createMode && <Checkbox id="asset-add-another" label={t('assetForm.create.addAnother', { defaultValue: 'Save and add another' })} checked={addAnother} onChange={(event) => setAddAnother(event.target.checked)} />}
             <Button
               id="cancel-button"
               type="button"
@@ -1824,7 +1837,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
             >
               {saving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
+                : (createMode ? t('assetForm.create.submit', { defaultValue: 'Create asset' }) : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' }))}
             </Button>
           </div>
         )}

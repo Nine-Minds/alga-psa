@@ -46,6 +46,7 @@ export const STARTER_AUTHORIZATION_BUNDLES: StarterBundleDefinition[] = [
     rules: [
       { resourceType: 'asset', action: 'read', templateKey: 'selected_clients' },
       { resourceType: 'asset', action: 'update', templateKey: 'same_team' },
+      { resourceType: 'asset', action: 'delete', templateKey: 'same_team' },
     ],
   },
   {

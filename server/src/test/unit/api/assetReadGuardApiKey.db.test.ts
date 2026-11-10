@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Route-level regression for the asset notes/software GETs on the x-api-key path
  * (C3 / alga-2026-0002683).
@@ -66,7 +67,7 @@ let noReadKey: string;
 
 async function insertAsset(trx: Knex, t: string, clientId: string): Promise<string> {
   const assetId = randomUUID();
-  await trx('assets').insert({
+  await insertTestAssets(trx, {
     tenant: t, asset_id: assetId, client_id: clientId, asset_type: 'workstation',
     asset_tag: `tag-${assetId}`, name: 'Scan target', status: 'active',
   });

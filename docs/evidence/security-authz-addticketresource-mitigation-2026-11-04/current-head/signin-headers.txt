@@ -1,0 +1,35 @@
+HTTP/1.1 307 Temporary Redirect
+access-control-allow-credentials: true
+access-control-allow-origin: *
+set-cookie: authjs.csrf-token=5783a46fdbb0c6e24504a576be86ed75ff63ac6c87bb2bd9405edf6ec2ec44a9%7C3f98b13b990a45615e20daad6b03447f0aade3a6f4c08883a72fe56006662058; Path=/; HttpOnly; SameSite=Lax
+set-cookie: authjs.callback-url=http%3A%2F%2Ffeature-security-authz-in-addticketresource.localhost%3A3751; Path=/; HttpOnly; SameSite=Lax
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+x-locale: en
+x-pathname: /auth/signin
+Link: </_next/static/media/InterVariable-s.p.2c0y96ae70xfx.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/InterVariable_Italic-s.p.1x53smi1ekt97.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/JetBrainsMono-s.p.2rmhnsrc80fag.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/chunks/_0bf3zg6ywaff6._.css>; rel=preload; as="style"
+location: /auth/msp/signin
+Cache-Control: no-store
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+Date: Wed, 04 Nov 2026 05:57:37 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
+HTTP/1.1 200 OK
+access-control-allow-credentials: true
+access-control-allow-origin: *
+set-cookie: authjs.csrf-token=562134a26961ac5474a873a892df1a229446367380d63a507d3a066488ff2512%7C7a074b3644293bf4f8c865d4d1c3cb6e54afd0fd99368d2403700c642c88ede1; Path=/; HttpOnly; SameSite=Lax
+set-cookie: authjs.callback-url=http%3A%2F%2Ffeature-security-authz-in-addticketresource.localhost%3A3751; Path=/; HttpOnly; SameSite=Lax
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+x-locale: en
+x-pathname: /auth/msp/signin
+Link: </_next/static/media/InterVariable-s.p.2c0y96ae70xfx.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/InterVariable_Italic-s.p.1x53smi1ekt97.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/JetBrainsMono-s.p.2rmhnsrc80fag.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/chunks/_0bf3zg6ywaff6._.css>; rel=preload; as="style"
+Cache-Control: no-store
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+Date: Wed, 04 Nov 2026 05:57:37 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+

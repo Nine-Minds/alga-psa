@@ -20,4 +20,13 @@ describe.each(helpers)('%s Microsoft calendar OAuth scopes', (_name, helper) => 
     expect(scopes).toContain('https://graph.microsoft.com/MailboxSettings.ReadWrite');
     expect(scopes).toContain('offline_access');
   });
+
+  it('requests no mail permission: no Calendar path reads mail', async () => {
+    const authUrl = await helper.generateMicrosoftCalendarAuthUrl({
+      clientId: 'client', redirectUri: 'https://example.test/callback', state: 'state',
+    });
+    const scopes = new URL(authUrl).searchParams.get('scope')?.split(' ') ?? [];
+    expect(scopes.filter((scope) => /(^|\/)Mail\./i.test(scope))).toEqual([]);
+    expect(scopes).not.toContain('https://graph.microsoft.com/Mail.Read');
+  });
 });

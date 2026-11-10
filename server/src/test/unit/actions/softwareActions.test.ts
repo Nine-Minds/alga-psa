@@ -49,8 +49,14 @@ vi.mock('@alga-psa/auth', () => ({
   },
 }));
 
+vi.mock('@alga-psa/assets/lib/assetReadAuthorization', () => ({
+  createAssetReadContext: vi.fn().mockResolvedValue({}),
+  isAssetReadAllowed: vi.fn().mockResolvedValue(true),
+}));
+
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser, hasPermission } from '@alga-psa/auth';
+import { isAssetReadAllowed } from '@alga-psa/assets/lib/assetReadAuthorization';
 import {
   getAssetSoftware,
   getAssetSoftwareSummary,
@@ -75,10 +81,26 @@ function createMockQueryBuilder(returnData: unknown): Partial<Knex.QueryBuilder>
   return mockBuilder;
 }
 
+// Authorization lookups and inventory queries return different row shapes.
+// Keeping them separate prevents an empty authorization result from making an
+// inventory test pass without ever exercising the inventory query.
+function createInventoryKnex(inventory: Partial<Knex.QueryBuilder>) {
+  const tables = {
+    assets: createMockQueryBuilder({ asset_id: TEST_ASSET_ID, client_id: 'client-123' }),
+    clients: createMockQueryBuilder({ client_id: 'client-123' }),
+    v_asset_software_details: inventory,
+  };
+  return vi.fn((table: string) => {
+    if (!(table in tables)) throw new Error(`Unexpected table: ${table}`);
+    return tables[table as keyof typeof tables];
+  });
+}
+
 describe('Software Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(hasPermission).mockResolvedValue(true);
+    vi.mocked(isAssetReadAllowed).mockResolvedValue(true);
     (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       user_id: '00000000-0000-0000-0000-000000000001',
       tenant: TEST_TENANT,
@@ -129,8 +151,8 @@ describe('Software Actions', () => {
         },
       ];
 
-      const mockQueryBuilder = createMockQueryBuilder({ count: 1 });
-      const mockKnex = vi.fn().mockReturnValue(mockQueryBuilder);
+      const mockQueryBuilder = createMockQueryBuilder({ count: 51 });
+      const mockKnex = createInventoryKnex(mockQueryBuilder);
 
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
         knex: mockKnex,
@@ -144,20 +166,18 @@ describe('Software Actions', () => {
 
       const result = await getAssetSoftware({
         asset_id: TEST_ASSET_ID,
-        page: 1,
+        page: 2,
         limit: 50,
       });
 
-      expect(result).toHaveProperty('software');
-      expect(result).toHaveProperty('total');
-      expect(result).toHaveProperty('page', 1);
-      expect(result).toHaveProperty('limit', 50);
-      expect(mockKnex).toHaveBeenCalledWith('v_asset_software_details');
+      expect(result).toEqual({ software: mockSoftware, total: 51, page: 2, limit: 50 });
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
+      expect(mockQueryBuilder.offset).toHaveBeenCalledWith(50);
     });
 
     it('should apply filters correctly', async () => {
       const mockQueryBuilder = createMockQueryBuilder({ count: 0 });
-      const mockKnex = vi.fn().mockReturnValue(mockQueryBuilder);
+      const mockKnex = createInventoryKnex(mockQueryBuilder);
 
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
         knex: mockKnex,
@@ -168,7 +188,7 @@ describe('Software Actions', () => {
         (callback) => callback([])
       );
 
-      await getAssetSoftware({
+      const result = await getAssetSoftware({
         asset_id: TEST_ASSET_ID,
         category: 'Security',
         software_type: 'application',
@@ -176,9 +196,32 @@ describe('Software Actions', () => {
         include_uninstalled: true,
       });
 
-      // Verify where was called multiple times for filters
-      expect(mockQueryBuilder.where).toHaveBeenCalled();
+      expect(result).toEqual({ software: [], total: 0, page: 1, limit: 50 });
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('category', 'Security');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('software_type', 'application');
+      expect(mockQueryBuilder.where).not.toHaveBeenCalledWith('is_current', true);
     });
+  });
+
+  it('returns empty inventory and summary when per-asset read access is denied', async () => {
+    vi.mocked(isAssetReadAllowed).mockResolvedValue(false);
+    // Populated inventory would expose this fixture if the read guard regressed.
+    const inventory = createMockQueryBuilder({ count: 25 });
+    const mockKnex = createInventoryKnex(inventory);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: mockKnex } as any);
+
+    expect(await getAssetSoftware({ asset_id: TEST_ASSET_ID })).toEqual({
+      software: [], total: 0, page: 1, limit: 50,
+    });
+    expect(await getAssetSoftwareSummary(TEST_ASSET_ID)).toEqual({
+      total_installed: 0,
+      by_category: {},
+      by_type: { application: 0, driver: 0, update: 0, system: 0 },
+      security_software_count: 0,
+      managed_software_count: 0,
+      recently_installed_count: 0,
+    });
+    expect(mockKnex).not.toHaveBeenCalledWith('v_asset_software_details');
   });
 
   describe('getAssetSoftwareSummary', () => {
@@ -192,12 +235,15 @@ describe('Software Actions', () => {
 
     it('should return summary statistics', async () => {
       const mockQueryBuilder = createMockQueryBuilder({ count: 25 });
-      // groupBy-terminated stat queries are awaited as arrays, while count
-      // queries terminate with .first() and return { count }.
+      // Grouped queries return arrays; scalar counts terminate with .first().
       (mockQueryBuilder.then as ReturnType<typeof vi.fn>).mockImplementation(
         (callback) => callback([])
+      ).mockImplementationOnce(
+        (callback) => callback([{ category: 'Security', count: '25' }])
+      ).mockImplementationOnce(
+        (callback) => callback([{ software_type: 'application', count: '25' }])
       );
-      const mockKnex = vi.fn().mockReturnValue(mockQueryBuilder);
+      const mockKnex = createInventoryKnex(mockQueryBuilder);
 
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
         knex: mockKnex,
@@ -206,12 +252,14 @@ describe('Software Actions', () => {
 
       const result = await getAssetSoftwareSummary(TEST_ASSET_ID);
 
-      expect(result).toHaveProperty('total_installed');
-      expect(result).toHaveProperty('by_category');
-      expect(result).toHaveProperty('by_type');
-      expect(result).toHaveProperty('security_software_count');
-      expect(result).toHaveProperty('managed_software_count');
-      expect(result).toHaveProperty('recently_installed_count');
+      expect(result).toEqual({
+        total_installed: 25,
+        by_category: { Security: 25 },
+        by_type: { application: 25, driver: 0, update: 0, system: 0 },
+        security_software_count: 25,
+        managed_software_count: 25,
+        recently_installed_count: 25,
+      });
     });
   });
 });

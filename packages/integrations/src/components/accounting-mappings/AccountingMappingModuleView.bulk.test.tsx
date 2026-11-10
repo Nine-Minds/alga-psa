@@ -430,6 +430,40 @@ describe('AccountingMappingModuleView bulk grid', () => {
       expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
     });
 
+    describe('QuickBooks Online (alga-2026-0002899)', () => {
+      const qboLoad = {
+        mappings: [{ id: 'm-1', alga_entity_id: 'svc-sales-1', external_entity_id: 'Q1', metadata: {} }],
+        algaEntities: [
+          { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+          { id: 'svc-sales-2', name: 'Sales', baseName: 'Sales' }
+        ],
+        externalEntities: [{ id: 'Q1', name: 'Sales' }]
+      };
+      const openQbo = async (algaEntityType: string) => {
+        loadMock.mockResolvedValue(qboLoad);
+        render(
+          <AccountingMappingModuleView
+            module={buildModule({ adapterType: 'quickbooks_online', algaEntityType, externalTarget: undefined } as any)}
+            context={context}
+          />
+        );
+        fireEvent.click(await screen.findByText('Bulk map'));
+        await screen.findByTestId(`${P}-grid`);
+      };
+
+      it('suggests and pre-ticks an item a service already holds for the twin service', async () => {
+        await openQbo('service');
+        expect(screen.getByTestId(`${P}-suggested-svc-sales-2`)).toBeInTheDocument();
+        expect(el(`${P}-select-svc-sales-2`).checked).toBe(true);
+      });
+
+      it('still treats a held QBO customer as taken', async () => {
+        await openQbo('client');
+        expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+        expect(el(`${P}-select-svc-sales-2`).checked).toBe(false);
+      });
+    });
+
     it('drops suggestions for targets that were just saved, after the reload', async () => {
       loadMock.mockResolvedValue(twinLoad(null));
       createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>

@@ -56,12 +56,27 @@
     "manageLicense": "Lizenz verwalten",
     "ariaLabel": "Lizenzstatus",
     "dismiss": "Schließen",
-    "licenseExpiresIn_few": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+
+    "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "subscriptionLapsed": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
+    "resubscribe": "Erneut abonnieren",
+    "termEnds": "Ihr Pro-Zugang endet am {{date}}. Verlängern Sie, um Pro zu behalten.",
+    "termEndsNoDate": "Ihre Pro-Laufzeit endet bald. Verlängern Sie, um Pro zu behalten.",
+    "paymentFailed": "Zahlung fehlgeschlagen — wir versuchen es am {{date}} erneut. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+    "paymentFailedNoRetry": "Zahlung fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+    "paymentFailedEndsOn": "Pro endet am {{date}}, wenn die Zahlung weiterhin fehlschlägt.",
+    "paymentFailedEnded": "Pro wurde beendet — Zahlung fehlgeschlagen. Ihre Appliance läuft mit Essentials.",
+    "paymentFailedEndedEnding": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro bleibt bis {{date}} aktiv. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "paymentFailedEndedEndingNoDate": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "updatePaymentMethod": "Zahlungsmethode aktualisieren",
+"licenseExpiresIn_few": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
     "licenseExpiresIn_many": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
     "trialDaysRemaining_few": "Pro-Testphase aktiv — noch {{count}} Tage.",
     "trialDaysRemaining_many": "Pro-Testphase aktiv — noch {{count}} Tage.",
     "trialExpiresIn_few": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",
     "trialExpiresIn_many": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten."
+
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -766,7 +781,8 @@
       "collapse": "Ordner einklappen",
       "allDocuments": "Alle Dokumente",
       "expand": "Ordner anzeigen",
-      "deleteTitle": "Ordner löschen"
+      "deleteTitle": "Ordner löschen",
+      "show": "Ordner anzeigen"
     },
     "folderManager": {
       "title": "Neuen Ordner erstellen",
@@ -828,6 +844,28 @@
     "huduTab": {
       "documentsTabLabel": "Dokumente",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Benutzer",
+    "selectOrCreate": "Wählen Sie ein Dokument aus oder erstellen Sie ein neues.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Drucken",
+      "edit": "Bearbeiten",
+      "upload": "Hochladen",
+      "closePreview": "Vorschau schließen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "viewMode": {
+      "grid": "Raster",
+      "list": "Liste"
+    },
+    "unsavedChanges": {
+      "title": "Ungespeicherte Änderungen",
+      "message": "Möchten Sie wirklich abbrechen? Alle ungespeicherten Änderungen gehen verloren.",
+      "confirm": "Änderungen verwerfen",
+      "cancel": "Weiter bearbeiten"
     }
   },
   "fields": {
@@ -860,7 +898,22 @@
       "verify": "Bestätigen",
       "title": "Ganz einfach",
       "instructions": "Geben Sie den sechsstelligen Code aus Ihrer Authenticator-App ein.",
-      "digitsLeft": "Noch {{count}} Stellen"
+      "digitsLeft": "Noch {{count}} Stellen",
+      "enroll": {
+        "title": "Zwei-Faktor-Authentifizierung einrichten",
+        "instructions": "Ihre Organisation verlangt Zwei-Faktor-Authentifizierung. Scannen Sie den QR-Code mit einer Authenticator-App und geben Sie dann den 6-stelligen Code ein.",
+        "qrAlt": "QR-Code für Ihre Authenticator-App",
+        "manualKey": "Oder geben Sie diesen Schlüssel manuell ein:",
+        "cancel": "Abbrechen",
+        "errors": {
+          "invalid_credentials": "Ihre E-Mail-Adresse oder Ihr Passwort ist nicht mehr gültig. Bitte melden Sie sich erneut an.",
+          "enrollment_not_required": "Für dieses Konto ist keine Einrichtung erforderlich. Bitte melden Sie sich erneut an.",
+          "invalid_code": "Dieser Code ist ungültig. Bitte versuchen Sie es erneut.",
+          "rate_limited": "Zu viele Versuche. Bitte warten Sie einige Minuten und versuchen Sie es erneut.",
+          "captcha_required": "Bitte schließen Sie zuerst die Überprüfung auf der Anmeldeseite ab.",
+          "unavailable": "Die Einrichtung ist derzeit nicht verfügbar. Bitte versuchen Sie es erneut."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Das Anmelde-Übergabe-Token fehlt oder ist ungültig. Bitte erneut anmelden.",
@@ -1410,7 +1463,17 @@
     "unnamedUser": "Unbenannter Benutzer",
     "unnamedTeam": "Unbenanntes Team",
     "userPicker": "Benutzerauswahl",
-    "noUsersFound": "Keine Benutzer gefunden"
+    "noUsersFound": "Keine Benutzer gefunden",
+    "contactRemoteLocation": "Im Homeoffice",
+    "selectBoard": "Board auswählen",
+    "activeBoards": "Aktive Boards",
+    "inactiveBoards": "Inaktive Boards",
+    "allBoards": "Alle Boards",
+    "boardPicker": "Board-Auswahl",
+    "filterByStatus": "Nach Status filtern",
+    "statusFilter": "Statusfilter",
+    "boards": "Boards",
+    "inactiveSuffix": "(Inaktiv)"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetyp auswählen ...",
@@ -1618,7 +1681,9 @@
       "ticketTitle": "Arbeitsetiketten drucken",
       "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",
       "unnamedAsset": "Unbenanntes Asset",
-      "useTemplate": "{{template}} verwenden"
+      "useTemplate": "{{template}} verwenden",
+      "copiesPerAsset": "Exemplare pro Asset",
+      "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt."
     }
   },
   "deleteEntity": {
@@ -1711,7 +1776,14 @@
       "assigned": "Zugewiesen:",
       "performedBy": "von {{name}}",
       "internal": "Intern"
-    }
+    },
+    "title": "Benachrichtigungen",
+    "reconnectingToServer": "Verbindung zum Server wird wiederhergestellt...",
+    "refresh": "Aktualisieren",
+    "markAllAsRead": "Alle als gelesen markieren",
+    "markAllRead": "Alle gelesen",
+    "emptyTitle": "Keine Benachrichtigungen",
+    "emptyDescription": "Sie sind auf dem neuesten Stand!"
   },
   "importConflicts": {
     "title": "Importkonflikte lösen",

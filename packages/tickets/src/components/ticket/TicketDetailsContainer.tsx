@@ -78,7 +78,6 @@ interface TicketDetailsContainerProps {
       priority: { value: string; label: string }[];
     };
     categories: any[];
-    clients: any[];
     locations: any[];
     agentSchedules: any[];
   };
@@ -355,12 +354,13 @@ export default function TicketDetailsContainer({
       initialAvailableAgents={ticketData.availableAgents}
       initialUserMap={ticketData.userMap}
       initialContactMap={ticketData.contactMap || {}}
+      liveUserMap={dataSource.screen.liveConversationAuthors ? ticketData.userMap : undefined}
+      liveContactMap={dataSource.screen.liveConversationAuthors ? ticketData.contactMap || {} : undefined}
       statusOptions={ticketData.options.status}
       agentOptions={ticketData.options.agent}
       boardOptions={ticketData.options.board}
       priorityOptions={ticketData.options.priority}
       initialCategories={ticketData.categories}
-      initialClients={ticketData.clients}
       initialLocations={ticketData.locations}
       initialAgentSchedules={ticketData.agentSchedules}
       onTicketUpdate={handleTicketUpdate}

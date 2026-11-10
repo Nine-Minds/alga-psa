@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.17",
+  "version": "1.6.18",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -33,6 +33,10 @@
     "./address": {
       "import": "./dist/lib/address.js",
       "types": "./src/lib/address.ts"
+    },
+    "./net/safeFetch": {
+      "import": "./dist/lib/net/safeFetch.js",
+      "types": "./src/lib/net/safeFetch.ts"
     },
     "./fileNames": {
       "import": "./dist/lib/fileNames.js",
@@ -85,6 +89,10 @@
     "./context/DocumentsCrossFeatureContext": {
       "import": "./dist/context/DocumentsCrossFeatureContext.js",
       "types": "./src/context/DocumentsCrossFeatureContext.ts"
+    },
+    "./rendering/isolatedRendering": {
+      "import": "./dist/lib/rendering/isolatedRendering.js",
+      "types": "./src/lib/rendering/isolatedRendering.ts"
     }
   },
   "scripts": {
@@ -99,10 +107,14 @@
     "node-vault": "^0.10.2",
     "posthog-node": "^4.18.0",
     "redis": "^4.6.10",
+    "undici": ">=7.30.1 <8",
     "uuid": "^11.1.1",
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
-    "react": "^19.2.4"
+    "react": "^19.2.4",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.5.23",
+    "postcss-value-parser": "^4.2.0"
   },
   "peerDependencies": {
     "next": "*"
@@ -115,6 +127,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/uuid": "^9.0.7",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "puppeteer": "^25.10.0"
   }
 }

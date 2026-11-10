@@ -37,6 +37,7 @@ import path from 'path';
 import os from 'os';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { tenantDb } from '@alga-psa/db';
+import { validateDocumentPreviewProvenance } from '@alga-psa/documents/lib/documentPreviewProvenance';
 import { isValidUUID } from '@alga-psa/validation';
 import {
   buildMediaProcessingFailedPayload,
@@ -727,6 +728,7 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
 
         // Generate previews
         const previewResult = await generateDocumentPreviews(doc, downloadResult.buffer);
+        await validateDocumentPreviewProvenance(knex, tenant, doc.document_id, previewResult);
 
         // Update document with preview file IDs
         await db.table('documents')
@@ -797,6 +799,7 @@ export async function regenerateDocumentPreview(documentId: string): Promise<boo
 
     // Generate previews
     const previewResult = await generateDocumentPreviews(document, downloadResult.buffer);
+    await validateDocumentPreviewProvenance(knex, tenant, documentId, previewResult);
 
     // Update document with preview file IDs
     await db.table('documents')

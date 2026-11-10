@@ -80,6 +80,8 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     getAllClients: lazy(() => import('../actions/clientLookupActions'), 'getAllClients'),
     getClientLocations: lazy(() => import('../actions/clientLookupActions'), 'getClientLocations'),
     getClientBillingProfiles: lazy(() => import('../actions/clientLookupActions'), 'getClientBillingProfiles'),
+    getContactEffectiveLocation: lazy(() => import('../actions/clientLookupActions'), 'getContactEffectiveLocation'),
+    searchClientsForPicker: lazy(() => import('../actions/clientLookupActions'), 'searchClientsForPicker'),
   }),
 
   resources: Object.freeze({
@@ -128,6 +130,7 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     applyChecklistTemplate: lazy(() => import('../actions/checklists'), 'applyChecklistTemplate'),
     deleteChecklistItem: lazy(() => import('../actions/checklists'), 'deleteChecklistItem'),
     getChecklistTemplates: lazy(() => import('../actions/checklists'), 'getChecklistTemplates'),
+    getChecklistTemplatesForTicket: lazy(() => import('../actions/checklists'), 'getChecklistTemplatesForTicket'),
     reorderChecklistItems: lazy(() => import('../actions/checklists'), 'reorderChecklistItems'),
     setChecklistItemCompleted: lazy(() => import('../actions/checklists'), 'setChecklistItemCompleted'),
     updateChecklistItem: lazy(() => import('../actions/checklists'), 'updateChecklistItem'),

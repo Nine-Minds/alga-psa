@@ -117,6 +117,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
   });
 
+  it('exempts the session-authenticated workspace export POST exactly, never a sibling or deeper route', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/export')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/export/evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/exportevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
+  });
+
   it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelioevil')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio-extra')).toBe(false);
@@ -141,6 +148,7 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/ai-gateway')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments/0ad8e710-13bc-4e01-a6ca-3f8992978ae8')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/other-provider')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });
@@ -148,5 +156,15 @@ describe('shouldSkipApiKeyAuth', () => {
   it('still requires an API key for unrelated API routes', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/upload')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
+  });
+
+  it('exempts exactly the two co-managed attachment download routes', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments')).toBe(false);
   });
 });

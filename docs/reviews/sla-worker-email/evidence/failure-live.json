@@ -1,0 +1,33 @@
+{
+  "revision": "d7a067bb76493aabc6f09f2ac903179b7851c0d6",
+  "checkedAt": "2026-11-08T17:14:13.888Z",
+  "ticket": {
+    "ticket_id": "3d5269d8-0000-4000-8000-00000000030e",
+    "ticket_number": "SLA-REPAIR-FAIL-20261108-E",
+    "board_id": "3d5269d8-0000-4000-8000-00000000000a",
+    "escalation_level": 1
+  },
+  "audit": {
+    "logId": "e39cf4e4-343c-4f17-bdf6-145374542cbc",
+    "createdAt": "2026-11-08T17:09:48.700Z",
+    "notifications": {
+      "email": "failed",
+      "inApp": true,
+      "emailReason": "Email provider not ready: SMTP initialization failed: connect ECONNREFUSED 127.0.0.1:1"
+    }
+  },
+  "smtp": {
+    "emulator": "GreenMail",
+    "port": 3725,
+    "refusedPort": 1,
+    "providerRestored": true,
+    "providerPort": 3725,
+    "failedEscalationMailReceiptCount": 0,
+    "postRestorationResolutionBreachMessage": {
+      "messageId": "<48906773-badb-5bed-7b67-0dd3b42499ed@emeraldcity.oz>",
+      "subject": "SLA BREACH: Ticket #SLA-REPAIR-FAIL-20261108-E - Resolution SLA Exceeded",
+      "from": "SLA Board A <sla-smoke-a@emeraldcity.oz>",
+      "note": "A later resolution-breach email was accepted after the SMTP provider was restored; it is a separate event from the failed escalation email."
+    }
+  }
+}

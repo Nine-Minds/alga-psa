@@ -90,6 +90,14 @@ const SsoBulkAssignment = dynamic(
   },
 );
 
+const LoginPolicySettings = dynamic(
+  () => import('@enterprise/components/settings/security/LoginPolicySettings'),
+  {
+    loading: SsoLoading,
+    ssr: false,
+  },
+);
+
 const MspSsoAdvancedSection = dynamic(
   () => import('./MspSsoAdvancedSection'),
   { ssr: false },
@@ -126,6 +134,26 @@ const ScimProvisioningSettings = dynamic(
   },
 );
 
+function ServicePrincipalsLoading() {
+  const { t } = useTranslation('msp/profile');
+  return (
+    <SettingsTabSkeleton
+      title={t('security.tabs.servicePrincipals', { defaultValue: 'Service principals' })}
+      description={t('security.loading.servicePrincipals', { defaultValue: 'Loading service principals...' })}
+      showTable
+    />
+  );
+}
+
+// Resolves to the real tab in EE builds and to a render-nothing stub in CE (the tab is EE-only).
+const ServicePrincipalsSettingsTab = dynamic(
+  () => import('@enterprise/components/service-principals/ServicePrincipalsSettingsTab'),
+  {
+    loading: ServicePrincipalsLoading,
+    ssr: false,
+  },
+);
+
 const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'), {
   loading: SessionsLoading,
   ssr: false
@@ -143,6 +171,7 @@ const SECURITY_TAB_IDS: readonly string[] = [
   'user-roles',
   'policies',
   'api-keys',
+  ...(isEnterpriseEdition ? ['service-principals'] : []),
   'webhooks',
 ];
 const DEFAULT_SECURITY_TAB = 'roles';
@@ -205,6 +234,9 @@ const SecuritySettingsPage = (): React.JSX.Element => {
             <KeycloakSsoSettings />
           </div>
           <MspSsoAdvancedSection />
+          <div className="mt-6">
+            <LoginPolicySettings />
+          </div>
         </>
       ),
     },
@@ -255,6 +287,17 @@ const SecuritySettingsPage = (): React.JSX.Element => {
         </Suspense>
       ),
     },
+    ...(isEnterpriseEdition
+      ? [{
+          id: 'service-principals',
+          label: t('security.tabs.servicePrincipals', { defaultValue: 'Service principals' }),
+          content: (
+            <Suspense fallback={<ServicePrincipalsLoading />}>
+              <ServicePrincipalsSettingsTab />
+            </Suspense>
+          ),
+        }]
+      : []),
     {
       id: 'webhooks',
       label: t('security.tabs.webhooks', { defaultValue: 'Webhooks' }),

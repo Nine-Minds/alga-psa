@@ -3,6 +3,15 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createInstance, type TFunction } from 'i18next';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const frCommon = JSON.parse(readFileSync(
+  resolve(__dirname, '../../../../../server/public/locales/fr/common.json'), 'utf8',
+));
+
+const translation = vi.hoisted(() => ({ t: null as TFunction | null }));
 
 const hook = vi.hoisted(() => ({
   print: vi.fn(),
@@ -13,6 +22,7 @@ const hook = vi.hoisted(() => ({
 vi.mock('../../lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      if (translation.t) return translation.t(key, options);
       let s = String(options?.defaultValue ?? key);
       for (const [k, v] of Object.entries(options ?? {})) s = s.replace(`{{${k}}}`, String(v));
       return s;
@@ -54,6 +64,7 @@ const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
 
 beforeEach(() => {
+  translation.t = null;
   hook.print.mockReset();
   hook.loadTemplates.mockResolvedValue({ defaultTemplateId: 'standard-ticket-work-tag', templates: [{ id: 'standard-ticket-work-tag', name: 'Ticket', source: 'standard' }] });
   hook.loadLinkedAssets.mockResolvedValue([]);
@@ -87,7 +98,30 @@ describe('LabelPrintDialog', () => {
     await waitFor(() => expect(screen.getByText('Use standard-asset-label')).toBeTruthy());
     fireEvent.click(screen.getByText('Skip these and print the rest'));
     await waitFor(() => expect(hook.print).toHaveBeenCalledTimes(2));
-    expect(hook.print.mock.calls[1][0].labels).toEqual([{ recordId: B }]);
+    expect(hook.print.mock.calls[1][0].labels).toEqual([{ recordId: B }, { recordId: B }]);
+  });
+
+  it('renders French copy controls and prints the chosen copies adjacent for each asset', async () => {
+    const missing = vi.fn();
+    const i18n = createInstance();
+    await i18n.init({ lng: 'fr', fallbackLng: false, resources: { fr: { common: frCommon } },
+      saveMissing: true, missingKeyHandler: missing });
+    translation.t = i18n.getFixedT('fr', 'common');
+    hook.print.mockResolvedValue({ status: 'printed', printed: 6, skipped: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A, B]} />);
+    const copies = screen.getByLabelText('Exemplaires par actif') as HTMLInputElement;
+    expect(copies.value).toBe('2');
+    expect(screen.getByText('Les exemplaires de chaque actif sont imprimés ensemble.')).toBeTruthy();
+    fireEvent.change(copies, { target: { value: '3' } });
+    fireEvent.click(screen.getByText('Imprimer'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalled());
+    expect(hook.print.mock.calls[0][0].labels).toEqual([
+      { recordId: A }, { recordId: A }, { recordId: A },
+      { recordId: B }, { recordId: B }, { recordId: B },
+    ]);
+    expect(missing.mock.calls.map(call => call[2]).filter(key =>
+      key === 'labels.dialog.copiesPerAsset' || key === 'labels.dialog.adjacentCopies'
+    )).toEqual([]);
   });
 
   it('disables printing above the 200-label limit and says why', async () => {

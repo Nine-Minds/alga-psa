@@ -18,7 +18,7 @@ import fs from 'fs';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { TIER_FEATURES } from '@alga-psa/types';
+import { isMspPrincipalUserType, TIER_FEATURES } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
@@ -87,6 +87,9 @@ function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
   handler: (user: any, context: { tenant: string }, ...args: TArgs) => Promise<TResult>,
 ) {
   return withAuth(async (user, context, ...args: TArgs): Promise<TResult> => {
+    if (!isMspPrincipalUserType(user.user_type)) {
+      throw new Error('NinjaOne integration actions are restricted to MSP users.');
+    }
     await assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS);
     return handler(user, context as { tenant: string }, ...args);
   });

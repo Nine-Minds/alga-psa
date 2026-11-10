@@ -9,6 +9,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { createRequire } from 'node:module';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
@@ -70,7 +71,9 @@ vi.mock('server/src/lib/eventBus', () => ({
   })),
 }));
 
-const sendNotification = vi.fn(async (_params: Record<string, unknown>) => {});
+const sendNotification = vi.fn(async (_params: Record<string, unknown>) => ({ status: 'sent' as const, messageId: 'smtp-message-1' }));
+const require = createRequire(import.meta.url);
+const legacyEmailAuditBackfill = require('../../../../migrations/20261101170000_backfill_legacy_sla_escalation_email_outcomes.cjs');
 
 vi.mock('@alga-psa/notifications/notifications/email', () => ({
   getEmailNotificationService: vi.fn(() => ({
@@ -79,6 +82,7 @@ vi.mock('@alga-psa/notifications/notifications/email', () => ({
 }));
 
 let escalateTicket: typeof import('@alga-psa/sla/services').escalateTicket;
+let ensureEscalationManagerOnTicket: typeof import('@alga-psa/sla/services/escalationService').ensureEscalationManagerOnTicket;
 
 const tenantTable = (dbOrTrx: Knex | Knex.Transaction, tenant: string, tableName: string) =>
   tenantDb(dbOrTrx, tenant).table(tableName);
@@ -100,7 +104,7 @@ describe('SLA Escalation Service Integration Tests', () => {
   const runCommitted = <T>(fn: (trx: Knex.Transaction) => Promise<T>): Promise<T> =>
     withTransaction(db, fn);
 
-  async function newTicket(boardForTicket: string = boardId): Promise<string> {
+  async function newTicket(boardForTicket: string = boardId, assignedTo = assigneeUserId): Promise<string> {
     const ticketId = uuidv4();
     await insertTicket(db, {
       tenant: tenantId,
@@ -112,7 +116,7 @@ describe('SLA Escalation Service Integration Tests', () => {
       statusId: statusOpenId,
       priorityId: priorityHighId,
       boardId: boardForTicket,
-      assignedTo: assigneeUserId,
+      assignedTo,
     });
     return ticketId;
   }
@@ -122,6 +126,7 @@ describe('SLA Escalation Service Integration Tests', () => {
     db = await createTestDbConnection();
 
     ({ escalateTicket } = await import('@alga-psa/sla/services'));
+    ({ ensureEscalationManagerOnTicket } = await import('@alga-psa/sla/services/escalationService'));
 
     tenantId = await createTenant(db, 'SLA Escalation Test Tenant');
     assigneeUserId = await createUser(db, tenantId, {
@@ -186,6 +191,30 @@ describe('SLA Escalation Service Integration Tests', () => {
     expect(notifications).toHaveLength(1);
   });
 
+  it('notifies an escalation manager who already owns the ticket without adding a duplicate resource', async () => {
+    const ticketId = await newTicket();
+    await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId })
+      .update({ assigned_to: managerL1Id });
+
+    await runCommitted(async (trx) => {
+      const result = await escalateTicket(trx, tenantId, ticketId, 1);
+      expect(result.success).toBe(true);
+      expect(result.resourceAdded).toBe(false);
+      expect(result.notificationsSent.inApp).toBe(true);
+      expect(sendNotification).not.toHaveBeenCalled();
+    });
+
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect(sendNotification.mock.calls[0][0]).toMatchObject({ userId: managerL1Id, boardId, mailClass: 'ticket' });
+    expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+    const ticket = await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId }).first();
+    expect(ticket).toMatchObject({ assigned_to: managerL1Id, escalated: true, escalation_level: 1 });
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const data = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(data.notifications).toMatchObject({ email: 'sent', emailMessageId: 'smtp-message-1' });
+  });
+
   it('sends the escalation email only after commit, with mailClass ticket and the ticket board', async () => {
     const ticketId = await newTicket();
 
@@ -205,6 +234,192 @@ describe('SLA Escalation Service Integration Tests', () => {
       userId: managerL1Id,
       templateName: 'sla-escalation',
     });
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(eventData.notifications).toMatchObject({ email: 'sent', emailMessageId: 'smtp-message-1' });
+  });
+
+  it('persists queued before send, then marks a post-commit send failure failed and logs both identifiers', async () => {
+    const ticketId = await newTicket();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    sendNotification.mockImplementationOnce(async () => {
+      const queuedAudit = await tenantTable(db, tenantId, 'sla_audit_log')
+        .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+      const queuedData = typeof queuedAudit.event_data === 'string' ? JSON.parse(queuedAudit.event_data) : queuedAudit.event_data;
+      expect(queuedData.notifications.email).toBe('queued');
+      throw new Error('GreenMail unavailable');
+    });
+
+    await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(eventData.notifications).toMatchObject({ email: 'failed', emailReason: 'GreenMail unavailable' });
+    expect(errorSpy).toHaveBeenCalledWith('SLA escalation email delivery failed', expect.objectContaining({
+      ticketId,
+      auditLogId: audit.log_id,
+    }));
+    errorSpy.mockRestore();
+  });
+
+  it('persists a skipped result returned by the after-commit email hook', async () => {
+    const ticketId = await newTicket();
+    sendNotification.mockImplementationOnce(async () => ({ status: 'skipped', reason: 'manager email preference disabled' } as never));
+
+    await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(eventData.notifications).toMatchObject({
+      email: 'skipped',
+      emailReason: 'manager email preference disabled',
+    });
+  });
+
+  it('leaves the committed audit outcome queued when persisting the send result fails', async () => {
+    const ticketId = await newTicket();
+    const auditErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const suffix = uuidv4().replace(/-/g, '');
+    const functionName = `fail_sla_audit_${suffix}`;
+    const triggerName = `fail_sla_audit_trigger_${suffix}`;
+    await db.raw(`CREATE FUNCTION ${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.ticket_id = '${ticketId}' AND NEW.event_data #>> '{notifications,email}' = 'sent' THEN
+          RAISE EXCEPTION 'forced audit outcome persistence failure';
+        END IF;
+        RETURN NEW;
+      END;
+    $$`);
+    await db.raw(`CREATE TRIGGER ${triggerName} BEFORE UPDATE ON sla_audit_log FOR EACH ROW EXECUTE FUNCTION ${functionName}()`);
+    try {
+      await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+      const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+        .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+      const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+      expect(eventData.notifications.email).toBe('queued');
+      expect(auditErrorSpy).toHaveBeenCalledWith('Failed to persist SLA escalation email outcome', expect.objectContaining({
+        ticketId,
+        auditLogId: audit.log_id,
+      }));
+    } finally {
+      await db.raw(`DROP TRIGGER IF EXISTS ${triggerName} ON sla_audit_log`);
+      await db.raw(`DROP FUNCTION IF EXISTS ${functionName}()`);
+      auditErrorSpy.mockRestore();
+    }
+  });
+
+  it('normalizes legacy booleans using provider evidence and preserves provenance and unrelated JSONB data', async () => {
+    const ticketId = await newTicket();
+    const provenId = uuidv4();
+    const unknownId = uuidv4();
+    const failedId = uuidv4();
+    const existingStringId = uuidv4();
+    const emptyMessageId = uuidv4();
+    const whitespaceMessageId = uuidv4();
+    const additionalLegacyIds = Array.from({ length: 501 }, () => uuidv4());
+    await tenantTable(db, tenantId, 'sla_audit_log').insert([
+      { log_id: provenId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true, emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } }) },
+      { log_id: unknownId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true }, custom: { keep: 'also' } }) },
+      { log_id: failedId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: false, emailMessageId: 'smtp-failed-88' }, custom: { keep: 'failed' } }) },
+      { log_id: existingStringId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: 'failed', emailReason: 'existing outcome' }, custom: { keep: 'string' } }) },
+      { log_id: emptyMessageId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: false, emailMessageId: '' }, custom: { keep: 'empty-id' } }) },
+      { log_id: whitespaceMessageId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true, emailMessageId: '   ' }, custom: { keep: 'whitespace-id' } }) },
+      ...additionalLegacyIds.map((log_id) => ({
+        log_id, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated',
+        event_data: JSON.stringify({ notifications: { email: true }, custom: { keep: 'batched' } }),
+      })),
+    ]);
+
+    await legacyEmailAuditBackfill.up(db);
+    const rows = await tenantTable(db, tenantId, 'sla_audit_log').whereIn('log_id', [provenId, unknownId, failedId, existingStringId, emptyMessageId, whitespaceMessageId, ...additionalLegacyIds]);
+    const byId = new Map(rows.map((row: any) => [row.log_id, typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data]));
+    expect(byId.get(provenId)).toMatchObject({ notifications: { email: 'sent', emailLegacyValue: true, emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } });
+    expect(byId.get(unknownId)).toMatchObject({ notifications: { email: 'queued', emailLegacyValue: true, emailReason: expect.stringContaining('no provider message id') }, custom: { keep: 'also' } });
+    expect(byId.get(failedId)).toMatchObject({ notifications: { email: 'failed', emailLegacyValue: false, emailMessageId: 'smtp-failed-88' }, custom: { keep: 'failed' } });
+    expect(byId.get(existingStringId)).toMatchObject({ notifications: { email: 'failed', emailReason: 'existing outcome' }, custom: { keep: 'string' } });
+    expect(byId.get(emptyMessageId)).toMatchObject({ notifications: { email: 'queued', emailLegacyValue: false, emailReason: expect.stringContaining('no provider message id') }, custom: { keep: 'empty-id' } });
+    expect(byId.get(whitespaceMessageId)).toMatchObject({ notifications: { email: 'queued', emailLegacyValue: true, emailReason: expect.stringContaining('no provider message id') }, custom: { keep: 'whitespace-id' } });
+    expect(additionalLegacyIds.every((id) => byId.get(id)?.notifications.email === 'queued')).toBe(true);
+    expect(additionalLegacyIds.every((id) => byId.get(id)?.notifications.emailLegacyValue === true)).toBe(true);
+    expect(additionalLegacyIds.every((id) => byId.get(id)?.custom.keep === 'batched')).toBe(true);
+  });
+
+  it('escalates when the L1 manager is the assignee, notifies once, and retries idempotently', async () => {
+    const ticketId = await newTicket(boardId, managerL1Id);
+
+    const result = await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+
+    expect(result).toMatchObject({
+      success: true,
+      managerId: managerL1Id,
+      resourceAdded: false,
+      notificationsSent: { inApp: true },
+    });
+    const after = await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId }).first();
+    expect(after).toMatchObject({ escalated: true, escalation_level: 1, assigned_to: managerL1Id });
+    expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+    expect(await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' })).toHaveLength(1);
+    expect(await tenantTable(db, tenantId, 'internal_notifications')
+      .where({ user_id: managerL1Id }).whereRaw("metadata->>'ticket_id' = ?", [ticketId])).toHaveLength(1);
+
+    sendNotification.mockClear();
+    const again = await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+    expect(again.success).toBe(true);
+    expect(again.error).toMatch(/already at or above/i);
+    expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+    expect(await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' })).toHaveLength(1);
+    expect(await tenantTable(db, tenantId, 'internal_notifications')
+      .where({ user_id: managerL1Id }).whereRaw("metadata->>'ticket_id' = ?", [ticketId])).toHaveLength(1);
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it('recognizes an existing additional resource without creating a duplicate', async () => {
+    const ticketId = await newTicket();
+    await tenantTable(db, tenantId, 'ticket_resources').insert({
+      assignment_id: uuidv4(), tenant: tenantId, ticket_id: ticketId,
+      assigned_to: assigneeUserId, additional_user_id: managerL1Id,
+      role: 'observer', assigned_at: db.fn.now(),
+    });
+
+    const status = await runCommitted((trx) =>
+      ensureEscalationManagerOnTicket(trx, tenantId, ticketId, managerL1Id, 1));
+
+    expect(status).toBe('existing_resource');
+    const resources = await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId });
+    expect(resources).toHaveLength(1);
+    expect(resources[0].role).toBe('escalation_manager_L1');
+  });
+
+  it('keeps escalation, audit, and notification when a real resource insert fails', async () => {
+    const ticketId = await newTicket();
+    const triggerName = `reject_resource_${ticketId.replace(/-/g, '')}`;
+    const functionName = `reject_resource_fn_${ticketId.replace(/-/g, '')}`;
+    await db.raw(`CREATE FUNCTION ${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.ticket_id = '${ticketId}'::uuid THEN RAISE EXCEPTION 'simulated resource attachment failure'; END IF;
+        RETURN NEW;
+      END;
+    $$`);
+    await db.raw(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON ticket_resources FOR EACH ROW EXECUTE FUNCTION ${functionName}()`);
+
+    try {
+      const result = await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+      expect(result.success).toBe(true);
+      expect(result.notificationsSent.inApp).toBe(true);
+      expect(await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId })
+        .first()).toMatchObject({ escalated: true, escalation_level: 1 });
+      expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+      expect(await tenantTable(db, tenantId, 'sla_audit_log')
+        .where({ ticket_id: ticketId, event_type: 'ticket_escalated' })).toHaveLength(1);
+      expect(await tenantTable(db, tenantId, 'internal_notifications')
+        .where({ user_id: managerL1Id }).whereRaw("metadata->>'ticket_id' = ?", [ticketId])).toHaveLength(1);
+    } finally {
+      await db.raw(`DROP TRIGGER IF EXISTS ${triggerName} ON ticket_resources`);
+      await db.raw(`DROP FUNCTION IF EXISTS ${functionName}()`);
+    }
   });
 
   it('does not create duplicates when escalating to the same level again', async () => {
@@ -252,6 +467,7 @@ describe('SLA Escalation Service Integration Tests', () => {
     expect(audit).toHaveLength(1);
     const data = typeof audit[0].event_data === 'string' ? JSON.parse(audit[0].event_data) : audit[0].event_data;
     expect(data.manager_found).toBe(false);
+    expect(data.notifications.email).toBe('skipped');
     expect(sendNotification).not.toHaveBeenCalled();
   });
 });
