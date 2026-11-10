@@ -30,9 +30,9 @@ Use **Quick invoice** on the ticket to select eligible unbilled fixed-fee servic
 
 Fixed-fee service entries also follow the existing scheduled billing path. Quick invoice is an additional way to invoice eligible ticket charges, not a replacement for scheduled billing. Once billed, the entries remain visible with their billed status and are locked against further editing.
 
-Scheduled ticket-material billing claims the exact source version used to calculate the invoice. If another user edits a material or another invoice bills it first, generation fails rather than invoicing stale quantities. Refresh the charges and retry. Source-claim failures roll back the invoice's charge transaction and remove its draft; database errors, including a missing required table, are surfaced instead of silently completing the invoice. Apply the required migrations before retrying a missing-table failure.
+Scheduled ticket-material billing claims the exact source version used to calculate the invoice. If another user edits a material or another invoice bills it first, generation fails rather than invoicing stale quantities. Refresh the charges and retry. The invoice header, charges, and source claims commit together, so a failed claim rolls back the entire draft. Database errors, including a missing required table, are surfaced instead of silently completing the invoice. Apply the required migrations before retrying a missing-table failure.
 
-For stock-tracked materials, invoice COGS and profitability use the signed total of consumption and restock-return movements. A stock return reverses the corresponding cost; it is not counted as another consumption.
+For stock-tracked materials, invoice COGS and profitability use consumption costs less restock-return costs. When a return movement is linked to the material and has a recorded cost, that cost is subtracted whether it is positive or negative.
 
 ## Deployment and testing
 
