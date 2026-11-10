@@ -711,7 +711,10 @@ export class EmailProviderLifecycleService {
       : null;
 
     if (imapConfig.auth_type === 'oauth2' && (!accessToken || isImapTokenExpired(imapConfig.token_expires_at))) {
-      accessToken = await refreshImapAccessToken({ provider: imapConfig, db: knex });
+      accessToken = await refreshImapAccessToken({
+        provider: { ...imapConfig, id: providerId, tenant },
+        db: knex,
+      });
     }
 
     const auth: any = { user: imapConfig.username };

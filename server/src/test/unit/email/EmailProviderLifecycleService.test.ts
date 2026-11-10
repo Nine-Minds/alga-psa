@@ -9,14 +9,26 @@ const mocks = vi.hoisted(() => ({
   usePollingDelivery: vi.fn(),
   recordWebhookDeliveryMode: vi.fn(),
   imapConstructed: vi.fn(),
+  imapConnect: vi.fn(),
+  axiosPost: vi.fn(),
+  dnsLookup: vi.fn(),
+  getTenantSecret: vi.fn(),
   operations: [] as string[],
 }));
 
 vi.mock('imapflow', () => ({
-  ImapFlow: vi.fn(function ImapFlow() {
-    mocks.imapConstructed();
-    return { connect: vi.fn(), logout: vi.fn(), close: vi.fn() };
+  ImapFlow: vi.fn(function ImapFlow(options: unknown) {
+    mocks.imapConstructed(options);
+    return { connect: (...args: unknown[]) => mocks.imapConnect(...args), logout: vi.fn(), close: vi.fn() };
   }),
+}));
+vi.mock('axios', () => ({ default: { post: mocks.axiosPost } }));
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: (...args: unknown[]) => mocks.dnsLookup(...args) },
+  lookup: (...args: unknown[]) => mocks.dnsLookup(...args),
+}));
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({ getTenantSecret: mocks.getTenantSecret }),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -54,6 +66,7 @@ vi.mock('@alga-psa/shared/services/email/EmailWebhookMaintenanceService', () => 
 }));
 
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
+import { getImapOauthSecretNames } from '@alga-psa/shared/services/email/imapOutboundTarget';
 
 function createState(providerType: 'microsoft' | 'google' | 'imap') {
   const state: any = {
@@ -145,6 +158,14 @@ describe('EmailProviderLifecycleService', () => {
     vi.clearAllMocks();
     mocks.operations.length = 0;
     mocks.imapConstructed.mockReset();
+    mocks.imapConnect.mockReset();
+    mocks.imapConnect.mockResolvedValue(undefined);
+    mocks.axiosPost.mockReset();
+    mocks.axiosPost.mockResolvedValue({ data: { access_token: 'recovered-access-token', expires_in: 3600 } });
+    mocks.dnsLookup.mockReset();
+    mocks.dnsLookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    mocks.getTenantSecret.mockReset();
+    mocks.getTenantSecret.mockResolvedValue('endpoint-scoped-secret');
     mocks.graphDelete.mockImplementation(async () => {
       mocks.operations.push('external:graph-delete');
     });
@@ -206,6 +227,45 @@ describe('EmailProviderLifecycleService', () => {
     expect(result.error).toMatch(/blocked private address/);
     expect(state.provider.inbound_paused_at).toBe('2026-07-23T17:00:00.000Z');
     expect(mocks.imapConstructed).not.toHaveBeenCalled();
+  });
+
+  it('recovers an OAuth IMAP provider using its scoped secret, normalized identity, and persisted refreshed token', async () => {
+    const state = createState('imap');
+    state.provider.inbound_paused_at = '2026-07-23T17:00:00.000Z';
+    state.provider.inbound_pause_reason = 'auth_failure';
+    const tokenUrl = 'https://93.184.216.34/token';
+    Object.assign(state.imap_email_provider_config, {
+      host: '93.184.216.34', port: 993, secure: true, allow_starttls: false,
+      auth_type: 'oauth2', username: 'support@example.com',
+      oauth_token_url: tokenUrl, oauth_credentials_token_url: tokenUrl,
+      oauth_credentials_secret_version: 1, oauth_client_id: 'imap-client',
+      oauth_client_secret: null, refresh_token: null, access_token: null,
+      token_expires_at: new Date(Date.now() - 60_000).toISOString(),
+    });
+    const expectedSecrets = getImapOauthSecretNames({
+      id: state.provider.id,
+      oauth_token_url: tokenUrl,
+      oauth_credentials_secret_version: 1,
+    });
+    const service = new EmailProviderLifecycleService();
+    vi.spyOn(service as any, 'reconcileImapPausedInterval').mockResolvedValue({ queuedMessages: 0 });
+    vi.spyOn(service as any, 'clearAuthPause').mockResolvedValue(undefined);
+
+    const result = await service.recoverAuthPausedProvider(state.provider.id, 'tenant-1');
+
+    expect(result).toMatchObject({ resumed: true, reconciliation: { status: 'started', queuedMessages: 0 } });
+    expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedSecrets.refreshToken);
+    expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedSecrets.clientSecret);
+    expect(mocks.axiosPost).toHaveBeenCalledWith(
+      tokenUrl,
+      expect.any(URLSearchParams),
+      expect.objectContaining({ maxRedirects: 0 })
+    );
+    expect(state.imap_email_provider_config.access_token).toBe('recovered-access-token');
+    expect(mocks.imapConstructed).toHaveBeenCalledWith(expect.objectContaining({
+      host: '93.184.216.34', auth: { user: 'support@example.com', accessToken: 'recovered-access-token', method: 'XOAUTH2' },
+    }));
+    expect(mocks.imapConnect).toHaveBeenCalledTimes(1);
   });
 
   it('T022: keeps the database pause when external teardown fails', async () => {
