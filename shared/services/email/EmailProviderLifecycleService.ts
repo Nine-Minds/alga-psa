@@ -700,7 +700,7 @@ export class EmailProviderLifecycleService {
       throw new Error('IMAP provider config not found');
     }
 
-    await assertSafeImapHost(imapConfig.host);
+    const imapTarget = await assertSafeImapHost(imapConfig.host, Number(imapConfig.port));
     if (imapConfig.auth_type === 'oauth2') {
       assertImapOauthCredentialIssuerBound(imapConfig);
     }
@@ -737,12 +737,17 @@ export class EmailProviderLifecycleService {
       port: Number(imapConfig.port),
       secure: Boolean(imapConfig.secure),
       auth,
+      tls: {
+        lookup: imapTarget.lookup as any,
+        ...(imapConfig.secure || imapConfig.allow_starttls
+          ? { rejectUnauthorized: (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false' }
+          : {}),
+      },
       disableAutoIdle: true,
       logger: false,
       connectionTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
       greetingTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
       socketTimeout: IMAP_VALIDATION_SOCKET_TIMEOUT_MS,
-      tls: imapConfig.secure || imapConfig.allow_starttls ? { rejectUnauthorized: (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false' } : undefined,
     });
 
     try {

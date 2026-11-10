@@ -1,23 +1,30 @@
 import { createHash } from 'node:crypto';
 import process from 'node:process';
 import {
-  assertSafeOutboundTarget,
+  createPinnedOutboundLookup,
   parseOutboundTargetAllowlist,
+  resolveSafeOutboundTarget,
 } from '@alga-psa/shared/lib/net/outboundTarget';
 
-export async function assertSafeImapHost(host: string): Promise<void> {
+export async function assertSafeImapHost(host: string, port: number = 993) {
   const value = host.trim();
+  if (!value || /[\/\\?#@%\s]/.test(value) || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('IMAP target host or port is invalid');
+  }
   const urlHost = value.includes(':') && !value.startsWith('[') ? `[${value}]` : value;
-  await assertSafeOutboundTarget(`imap://${urlHost}/`, {
+  const target = await resolveSafeOutboundTarget(`imap://${urlHost}:${port}/`, {
     schemes: ['imap'],
+    ports: [143, 993],
     privateTargetAllowlist: parseOutboundTargetAllowlist(
       process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST
     ),
   });
+  return { ...target, lookup: createPinnedOutboundLookup(target.pin) };
 }
 
-export async function assertSafeImapOauthTokenEndpoint(endpoint: string): Promise<void> {
-  await assertSafeOutboundTarget(endpoint, { schemes: ['https'] });
+export async function assertSafeImapOauthTokenEndpoint(endpoint: string) {
+  const target = await resolveSafeOutboundTarget(endpoint, { schemes: ['https'], ports: [443] });
+  return { ...target, lookup: createPinnedOutboundLookup(target.pin) };
 }
 
 export function isImapOauthCredentialIssuerBound(provider: {

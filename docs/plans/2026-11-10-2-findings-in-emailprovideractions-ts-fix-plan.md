@@ -5,9 +5,10 @@ Review card `b0ef6d7a-d45e-5373-bc9c-6bd7ead0c021` · PR
 PR 3984 fixed the equivalent authorization gaps in `emailSettingsActions.ts`
 (outbound transport) but left the adjacent **inbound provider** actions in
 `packages/integrations/src/actions/email-actions/emailProviderActions.ts`
-unguarded. This plan is forward-looking: **no part of this fix exists on the
-branch yet** (verified — the only working-tree change is an unrelated
-`package-lock.json` edit).
+unguarded. This plan records the original baseline at `e54c9397a9`; later
+commits on this branch already implemented most of its fixes. The current
+implementation and verification are tracked in
+`docs/security/email-provider-actions-security-review.md`.
 
 Both findings are **confirmed real** against the code as it stands. Evidence and
 the concrete fix follow.
@@ -233,18 +234,27 @@ an integration test alongside
 
 ## 4. Scope deliberately excluded, and reviewer risks
 
+### Current implementation update (2026-11-10)
+
+The original plan scoped out pinned-DNS transports, but the implementation
+requirement for this repair now includes them. The shared outbound-target
+resolver returns a vetted address after checking every DNS answer. OAuth HTTPS
+requests use a pinned `https.Agent`, disable proxy routing, and reject redirects;
+ImapFlow receives the pinned lookup callback for the initial socket and any TLS
+upgrade. OAuth endpoints are HTTPS/443 only, while IMAP is limited to ports 143
+and 993. This removes the validate-then-resolve gap described in the historical
+scope note below. The existing explicit IMAP private-target allowlist remains
+scoped to mail-server addresses only.
+
 **Not doing in this card:**
 
 - **A dedicated `email_provider:*` permission.** Reuse `ticket_settings:update`,
   matching PR 3984 and the `mspOutboundEmailAccess` header's stated follow-up. A
   new permission is a catalog/seed migration, out of scope for a security fix.
-- **Full pinned-DNS fetch for the token POST.** We validate-then-POST with
-  `maxRedirects: 0`; we do not replace axios with an undici pinned agent. This
-  leaves a narrow DNS-rebinding TOCTOU (resolve returns public, axios re-resolves
-  to private). Flag as a recommended follow-up (route through a `safeFetch`-style
-  pinned agent). The `maxRedirects: 0` + resolved-IP check closes the practical
-  attack; rebinding requires attacker control of authoritative DNS with a sub-
-  second flip.
+- **Historical baseline note, superseded:** the original plan proposed
+  validate-then-POST with redirects disabled and listed DNS pinning as a
+  follow-up. The current implementation update above replaces that limitation:
+  token requests and IMAP sockets are pinned to validated addresses.
 - **Microsoft/Google token endpoints** — fixed vendor URLs, not caller-supplied;
   untouched.
 - **Rotating already-stored IMAP credentials** that may have been planted before

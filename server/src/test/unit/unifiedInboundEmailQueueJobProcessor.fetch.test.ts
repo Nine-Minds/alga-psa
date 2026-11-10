@@ -21,6 +21,7 @@ const imapCloseMock = vi.fn();
 const imapOnMock = vi.fn();
 const getTenantSecretMock = vi.fn();
 const dnsLookupMock = vi.fn();
+const imapOptionsMock = vi.fn();
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
@@ -87,6 +88,9 @@ vi.mock('mailparser', () => ({
 
 vi.mock('imapflow', () => ({
   ImapFlow: class ImapFlow {
+    constructor(options: unknown) {
+      imapOptionsMock(options);
+    }
     connect(...args: any[]) {
       return imapConnectMock(...args);
     }
@@ -245,6 +249,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     gmailGetMessageDetailsMock.mockReset();
     simpleParserMock.mockReset();
     imapConnectMock.mockReset();
+    imapOptionsMock.mockReset();
     imapGetMailboxLockMock.mockReset();
     imapFetchMock.mockReset();
     imapLogoutMock.mockReset();
@@ -780,6 +785,12 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       dedupedCount: 0,
     });
     expect(imapConnectMock).toHaveBeenCalledTimes(1);
+    const [imapOptions] = imapOptionsMock.mock.calls[0];
+    const pinnedAddress = await new Promise((resolve, reject) =>
+      (imapOptions as any).tls.lookup('imap.example.com', { all: true },
+        (error: Error | null, addresses: unknown) => error ? reject(error) : resolve(addresses))
+    );
+    expect(pinnedAddress).toEqual([{ address: '93.184.216.34', family: 4 }]);
     expect(simpleParserMock).toHaveBeenCalledTimes(1);
     expect(processInboundEmailInAppMock).toHaveBeenCalledWith(
       expect.objectContaining({

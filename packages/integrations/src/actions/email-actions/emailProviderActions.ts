@@ -13,6 +13,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
 import axios from 'axios';
+import https from 'node:https';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 import { configureGmailProvider, type ConfigureGmailProviderResult } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
@@ -216,6 +217,29 @@ const PROVIDER_COLUMNS = [
   'created_at as createdAt',
   'updated_at as updatedAt'
 ];
+
+function redactProviderCredentials(provider: EmailProvider): EmailProvider {
+  const redact = <T extends object | undefined>(config: T): T => {
+    if (!config) return config;
+    const {
+      client_secret: _clientSecret,
+      client_secret_ref: _clientSecretRef,
+      oauth_client_secret: _oauthClientSecret,
+      access_token: _accessToken,
+      refresh_token: _refreshToken,
+      webhook_verification_token: _webhookVerificationToken,
+      ...safeConfig
+    } = config as Record<string, unknown>;
+    return safeConfig as T;
+  };
+
+  return {
+    ...provider,
+    microsoftConfig: redact(provider.microsoftConfig),
+    googleConfig: redact(provider.googleConfig),
+    imapConfig: redact(provider.imapConfig),
+  };
+}
 
 type ProviderRow = EmailProvider;
 
@@ -793,20 +817,15 @@ export const getEmailProviders = withAuth(async (
             'email_provider_id',
             'tenant',
             'client_id',
-            'client_secret',
             'microsoft_profile_id',
-            'client_secret_ref',
             'tenant_id',
             'redirect_uri',
             'auto_process_emails',
             'max_emails_per_sync',
             'folder_filters',
-            'access_token',
-            'refresh_token',
             'token_expires_at',
             'webhook_subscription_id',
             'webhook_expires_at',
-            'webhook_verification_token',
             'last_subscription_renewal',
             'delivery_mode',
             'last_webhook_delivery_at',
@@ -829,7 +848,6 @@ export const getEmailProviders = withAuth(async (
             'email_provider_id',
             'tenant',
             'client_id',
-            'client_secret',
             'project_id',
             'redirect_uri',
             'pubsub_topic_name',
@@ -837,8 +855,6 @@ export const getEmailProviders = withAuth(async (
             'auto_process_emails',
             'max_emails_per_sync',
             'label_filters',
-            'access_token',
-            'refresh_token',
             'token_expires_at',
             'history_id',
             'watch_expiration',
@@ -869,13 +885,8 @@ export const getEmailProviders = withAuth(async (
             'folder_filters',
             'oauth_authorize_url',
             'oauth_token_url',
-            'oauth_credentials_token_url',
-            'oauth_credentials_secret_version',
             'oauth_client_id',
-            'oauth_client_secret',
             'oauth_scopes',
-            'access_token',
-            'refresh_token',
             'token_expires_at',
             'uid_validity',
             'last_uid',
@@ -900,7 +911,7 @@ export const getEmailProviders = withAuth(async (
         }
       }
       
-      return provider;
+      return redactProviderCredentials(provider);
     }));
 
     return { providers: providersWithConfig };
@@ -1039,6 +1050,7 @@ export const upsertEmailProvider = withAuth(async (
       }
     }
 
+    if (result.provider) result.provider = redactProviderCredentials(result.provider);
     return result;
   } catch (error) {
     if (error instanceof ExpectedEmailProviderActionError) {
@@ -1394,6 +1406,7 @@ export const updateEmailProvider = withAuth(async (
       }
     }
 
+    if (result.provider) result.provider = redactProviderCredentials(result.provider);
     return result;
   } catch (error) {
     if (error instanceof ExpectedEmailProviderActionError) {
@@ -1517,8 +1530,9 @@ export const testEmailProviderConnection = withAuth(async (
         return emailProviderOperationError('IMAP provider configuration not found.', 'missing_config');
       }
 
+      let imapTarget: Awaited<ReturnType<typeof assertSafeImapHost>>;
       try {
-        await assertSafeImapHost(String(config.host ?? ''));
+        imapTarget = await assertSafeImapHost(String(config.host ?? ''), Number(config.port));
       } catch {
         return emailProviderOperationError('IMAP server is not an allowed target.', 'missing_config');
       }
@@ -1545,8 +1559,9 @@ export const testEmailProviderConnection = withAuth(async (
               'missing_config'
             );
           }
+          let tokenTarget: Awaited<ReturnType<typeof assertSafeImapOauthTokenEndpoint>>;
           try {
-            await assertSafeImapOauthTokenEndpoint(config.oauth_token_url);
+            tokenTarget = await assertSafeImapOauthTokenEndpoint(config.oauth_token_url);
           } catch {
             return emailProviderOperationError(
               'IMAP OAuth token endpoint is not an allowed target.',
@@ -1581,6 +1596,8 @@ export const testEmailProviderConnection = withAuth(async (
             response = await axios.post(config.oauth_token_url, params as any, {
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
               maxRedirects: 0,
+              proxy: false,
+              httpsAgent: new https.Agent({ lookup: tokenTarget.lookup as any }),
             });
           } catch (oauthError) {
             console.warn('IMAP OAuth token refresh failed:', oauthError);
@@ -1630,6 +1647,7 @@ export const testEmailProviderConnection = withAuth(async (
         port: Number(config.port),
         secure: config.secure,
         auth,
+        tls: { lookup: imapTarget.lookup as any },
         disableAutoIdle: true,
         logger: false,
       });

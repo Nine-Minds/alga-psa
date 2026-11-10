@@ -5,6 +5,12 @@ const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   sessionUser: { user_id: 'user-1', user_type: 'internal' as 'internal' | 'client' },
   tableCalls: [] as string[],
+  providerRows: null as Array<Record<string, any>> | null,
+  providerConfigs: {} as Record<string, Record<string, any>>,
+  secretLookup: vi.fn(),
+  httpPost: vi.fn(),
+  imapConnect: vi.fn(),
+  providerDelete: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -12,7 +18,28 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({
     table: (name: string) => {
       mocks.tableCalls.push(name);
-      throw new Error(`unexpected provider data access: ${name}`);
+      if (!mocks.providerRows) throw new Error(`unexpected provider data access: ${name}`);
+      let selectedColumns: string[] = [];
+      const query: any = {
+        orderBy: () => query,
+        where: () => query,
+        select: (...columns: any[]) => {
+          if (name === 'email_providers') {
+            const requested = Array.isArray(columns[0]) ? columns[0] : columns;
+            return Promise.resolve(mocks.providerRows!.map((row) => Object.fromEntries(requested.flatMap((column: string) => {
+              const field = column.includes(' as ') ? column.split(' as ')[1] : column;
+              return field in row ? [[field, row[field]]] : [];
+            }))));
+          }
+          selectedColumns = columns as string[];
+          return query;
+        },
+        first: async () => {
+          const row = mocks.providerConfigs[name];
+          return row ? Object.fromEntries(selectedColumns.filter((column) => column in row).map((column) => [column, row[column]])) : null;
+        },
+      };
+      return query;
     },
   }),
   auditLog: vi.fn(),
@@ -22,6 +49,18 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ ...mocks.sessionUser }, { tenant: 'tenant-1' }, ...args),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({ getTenantSecret: mocks.secretLookup }),
+}));
+vi.mock('axios', () => ({ default: { post: mocks.httpPost } }));
+vi.mock('imapflow', () => ({
+  ImapFlow: vi.fn(function (this: any) {
+    this.connect = (...args: unknown[]) => mocks.imapConnect(...args);
+  }),
+}));
+vi.mock('../../services/email/EmailProviderService', () => ({
+  EmailProviderService: vi.fn(function () { return { deleteProvider: mocks.providerDelete }; }),
+}));
 
 const providerData = {
   tenant: 'tenant-1', providerType: 'imap', providerName: 'Mailbox', mailbox: 'a@example.test', isActive: true,
@@ -31,6 +70,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.tableCalls.length = 0;
   mocks.sessionUser.user_type = 'internal';
+  mocks.providerRows = null;
+  mocks.providerConfigs = {};
   mocks.createTenantKnex.mockResolvedValue({ knex: {} });
   mocks.hasPermission.mockResolvedValue(false);
 });
@@ -64,6 +105,10 @@ describe('email provider action authorization', () => {
     expect(results[9]).toEqual({ success: false, error: 'Permission denied' });
     expect(mocks.hasPermission).not.toHaveBeenCalled();
     expect(mocks.tableCalls).toEqual([]);
+    expect(mocks.secretLookup).not.toHaveBeenCalled();
+    expect(mocks.httpPost).not.toHaveBeenCalled();
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
+    expect(mocks.providerDelete).not.toHaveBeenCalled();
   });
 
   it('rejects MSP users without ticket_settings:update before provider data access', async () => {
@@ -90,6 +135,10 @@ describe('email provider action authorization', () => {
     expect(mocks.hasPermission).toHaveBeenCalledTimes(10);
     expect(mocks.hasPermission).toHaveBeenCalledWith(expect.anything(), 'ticket_settings', 'update', expect.anything());
     expect(mocks.tableCalls).toEqual([]);
+    expect(mocks.secretLookup).not.toHaveBeenCalled();
+    expect(mocks.httpPost).not.toHaveBeenCalled();
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
+    expect(mocks.providerDelete).not.toHaveBeenCalled();
   });
 
   it('lets an authorized MSP caller reach provider data access', async () => {
@@ -99,5 +148,26 @@ describe('email provider action authorization', () => {
     await expect(actions.resyncImapProvider('provider-1')).rejects.toThrow('unexpected provider data access');
     expect(mocks.hasPermission).toHaveBeenCalledWith(expect.anything(), 'ticket_settings', 'update', expect.anything());
     expect(mocks.tableCalls).toEqual(['email_providers']);
+  });
+
+  it('returns provider settings without any stored credential values', async () => {
+    mocks.hasPermission.mockResolvedValue(true);
+    mocks.providerRows = [{ id: 'provider-1', providerType: 'imap', tenant: 'tenant-1' }];
+    mocks.providerConfigs.imap_email_provider_config = {
+      email_provider_id: 'provider-1',
+      oauth_client_id: 'client-id',
+      oauth_client_secret: 'secret-value',
+      access_token: 'access-value',
+      refresh_token: 'refresh-value',
+    };
+    const actions = await import('./emailProviderActions');
+
+    const result = await actions.getEmailProviders();
+
+    expect(result.providers).toHaveLength(1);
+    expect(result.providers[0].imapConfig).toMatchObject({ email_provider_id: 'provider-1', oauth_client_id: 'client-id' });
+    expect(result.providers[0].imapConfig).not.toHaveProperty('oauth_client_secret');
+    expect(result.providers[0].imapConfig).not.toHaveProperty('access_token');
+    expect(result.providers[0].imapConfig).not.toHaveProperty('refresh_token');
   });
 });

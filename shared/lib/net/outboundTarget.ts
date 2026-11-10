@@ -15,6 +15,8 @@ export class UnsafeOutboundTargetError extends Error {
 
 export type OutboundTargetOptions = {
   schemes: readonly string[];
+  /** Effective URL ports allowed for this destination class. */
+  ports?: readonly number[];
   /** Exact hosts/IPs allowed to resolve to private addresses. Never tenant data. */
   privateTargetAllowlist?: readonly string[];
   /** Deployment-owned compatibility switch; still enforces URL syntax/scheme. */
@@ -22,6 +24,12 @@ export type OutboundTargetOptions = {
   /** Injection point for deterministic tests. */
   lookup?: (hostname: string) => Promise<Array<{ address: string; family: number }>>;
 };
+
+export interface ResolvedOutboundTarget {
+  url: URL;
+  /** One vetted answer used by the transport for the actual connection. */
+  pin: { address: string; family: number };
+}
 
 const blocked = new BlockList();
 for (const [network, prefix] of [
@@ -86,15 +94,27 @@ export async function assertSafeOutboundTarget(
   targetUrl: string,
   options: OutboundTargetOptions,
 ): Promise<URL> {
+  return (await resolveSafeOutboundTarget(targetUrl, options)).url;
+}
+
+/** Resolve and validate a target, returning a vetted address for pinned transports. */
+export async function resolveSafeOutboundTarget(
+  targetUrl: string,
+  options: OutboundTargetOptions,
+): Promise<ResolvedOutboundTarget> {
   let parsed: URL;
   try {
     parsed = new URL(targetUrl);
   } catch {
-    throw new UnsafeOutboundTargetError(`Outbound target URL is invalid: ${targetUrl}`);
+    throw new UnsafeOutboundTargetError('Outbound target URL is invalid');
   }
   const schemes = options.schemes.map((scheme) => scheme.endsWith(':') ? scheme : `${scheme}:`);
   if (!schemes.includes(parsed.protocol)) {
     throw new UnsafeOutboundTargetError(`Outbound target protocol ${parsed.protocol} is not allowed`);
+  }
+  const effectivePort = Number(parsed.port || (parsed.protocol === 'https:' ? 443 : parsed.protocol === 'http:' ? 80 : 0));
+  if (options.ports && !options.ports.includes(effectivePort)) {
+    throw new UnsafeOutboundTargetError(`Outbound target port ${effectivePort} is not allowed`);
   }
   if (parsed.username || parsed.password) {
     throw new UnsafeOutboundTargetError('Outbound target URL must not contain credentials');
@@ -119,7 +139,27 @@ export async function assertSafeOutboundTarget(
       throw new UnsafeOutboundTargetError(`Outbound target resolved to a blocked private address: ${address}`);
     }
   }
-  return parsed;
+  const pin = addresses[0];
+  if (!pin || isBlockedOutboundAddress(pin.address) && !options.allowPrivateTargets &&
+    !(allowedPrivateHosts.has(hostname) && isPrivateRangeEligibleForAllowlist(pin.address))) {
+    throw new UnsafeOutboundTargetError('Outbound target has no permitted address');
+  }
+  return { url: parsed, pin };
+}
+
+/** A Node lookup callback that prevents a validated hostname from being re-resolved. */
+export function createPinnedOutboundLookup(pin: { address: string; family: number }) {
+  return (
+    _hostname: string,
+    options: { all?: boolean } | number | undefined,
+    callback: (err: NodeJS.ErrnoException | null, address: any, family?: number) => void,
+  ): void => {
+    if (typeof options === 'object' && options?.all) {
+      callback(null, [{ address: pin.address, family: pin.family }]);
+      return;
+    }
+    callback(null, pin.address, pin.family);
+  };
 }
 
 /** Exact hostname/IP allowlist parser used by deployment-owned policy. */

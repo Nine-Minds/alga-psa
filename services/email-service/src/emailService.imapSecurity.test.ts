@@ -80,11 +80,11 @@ vi.mock('@alga-psa/shared/services/email/inboundEmailMetrics', () => ({
 import { EmailService } from './emailService';
 
 function providerRow(overrides: Record<string, unknown> = {}) {
-  const tokenUrl = 'https://93.184.216.34/token';
+  const tokenUrl = 'https://login.example.test/token';
   return {
     id: 'imap-provider-1', tenant: 'tenant-1', provider_name: 'Support',
     mailbox: 'support@example.test', is_active: true, status: 'connected',
-    error_message: null, last_sync_at: null, host: '93.184.216.34', port: 993,
+    error_message: null, last_sync_at: null, host: 'imap.example.test', port: 993,
     secure: true, allow_starttls: false, auth_type: 'oauth2', username: 'support@example.test',
     auto_process_emails: true, max_emails_per_sync: 5, folder_filters: ['INBOX'],
     oauth_token_url: tokenUrl, oauth_credentials_token_url: tokenUrl,
@@ -196,7 +196,7 @@ describe('email-service IMAP outbound security', () => {
     const service = await startListeners([providerRow()]);
     await vi.waitFor(() => expect(mocks.axiosPost).toHaveBeenCalledTimes(1));
     expect(mocks.axiosPost).toHaveBeenCalledWith(
-      'https://93.184.216.34/token',
+      'https://login.example.test/token',
       expect.any(URLSearchParams),
       expect.objectContaining({ maxRedirects: 0 })
     );
@@ -240,9 +240,23 @@ describe('email-service IMAP outbound security', () => {
     expect(form.get('client_secret')).toBe('endpoint-scoped-client-secret');
     expect(mocks.configUpdates).toContainEqual(expect.objectContaining({ access_token: 'listener-access-token' }));
     expect(mocks.imapConstructed.mock.calls[0][0]).toMatchObject({
-      host: '93.184.216.34',
+      host: 'imap.example.test',
       auth: { accessToken: 'listener-access-token' },
     });
+    const [clientOptions] = mocks.imapConstructed.mock.calls[0];
+    const tokenRequest = mocks.axiosPost.mock.calls[0][2];
+    const resolvePinned = (lookup: Function) => new Promise((resolve, reject) =>
+      lookup('imap.example.test', { all: true }, (error: Error | null, addresses: unknown) =>
+        error ? reject(error) : resolve(addresses)
+      )
+    );
+    mocks.dnsLookup.mockResolvedValue([{ address: '169.254.169.254', family: 4 }]);
+    await expect(resolvePinned(tokenRequest.httpsAgent.options.lookup)).resolves.toEqual([
+      { address: '93.184.216.34', family: 4 },
+    ]);
+    await expect(resolvePinned(clientOptions.tls.lookup)).resolves.toEqual([
+      { address: '93.184.216.34', family: 4 },
+    ]);
     await service.stop();
   });
 

@@ -710,7 +710,7 @@ class ImapFolderListener {
   }
 
   private async buildClient(): Promise<ImapFlow> {
-    await assertSafeImapHost(this.provider.host);
+    const imapTarget = await assertSafeImapHost(this.provider.host, Number(this.provider.port));
     if (this.provider.auth_type === 'oauth2') {
       assertImapOauthCredentialIssuerBound(this.provider);
       if (this.isTokenExpired()) {
@@ -738,9 +738,10 @@ class ImapFolderListener {
     const secure = Boolean(this.provider.secure);
 
     const rejectUnauthorized = (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false';
-    const tlsOptions = (secure || this.provider.allow_starttls)
-      ? { rejectUnauthorized }
-      : undefined;
+    const tlsOptions = {
+      lookup: imapTarget.lookup as any,
+      ...(secure || this.provider.allow_starttls ? { rejectUnauthorized } : {}),
+    };
     const client = new ImapFlow({
       host: this.provider.host,
       port: Number(this.provider.port),

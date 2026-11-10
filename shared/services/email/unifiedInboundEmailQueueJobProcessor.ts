@@ -666,7 +666,7 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
   const oauthMechanism: 'XOAUTH2' | 'OAUTHBEARER' =
     process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
 
-  await assertSafeImapHost(provider.host);
+  const imapTarget = await assertSafeImapHost(provider.host, Number(provider.port));
   if (provider.auth_type === 'oauth2') {
     assertImapOauthCredentialIssuerBound(provider);
   }
@@ -709,7 +709,10 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
       connectionTimeout: connectionTimeoutMs,
       greetingTimeout: connectionTimeoutMs,
       socketTimeout: socketTimeoutMs,
-      tls: secure || provider.allow_starttls ? { rejectUnauthorized } : undefined,
+      tls: {
+        lookup: imapTarget.lookup as any,
+        ...(secure || provider.allow_starttls ? { rejectUnauthorized } : {}),
+      },
     });
     applyOauthMechanismOverride(client, oauthMechanism);
     client.on('error', (error: any) => {

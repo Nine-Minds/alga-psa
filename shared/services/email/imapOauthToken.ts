@@ -5,6 +5,7 @@
  */
 
 import axios from 'axios';
+import https from 'node:https';
 import { tenantDb } from '@alga-psa/db';
 import type { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -60,7 +61,7 @@ export async function refreshImapAccessToken(params: {
   // Check the durable DB binding before reading secrets: CompositeSecretProvider
   // may still return an environment fallback after its write provider deletes a key.
   assertImapOauthCredentialIssuerBound(provider);
-  await assertSafeImapOauthTokenEndpoint(provider.oauth_token_url);
+  const tokenTarget = await assertSafeImapOauthTokenEndpoint(provider.oauth_token_url);
 
   const { clientSecret, refreshToken } = await getImapOauthSecrets({
     id: provider.id,
@@ -86,6 +87,8 @@ export async function refreshImapAccessToken(params: {
   const response = await axios.post(provider.oauth_token_url, paramsBody, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     maxRedirects: 0,
+    proxy: false,
+    httpsAgent: new https.Agent({ lookup: tokenTarget.lookup as any }),
   });
   const accessToken = asNonEmptyString(response?.data?.access_token);
   if (!accessToken) {

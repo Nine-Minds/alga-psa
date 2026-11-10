@@ -482,6 +482,9 @@ describe('Email Provider Creation', () => {
       };
       const created = await createEmailProvider(original as any, true);
       expect(created).toHaveProperty('provider.id');
+      expect(created.provider.imapConfig).not.toHaveProperty('oauth_client_secret');
+      expect(created.provider.imapConfig).not.toHaveProperty('refresh_token');
+      expect(created.provider.imapConfig).not.toHaveProperty('access_token');
       const providerId = created.provider.id;
 
       await updateEmailProvider(providerId, { ...original, imapConfig: {
@@ -502,12 +505,17 @@ describe('Email Provider Creation', () => {
       const changed = await updateEmailProvider(providerId, { ...original, imapConfig: {
         ...original.imapConfig,
         oauth_token_url: 'https://issuer-two.example.test/token',
-        oauth_client_secret: undefined,
-        refresh_token: undefined,
-        access_token: undefined,
-        token_expires_at: undefined,
+        // A stale form can submit the old values together with the new issuer.
+        // Persistence must discard them rather than re-bind them to that URL.
+        oauth_client_secret: 'stored-client-secret',
+        refresh_token: 'stored-refresh-token',
+        access_token: 'stored-access-token',
+        token_expires_at: new Date(Date.now() + 60_000).toISOString(),
       } } as any, true);
       expect(changed).toMatchObject({ setupError: expect.stringContaining('Reconnect the mailbox') });
+      expect(changed.provider.imapConfig).not.toHaveProperty('oauth_client_secret');
+      expect(changed.provider.imapConfig).not.toHaveProperty('refresh_token');
+      expect(changed.provider.imapConfig).not.toHaveProperty('access_token');
       row = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
       expect(row.oauth_token_url).toBe('https://issuer-two.example.test/token');
       expect(row.oauth_credentials_token_url).toBeNull();

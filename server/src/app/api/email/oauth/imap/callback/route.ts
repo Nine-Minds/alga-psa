@@ -9,6 +9,7 @@ import {
   getImapOauthSecretNames,
 } from '@alga-psa/shared/services/email/imapOutboundTarget';
 import axios from 'axios';
+import https from 'node:https';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 export async function GET(request: NextRequest) {
@@ -61,8 +62,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IMAP OAuth token configuration missing' }, { status: 400 });
     }
 
+    let tokenTarget: Awaited<ReturnType<typeof assertSafeImapOauthTokenEndpoint>>;
     try {
-      await assertSafeImapOauthTokenEndpoint(imapConfig.oauth_token_url);
+      tokenTarget = await assertSafeImapOauthTokenEndpoint(imapConfig.oauth_token_url);
     } catch {
       return NextResponse.json({ error: 'IMAP OAuth token endpoint is not an allowed target' }, { status: 400 });
     }
@@ -87,6 +89,8 @@ export async function GET(request: NextRequest) {
       tokenResponse = await axios.post(imapConfig.oauth_token_url, params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         maxRedirects: 0,
+        proxy: false,
+        httpsAgent: new https.Agent({ lookup: tokenTarget.lookup as any }),
       });
     } catch (tokenError) {
       console.warn('IMAP OAuth token exchange failed:', tokenError);
