@@ -1,14 +1,17 @@
 'use server';
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
+import {
+  authorizeTicketRecordAccess,
+  TicketRecordAccessDeniedError,
+} from '@alga-psa/authorization/ticketRecordAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { ITicketFixedFeeService } from '@alga-psa/types';
 import { z } from 'zod';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 
 function permissionErrorFrom(error: unknown) {
-  if (error instanceof Error && error.message.includes('Permission denied')) {
+  if (error instanceof TicketRecordAccessDeniedError) {
     return permissionError(error.message);
   }
   throw error;
