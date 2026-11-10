@@ -107,6 +107,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
+import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { assertAllowedTicketUpdateOptions, AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
@@ -348,16 +349,17 @@ async function createTicketAuthorizationContext(
   };
 }
 
-async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+/** Each readable ticket with the fields its reader's policy redacts. */
+async function authorizeTicketReads<T extends Partial<ITicket> & { ticket_id?: string | null }>(
   trx: Knex.Transaction,
   context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
   tickets: T[]
-): Promise<T[]> {
+): Promise<Array<{ ticket: T; redactedFields: string[] }>> {
 
   const decisions = await Promise.all(
     tickets.map((ticket) => {
       if (!ticket.ticket_id) {
-        return Promise.resolve({ allowed: false });
+        return Promise.resolve({ allowed: false, redactedFields: [] as string[] });
       }
 
       return context.authorizationKernel.authorizeResource({
@@ -376,7 +378,27 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
     })
   );
 
-  return tickets.filter((_, index) => decisions[index]?.allowed);
+  return tickets.flatMap((ticket, index) =>
+    decisions[index]?.allowed ? [{ ticket, redactedFields: decisions[index].redactedFields ?? [] }] : []
+  );
+}
+
+/**
+ * The tickets the reader may see, each as the reader may see it: fields the
+ * decision redacts are omitted the way the REST ticket endpoints omit them, and
+ * a ticket whose identity is redacted is dropped. Without redactions the rows
+ * are returned untouched.
+ */
+async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+  trx: Knex.Transaction,
+  context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
+  tickets: T[]
+): Promise<T[]> {
+  const authorized = await authorizeTicketReads(trx, context, tickets);
+  return authorized.flatMap(({ ticket, redactedFields }) => {
+    const projected = projectReadableRecord('ticket', ticket, redactedFields);
+    return projected ? [projected] : [];
+  });
 }
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
@@ -390,6 +412,13 @@ function applyTicketReadAuthorizationSql(
   // Built-in narrowing for client-portal users mirrors createTicketAuthorizationContext.
   const builtinRules: RelationshipRule[] =
     context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
+
+  // SQL narrowing preserves row authorization but has no per-row redaction
+  // metadata. Use the kernel path whenever a policy carries field redactions,
+  // as the REST ticket list does.
+  if (context.ticketReadBundleNarrowingRules.some((rule) => (rule.redactedFields?.length ?? 0) > 0)) {
+    return { supported: false, reason: 'bundle rule redacts fields' };
+  }
 
   return compileTenantScopedResourceReadAuthorizationSql(query, {
     resourceType: 'ticket',
@@ -486,11 +515,16 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       tenant,
       user as IUserWithRoles
     );
-    const [authorizedTicket] = await filterAuthorizedTickets(trx, authorizationContext, [ticket]);
+    const [ticketRead] = await authorizeTicketReads(trx, authorizationContext, [ticket]);
 
-    if (!authorizedTicket) {
+    // A redaction that hides the ticket's identity hides the ticket, as on REST.
+    if (!ticketRead || !projectReadableRecord('ticket', ticket, ticketRead.redactedFields)) {
       throw new Error('Permission denied: Cannot view ticket');
     }
+    const ticketRedactions = ticketRead.redactedFields;
+    // A related record is derived from a ticket field: hiding the field hides the record.
+    const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
+      isRecordFieldHidden('ticket', field, ticketRedactions) ? null : value;
 
     // Fetch all related data in parallel
     const [
@@ -1079,11 +1113,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Return all data in a single consolidated object
     return {
-      ticket: {
+      ticket: projectReadableRecord('ticket', {
         ...normalizedTicketData,
         tenant,
         location
-      },
+      }, ticketRedactions),
       bundle: {
         isBundleChild,
         isBundleMaster,
@@ -1099,13 +1133,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       aggregatedChildClientComments: filteredAggregatedChildClientComments,
       comments,
       documents,
-      client,
+      client: whenTicketFieldVisible('client_name', client),
       contacts,
-      contactInfo,
+      contactInfo: whenTicketFieldVisible('contact_name', contactInfo),
       displayTags,
-      createdByUser,
+      createdByUser: whenTicketFieldVisible('entered_by_name', createdByUser),
       updatedByUser,
-      board,
+      board: whenTicketFieldVisible('board_name', board),
       additionalAgents: resources,
       availableAgents: users,
       userMap,

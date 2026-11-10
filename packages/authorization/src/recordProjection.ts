@@ -87,6 +87,10 @@ const DEFINITIONS: Record<ProjectableResource, ResourceDefinition> = {
       clientName: commonClientName,
       status_name: [...commonStatusName, 'standard_statuses', 'standard_statuses.name', 'project_status_mapping_id', 'project_status_mappings', 'project_status_mappings.custom_name'],
       assigned_user_name: commonAssignedName,
+      // The MSP project rows carry the manager's name in these columns and fold them into `assigned_user`.
+      assigned_to_first_name: commonAssignedName,
+      assigned_to_last_name: commonAssignedName,
+      assigned_user: commonAssignedName,
       contact_name: ['contact_name', 'contact_name_id', 'contacts', 'contacts.full_name', 'values.contact_name_id', 'projects.contact_name_id'],
       phase_id: ['phase_id', 'project_phases.phase_id'],
       phase_name: [...PHASE_NAME_ALIASES, 'phase_id', 'project_phases', 'project_phases.phase_id'],

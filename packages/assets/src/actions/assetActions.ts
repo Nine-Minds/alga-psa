@@ -112,6 +112,7 @@ import {
     isAssetActionAllowed as isSharedAssetActionAllowed,
     isAssetReadAllowed as isSharedAssetReadAllowed,
     filterReadableAssets,
+    projectReadableAssets,
     type AssetAuthUser as SharedAssetAuthUser,
     type AssetAuthorizationAction,
 } from '../lib/assetReadAuthorization';
@@ -613,6 +614,20 @@ async function assertAssetReadAllowed(
     await assertAssetActionAllowed(trx, tenant, context, asset, 'read');
 }
 
+/** The asset as its reader may see it; a redaction that hides its identity hides the asset. */
+async function readableAssetOrNotFound<T extends AssetAuthorizationInput>(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset: T
+): Promise<T> {
+    const [readable] = await projectReadableAssets(trx, tenant, context, [asset]);
+    if (!readable) {
+        throw new Error('Asset not found');
+    }
+    return readable;
+}
+
 async function resolveAssetAuthorizationInputById(
     trx: Knex.Transaction,
     tenant: string,
@@ -836,14 +851,14 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
         const asset = await getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser);
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
         await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
-        return asset;
+        // Same normalisation every other read path applies (getAssetDetailBundle,
+        // create, update): pg returns NUMERIC columns as strings and timestamps as
+        // Date, neither of which matches the declared Asset contract or what the
+        // edit form can round-trip back through updateAssetSchema (alga0002283).
+        return readableAssetOrNotFound(trx, tenant, context, formatAssetForOutput(asset));
     });
 
-    // Same normalisation every other read path applies (getAssetDetailBundle,
-    // create, update): pg returns NUMERIC columns as strings and timestamps as
-    // Date, neither of which matches the declared Asset contract or what the
-    // edit form can round-trip back through updateAssetSchema (alga0002283).
-    return formatAssetForOutput(asset);
+    return asset;
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -892,7 +907,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
             { asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }
         );
 
-        const formattedAsset = formatAssetForOutput(assetRecord);
+        const formattedAsset = await readableAssetOrNotFound(trx, tenant, context, formatAssetForOutput(assetRecord));
 
         // Structural child data inherits parent-asset authorization. Linked ticket/document data
         // additionally intersects with their own resource-family authorization.
@@ -2490,7 +2505,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
         );
 
             const response = {
-                assets: assetsWithExtensions,
+                assets: await projectReadableAssets(trx, tenant, context, assetsWithExtensions),
                 total: authorizedPage.total,
                 page,
                 limit,
@@ -3716,7 +3731,7 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                 )
             );
 
-            return assets;
+            return projectReadableAssets(trx, tenant, context, assets);
         });
     } catch (error) {
         console.error('Error listing entity assets:', error);

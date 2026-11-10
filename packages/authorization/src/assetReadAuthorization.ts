@@ -10,6 +10,7 @@ import {
 } from './kernel';
 import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
+import { projectReadableRecord } from './recordProjection';
 
 /**
  * Asset read authorization, shared by the asset server actions and the label code paths.
@@ -364,4 +365,36 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   options?: { resolveMultiUserOwnersIndividually?: boolean }
 ): Promise<T[]> {
   return filterAssetsAllowedForAction(trx, tenant, context, assets, 'read', options);
+}
+
+/**
+ * The assets the caller may read, each as the caller may see it: fields the read decision redacts are omitted
+ * the way the REST asset endpoints omit them, and an asset whose identity is redacted (or that is not readable)
+ * is dropped. Rows of a caller without redactions are returned untouched.
+ */
+export async function projectReadableAssets<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[]
+): Promise<T[]> {
+  if (assets.length === 0) return [];
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
+  const decide = (asset: T, record: AuthorizationRecord | undefined) => context.authorizationKernel.authorizeResource({
+    subject: context.subject,
+    resource: { type: 'asset' as const, action: 'read' as const, id: asset.asset_id },
+    record,
+    requestCache: context.requestCache,
+    knex: trx as Knex,
+  });
+  const projected = await Promise.all(assets.map(async (asset) => {
+    let decision = await decide(asset, records.get(asset.asset_id));
+    if (!decision.allowed) {
+      // Batched association rows are unordered, so an asset with several owners is decided again on its own
+      // before it is treated as unreadable (see filterAssetsAllowedForAction).
+      decision = await decide(asset, (await resolveAssetAuthorizationRecords(trx, tenant, [asset])).get(asset.asset_id));
+    }
+    return decision.allowed ? projectReadableRecord('asset', asset, decision.redactedFields) : null;
+  }));
+  return projected.filter((asset): asset is NonNullable<typeof asset> => asset !== null) as T[];
 }
