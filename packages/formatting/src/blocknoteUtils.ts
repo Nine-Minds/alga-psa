@@ -86,11 +86,21 @@ function isEffectivelyEmpty(html: string, text: string): boolean {
   return cleanedHtml.length === 0 && cleanedText.length === 0;
 }
 
+/** @deprecated Conversion no longer throws; unsupported blocks render UNSUPPORTED_RICH_TEXT_PLACEHOLDER. */
 export class UnsupportedRichTextBlockError extends Error {
   constructor(type: unknown) {
     super(`Cannot export rich-text block "${String(type)}". Replace it with supported content or a link before exporting.`);
     this.name = 'UnsupportedRichTextBlockError';
   }
+}
+
+// One unrepresentable block must not abort a whole email or worksheet, nor
+// vanish silently: it is replaced by a visible marker and logged.
+export const UNSUPPORTED_RICH_TEXT_PLACEHOLDER = '[Unsupported content]';
+
+function unsupportedBlock(type: unknown): string {
+  console.warn(`[BlockNoteUtils] Replacing unsupported rich-text block with a placeholder: ${String(type)}`);
+  return UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
 }
 
 function tableCellContent(cell: unknown): unknown[] {
@@ -102,7 +112,7 @@ function tableCellContent(cell: unknown): unknown[] {
     if (Array.isArray(content)) return content;
     if (typeof content === 'string') return [{ type: 'text', text: content, styles: {} }];
   }
-  throw new UnsupportedRichTextBlockError('invalid table cell');
+  return [{ type: 'text', text: unsupportedBlock('invalid table cell'), styles: {} }];
 }
 
 const TABLE_STYLE = 'border-collapse:collapse;max-width:100%;';
@@ -121,9 +131,12 @@ function tableCellAttributes(props: Record<string, unknown> = {}): string {
   return `${attributes} style="${TABLE_CELL_STYLE}${alignment ? `text-align:${alignment};` : ''}"`;
 }
 
-function mediaLink(props: Record<string, unknown>, type: string): { url: string; label: string } {
+function mediaLink(props: Record<string, unknown>, type: string): { url: string; label: string } | null {
   const url = sanitizeHref(props.url ?? props.src);
-  if (!url) throw new UnsupportedRichTextBlockError(type);
+  if (!url) {
+    unsupportedBlock(type);
+    return null;
+  }
   const label = [props.caption, props.name, props.alt].find(
     (value): value is string => typeof value === 'string' && value.trim().length > 0,
   );
@@ -195,7 +208,6 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
       }
       return { html: '', text: '' };
     } catch (error) {
-      if (error instanceof UnsupportedRichTextBlockError) throw error;
       console.warn('[BlockNoteUtils] Failed to convert BlockNote content, falling back to plain text', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
@@ -277,7 +289,6 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
       return markdown;
     }
   } catch (customError) {
-    if (customError instanceof UnsupportedRichTextBlockError) throw customError;
     console.error("[BlockNoteUtils] Custom markdown conversion failed:", customError);
   }
 
@@ -479,8 +490,8 @@ function extractStyledTextFromContent(content: any[]): string {
 function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
   const convertBlock = (block: Block | PartialBlock): string => {
     if (LINK_ONLY_BLOCK_TYPES.has(String(block.type))) {
-      const { url, label } = mediaLink(block.props ?? {}, String(block.type));
-      return `[${label}](${url})`;
+      const link = mediaLink(block.props ?? {}, String(block.type));
+      return link ? `[${link.label}](${link.url})` : UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
     }
     // Check for block-level styling (like paragraph background color)
     let blockWrapper = (content: string): string => content;
@@ -586,7 +597,7 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         if (typeof block.content === 'string') return block.content;
         if (Array.isArray(block.content)) return extractStyledTextFromContent(block.content);
         if (block.children?.length) return '';
-        throw new UnsupportedRichTextBlockError(block.type);
+        return unsupportedBlock(block.type);
     }
 
     return '';
@@ -611,7 +622,7 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
 
     // Validate table structure
     if (!content || typeof content !== 'object' || !content.rows) {
-      throw new UnsupportedRichTextBlockError('invalid table');
+      return unsupportedBlock('invalid table');
     }
 
     const rows = content.rows || [];
@@ -675,7 +686,6 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
 
     return markdown;
   } catch (error) {
-    if (error instanceof UnsupportedRichTextBlockError) throw error;
     console.error("[BlockNoteUtils] Error converting table to markdown:", error);
     return '[Table conversion error]';
   }
@@ -834,8 +844,10 @@ export function convertBlockNoteToHTML(blocks: any): string {
 
       if (LINK_ONLY_BLOCK_TYPES.has(String(block.type))) {
         flushListBuffer();
-        const { url, label } = mediaLink(block.props ?? {}, String(block.type));
-        output.push(`<p${styleAttribute}><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></p>`);
+        const link = mediaLink(block.props ?? {}, String(block.type));
+        output.push(link
+          ? `<p${styleAttribute}><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a></p>`
+          : `<p${styleAttribute}>${escapeHtml(UNSUPPORTED_RICH_TEXT_PLACEHOLDER)}</p>`);
         if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
         return;
       }
@@ -915,7 +927,8 @@ export function convertBlockNoteToHTML(blocks: any): string {
             ? (rawTable as { rows: Array<{ cells: any[] }> })
             : null;
           if (!tableContent || !Array.isArray(tableContent.rows)) {
-            throw new UnsupportedRichTextBlockError('invalid table');
+            output.push(`<p${styleAttribute}>${escapeHtml(unsupportedBlock('invalid table'))}</p>`);
+            break;
           }
           let tableHTML = `<table style="${TABLE_STYLE}"><tbody>`;
           const headerRows = 'headerRows' in tableContent ? Number(tableContent.headerRows) : 0;
@@ -983,7 +996,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
           } else if (typeof block.content === 'string') {
             output.push(`<div${styleAttribute}>${escapeHtml(block.content)}</div>`);
           } else if (!block.children?.length) {
-            throw new UnsupportedRichTextBlockError(block.type);
+            output.push(`<div${styleAttribute}>${escapeHtml(unsupportedBlock(block.type))}</div>`);
           }
           if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
           break;
@@ -1138,8 +1151,10 @@ function renderPMNode(node: PMNode): string {
     case 'audio':
     case 'file':
     case 'embed': {
-      const { url, label } = mediaLink(node.attrs ?? {}, node.type);
-      return `<p><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></p>`;
+      const link = mediaLink(node.attrs ?? {}, node.type);
+      return link
+        ? `<p><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a></p>`
+        : `<p>${escapeHtml(UNSUPPORTED_RICH_TEXT_PLACEHOLDER)}</p>`;
     }
 
     case 'blockquote': {
@@ -1181,7 +1196,7 @@ function renderPMNode(node: PMNode): string {
       // Unknown block — try to render children
       if (node.content) return (node.content).map(renderPMNode).join('\n');
       if (node.text != null) return escapeHtml(node.text);
-      throw new UnsupportedRichTextBlockError(node.type);
+      return `<p>${escapeHtml(unsupportedBlock(node.type))}</p>`;
     }
   }
 }
@@ -1369,8 +1384,8 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
     case 'audio':
     case 'file':
     case 'embed': {
-      const { url, label } = mediaLink(node.attrs ?? {}, node.type);
-      return `[${label}](${url})`;
+      const link = mediaLink(node.attrs ?? {}, node.type);
+      return link ? `[${link.label}](${link.url})` : UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
     }
 
     case 'table': {
@@ -1397,7 +1412,7 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
     default: {
       if (node.content) return (node.content).map(child => renderPMNodeMarkdown(child)).join('\n');
       if (node.text != null) return node.text;
-      throw new UnsupportedRichTextBlockError(node.type);
+      return unsupportedBlock(node.type);
     }
   }
 }

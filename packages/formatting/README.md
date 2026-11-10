@@ -14,8 +14,11 @@ until rendering; flattening it first loses tables, headings, lists, and styles.
 - Audio, video, files, and URL-based embeds become escaped, sanitized links,
   not executable embedded players.
 - Unknown textual blocks retain their text with a warning. Blocks that cannot
-  be represented throw `UnsupportedRichTextBlockError`; notifications must not
-  silently replace those failures with empty content or serialized JSON.
+  be represented (unknown non-text blocks, malformed tables, media without a
+  safe URL) are logged and rendered as a visible
+  `UNSUPPORTED_RICH_TEXT_PLACEHOLDER` ("[Unsupported content]") so one bad
+  block never fails an email send or worksheet render, and content is never
+  silently dropped or serialized as JSON.
 
 The standard customer worksheet uses `ticketDescriptionRichText`. The legacy
 `ticketDescription` binding remains plain text for existing custom templates.

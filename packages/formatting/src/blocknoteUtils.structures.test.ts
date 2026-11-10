@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   convertBlockContentToHTML,
   convertBlockContentToMarkdown,
   flattenBlockContentToPlainText,
   formatBlockNoteContent,
-  UnsupportedRichTextBlockError,
+  UNSUPPORTED_RICH_TEXT_PLACEHOLDER,
 } from './blocknoteUtils';
 
 const text = (value: string) => [{ type: 'text', text: value, styles: {} }];
@@ -127,12 +127,20 @@ describe('rich-text export structures', () => {
     [{ type: 'unsupportedWidget' }],
     [{ type: 'embed', props: { url: 'javascript:alert(1)' } }],
     [{ type: 'table', content: { rows: [{ cells: [{ invalid: true }] }] } }],
-  ])('fails explicitly instead of dropping unsupported content: %j', (block) => {
-    const content = [block];
+  ])('replaces unsupported content with a visible placeholder instead of failing or dropping it: %j', (block) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const content = [{ type: 'paragraph', content: [{ type: 'text', text: 'Before', styles: {} }] }, block];
     for (const value of [content, JSON.stringify(content)]) {
-      expect(() => formatBlockNoteContent(value)).toThrow(UnsupportedRichTextBlockError);
-      expect(() => convertBlockContentToMarkdown(value)).toThrow(UnsupportedRichTextBlockError);
+      const { html, text: plainText } = formatBlockNoteContent(value);
+      const markdown = convertBlockContentToMarkdown(value);
+      for (const output of [html, plainText, markdown]) {
+        expect(output).toContain('Before');
+        expect(output).toContain(UNSUPPORTED_RICH_TEXT_PLACEHOLDER);
+        expect(output).not.toContain('javascript:');
+      }
     }
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('formats ProseMirror table cells, hard breaks, images and task states in notifications', () => {
