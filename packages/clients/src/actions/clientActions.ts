@@ -9,6 +9,7 @@ import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
+import { createClientScopeContext } from '../lib/clientScopeAuthorization';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
@@ -755,6 +756,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       // Build the base query with client_locations join
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -927,6 +930,8 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -1528,6 +1533,8 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
       // Build the base query - same filtering logic as getAllClientsPaginated
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
 
       // Join with locations for search if needed
       if (searchTerm) {

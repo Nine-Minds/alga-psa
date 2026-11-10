@@ -87,7 +87,7 @@
   {
     "id": "T011",
     "description": "DB integration: with three clients, a subject restricted to two lists, pages, counts and picks only those two clients and their contacts; a contact with no client is hidden.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F015"

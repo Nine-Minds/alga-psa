@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Client lists, client detail and client pickers return only in-scope clients for a client-restricted subject, with the restriction applied in SQL so counts and pagination match.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Contact lists, contact detail and contact pickers return only contacts of in-scope clients for a client-restricted subject, and contacts with no client are hidden from them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
