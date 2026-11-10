@@ -240,6 +240,7 @@ vi.mock('@alga-psa/authorization/kernel', () => ({
     };
     return {
       authorizeResource,
+      // LEVERAGE: pattern fake-kernel-mutation — hand-written kernel fakes re-model 'mutation = read, then action'; a shared test kernel built from a decision function would keep them in step with the engine.
       // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
       authorizeMutation: async (req: any) => {
         const read = await authorizeResource({ ...req, resource: { ...req.resource, action: 'read' } });

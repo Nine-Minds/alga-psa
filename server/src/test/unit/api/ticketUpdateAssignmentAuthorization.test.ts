@@ -68,6 +68,7 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.f
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
     authorizeResource: authorizeResourceMock,
+    // LEVERAGE: pattern fake-kernel-mutation — hand-written kernel fakes re-model 'mutation = read, then action'; a shared test kernel built from a decision function would keep them in step with the engine.
     // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
     authorizeMutation: async (input: any) => {
       const read = await authorizeResourceMock({ ...input, resource: { ...input.resource, action: 'read' } });

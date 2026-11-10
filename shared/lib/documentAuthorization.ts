@@ -437,6 +437,7 @@ export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
         requestCache,
         knex: trx,
       };
+      // LEVERAGE: friction mutation-decision-without-read-view — a write needs the read redactions and the mutation verdict, so read is evaluated here and again inside authorizeMutation; a kernel decision that returns both would remove the second pass.
       const decision = await authorizationKernel.authorizeResource(evaluation);
       const mutationAllowed = action === 'read' || !decision.allowed || (
         await authorizationKernel.authorizeMutation({ ...evaluation, resource: { ...evaluation.resource, action } })
