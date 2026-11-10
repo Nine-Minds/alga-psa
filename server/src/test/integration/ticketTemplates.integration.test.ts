@@ -710,9 +710,12 @@ describe('Ticket templates (integration)', () => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const linkMigration = require('../../../migrations/20261017120000_add_recurring_ticket_template_link.cjs');
       // ticket_template_links references ticket_templates too (ON DELETE CASCADE FK), so it goes first as well.
+      // Only the table is dropped: that migration's full down rebuilds external_entity_links indexes
+      // CONCURRENTLY, which cannot run inside this test's transaction. Its up then recreates just the
+      // table, because the index steps are already done.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const docLinksMigration = require('../../../migrations/20261109120000_ticket_template_links.cjs');
-      await docLinksMigration.down(context.db);
+      await context.db.schema.dropTableIfExists('ticket_template_links');
       await linkMigration.down(context.db);
       try {
         await migration.down(context.db);
