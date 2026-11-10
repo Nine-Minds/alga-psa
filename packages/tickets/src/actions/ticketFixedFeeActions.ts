@@ -1,10 +1,18 @@
 'use server';
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { ITicketFixedFeeService } from '@alga-psa/types';
 import { z } from 'zod';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+
+function permissionErrorFrom(error: unknown) {
+  if (error instanceof Error && error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+  throw error;
+}
 
 const entrySchema = z.object({
   ticket_id: z.string().uuid(),
@@ -20,12 +28,19 @@ export const listTicketFixedFeeServices = withAuth(async (user, { tenant }, tick
   }
   z.string().uuid().parse(ticketId);
   const { knex } = await createTenantKnex();
-  const db = tenantDb(knex, tenant);
-  const query = db.table('ticket_fixed_fee_services as f');
-  db.tenantJoin(query, 'service_catalog as s', 's.service_id', 'f.service_id');
-  return query.where('f.ticket_id', ticketId)
-    .orderBy('f.created_at', 'asc')
-    .select('f.*', 's.service_name');
+  try {
+    return await withTransaction(knex, async (trx) => {
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action: 'read' });
+      const db = tenantDb(trx, tenant);
+      const query = db.table('ticket_fixed_fee_services as f');
+      db.tenantJoin(query, 'service_catalog as s', 's.service_id', 'f.service_id');
+      return query.where('f.ticket_id', ticketId)
+        .orderBy('f.created_at', 'asc')
+        .select('f.*', 's.service_name');
+    });
+  } catch (error) {
+    return permissionErrorFrom(error);
+  }
 });
 
 export const addTicketFixedFeeService = withAuth(async (user, { tenant }, input: z.input<typeof entrySchema>) => {
@@ -43,6 +58,7 @@ export const addTicketFixedFeeService = withAuth(async (user, { tenant }, input:
     if (!ticket) {
       return actionError('The ticket no longer exists. Refresh and try again.', 'features/tickets:fixedFeeServices.errors.ticketMissing');
     }
+    await authorizeTicketRecordAccess({ trx, tenant, user, ticketId: parsed.data.ticket_id, action: 'update' });
     const service = await db.table('service_catalog')
       .where({ service_id: parsed.data.service_id, item_kind: 'service', billing_method: 'fixed', is_active: true })
       .forShare().first('service_id');
@@ -65,7 +81,7 @@ export const addTicketFixedFeeService = withAuth(async (user, { tenant }, input:
       rate,
     }).returning<ITicketFixedFeeService[]>('*');
     return entry;
-  });
+  }).catch(permissionErrorFrom);
 });
 
 export const deleteTicketFixedFeeService = withAuth(async (user, { tenant }, entryId: string) => {
@@ -74,10 +90,26 @@ export const deleteTicketFixedFeeService = withAuth(async (user, { tenant }, ent
   }
   z.string().uuid().parse(entryId);
   const { knex } = await createTenantKnex();
-  const count = await tenantDb(knex, tenant).table('ticket_fixed_fee_services')
-    .where({ entry_id: entryId, is_billed: false }).delete();
-  if (count !== 1) {
-    return actionError('This service entry is already billed or was removed. Refresh and try again.', 'features/tickets:fixedFeeServices.errors.cannotDelete');
+  try {
+    return await withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, tenant);
+      const entry = await db.table('ticket_fixed_fee_services')
+        .where({ entry_id: entryId }).forUpdate().first('ticket_id', 'is_billed');
+      if (!entry) {
+        return actionError('This service entry is already billed or was removed. Refresh and try again.', 'features/tickets:fixedFeeServices.errors.cannotDelete');
+      }
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId: entry.ticket_id, action: 'update' });
+      if (entry.is_billed) {
+        return actionError('This service entry is already billed or was removed. Refresh and try again.', 'features/tickets:fixedFeeServices.errors.cannotDelete');
+      }
+      const count = await db.table('ticket_fixed_fee_services')
+        .where({ entry_id: entryId, is_billed: false }).delete();
+      if (count !== 1) {
+        return actionError('This service entry is already billed or was removed. Refresh and try again.', 'features/tickets:fixedFeeServices.errors.cannotDelete');
+      }
+    });
+  } catch (error) {
+    return permissionErrorFrom(error);
   }
 });
 
@@ -93,6 +125,9 @@ export const updateTicketFixedFeeService = withAuth(async (user, { tenant }, ent
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
     const entry = await db.table('ticket_fixed_fee_services').where({ entry_id: entryId }).forUpdate().first();
+    if (entry) {
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId: entry.ticket_id, action: 'update' });
+    }
     // Billed rows are immutable because their quantity and price back an invoice.
     if (!entry || entry.is_billed) {
       return actionError('Billed or removed entries cannot be edited. Refresh and try again.', 'features/tickets:chargeEdit.errors.notEditable');
@@ -102,5 +137,5 @@ export const updateTicketFixedFeeService = withAuth(async (user, { tenant }, ent
     }
     await db.table('ticket_fixed_fee_services').where({ entry_id: entryId, is_billed: false })
       .update({ quantity: parsed.data.quantity, description: parsed.data.description || null, updated_at: new Date().toISOString() });
-  });
+  }).catch(permissionErrorFrom);
 });
