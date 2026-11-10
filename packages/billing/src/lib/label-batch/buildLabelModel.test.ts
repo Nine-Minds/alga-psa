@@ -56,26 +56,33 @@ describe('buildLabelModel', () => {
     expect(paths.some((p) => /recordId|email|phone/i.test(p))).toBe(false);
   });
 
-  it('provides the full serial and description only to full-page ticket worksheets before evaluation', () => {
+  it('provides the full serial, description and asset specifications only to full-page ticket worksheets before evaluation', () => {
+    const linkedAsset = {
+      assetId: 'asset-1', name: 'Desktop', manufacturer: 'Make', model: 'Model',
+      osLine: 'OS', cpuLine: 'CPU', ramLine: '16 GB', storageLine: '512 GB',
+    };
     const withDetails = {
       ...vm,
       assetSerialNumber: '1234567',
       ticketDescription: 'First line\nSecond line',
       ticketDescriptionRichText: [{ type: 'paragraph', content: [{ type: 'text', text: 'First line' }] }],
+      linkedAsset,
     };
     expect(buildLabelModel(withDetails, tenant)).toMatchObject({
       assetSerialNumber: null,
       ticketDescription: null,
       ticketDescriptionRichText: null,
+      linkedAsset: null,
     });
     expect(buildLabelModel(withDetails, tenant, [], { worksheet: true })).toMatchObject({
       assetSerialNumber: '1234567',
       ticketDescription: 'First line\nSecond line',
       ticketDescriptionRichText: withDetails.ticketDescriptionRichText,
+      linkedAsset,
       url: vm.url,
     });
     expect(buildLabelModel({ ...withDetails, labelClass: 'asset-identity' }, tenant, [], { worksheet: true }))
-      .toMatchObject({ assetSerialNumber: null, ticketDescription: null, ticketDescriptionRichText: null });
+      .toMatchObject({ assetSerialNumber: null, ticketDescription: null, ticketDescriptionRichText: null, linkedAsset: null });
   });
 
   it.each([

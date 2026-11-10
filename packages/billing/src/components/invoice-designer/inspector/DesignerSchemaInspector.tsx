@@ -36,6 +36,7 @@ import { getNodeMetadata } from '../utils/nodeProps';
 import { isPlainObject, readFieldValue, isFieldSetOnNode, isRuleVisible } from './fieldState';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { type InvoiceFieldCategory } from '../fields/fieldCatalog';
+import { designerFieldTranslationKey } from '../fields/fieldTranslationKey';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
 import {
   buildDocumentExpressionPathOptions,
@@ -96,9 +97,8 @@ const toBindingOption = (
 ): BindingOption | null => {
   const described = describeBindingOption(option);
   if (!described) return null;
-  const keySlug = option.path.replace(/\./g, '_');
-  const label = translate(`designer.fields.${keySlug}.label`, described.label, option.path);
-  const description = translate(`designer.fields.${keySlug}.description`, described.description, option.path);
+  const label = translate(designerFieldTranslationKey(option.path, 'label'), described.label, option.path);
+  const description = translate(designerFieldTranslationKey(option.path, 'description'), described.description, option.path);
   return {
     path: option.path,
     ...described,
@@ -293,7 +293,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
   const resultsRef = React.useRef<HTMLDivElement | null>(null);
 
   const currentLabel = normalizedBinding
-    ? t(`designer.fields.${normalizedBinding.replace(/\./g, '_')}.label`, {
+    ? t(designerFieldTranslationKey(normalizedBinding, 'label'), {
         defaultValue: resolveDocumentFieldLabel(normalizedBinding),
       })
     : t('designer.inspector.noFieldSelected', { defaultValue: 'No field selected' });

@@ -1678,6 +1678,8 @@
       "skipFailures": "Ignorar estes e imprimir o restante",
       "skipped_one": "{{count}} registro foi ignorado porque não pôde ser aberto.",
       "skipped_other": "{{count}} registros foram ignorados porque não puderam ser abertos.",
+      "missingImages_one": "Não foi possível incluir {{count}} imagem das descrições dos tickets. Ela está marcada na folha.",
+      "missingImages_other": "Não foi possível incluir {{count}} imagens das descrições dos tickets. Elas estão marcadas nas folhas.",
       "template": "Modelo",
       "ticketTitle": "Imprimir etiquetas de trabalho",
       "tooMany": "Você pode imprimir no máximo {{max}} etiquetas por vez.",
@@ -1688,7 +1690,9 @@
       "templatePaperWarning": "Este modelo é impresso em uma folha inteira. Escolha \"Papel do modelo\" (ou um layout de folha inteira), caso contrário o conteúdo não caberá na etiqueta.",
       "worksheetPageSizeError": "A folha tem de usar papel Letter ou maior na vertical, tanto no editor como na disposição de impressão.",
       "paperMismatchWarning": "Este modelo foi projetado para papel {{template}}, mas o layout selecionado imprime em {{layout}}. Escolha „Papel do modelo“ ou o layout de página inteira correspondente, ou o conteúdo não caberá.",
-      "worksheetTextOverflowError": "A folha {{numbers}} contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir."
+      "worksheetTextOverflowError": "A folha {{numbers}} contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir.",
+      "worksheetPageSizeError": "A folha de trabalho não corresponde ao layout de impressão selecionado. Use „Papel do modelo“ ou um layout com o mesmo papel do modelo.",
+      "worksheetTextOverflowError": "Esta folha contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir."
     },
     "layout": {
       "template-preferred": "Papel do modelo (padrão)",

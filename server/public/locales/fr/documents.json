@@ -150,6 +150,8 @@
       "nextAction": "Prochaine action",
       "assetSpecifications": "Caractéristiques de l'actif",
       "ticketDetails": "Détails du ticket",
+      "imageNotIncluded": "[Image non incluse]",
+      "imageNotIncludedNamed": "[Image non incluse : {{name}}]",
       "assetName": "Nom",
       "make": "Fabricant",
       "model": "Modèle",

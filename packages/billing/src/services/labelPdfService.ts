@@ -8,7 +8,7 @@ import type { InvoicePdfPrintOptions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
-import { renderLabelBatchHtml, type LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
+import { labelTextOverflowError, renderLabelBatchHtml, type LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
 import {
   LabelLayoutError,
   labelMetadataPrefersPaperPage,
@@ -20,9 +20,11 @@ import { labelClassOfCustomTemplate } from '../lib/label-template-ast/labelTempl
 import {
   LABEL_CLASS_BY_STANDARD_CODE,
   LABEL_STANDARD_CODE_BY_CLASS,
-  getStandardLabelTemplateAstByCode,
+  resolveLabelTemplateAst,
 } from '../lib/label-template-ast/standardTemplates';
 import { inlineLogoDataUrl } from '../lib/label-batch/labelLogo';
+import { inlineWorksheetDescriptionImages, type MissingImageText } from '../lib/label-batch/inlineWorksheetImages';
+import { inlineDocumentImageUrl } from '../lib/invoice-template-ast/server-render';
 import { resolveLabelTemplate, type ResolvedLabelTemplate } from '../lib/label-batch/resolveLabelTemplate';
 import type { LabelClass } from '@alga-psa/types';
 import { browserPoolService } from './browserPoolService';
@@ -83,7 +85,7 @@ export async function renderHtmlToPdf(html: string, printOptions: InvoicePdfPrin
       throw new LabelLayoutError(
         `Worksheet ${clippedWorksheets.join(', ')} contains text that does not fit. ` +
         'Adjust the layout or shorten the content before printing.',
-        { errorCode: 'worksheetTextOverflow', worksheetNumbers: clippedWorksheets },
+        { errorCode: 'worksheetTextOverflow', labelIndexes: clippedWorksheets.map((n) => n - 1) },
       );
     }
     return Buffer.from(await page.pdf(printOptions));
@@ -113,8 +115,12 @@ export async function renderLabelBatchPdf(
   tenant: string,
   items: readonly LabelPrintItem[],
   layout: LabelBatchLayout,
-  options: { locale?: string } = {}
-): Promise<{ pdf: Buffer; sheets: number; labels: number }> {
+  options: {
+    locale?: string;
+    /** Printed where a description image could not be included (see inlineWorksheetDescriptionImages). */
+    missingImageText?: MissingImageText;
+  } = {}
+): Promise<{ pdf: Buffer; sheets: number; labels: number; missingImages: number }> {
   const { knex } = await createTenantKnex();
   const party = await fetchTenantParty(knex, tenant);
   // The logo is inlined as a data: URL because Puppeteer has no session; an unreadable logo is omitted.
@@ -123,11 +129,38 @@ export async function renderLabelBatchPdf(
     : null;
   const tenantClient = party ? { name: party.name ?? null, logoUrl } : null;
 
-  const { html, geometry, printOptions } = await renderLabelBatchHtml(items, layout, {
+  // Description images are read for THIS tenant only: a description can come from the client portal
+  // or an inbound email, so a document URL naming another tenant's file must not resolve.
+  const resolved = new Map<string, Promise<string | null>>();
+  const resolveImage = (url: string): Promise<string | null> => {
+    let pending = resolved.get(url);
+    if (!pending) {
+      pending = inlineDocumentImageUrl(url, { knex, tenant, unresolved: 'drop' }).then((value) =>
+        typeof value === 'string' && value.startsWith('data:') ? value : null
+      );
+      resolved.set(url, pending);
+    }
+    return pending;
+  };
+  const { items: printItems, missingImages } = await inlineWorksheetDescriptionImages(
+    items,
+    resolveImage,
+    options.missingImageText ?? ((name) => (name ? `[Image not included: ${name}]` : '[Image not included]'))
+  );
+
+  const { html, geometry, printOptions } = await renderLabelBatchHtml(printItems, layout, {
     tenantClient,
     locale: options.locale,
   });
-  const pdf = await renderHtmlToPdf(html, printOptions);
+  let pdf: Buffer;
+  try {
+    pdf = await renderHtmlToPdf(html, printOptions);
+  } catch (error) {
+    if (error instanceof LabelLayoutError && error.errorCode === 'worksheetTextOverflow' && error.labelIndexes?.length) {
+      throw labelTextOverflowError(items, error.labelIndexes);
+    }
+    throw error;
+  }
   // A worksheet flows across pages, so the planned sheet count is a floor: report the real page
   // count of the produced PDF, falling back to the plan when the buffer cannot be re-read.
   let sheets = geometry.sheets;
@@ -136,7 +169,7 @@ export async function renderLabelBatchPdf(
   } catch {
     // The plan stays the answer for a buffer pdf-lib cannot parse.
   }
-  return { pdf, sheets, labels: items.length };
+  return { pdf, sheets, labels: items.length, missingImages };
 }
 
 /** Resolve the template for a print (explicit id -> class default -> standard). Read-only. */
@@ -176,23 +209,19 @@ export async function listLabelTemplatesForTenant(
         ? LABEL_CLASS_BY_STANDARD_CODE[item.template_id] === labelClass
         : labelClassOfCustomTemplate(item.templateAst) === labelClass
     )
-    .map((item) => ({
-      id: item.template_id,
-      name: item.name,
-      source: item.source,
-      // True when the template asks for a full sheet (an A4 or Letter worksheet): the dialog offers
-      // "template paper" as the layout default for it. Standard ASTs carry the page size, so the
-      // catalog answers for both sources.
-      prefersPaperPage:
-        labelMetadataPrefersPaperPage(item.templateAst?.metadata) ||
-        (item.source === 'standard'
-          ? labelMetadataPrefersPaperPage(getStandardLabelTemplateAstByCode(item.template_id)?.metadata)
-          : false),
-      paperSizeMm: toDialogPaperSize(resolveTemplateDeclaredPageSizeMm(item.templateAst?.metadata))
-        ?? (item.source === 'standard'
-          ? toDialogPaperSize(resolveTemplateDeclaredPageSizeMm(getStandardLabelTemplateAstByCode(item.template_id)?.metadata))
-          : null),
-    }));
+    .map((item) => {
+      // Standard ASTs carry the page size, so the catalog answers for both sources.
+      const metadata = resolveLabelTemplateAst({ templateAst: item.templateAst, templateCode: item.template_id })?.metadata;
+      return {
+        id: item.template_id,
+        name: item.name,
+        source: item.source,
+        // True when the template asks for a full sheet (an A4 or Letter worksheet): the dialog offers
+        // "template paper" as the layout default for it.
+        prefersPaperPage: labelMetadataPrefersPaperPage(metadata),
+        paperSizeMm: toDialogPaperSize(resolveTemplateDeclaredPageSizeMm(metadata)),
+      };
+    });
   const resolved = await resolveLabelTemplate(knex, tenant, labelClass);
   return { defaultTemplateId: resolved.ok ? resolved.templateCode : LABEL_STANDARD_CODE_BY_CLASS[labelClass], templates };
 }

@@ -150,6 +150,8 @@
       "nextAction": "Volgende actie",
       "assetSpecifications": "Assetspecificaties",
       "ticketDetails": "Ticketdetails",
+      "imageNotIncluded": "[Afbeelding niet opgenomen]",
+      "imageNotIncludedNamed": "[Afbeelding niet opgenomen: {{name}}]",
       "assetName": "Naam",
       "make": "Merk",
       "model": "Model",

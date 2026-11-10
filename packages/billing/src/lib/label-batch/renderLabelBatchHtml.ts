@@ -1,4 +1,5 @@
 import {
+  DEFAULT_INVOICE_PRINT_SETTINGS,
   customPageSizeToMm,
   matchRecordPath,
   recordUrl,
@@ -10,6 +11,7 @@ import {
 } from '@alga-psa/types';
 
 import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
+import { resolveTemplatePrintSettingsFromAst } from '../invoice-template-ast/printSettings';
 import { renderTemplateAstFragment } from '../invoice-template-ast/server-render';
 import { BarcodeError } from '../invoice-template-ast/barcode/constraints';
 import {
@@ -52,6 +54,31 @@ function batchFailureMessage(failures: readonly LabelPrintFailure[], total: numb
       : `${failures.length} of ${total} labels cannot be printed, so none were. `;
   const tail = suggestions.length ? ` Print ${failures.length === 1 ? 'it' : 'them'} with ${suggestions.join(' or ')} instead.` : '';
   return `${head}${lines.join(' ')}${tail}`;
+}
+
+/**
+ * The print-time text-fit check names labels by their position in the batch; this turns them into
+ * per-record failures (record, ticket number, template, error code) so the caller can name each
+ * ticket and skip exactly those records.
+ */
+export function labelTextOverflowError(
+  items: readonly LabelPrintItem[],
+  labelIndexes: readonly number[]
+): LabelRenderError {
+  const failures: LabelPrintFailure[] = labelIndexes
+    .filter((index) => items[index] !== undefined)
+    .map((index) => {
+      const item = items[index];
+      return {
+        index,
+        recordId: item.viewModel.recordId,
+        identifier: item.viewModel.identifier,
+        templateCode: item.templateCode ?? LABEL_STANDARD_CODE_BY_CLASS[item.viewModel.labelClass],
+        errorCode: 'worksheetTextOverflow' as const,
+        message: 'Contains text that does not fit. Adjust the layout or shorten the content before printing.',
+      };
+    });
+  return new LabelRenderError(batchFailureMessage(failures, items.length), failures);
 }
 
 /**
@@ -120,6 +147,7 @@ export function buildLabelModel(
       worksheet && !hidden.has('ticketDescription') && !hidden.has('detail')
         ? viewModel.ticketDescriptionRichText ?? viewModel.ticketDescription ?? null
         : null,
+    linkedAsset: worksheet ? viewModel.linkedAsset ?? null : null,
     custodyLocation,
     nextAction,
     tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,
@@ -171,7 +199,7 @@ export async function renderLabelBatchHtml(
       assertCanonicalLabelUrl(item.viewModel);
       const { ast, code } = resolveTemplateAst(item);
       const labelSettings = ast.metadata?.labelSettings;
-      const worksheetSize = resolveWorksheetDesignSizeMm(ast.metadata);
+      const worksheetSize = resolveWorksheetDesignSizeMm(item.viewModel.labelClass, ast.metadata);
       if (worksheetSize) {
         const cellSize = resolveCellSizeMm(layout);
         if (
@@ -188,17 +216,28 @@ export async function renderLabelBatchHtml(
         worksheet: Boolean(worksheetSize),
       });
       const evaluation = evaluateTemplateAst(ast, model as unknown as Record<string, unknown>);
-      const { html, css } = await renderTemplateAstFragment(ast, evaluation, { locale: options.locale });
+      // A worksheet's margin becomes its flow sheet's `@page` margin so it repeats on every continuation
+      // page; the root must not pad it a second time, so the fragment renders with a zero margin. The
+      // margin is the whole-pixel value the designer preview pads with, so preview and paper line up.
+      const flowMarginMm = worksheetSize ? (resolveTemplatePrintSettingsFromAst(ast).marginPx * 25.4) / 96 : 0;
+      const renderAst: TemplateAst = worksheetSize
+        ? {
+            ...ast,
+            metadata: { ...ast.metadata, printSettings: { ...DEFAULT_INVOICE_PRINT_SETTINGS, ...ast.metadata?.printSettings, marginMm: 0 } },
+          }
+        : ast;
+      const { html, css } = await renderTemplateAstFragment(renderAst, evaluation, { locale: options.locale });
       const printSettings = ast.metadata?.printSettings;
       cells.push({
         html,
         css,
         designedSizeMm: worksheetSize ?? (printSettings?.customPageSize ? customPageSizeToMm(printSettings.customPageSize) : null),
         description: `Label ${index + 1} (${code})`,
-        validateTextFits: Boolean(worksheetSize && item.viewModel.labelClass === 'ticket-work-tag'),
+        validateTextFits: Boolean(worksheetSize),
         // A worksheet prints as a flow section: a description taller than one page continues onto the
         // next page (like a regular document) instead of being clipped or refused.
         flow: Boolean(worksheetSize),
+        ...(worksheetSize ? { flowMarginMm } : {}),
       });
     } catch (error) {
       const fallback = LABEL_FALLBACK_TEMPLATE_BY_CODE[templateCode];

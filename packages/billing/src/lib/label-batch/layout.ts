@@ -7,6 +7,7 @@ import {
   type CustomPageSize,
   type InvoicePaperPresetId,
   type InvoicePdfPrintOptions,
+  type LabelClass,
   type LabelPrintErrorCode,
 } from '@alga-psa/types';
 
@@ -67,12 +68,13 @@ export interface LabelBatchGeometry {
 
 export class LabelLayoutError extends Error {
   readonly errorCode?: LabelPrintErrorCode;
-  readonly worksheetNumbers?: number[];
-  constructor(message: string, details?: { errorCode: LabelPrintErrorCode; worksheetNumbers?: number[] }) {
+  /** 0-based indexes of the batch labels the error is about, when the check can name them. */
+  readonly labelIndexes?: number[];
+  constructor(message: string, details?: { errorCode: LabelPrintErrorCode; labelIndexes?: number[] }) {
     super(message);
     this.name = 'LabelLayoutError';
     this.errorCode = details?.errorCode;
-    this.worksheetNumbers = details?.worksheetNumbers;
+    this.labelIndexes = details?.labelIndexes;
   }
 }
 
@@ -248,21 +250,27 @@ export function resolveTemplateDeclaredPageSizeMm(
 }
 
 /**
- * True when a ticket-work-tag template's own page makes it a full-page customer worksheet rather
- * than a 4 x 2 in tag: portrait paper at least A4-wide (Letter, A4, Legal, A3, ...). The declared
- * page size is the only gate — there is no separate worksheet flag.
+ * True when a template is a full-page customer worksheet rather than a 4 x 2 in tag: a ticket work tag
+ * whose own page is portrait paper at least A4-wide (Letter, A4, Legal, A3, ...). Only ticket work tags
+ * are worksheets; a portrait asset, RMA or staging template keeps printing as a fixed label. The
+ * declared page size is the only gate — there is no separate worksheet flag.
  */
-export function isWorksheetLabelMetadata(metadata?: LabelTemplatePageMetadata | null): boolean {
+export function isWorksheetLabelTemplate(
+  labelClass: LabelClass | null | undefined,
+  metadata?: LabelTemplatePageMetadata | null
+): boolean {
+  if (labelClass !== 'ticket-work-tag') return false;
   const size = resolveTemplateDeclaredPageSizeMm(metadata);
   if (!size) return false;
   return size.heightMm > size.widthMm && size.widthMm + 0.05 >= WORKSHEET_MIN_WIDTH_MM;
 }
 
-/** The worksheet design size a template asks for, or null when its page is not worksheet paper. */
+/** The worksheet design size a template asks for, or null when it is not a worksheet. */
 export function resolveWorksheetDesignSizeMm(
+  labelClass: LabelClass | null | undefined,
   metadata?: LabelTemplatePageMetadata | null
 ): { widthMm: number; heightMm: number } | null {
-  return isWorksheetLabelMetadata(metadata) ? resolveTemplateDeclaredPageSizeMm(metadata) : null;
+  return isWorksheetLabelTemplate(labelClass, metadata) ? resolveTemplateDeclaredPageSizeMm(metadata) : null;
 }
 
 /** True when a template's own page size is paper an ordinary printer holds (a worksheet, not a tag). */
@@ -283,12 +291,12 @@ export function labelMetadataPrefersPaperPage(
  * without the caller having to pick the paper twice.
  */
 export function resolveTemplatePreferredPageSizes(
-  templates: readonly { metadata?: LabelTemplatePageMetadata | undefined }[]
+  templates: readonly { labelClass: LabelClass; metadata?: LabelTemplatePageMetadata | undefined }[]
 ): CustomPageSize | null {
   if (templates.length === 0) return null;
   let preferred: CustomPageSize | null = null;
   for (const template of templates) {
-    const worksheetSize = resolveWorksheetDesignSizeMm(template.metadata);
+    const worksheetSize = resolveWorksheetDesignSizeMm(template.labelClass, template.metadata);
     const pageSize = template.metadata?.printSettings?.customPageSize ??
       (worksheetSize ? { width: worksheetSize.widthMm, height: worksheetSize.heightMm, unit: 'mm' as const } : undefined);
     if (!pageSize || !labelMetadataPrefersPaperPage(template.metadata)) return null;

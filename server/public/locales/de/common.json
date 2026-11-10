@@ -1678,6 +1678,8 @@
       "skipFailures": "Diese überspringen und den Rest drucken",
       "skipped_one": "{{count}} Datensatz wurde übersprungen, weil er nicht geöffnet werden konnte.",
       "skipped_other": "{{count}} Datensätze wurden übersprungen, weil sie nicht geöffnet werden konnten.",
+      "missingImages_one": "{{count}} Bild in den Ticketbeschreibungen konnte nicht eingefügt werden. Es ist auf dem Arbeitsblatt markiert.",
+      "missingImages_other": "{{count}} Bilder in den Ticketbeschreibungen konnten nicht eingefügt werden. Sie sind auf den Arbeitsblättern markiert.",
       "template": "Vorlage",
       "ticketTitle": "Arbeitsetiketten drucken",
       "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",
@@ -1688,7 +1690,9 @@
       "templatePaperWarning": "Diese Vorlage wird auf ein ganzes Blatt gedruckt. Wählen Sie „Vorlagenpapier“ (oder ein Ganzseiten-Layout), sonst passt der Inhalt nicht auf das Etikett.",
       "worksheetPageSizeError": "Das Arbeitsblatt muss im Designer und im Drucklayout Letter-Papier oder größeres Papier im Hochformat verwenden.",
       "paperMismatchWarning": "Dieses Vorlagenformat ist für {{template}} ausgelegt, aber das gewählte Layout druckt auf {{layout}}. Wählen Sie „Vorlagenpapier“ oder das passende Layout für volle Bögen, sonst passt der Inhalt nicht.",
-      "worksheetTextOverflowError": "Arbeitsblatt {{numbers}} enthält Text, der nicht hineinpasst. Passen Sie das Layout an oder kürzen Sie den Inhalt vor dem Drucken."
+      "worksheetTextOverflowError": "Arbeitsblatt {{numbers}} enthält Text, der nicht hineinpasst. Passen Sie das Layout an oder kürzen Sie den Inhalt vor dem Drucken.",
+      "worksheetPageSizeError": "Das Arbeitsblatt passt nicht zum gewählten Drucklayout. Verwenden Sie „Vorlagenpapier“ oder ein Layout mit demselben Papier wie die Vorlage.",
+      "worksheetTextOverflowError": "Dieses Arbeitsblatt enthält Text, der nicht hineinpasst. Passen Sie das Layout an oder kürzen Sie den Inhalt vor dem Drucken."
     },
     "layout": {
       "template-preferred": "Vorlagenpapier (Standard)",

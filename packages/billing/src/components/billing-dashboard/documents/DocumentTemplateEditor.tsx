@@ -42,7 +42,7 @@ import {
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
 import { resolveCurrentWorkspacePrintSettings, useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
-import { isWorksheetLabelMetadata } from '../../../lib/label-batch/layout';
+import { isWorksheetLabelTemplate } from '../../../lib/label-batch/layout';
 import {
   exportWorkspaceToTemplateAst,
   importTemplateAstToWorkspace,
@@ -183,9 +183,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   // the designer is worksheet paper (portrait, at least A4 wide). The page size is the only gate;
   // worksheets print on whatever paper the template declares (A4, Letter, ...).
   const isWorksheetPage = useMemo(() => {
-    if (!isLabelTemplate || labelClass !== 'ticket-work-tag') return false;
+    if (!isLabelTemplate) return false;
     const printSettings = resolveCurrentWorkspacePrintSettings(designerNodes);
-    return isWorksheetLabelMetadata({
+    return isWorksheetLabelTemplate(labelClass, {
       printSettings: {
         paperPreset: printSettings.paperPreset,
         ...(printSettings.customPageSize ? { customPageSize: printSettings.customPageSize } : {}),

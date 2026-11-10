@@ -1676,6 +1676,8 @@
       "skipFailures": "Omitir estos e imprimir el resto",
       "skipped_one": "Se omitió {{count}} registro porque no se pudo abrir.",
       "skipped_other": "Se omitieron {{count}} registros porque no se pudieron abrir.",
+      "missingImages_one": "No se pudo incluir {{count}} imagen de las descripciones de los tickets. Está señalada en la hoja.",
+      "missingImages_other": "No se pudieron incluir {{count}} imágenes de las descripciones de los tickets. Están señaladas en las hojas.",
       "template": "Plantilla",
       "ticketTitle": "Imprimir etiquetas de trabajo",
       "tooMany": "Puede imprimir como máximo {{max}} etiquetas a la vez.",
@@ -1686,7 +1688,9 @@
       "templatePaperWarning": "Esta plantilla se imprime en una hoja completa. Elija «Papel de la plantilla» (o un diseño de hoja completa); de lo contrario, el contenido no cabrá en la etiqueta.",
       "worksheetPageSizeError": "La hoja debe usar papel carta o mayor en orientación vertical, tanto en el diseñador como en el diseño de impresión.",
       "paperMismatchWarning": "Esta plantilla está diseñada para papel {{template}}, pero el diseño seleccionado imprime en {{layout}}. Elija «Papel de la plantilla» o el diseño de hoja completa equivalente; si no, el contenido no cabrá.",
-      "worksheetTextOverflowError": "La hoja {{numbers}} contiene texto que no cabe. Ajuste el diseño o acorte el contenido antes de imprimir."
+      "worksheetTextOverflowError": "La hoja {{numbers}} contiene texto que no cabe. Ajuste el diseño o acorte el contenido antes de imprimir.",
+      "worksheetPageSizeError": "El cuaderno de trabajo no cabe en el diseño de impresión seleccionado. Use «Papel de la plantilla» o un diseño con el mismo papel que la plantilla.",
+      "worksheetTextOverflowError": "Esta hoja contiene texto que no cabe. Ajuste el diseño o acorte el contenido antes de imprimir."
     },
     "layout": {
       "template-preferred": "Papel de la plantilla (predeterminado)",

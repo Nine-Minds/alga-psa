@@ -44,34 +44,37 @@ export interface LabelPrintRequest {
 }
 
 export type LabelPrintOutcome =
-  | { status: 'printed'; printed: number; skipped: number; blobUrl: string; popupBlocked: boolean }
+  | {
+      status: 'printed';
+      printed: number;
+      skipped: number;
+      missingImages: number;
+      blobUrl: string;
+      popupBlocked: boolean;
+    }
   | {
       status: 'failed';
       httpStatus: number;
       message: string;
       failures: LabelPrintFailure[];
       errorCode?: LabelPrintErrorCode;
-      worksheetNumbers?: number[];
     };
 
 async function readError(response: Response): Promise<{
   message: string;
   failures: LabelPrintFailure[];
   errorCode?: LabelPrintErrorCode;
-  worksheetNumbers?: number[];
 }> {
   try {
     const body = (await response.json()) as {
       error?: string;
       failures?: LabelPrintFailure[];
       errorCode?: LabelPrintErrorCode;
-      worksheetNumbers?: number[];
     };
     return {
       message: body.error ?? '',
       failures: Array.isArray(body.failures) ? body.failures : [],
       ...(body.errorCode ? { errorCode: body.errorCode } : {}),
-      ...(Array.isArray(body.worksheetNumbers) ? { worksheetNumbers: body.worksheetNumbers } : {}),
     };
   } catch {
     return { message: '', failures: [] };
@@ -116,6 +119,7 @@ export function useLabelPrint() {
         return { status: 'failed', httpStatus: response.status, ...error };
       }
       const skipped = Number(response.headers.get('X-Label-Skipped') ?? '0') || 0;
+      const missingImages = Number(response.headers.get('X-Label-Missing-Images') ?? '0') || 0;
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       const opened = window.open(blobUrl, '_blank');
@@ -123,6 +127,7 @@ export function useLabelPrint() {
         status: 'printed',
         printed: body.labels.length - skipped,
         skipped,
+        missingImages,
         blobUrl,
         popupBlocked: !opened,
       };

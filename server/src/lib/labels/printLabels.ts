@@ -13,8 +13,8 @@ import {
   type LabelViewModelProvider,
 } from '@alga-psa/types';
 import type { LabelBatchLayout, LabelPrintItem, ResolvedLabelTemplate } from '@alga-psa/billing/services';
-import { isWorksheetLabelMetadata, resolveTemplatePreferredPageSizes } from '@alga-psa/billing/lib/label-batch/layout';
-import { getStandardLabelTemplateAstByCode } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
+import { isWorksheetLabelTemplate, resolveTemplatePreferredPageSizes } from '@alga-psa/billing/lib/label-batch/layout';
+import { resolveLabelTemplateAst } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
 
 /**
  * Composition root for label printing: the one place that knows the record owners (through their
@@ -91,14 +91,13 @@ export function sanitizeLabelOverride(value: string): string | null {
 }
 
 export type PrintLabelsResult =
-  | { ok: true; pdf: Buffer; labels: number; sheets: number; skipped: number }
+  | { ok: true; pdf: Buffer; labels: number; sheets: number; skipped: number; missingImages: number }
   | {
       ok: false;
       status: 400 | 404 | 422 | 500;
       message: string;
       failures?: LabelPrintFailure[];
       errorCode?: LabelPrintErrorCode;
-      worksheetNumbers?: number[];
     };
 
 export interface PrintLabelsDeps {
@@ -107,7 +106,7 @@ export interface PrintLabelsDeps {
     tenant: string,
     items: readonly LabelPrintItem[],
     layout: LabelBatchLayout
-  ) => Promise<{ pdf: Buffer; labels: number; sheets: number }>;
+  ) => Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number }>;
   /**
    * Describes a layout / render error that is the caller's fault (422) rather than ours (500), with the
    * records that could not print when the renderer names them; null for anything else (rethrown).
@@ -136,7 +135,6 @@ export interface PrintLabelsDeps {
     message: string;
     failures?: LabelPrintFailure[];
     errorCode?: LabelPrintErrorCode;
-    worksheetNumbers?: number[];
   } | null;
 }
 
@@ -257,14 +255,12 @@ export async function printLabels(
   }
 
   const ticketTemplate = templates.get('ticket-work-tag');
-  const ticketAst = ticketTemplate
-    ? ticketTemplate.templateAst ?? getStandardLabelTemplateAstByCode(ticketTemplate.templateCode)
-    : null;
+  const ticketAst = ticketTemplate ? resolveLabelTemplateAst(ticketTemplate) : null;
   const context: LabelRequestContext = {
     tenant: caller.tenant,
     user: caller.user,
     baseUrl: caller.baseUrl,
-    includeWorksheetDetails: isWorksheetLabelMetadata(ticketAst?.metadata),
+    includeWorksheetDetails: isWorksheetLabelTemplate('ticket-work-tag', ticketAst?.metadata),
   };
   // One provider call per class (unique ids), then the results are put back in request order per subject.
   const byRecord = new Map<string, LabelViewModel>();
@@ -336,18 +332,14 @@ export async function printLabels(
     // on it. Otherwise fall back to the 4 x 2 in roll, as before.
     const preferredPage = request.layout === undefined || request.layout === null
       ? resolveTemplatePreferredPageSizes(
-          classes.map((cls) => {
-            const template = templates.get(cls)!;
-            const ast = template.templateAst ?? getStandardLabelTemplateAstByCode(template.templateCode);
-            return { metadata: ast?.metadata };
-          })
+          classes.map((cls) => ({ labelClass: cls, metadata: resolveLabelTemplateAst(templates.get(cls)!)?.metadata }))
         )
       : null;
     const layout: LabelBatchLayout =
       (request.layout as LabelBatchLayout | undefined) ??
       (preferredPage ? { kind: 'one-per-page', pageSize: preferredPage } : DEFAULT_LAYOUT);
-    const { pdf, labels, sheets } = await deps.renderPdf(caller.tenant, items, layout);
-    return { ok: true, pdf, labels, sheets, skipped };
+    const { pdf, labels, sheets, missingImages = 0 } = await deps.renderPdf(caller.tenant, items, layout);
+    return { ok: true, pdf, labels, sheets, skipped, missingImages };
   } catch (error) {
     const clientError = deps.describeClientError(error);
     if (clientError) {
@@ -357,7 +349,6 @@ export async function printLabels(
         message: clientError.message,
         ...(clientError.failures?.length ? { failures: clientError.failures } : {}),
         ...(clientError.errorCode ? { errorCode: clientError.errorCode } : {}),
-        ...(clientError.worksheetNumbers ? { worksheetNumbers: clientError.worksheetNumbers } : {}),
       };
     }
     throw error;

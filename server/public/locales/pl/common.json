@@ -1688,6 +1688,10 @@
       "skipped_few": "Pominięto {{count}} rekordy, ponieważ nie udało się ich otworzyć.",
       "skipped_many": "Pominięto {{count}} rekordów, ponieważ nie udało się ich otworzyć.",
       "skipped_other": "Pominięto {{count}} rekordu, ponieważ nie udało się go otworzyć.",
+      "missingImages_one": "Nie udało się dołączyć {{count}} obrazu z opisów zgłoszeń. Jest oznaczony na karcie.",
+      "missingImages_few": "Nie udało się dołączyć {{count}} obrazów z opisów zgłoszeń. Są oznaczone na kartach.",
+      "missingImages_many": "Nie udało się dołączyć {{count}} obrazów z opisów zgłoszeń. Są oznaczone na kartach.",
+      "missingImages_other": "Nie udało się dołączyć {{count}} obrazu z opisów zgłoszeń. Są oznaczone na kartach.",
       "template": "Szablon",
       "ticketTitle": "Drukuj etykiety robocze",
       "tooMany": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet.",
@@ -1698,7 +1702,9 @@
       "templatePaperWarning": "Ten szablon drukuje się na całym arkuszu. Wybierz „Papier szablonu” (lub układ pełnoarkuszowy), w przeciwnym razie zawartość nie zmieści się na etykiecie.",
       "worksheetPageSizeError": "Karta musi używać papieru Letter lub większego w orientacji pionowej zarówno w projektancie, jak i w układzie wydruku.",
       "paperMismatchWarning": "Ten szablon jest zaprojektowany dla papieru {{template}}, ale wybrany układ drukuje na {{layout}}. Wybierz „Papier szablonu” lub pasujący układ pełnostronicowy, inaczej treść się nie zmieści.",
-      "worksheetTextOverflowError": "Karta {{numbers}} zawiera tekst, który się nie mieści. Przed drukowaniem zmień układ lub skróć treść."
+      "worksheetTextOverflowError": "Karta {{numbers}} zawiera tekst, który się nie mieści. Przed drukowaniem zmień układ lub skróć treść.",
+      "worksheetPageSizeError": "Karta pracy nie pasuje do wybranego układu wydruku. Użyj „Papier szablonu” lub układu z tym samym papierem co szablon.",
+      "worksheetTextOverflowError": "Ta karta zawiera tekst, który się nie mieści. Przed drukowaniem zmień układ lub skróć treść."
     },
     "layout": {
       "template-preferred": "Papier szablonu (domyślnie)",

@@ -1678,6 +1678,8 @@
       "skipFailures": "Skip these and print the rest",
       "skipped_one": "{{count}} record was skipped because it could not be opened.",
       "skipped_other": "{{count}} records were skipped because they could not be opened.",
+      "missingImages_one": "{{count}} image in the ticket descriptions could not be included. It is marked on the worksheet.",
+      "missingImages_other": "{{count}} images in the ticket descriptions could not be included. They are marked on the worksheets.",
       "template": "Template",
       "ticketTitle": "Print work tags",
       "tooMany": "You can print at most {{max}} labels at a time.",
@@ -1688,7 +1690,9 @@
       "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label.",
       "worksheetPageSizeError": "The worksheet must use Letter or larger portrait paper, both in the designer and the print layout.",
       "paperMismatchWarning": "This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose \"Template paper\" or the matching full-sheet layout, or the content will not fit.",
-      "worksheetTextOverflowError": "Worksheet {{numbers}} contains text that will not fit. Adjust the layout or shorten the content before printing."
+      "worksheetTextOverflowError": "Worksheet {{numbers}} contains text that will not fit. Adjust the layout or shorten the content before printing.",
+      "worksheetPageSizeError": "The worksheet does not fit the selected print layout. Use \"Template paper\" or a layout on the same paper as the template.",
+      "worksheetTextOverflowError": "This worksheet contains text that will not fit. Adjust the layout or shorten the content before printing."
     },
     "layout": {
       "template-preferred": "Template paper (default)",

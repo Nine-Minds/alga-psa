@@ -6,15 +6,13 @@ import { useLabelPrint, type LabelPrintOutcome } from './useLabelPrint';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('useLabelPrint', () => {
-  it('passes worksheet error codes and sheet numbers from the API to the dialog', async () => {
+  it('passes per-record worksheet failures from the API to the dialog', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 422,
       json: async () => ({
-        error: 'Worksheet 2 is clipped',
-        errorCode: 'worksheetTextOverflow',
-        worksheetNumbers: [2],
-        failures: [],
+        error: 'Label 2 (TIC-2): Contains text that does not fit.',
+        failures: [{ index: 1, recordId: 'ticket-2', identifier: 'TIC-2', templateCode: 'standard-ticket-customer-worksheet', errorCode: 'worksheetTextOverflow', message: 'Contains text that does not fit.' }],
       }),
     }));
     const { result } = renderHook(() => useLabelPrint());
@@ -25,10 +23,8 @@ describe('useLabelPrint', () => {
     expect(outcome).toEqual({
       status: 'failed',
       httpStatus: 422,
-      message: 'Worksheet 2 is clipped',
-      errorCode: 'worksheetTextOverflow',
-      worksheetNumbers: [2],
-      failures: [],
+      message: 'Label 2 (TIC-2): Contains text that does not fit.',
+      failures: [{ index: 1, recordId: 'ticket-2', identifier: 'TIC-2', templateCode: 'standard-ticket-customer-worksheet', errorCode: 'worksheetTextOverflow', message: 'Contains text that does not fit.' }],
     });
   });
 });

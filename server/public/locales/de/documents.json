@@ -150,6 +150,8 @@
       "nextAction": "Nächste Aktion",
       "assetSpecifications": "Asset-Spezifikationen",
       "ticketDetails": "Ticketdetails",
+      "imageNotIncluded": "[Bild nicht eingefügt]",
+      "imageNotIncludedNamed": "[Bild nicht eingefügt: {{name}}]",
       "assetName": "Name",
       "make": "Hersteller",
       "model": "Modell",

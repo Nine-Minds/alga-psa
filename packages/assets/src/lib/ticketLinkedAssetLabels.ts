@@ -156,8 +156,11 @@ export async function getTicketLinkedAssetLabelParts(
     };
   });
 
-  // The worksheet block is fetched only for the assets the labels actually resolved — always readable.
-  const infoIds = Array.from(new Set(resolved.filter((id): id is string => Boolean(id))));
+  // The worksheet block is fetched only for a worksheet print (a 4 x 2 in tag never shows it), and only
+  // for the assets the labels actually resolved, which are always readable.
+  const infoIds = context.includeWorksheetDetails
+    ? Array.from(new Set(resolved.filter((id): id is string => Boolean(id))))
+    : [];
   if (infoIds.length > 0) {
     const bases: LinkedAssetInfoBase[] = infoIds.flatMap((id) => {
       const a = byId.get(id);

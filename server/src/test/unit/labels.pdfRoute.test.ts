@@ -24,8 +24,8 @@ const mocks = vi.hoisted(() => ({
     tenant: string,
     items: readonly LabelPrintItem[],
     layout: LabelBatchLayout,
-    options: { locale?: string }
-  ) => Promise<{ pdf: Buffer; labels: number; sheets: number }>>(),
+    options: { locale?: string; missingImageText?: (name: string | null) => string }
+  ) => Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number }>>(),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -65,7 +65,7 @@ vi.mock('@alga-psa/inventory/lib/labelViewModelProvider', () => ({ stockUnitLabe
 vi.mock('@alga-psa/inventory/lib/rmaLabelViewModelProvider', () => ({ rmaLabelViewModelProvider: {} }));
 vi.mock('@alga-psa/projects/lib/stagingLabelViewModelProvider', () => ({ stagingContainerLabelViewModelProvider: {} }));
 
-import { LabelLayoutError } from '@alga-psa/billing/services';
+import { LabelLayoutError, LabelRenderError } from '@alga-psa/billing/services';
 import { POST } from '../../app/api/labels/pdf/route';
 
 const ticketId = '11111111-1111-4111-8111-111111111111';
@@ -166,22 +166,49 @@ describe('worksheet PDF route', () => {
         }),
       })],
       expect.objectContaining({ kind: 'one-per-page' }),
-      { locale },
+      expect.objectContaining({ locale, missingImageText: expect.any(Function) }),
     );
   });
 
-  it('returns structured worksheet clipping errors to the print dialog', async () => {
-    mocks.renderPdf.mockRejectedValueOnce(new LabelLayoutError('Text is clipped', {
-      errorCode: 'worksheetTextOverflow',
-      worksheetNumbers: [1],
-    }));
+  it('marks images that could not be printed in the request locale and reports the count in a header', async () => {
+    mocks.locale = 'en';
+    mocks.renderPdf.mockResolvedValueOnce({ pdf: Buffer.from('%PDF-test'), labels: 1, sheets: 1, missingImages: 2 });
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(response.headers.get('X-Label-Missing-Images')).toBe('2');
+    const { missingImageText } = mocks.renderPdf.mock.calls[0][3];
+    expect(missingImageText?.('scan.png')).toBe('[Image not included: scan.png]');
+    expect(missingImageText?.(null)).toBe('[Image not included]');
+  });
+
+  it('reports zero missing images when every image was inlined', async () => {
+    const response = await POST(request());
+    expect(response.headers.get('X-Label-Missing-Images')).toBe('0');
+  });
+
+  it('returns worksheet clipping as per-record failures the print dialog can name and skip', async () => {
+    const failure = {
+      index: 0,
+      recordId: ticketId,
+      identifier: 'TIC-1',
+      templateCode: 'standard-ticket-customer-worksheet',
+      errorCode: 'worksheetTextOverflow' as const,
+      message: 'Contains text that does not fit.',
+    };
+    mocks.renderPdf.mockRejectedValueOnce(new LabelRenderError('Label 1 (TIC-1): Contains text that does not fit.', [failure]));
 
     const response = await POST(request());
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({
-      error: 'Text is clipped',
-      errorCode: 'worksheetTextOverflow',
-      worksheetNumbers: [1],
-    });
+    const body = await response.json();
+    expect(body).toMatchObject({ error: 'Label 1 (TIC-1): Contains text that does not fit.', failures: [failure] });
+    expect(body).not.toHaveProperty('worksheetNumbers');
+  });
+
+  it('keeps the error code of a request-level layout error', async () => {
+    mocks.renderPdf.mockRejectedValueOnce(new LabelLayoutError('Too small', { errorCode: 'worksheetPageSize' }));
+    const response = await POST(request());
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ error: 'Too small', errorCode: 'worksheetPageSize' });
   });
 });

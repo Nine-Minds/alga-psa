@@ -66,7 +66,8 @@ const isRecord = (value: unknown): value is UnknownRecord =>
 /**
  * True when a resolved value is authored structured content (a non-empty
  * BlockNote block array or a ProseMirror doc). A plain string — the legacy
- * terms projection — is not structured and renders as pre-line text.
+ * terms projection — is not structured and renders as pre-line text, and so
+ * does a JSON array that is not made of typed blocks (`["see appendix"]`).
  */
 const isStructuredBlockContent = (value: unknown): boolean => {
   let content = value;
@@ -77,7 +78,9 @@ const isStructuredBlockContent = (value: unknown): boolean => {
       return false;
     }
   }
-  if (Array.isArray(content)) return content.length > 0;
+  if (Array.isArray(content)) {
+    return content.length > 0 && content.every((block) => isRecord(block) && typeof block.type === 'string');
+  }
   return isRecord(content) && content.type === 'doc';
 };
 

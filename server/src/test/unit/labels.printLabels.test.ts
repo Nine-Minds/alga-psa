@@ -20,7 +20,7 @@ const setup = (readable: string[], userType = 'internal') => {
     entityType: 'ticket', labelClass: 'ticket-work-tag',
     getLabelViewModels: vi.fn(async (_c, ids) => ids.map((i) => (readable.includes(i) ? vm(i) : null))),
   };
-  const renderPdf = vi.fn(async () => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }));
+  const renderPdf = vi.fn(async (): Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number }> => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }));
   const deps: PrintLabelsDeps = {
     providers: { 'ticket-work-tag': provider, 'asset-identity': undefined, 'stock-unit-identity': undefined, 'staging-container': undefined, 'rma-work-tag': undefined },
     renderPdf, describeClientError: () => null,
@@ -38,6 +38,15 @@ describe('printLabels', () => {
     expect(r.ok).toBe(true);
     const items = (s.renderPdf.mock.calls[0] as unknown[])[1] as Array<{ viewModel: LabelViewModel }>;
     expect(items.map((i) => i.viewModel.recordId)).toEqual([C, A, B]);
+  });
+
+  it('passes the count of images the renderer could not print through to the caller', async () => {
+    const s = setup([A]);
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) }))
+      .toMatchObject({ ok: true, missingImages: 0 });
+    s.renderPdf.mockResolvedValueOnce({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1, missingImages: 3 });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) }))
+      .toMatchObject({ ok: true, missingImages: 3 });
   });
 
   it('T-skip: unreadable records are skipped and only counted; missing and unauthorized look the same', async () => {
@@ -234,19 +243,15 @@ describe('printLabels', () => {
     await expect(printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).rejects.toThrow('boom');
   });
 
-  it('preserves worksheet error codes and sheet numbers for client localization', async () => {
+  it('preserves request-level worksheet error codes for client localization', async () => {
     const s = setup([A]);
-    s.renderPdf.mockRejectedValueOnce(new Error('overflow'));
-    s.deps.describeClientError = () => ({
-      message: 'Worksheet 2 is clipped',
-      errorCode: 'worksheetTextOverflow',
-      worksheetNumbers: [2],
-    });
-    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).toMatchObject({
+    s.renderPdf.mockRejectedValueOnce(new Error('too small'));
+    s.deps.describeClientError = () => ({ message: 'Too small', errorCode: 'worksheetPageSize' });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).toEqual({
       ok: false,
       status: 422,
-      errorCode: 'worksheetTextOverflow',
-      worksheetNumbers: [2],
+      message: 'Too small',
+      errorCode: 'worksheetPageSize',
     });
   });
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { recordUrl, type LabelViewModel } from '@alga-psa/types';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-import { LabelRenderError, renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtml';
+import { LabelRenderError, labelTextOverflowError, renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtml';
 import {
   STANDARD_LABEL_ASSET_CODE,
   STANDARD_LABEL_ASSET_CODE128_CODE,
@@ -192,8 +192,48 @@ describe('renderLabelBatchHtml failures', () => {
       expect(html).toContain('label-sheet label-sheet-flow');
       expect(html).toContain('label-cell label-cell-flow');
       expect(html).toContain('data-flow="true"');
-      // A short worksheet still frames one full page: the flow root carries a page-tall minHeight.
-      expect(html).toContain('min-height:11in');
+      // The root's page-sized frame yields to the flow page's own box (size + margin).
+      expect(html).toContain('min-height: 0 !important');
+    });
+
+    it('gives worksheet pages a real @page margin that repeats on every page, without padding the root again', async () => {
+      const { html } = await renderLabelBatchHtml(
+        [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE, viewModel }],
+        letter,
+      );
+      expect(html).toMatch(/@page label-flow-1 \{ size: 215\.9mm 279\.4mm; margin: 15\.081mm; \}/); // 57 px, the preview's whole-pixel margin
+      expect(html).toContain('class="label-sheet label-sheet-flow" data-sheet="0" style="page:label-flow-1;"');
+      // The synthetic root padding (15 mm = 57 px) would double the margin on page 1 only.
+      expect(html).not.toMatch(/id="root"[^>]*padding:57px/);
+    });
+
+    it('keeps zero-margin pages for tags printed in the same batch as a worksheet', async () => {
+      const tag = asset(7, 'WL-WS-007', STANDARD_LABEL_ASSET_CODE);
+      const { html } = await renderLabelBatchHtml(
+        [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE, viewModel }, tag],
+        letter,
+      );
+      expect(html).toContain('@page { size: 215.9mm 279.4mm; margin: 0; }');
+      expect(html.match(/style="page:label-flow-1;"/g)).toHaveLength(1);
+      expect(html).toMatch(/<div class="label-sheet" data-sheet="1">/);
+    });
+
+    it('prints a portrait Letter template of another label class as a fixed label, not a worksheet', async () => {
+      const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_ASSET_CODE)!;
+      ast.metadata!.printSettings = { paperPreset: 'Letter', marginMm: 15, customPageSize: { width: 8.5, height: 11, unit: 'in' } };
+      const { html } = await renderLabelBatchHtml([{ ...asset(8, 'WL-WS-008'), templateAst: ast }], letter);
+      expect(html).not.toContain('data-flow="true"');
+      expect(html).not.toContain('data-validate-text-fits="true"');
+      expect(html).not.toContain('label-flow-1');
+    });
+
+    it('renders a JSON array of plain strings as text rather than as rich content', async () => {
+      const { html } = await renderLabelBatchHtml([{
+        templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
+        viewModel: { ...viewModel, ticketDescription: '["see appendix"]', ticketDescriptionRichText: '["see appendix"]' },
+      }], letter);
+      expect(html).toContain('[&quot;see appendix&quot;]');
+      expect(html).not.toContain('Unsupported content');
     });
 
     it('renders the standard worksheet headings in the selected locale', async () => {
@@ -346,5 +386,29 @@ describe('renderLabelBatchHtml failures', () => {
     expect(error.failures).toHaveLength(1);
     expect(error.failures[0].suggestedTemplateCode).toBeUndefined();
     expect(error.message).toMatch(/canonical record URL/);
+  });
+
+  it('turns clipped worksheet positions into per-record failures the dialog can name and skip', () => {
+    const ticket = (n: number): LabelPrintItem => ({
+      viewModel: {
+        ...asset(n, `TIC-${n}`).viewModel,
+        labelClass: 'ticket-work-tag',
+        entityType: 'ticket',
+        url: recordUrl('ticket', uuid(n), BASE),
+        code128Value: null,
+      },
+    });
+    const error = labelTextOverflowError([ticket(1), ticket(2), ticket(3)], [1, 7]);
+    expect(error).toBeInstanceOf(LabelRenderError);
+    expect(error.failures).toEqual([{
+      index: 1,
+      recordId: uuid(2),
+      identifier: 'TIC-2',
+      templateCode: 'standard-ticket-work-tag',
+      errorCode: 'worksheetTextOverflow',
+      message: expect.stringMatching(/does not fit/),
+    }]);
+    expect(error.message).toContain('TIC-2');
+    expect(error.message).not.toContain('TIC-1');
   });
 });

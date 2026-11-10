@@ -451,3 +451,12 @@ export const getStandardLabelTemplateAstByCode = (code: string): TemplateAst | n
   const ast = STANDARD_LABEL_TEMPLATE_ASTS[code];
   return ast ? cloneAst(ast) : null;
 };
+
+/**
+ * The AST a resolved label template prints with: the tenant's custom AST when it has one, else the
+ * standard template its code names. One lookup for the print path, the paper default and the catalog.
+ */
+export const resolveLabelTemplateAst = (template: {
+  templateAst?: TemplateAst | null;
+  templateCode: string;
+}): TemplateAst | null => template.templateAst ?? getStandardLabelTemplateAstByCode(template.templateCode);

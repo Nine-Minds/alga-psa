@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   custody: new Map<string, Record<string, unknown>>(),
   unreadable: new Set<string>(),
   canReadAssets: true,
+  infoLookups: 0,
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => state.canReadAssets }));
@@ -31,6 +32,17 @@ vi.mock('./custody/queries', () => ({
     new Map(ids.filter((id) => state.custody.has(id)).map((id) => [id, state.custody.get(id)!])),
 }));
 
+vi.mock('./linkedAssetLabelInfo', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./linkedAssetLabelInfo')>();
+  return {
+    ...actual,
+    getLinkedAssetInfoForAssets: (...args: Parameters<typeof actual.getLinkedAssetInfoForAssets>) => {
+      state.infoLookups += 1;
+      return actual.getLinkedAssetInfoForAssets(...args);
+    },
+  };
+});
+
 import { getTicketLinkedAssetLabelParts, listTicketLinkedAssetChoices } from './ticketLinkedAssetLabels';
 
 const T = 'ticket-1';
@@ -54,6 +66,7 @@ function seed(opts: { assets: string[]; held?: Record<string, ReturnType<typeof 
 beforeEach(() => {
   state.unreadable = new Set();
   state.canReadAssets = true;
+  state.infoLookups = 0;
   seed({ assets: [] });
 });
 
@@ -66,12 +79,21 @@ describe('getTicketLinkedAssetLabelParts', () => {
 
   it('the picked asset decides: its own shelf and next action, and its own asset line', async () => {
     three();
-    const [r] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T, linkedAssetId: 'b' }]);
+    const [r] = await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T, linkedAssetId: 'b' }]);
     expect(r).toMatchObject({
       assetId: 'b', assetTag: 'TAG-b', serialSuffix: 'WXYZ',
       custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29',
       linkedAssetInfo: { assetId: 'b', name: 'Item b', manufacturer: null, model: null, cpuLine: null, ramLine: null, storageLine: null, osLine: null },
     });
+  });
+
+  it('an ordinary tag print never looks up the asset specifications it does not show', async () => {
+    three();
+    const [r] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T, linkedAssetId: 'b' }]);
+    expect(r).toMatchObject({ assetId: 'b', assetTag: 'TAG-b', serialSuffix: 'WXYZ', linkedAssetInfo: null });
+    expect(state.infoLookups).toBe(0);
+    await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T, linkedAssetId: 'b' }]);
+    expect(state.infoLookups).toBe(1);
   });
 
   it('no asset line (count only): no worksheet info block', async () => {

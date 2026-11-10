@@ -150,6 +150,8 @@
       "nextAction": "Next action",
       "assetSpecifications": "Asset Specifications",
       "ticketDetails": "Ticket Details",
+      "imageNotIncluded": "[Image not included]",
+      "imageNotIncludedNamed": "[Image not included: {{name}}]",
       "assetName": "Name",
       "make": "Make",
       "model": "Model",

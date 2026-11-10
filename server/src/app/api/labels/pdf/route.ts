@@ -56,8 +56,17 @@ const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
 
 const deps: PrintLabelsDeps = {
   providers: PROVIDERS,
-  renderPdf: async (tenant, items, layout) =>
-    renderLabelBatchPdf(tenant, items, layout, { locale: await getServerLocale() }),
+  renderPdf: async (tenant, items, layout) => {
+    const locale = await getServerLocale();
+    const { t } = await getServerTranslation(locale, 'documents');
+    return renderLabelBatchPdf(tenant, items, layout, {
+      locale,
+      missingImageText: (name) =>
+        name
+          ? String(t('labels.worksheet.imageNotIncludedNamed', { defaultValue: '[Image not included: {{name}}]', name }))
+          : String(t('labels.worksheet.imageNotIncluded', { defaultValue: '[Image not included]' })),
+    });
+  },
   resolveTemplate: (tenant, labelClass, templateId) => resolveLabelTemplateForTenant(tenant, labelClass, templateId),
   getLinkedAssetParts: async (context, subjects) => {
     const locale = await getServerLocale();
@@ -78,7 +87,6 @@ const deps: PrintLabelsDeps = {
       return {
         message: error.message,
         ...(error instanceof LabelLayoutError && error.errorCode ? { errorCode: error.errorCode } : {}),
-        ...(error instanceof LabelLayoutError && error.worksheetNumbers ? { worksheetNumbers: error.worksheetNumbers } : {}),
       };
     }
     return null;
@@ -120,7 +128,6 @@ export async function POST(request: Request) {
         error: result.message,
         ...(result.failures ? { failures: result.failures } : {}),
         ...(result.errorCode ? { errorCode: result.errorCode } : {}),
-        ...(result.worksheetNumbers ? { worksheetNumbers: result.worksheetNumbers } : {}),
       });
     }
     return new Response(new Uint8Array(result.pdf), {
@@ -134,6 +141,8 @@ export async function POST(request: Request) {
         'X-Label-Skipped': String(result.skipped),
         // Sheets the batch consumed: a worksheet flows across pages, so this can exceed the label count.
         'X-Label-Sheets': String(result.sheets),
+        // Description images that could not be embedded; each one is marked on the printed worksheet.
+        'X-Label-Missing-Images': String(result.missingImages),
       },
     });
   } catch (error) {

@@ -88,6 +88,20 @@ describe('LabelPrintDialog', () => {
     expect(screen.getByText(/3 records were skipped because they could not be opened\./)).toBeTruthy();
   });
 
+  it('says how many description images could not be printed, and stays quiet when all were', async () => {
+    hook.print.mockResolvedValueOnce({ status: 'printed', printed: 1, skipped: 0, missingImages: 2, blobUrl: 'blob:x', popupBlocked: false });
+    const { unmount } = render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(/2 images in the ticket descriptions could not be included\./)).toBeTruthy());
+    unmount();
+
+    hook.print.mockResolvedValueOnce({ status: 'printed', printed: 1, skipped: 0, missingImages: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(/Printed 1 label/)).toBeTruthy());
+    expect(screen.queryByText(/could not be included/)).toBeNull();
+  });
+
   it('offers an Open PDF link when the popup was blocked', async () => {
     hook.print.mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: true });
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A]} />);
@@ -133,21 +147,24 @@ describe('LabelPrintDialog', () => {
     )).toEqual([]);
   });
 
-  it('localizes a worksheet overflow error and preserves the affected sheet numbers', async () => {
-    hook.print.mockResolvedValue({
-      status: 'failed',
-      httpStatus: 422,
-      message: 'server fallback',
-      failures: [],
-      errorCode: 'worksheetTextOverflow',
-      worksheetNumbers: [2, 4],
-    });
-    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+  it('names the ticket whose worksheet overflows, and "Skip these" reprints the rest', async () => {
+    hook.print
+      .mockResolvedValueOnce({
+        status: 'failed',
+        httpStatus: 422,
+        message: 'server fallback',
+        failures: [{ index: 1, recordId: B, identifier: 'TIC-2', templateCode: 'standard-ticket-customer-worksheet', message: 'server detail', errorCode: 'worksheetTextOverflow' }],
+      })
+      .mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A, B]} />);
     fireEvent.click(screen.getByText('Print'));
-    await waitFor(() => expect(screen.getByText(
-      'Worksheet 2, 4 contains text that will not fit. Adjust the layout or shorten the content before printing.',
-    )).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('TIC-2')).toBeTruthy());
+    expect(screen.getByText(/This worksheet contains text that will not fit\./)).toBeTruthy();
     expect(screen.queryByText('server fallback')).toBeNull();
+    expect(screen.queryByText(/server detail/)).toBeNull();
+    fireEvent.click(screen.getByText('Skip these and print the rest'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalledTimes(2));
+    expect(hook.print.mock.calls[1][0].labels).toEqual([{ recordId: A }]);
   });
 
   it('localizes worksheet page-size failures instead of showing the server fallback', async () => {

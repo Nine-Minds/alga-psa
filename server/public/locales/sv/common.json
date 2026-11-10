@@ -1678,6 +1678,8 @@
       "skipFailures": "Hoppa över dessa och skriv ut resten",
       "skipped_one": "{{count}} post hoppades över eftersom den inte kunde öppnas.",
       "skipped_other": "{{count}} poster hoppades över eftersom de inte kunde öppnas.",
+      "missingImages_one": "{{count}} bild i ärendebeskrivningarna kunde inte tas med. Den är markerad på bladet.",
+      "missingImages_other": "{{count}} bilder i ärendebeskrivningarna kunde inte tas med. De är markerade på bladen.",
       "template": "Mall",
       "ticketTitle": "Skriv ut arbetsetiketter",
       "tooMany": "Du kan skriva ut högst {{max}} etiketter åt gången.",
@@ -1688,7 +1690,9 @@
       "templatePaperWarning": "Den här mallen skrivs ut på ett helt ark. Välj \"Mallens papper\" (eller en helsideslayout), annars får innehållet inte plats på etiketten.",
       "worksheetPageSizeError": "Bladet måste använda stående Letter-papper eller större, både i designern och i utskriftslayouten.",
       "paperMismatchWarning": "Den här mallen är utformad för {{template}}-papper, men den valda layouten skriver ut på {{layout}}. Välj „Mallpapper“ eller matchande layout för hela ark, annars får innehållet inte plats.",
-      "worksheetTextOverflowError": "Blad {{numbers}} innehåller text som inte får plats. Justera layouten eller förkorta innehållet före utskrift."
+      "worksheetTextOverflowError": "Blad {{numbers}} innehåller text som inte får plats. Justera layouten eller förkorta innehållet före utskrift.",
+      "worksheetPageSizeError": "Arbetsbladet matchar inte den valda utskriftslayouten. Använd „Mallpapper“ eller en layout med samma papper som mallen.",
+      "worksheetTextOverflowError": "Det här bladet innehåller text som inte får plats. Justera layouten eller förkorta innehållet före utskrift."
     },
     "layout": {
       "template-preferred": "Mallens papper (standard)",

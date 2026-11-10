@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { MAX_LABELS_PER_REQUEST, type LabelClass, type LabelPrintErrorCode, type LabelPrintFailure } from '@alga-psa/types';
+import {
+  INVOICE_PAPER_PRESET_IDS,
+  INVOICE_PAPER_PRESET_REGISTRY,
+  MAX_LABELS_PER_REQUEST,
+  customPageSizeToMm,
+  type LabelClass,
+  type LabelPrintErrorCode,
+  type LabelPrintFailure,
+} from '@alga-psa/types';
 import { Dialog, DialogContent } from '../Dialog';
 import { Button } from '../Button';
 import { Input } from '../Input';
@@ -156,10 +164,10 @@ export function LabelPrintDialog({
   // Human-readable page size for a template or layout preset, used by the paper-mismatch warning.
   const formatPaper = (size?: { width: number; height: number } | null): string | null => {
     if (!size) return null;
-    const near = (w: number, h: number) => Math.abs(size.width - w) < 1 && Math.abs(size.height - h) < 1;
-    if (near(210, 297)) return t('labels.paper.a4', { defaultValue: 'A4' });
-    if (near(215.9, 279.4)) return t('labels.paper.letter', { defaultValue: 'Letter' });
-    if (near(215.9, 355.6)) return t('labels.paper.legal', { defaultValue: 'Legal' });
+    const preset = INVOICE_PAPER_PRESET_IDS.map((id) => INVOICE_PAPER_PRESET_REGISTRY[id]).find(
+      (candidate) => Math.abs(size.width - candidate.widthMm) < 1 && Math.abs(size.height - candidate.heightMm) < 1
+    );
+    if (preset) return t(`labels.paper.${preset.id.toLowerCase()}`, { defaultValue: preset.label });
     return `${Math.round(size.width)} × ${Math.round(size.height)} mm`;
   };
   const mmFromLayout = (layout: unknown): { width: number; height: number } | null => {
@@ -173,8 +181,9 @@ export function LabelPrintDialog({
     };
     const source = l.kind === 'grid' ? { width: l.labelWidth, height: l.labelHeight, unit: l.unit } : l.pageSize;
     if (!source || typeof source.width !== 'number' || typeof source.height !== 'number') return null;
-    const factor = source.unit === 'in' ? 25.4 : 1;
-    return { width: source.width * factor, height: source.height * factor };
+    if (source.unit !== 'in' && source.unit !== 'mm') return null;
+    const { widthMm, heightMm } = customPageSizeToMm({ width: source.width, height: source.height, unit: source.unit });
+    return { width: widthMm, height: heightMm };
   };
   // True when the chosen layout prints on a different paper than the template declares (e.g. an A4
   // template sent through the Letter layout), which the server rejects with a paper-size error.
@@ -245,16 +254,15 @@ export function LabelPrintDialog({
   }
 
   const failures: LabelPrintFailure[] = outcome?.status === 'failed' ? outcome.failures : [];
-  const localizedWorksheetError = (code?: LabelPrintErrorCode, worksheetNumbers?: number[]): string | null => {
+  const localizedWorksheetError = (code?: LabelPrintErrorCode): string | null => {
     if (code === 'worksheetPageSize') {
       return t('labels.dialog.worksheetPageSizeError', {
         defaultValue: 'The worksheet does not fit the selected print layout. Use "Template paper" or a layout on the same paper as the template.',
       });
     }
-    if (code === 'worksheetTextOverflow' && worksheetNumbers?.length) {
+    if (code === 'worksheetTextOverflow') {
       return t('labels.dialog.worksheetTextOverflowError', {
-        defaultValue: 'Worksheet {{numbers}} contains text that will not fit. Adjust the layout or shorten the content before printing.',
-        numbers: worksheetNumbers.join(', '),
+        defaultValue: 'This worksheet contains text that will not fit. Adjust the layout or shorten the content before printing.',
       });
     }
     return null;
@@ -444,6 +452,15 @@ export function LabelPrintDialog({
                       })}
                     </>
                   )}
+                  {outcome.missingImages > 0 && (
+                    <>
+                      {' '}
+                      {t('labels.dialog.missingImages', {
+                        defaultValue: '{{count}} images in the ticket descriptions could not be included. They are marked on the worksheets.',
+                        count: outcome.missingImages,
+                      })}
+                    </>
+                  )}
                   {outcome.popupBlocked && (
                     <>
                       {' '}
@@ -470,7 +487,7 @@ export function LabelPrintDialog({
                   <p>
                     {outcome.httpStatus === 404
                       ? t('labels.dialog.notFound', { defaultValue: 'These records could not be opened.' })
-                      : localizedWorksheetError(outcome.errorCode, outcome.worksheetNumbers) ||
+                      : localizedWorksheetError(outcome.errorCode) ||
                         (failures.some((failure) => failure.errorCode)
                          ? t('labels.dialog.failed', { defaultValue: 'The labels could not be printed.' })
                          : outcome.message) ||

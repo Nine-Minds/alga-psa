@@ -150,6 +150,8 @@
       "nextAction": "⟦Ƞḗẋŧ ȧƈŧīȯƞ⟧",
       "assetSpecifications": "⟦Ȧşşḗŧ Şƥḗƈīƒīƈȧŧīȯƞş⟧",
       "ticketDetails": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧",
+      "imageNotIncluded": "⟦[Īḿȧɠḗ ƞȯŧ īƞƈŀŭḓḗḓ]⟧",
+      "imageNotIncludedNamed": "⟦[Īḿȧɠḗ ƞȯŧ īƞƈŀŭḓḗḓ: {{name}}]⟧",
       "assetName": "⟦Ƞȧḿḗ⟧",
       "make": "⟦Ḿȧķḗ⟧",
       "model": "⟦Ḿȯḓḗŀ⟧",

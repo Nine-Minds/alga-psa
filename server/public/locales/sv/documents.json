@@ -150,6 +150,8 @@
       "nextAction": "Nästa åtgärd",
       "assetSpecifications": "Tillgångsspecifikationer",
       "ticketDetails": "Ärendedetaljer",
+      "imageNotIncluded": "[Bild inte medtagen]",
+      "imageNotIncludedNamed": "[Bild inte medtagen: {{name}}]",
       "assetName": "Namn",
       "make": "Tillverkare",
       "model": "Modell",

@@ -30,6 +30,11 @@ export interface RenderedLabelCell {
    * flows onto continuation pages the way a regular document does, instead of being clipped or refused.
    */
   flow?: boolean;
+  /**
+   * A flow cell's page margin in mm (the template's `printSettings.marginMm`). It is the flow sheet's
+   * real `@page` margin, so every continuation page keeps it; the cell's markup must not pad it again.
+   */
+  flowMarginMm?: number;
 }
 
 export interface ComposedLabelDocument {
@@ -72,16 +77,27 @@ export function composeLabelSheets(
 
   // Fixed cells fill the planned grid slots; each flow cell gets a sheet of its own so its pages
   // cannot collide with a neighbouring label. Input order is preserved across both kinds.
-  type Sheet = { flow: boolean; plannedSheet: number | null; cells: string[] };
+  // Each distinct flow margin gets its own named page, so fixed tags in the same batch keep the
+  // zero-margin default page while worksheet pages carry their margin onto every continuation page.
+  type Sheet = { flow: boolean; plannedSheet: number | null; pageName?: string; cells: string[] };
   const sheets: Sheet[] = [];
+  const flowPages = new Map<string, { name: string; marginMm: number }>();
   cells.forEach((cell, index) => {
     const p = geometry.placements[index];
     const attrs = `data-label-index="${index}"${cell.validateTextFits ? ' data-validate-text-fits="true"' : ''}${cell.flow ? ' data-flow="true"' : ''}`;
     if (cell.flow) {
+      const marginMm = Math.max(0, Math.min(cell.flowMarginMm ?? 0, p.widthMm / 4, p.heightMm / 4));
+      const key = mmCss(marginMm);
+      let page = flowPages.get(key);
+      if (!page) {
+        page = { name: `label-flow-${flowPages.size + 1}`, marginMm };
+        flowPages.set(key, page);
+      }
       sheets.push({
         flow: true,
         plannedSheet: p.sheet,
-        cells: [`<div class="label-cell label-cell-flow" ${attrs} style="width:${mmCss(p.widthMm)};">${cell.html}</div>`],
+        pageName: page.name,
+        cells: [`<div class="label-cell label-cell-flow" ${attrs}>${cell.html}</div>`],
       });
       return;
     }
@@ -104,6 +120,10 @@ export function composeLabelSheets(
   });
 
   const css = Array.from(new Set(cells.map((cell) => cell.css).filter(Boolean))).join('\n');
+  const pageSize = `${mmCss(geometry.pageWidthMm)} ${mmCss(geometry.pageHeightMm)}`;
+  const flowPageCss = Array.from(flowPages.values())
+    .map((page) => `@page ${page.name} { size: ${pageSize}; margin: ${mmCss(page.marginMm)}; }`)
+    .join('\n');
   const html = `<!doctype html>
 <html lang="en">
   <head>
@@ -112,18 +132,25 @@ export function composeLabelSheets(
     <style>
 ${PDF_FONT_FACE_CSS}
 ${css}
-@page { size: ${mmCss(geometry.pageWidthMm)} ${mmCss(geometry.pageHeightMm)}; margin: 0; }
+@page { size: ${pageSize}; margin: 0; }
+${flowPageCss}
 html, body { margin: 0; padding: 0; background: #fff; }
 .label-sheet { position: relative; width: ${mmCss(geometry.pageWidthMm)}; height: ${mmCss(geometry.pageHeightMm)}; overflow: hidden; break-after: page; page-break-after: always; }
 .label-sheet:last-child { break-after: auto; page-break-after: auto; }
 .label-cell { position: absolute; box-sizing: border-box; overflow: hidden; }
-.label-sheet-flow { height: auto; overflow: visible; }
-.label-cell-flow { position: static; overflow: visible; break-after: page; page-break-after: always; }
+.label-sheet-flow { width: auto; height: auto; overflow: visible; }
+.label-cell-flow { position: static; width: auto; overflow: visible; break-after: page; page-break-after: always; }
+/* On a flow sheet the page box (size + margin) is the frame: the template's own page-sized root and
+   single page section give up their fixed size so they fill the margin box instead of overrunning it. */
+.label-cell-flow > .invoice-template-root > .ast-node-type-document,
+.label-cell-flow > .invoice-template-root > .ast-node-type-document > .ast-node-type-section:only-child {
+  width: auto !important; max-width: 100%; height: auto !important; min-height: 0 !important;
+}
 .label-cell-flow:last-child { break-after: auto; page-break-after: auto; }
     </style>
   </head>
   <body>
-${sheets.map((sheet, i) => `<div class="label-sheet${sheet.flow ? ' label-sheet-flow' : ''}" data-sheet="${i}">${sheet.cells.join('')}</div>`).join('\n')}
+${sheets.map((sheet, i) => `<div class="label-sheet${sheet.flow ? ' label-sheet-flow' : ''}" data-sheet="${i}"${sheet.pageName ? ` style="page:${sheet.pageName};"` : ''}>${sheet.cells.join('')}</div>`).join('\n')}
   </body>
 </html>`;
 

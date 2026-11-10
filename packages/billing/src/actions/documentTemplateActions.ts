@@ -30,7 +30,7 @@ import {
 } from '../lib/document-templates/storage';
 import { labelClassOfCustomTemplate, labelClassOfStandardCode } from '../lib/label-template-ast/labelTemplates';
 import { buildLabelModel } from '../lib/label-batch/renderLabelBatchHtml';
-import { isWorksheetLabelMetadata } from '../lib/label-batch/layout';
+import { isWorksheetLabelTemplate } from '../lib/label-batch/layout';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -366,7 +366,7 @@ export const runAuthoritativeTemplatePreview = withAuth(
         sampleLabel,
         sampleLabel.tenantClient,
         templateAst.metadata?.labelSettings?.hiddenFields,
-        { worksheet: isWorksheetLabelMetadata(templateAst.metadata) }
+        { worksheet: isWorksheetLabelTemplate(sampleLabel.labelClass, templateAst.metadata) }
       ) as unknown as Record<string, unknown>;
     }
 

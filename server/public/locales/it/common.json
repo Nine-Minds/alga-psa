@@ -1678,6 +1678,8 @@
       "skipFailures": "Salta questi e stampa il resto",
       "skipped_one": "{{count}} record è stato saltato perché non è stato possibile aprirlo.",
       "skipped_other": "{{count}} record sono stati saltati perché non è stato possibile aprirli.",
+      "missingImages_one": "Non è stato possibile includere {{count}} immagine delle descrizioni dei ticket. È segnalata sul foglio.",
+      "missingImages_other": "Non è stato possibile includere {{count}} immagini delle descrizioni dei ticket. Sono segnalate sui fogli.",
       "template": "Modello",
       "ticketTitle": "Stampa etichette di lavoro",
       "tooMany": "Puoi stampare al massimo {{max}} etichette alla volta.",
@@ -1688,7 +1690,9 @@
       "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli \"Carta del modello\" (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
       "worksheetPageSizeError": "Il foglio deve usare carta Letter o più grande in verticale, sia nel designer sia nel layout di stampa.",
       "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli „Carta del modello“ o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
-      "worksheetTextOverflowError": "Il foglio {{numbers}} contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
+      "worksheetTextOverflowError": "Il foglio {{numbers}} contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare.",
+      "worksheetPageSizeError": "Il foglio di lavoro non corrisponde al layout di stampa selezionato. Usa „Carta del modello“ o un layout con la stessa carta del modello.",
+      "worksheetTextOverflowError": "Questo foglio contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
     },
     "layout": {
       "template-preferred": "Carta del modello (predefinita)",

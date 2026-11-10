@@ -39,13 +39,26 @@ interface Layout {
   nodes: Record<string, Box>;
 }
 
-async function measure(html: string, media: 'screen' | 'print', frameSelector: string): Promise<Layout> {
+/**
+ * `contentWidthPx` lays the document out in a page's content box: a flow worksheet has no frame of its
+ * own (its `@page` size and margin are the frame), so the print measurement must use the width Chrome
+ * gives it when it paginates, not the screen viewport.
+ */
+async function measure(
+  html: string,
+  media: 'screen' | 'print',
+  frameSelector: string,
+  contentWidthPx?: number
+): Promise<Layout> {
   const browser = await browserPoolService.getBrowser();
   const page = await browser.newPage();
   try {
     await page.setViewport({ width: 1400, height: 900 });
     await page.emulateMediaType(media);
     await page.setContent(html, { waitUntil: 'load' });
+    if (contentWidthPx !== undefined) {
+      await page.addStyleTag({ content: `body { margin: 0 !important; width: ${contentWidthPx}px !important; }` });
+    }
     return await page.evaluate(
       (selector: string, guideClass: string) => {
         const frame = document.querySelector<HTMLElement>(selector)!;
@@ -126,14 +139,27 @@ describe('designer preview sheet matches the printed label cell', () => {
         pageSize: { width: geometry.width, height: geometry.height, unit: geometry.unit },
       });
 
+      const isFlow = cellOverflow === 'visible';
+      // A worksheet prints on a named page whose margin is the template margin, so its cell starts at
+      // the margin and is as wide as the page's content box; a tag cell is the whole label.
+      const inset = isFlow ? marginPx : 0;
       const preview = await measure(previewHtml, 'screen', `.${PREVIEW_SHEET_CLASS}`);
-      const paper = await measure(printed.html, 'print', '.label-cell');
+      const paper = await measure(printed.html, 'print', '.label-cell', isFlow ? framePx - marginPx * 2 : undefined);
 
       // The sheet IS the label (or the worksheet page) at 96 CSS px/in, clipped like the cell.
       expect(preview.frame.w).toBeCloseTo(framePx, 1);
       expect(preview.frame.h).toBeCloseTo(pagePx, 1);
-      expect(paper.frame.w).toBeCloseTo(framePx, 1);
-      expect(paper.frame.h).toBeCloseTo(pagePx, 1);
+      expect(paper.frame.w).toBeCloseTo(framePx - inset * 2, 1);
+      if (isFlow) {
+        const pageRule = /@page (label-flow-\d+) \{ size: ([\d.]+)mm ([\d.]+)mm; margin: ([\d.]+)mm; \}/.exec(printed.html);
+        expect(pageRule).not.toBeNull();
+        const toPx = (mm: string) => (Number(mm) * 96) / 25.4;
+        expect(toPx(pageRule![2])).toBeCloseTo(framePx, 1);
+        expect(toPx(pageRule![3])).toBeCloseTo(pagePx, 1);
+        expect(toPx(pageRule![4])).toBeCloseTo(marginPx, 1);
+      } else {
+        expect(paper.frame.h).toBeCloseTo(pagePx, 1);
+      }
       expect(preview.frame.overflow).toBe('hidden');
       expect(paper.frame.overflow).toBe(cellOverflow);
 
@@ -146,15 +172,19 @@ describe('designer preview sheet matches the printed label cell', () => {
       expect(preview.guide!.w).toBeCloseTo(framePx - marginPx * 2, 0);
       expect(preview.guide!.h).toBeCloseTo(pagePx - marginPx * 2, 0);
 
-      // Every node the template renders is in the same place, at the same size, in both.
+      // Every node the template renders is in the same place, at the same size, in both. On a worksheet
+      // the page-sized root is the page itself (its padding moved to the @page margin), so it is the
+      // one node that is compared through the guide above instead.
       const ids = Object.keys(paper.nodes);
       expect(ids.length).toBeGreaterThan(4);
       expect(Object.keys(preview.nodes).sort()).toEqual(ids.sort());
       for (const id of ids) {
+        if (isFlow && id === 'root') continue;
         const a = preview.nodes[id];
         const b = paper.nodes[id];
+        const placed = { x: b.x + inset, y: b.y + inset, w: b.w, h: b.h };
         for (const key of ['x', 'y', 'w', 'h'] as const) {
-          expect(Math.abs(a[key] - b[key]), `${code} #${id}.${key}: preview ${a[key]} vs print ${b[key]}`).toBeLessThan(0.5);
+          expect(Math.abs(a[key] - placed[key]), `${code} #${id}.${key}: preview ${a[key]} vs print ${placed[key]}`).toBeLessThan(0.5);
         }
       }
     }, 60_000);

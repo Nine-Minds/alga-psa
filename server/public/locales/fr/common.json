@@ -1678,6 +1678,8 @@
       "skipFailures": "Ignorer ceux-ci et imprimer le reste",
       "skipped_one": "{{count}} enregistrement a été ignoré car il n'a pas pu être ouvert.",
       "skipped_other": "{{count}} enregistrements ont été ignorés car ils n'ont pas pu être ouverts.",
+      "missingImages_one": "{{count}} image des descriptions de tickets n'a pas pu être incluse. Elle est signalée sur la fiche.",
+      "missingImages_other": "{{count}} images des descriptions de tickets n'ont pas pu être incluses. Elles sont signalées sur les fiches.",
       "template": "Modèle",
       "ticketTitle": "Imprimer les étiquettes de travail",
       "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",
@@ -1688,7 +1690,9 @@
       "templatePaperWarning": "Ce modèle s'imprime sur une feuille entière. Choisissez « Papier du modèle » (ou une mise en page pleine feuille), sinon le contenu ne tiendra pas sur l'étiquette.",
       "worksheetPageSizeError": "La fiche doit utiliser du papier Letter ou plus grand en orientation portrait, dans le concepteur comme à l'impression.",
       "paperMismatchWarning": "Ce modèle est conçu pour du papier {{template}}, mais la mise en page sélectionnée imprime sur {{layout}}. Choisissez « Papier du modèle » ou la mise en page plein format correspondante, sinon le contenu ne tiendra pas.",
-      "worksheetTextOverflowError": "La fiche {{numbers}} contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression."
+      "worksheetTextOverflowError": "La fiche {{numbers}} contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression.",
+      "worksheetPageSizeError": "La feuille de travail ne correspond pas à la mise en page d’impression sélectionnée. Utilisez « Papier du modèle » ou une mise en page utilisant le même papier que le modèle.",
+      "worksheetTextOverflowError": "Cette fiche contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression."
     },
     "layout": {
       "template-preferred": "Papier du modèle (par défaut)",

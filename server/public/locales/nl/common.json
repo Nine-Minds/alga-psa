@@ -1678,6 +1678,8 @@
       "skipFailures": "Deze overslaan en de rest afdrukken",
       "skipped_one": "{{count}} record is overgeslagen omdat het niet kon worden geopend.",
       "skipped_other": "{{count}} records zijn overgeslagen omdat ze niet konden worden geopend.",
+      "missingImages_one": "{{count}} afbeelding in de ticketbeschrijvingen kon niet worden opgenomen. Deze is gemarkeerd op het werkblad.",
+      "missingImages_other": "{{count}} afbeeldingen in de ticketbeschrijvingen konden niet worden opgenomen. Ze zijn gemarkeerd op de werkbladen.",
       "template": "Sjabloon",
       "ticketTitle": "Werklabels afdrukken",
       "tooMany": "U kunt maximaal {{max}} labels tegelijk afdrukken.",
@@ -1688,7 +1690,9 @@
       "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies \"Sjabloonpapier\" (of een lay-out voor een volledig vel), anders past de inhoud niet op het etiket.",
       "worksheetPageSizeError": "Het werkblad moet zowel in de ontwerper als in de afdrukindeling staand Letter-papier of groter gebruiken.",
       "paperMismatchWarning": "Deze sjabloon is ontworpen voor {{template}}-papier, maar de geselecteerde indeling print op {{layout}}. Kies „Sjabloonpapier“ of de passende indeling voor volle vellen, anders past de inhoud niet.",
-      "worksheetTextOverflowError": "Werkblad {{numbers}} bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt."
+      "worksheetTextOverflowError": "Werkblad {{numbers}} bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt.",
+      "worksheetPageSizeError": "Het werkvel past niet bij de geselecteerde printindeling. Gebruik „Sjabloonpapier“ of een indeling met hetzelfde papier als de sjabloon.",
+      "worksheetTextOverflowError": "Dit werkblad bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt."
     },
     "layout": {
       "template-preferred": "Sjabloonpapier (standaard)",

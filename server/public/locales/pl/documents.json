@@ -150,6 +150,8 @@
       "nextAction": "Następne działanie",
       "assetSpecifications": "Specyfikacja zasobu",
       "ticketDetails": "Szczegóły zgłoszenia",
+      "imageNotIncluded": "[Obraz nie został dołączony]",
+      "imageNotIncludedNamed": "[Obraz nie został dołączony: {{name}}]",
       "assetName": "Nazwa",
       "make": "Producent",
       "model": "Model",
