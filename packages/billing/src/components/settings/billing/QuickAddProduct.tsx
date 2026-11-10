@@ -58,23 +58,11 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
-import { BuiltinAssetSpecFields } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
+import { BuiltinAssetSpecFields, useBuiltinAssetTypeOptions } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
 import { BUILTIN_ASSET_SPEC_FIELDS, normalizeAssetSpecValues, type AssetSpecValues } from '@alga-psa/core/builtinAssetSpecs';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
-
-// Default asset type applied when a delivered serialized unit becomes a managed asset
-// (F027). Mirrors BUILTIN_ASSET_TYPE_SLUGS in @alga-psa/assets (inlined to avoid a
-// cross-package dependency); empty leaves it unset (assetLink falls back to 'unknown').
-const DEFAULT_ASSET_TYPE_OPTIONS = [
-  { value: '', label: 'Unset (unknown)' },
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'network_device', label: 'Network device' },
-  { value: 'server', label: 'Server' },
-  { value: 'mobile_device', label: 'Mobile device' },
-  { value: 'printer', label: 'Printer' },
-];
 
 type ReturnedActionError = ActionMessageError | ActionPermissionError;
 
@@ -94,6 +82,7 @@ interface QuickAddProductProps {
 
 export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: QuickAddProductProps) {
   const { t } = useTranslation('msp/billing-settings');
+  const defaultAssetTypeOptions = useBuiltinAssetTypeOptions();
   const { money } = useCurrencyFormat();
   const isEditMode = !!product;
   const [error, setError] = useState<string | null>(null);
@@ -1137,7 +1126,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                           </label>
                           <CustomSelect
                             id="quick-add-product-default-asset-type"
-                            options={DEFAULT_ASSET_TYPE_OPTIONS}
+                            options={defaultAssetTypeOptions}
                             value={inv.default_asset_type}
                             onValueChange={(value) => {
                               setInv((prev) => ({ ...prev, default_asset_type: value, default_asset_metadata: {} }));

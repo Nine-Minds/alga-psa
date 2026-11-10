@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import CustomSelect from './CustomSelect';
+import React, { useMemo } from 'react';
+import CustomSelect, { type SelectOption } from './CustomSelect';
 import { Input } from './Input';
 import { Checkbox } from './Checkbox';
 import { useTranslation } from '../lib/i18n/client';
@@ -14,6 +14,20 @@ import {
 const OPTION_KEYS: Record<AssetSpecOptionGroup, string> = {
   os: 'osTypes', storage: 'storageTypes', network: 'networkDeviceTypes', mobileOs: 'mobileOsTypes',
 };
+
+/** Built-in asset types with spec tables, labelled like the asset form; '' leaves the type unknown. */
+export function useBuiltinAssetTypeOptions(): SelectOption[] {
+  const { t } = useTranslation('msp/assets');
+  return useMemo(() => [
+    { value: '', label: t('quickAddAsset.assetTypes.unknown', { defaultValue: 'Unknown' }) },
+    ...Object.keys(BUILTIN_ASSET_SPEC_FIELDS).map((slug) => ({
+      value: slug,
+      label: t(`quickAddAsset.assetTypes.${slug}`, {
+        defaultValue: slug.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' '),
+      }),
+    })),
+  ], [t]);
+}
 
 export function AssetSpecSelect({ optionGroup, ...props }: Omit<React.ComponentProps<typeof CustomSelect>, 'options'> & {
   optionGroup: AssetSpecOptionGroup;
