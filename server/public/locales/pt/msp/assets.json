@@ -2184,6 +2184,7 @@
     "loading": "Carregando auditorias…",
     "empty": "Ainda não há auditorias no local que correspondam a esta visualização.",
     "columns": {
+      "audit": "Auditoria",
       "client": "Cliente",
       "location": "Local",
       "status": "Status",
@@ -2236,6 +2237,7 @@
     },
     "detail": {
       "backToClient": "Voltar às auditorias do cliente",
+      "reference": "Auditoria",
       "untitledClient": "Cliente",
       "location": "Local",
       "startedBy": "Iniciada por",
