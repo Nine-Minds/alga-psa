@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
 import { predicateClauseSchema } from '@alga-psa/predicates';
 
 /**
@@ -55,7 +55,7 @@ export const ticketFiltersShape: { [K in TicketNamedViewFilterKey]: z.ZodTypeAny
   contactId: z.string(),
   showOpenOnly: z.boolean(),
   tags: z.array(z.string()),
-  assignedToIds: z.array(z.string().guid()),
+  assignedToIds: z.array(z.union([z.string().guid(), z.literal(TICKET_ASSIGNEE_ME)])),
   assignedTeamIds: z.array(z.string()),
   includeUnassigned: z.boolean(),
   assignedToMe: z.boolean(),

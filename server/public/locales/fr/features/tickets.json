@@ -220,6 +220,7 @@
     "search": "Rechercher des tickets et commentaires...",
     "button": "Filtres",
     "unassigned": "Non attribué",
+    "me": "Moi",
     "category": "Filtrer par catégorie",
     "removeFilterChip": "Supprimer le filtre : {{label}}",
     "assignee": "Destinataire",

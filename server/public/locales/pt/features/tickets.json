@@ -220,6 +220,7 @@
     "search": "Pesquisar tickets e comentários...",
     "button": "Filtros",
     "unassigned": "Não atribuído",
+    "me": "Eu",
     "category": "Filtrar por categoria",
     "removeFilterChip": "Remover filtro: {{label}}",
     "assignee": "Responsável",

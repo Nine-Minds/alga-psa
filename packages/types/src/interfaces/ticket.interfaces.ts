@@ -147,6 +147,13 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   latest_activity_actor?: ITicketLatestActivityActor | null;
 }
 
+/**
+ * Sentinel stored in `ITicketListFilters.assignedToIds` meaning "the viewing user". It is kept as-is in
+ * URLs, saved views and board default views, and resolved to the viewer's id only when the filter
+ * compiles to SQL (`ticketFiltersToPredicates`, from `context.userId`).
+ */
+export const TICKET_ASSIGNEE_ME = 'me';
+
 export interface ITicketListFilters {
   boardId?: string;                   // Legacy single-board include (deep links)
   boardIds?: string[];                // Boards to include ('no-board' sentinel matches tickets with no board)
@@ -162,10 +169,13 @@ export interface ITicketListFilters {
   boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
-  assignedToIds?: string[];        // Array of user IDs to filter by
+  assignedToIds?: string[];        // User IDs to filter by, or the TICKET_ASSIGNEE_ME ('me') sentinel for the viewing user (assigned_to only)
   assignedTeamIds?: string[];      // Array of team IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
-  assignedToMe?: boolean;          // Restrict to tickets where caller is assignee (incl. additional agents + team membership). Server bypasses for project:read admins.
+  // NOT the assignee filter's "Me" (see TICKET_ASSIGNEE_ME in assignedToIds). This is the task-link picker's
+  // "involves me" scope: caller is the assignee, an additional agent, or a member of the assigned team.
+  // Bypassed (no-op) for callers holding project:read.
+  assignedToMe?: boolean;
   // Due date filters
   dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';
   dueDateFrom?: string;            // ISO date string for custom range start
