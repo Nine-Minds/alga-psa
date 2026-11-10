@@ -96,6 +96,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
@@ -231,72 +232,6 @@ function captureAnalytics(_event: string, _properties?: Record<string, any>, _us
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
 }
 
-function extractRoleIdsFromUser(user: unknown): string[] {
-  const roles = (user as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      if (role && typeof role === 'object' && 'role_id' in role) {
-        const roleId = (role as { role_id?: unknown }).role_id;
-        return typeof roleId === 'string' ? roleId : null;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-      .where({ user_id: user.user_id })
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, 'users', tenant)
-      .where({ reports_to: user.user_id })
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
-}
-
 function toTicketAuthorizationRecord(
   ticket: Partial<ITicket>
 ): AuthorizationRecord {
@@ -357,7 +292,8 @@ async function decideTicketRead(
   user: IUserWithRoles,
   ticket: Partial<ITicket>
 ): Promise<{ allowed: boolean; redactedFields: string[] }> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const requestCache = new RequestLocalAuthorizationCache();
+  const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
@@ -377,7 +313,6 @@ async function decideTicketRead(
     }),
     rbacEvaluator: async () => true,
   });
-  const requestCache = new RequestLocalAuthorizationCache();
 
   if (user.user_type === 'client' && user.clientId) {
     if (ticket.client_id !== user.clientId) {
@@ -2132,11 +2067,12 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         throw new Error('Permission denied: Cannot view tickets');
       }
 
-      const authorizationSubject = await resolveAuthorizationSubjectForUser(
-        trx,
+      const requestCache = new RequestLocalAuthorizationCache();
+      const authorizationSubject = await resolveAuthorizationSubject(trx, {
         tenant,
-        user as IUserWithRoles
-      );
+        user: user as IUserWithRoles,
+        requestCache,
+      });
       const contactVisibility = await resolveClientVisibility(trx, tenant, user as IUserWithRoles);
       const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
       const relationshipRules =
@@ -2156,7 +2092,6 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         }),
         rbacEvaluator: async () => true,
       });
-      const requestCache = new RequestLocalAuthorizationCache();
 
       const tenantFacade = tenantDb(trx, tenant);
       let query = tenantFacade.table('tickets as t')

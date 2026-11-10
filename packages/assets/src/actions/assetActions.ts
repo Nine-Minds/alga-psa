@@ -516,9 +516,10 @@ type AssetAuthUser = SharedAssetAuthUser;
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
-    user: AssetAuthUser
+    user: AssetAuthUser,
+    requestCache?: RequestLocalAuthorizationCache
 ): Promise<AuthorizationSubject> {
-    return resolveSharedAuthorizationSubject(trx, tenant, user);
+    return resolveSharedAuthorizationSubject(trx, tenant, user, undefined, requestCache);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -562,10 +563,11 @@ async function createAssetReadAuthorizationContext(
     tenant: string,
     user: AssetAuthUser
 ): Promise<AssetReadAuthorizationContext> {
+    const requestCache = new RequestLocalAuthorizationCache();
     return {
-        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
+        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user, requestCache),
         authorizationKernel: createAssetReadAuthorizationKernel(trx),
-        requestCache: new RequestLocalAuthorizationCache(),
+        requestCache,
     };
 }
 

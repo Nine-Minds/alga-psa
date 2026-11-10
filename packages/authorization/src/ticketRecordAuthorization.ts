@@ -1,3 +1,4 @@
+import { assembleAuthorizationSubject } from './subject/assemble';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
@@ -95,16 +96,17 @@ export async function createTicketAuthorizationContext(
     userId: user.user_id,
     apiKeyId: (user as IUserWithRoles & { api_key_id?: string | null }).api_key_id ?? null,
   });
-  const authorizationSubject: AuthorizationSubject = {
+  // The snapshot is the loaded facts; the subject is assembled by the shared resolver step.
+  const authorizationSubject: AuthorizationSubject = assembleAuthorizationSubject({
     tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds: snapshot.roleIds,
-    teamIds: snapshot.teamIds,
-    managedUserIds: snapshot.managedUserIds,
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
+    user,
+    facts: {
+      roleIds: snapshot.roleIds,
+      teamIds: snapshot.teamIds,
+      managedUserIds: snapshot.managedUserIds,
+      storedPortfolioClientIds: snapshot.portfolioClientIds ?? [],
+    },
+  });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds =
     contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;

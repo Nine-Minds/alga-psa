@@ -10,10 +10,10 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   type AuthorizationRecord,
-  type AuthorizationSubject,
   type RelationshipRule,
 } from '@alga-psa/authorization/kernel';
 import { createBundleNarrowingProvider } from '@alga-psa/authorization/bundles/narrowingProvider';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 
 // Shared by initial ticket loading and subsequent document actions.
 // LEVERAGE: pattern tenant-scoped-table — document actions and shared authorization repeat this typed facade.
@@ -25,7 +25,6 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-type UserWithOptionalRoles = IUser & { roles?: Array<{ role_id?: string } | string> };
 
 interface DocumentAssociationRow {
   document_id: string;
@@ -37,54 +36,6 @@ interface DocumentAuthorizationInput {
   document_id: string;
   created_by?: string | null;
   is_client_visible?: boolean | null;
-}
-
-function extractRoleIdsFromUser(user: UserWithOptionalRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role: { role_id?: string } | string) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value: string | null): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: UserWithOptionalRoles
-): Promise<AuthorizationSubject> {
-  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-      .where('user_id', user.user_id)
-      .select<{ role_id: string }[]>('role_id');
-    roleIds = roleRows.map((row) => row.role_id);
-  }
-
-  const teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-    .where('user_id', user.user_id)
-    .select<{ team_id: string }[]>('team_id');
-  const managedRows = await tenantScopedTable(trx, 'users', tenant)
-    .where('reports_to', user.user_id)
-    .select<{ user_id: string }[]>('user_id');
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
 }
 
 function applyDocumentRedactions<T extends object>(document: T, redactedFields: string[]): T {
@@ -352,7 +303,9 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   }
   const deniedDocuments = new Set(assetLinks.filter(link => !readableAssetIds.has(link.entity_id)).map(link => link.document_id));
 
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user as UserWithOptionalRoles);
+  const requestCache = new RequestLocalAuthorizationCache();
+  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
+  const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const relationshipRules = getDocumentBuiltinRelationshipRules(user);
   const selectedClientIds = user.clientId ? [user.clientId] : undefined;
   const authorizationKernel = createAuthorizationKernel({
@@ -362,7 +315,6 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     bundleProvider: createBundleNarrowingProvider(trx),
     rbacEvaluator: async () => true,
   });
-  const requestCache = new RequestLocalAuthorizationCache();
   const authorizationRecords = await resolveDocumentAuthorizationRecords(
     trx,
     tenant,
