@@ -378,9 +378,13 @@ async function authorizeTicketReads<T extends Partial<ITicket> & { ticket_id?: s
     })
   );
 
-  return tickets.flatMap((ticket, index) =>
-    decisions[index]?.allowed ? [{ ticket, redactedFields: decisions[index].redactedFields ?? [] }] : []
-  );
+  // A redaction that hides the ticket's identity hides the ticket, as on REST.
+  return tickets.flatMap((ticket, index) => {
+    const decision = decisions[index];
+    if (!decision?.allowed) return [];
+    const redactedFields = decision.redactedFields ?? [];
+    return projectReadableRecord('ticket', ticket, redactedFields) ? [{ ticket, redactedFields }] : [];
+  });
 }
 
 /**
@@ -398,6 +402,20 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   return authorized.flatMap(({ ticket, redactedFields }) => {
     const projected = projectReadableRecord('ticket', ticket, redactedFields);
     return projected ? [projected] : [];
+  });
+}
+
+/**
+ * List rows for authorized tickets. The projection runs on the mapped row, so a
+ * display default (`'Unknown'`) is never emitted in place of a redacted field.
+ */
+function readableTicketListItems<T extends Partial<ITicket>>(
+  reads: Array<{ ticket: T; redactedFields: string[] }>
+): ITicketListItem[] {
+  return reads.flatMap(({ ticket, redactedFields }) => {
+    const [item] = mapTicketListItems([ticket]);
+    const readable = projectReadableRecord('ticket', item, redactedFields);
+    return readable ? [readable] : [];
   });
 }
 
@@ -517,8 +535,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     );
     const [ticketRead] = await authorizeTicketReads(trx, authorizationContext, [ticket]);
 
-    // A redaction that hides the ticket's identity hides the ticket, as on REST.
-    if (!ticketRead || !projectReadableRecord('ticket', ticket, ticketRead.redactedFields)) {
+    if (!ticketRead) {
       throw new Error('Permission denied: Cannot view ticket');
     }
     const ticketRedactions = ticketRead.redactedFields;
@@ -2135,13 +2152,13 @@ export const getTicketsForList = withAuth(async (
         tenant,
         validatedFilters
       );
-      const authorizedTickets = await filterAuthorizedTickets(trx, authorizationContext, tickets);
+      const authorizedTickets = await authorizeTicketReads(trx, authorizationContext, tickets);
       totalCount = authorizedTickets.length;
       const paginatedAuthorizedTickets = authorizedTickets.slice(
         (page - 1) * pageSize,
         (page - 1) * pageSize + pageSize
       );
-      ticketListItems = mapTicketListItems(paginatedAuthorizedTickets);
+      ticketListItems = readableTicketListItems(paginatedAuthorizedTickets);
     }
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
@@ -2258,29 +2275,29 @@ export const loadTicketListItemsByIds = withAuth(async (
 
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
-      let rows: any[];
+      let items: ITicketListItem[];
       if (authSqlResult.supported) {
-        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user))
+        items = mapTicketListItems(await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
-          .clearOrder();
+          .clearOrder());
       } else {
         const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder();
-        rows = await filterAuthorizedTickets(trx, authorizationContext, candidates);
+        items = readableTicketListItems(await authorizeTicketReads(trx, authorizationContext, candidates));
       }
 
-      const byId = new Map<string, any>();
-      for (const row of rows) {
-        if (row?.ticket_id) {
-          byId.set(row.ticket_id, row);
+      const byId = new Map<string, ITicketListItem>();
+      for (const item of items) {
+        if (item?.ticket_id) {
+          byId.set(item.ticket_id, item);
         }
       }
       const ordered = requestedIds
         .map((id) => byId.get(id))
-        .filter((row): row is any => Boolean(row));
+        .filter((item): item is ITicketListItem => Boolean(item));
 
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+      return enrichTicketListItems(trx, tenant, ordered);
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {
@@ -3984,9 +4001,10 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         .where({ 't.master_ticket_id': masterTicketId })
         .orderBy('t.updated_at', 'desc');
 
-      const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+      const authorizedRows = await authorizeTicketReads(trx, authorizationContext, rows as any[]);
 
-      const mapped = authorizedRows.map((ticket: any): ITicketListItem => {
+      // The projection runs on the mapped row, so a display default is never emitted in place of a redacted field.
+      const mapped = authorizedRows.flatMap(({ ticket, redactedFields }): ITicketListItem[] => {
         const {
           status_id,
           priority_id,
@@ -4007,7 +4025,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           ...rest
         } = ticket;
 
-        return {
+        const item: ITicketListItem = {
           ...rest,
           status_id: status_id || null,
           priority_id: priority_id || null,
@@ -4029,6 +4047,8 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           bundle_distinct_client_count: 0,
           bundle_master_ticket_number: bundle_master_ticket_number ?? null,
         };
+        const readable = projectReadableRecord('ticket', item, redactedFields);
+        return readable ? [readable] : [];
       });
 
       // Same enrichment as the list page: avatars, logos, ticket tags and chip tags, so an expanded

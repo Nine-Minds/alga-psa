@@ -2306,14 +2306,17 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           })
         )
       );
+      // A redaction that hides the ticket's identity hides the ticket, as on REST.
       const authorizedTickets = tickets.flatMap((ticket: any, index: number) => {
-        if (!decisions[index]?.allowed) return [];
-        const readable = projectReadableRecord('ticket', ticket, decisions[index].redactedFields);
-        return readable ? [readable] : [];
+        const redactedFields: string[] = decisions[index]?.redactedFields ?? [];
+        return decisions[index]?.allowed && projectReadableRecord('ticket', ticket, redactedFields)
+          ? [{ ticket, redactedFields }]
+          : [];
       });
 
-      // Transform and validate the data
-      const ticketListItems = authorizedTickets.map((ticket: any): ITicketListItem => {
+      // Transform and validate the data. The projection runs on the mapped row, so a display
+      // default ('Unknown') is never emitted in place of a redacted field.
+      const ticketListItems = authorizedTickets.flatMap(({ ticket, redactedFields }: { ticket: any; redactedFields: string[] }): ITicketListItem[] => {
         const {
           status_id,
           priority_id,
@@ -2330,7 +2333,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           ...rest
         } = ticket;
 
-        return {
+        const item: ITicketListItem = {
           status_id: status_id || null,
           priority_id: priority_id || null,
           board_id: board_id || null,
@@ -2352,6 +2355,8 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           estimated_hours: rest.estimated_hours === null || rest.estimated_hours === undefined ? undefined : rest.estimated_hours,
           due_date: rest.due_date === null || rest.due_date === undefined ? undefined : rest.due_date
         };
+        const readable = projectReadableRecord('ticket', item, redactedFields);
+        return readable ? [readable] : [];
       });
 
       return ticketListItems as ITicketListItem[];
