@@ -27,16 +27,3 @@ const MULTIPART_OVERHEAD_RESERVE_BYTES = 1024 * 1024;
 
 /** Largest single file (in bytes) the upload UI sends: 99 MiB. */
 export const MAX_UPLOAD_BYTES = PROXY_BODY_LIMIT_BYTES - MULTIPART_OVERHEAD_RESERVE_BYTES;
-
-/** Splits files into those that fit under MAX_UPLOAD_BYTES and those that do not. */
-export function splitOversizedFiles<T extends { size: number }>(
-  files: readonly T[],
-  maxBytes: number = MAX_UPLOAD_BYTES
-): { accepted: T[]; oversized: T[] } {
-  const accepted: T[] = [];
-  const oversized: T[] = [];
-  for (const file of files) {
-    (file.size > maxBytes ? oversized : accepted).push(file);
-  }
-  return { accepted, oversized };
-}
