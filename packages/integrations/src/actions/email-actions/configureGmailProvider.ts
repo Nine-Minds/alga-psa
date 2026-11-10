@@ -251,12 +251,16 @@ export async function configureGmailProvider({
             });
           } catch (reconcileError) {
             // The new watch already replaced history_id with its fresh cursor.
-            // Put the pre-watch cursor back so the retry reconciles the same gap.
-            if (savedHistoryId) {
-              await db.table('google_email_provider_config')
-                .where('email_provider_id', providerId)
-                .update({ history_id: savedHistoryId });
-            }
+            // Put the pre-watch cursor back so the retry reconciles the same gap,
+            // and clear watch_expiration so renew-google-gmail-watch (which only
+            // selects null/near-expiry watches) picks this provider up on its
+            // next run instead of ~6.75 days from now.
+            await db.table('google_email_provider_config')
+              .where('email_provider_id', providerId)
+              .update({
+                ...(savedHistoryId ? { history_id: savedHistoryId } : {}),
+                watch_expiration: null,
+              });
             const reason = reconcileError instanceof Error ? reconcileError.message : String(reconcileError);
             throw new Error(`${RECONCILE_FAILED_PREFIX} mail received during the outage could not be recovered yet; it will be retried automatically. Details: ${reason}`);
           }

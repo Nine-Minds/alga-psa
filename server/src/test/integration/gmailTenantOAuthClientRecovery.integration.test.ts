@@ -301,6 +301,28 @@ describeDb('Gmail tenant OAuth client + error recovery (DB-backed)', () => {
     expect(row.status).toBe('error');
     expect(row.error_message).toMatch(/could not be recovered yet/);
     expect((await googleCfg(providerId)).history_id).toBe('1500');
+    // Made due for the very next renewal run (not ~6.75 days out).
+    expect((await googleCfg(providerId)).watch_expiration).toBeNull();
+    const failedSync = (await provider(providerId)).last_sync_at;
+    expect(await ingressCount(providerId)).toBe(0);
+
+    // Next renewal run selects it again (watch registered once more) and,
+    // with the reconciler healthy, recovers and enqueues the gap exactly once.
+    gmailMock.registerWatch.mockClear();
+    gmailMock.listMessagesSince.mockReset().mockResolvedValue(['m-1', 'm-2']);
+    await renewGoogleGmailWatchSubscriptions({ tenantId: testTenant });
+    expect(gmailMock.registerWatch).toHaveBeenCalledTimes(1);
+    expect(gmailMock.listMessagesSince).toHaveBeenCalledWith('1500');
+    const recovered = await provider(providerId);
+    expect(recovered.status).toBe('connected');
+    expect(recovered.error_message).toBeNull();
+    expect(await ingressCount(providerId)).toBe(2);
+    expect(new Date(recovered.last_sync_at).getTime()).toBeGreaterThan(new Date(failedSync).getTime());
+
+    // A further run does not re-select it (fresh watch) nor duplicate mail.
+    await renewGoogleGmailWatchSubscriptions({ tenantId: testTenant });
+    expect(gmailMock.registerWatch).toHaveBeenCalledTimes(1);
+    expect(await ingressCount(providerId)).toBe(2);
   });
 
   it('T006: running the reconciliation twice, or over already-ingested mail, creates no duplicates', async () => {
