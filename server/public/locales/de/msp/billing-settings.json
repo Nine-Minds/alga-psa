@@ -1194,6 +1194,18 @@
         "kit": "Set",
         "createsAsset": "Erstellt Asset bei Lieferung",
         "defaultAssetType": "Standard-Asset-Typ",
+        "specDefaults": "Standard-Spezifikationen für gelieferte Assets",
+        "specDefaultsHint": "Wird angewendet, wenn eine gelieferte serialisierte Einheit automatisch ihr Asset erstellt.",
+        "spec": {
+          "deviceType": "Gerätetyp",
+          "os_type": "Betriebssystemtyp",
+          "os_version": "Betriebssystemversion",
+          "cpu_model": "CPU-Modell",
+          "storage_type": "Speichertyp",
+          "management_ip": "Management-IP",
+          "firmware_version": "Firmware-Version",
+          "model": "Modell"
+        },
         "reorderPoint": "Meldebestand",
         "reorderQuantity": "Nachbestellmenge",
         "kitPricingMode": "Set-Preismodus",

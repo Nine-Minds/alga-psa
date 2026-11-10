@@ -556,6 +556,7 @@
       "invalidDateRange": "Scegli un intervallo di date del report valido."
     },
     "restock": {
+      "billedMaterialLine": "Questa unità si trova su una riga materiale già fatturata. Crea una nota di credito o annulla la fattura prima di riassortirla.",
       "cannotRestock": "Questa unità non può essere riassortita. Solo le unità consegnate o rese possono essere riassortite.",
       "cannotRestockStatus": {
         "allocated": "Questa unità non può essere riassortita: attualmente è allocata. Solo le unità consegnate o rese possono essere riassortite.",

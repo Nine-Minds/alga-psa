@@ -556,6 +556,7 @@
       "invalidDateRange": "Wählen Sie einen gültigen Berichtszeitraum."
     },
     "restock": {
+      "billedMaterialLine": "Diese Einheit befindet sich auf einer Materialposition, die bereits fakturiert wurde. Erstellen Sie einen Gutschein oder stornieren Sie die Rechnung, bevor Sie die Einheit wieder einlagern.",
       "cannotRestock": "Diese Einheit kann nicht wieder eingelagert werden. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
       "cannotRestockStatus": {
         "allocated": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit zugewiesen. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",

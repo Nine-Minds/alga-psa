@@ -1194,6 +1194,18 @@
         "kit": "Paket",
         "createsAsset": "Skapar tillgång vid leverans",
         "defaultAssetType": "Standardtyp för tillgång",
+        "specDefaults": "Standardspecifikationer för levererade tillgångar",
+        "specDefaultsHint": "Tillämpas när en levererad enhet med serienummer automatiskt skapar sin tillgång.",
+        "spec": {
+          "deviceType": "Enhetstyp",
+          "os_type": "OS-typ",
+          "os_version": "OS-version",
+          "cpu_model": "CPU-modell",
+          "storage_type": "Lagringstyp",
+          "management_ip": "Hanterings-IP",
+          "firmware_version": "Firmware-version",
+          "model": "Modell"
+        },
         "reorderPoint": "Beställningspunkt",
         "reorderQuantity": "Beställningsantal",
         "kitPricingMode": "Prissättningsmetod för paket",
