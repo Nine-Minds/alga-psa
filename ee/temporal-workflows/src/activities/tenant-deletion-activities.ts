@@ -237,6 +237,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'user_notification_preferences',
   'user_internal_notification_preferences',
   'user_preferences',
+  'user_client_portfolios',
   'role_permissions',
   'user_roles',
   'user_auth_accounts',

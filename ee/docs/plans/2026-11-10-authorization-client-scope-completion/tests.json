@@ -1,0 +1,200 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: tickets, projects, assets and documents evaluated for the same user receive the same subject, including a non-empty portfolio.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: `client_portfolio` allows a record of a portfolio client, denies another client's record and denies everything for an empty portfolio; the SQL form returns the same rows as the matcher.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Contract: every table with a foreign key to clients has an ownership declaration or a stated exemption; a fixture table without one fails.",
+    "implemented": false,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: polymorphic resolvers return the right client for a time entry on a ticket, on a project task and on an interaction, a schedule entry, a document association and a tag mapping; an unknown discriminator returns none.",
+    "implemented": false,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Query budget: a tenant with no assignments and no portfolios runs the same statement count as main on the five measured paths.",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: with the rule loader throwing, project, asset and document reads are denied.",
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit, property: matrix over open bundle, closed bundle, both, and neither, against named and unnamed resources and actions, asserting every allow and deny and its reason.",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F013"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration: a client-restricted subject creating a ticket, contact, interaction, time entry and document association for an out-of-scope client is refused, and for an in-scope client succeeds.",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB integration: a subject with an update rule that matches but a read rule that does not is refused update and delete.",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: a registered resolver's rules apply to its subject class, a closed baseline from a resolver denies unnamed resources, other subjects are unaffected, and the policy service does not list or edit resolver rules.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB integration: with three clients, a subject restricted to two lists, pages, counts and picks only those two clients and their contacts; a contact with no client is hidden.",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB integration: interaction lists, time-entry lists, ticket time summaries and timesheet reads for that subject contain nothing from the third client; an ad hoc entry is visible only to its own user.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "DB integration: a colleague's schedule entry for the third client's ticket is returned to that subject with no title or work item, and work item search omits it.",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F021"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "DB integration: document list, folder tree, folder statistics, entity-type filters and tag suggestions for that subject reveal nothing from the third client.",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "DB integration: project task comments on an out-of-scope project are refused through the action and through REST; a bundle with children across clients shows only in-scope children and their mirrored comments.",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F023"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB integration: ticket form options contain no portal user and no tag text from out-of-scope tickets; ticket, client and dashboard counts equal the number of records the subject can list.",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "DB integration: a narrowable report returns only in-scope rows, a report that cannot be narrowed is refused, and client, contact, time and ticket exports contain only in-scope records.",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "DB integration: after re-index, search by a subject restricted to two clients returns no client, contact, interaction, document, time entry or ticket of the third, and a subject restricted to selected boards gets no ticket from another board; a strict-type record with no client scope is hidden.",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F029",
+      "F030",
+      "F031"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "API integration: with a bundle assigned to an API key, the eight controllers return only in-scope records, totals match, a create for an out-of-scope client is refused, and MCP search and endpoint calls with that key agree.",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F033",
+      "F034"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "DB integration: with a rule that redacts a field, the MSP ticket, project and asset reads omit that field as the REST projection does.",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Contract (AST): a fixture action that reads a covered table without authorization fails the read-coverage test, and a fixture action with no permission check fails the permission-coverage test unless pinned; a pinned action reading a commercial table fails.",
+    "implemented": false,
+    "featureIds": [
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "E2E: an administrator sets a user's portfolio, assigns the starter bundle, sees it marked closed with a denial preview, and the simulator explains a denial for a third client's ticket and for creating a ticket there.",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F039",
+      "F040",
+      "F041",
+      "F042"
+    ]
+  }
+]
