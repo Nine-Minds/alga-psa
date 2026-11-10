@@ -62209,6 +62209,61 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "maxItems": 200,
           "description": "The whole checklist, in order. On update this list replaces the stored items."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."
+              },
+              "external_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Identifier of the record in the external system, e.g. the Hudu article id."
+              },
+              "realm": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Repository, server or workspace, for systems whose URL template needs one."
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri",
+                "description": "Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created."
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500,
+                "description": "Human title shown on the ticket, e.g. the article name."
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {},
+                "description": "Free-form details, e.g. { hudu: { article_id, company_id } }."
+              }
+            },
+            "required": [
+              "system",
+              "external_id"
+            ]
+          },
+          "maxItems": 50,
+          "description": "Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links."
         }
       },
       "required": [
@@ -62250,7 +62305,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/templates/{templateId}",
     "displayName": "Get a ticket template",
     "summary": "Get a ticket template",
-    "description": "Returns one ticket template with its checklist items in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).",
+    "description": "Returns one ticket template with its checklist items and documentation links in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).",
     "tags": [
       "Work Management v1"
     ],
@@ -62485,6 +62540,61 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "maxItems": 200,
           "description": "The whole checklist, in order. On update this list replaces the stored items."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."
+              },
+              "external_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Identifier of the record in the external system, e.g. the Hudu article id."
+              },
+              "realm": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Repository, server or workspace, for systems whose URL template needs one."
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri",
+                "description": "Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created."
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500,
+                "description": "Human title shown on the ticket, e.g. the article name."
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {},
+                "description": "Free-form details, e.g. { hudu: { article_id, company_id } }."
+              }
+            },
+            "required": [
+              "system",
+              "external_id"
+            ]
+          },
+          "maxItems": 50,
+          "description": "Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links."
         },
         "is_active": {
           "type": "boolean",
@@ -62839,6 +62949,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uri",
           "description": "Optional explicit link-out; must be http(s)."
         },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Human title shown instead of the raw external id, e.g. a knowledge-base article name."
+        },
         "relationship": {
           "type": "string",
           "enum": [
@@ -62997,6 +63115,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "format": "uri"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Human title shown instead of the raw external id, e.g. a knowledge-base article name."
         },
         "actor": {
           "type": [
