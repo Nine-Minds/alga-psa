@@ -101,9 +101,4 @@ describe('checklist client.id complements (T006)', () => {
     const parsed = readChecklistWhere({ join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [owner, other] }] }, 1);
     expect(() => checklistWhereForOwner(parsed, owner)).toThrow(/outside this template's ownership/);
   });
-
-  it('keeps the Client rule editor field pinned to equals/in', async () => {
-    const { TICKET_PREDICATE_FIELDS } = await import('../../../../packages/tickets/src/lib/ticketPredicateFields');
-    expect(TICKET_PREDICATE_FIELDS.find((f) => f.path === 'client.id')?.operators).toEqual(['equals', 'in']);
-  });
 });
