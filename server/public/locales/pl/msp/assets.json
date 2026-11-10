@@ -2186,6 +2186,7 @@
     "loading": "Ładowanie audytów…",
     "empty": "Nie ma jeszcze audytów lokalizacji pasujących do tego widoku.",
     "columns": {
+      "audit": "Audyt",
       "client": "Klient",
       "location": "Lokalizacja",
       "status": "Status",
@@ -2240,6 +2241,7 @@
     },
     "detail": {
       "backToClient": "Wróć do audytów klienta",
+      "reference": "Audyt",
       "untitledClient": "Klient",
       "location": "Lokalizacja",
       "startedBy": "Rozpoczęty przez",
