@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 const mocks = vi.hoisted(() => ({
   user: null as any,
   permission: false,
+  issuerBound: true,
   dbReads: [] as string[],
   writes: [] as string[],
   secretReads: [] as string[],
@@ -31,7 +32,7 @@ vi.mock('@alga-psa/db', () => ({
               oauth_token_url: 'https://auth.example.test/token',
               oauth_authorize_url: 'https://auth.example.test/authorize',
               oauth_client_id: 'client-id',
-              oauth_credentials_token_url: 'https://auth.example.test/token',
+              oauth_credentials_token_url: mocks.issuerBound ? 'https://auth.example.test/token' : null,
               oauth_credentials_secret_version: 0,
               oauth_client_secret: null,
               refresh_token: null,
@@ -80,6 +81,7 @@ describe('IMAP provider route administration boundary', () => {
     vi.clearAllMocks();
     mocks.user = admin;
     mocks.permission = false;
+    mocks.issuerBound = true;
     mocks.dbReads.length = 0;
     mocks.writes.length = 0;
     mocks.secretReads.length = 0;
@@ -123,6 +125,21 @@ describe('IMAP provider route administration boundary', () => {
       expect(mocks.posts).toEqual(['https://auth.example.test/token']);
       expect(mocks.secretWrites).toContainEqual(['scoped-refresh', 'refresh-secret']);
       expect(mocks.writes.some((write) => write.includes('"refresh_token":"refresh-secret"'))).toBe(true);
+      expect(mocks.writes.some((write) => write.includes('"oauth_reauthorization_required":false'))).toBe(true);
     }
+  });
+
+  it('does not restore an unbound refresh credential when callback omits refresh_token', async () => {
+    mocks.permission = true;
+    mocks.issuerBound = false;
+    const { GET } = await import('@/app/api/email/oauth/imap/callback/route');
+
+    const response = await GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(callbackState)}`, 'GET'));
+
+    expect(response.status).toBe(307);
+    expect(mocks.secretReads).toEqual([]);
+    expect(mocks.secretWrites).toEqual([]);
+    expect(mocks.writes.some((write) => write.includes('"oauth_credentials_token_url":null'))).toBe(true);
+    expect(mocks.writes.some((write) => write.includes('"oauth_reauthorization_required":true'))).toBe(true);
   });
 });

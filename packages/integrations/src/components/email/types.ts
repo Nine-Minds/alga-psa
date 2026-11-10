@@ -98,6 +98,8 @@ export interface ImapEmailProviderConfig {
   oauth_credentials_token_url?: string | null;
   /** 0 reads legacy secret keys; 1 reads endpoint-scoped secret keys only. */
   oauth_credentials_secret_version?: number;
+  /** UI state, independent of the active credential issuer binding. */
+  oauth_reauthorization_required?: boolean;
   /** Safe UI state; never contains credential material. */
   oauth_authorization_status?: 'connected' | 'not_connected' | 'reauthorization_required';
   oauth_client_id?: string | null;

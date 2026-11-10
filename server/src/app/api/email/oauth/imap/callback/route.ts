@@ -120,6 +120,7 @@ export async function GET(request: NextRequest) {
 
     const accessToken = tokenResponse.data.access_token;
     const refreshToken = tokenResponse.data.refresh_token || existingRefreshToken;
+    const hasIssuerBoundRefreshToken = Boolean(refreshToken);
     const expiresIn = Number(tokenResponse.data.expires_in || 3600);
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
     const boundSecretNames = getImapOauthSecretNames({
       id: state.providerId,
       oauth_token_url: imapConfig.oauth_token_url,
-      oauth_credentials_secret_version: 1,
+      oauth_credentials_secret_version: hasIssuerBoundRefreshToken ? 1 : 0,
     });
     if (clientSecret) {
       await secretProvider.setTenantSecret(tenant, boundSecretNames.clientSecret, clientSecret);
@@ -148,8 +149,9 @@ export async function GET(request: NextRequest) {
         access_token: accessToken,
         refresh_token: refreshToken || null,
         token_expires_at: expiresAt,
-        oauth_credentials_token_url: imapConfig.oauth_token_url,
-        oauth_credentials_secret_version: 1,
+        oauth_credentials_token_url: hasIssuerBoundRefreshToken ? imapConfig.oauth_token_url : null,
+        oauth_credentials_secret_version: hasIssuerBoundRefreshToken ? 1 : 0,
+        oauth_reauthorization_required: !hasIssuerBoundRefreshToken,
         updated_at: knex.fn.now(),
       });
 

@@ -220,15 +220,17 @@ const PROVIDER_COLUMNS = [
 
 function redactProviderCredentials(provider: EmailProvider): EmailProvider {
   const imapConfig = provider.imapConfig;
-  const oauthAuthorizationStatus = imapConfig
-    ? imapConfig.oauth_credentials_token_url != null &&
-      imapConfig.oauth_credentials_token_url !== imapConfig.oauth_token_url
+  const oauthAuthorizationStatus = !imapConfig
+    ? undefined
+    : imapConfig.oauth_reauthorization_required || (
+        imapConfig.oauth_credentials_token_url != null &&
+        imapConfig.oauth_credentials_token_url !== imapConfig.oauth_token_url
+      )
       ? 'reauthorization_required'
       : imapConfig.oauth_credentials_token_url === imapConfig.oauth_token_url &&
         Boolean(imapConfig.access_token || imapConfig.refresh_token)
         ? 'connected'
-        : 'not_connected'
-    : undefined;
+        : 'not_connected';
   const redact = <T extends object | undefined>(config: T): T => {
     if (!config) return config;
     const {
@@ -670,11 +672,15 @@ async function persistImapConfig(
       'oauth_token_url',
       'oauth_credentials_token_url',
       'oauth_credentials_secret_version',
+      'oauth_reauthorization_required',
       'oauth_client_secret',
       'refresh_token'
     );
   const tokenEndpointChanged = Boolean(
     existing && config.oauth_token_url != null && existing.oauth_token_url !== config.oauth_token_url
+  );
+  const credentialsInvalidated = Boolean(
+    tokenEndpointChanged || (existing?.oauth_reauthorization_required && !config.refresh_token)
   );
   if (tokenEndpointChanged && state) state.oauthTokenEndpointChanged = true;
   const hasNewOauthCredentials = Boolean(
@@ -689,14 +695,17 @@ async function persistImapConfig(
     hasNewOauthCredentials && existingIssuerBound &&
     Number(existing?.oauth_credentials_secret_version || 0) < 1
   );
-  const credentialsTokenUrl = tokenEndpointChanged
-    ? (existing?.oauth_credentials_token_url ?? null)
-    : hasNewOauthCredentials
+  const credentialsWillBeIssuerBound = Boolean(
+    !credentialsInvalidated && (existingIssuerBound || config.refresh_token)
+  );
+  const credentialsTokenUrl = credentialsInvalidated
+    ? null
+    : credentialsWillBeIssuerBound
       ? (config.oauth_token_url ?? existing?.oauth_token_url ?? null)
       : (existing?.oauth_credentials_token_url ?? null);
-  const credentialsSecretVersion = tokenEndpointChanged
-    ? Number(existing?.oauth_credentials_secret_version || 0)
-    : hasNewOauthCredentials
+  const credentialsSecretVersion = credentialsInvalidated
+    ? 0
+    : credentialsWillBeIssuerBound && hasNewOauthCredentials
       ? 1
       : Number(existing?.oauth_credentials_secret_version || 0);
   const oldSecretNames = getImapOauthSecretNames({
@@ -720,7 +729,7 @@ async function persistImapConfig(
     await secretProvider.setTenantSecret(tenant, `imap_password_${providerId}`, config.password);
   }
 
-  if (tokenEndpointChanged) {
+  if (credentialsInvalidated) {
     // Best-effort cleanup; the durable issuer marker below is the security
     // boundary because composite secret providers may still read fallback keys.
     await Promise.all([oldSecretNames.clientSecret, oldSecretNames.refreshToken].map(async (name) => {
@@ -769,12 +778,17 @@ async function persistImapConfig(
       oauth_token_url: config.oauth_token_url ?? existing?.oauth_token_url ?? null,
       oauth_credentials_token_url: credentialsTokenUrl,
       oauth_credentials_secret_version: credentialsSecretVersion,
+      oauth_reauthorization_required: tokenEndpointChanged
+        ? true
+        : credentialsWillBeIssuerBound
+          ? false
+          : Boolean(existing?.oauth_reauthorization_required),
       oauth_client_id: config.oauth_client_id || null,
-      oauth_client_secret: tokenEndpointChanged ? null : (config.oauth_client_secret || null),
+      oauth_client_secret: credentialsInvalidated ? null : (config.oauth_client_secret || null),
       oauth_scopes: config.oauth_scopes || null,
-      access_token: tokenEndpointChanged ? null : (config.access_token || null),
-      refresh_token: tokenEndpointChanged ? null : (config.refresh_token || null),
-      token_expires_at: tokenEndpointChanged ? null : (config.token_expires_at || null),
+      access_token: credentialsInvalidated ? null : (config.access_token || null),
+      refresh_token: credentialsInvalidated ? null : (config.refresh_token || null),
+      token_expires_at: credentialsInvalidated ? null : (config.token_expires_at || null),
       uid_validity: config.uid_validity || null,
       last_uid: config.last_uid || null,
       last_seen_at: config.last_seen_at || null,
@@ -798,20 +812,25 @@ async function persistImapConfig(
       folder_filters: JSON.stringify(folderFiltersArray),
       oauth_authorize_url: config.oauth_authorize_url || null,
       oauth_token_url: config.oauth_token_url ?? existing?.oauth_token_url ?? null,
-      oauth_credentials_token_url: tokenEndpointChanged
-        ? (existing?.oauth_credentials_token_url ?? null)
-        : (credentialsTokenUrl ?? trx.raw('COALESCE(EXCLUDED.oauth_credentials_token_url, imap_email_provider_config.oauth_credentials_token_url)')),
-      oauth_credentials_secret_version: tokenEndpointChanged
-        ? credentialsSecretVersion
+      oauth_credentials_token_url: credentialsInvalidated
+        ? null
+        : credentialsTokenUrl ?? trx.raw('COALESCE(EXCLUDED.oauth_credentials_token_url, imap_email_provider_config.oauth_credentials_token_url)'),
+      oauth_credentials_secret_version: credentialsInvalidated
+        ? 0
         : trx.raw('GREATEST(EXCLUDED.oauth_credentials_secret_version, imap_email_provider_config.oauth_credentials_secret_version)'),
+      oauth_reauthorization_required: tokenEndpointChanged
+        ? true
+        : credentialsWillBeIssuerBound
+          ? false
+          : trx.raw('imap_email_provider_config.oauth_reauthorization_required'),
       oauth_client_id: config.oauth_client_id || null,
-      oauth_client_secret: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
+      oauth_client_secret: credentialsInvalidated ? null : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
       oauth_scopes: config.oauth_scopes || null,
       connection_timeout_ms: trx.raw('COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms)'),
       socket_keepalive: trx.raw('COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive)'),
-      access_token: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token)'),
-      refresh_token: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token)'),
-      token_expires_at: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at)'),
+      access_token: credentialsInvalidated ? null : trx.raw('COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token)'),
+      refresh_token: credentialsInvalidated ? null : trx.raw('COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token)'),
+      token_expires_at: credentialsInvalidated ? null : trx.raw('COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at)'),
       uid_validity: trx.raw('COALESCE(EXCLUDED.uid_validity, imap_email_provider_config.uid_validity)'),
       last_uid: trx.raw('COALESCE(EXCLUDED.last_uid, imap_email_provider_config.last_uid)'),
       last_seen_at: trx.raw('COALESCE(EXCLUDED.last_seen_at, imap_email_provider_config.last_seen_at)'),
@@ -926,6 +945,7 @@ export const getEmailProviders = withAuth(async (
             'oauth_token_url',
             'oauth_credentials_token_url',
             'oauth_credentials_secret_version',
+            'oauth_reauthorization_required',
             'oauth_client_id',
             'oauth_scopes',
             'access_token',

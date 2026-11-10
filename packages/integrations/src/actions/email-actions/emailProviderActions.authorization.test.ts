@@ -184,8 +184,9 @@ describe('email provider action authorization', () => {
     mocks.providerConfigs.imap_email_provider_config = {
       email_provider_id: 'provider-1',
       oauth_token_url: 'https://new-issuer.example.test/token',
-      oauth_credentials_token_url: 'https://old-issuer.example.test/token',
-      oauth_credentials_secret_version: 1,
+      oauth_credentials_token_url: null,
+      oauth_credentials_secret_version: 0,
+      oauth_reauthorization_required: true,
       oauth_client_id: 'client-id',
       refresh_token: 'old-refresh-value',
     };
@@ -194,6 +195,7 @@ describe('email provider action authorization', () => {
     const result = await actions.getEmailProviders();
 
     expect(result.providers[0].imapConfig).toHaveProperty('oauth_authorization_status', 'reauthorization_required');
+    expect(result.providers[0].imapConfig).toHaveProperty('oauth_reauthorization_required', true);
     expect(result.providers[0].imapConfig).not.toHaveProperty('refresh_token');
     expect(mocks.secretLookup).not.toHaveBeenCalled();
   });
