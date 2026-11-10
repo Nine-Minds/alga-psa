@@ -24,13 +24,17 @@ describe('project catalog and material tenant-scoped query contract', () => {
     expect(materialCatalogSource).toMatch(/addMaterial\(\s*db,\s*tenant,/);
     expect(materialCatalogSource).toContain("deleteMaterial(db, tenant, 'project', projectMaterialId");
 
-    // Pin the extracted implementation too: its dynamic project-material roots,
-    // catalog reads, price reads, and joins all retain explicit tenant scoping.
-    expect(inventoryMaterialsSource).toContain(".where({ 'm.tenant': tenant, [`m.${cfg.parentCol}`]: parentId })");
-    expect(inventoryMaterialsSource).toContain(".andOn('m.tenant', '=', 'sc.tenant')");
+    // The list uses facade-scoped roots and joins; the remaining paths retain
+    // explicit tenant predicates.
+    expect(inventoryMaterialsSource).toContain('const scoped = tenantDb(trx, tenant);');
+    expect(inventoryMaterialsSource).toContain('scoped.table(`${cfg.table} as m`)');
+    expect(inventoryMaterialsSource).toContain('.where({ [`m.${cfg.parentCol}`]: parentId })');
+    expect(inventoryMaterialsSource).toContain("scoped.tenantJoin(query, 'service_catalog as sc', 'm.service_id', 'sc.service_id', { type: 'left' })");
+    expect(inventoryMaterialsSource).toContain("scoped.tenantJoin(query, 'project_staging_lines as psl', 'm.project_material_id', 'psl.project_material_id', { type: 'left' })");
+    expect(inventoryMaterialsSource).toContain('WHERE sm.tenant = m.tenant AND sm.source_doc_type = ?');
     expect(inventoryMaterialsSource).toContain(".where({ tenant, [cfg.pk]: materialId })");
     expect(inventoryMaterialsSource).toContain("await trx(cfg.table).where({ tenant, [cfg.pk]: materialId }).delete()");
     expect(inventoryMaterialsSource).toContain("const base = trx('service_catalog as sc').where({ 'sc.tenant': tenant })");
-    expect(inventoryMaterialsSource).toContain("const rows = await trx('service_prices')\n    .where({ tenant, service_id: serviceId })");
+    expect(inventoryMaterialsSource).toMatch(/const rows = await trx\('service_prices'\)\s*\.where\(\{ tenant, service_id: serviceId \}\)/);
   });
 });
