@@ -584,12 +584,14 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         return `![${alt}](${url})`;
       }
 
-      default:
-        console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${block.type}`);
-        if (typeof block.content === 'string') return block.content;
-        if (Array.isArray(block.content)) return extractStyledTextFromContent(block.content);
-        if (block.children?.length) return '';
-        return unsupportedBlock(block.type);
+      default: {
+        const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
+        console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+        if (typeof unknownBlock.content === 'string') return unknownBlock.content;
+        if (Array.isArray(unknownBlock.content)) return extractStyledTextFromContent(unknownBlock.content);
+        if (unknownBlock.children?.length) return '';
+        return unsupportedBlock(unknownBlock.type);
+      }
     }
 
     return '';
@@ -980,18 +982,20 @@ export function convertBlockNoteToHTML(blocks: any): string {
           );
           break;
         }
-        default:
+        default: {
           flushListBuffer();
-          console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${block.type}`);
-          if (Array.isArray(block.content)) {
-            output.push(`<div${styleAttribute}>${extractStyledTextToHTML(block.content)}</div>`);
-          } else if (typeof block.content === 'string') {
-            output.push(`<div${styleAttribute}>${escapeHtml(block.content)}</div>`);
-          } else if (!block.children?.length) {
-            output.push(`<div${styleAttribute}>${escapeHtml(unsupportedBlock(block.type))}</div>`);
+          const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
+          console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+          if (Array.isArray(unknownBlock.content)) {
+            output.push(`<div${styleAttribute}>${extractStyledTextToHTML(unknownBlock.content)}</div>`);
+          } else if (typeof unknownBlock.content === 'string') {
+            output.push(`<div${styleAttribute}>${escapeHtml(unknownBlock.content)}</div>`);
+          } else if (!unknownBlock.children?.length) {
+            output.push(`<div${styleAttribute}>${escapeHtml(unsupportedBlock(unknownBlock.type))}</div>`);
           }
-          if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          if (unknownBlock.children?.length) processBlocksRecursive(unknownBlock.children as Block[], currentLevel + 1);
           break;
+        }
       }
       if (!isListItem) {
         flushListBuffer();
