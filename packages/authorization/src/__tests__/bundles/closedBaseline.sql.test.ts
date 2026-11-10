@@ -3,6 +3,7 @@ import knexFactory from 'knex';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
+  bundleRulesRestrict,
   closedBundlesNotNaming,
   compileBundleReadNarrowingSql,
   compileResourceReadAuthorizationSql,
@@ -80,5 +81,13 @@ describe('closed baseline: SQL parity with the provider', () => {
     expect(closedBundlesNotNaming([rule('a', 'c1', 'closed', 'project', 'read')], 'ticket', 'read')).toEqual([
       { bundleId: 'c1', revisionId: 'c1-rev' },
     ]);
+  });
+
+  it('bundleRulesRestrict: a rule naming it, or a closed bundle not naming it, restricts; otherwise not', () => {
+    expect(bundleRulesRestrict([], 'asset', 'read')).toBe(false);
+    expect(bundleRulesRestrict([rule('o', 'open', 'open', 'ticket', 'read')], 'asset', 'read')).toBe(false);
+    expect(bundleRulesRestrict([rule('o', 'open', 'open', 'asset', 'read')], 'asset', 'read')).toBe(true);
+    expect(bundleRulesRestrict([rule('c', 'closed', 'closed', 'ticket', 'read')], 'asset', 'read')).toBe(true);
+    expect(bundleRulesRestrict([rule('c', 'closed', 'closed', 'asset', 'update')], 'asset', 'delete')).toBe(true);
   });
 });

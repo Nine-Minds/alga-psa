@@ -40,3 +40,12 @@ export function closedBundlesNotNaming(
   }
   return denials;
 }
+
+/**
+ * Whether the bundle rules restrict this resource and action at all: a rule names it (alias-aware), or a closed
+ * bundle does not. Callers that skip per-record authorization for unrestricted subjects must ask this, not
+ * whether a rule names the resource — a closed bundle restricts precisely what it does not name.
+ */
+export function bundleRulesRestrict(rules: BundleNarrowingRule[], resource: string, action: string): boolean {
+  return matchRulesForAction(rules, resource, action).length > 0 || closedBundlesNotNaming(rules, resource, action).length > 0;
+}
