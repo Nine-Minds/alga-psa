@@ -225,8 +225,8 @@
         "any": "Beliebiges Inventurergebnis",
         "present": "Letzte Inventur: vorhanden",
         "missing": "Letzte Inventur: fehlend",
-        "never": "Noch nie inventarisiert",
-        "stale": "Seit 90 Tagen nicht inventarisiert"
+        "never": "Noch keine Inventur",
+        "stale": "Seit 90 Tagen keine Inventur"
       }
     },
     "activeFilters": {
@@ -401,8 +401,8 @@
       "purchaseDate": "Kaufdatum",
       "warrantyEnd": "Garantieende",
       "notProvided": "Nicht bereitgestellt",
-      "lastAudited": "Zuletzt inventarisiert",
-      "neverAudited": "Noch nie inventarisiert"
+      "lastAudited": "Letzte Inventur",
+      "neverAudited": "Noch keine Inventur"
     },
     "info": {
       "client": "Kunde",
@@ -1679,7 +1679,7 @@
     "sharedWorkspace": "Gemeinsamer Arbeitsplatz",
     "sharedWorkspaceValue": "{{name}} · {{count}} Personen",
     "billingProfile": "Abrechnungsprofil",
-    "lastAudited": "Zuletzt inventarisiert"
+    "lastAudited": "Letzte Inventur"
   },
   "assetTimeline": {
     "title": "Verlauf",
