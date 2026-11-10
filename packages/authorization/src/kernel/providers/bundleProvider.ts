@@ -10,6 +10,7 @@ import { ALLOW_ALL_SCOPE, DENY_ALL_SCOPE } from '../scope';
 import { evaluateRelationshipTemplate } from '../relationshipTemplates';
 import { isSelfApprovalBlocked } from '../selfApproval';
 import { matchRulesForAction } from '../actionAliases';
+import { closedBundlesNotNaming } from '../closedBaseline';
 
 export const BUNDLE_CLOSED_BASELINE_DENIED_CODE = 'bundle_closed_baseline_denied';
 export const BUNDLE_TEMPLATE_DENIED_CODE = 'bundle_template_denied';
@@ -74,48 +75,25 @@ function evaluateTemplateForRule(
   return evaluateRelationshipTemplate(rule.templateKey as RelationshipTemplateKey, ruleScopedInput);
 }
 
-/**
- * Closed bundles are the bundles whose rules carry baseline 'closed'. The provider derives them from the
- * rule list it already receives: publishBundleRevision refuses an empty revision, so a published closed
- * revision always has at least one rule and therefore always shows up here. (Pinned by closedBaseline.matrix.test.ts.)
- * Therefore a `resolveRules` implementation must return the subject's full assigned rule set, unfiltered; filtering
- * rules out makes a closed bundle look like it does not name a resource (false deny) or hides it (false allow).
- * To neutralise a rule, keep it and change it (e.g. `templateKey: null`) instead of dropping it.
- * A rule with no bundleId cannot be attributed to a bundle and is never treated as closed.
- */
-function groupClosedBundles(rules: BundleNarrowingRule[]): Map<string, BundleNarrowingRule[]> {
-  const closed = new Map<string, BundleNarrowingRule[]>();
-  for (const rule of rules) {
-    if (rule.baseline !== 'closed' || !rule.bundleId) continue;
-    const group = closed.get(rule.bundleId);
-    if (group) group.push(rule);
-    else closed.set(rule.bundleId, [rule]);
-  }
-  return closed;
-}
-
 function closedBaselineReasons(
   rules: BundleNarrowingRule[],
   input: AuthorizationEvaluationInput
 ): AuthorizationReason[] {
-  const reasons: AuthorizationReason[] = [];
-  for (const [bundleId, bundleRules] of groupClosedBundles(rules)) {
-    if (matchRulesForAction(bundleRules, input.resource.type, input.resource.action).length > 0) continue;
-    reasons.push({
-      stage: 'bundle',
-      sourceType: 'bundle',
+  return closedBundlesNotNaming(rules, input.resource.type, input.resource.action).map(
+    ({ bundleId, revisionId }) => ({
+      stage: 'bundle' as const,
+      sourceType: 'bundle' as const,
       sourceId: bundleId,
       code: BUNDLE_CLOSED_BASELINE_DENIED_CODE,
       message: 'Closed bundle does not name this resource and action; access is denied.',
       metadata: {
         bundleId,
-        revisionId: bundleRules.find((rule) => rule.revisionId)?.revisionId ?? null,
+        revisionId,
         resource: input.resource.type,
         action: input.resource.action,
       },
-    });
-  }
-  return reasons;
+    })
+  );
 }
 
 function ruleDenialReason(
