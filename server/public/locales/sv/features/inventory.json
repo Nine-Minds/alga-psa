@@ -556,6 +556,7 @@
       "invalidDateRange": "Välj ett giltigt datumintervall för rapporten."
     },
     "restock": {
+      "billedMaterialLine": "Enheten finns på en materialrad som redan har fakturerats. Skapa en kredit eller ångra faktureringen innan du återlägger enheten.",
       "cannotRestock": "Enheten kan inte återläggas i lager. Endast levererade eller returnerade enheter kan återläggas i lager.",
       "cannotRestockStatus": {
         "allocated": "Enheten kan inte återläggas i lager – den är för närvarande reserverad. Endast levererade eller returnerade enheter kan återläggas i lager.",

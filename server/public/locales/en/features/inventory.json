@@ -556,6 +556,7 @@
       "invalidDateRange": "Choose a valid report date range."
     },
     "restock": {
+      "billedMaterialLine": "This unit is on a material line that's already been billed. Credit or unbill the invoice before restocking it.",
       "cannotRestock": "This unit can't be restocked. Only delivered or returned units can be restocked.",
       "cannotRestockStatus": {
         "allocated": "This unit can't be restocked — it's currently Allocated. Only delivered or returned units can be restocked.",

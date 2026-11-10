@@ -1194,6 +1194,18 @@
         "kit": "Kit",
         "createsAsset": "Creates asset on delivery",
         "defaultAssetType": "Default asset type",
+        "specDefaults": "Default specs for delivered assets",
+        "specDefaultsHint": "Applied when a delivered serialized unit automatically creates its asset.",
+        "spec": {
+          "deviceType": "Device type",
+          "os_type": "OS type",
+          "os_version": "OS version",
+          "cpu_model": "CPU model",
+          "storage_type": "Storage type",
+          "management_ip": "Management IP",
+          "firmware_version": "Firmware version",
+          "model": "Model"
+        },
         "reorderPoint": "Reorder Point",
         "reorderQuantity": "Reorder Quantity",
         "kitPricingMode": "Kit Pricing Mode",

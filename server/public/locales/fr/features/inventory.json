@@ -556,6 +556,7 @@
       "invalidDateRange": "Choisissez une plage de dates de rapport valide."
     },
     "restock": {
+      "billedMaterialLine": "Cette unité figure sur une ligne de matériel déjà facturée. Créez un avoir ou annulez la facture avant de la réapprovisionner.",
       "cannotRestock": "Cette unité ne peut pas être réapprovisionnée. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
       "cannotRestockStatus": {
         "allocated": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement affectée. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
