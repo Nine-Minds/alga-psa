@@ -90,8 +90,18 @@ function isEffectivelyEmpty(html: string, text: string): boolean {
 // vanish silently: it is replaced by a visible marker and logged.
 export const UNSUPPORTED_RICH_TEXT_PLACEHOLDER = '[Unsupported content]';
 
+// Batch renders (worksheets, notification fan-out) hit the same block type
+// repeatedly; log each message once per process instead of once per block.
+const loggedBlockWarnings = new Set<string>();
+
+function warnOnce(message: string): void {
+  if (loggedBlockWarnings.has(message)) return;
+  if (loggedBlockWarnings.size < 200) loggedBlockWarnings.add(message);
+  console.warn(message);
+}
+
 function unsupportedBlock(type: unknown): string {
-  console.warn(`[BlockNoteUtils] Replacing unsupported rich-text block with a placeholder: ${String(type)}`);
+  warnOnce(`[BlockNoteUtils] Replacing unsupported rich-text block with a placeholder: ${String(type)}`);
   return UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
 }
 
@@ -586,7 +596,7 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
 
       default: {
         const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
-        console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+        warnOnce(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
         if (typeof unknownBlock.content === 'string') return unknownBlock.content;
         if (Array.isArray(unknownBlock.content)) return extractStyledTextFromContent(unknownBlock.content);
         if (unknownBlock.children?.length) return '';
@@ -985,7 +995,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
         default: {
           flushListBuffer();
           const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
-          console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+          warnOnce(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
           if (Array.isArray(unknownBlock.content)) {
             output.push(`<div${styleAttribute}>${extractStyledTextToHTML(unknownBlock.content)}</div>`);
           } else if (typeof unknownBlock.content === 'string') {
