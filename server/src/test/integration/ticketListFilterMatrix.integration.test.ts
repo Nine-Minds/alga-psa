@@ -61,6 +61,8 @@ const describeDb = await describeWithDb();
 type OptimizedActions = typeof import('@alga-psa/tickets/actions/optimizedTicketActions');
 let optimized: OptimizedActions;
 let db: Knex;
+/** True when beforeAll dropped tickets.client_id NOT NULL, so afterAll must put it back. */
+let droppedClientIdNotNull = false;
 
 const TICKET_NAMES = ['T1', 'T2', 'T3', 'T4', 'T5', 'M', 'CH1', 'CH2'] as const;
 type TicketName = (typeof TICKET_NAMES)[number];
@@ -466,8 +468,15 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
     // A freshly migrated schema enforces tickets.client_id NOT NULL (the cleanup migration sets it
     // only where no row is NULL), but databases that carry client-less tickets exist and the client
     // filter must keep them under "None of". The disposable test database drops the constraint so
-    // the T5 fixture (no client) can be seeded.
-    await db.raw('ALTER TABLE tickets ALTER COLUMN client_id DROP NOT NULL');
+    // the T5 fixture (no client) can be seeded. Only a constraint this suite removed is restored
+    // in afterAll.
+    const clientIdColumn = await db('information_schema.columns')
+      .where({ table_schema: 'public', table_name: 'tickets', column_name: 'client_id' })
+      .first('is_nullable');
+    if (clientIdColumn?.is_nullable === 'NO') {
+      await db.raw('ALTER TABLE tickets ALTER COLUMN client_id DROP NOT NULL');
+      droppedClientIdNotNull = true;
+    }
     optimized = await import('@alga-psa/tickets/actions/optimizedTicketActions');
     await seedFixture();
     allowAll();
@@ -476,6 +485,14 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
   }, 300000);
 
   afterAll(async () => {
+    if (droppedClientIdNotNull) {
+      // The client-less fixture ticket (T5) is the only row that blocks restoring the constraint.
+      // Nothing else references it, so deleting it by id is enough.
+      if (fx?.ticketIds?.T5) {
+        await db('tickets').where({ tenant: fx.tenantId, ticket_id: fx.ticketIds.T5 }).del();
+      }
+      await db.raw('ALTER TABLE tickets ALTER COLUMN client_id SET NOT NULL');
+    }
     await db?.destroy().catch(() => undefined);
   }, 60000);
 
