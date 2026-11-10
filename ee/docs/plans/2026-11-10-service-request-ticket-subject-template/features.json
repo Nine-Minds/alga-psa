@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Ticket Routing panel replaces 'Title Field Key' with a full-width 'Ticket subject' TemplateTokenInput whose menu lists form fields by label (key as secondary text), with helper text and new msp/service-requests strings in all locales",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements > Editor"
@@ -131,7 +131,7 @@
   {
     "id": "F017",
     "description": "Description prefix uses TemplateTokenInput (multiline) with the same Insert field menu",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -139,7 +139,7 @@
   {
     "id": "F018",
     "description": "Editor shows an inline unknown-field error under the subject template and description prefix",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"
@@ -148,7 +148,7 @@
   {
     "id": "F019",
     "description": "Save Ticket Routing and Save All refuse to save routing while unknown tokens exist (toast / failures list)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > Editor"
     ]

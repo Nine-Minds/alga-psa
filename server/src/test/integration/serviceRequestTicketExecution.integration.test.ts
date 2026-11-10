@@ -61,6 +61,7 @@ async function cleanupTenant(tenant: string): Promise<void> {
   await tenantTable(tenant, 'boards').del();
   await tenantTable(tenant, 'clients').del();
   await tenantTable(tenant, 'users').del();
+  await tenantTable(tenant, 'tenant_settings').del();
   await tenantRows().where({ tenant }).del();
 }
 
@@ -355,6 +356,52 @@ describe('service request ticket-only execution', () => {
     expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, March 2, 2026 (Laptop)');
     const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
     expect(ticketDescription?.startsWith('Requested for Jane Doe')).toBe(true);
+  });
+
+  it('formats dates and checkboxes in the tenant default locale', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+    await tenantTable(fixture.tenant, 'tenant_settings').insert({
+      tenant: fixture.tenant,
+      settings: { defaultLocale: 'de' },
+    });
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      formSchemaSnapshot: {
+        fields: [
+          { key: 'employee_name', type: 'short-text', label: 'Employee Name', required: true },
+          { key: 'start_date', type: 'date', label: 'Start Date' },
+          { key: 'needs_vpn', type: 'checkbox', label: 'Needs VPN access' },
+        ],
+      },
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleTemplate: 'New Hire for Employee: {{employee_name}}, {{start_date}}',
+        descriptionPrefix: 'VPN: {{needs_vpn}}',
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: { employee_name: 'Jane Doe', start_date: '2026-03-02', needs_vpn: true },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, 2. März 2026');
+    const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
+    expect(ticketDescription?.startsWith('VPN: Ja')).toBe(true);
   });
 
   it('T027: ticket-only execution failure keeps submission persisted with failed status and error summary', async () => {
