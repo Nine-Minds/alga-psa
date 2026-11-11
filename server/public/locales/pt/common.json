@@ -927,6 +927,7 @@
       "pending": "Pendente",
       "error": "Falha ao carregar o documento",
       "fileError": "Falha ao carregar o arquivo",
+      "fileTooLarge": "Este arquivo tem {{size}}. O limite atual é de {{limit}} por arquivo.",
       "associatedEntityTypeLabel": "Associar-se a",
       "noAssociation": "Nenhuma associação",
       "selectAssociatedEntityError": "Selecione uma entidade associada antes de fazer upload.",
