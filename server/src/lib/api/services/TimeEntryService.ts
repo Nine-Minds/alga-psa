@@ -43,6 +43,7 @@ import {
   getWorkItemBillingContext,
   deleteTimeEntryCore,
   persistTimeEntry,
+  assertTimeEntryCreateInScope,
   publishPersistedTimeEntryEvents,
   type PersistedTimeEntry,
 } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
@@ -390,6 +391,13 @@ export class TimeEntryService extends BaseService<any> {
     if (overlapping) {
       throw new ConflictError('Time entry overlaps with existing entry');
     }
+
+    // The create gate runs before anything is written, so a refused entry leaves no time sheet behind. The write core
+    // asks the same question again inside its transaction.
+    if (!context.user) {
+      throw new ForbiddenError('Permission denied: Missing user context');
+    }
+    await knex.transaction((trx) => assertTimeEntryCreateInScope(trx, context.tenant, context.user as IUser, context.userId, data as any));
 
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheetForWorkDate(work_date, context.userId, context);

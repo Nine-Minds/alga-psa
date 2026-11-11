@@ -19,6 +19,8 @@ import { hasApiContextPermission } from '../../middleware/apiContextPermission';
 import { authorizeApiResourceRead } from '../../controllers/authorizationKernel';
 import { assertAssetRecordAccess } from '../../controllers/assetReadGuard';
 import { AssetService } from '../AssetService';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { subjectFromServiceContext } from '../serviceContextSubject';
 import { buildProjectRecordContext, buildTicketRecordContext } from '../../controllers/recordContexts';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
@@ -132,6 +134,8 @@ function simpleAdapter(
   table: string,
   idColumn: string,
   label: string,
+  /** Client-owned entities: the caller's client scope also decides whether the target exists for them. */
+  scopeResource?: 'client' | 'contact',
 ): EntityAdapter {
   return {
     entityType,
@@ -140,6 +144,13 @@ function simpleAdapter(
     async assertCanAttach(apiRequest, entityId, knex) {
       await assertRbacUpdate(apiRequest, rbacResource, knex);
       await assertRowExists(knex, apiRequest.context.tenant, table, idColumn, entityId, label);
+      if (scopeResource) {
+        // Same predicate as ClientService/ContactService; an out-of-scope target is indistinguishable from a missing one.
+        const scope = await createClientScopeContext(knex, apiRequest.context.tenant, subjectFromServiceContext(apiRequest.context as any));
+        if (!(await scope.permits(scopeResource, entityId))) {
+          throw new NotFoundError(`${label} not found`);
+        }
+      }
     },
     resolveFolder: (knex, tenant, entityId) => firstEntityFolder(knex, tenant, entityType, entityId),
   };
@@ -256,8 +267,8 @@ const assetAdapter: EntityAdapter = {
 export const ENTITY_ADAPTERS: Record<AttachableEntityType, EntityAdapter> = {
   ticket: ticketAdapter,
   project_task: projectTaskAdapter,
-  client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client'),
-  contact: simpleAdapter('contact', 'contact', '/api/v1/contacts', 'contacts', 'contact_name_id', 'Contact'),
+  client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client', 'client'),
+  contact: simpleAdapter('contact', 'contact', '/api/v1/contacts', 'contacts', 'contact_name_id', 'Contact', 'contact'),
   asset: assetAdapter,
 };
 

@@ -79,7 +79,7 @@ const PERMISSIONS: Array<[string, string[]]> = [
   ['ticket', ['read', 'create', 'update', 'delete']],
   ['project', ['read']],
   ['project_task', ['read', 'create', 'update', 'delete']],
-  ['document', ['read']],
+  ['document', ['read', 'create']],
   ['time', ['read']],
 ];
 /** Resources the bundle narrows to client A (read rules also decide create, per the create gate). */
@@ -93,7 +93,7 @@ const ids = {
   admin: '', owner: '', controlOwner: '',
   A: { client: '', contacts: [] as string[], interactions: [] as string[], tickets: [] as string[], project: '', task: '', entries: [] as string[] },
   B: { client: '', contacts: [] as string[], interactions: [] as string[], tickets: [] as string[], project: '', task: '', entries: [] as string[] },
-  board: '', status: '', priority: '', projectStatus: '', interactionType: '', period: '', sheet: '', controlSheet: '', service: '',
+  emptyPeriod: '', board: '', status: '', priority: '', projectStatus: '', interactionType: '', period: '', sheet: '', controlSheet: '', service: '',
 };
 let narrowed: Caller;
 let previousKernel: unknown;
@@ -253,6 +253,9 @@ beforeAll(async () => {
   await insert('interaction_types', { type_id: ids.interactionType, type_name: `Call ${ids.interactionType.slice(0, 6)}` });
   await insert('time_periods', { period_id: ids.period, start_date: '2026-01-05', end_date: '2026-01-12' });
   await insert('time_sheets', { id: ids.sheet, user_id: ids.owner, period_id: ids.period, approval_status: 'DRAFT' });
+  // A period nobody has a sheet for: a refused create there must not leave one behind.
+  ids.emptyPeriod = randomUUID();
+  await insert('time_periods', { period_id: ids.emptyPeriod, start_date: '2026-02-02', end_date: '2026-02-09' });
   await insert('time_sheets', { id: ids.controlSheet, user_id: ids.controlOwner, period_id: ids.period, approval_status: 'DRAFT' });
   const serviceTypeId = randomUUID();
   await insert('service_types', { id: serviceTypeId, name: `rest-mcp-type-${serviceTypeId.slice(0, 6)}`, is_active: true });
@@ -283,6 +286,7 @@ beforeAll(async () => {
   routes.tickets = (await import('../../../app/api/v1/tickets/route')).GET as Handler;
   routes['tickets:post'] = (await import('../../../app/api/v1/tickets/route')).POST as Handler;
   routes['tickets/[id]'] = (await import('../../../app/api/v1/tickets/[id]/route')).GET as Handler;
+  routes['documents:post'] = (await import('../../../app/api/v1/documents/route')).POST as Handler;
   routes.search = (await import('../../../app/api/v1/search/route')).GET as Handler;
   const comments = await import('../../../app/api/v1/projects/tasks/[taskId]/comments/route');
   routes['comments'] = comments.GET as Handler;
@@ -514,8 +518,34 @@ describe('T019: REST and MCP return only in-scope records', () => {
       });
       const refused = await call(routes['time-entries:post'], narrowed, '/api/v1/time-entries', 'POST', entryBody(ids.B.tickets[0], 7));
       expect(refused.status, JSON.stringify(refused.json)).toBe(403);
+      // The refusal changes no data: no time sheet appears for the owner in a period that has none.
+      const sheetsIn = async () => (await connection.db!('time_sheets').where({ tenant, user_id: ids.owner, period_id: ids.emptyPeriod }).count('* as c'))[0].c;
+      const before = Number(await sheetsIn());
+      const refusedNewPeriod = await call(routes['time-entries:post'], narrowed, '/api/v1/time-entries', 'POST',
+        { ...entryBody(ids.B.tickets[0], 7), start_time: '2026-02-03T08:00:00.000Z', end_time: '2026-02-03T09:00:00.000Z' });
+      expect(refusedNewPeriod.status, JSON.stringify(refusedNewPeriod.json)).toBe(403);
+      expect(Number(await sheetsIn())).toBe(before);
       const okEntry = await call(routes['time-entries:post'], narrowed, '/api/v1/time-entries', 'POST', entryBody(ids.A.tickets[0], 7));
       expect(okEntry.status, JSON.stringify(okEntry.json)).toBe(201);
+    });
+  });
+
+  describe('F032: attaching a document to a client or contact outside the key\'s scope', () => {
+    const attach = (caller: Caller, entityType: string, entityId: string) =>
+      call(routes['documents:post'], caller, '/api/v1/documents', 'POST', {
+        entity_type: entityType, entity_id: entityId, file_name: 'note.txt', mime_type: 'text/plain',
+        source: { type: 'base64', content: Buffer.from('s18').toString('base64') },
+      });
+
+    it('is a 404 for client B and its contacts, succeeds for client A, and is unchanged for the control key', async () => {
+      expect((await attach(narrowed, 'client', ids.B.client)).status).toBe(404);
+      expect((await attach(narrowed, 'contact', ids.B.contacts[0])).status).toBe(404);
+      const okClient = await attach(narrowed, 'client', ids.A.client);
+      expect(okClient.status, JSON.stringify(okClient.json)).toBe(201);
+      const okContact = await attach(narrowed, 'contact', ids.A.contacts[0]);
+      expect(okContact.status, JSON.stringify(okContact.json)).toBe(201);
+      const controlClient = await attach(control, 'client', ids.B.client);
+      expect(controlClient.status, JSON.stringify(controlClient.json)).toBe(201);
     });
   });
 
