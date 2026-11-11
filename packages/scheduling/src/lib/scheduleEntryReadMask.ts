@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import type { IScheduleEntry } from '@alga-psa/types';
 import {
+  createScheduleEntryReadScope,
   unreadableScheduleEntryIds,
   type ScheduleEntryReadScope,
 } from '@alga-psa/authorization/scheduleEntryReadAuthorization';
@@ -47,4 +48,21 @@ export async function maskEntriesOutsideReadScope(
  */
 export function delegatedViewAccess(viewerUserId: string): CalendarAccess {
   return { viewerUserId, canViewAll: true, userLevels: new Map(), groupLevels: new Map(), hiddenCalendarIds: [] };
+}
+
+/**
+ * Whether the viewer may read the stored entry `entryId` in full. For reads that look one entry up by id outside
+ * the schedule list (an entry opened as an ad-hoc work item): an entry the list shows as busy time must not be
+ * readable there either. Decided on the stored work item, like `maskEntriesOutsideReadScope`; a missing entry is
+ * unreadable. Costs no query beyond the read scope for a viewer whose policy does not restrict schedule entries.
+ */
+export async function canReadScheduleEntry(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: Parameters<typeof createScheduleEntryReadScope>[2],
+  entryId: string
+): Promise<boolean> {
+  const scope = await createScheduleEntryReadScope(trx, tenant, user);
+  if (!scope.restricted) return true;
+  return !(await unreadableScheduleEntryIds(trx, scope, [entryId])).has(entryId);
 }

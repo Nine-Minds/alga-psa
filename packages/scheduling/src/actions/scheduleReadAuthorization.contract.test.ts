@@ -12,6 +12,7 @@ const ticketLookupActions = read('./ticketLookupActions.ts');
 const timeEntryWorkItemActions = read('./timeEntryWorkItemActions.ts');
 const readMask = read('../lib/scheduleEntryReadMask.ts');
 const ticketNarrowing = read('../lib/ticketReadNarrowing.ts');
+const dispatchDashboard = read('../components/technician-dispatch/TechnicianDispatchDashboard.tsx');
 
 function section(source: string, startMarker: string, endMarker: string): string {
   const start = source.indexOf(startMarker);
@@ -54,6 +55,19 @@ describe('ticket lookups and work item search apply ticket read narrowing', () =
   it('getSchedulingTicketById narrows; the time sheet ticket list is left to S10 so entries and rows stay paired', () => {
     expect(ticketLookupActions).toContain('narrowTicketsToReadable(trx, tenant, user, query)');
     expect(timeEntryWorkItemActions).not.toContain('narrowTicketsToReadable');
+  });
+
+  it('an entry opened by id as an ad-hoc work item is checked against the read scope before it is read', () => {
+    const byId = section(workItemActions, 'export const getWorkItemById', 'export const ');
+    const adHoc = section(byId, "workItemType === 'ad_hoc'", "workItemType === 'interaction'");
+    expect(adHoc.indexOf('canReadScheduleEntry(')).toBeGreaterThanOrEqual(0);
+    expect(adHoc.indexOf('canReadScheduleEntry(')).toBeLessThan(adHoc.indexOf("table('schedule_entries as se')"));
+    expect(readMask).toContain('export async function canReadScheduleEntry(');
+  });
+
+  it('dispatch opens busy time view-only instead of looking up its work item', () => {
+    const click = section(dispatchDashboard, 'const handleEventClick', 'getWorkItemById(workItemId');
+    expect(click).toContain("event.access === 'busy'");
   });
 
   it('the delegated (co-managed) schedule reads are masked through the same choke point', () => {

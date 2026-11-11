@@ -4,6 +4,7 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { narrowTicketsToReadable } from '../lib/ticketReadNarrowing';
+import { canReadScheduleEntry } from '../lib/scheduleEntryReadMask';
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
@@ -963,6 +964,9 @@ export const getWorkItemById = withAuth(async (
       tenantScopedDb.tenantJoin(projectTaskQuery, 'service_catalog as project_service', 'p.service_id', 'project_service.service_id', { type: 'left' });
       workItem = await projectTaskQuery.first();
     } else if (workItemType === 'ad_hoc') {
+      // The "ad-hoc work item" is the schedule entry itself, looked up by entry id. An entry the schedule shows as
+      // busy time (its work item is outside the reader's client scope) looks the same as a missing one here.
+      if (!await canReadScheduleEntry(db, tenant, user, workItemId)) return null;
       workItem = await tenantScopedDb.table('schedule_entries as se')
         .where({
           'se.entry_id': workItemId,

@@ -214,6 +214,13 @@ describe('schedule, dispatch and ticket lookups respect client scope (T013)', ()
     const { getWorkItemById } = await import('@alga-psa/scheduling/actions/workItemActions');
     expect(((await getWorkItemById(ticketC, 'ticket')) as any)).toBeNull();
     expect(((await getWorkItemById(fx.b.ticketId, 'ticket')) as any)?.work_item_id).toBe(fx.b.ticketId);
+
+    // Dispatch opens an entry's details by looking the entry up as an ad-hoc work item: the masked entry must not
+    // come back whole there (title and notes are what the busy block hides). A real ad-hoc entry still does.
+    expect(await getWorkItemById(entry.C, 'ad_hoc')).toBeNull();
+    expect(await getWorkItemById(entry.deleted, 'ad_hoc')).toBeNull();
+    expect(((await getWorkItemById(entry.adHoc, 'ad_hoc')) as any)?.title).toBe('Title adHoc');
+    expect(((await getWorkItemById(entry.A, 'ad_hoc')) as any)?.title).toBe('Title A');
   }, HOOK_TIMEOUT);
 
   it('a policy the SQL compiler cannot express falls back to the per-row kernel and still narrows the query', async () => {
@@ -297,6 +304,8 @@ describe('schedule, dispatch and ticket lookups respect client scope (T013)', ()
     expect(await dispatchSearch()).toEqual([fx.a.ticketId, fx.b.ticketId, ticketC].sort());
     const { getSchedulingTicketById } = await import('@alga-psa/scheduling/actions/ticketLookupActions');
     expect((await getSchedulingTicketById(ticketC))?.ticket_id).toBe(ticketC);
+    const { getWorkItemById } = await import('@alga-psa/scheduling/actions/workItemActions');
+    expect(((await getWorkItemById(entry.C, 'ad_hoc')) as any)?.title).toBe('Title C');
   }, HOOK_TIMEOUT);
 
   it('fail closed: unknown work item types, deleted work items and other tenants resolve to unreadable; no-client items do not', async () => {
