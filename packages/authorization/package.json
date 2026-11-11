@@ -90,6 +90,10 @@
       "import": "./dist/clientScopeAuthorization.js",
       "types": "./src/clientScopeAuthorization.ts"
     },
+    "./ticketScopeAuthorization": {
+      "import": "./dist/ticketScopeAuthorization.js",
+      "types": "./src/ticketScopeAuthorization.ts"
+    },
     "./clientScopeSqlAdapters": {
       "import": "./dist/clientScopeSqlAdapters.js",
       "types": "./src/clientScopeSqlAdapters.ts"
