@@ -849,11 +849,20 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
   }
 );
 
+/**
+ * The kernel's view of one revision's rules. Each rule carries its bundle, revision and the revision's baseline:
+ * the closed baseline is derived from the rules (closedBundlesNotNaming), so a rule without them makes a closed
+ * revision evaluate as open.
+ */
 function normalizeBundleRules(
-  rules: Awaited<ReturnType<typeof listBundleRulesForRevision>>
+  rules: Awaited<ReturnType<typeof listBundleRulesForRevision>>,
+  source: { bundleId: string; revisionId: string; baseline: BundleBaseline }
 ): BundleNarrowingRule[] {
   return rules.map((rule) => ({
     id: rule.ruleId,
+    bundleId: source.bundleId,
+    revisionId: source.revisionId,
+    baseline: source.baseline,
     resource: rule.resourceType,
     action: rule.action,
     templateKey: rule.templateKey as RelationshipTemplateKey,
@@ -1109,20 +1118,16 @@ export const runAuthorizationBundleSimulationAction = withAuth(
         }
       : await loadSimulationRecord(knex, tenant, input.resourceType, input.resourceId || '');
 
-    const draftRules = normalizeBundleRules(
-      await listBundleRulesForRevision(knex, {
-        tenant,
-        revisionId: draftRevisionId,
-      })
-    );
-    const publishedRules = bundle.published_revision_id
-      ? normalizeBundleRules(
-          await listBundleRulesForRevision(knex, {
-            tenant,
-            revisionId: bundle.published_revision_id,
-          })
-        )
-      : [];
+    // Each revision is simulated with its own baseline, so a closed draft denies what it does not name before
+    // it is published, and the published side shows what users get today.
+    const loadRevisionRules = async (revisionId: string) =>
+      normalizeBundleRules(await listBundleRulesForRevision(knex, { tenant, revisionId }), {
+        bundleId: input.bundleId,
+        revisionId,
+        baseline: await readRevisionBaseline(knex, tenant, revisionId),
+      });
+    const draftRules = await loadRevisionRules(draftRevisionId);
+    const publishedRules = bundle.published_revision_id ? await loadRevisionRules(bundle.published_revision_id) : [];
 
     const createKernelWithRules = (rules: BundleNarrowingRule[]) =>
       createAuthorizationKernelWithDefaultRbac({

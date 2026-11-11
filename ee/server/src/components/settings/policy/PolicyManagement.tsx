@@ -896,15 +896,19 @@ export default function PolicyManagement() {
         : '';
     const localizeAction = (action?: string) =>
       action ? t(`policyManagement.actions.${action}`, { defaultValue: action }) : '';
+    // Parameters are lowercased to read naturally mid-sentence; a message that opens with one still starts a sentence.
+    const asSentence = (text: string) => text.charAt(0).toLocaleUpperCase() + text.slice(1);
     return (
       <ul id={`authorization-bundle-simulator-explanations-${revision}`} className="space-y-1 text-sm text-[rgb(var(--color-text-900))]">
         {decision.explanations.map((explanation) => (
           <li key={explanation.code} id={`authorization-bundle-simulator-explanation-${revision}-${explanation.kind}`}>
-            {t(explanation.messageKey, {
-              resource: localizeResource(explanation.params.resource).toLowerCase(),
-              action: localizeAction(explanation.params.action).toLowerCase(),
-              requiredAction: localizeAction(explanation.params.requiredAction).toLowerCase(),
-            })}
+            {asSentence(
+              t(explanation.messageKey, {
+                resource: localizeResource(explanation.params.resource).toLowerCase(),
+                action: localizeAction(explanation.params.action).toLowerCase(),
+                requiredAction: localizeAction(explanation.params.requiredAction).toLowerCase(),
+              })
+            )}
           </li>
         ))}
       </ul>

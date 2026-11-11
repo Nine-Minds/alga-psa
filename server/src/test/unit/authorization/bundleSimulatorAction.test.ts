@@ -134,6 +134,8 @@ function buildKnexMock(input: {
   document?: Row;
   bundle: Row;
   principalOptions: Row[];
+  /** Baseline per revision id; revisions not listed read as open. */
+  revisionBaselines?: Record<string, 'open' | 'closed'>;
 }): KnexMock {
   const calls: Array<{ table: string; where: Row[] }> = [];
 
@@ -209,6 +211,12 @@ function buildKnexMock(input: {
           return pickColumns(input.bundle, columns);
         }
 
+        if (state.table === 'authorization_bundle_revisions') {
+          const revisionId = state.whereClauses.find((clause) => 'revision_id' in clause)?.revision_id as string | undefined;
+          const baseline = revisionId ? input.revisionBaselines?.[revisionId] : undefined;
+          return baseline ? { baseline } : undefined;
+        }
+
         if (state.table === 'tickets') {
           return pickColumns(input.ticket, columns);
         }
@@ -273,7 +281,9 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: (...args: unknown[]) => dbMocks.createTenantKnex(...args),
 }));
 
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  // Pure helper: the real one, so the simulator reads baselines exactly as the product does.
+  normalizeBundleBaseline: (await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()).normalizeBundleBaseline,
   archiveBundle: serviceMocks.archiveBundle,
   cloneAuthorizationBundle: serviceMocks.cloneAuthorizationBundle,
   createBundleAssignment: serviceMocks.createBundleAssignment,
@@ -400,6 +410,33 @@ describe('runAuthorizationBundleSimulationAction', () => {
     expect(result.draft.reasonCodes).toContain('rbac:rbac_allowed');
     expect(result.draft.reasonCodes).toContain('bundle:bundle_template_denied');
     expect(serviceMocks.listBundleRulesForRevision).toHaveBeenCalledTimes(2);
+  });
+
+  it('simulates each revision with its own baseline, so a closed draft denies what it does not name', async () => {
+    const knex = buildKnexMock({
+      principal: { user_id: principalUserId, user_type: 'internal', client_id: null },
+      principalOptions: [],
+      ticket: { ticket_id: ticketId, user_id: principalUserId, title: 'Ticket 1', tenant: authContext.tenant },
+      bundle: { published_revision_id: revisionContext.publishedRevisionId },
+      revisionBaselines: { [revisionContext.draftRevisionId]: 'closed' },
+    });
+    dbMocks.createTenantKnex.mockResolvedValue({ knex, tenant: authContext.tenant });
+
+    // Both revisions name only ticket read; documents are unnamed. Closed draft: denied by the baseline. Open
+    // published: not narrowed at all.
+    const result = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'document',
+      action: 'read',
+      syntheticRecord: { ownerUserId: principalUserId, clientId: null, boardId: null, isClientVisible: false },
+    }));
+
+    expect(result.draft.allowed).toBe(false);
+    expect(result.draft.reasonCodes).toContain('bundle:bundle_closed_baseline_denied');
+    expect(result.draft.explanations.map((explanation) => explanation.kind)).toContain('closed_baseline');
+    expect(result.published.allowed).toBe(true);
+    expect(result.published.reasonCodes).not.toContain('bundle:bundle_closed_baseline_denied');
   });
 
   it('supports synthetic scenarios without a persisted resource lookup', async () => {
