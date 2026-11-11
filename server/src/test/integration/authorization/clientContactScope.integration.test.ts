@@ -45,6 +45,15 @@ import { getContactByContactNameId, getContactByEmail, getContactsEligibleForInv
   from '../../../../../packages/clients/src/actions/contact-actions/contactActions';
 
 import * as ticketLookups from '../../../../../packages/tickets/src/actions/clientLookupActions';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { getAllClients as getAllClientsModel, getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
+import {
+  getAllActiveContacts as getAllActiveContactsModel,
+  getContactsByClient as getContactsByClientModel,
+} from '@alga-psa/shared/ticketClients/contacts';
+import { searchClientsForPicker as searchClientsForPickerModel } from '@alga-psa/shared/ticketClients/clientPicker';
+import { attachDisplayTags } from '@alga-psa/tags/lib/displayTags';
+import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
 const HOOK_TIMEOUT = 900_000;
 
@@ -260,6 +269,45 @@ describe('client and contact reads narrowed by a client-scoped bundle (real kern
       asUser(plainUser, plainTenant);
       expect(names(await getAllClients(), 'client_name')).toEqual([`Plain ${mark}`]);
       expect(names(await getAllContacts('all'), 'full_name')).toEqual([`Plain Contact ${mark}`, `Plain Orphan ${mark}`]);
+    }, HOOK_TIMEOUT);
+
+    it('a tenant with no bundles: the tickets lookups add exactly the tenant probe to what the model alone costs', async () => {
+      const plainUser = await createUser(db, plainTenant, { user_type: 'internal' });
+      asUser(plainUser, plainTenant);
+      const plainClient = (await db('clients').where({ tenant: plainTenant }).first('client_id')).client_id as string;
+      const user = ref.user;
+
+      // Every statement the connection sends, minus transaction control.
+      const record = async (run: () => Promise<unknown>): Promise<string[]> => {
+        const sqls: string[] = [];
+        const onQuery = (q: { sql: string }) => { sqls.push(q.sql); };
+        db.on('query', onQuery);
+        try { await run(); } finally { db.removeListener('query', onQuery); }
+        return sqls.filter((sql) => !/^\s*(begin|commit|rollback|savepoint|release)/i.test(sql)).sort();
+      };
+
+      const probe = await record(() => createClientScopeContext(db, plainTenant, user));
+      expect(probe).toHaveLength(1);
+
+      const expectProbeOnly = async (label: string, action: () => Promise<unknown>, baseline: () => Promise<unknown>) => {
+        const without = await record(baseline);
+        const withScope = await record(action);
+        expect({ label, extra: withScope.length - without.length }).toEqual({ label, extra: 1 });
+        expect([...without, ...probe].sort()).toEqual(withScope);
+      };
+
+      await expectProbeOnly('getAllClients', () => ticketLookups.getAllClients(), () => getAllClientsModel(db, plainTenant, true));
+      await expectProbeOnly('getClientById', () => ticketLookups.getClientById(plainClient), async () => {
+        await getClientByIdModel(db, plainTenant, plainClient);
+        await getClientLogoUrl(plainClient, plainTenant);
+      });
+      await expectProbeOnly('getContactsByClient', () => ticketLookups.getContactsByClient(plainClient, 'all'),
+        () => getContactsByClientModel(db, plainTenant, plainClient, 'all'));
+      await expectProbeOnly('getAllActiveContacts', () => ticketLookups.getAllActiveContacts(), () => getAllActiveContactsModel(db, plainTenant));
+      await expectProbeOnly('searchClientsForPicker', () => ticketLookups.searchClientsForPicker({ search: mark, status: 'all' }), async () => {
+        const { clients: found } = await searchClientsForPickerModel(db, plainTenant, user, { search: mark, status: 'all' });
+        await attachDisplayTags(db, plainTenant, user, 'client', found, (c: { client_id: string }) => c.client_id);
+      });
     }, HOOK_TIMEOUT);
   });
 });
