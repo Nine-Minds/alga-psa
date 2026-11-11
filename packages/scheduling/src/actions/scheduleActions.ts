@@ -173,6 +173,8 @@ export const getScheduleEntries = withAuth(async (
     }));
     if (current.handled) {
       // The delegated reader admitted these entries; the viewer's own client scope still decides what shows of the work item.
+      // An empty result has nothing to mask, so it costs no policy resolution and no transaction.
+      if (current.entries.length === 0) return { success: true, entries: [] };
       const delegated = await withTransaction(db, async (trx: Knex.Transaction) =>
         maskEntriesOutsideReadScope(
           trx,
