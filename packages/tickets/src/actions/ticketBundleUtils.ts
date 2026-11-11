@@ -117,7 +117,9 @@ export type BundleMasterClosedContext = {
 export async function getBundleMasterClosedContext(
   trx: Knex.Transaction,
   tenant: string,
-  masterTicketId: string
+  masterTicketId: string,
+  /** Display-only narrowing of the open-children count (see `openBundleChildrenCount`). */
+  narrowChildren?: (query: Knex.QueryBuilder) => Knex.QueryBuilder
 ): Promise<BundleMasterClosedContext | null> {
   const master = await tenantDb(trx, tenant)
     .tenantJoin(
@@ -139,7 +141,7 @@ export async function getBundleMasterClosedContext(
   const requireNoOpenChildren = Boolean(rules?.is_enabled && rules?.require_no_open_children);
 
   const [openChildren, resolutionComment] = await Promise.all([
-    openBundleChildrenCount(trx, tenant, masterTicketId),
+    openBundleChildrenCount(trx, tenant, masterTicketId, narrowChildren),
     tenantScopedTable(trx, 'comments as c', tenant)
       .select(
         'c.comment_id',

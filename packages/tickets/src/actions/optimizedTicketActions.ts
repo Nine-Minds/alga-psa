@@ -105,6 +105,7 @@ import {
   type RelationshipRule,
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
+import { createTicketReadScopeFromRules, createTicketReadScope, type TicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
@@ -1704,15 +1705,31 @@ function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFil
     return validatedFilters;
 }
 
+/**
+ * The read scope bundle statistics count children through: the reader's ticket read narrowing (the very
+ * rules the list is narrowed by), so a bundle row never counts, or names the client of, a child the reader
+ * could not open. Unrestricted readers get a no-op scope and the statistics are unchanged.
+ */
+function bundleChildReadScope(context: TicketAuthorizationContext): TicketReadScope {
+  return createTicketReadScopeFromRules({
+    subject: context.authorizationSubject,
+    bundleRules: context.ticketReadBundleNarrowingRules,
+    builtinRules: context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }],
+    selectedBoardIds: context.selectedBoardIds,
+    contactVisibility: context.contactVisibility,
+  });
+}
+
 function buildTicketListItemsQuery(
   trx: Knex.Transaction,
   tenant: string,
   baseQuery: Knex.QueryBuilder,
-  audience: TagDisplayAudience
+  audience: TagDisplayAudience,
+  childScope: TicketReadScope
 ): Knex.QueryBuilder {
   const db = tenantDb(trx, tenant);
   const latestActivity = ticketLatestActivitySql(tenant);
-  const bundleStats = db.table('tickets as tc')
+  const bundleStats = childScope.apply(db.table('tickets as tc')
     .select(
       'tc.master_ticket_id',
       'tc.tenant',
@@ -1720,7 +1737,7 @@ function buildTicketListItemsQuery(
       trx.raw('COUNT(*) FILTER (WHERE tc.closed_at IS NULL)::int as bundle_open_child_count'),
       trx.raw('array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids')
     )
-    .whereNotNull('tc.master_ticket_id')
+    .whereNotNull('tc.master_ticket_id'), 'tc')
     .groupBy('tc.master_ticket_id', 'tc.tenant')
     .as('bs');
   const additionalAgents = db.table('ticket_resources as tr')
@@ -2144,7 +2161,7 @@ export const getTicketsForList = withAuth(async (
         .first();
 
       const pageQuery = applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user)),
+        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), bundleChildReadScope(authorizationContext)),
         tenant,
         validatedFilters
       )
@@ -2158,7 +2175,7 @@ export const getTicketsForList = withAuth(async (
       // Future ABAC templates/constraints may not be representable in SQL yet.
       // Fall back to the exact JS kernel path instead of risking overexposure.
       const tickets = await applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user)),
+        buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), bundleChildReadScope(authorizationContext)),
         tenant,
         validatedFilters
       );
@@ -2287,11 +2304,11 @@ export const loadTicketListItemsByIds = withAuth(async (
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
       let items: ITicketListItem[];
       if (authSqlResult.supported) {
-        items = mapTicketListItems(await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user))
+        items = mapTicketListItems(await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), bundleChildReadScope(authorizationContext))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder());
       } else {
-        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user))
+        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), bundleChildReadScope(authorizationContext))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder();
         items = readableTicketListItems(await authorizeTicketReads(trx, authorizationContext, candidates));
@@ -2405,6 +2422,15 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .select(trx.raw('1'))
         .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(ticketTagMappingsQuery, 'tm.tenant', 'td.tenant');
+      // Tag text is offered only from tickets the caller may read: for a narrowed caller a mapping counts only
+      // when its ticket passes the ticket list's own read narrowing (joined, never filtered after the fetch).
+      // An unrestricted caller's query is unchanged.
+      const readableTickets = await createTicketReadScope(trx, tenant, user as IUserWithRoles);
+      if (readableTickets.narrowed) {
+        scopedDb.tenantJoin(ticketTagMappingsQuery, 'tickets as t', 'tm.tagged_id', 't.ticket_id');
+        ticketTagMappingsQuery.where('tm.tagged_type', 'ticket');
+        readableTickets.apply(ticketTagMappingsQuery, 't');
+      }
 
       const [
         statuses,
@@ -2435,7 +2461,10 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
+      // Assignee and user options are internal staff only: a portal (client) user is never a valid assignee,
+      // for any client, whoever is asking.
       tenantScopedTable(trx, 'users', tenant)
+        .where('user_type', 'internal')
         .select(...USER_RESPONSE_FIELD_NAMES)
         .orderBy('first_name', 'asc'),
 

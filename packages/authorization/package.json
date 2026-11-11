@@ -78,6 +78,10 @@
       "import": "./dist/clientReadScope.js",
       "types": "./src/clientReadScope.ts"
     },
+    "./readScope": {
+      "import": "./dist/readScope.js",
+      "types": "./src/readScope.ts"
+    },
     "./scheduleEntryReadAuthorization": {
       "import": "./dist/scheduleEntryReadAuthorization.js",
       "types": "./src/scheduleEntryReadAuthorization.ts"
@@ -93,6 +97,10 @@
     "./clientScopeAuthorization": {
       "import": "./dist/clientScopeAuthorization.js",
       "types": "./src/clientScopeAuthorization.ts"
+    },
+    "./ticketScopeAuthorization": {
+      "import": "./dist/ticketScopeAuthorization.js",
+      "types": "./src/ticketScopeAuthorization.ts"
     },
     "./clientScopeSqlAdapters": {
       "import": "./dist/clientScopeSqlAdapters.js",
