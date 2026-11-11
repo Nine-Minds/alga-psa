@@ -539,12 +539,12 @@
       },
       "baseline": {
         "title": "Pacote fechado",
-        "explanation": "Um pacote fechado nega todos os tipos de registo e ações que não nomeia. Um pacote aberto limita apenas os que nomeia.",
+        "explanation": "Um pacote fechado nega todos os tipos de registro e ações que não nomeia. Um pacote aberto limita apenas os que nomeia.",
         "closedToggle": "Publicar como fechado",
         "openBadge": "Aberto",
         "previewTitle": "Este pacote fechado vai negar",
-        "previewIntro": "Aos utilizadores com este pacote são negados estes tipos de registo e ações, porque o pacote não tem nenhuma regra para eles.",
-        "previewNothing": "O pacote nomeia todos os tipos de registo e ações, por isso não nega nada além das suas próprias regras.",
+        "previewIntro": "Os usuários com este pacote não têm acesso a estes tipos de registro e ações, porque o pacote não tem nenhuma regra para eles.",
+        "previewNothing": "O pacote nomeia todos os tipos de registro e ações, por isso não nega nada além das suas próprias regras.",
         "deniedAll": "Todas as ações",
         "deniedActions": "Negado: {{actions}}"
       }
@@ -592,14 +592,14 @@
       "empty": "Execute uma simulação para comparar o comportamento do rascunho e do publicado.",
       "explanations": {
         "closedBaseline": "O pacote é fechado e não tem regra para {{action}} em {{resource}}, por isso o acesso é negado.",
-        "clientPortfolio": "O registo pertence a um cliente fora da carteira de clientes deste utilizador, por isso a regra da carteira nega-o.",
-        "createOutOfScope": "Criar {{resource}} para este cliente é negado: o cliente está fora do âmbito deste utilizador.",
-        "readRequired": "{{action}} em {{resource}} também exige acesso de leitura ao registo, e as regras de leitura negam-no.",
-        "templateDenied": "Uma regra do pacote limita {{action}} em {{resource}} a registos com os quais este utilizador não corresponde.",
-        "clientVisibleOnly": "O pacote permite {{action}} em {{resource}} apenas quando o registo é visível para o cliente.",
-        "notSelfApprover": "Os utilizadores não podem aprovar os seus próprios registos.",
+        "clientPortfolio": "O registro pertence a um cliente fora da carteira de clientes deste usuário, por isso a regra da carteira o nega.",
+        "createOutOfScope": "Criar {{resource}} para este cliente é negado: o cliente está fora do escopo deste usuário.",
+        "readRequired": "{{action}} em {{resource}} também exige acesso de leitura ao registro, e as regras de leitura o negam.",
+        "templateDenied": "Uma regra do pacote limita {{action}} em {{resource}} a registros com os quais este usuário não corresponde.",
+        "clientVisibleOnly": "O pacote permite {{action}} em {{resource}} apenas quando o registro é visível para o cliente.",
+        "notSelfApprover": "Os usuários não podem aprovar os seus próprios registros.",
         "rulesUnavailable": "Não foi possível carregar as regras do pacote, por isso o acesso é negado.",
-        "rbacDenied": "A função do utilizador não concede {{action}} em {{resource}}."
+        "rbacDenied": "A função do usuário não concede {{action}} em {{resource}}."
       }
     },
     "createDialog": {
@@ -638,10 +638,10 @@
       "selectRecord": "Selecione um registro antes de executar a simulação.",
       "runSimulation": "Falha ao executar a simulação.",
       "simulator": {
-        "unsupportedAction": "O simulador suporta verificações de Ler, Criar, Atualizar, Eliminar e Aprovar. Escolha uma dessas ações e tente novamente.",
+        "unsupportedAction": "O simulador suporta verificações de Ler, Criar, Atualizar, Excluir e Aprovar. Escolha uma dessas ações e tente novamente.",
         "unsupportedResource": "Este tipo de registro ainda não está disponível no simulador. Escolha um tipo de registro compatível e tente novamente.",
         "clientTicketNotSupported": "As verificações de tickets para usuários clientes ainda não estão disponíveis no simulador porque a visibilidade do quadro de tickets não está incluída. Experimente um usuário interno ou verifique o acesso ao ticket do cliente no aplicativo.",
-        "syntheticRecordRequired": "Este tipo de registo não tem registos armazenados para escolher. Use um cenário de registo sintético e tente novamente."
+        "syntheticRecordRequired": "Este tipo de registro não tem registros armazenados para escolher. Use um cenário de registro sintético e tente novamente."
       },
       "saveBaseline": "Não foi possível alterar se o pacote é fechado."
     },
@@ -654,7 +654,7 @@
       "billing": "Cobrança",
       "tag": "Etiquetas",
       "client": "Clientes",
-      "contact": "Contactos",
+      "contact": "Contatos",
       "interaction": "Interações",
       "schedule_entry": "Entradas de agenda"
     },
@@ -662,23 +662,23 @@
       "read": "Ler",
       "create": "Criar",
       "update": "Atualizar",
-      "delete": "Eliminar",
+      "delete": "Excluir",
       "approve": "Aprovar"
     },
     "portfolio": {
       "title": "Carteira de clientes",
-      "description": "Os clientes para os quais este utilizador trabalha. Os pacotes com uma regra de carteira de clientes limitam o utilizador a estes clientes.",
+      "description": "Os clientes para os quais este usuário trabalha. Os pacotes com uma regra de carteira de clientes limitam o usuário a estes clientes.",
       "addClient": "Adicionar um cliente",
-      "loading": "A carregar a carteira de clientes...",
-      "empty": "Sem clientes. A um utilizador com a carteira vazia é negado tudo o que uma regra de carteira de clientes abrange.",
+      "loading": "Carregando a carteira de clientes...",
+      "empty": "Sem clientes. Um usuário com a carteira vazia não tem acesso a nada do que uma regra de carteira de clientes abrange.",
       "removeClient": "Remover {{client}}",
-      "save": "Guardar carteira",
-      "saving": "A guardar...",
-      "saved": "Carteira de clientes guardada.",
+      "save": "Salvar carteira",
+      "saving": "Salvando...",
+      "saved": "Carteira de clientes salva.",
       "errors": {
         "load": "Não foi possível carregar a carteira de clientes.",
         "lookup": "Não foi possível procurar o cliente.",
-        "save": "Não foi possível guardar a carteira de clientes."
+        "save": "Não foi possível salvar a carteira de clientes."
       }
     }
   },
