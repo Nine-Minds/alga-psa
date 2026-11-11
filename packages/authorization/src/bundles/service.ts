@@ -761,6 +761,20 @@ export async function setBundleRevisionBaseline(
   }
 }
 
+/**
+ * The baseline of each given revision, by revision id. Revisions not found are absent from the map.
+ */
+export async function readPublishedBundleBaselines(
+  knex: Knex | Knex.Transaction,
+  input: { tenant: string; revisionIds: readonly string[] }
+): Promise<Map<string, BundleBaseline>> {
+  if (input.revisionIds.length === 0) return new Map();
+  const rows = await tenantDb(knex, input.tenant).table('authorization_bundle_revisions')
+    .whereIn('revision_id', [...input.revisionIds])
+    .select<Array<{ revision_id: string; baseline: string | null }>>('revision_id', 'baseline');
+  return new Map(rows.map((row) => [row.revision_id, normalizeBundleBaseline(row.baseline)]));
+}
+
 export async function publishBundleRevision(
   knex: Knex | Knex.Transaction,
   input: PublishBundleRevisionInput

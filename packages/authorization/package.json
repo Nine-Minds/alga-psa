@@ -46,6 +46,14 @@
       "import": "./dist/bundles/starterBundles.js",
       "types": "./src/bundles/starterBundles.ts"
     },
+    "./bundles/closedBundlePreview": {
+      "import": "./dist/bundles/closedBundlePreview.js",
+      "types": "./src/bundles/closedBundlePreview.ts"
+    },
+    "./bundles/denialExplanations": {
+      "import": "./dist/bundles/denialExplanations.js",
+      "types": "./src/bundles/denialExplanations.ts"
+    },
     "./portfolios/service": {
       "import": "./dist/portfolios/service.js",
       "types": "./src/portfolios/service.ts"

@@ -537,7 +537,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
       bundleId: 'bundle-1',
       principalUserId,
       resourceType: 'ticket',
-      action: 'delete',
+      action: 'export',
       resourceId: ticketId,
     });
 
@@ -545,7 +545,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
       ok: false,
       error: expect.objectContaining({
         code: 'unsupported_simulation_action',
-        message: expect.stringContaining('supports only Read and Approve checks'),
+        message: expect.stringContaining('supports only Read, Create, Update, Delete and Approve checks'),
       }),
     });
   });

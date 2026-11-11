@@ -83,6 +83,9 @@ async function evaluateRecordRules(
   };
 }
 
+/** Emitted (stage 'mutation') when update or delete is refused because the subject's read rules deny the record. */
+export const PREREQUISITE_ACTION_DENIED_CODE = 'prerequisite_action_denied';
+
 /**
  * Evaluates the subject's record rules for every action the requested action
  * presupposes (see `prerequisiteActionsFor`). Returns the reasons for the first
@@ -105,7 +108,7 @@ async function findDeniedPrerequisite(
         {
           stage: 'mutation',
           sourceType: 'system',
-          code: 'prerequisite_action_denied',
+          code: PREREQUISITE_ACTION_DENIED_CODE,
           message: `The subject's ${requiredAction} rules deny this record, so ${input.resource.action} is refused.`,
           metadata: {
             resource: input.resource.type,

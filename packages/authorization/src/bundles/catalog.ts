@@ -55,11 +55,15 @@ export function assertBundleRuleCatalogInput(input: BundleRuleCatalogInput): voi
 }
 
 /**
- * Resource types a bundle rule can name. `tag` covers tag lists and tag suggestions: a
- * tag is visible to a narrowed subject when a record it is attached to belongs to a
- * client in scope (see `parentVisibleViaChildClients`).
+ * The kernel's resource catalog: every resource type a bundle rule can name, in display order. This is the one
+ * list. The policy screen, the closed-bundle denial preview and the starter bundles derive from it; none keeps a
+ * second copy. A coverage slice that registers a resource type with the kernel appends it here.
+ *
+ * `tag` covers tag lists and tag suggestions: a tag is visible to a narrowed subject when a record it is
+ * attached to belongs to a client in scope (see `parentVisibleViaChildClients`).
+ * `AUTHORIZATION_RESOURCE_TYPE_CATALOG` above is the narrower list of types that have a SQL read adapter.
  */
-export const BUNDLE_RULE_RESOURCE_TYPE_CATALOG: ReadonlySet<string> = new Set([
+export const BUNDLE_RULE_RESOURCE_TYPES = [
   'ticket',
   'document',
   'time_entry',
@@ -67,4 +71,15 @@ export const BUNDLE_RULE_RESOURCE_TYPE_CATALOG: ReadonlySet<string> = new Set([
   'asset',
   'billing',
   'tag',
-]);
+  'client',
+  'contact',
+  'interaction',
+  'schedule_entry',
+] as const;
+
+export type BundleRuleResourceType = (typeof BUNDLE_RULE_RESOURCE_TYPES)[number];
+
+export const BUNDLE_RULE_RESOURCE_TYPE_CATALOG: ReadonlySet<string> = new Set<string>(BUNDLE_RULE_RESOURCE_TYPES);
+
+/** Actions a bundle rule can name. `approve` applies to approvable resources only. */
+export const BUNDLE_RULE_ACTIONS = ['read', 'create', 'update', 'delete', 'approve'] as const;
