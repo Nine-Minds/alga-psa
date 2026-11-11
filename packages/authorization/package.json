@@ -78,9 +78,25 @@
       "import": "./dist/readScope.js",
       "types": "./src/readScope.ts"
     },
+    "./scheduleEntryReadAuthorization": {
+      "import": "./dist/scheduleEntryReadAuthorization.js",
+      "types": "./src/scheduleEntryReadAuthorization.ts"
+    },
+    "./ticketReadAuthorization": {
+      "import": "./dist/ticketReadAuthorization.js",
+      "types": "./src/ticketReadAuthorization.ts"
+    },
     "./ticketRecordAuthorization": {
       "import": "./dist/ticketRecordAuthorization.js",
       "types": "./src/ticketRecordAuthorization.ts"
+    },
+    "./clientScopeAuthorization": {
+      "import": "./dist/clientScopeAuthorization.js",
+      "types": "./src/clientScopeAuthorization.ts"
+    },
+    "./clientScopeSqlAdapters": {
+      "import": "./dist/clientScopeSqlAdapters.js",
+      "types": "./src/clientScopeSqlAdapters.ts"
     },
     "./recordProjection": {
       "import": "./dist/recordProjection.js",

@@ -8,7 +8,7 @@ import {
   type AuthorizationSubject,
   type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
-import { AUTHORIZATION_RESOURCE_TYPE_CATALOG } from '@alga-psa/authorization/bundles/catalog';
+import { BUNDLE_RULE_RESOURCE_TYPE_CATALOG } from '@alga-psa/authorization/bundles/catalog';
 import { applyReadScope, resolveNarrowedReadScope } from '@alga-psa/authorization/readScope';
 import { createDocumentRelationshipSqlAdapter } from '@shared/lib/documentAuthorization';
 
@@ -162,9 +162,9 @@ describe('S2 fast path', () => {
 
 describe('resource type catalog', () => {
   it('declares the tag resource type next to the others', () => {
-    expect(AUTHORIZATION_RESOURCE_TYPE_CATALOG.has('tag')).toBe(true);
+    expect(BUNDLE_RULE_RESOURCE_TYPE_CATALOG.has('tag')).toBe(true);
     for (const existing of ['ticket', 'document', 'time_entry', 'project', 'asset', 'billing']) {
-      expect(AUTHORIZATION_RESOURCE_TYPE_CATALOG.has(existing)).toBe(true);
+      expect(BUNDLE_RULE_RESOURCE_TYPE_CATALOG.has(existing)).toBe(true);
     }
   });
 });

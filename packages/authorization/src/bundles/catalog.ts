@@ -14,6 +14,17 @@ export const AUTHORIZATION_TEMPLATE_CATALOG: ReadonlySet<RelationshipTemplateKey
   'contact_visibility',
 ]);
 
+/**
+ * Resource types whose reads are narrowed by bundle rules in SQL through a
+ * `RelationshipSqlAdapter`. Each coverage slice appends its own resource type.
+ */
+export type AuthorizationResourceType = 'client' | 'contact';
+
+export const AUTHORIZATION_RESOURCE_TYPE_CATALOG: ReadonlySet<AuthorizationResourceType> = new Set([
+  'client',
+  'contact',
+]);
+
 export type AuthorizationConstraintKey =
   | 'not_self_approver'
   | 'client_visible_only'
@@ -48,7 +59,7 @@ export function assertBundleRuleCatalogInput(input: BundleRuleCatalogInput): voi
  * tag is visible to a narrowed subject when a record it is attached to belongs to a
  * client in scope (see `parentVisibleViaChildClients`).
  */
-export const AUTHORIZATION_RESOURCE_TYPE_CATALOG: ReadonlySet<string> = new Set([
+export const BUNDLE_RULE_RESOURCE_TYPE_CATALOG: ReadonlySet<string> = new Set([
   'ticket',
   'document',
   'time_entry',

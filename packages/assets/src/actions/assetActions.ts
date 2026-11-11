@@ -91,6 +91,7 @@ import {
     BuiltinAuthorizationKernelProvider,
     BundleAuthorizationKernelProvider,
     RequestLocalAuthorizationCache,
+    builtinResolversRestrict,
     bundleRulesRestrict,
     createAuthorizationKernel,
     type AuthorizationRecord,
@@ -878,7 +879,7 @@ export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id
         throw new Error('Permission denied: Cannot read asset facts');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
         await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
         return listAvailableAssetFactsForAsset(trx, { tenant, assetId: asset_id });
     });
@@ -897,7 +898,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         throw new Error('Permission denied: Cannot read assets');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
         const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
             getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser),
             hasPermission(user, 'ticket', 'read', trx),
@@ -2400,7 +2401,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             // A closed bundle that does not name asset:read restricts it too, so ask the kernel rather than
             // looking for an asset:read rule; otherwise the type facet below would count every asset.
             const requiresRecordAuthorization = context.subject.userType === 'client'
-                || bundleRulesRestrict(assetReadRules, 'asset', 'read');
+                || bundleRulesRestrict(assetReadRules, 'asset', 'read')
+                // A registered built-in rule resolver (closed baseline or named rule) restricts it as well.
+                || builtinResolversRestrict({ subject: context.subject, resource: { type: 'asset', action: 'read' } });
             const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
                 rule.resource === 'asset' && rule.action === 'read'
                 && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')

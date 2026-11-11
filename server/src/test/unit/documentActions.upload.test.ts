@@ -20,7 +20,7 @@ vi.mock('../lib/documentPermissions', () => ({
 }));
 
 vi.mock('@shared/lib/documentAuthorization', () => ({
-  authorizeAndRedactDocuments: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => documents,
+  authorizeAndRedactDocumentsForAction: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => documents,
 }));
 
 vi.mock('../lib/meetingDocumentAdmission', () => ({

@@ -1,6 +1,7 @@
 export * from './contracts';
 export * from './engine';
 export * from './providers/builtinProvider';
+export * from './providers/builtinResolverEvaluation';
 export * from './providers/bundleProvider';
 export * from './relationships';
 export * from './relationshipTemplates';
@@ -12,3 +13,4 @@ export * from './scope';
 export * from './selfApproval';
 export * from './actionAliases';
 export * from './closedBaseline';
+export * from './builtinRuleResolvers';

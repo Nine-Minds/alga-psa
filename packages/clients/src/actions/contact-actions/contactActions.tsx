@@ -54,6 +54,7 @@ import {
   parseSubmittedFields
 } from '@alga-psa/validation';
 import { collectReportContactIds } from '../../lib/managerSubtree';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { attachContactLocations } from '../../lib/contactLocations';
 import {
   getContactLocationCount as readContactLocationCount,
@@ -441,7 +442,12 @@ export const getContactByContactNameId = withAuth(async (
     await assertMspPermission(user, 'contact', 'read', `Permission denied: ${await contactText('errors.contact.permissions.readContacts')}`, db);
 
     // Fetch contact with client information
-    const contact = await withTransaction(db, async (trx: Knex.Transaction) => ContactModel.getContactById(contactNameId, tenant, trx));
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // An out-of-scope contact reads as not found: the in-scope check carries the same SQL predicate as the lists.
+      const scope = await createClientScopeContext(trx, tenant, user);
+      if (!(await scope.permits('contact', contactNameId))) return null;
+      return ContactModel.getContactById(contactNameId, tenant, trx);
+    });
     if (!contact) {
       return null;
     }
@@ -662,6 +668,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       const q = scopedDb.table('contacts as c');
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'c')).apply(q);
       scopedDb.tenantJoin(q, 'users as u', 'u.contact_id', 'c.contact_name_id', {
         type: 'left',
         on(join) {
@@ -1801,9 +1808,10 @@ export const getContactByEmail = withAuth(async (
     );
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingContact = await tenantScopedTable(trx, 'contacts', tenant)
-        .where({ email: email.toLowerCase(), client_id: clientId })
-        .first<{ contact_name_id: string }>();
+      const existingContactQuery = tenantScopedTable(trx, 'contacts', tenant)
+        .where({ email: email.toLowerCase(), client_id: clientId });
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'contacts')).apply(existingContactQuery);
+      const existingContact = await existingContactQuery.first<{ contact_name_id: string }>();
 
       if (!existingContact) {
         return null;

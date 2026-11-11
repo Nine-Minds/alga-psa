@@ -58,7 +58,12 @@ import {
   documentActionErrorMessage,
   type DocumentActionError,
 } from './documentActionErrors';
-import { authorizeAndRedactDocuments as authorizeDocumentRows, resolveDocumentReadScope, type DocumentReadScope } from '@shared/lib/documentAuthorization';
+import {
+  authorizeAndRedactDocumentsForAction as authorizeDocumentRowsForAction,
+  resolveDocumentReadScope,
+  type DocumentAuthorizationAction,
+  type DocumentReadScope,
+} from '@shared/lib/documentAuthorization';
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
@@ -314,8 +319,20 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
+  return authorizeDocumentsForAction(trx, tenant, user, documents, 'read', verifiedRecipientLifecycleAccess);
+}
+
+/** `authorizeAndRedactDocuments` for any document action; `update` and `delete` also pass the kernel's mutation decision. */
+async function authorizeDocumentsForAction<T extends IDocument>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: T[],
+  action: DocumentAuthorizationAction,
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+): Promise<T[]> {
   const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
-  const authorized = await authorizeDocumentRows(trx, tenant, user, admitted.documents, verifiedRecipientLifecycleAccess);
+  const authorized = await authorizeDocumentRowsForAction(trx, tenant, user, admitted.documents, action, verifiedRecipientLifecycleAccess);
   await admitted.assertCurrent?.();
   return authorized;
 }
@@ -345,6 +362,16 @@ export async function getAuthorizedDocumentById(
   user: IUser,
   documentId: string
 ): Promise<IDocument | null> {
+  return loadAuthorizedDocumentById(trx, tenant, user, documentId, 'read');
+}
+
+async function loadAuthorizedDocumentById(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documentId: string,
+  action: DocumentAuthorizationAction
+): Promise<IDocument | null> {
   const document = await tenantScopedTable(trx, 'documents', tenant)
     .modify(query => applyDocumentProductReadScope(query, trx, user))
     .where('document_id', documentId)
@@ -354,7 +381,7 @@ export async function getAuthorizedDocumentById(
     return null;
   }
 
-  const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument]);
+  const [authorizedDocument] = await authorizeDocumentsForAction(trx, tenant, user, [document as IDocument], action);
   return authorizedDocument ?? null;
 }
 
@@ -390,11 +417,12 @@ async function assertAuthorizedDocumentSetForMutation(
     return permissionError(deniedMessage);
   }
 
-  const authorizedDocuments = await authorizeAndRedactDocuments(
+  const authorizedDocuments = await authorizeDocumentsForAction(
     trx,
     tenant,
     user,
-    documents as IDocument[]
+    documents as IDocument[],
+    'update'
   );
 
   if (authorizedDocuments.length !== uniqueDocumentIds.length) {
@@ -603,7 +631,7 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     const { knex } = await createTenantKnex();
 
     const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
       if (!authorizedDocument) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
@@ -675,7 +703,7 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
     const { knex } = await createTenantKnex();
 
     const outcome = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const target = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+      const target = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
       if (!target) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
@@ -863,7 +891,7 @@ export const deleteDocument = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const authorizedDocumentForDelete = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      getAuthorizedDocumentById(trx, tenant, user, documentId)
+      loadAuthorizedDocumentById(trx, tenant, user, documentId, 'delete')
     );
     if (!authorizedDocumentForDelete) {
       return {
@@ -877,7 +905,7 @@ export const deleteDocument = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
-      const authorizedDocument = await getAuthorizedDocumentById(trx, tenantId, user, documentId);
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenantId, user, documentId, 'delete');
       if (!authorizedDocument) {
         throw new Error('Permission denied: Cannot delete documents');
       }
