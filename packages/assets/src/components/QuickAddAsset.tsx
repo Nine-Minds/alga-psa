@@ -79,6 +79,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const { renderQuickAddClient } = useQuickAddClient();
   const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -279,6 +280,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setError(null);
+      setValidationErrors([]);
     }
   };
 
@@ -292,9 +294,10 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       : [];
     setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
 
-    const validationErrors = [...validateForm(), ...attributeIssues.map((issue) => issue.message)];
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join('\n'));
+    const missingFields = [...validateForm(), ...attributeIssues.map((issue) => issue.message)];
+    setValidationErrors(missingFields);
+    if (missingFields.length > 0) {
+      setError(null);
       return;
     }
 
@@ -689,7 +692,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         footer={quickAddAssetFooter}
       >
         <DialogContent>
-          {hasAttemptedSubmit && error && (
+          {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 <p className="font-medium mb-2">
@@ -698,11 +701,17 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 </p>
                 <ul className="list-disc list-inside space-y-1">
-                  {error.split('\n').map((err, index) => (
+                  {validationErrors.map((err, index) => (
                     <li key={index}>{err}</li>
                   ))}
                 </ul>
               </AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Alert variant="destructive" className="mb-4" data-testid="quick-add-asset-error">
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           
