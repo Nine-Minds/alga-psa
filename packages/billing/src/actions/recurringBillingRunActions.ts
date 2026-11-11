@@ -3,7 +3,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { createTenantKnex, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { createTenantKnex, resolveEffectiveTimeZone, localDateForInstant } from '@alga-psa/db';
 import {
   actionError,
   isActionMessageError,
@@ -450,10 +450,7 @@ export async function generateCalendarMonthEndCloseInvoices(params: {
   // below): the policy only approves when the local date equals that day. Stamping
   // invoices from the tenant's billing calendar (never the server host's clock)
   // keeps the gate and the invoice it approves on the same date.
-  const monthEndCloseInvoiceDate = Temporal.Instant.from(now.toISOString())
-    .toZonedDateTimeISO(effectiveTimeZone)
-    .toPlainDate()
-    .toString();
+  const monthEndCloseInvoiceDate = localDateForInstant(Temporal.Instant.from(now.toISOString()), effectiveTimeZone).toString();
 
   // Server-side revalidation: the UI convenience flag is not the policy. The
   // CANONICAL WINDOW is validated as a whole — every persisted client-cadence
