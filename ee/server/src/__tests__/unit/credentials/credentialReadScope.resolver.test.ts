@@ -8,7 +8,7 @@ import {
 import {
   compileCredentialReadScopeSql,
   type CredentialAuthorizationContext,
-} from '../../../../../ee/server/src/lib/credentials/credentialAuthorization';
+} from '@ee/lib/credentials/credentialAuthorization';
 
 // The credential list SQL must consult registered built-in rule resolvers like the JS kernel does.
 const subject: AuthorizationSubject = {
