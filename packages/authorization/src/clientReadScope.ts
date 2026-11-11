@@ -35,6 +35,17 @@ export interface ClientReadScope {
   readonly narrowed: boolean;
   /** Narrow `builder` (a tenant-scoped query on the resource's table, aliased as the adapter expects). */
   apply(builder: Knex.QueryBuilder): void;
+  /**
+   * Narrow `builder` through a different physical mapping than the one the scope was resolved with. The subject
+   * and its rules are resolved once; a query that names several tables (a report) maps each table's client
+   * through its own adapter. A no-op when not narrowed.
+   */
+  // LEVERAGE: friction client-read-scope-single-adapter — the scope was built around one resource's adapter; a report needs one
+  // resolved subject mapped through many tables' adapters, so `applyWith` was bolted on beside `apply`. The scope is really
+  // "the subject's client set"; the adapter belongs to the call.
+  applyWith(builder: Knex.QueryBuilder, adapter: RelationshipSqlAdapter): void;
+  /** The resolved subject; null on the fast path (nothing was resolved). */
+  readonly subject: AuthorizationSubject | null;
 }
 
 export interface ResolveClientReadScopeInput {
@@ -48,7 +59,7 @@ export interface ResolveClientReadScopeInput {
   requestCache?: AuthorizationRequestCache;
 }
 
-const UNNARROWED: ClientReadScope = Object.freeze({ narrowed: false, apply: () => undefined });
+const UNNARROWED: ClientReadScope = Object.freeze({ narrowed: false, apply: () => undefined, applyWith: () => undefined, subject: null });
 
 function clientScopeOnly(rule: BundleNarrowingRule): BundleNarrowingRule {
   const narrowsByClient =
@@ -86,13 +97,16 @@ export async function resolveClientReadScope(
     closedBundlesNotNaming(rules, resourceType, 'read').length > 0;
   if (!narrowsHere) return UNNARROWED;
 
-  const ctx = { subject, adapter: input.createAdapter(subject) };
+  const applyWith = (builder: Knex.QueryBuilder, adapter: RelationshipSqlAdapter) => {
+    const compiled = compileBundleReadNarrowingSql(builder, rules, resourceType, 'read', { subject, adapter });
+    // Every rule was reduced to what the SQL compiler expresses. If that ever stops being true, deny: never run a partial predicate.
+    if (compiled.supported === false) builder.whereRaw('1 = 0');
+  };
+  const defaultAdapter = input.createAdapter(subject);
   return {
     narrowed: true,
-    apply(builder) {
-      const compiled = compileBundleReadNarrowingSql(builder, rules, resourceType, 'read', ctx);
-      // Every rule was reduced to what the SQL compiler expresses. If that ever stops being true, deny: never run a partial predicate.
-      if (compiled.supported === false) builder.whereRaw('1 = 0');
-    },
+    subject,
+    apply: (builder) => applyWith(builder, defaultAdapter),
+    applyWith,
   };
 }

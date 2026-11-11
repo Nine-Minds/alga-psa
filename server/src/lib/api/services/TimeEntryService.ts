@@ -49,6 +49,8 @@ import {
 import { getEligibleContractLines } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
 import { resolveDeterministicContractLineSelection } from '@alga-psa/scheduling/lib/contractLineDisambiguation.shared';
 import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '@alga-psa/scheduling/actions/timeEntrySchemas';
+import { resolveTimeEntryReadScope } from '@alga-psa/scheduling/lib/timeEntryAuthorizationSql';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import {
   CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
   type ContractLineSource,
@@ -821,6 +823,10 @@ export class TimeEntryService extends BaseService<any> {
     };
     
     this.applyFilters(query, filters, knex, context.tenant);
+
+    // Only the entries the caller may read: entries on work items of clients outside their scope are not exported,
+    // and an entry on client-less work (ad hoc) is exported to its own user only. Free for a caller nothing narrows.
+    (await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName)).apply(query);
     
     // Add joins for complete data
     const scopedDb = tenantDb(knex, context.tenant);

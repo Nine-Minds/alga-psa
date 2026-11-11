@@ -11,8 +11,10 @@ import {
   FormattingOptions,
   FormattedMetricValue,
   ReportExecutionError,
-  ReportExecutionOptions
+  ReportExecutionOptions,
+  ReportClientScopeRefusedError
 } from './types';
+import { planQueryNarrowing, resolveReportClientScope, type QueryNarrowingPlan, type ReportClientScope } from '../clientScope';
 import { QueryBuilder } from '../builders/QueryBuilder';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
@@ -59,6 +61,10 @@ export class ReportEngine {
       
       // Execute report within transaction
       const result = await withTransaction(knex, async (trx) => {
+        // Client scope first: a report that cannot be narrowed for a narrowed subject must not run at all.
+        // A subject nothing narrows costs one cached probe and takes the unchanged path below.
+        const narrowing = await this.planClientNarrowing(trx, tenant, definition, options);
+
         // Resolve the tenant's configured default currency once. Currency metrics whose
         // definition does not pin a specific currency are formatted in this currency
         // instead of a hardcoded 'USD'. Defensive: a lookup failure must not fail the report.
@@ -79,7 +85,7 @@ export class ReportEngine {
         // Execute each metric calculation
         for (const metric of definition.metrics) {
           try {
-            const value = await this.executeMetric(trx, metric, enrichedParameters);
+            const value = await this.executeMetric(trx, metric, enrichedParameters, narrowing?.scope, narrowing?.plans.get(metric.id));
             metrics[metric.id] = this.formatMetricValue(value, metric.formatting, locale, defaultCurrency);
           } catch (error) {
             console.error(`Error executing metric ${metric.id}:`, error);
@@ -114,6 +120,10 @@ export class ReportEngine {
       return result;
       
     } catch (error) {
+      if (error instanceof ReportClientScopeRefusedError) {
+        // A refusal is an answer, not a failure: keep it typed for the action boundary.
+        throw error;
+      }
       const executionTime = Date.now() - startTime;
       console.error(`Report execution failed for ${definition.id} after ${executionTime}ms:`, error);
       
@@ -127,12 +137,39 @@ export class ReportEngine {
   }
   
   /**
+   * Resolve the subject's client scope and plan every metric's narrowing up front.
+   * Returns null when nothing narrows the subject. Throws `ReportClientScopeRefusedError` when any metric cannot be narrowed.
+   */
+  private static async planClientNarrowing(
+    trx: any,
+    tenant: string,
+    definition: ReportDefinition,
+    options: ReportExecutionOptions
+  ): Promise<{ scope: ReportClientScope; plans: Map<string, QueryNarrowingPlan> } | null> {
+    if (!options.scopeSubject) return null;
+    const scope = await resolveReportClientScope(trx, { tenant, user: options.scopeSubject });
+    if (!scope.narrowed) return null;
+
+    const plans = new Map<string, QueryNarrowingPlan>();
+    for (const metric of definition.metrics) {
+      const plan = planQueryNarrowing(metric.query);
+      if (!plan.ok) {
+        throw new ReportClientScopeRefusedError({ ...plan.refusal, reportId: definition.id, metricId: metric.id });
+      }
+      plans.set(metric.id, plan.value);
+    }
+    return { scope, plans };
+  }
+
+  /**
    * Execute a single metric calculation
    */
   private static async executeMetric(
     trx: any,
     metric: MetricDefinition,
-    parameters: ReportParameters
+    parameters: ReportParameters,
+    clientScope?: ReportClientScope,
+    plan?: QueryNarrowingPlan
   ): Promise<any> {
     
     try {
@@ -141,6 +178,8 @@ export class ReportEngine {
       
       // Build and execute the query
       const query = QueryBuilder.build(trx, metric.query, parameters);
+      // Narrowed subjects only: the predicate joins the WHERE before any aggregation runs.
+      if (clientScope && plan) clientScope.narrowAnchors(query, plan.anchors);
       const rawResult = await query;
       // raw_sql queries resolve to the pg driver's Result object rather than a rows array
       const result = Array.isArray(rawResult) ? rawResult : ((rawResult as { rows?: any[] })?.rows ?? []);

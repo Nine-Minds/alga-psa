@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "A report run by a client-restricted subject applies their narrowing to client-owned tables in the report definition, and a report that cannot be narrowed is refused with a stated reason.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Aggregates, options and exports"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "Client, contact, time-entry and ticket exports contain only records the subject may read.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Aggregates, options and exports"
     ]

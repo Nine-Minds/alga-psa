@@ -20,6 +20,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { getBillingOverview } from '@alga-psa/reporting';
 import type { ReportResult, FormattedMetricValue } from '@alga-psa/reporting';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface MetricCardProps {
   title: string;
@@ -108,6 +109,11 @@ const Overview = () => {
         setLoading(true);
         setError(null);
         const data = await getBillingOverview();
+        if (isActionMessageError(data) || isActionPermissionError(data)) {
+          // E.g. a client-restricted user: the report is refused with its reason.
+          setError(getErrorMessage(data));
+          return;
+        }
         setReportData(data);
       } catch (err) {
         console.error('Error fetching billing overview:', err);

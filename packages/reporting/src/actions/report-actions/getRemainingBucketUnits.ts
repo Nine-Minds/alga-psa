@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex'; // Import Knex type for query builder
-import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
+import { clientOutOfScopeError, reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -44,7 +44,7 @@ export interface RemainingBucketUnitsResult {
  * @returns A promise that resolves to an array of bucket pool usage details.
  */
 export const getRemainingBucketUnits = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: z.infer<typeof InputSchema>
 ): Promise<RemainingBucketUnitsResult[] | ReportingActionError> => {
@@ -56,6 +56,10 @@ export const getRemainingBucketUnits = withAuth(async (
   const { clientId, currentDate } = validationResult.data;
 
   const { knex } = await createTenantKnex();
+
+  // A client-restricted user gets no report about a client outside their scope.
+  const outOfScope = await clientOutOfScopeError(knex, tenant, user, clientId);
+  if (outOfScope) return outOfScope;
 
   console.log(`Fetching remaining bucket units for client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
