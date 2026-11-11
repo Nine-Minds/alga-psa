@@ -9,6 +9,7 @@ import { registeredObjectTypes } from './index';
 import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
+  SEARCH_TYPE_RESOURCE,
   type ClientAccess,
 } from './acl';
 import {
@@ -102,30 +103,15 @@ export function emptyGroups(): Record<SearchObjectType, number> {
   ) as Record<SearchObjectType, number>;
 }
 
-/**
- * Resources whose `read` rules bound the clients a search principal may see. Search has one client
- * set per principal, so it is the intersection over these: a restriction on any of them narrows
- * every client-keyed search result (fail closed).
- */
-// LEVERAGE: friction search-single-client-set — one client set per principal makes a bundle that restricts only
-// one resource (say assets) narrow every search type; per-type sets would follow each resource's own rules.
-export const SEARCH_CLIENT_RESOURCES = [
-  'client',
-  'contact',
-  'ticket',
-  'project',
-  'asset',
-  'document',
-  'interaction',
-  'time_entry',
-] as const;
+/** Resources whose `read` rules bound the clients of the search types that belong to them (see SEARCH_TYPE_RESOURCE). */
+export const SEARCH_CLIENT_RESOURCES = [...new Set(Object.values(SEARCH_TYPE_RESOURCE))];
 
 /**
  * Single source of truth for which clients and boards a search principal may see.
  *
  * Client-portal users are scoped to their own client. An internal/MSP user is resolved through the
  * authorization subject resolver and their bundle rules: when those restrict clients they get
- * `{ mode: 'scoped', clientIds }`, when they restrict ticket boards they also get `boardIds`.
+ * `{ mode: 'by_resource' }` with one client set per resource (each applies to its own search types only), when they restrict ticket boards they also get `boardIds`.
  * The SQL predicate and the per-row visibility verifier both consume this value, so the
  * restriction is enforced in both layers without an `isInternal` shortcut to audit.
  *
@@ -149,9 +135,11 @@ export async function resolveClientAccess(
     boardResource: 'ticket',
   });
   const boards = scope.boardIds === null ? {} : { boardIds: scope.boardIds };
-  return scope.clientIds === null
+  const restricted = Object.entries(scope.clientIdsByResource)
+    .filter((entry): entry is [string, string[]] => entry[1] !== null);
+  return restricted.length === 0
     ? { mode: 'all', ...boards }
-    : { mode: 'scoped', clientIds: scope.clientIds, ...boards };
+    : { mode: 'by_resource', clientIdsByResource: Object.fromEntries(restricted), ...boards };
 }
 
 export function toSearchResultRow(

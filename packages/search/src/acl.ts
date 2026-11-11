@@ -21,19 +21,45 @@ export interface ComposedAclHints {
 
 /**
  * Client visibility for a search principal. `all` means unrestricted. `scoped` means the principal
- * may only see rows whose `client_scope_id` is in `clientIds`: client-portal users (their own client)
- * and internal users whose authorization-bundle rules restrict clients. Keeping this an explicit mode
- * rather than overloading an empty array is what lets the SQL predicate and the per-row verifier
- * agree on one answer; `resolveClientAccess` is the only place that decides it.
+ * may only see rows whose `client_scope_id` is in `clientIds`, on every object type: client-portal
+ * users (their own client). `by_resource` is an internal user whose authorization-bundle rules
+ * restrict clients per resource: each entry of `clientIdsByResource` bounds the search types of that
+ * resource only (see SEARCH_TYPE_RESOURCE); a resource with no entry is unrestricted, and an empty
+ * set means nothing of that resource is readable. The explicit mode, never an empty array standing
+ * for "unrestricted", is what lets the SQL predicate and the per-row verifiers agree;
+ * `resolveClientAccess` is the only place that decides it.
  *
  * `boardIds` is a second, independent restriction: when present, ticket rows (and ticket comments)
  * are limited to those boards, whatever the client mode.
  */
-// LEVERAGE: friction search-access-shape — board restriction rides on ClientAccess because every caller already
-// threads this one value to the principal; a principal-level `access` object (clients, boards, ...) would say it honestly.
 export type ClientAccess =
   | { mode: 'all'; boardIds?: string[] }
-  | { mode: 'scoped'; clientIds: string[]; boardIds?: string[] };
+  | { mode: 'scoped'; clientIds: string[]; boardIds?: string[] }
+  | { mode: 'by_resource'; clientIdsByResource: Readonly<Record<string, readonly string[]>>; boardIds?: string[] };
+
+/** The authorization resource whose `read` rules bound the clients of each client-bounded search type. */
+export const SEARCH_TYPE_RESOURCE: Readonly<Record<string, string>> = {
+  ticket: 'ticket',
+  ticket_comment: 'ticket',
+  project: 'project',
+  project_phase: 'project',
+  project_task: 'project',
+  project_task_comment: 'project',
+  asset: 'asset',
+  client: 'client',
+  contact: 'contact',
+  document: 'document',
+  interaction: 'interaction',
+  time_entry: 'time_entry',
+};
+
+/** The clients `access` allows for rows of `objectType`; null when that type is not client-restricted. */
+export function clientIdsForObjectType(access: ClientAccess | undefined, objectType: string): readonly string[] | null {
+  if (!access || access.mode === 'all') return null;
+  if (access.mode === 'scoped') return access.clientIds;
+  const resource = SEARCH_TYPE_RESOURCE[objectType];
+  return resource !== undefined ? access.clientIdsByResource[resource] ?? null : null;
+}
 
 export interface SearchAclPrincipal {
   userId: string;
@@ -120,14 +146,29 @@ export const STRICT_CLIENT_SCOPE_OBJECT_TYPES: readonly string[] = [
 /** Object types whose rows belong to a ticket, and so to the ticket's board. */
 const BOARD_SCOPED_OBJECT_TYPES: readonly string[] = ['ticket', 'ticket_comment'];
 
+const NULL_SCOPE_OR_IN_SET =
+  '((client_scope_id IS NULL AND NOT (object_type = ANY(?::text[]))) OR client_scope_id = ANY(?::uuid[]))';
+
+/** Client-scope predicate: one set for every type (`scoped`), or each resource's set for its own types (`by_resource`). */
+function clientScopeSql(access: ClientAccess): SqlFragment {
+  if (access.mode === 'all') return { sql: 'TRUE', bindings: [] };
+  if (access.mode === 'scoped') {
+    return { sql: NULL_SCOPE_OR_IN_SET, bindings: [[...STRICT_CLIENT_SCOPE_OBJECT_TYPES], access.clientIds] };
+  }
+  const clauses: string[] = [];
+  const bindings: unknown[] = [];
+  for (const [resource, clientIds] of Object.entries(access.clientIdsByResource)) {
+    const types = Object.entries(SEARCH_TYPE_RESOURCE).filter(([, r]) => r === resource).map(([type]) => type);
+    if (types.length === 0) continue;
+    clauses.push(`(NOT (object_type = ANY(?::text[])) OR ${NULL_SCOPE_OR_IN_SET})`);
+    bindings.push(types, [...STRICT_CLIENT_SCOPE_OBJECT_TYPES], [...clientIds]);
+  }
+  return clauses.length === 0 ? { sql: 'TRUE', bindings: [] } : { sql: clauses.join(' AND '), bindings };
+}
+
 export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
   const clientAccess = user.clientAccess ?? { mode: 'all' };
-  const clientScopeClause = clientAccess.mode === 'all'
-    ? 'TRUE'
-    : '((client_scope_id IS NULL AND NOT (object_type = ANY(?::text[]))) OR client_scope_id = ANY(?::uuid[]))';
-  const clientScopeBindings = clientAccess.mode === 'all'
-    ? []
-    : [[...STRICT_CLIENT_SCOPE_OBJECT_TYPES], clientAccess.clientIds];
+  const clientScope = clientScopeSql(clientAccess);
 
   const boardIds = clientAccess.boardIds;
   // `s` is the search index alias every query in query.ts uses. The correlated reads are tenant-joined.
@@ -165,7 +206,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
         AND (cardinality(visible_to_roles) = 0 OR visible_to_roles && ?::text[])
         AND (is_internal_only = false OR ?::boolean = true)
         AND (is_private = false OR visible_to_user_ids && ARRAY[?]::uuid[])
-        AND ${clientScopeClause}
+        AND ${clientScope.sql}
         AND ${boardClause}
       )
     `,
@@ -175,7 +216,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
       user.roles ?? [],
       user.isInternal ?? false,
       user.userId,
-      ...clientScopeBindings,
+      ...clientScope.bindings,
       ...boardBindings,
     ],
   };
@@ -246,15 +287,11 @@ export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
   return visibleRows;
 }
 
-function hasClientAccess(user: SearchAclPrincipal, clientId: string | null | undefined): boolean {
-  if (!clientId) {
-    return true;
-  }
-  const clientAccess = user.clientAccess ?? { mode: 'all' };
-  if (clientAccess.mode === 'all') {
-    return true;
-  }
-  return clientAccess.clientIds.includes(clientId);
+function hasClientAccess(user: SearchAclPrincipal, objectType: SearchObjectType, clientId: string | null | undefined): boolean {
+  const allowed = clientIdsForObjectType(user.clientAccess, objectType);
+  if (allowed === null) return true;
+  if (!clientId) return !STRICT_CLIENT_SCOPE_OBJECT_TYPES.includes(objectType);
+  return allowed.includes(clientId);
 }
 
 function parseAssignedUsers(value: unknown): string[] {
@@ -312,10 +349,7 @@ function hasTicketClientAccess(
   objectType: 'ticket' | 'ticket_comment',
   clientId: string | null | undefined,
 ): boolean {
-  const clientAccess = user.clientAccess ?? { mode: 'all' };
-  if (clientAccess.mode === 'all') return true;
-  if (!clientId) return !STRICT_CLIENT_SCOPE_OBJECT_TYPES.includes(objectType);
-  return clientAccess.clientIds.includes(clientId);
+  return hasClientAccess(user, objectType, clientId);
 }
 
 // LEVERAGE: friction portal-ticket-policy-in-search — the canonical portal policy (board visibility
@@ -376,7 +410,7 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
 
 registerSearchVisibilityVerifier('project', async (knex, user, row) => {
   const clientId = await projectClientIdForProject(knex, user, row.id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project', clientId);
 });
 
 registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
@@ -386,7 +420,7 @@ registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
     .first();
   if (!phase) return false;
   const clientId = await projectClientIdForProject(knex, user, phase.project_id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project_phase', clientId);
 });
 
 registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
@@ -402,7 +436,7 @@ registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
   const task = await query;
   if (!task) return false;
   const clientId = await projectClientIdForProject(knex, user, task.project_id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project_task', clientId);
 });
 
 registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row) => {
@@ -420,7 +454,7 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
   const comment = await query;
   if (!comment) return false;
   const clientId = await projectClientIdForProject(knex, user, comment.project_id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project_task_comment', clientId);
 });
 
 /**
@@ -434,11 +468,11 @@ async function clientOwnedRecordVisible(
   objectType: ClientScopedObjectType,
   objectId: string,
 ): Promise<boolean> {
-  const clientAccess = user.clientAccess ?? { mode: 'all' };
-  if (clientAccess.mode === 'all') return true;
+  const allowed = clientIdsForObjectType(user.clientAccess, objectType);
+  if (allowed === null) return true;
   if (!user.tenant) return false;
   const scope = (await resolveClientScopes(knex, user.tenant, objectType, [objectId])).get(objectId) ?? null;
-  return scope !== null && clientAccess.clientIds.includes(scope);
+  return scope !== null && allowed.includes(scope);
 }
 
 for (const objectType of ['client', 'contact', 'interaction', 'time_entry'] as const) {

@@ -36,13 +36,18 @@ const BOARD_TEMPLATES: readonly RelationshipTemplateKey[] = ['selected_boards'];
 const NO_SUCH_ID = '00000000-0000-0000-0000-000000000000';
 
 export interface ReadableScope {
-  /** Clients the subject may read on every named resource; null when no named resource restricts clients. */
-  clientIds: string[] | null;
+  /**
+   * Clients the subject may read, per requested resource. null: that resource is not restricted by
+   * client. []: nothing of that resource is readable. Each resource is evaluated on its own rules.
+   */
+  clientIdsByResource: Record<string, string[] | null>;
   /** Boards the subject may read tickets from; null when ticket reads are not restricted by board. */
   boardIds: string[] | null;
 }
 
-export const UNRESTRICTED_READABLE_SCOPE: ReadableScope = Object.freeze({ clientIds: null, boardIds: null });
+export function unrestrictedReadableScope(resources: readonly string[]): ReadableScope {
+  return { clientIdsByResource: Object.fromEntries(resources.map((resource) => [resource, null])), boardIds: null };
+}
 
 export interface ResolveReadableScopeInput {
   tenant: string;
@@ -81,12 +86,6 @@ async function allowedIds(
   return allowed.sort();
 }
 
-function intersect(sets: Array<string[] | null>): string[] | null {
-  const restricting = sets.filter((set): set is string[] => set !== null);
-  if (restricting.length === 0) return null;
-  return restricting.reduce((acc, set) => acc.filter((id) => set.includes(id)));
-}
-
 /**
  * The clients and boards `user` may read. A tenant with no published bundle assignment is
  * answered by the one cached probe and returns unrestricted without loading the subject or any rule.
@@ -97,7 +96,7 @@ export async function resolveReadableScope(
 ): Promise<ReadableScope> {
   const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
   const tenantScope = await probeTenantAuthorizationScope(knex, input.tenant, requestCache);
-  if (!tenantScope.publishedAssignments) return UNRESTRICTED_READABLE_SCOPE;
+  if (!tenantScope.publishedAssignments) return unrestrictedReadableScope(input.clientResources);
 
   const subject = await resolveAuthorizationSubject(knex, { tenant: input.tenant, user: input.user, requestCache });
   const rules = await resolveBundleNarrowingRulesForEvaluation(knex, {
@@ -105,17 +104,16 @@ export async function resolveReadableScope(
     resource: { type: input.clientResources[0] ?? 'ticket', action: 'read' },
     requestCache,
   });
-  if (rules.length === 0) return UNRESTRICTED_READABLE_SCOPE;
+  if (rules.length === 0) return unrestrictedReadableScope(input.clientResources);
 
   const clientRules = onlyFacet(rules, CLIENT_TEMPLATES);
   const subjectClients = [...(subject.portfolioClientIds ?? []), ...(subject.clientId ? [subject.clientId] : [])];
-  const perResource: Array<string[] | null> = [];
+  const clientIdsByResource: Record<string, string[] | null> = {};
   for (const resource of input.clientResources) {
     const named = rules.filter((rule) => rule.resource === resource && rule.templateKey === 'selected_clients')
       .flatMap((rule) => rule.selectedClientIds ?? []);
-    perResource.push(
-      await allowedIds(clientRules, subject, resource, [...named, ...subjectClients], (clientId) => ({ clientId })),
-    );
+    clientIdsByResource[resource] =
+      await allowedIds(clientRules, subject, resource, [...named, ...subjectClients], (clientId) => ({ clientId }));
   }
 
   let boardIds: string[] | null = null;
@@ -126,5 +124,5 @@ export async function resolveReadableScope(
     boardIds = await allowedIds(boardRules, subject, input.boardResource, named, (boardId) => ({ boardId }));
   }
 
-  return { clientIds: intersect(perResource), boardIds };
+  return { clientIdsByResource, boardIds };
 }

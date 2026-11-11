@@ -73,6 +73,8 @@ describe('search respects client and board restrictions (T018)', () => {
   let restrictedUser: IUserWithRoles;
   let boardUser: IUserWithRoles;
   let unrestrictedUser: IUserWithRoles;
+  let closedTicketUser: IUserWithRoles;
+  let assetOnlyUser: IUserWithRoles;
 
   beforeAll(async () => {
     ctx = await helpers.beforeAll({
@@ -188,6 +190,7 @@ describe('search respects client and board restrictions (T018)', () => {
   async function restrictUser(
     user: IUserWithRoles,
     rules: Array<{ resourceType: string; templateKey: string; config: Record<string, unknown> }>,
+    baseline?: 'open' | 'closed',
   ): Promise<void> {
     const created = await createAuthorizationBundle(db, { tenant, name: `S17-${randomUUID()}`, actorUserId: ctx.user.user_id });
     for (const rule of rules) {
@@ -200,7 +203,7 @@ describe('search respects client and board restrictions (T018)', () => {
         ...rule,
       });
     }
-    await publishBundleRevision(db as any, { tenant, bundleId: created.bundleId, revisionId: created.revisionId, actorUserId: ctx.user.user_id });
+    await publishBundleRevision(db as any, { tenant, bundleId: created.bundleId, revisionId: created.revisionId, actorUserId: ctx.user.user_id, ...(baseline ? { baseline } : {}) });
     await createBundleAssignment(db, { tenant, bundleId: created.bundleId, targetType: 'user', targetId: user.user_id, actorUserId: ctx.user.user_id });
   }
 
@@ -208,6 +211,8 @@ describe('search respects client and board restrictions (T018)', () => {
     restrictedUser = await seedUser('restricted');
     boardUser = await seedUser('boards');
     unrestrictedUser = await seedUser('unrestricted');
+    closedTicketUser = await seedUser('closedticket');
+    assetOnlyUser = await seedUser('assetonly');
     a = await seedClientRecords('alpha', restrictedUser.user_id);
     b = await seedClientRecords('bravo', restrictedUser.user_id);
     c = await seedClientRecords('charlie', restrictedUser.user_id);
@@ -239,6 +244,14 @@ describe('search respects client and board restrictions (T018)', () => {
         config: { selectedClientIds: [a.clientId, b.clientId] },
       })),
     );
+    await restrictUser(
+      closedTicketUser,
+      [{ resourceType: 'ticket', templateKey: 'selected_clients', config: { selectedClientIds: [a.clientId] } }],
+      'closed',
+    );
+    await restrictUser(assetOnlyUser, [
+      { resourceType: 'asset', templateKey: 'selected_clients', config: { selectedClientIds: [a.clientId] } },
+    ]);
     await restrictUser(boardUser, [
       { resourceType: 'ticket', templateKey: 'selected_boards', config: { selectedBoardIds: [a.boardId] } },
     ]);
@@ -333,6 +346,34 @@ describe('search respects client and board restrictions (T018)', () => {
     }
     const unrestricted = await idsOf(unrestrictedUser);
     for (const s of [a, b, c]) expect(unrestricted.has(s.documentId)).toBe(true);
+  }, HOOK_TIMEOUT);
+
+  async function reindexTickets(): Promise<void> {
+    await reindex();
+    for (const s of [a, b, c]) {
+      const doc = await getIndexer('ticket')!.loadOne(db, tenant, s.ticketId);
+      await upsertSearchDoc(db, doc!);
+    }
+  }
+
+  it('a closed bundle naming only ticket read for client A still returns client A tickets', async () => {
+    await reindexTickets();
+    const seen = await idsOf(closedTicketUser);
+    expect(seen.has(a.ticketId)).toBe(true);
+    expect(seen.has(b.ticketId)).toBe(false);
+    expect(seen.has(c.ticketId)).toBe(false);
+    // The closed baseline denies the resources it does not name, each on its own set.
+    for (const id of [a.contactId, a.clientId, a.documentId]) expect(seen.has(id), `closed ${id}`).toBe(false);
+  }, HOOK_TIMEOUT);
+
+  it('a bundle restricting only asset leaves ticket, contact and client search of every client alone', async () => {
+    await reindexTickets();
+    const seen = await idsOf(assetOnlyUser);
+    for (const s of [a, b, c]) {
+      for (const id of [s.ticketId, s.contactId, s.clientId, s.documentId, s.interactionId]) {
+        expect(seen.has(id), `asset-only ${id}`).toBe(true);
+      }
+    }
   }, HOOK_TIMEOUT);
 
   it('leaves unrestricted users on the all mode with one probe query and no clients scan', async () => {
