@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "`co_managed_allocations` carries `allocation_kind` (`workspace` by default, or `seat`) and `sponsor_client_id`; kind-aware constraints require a customer tenant and relationship for workspace rows and a client with neither for seat rows; existing rows read as workspace with no data change.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]

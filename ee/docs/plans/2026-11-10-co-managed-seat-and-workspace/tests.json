@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB integration: existing workspace allocations read as `workspace` after migration, and the kind-aware constraints reject a seat row with a customer tenant and a workspace row without one.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
