@@ -21,7 +21,7 @@ type Row = Record<string, any>;
 const adjustmentPreview = vi.hoisted(() => vi.fn());
 vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustments', () => ({
   previewAutomaticInvoiceDiscounts: adjustmentPreview,
-  reconcileAutomaticInvoiceAdjustments: vi.fn(),
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => ({ automaticDiscountAmount: 0 })),
 }));
 
 // The preview taxes through the tenant's TaxService, which resolves its own
@@ -126,7 +126,10 @@ function buildContractCadenceServicePeriodRow(overrides: Row = {}): Row {
   };
 }
 
-function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
+// Rows written through the stubbed knex, so creation can be compared with preview.
+const insertedRows: Array<{ table: string; row: Record<string, any> }> = [];
+
+function createQueryBuilder(rows: Row[], raw: (sql: string) => string, tableName = '') {
   let resultRows = [...rows];
 
   const builder: any = {
@@ -157,6 +160,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       return builder;
     }),
     orWhere: vi.fn(() => builder),
+    andWhere: vi.fn(() => builder),
     whereIn: vi.fn((column: string, values: any[]) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
@@ -182,6 +186,13 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
     joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
+    insert: vi.fn((row: Record<string, any>) => {
+      insertedRows.push({ table: tableName, row });
+      return { returning: async () => [{ ...row, invoice_id: 'created-invoice-1' }] };
+    }),
+    update: vi.fn(async () => 1),
+    delete: vi.fn(async () => 1),
+    forUpdate: vi.fn(() => builder),
     raw,
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(resultRows).then(resolve, reject),
@@ -250,7 +261,7 @@ const mocks = vi.hoisted(() => {
       throw new Error(`relation "${normalizedTableName}" does not exist`);
     }
 
-    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw);
+    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw, normalizedTableName);
   }) as any;
   knex.raw = raw;
 
@@ -399,6 +410,10 @@ vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
   getDueDate: mocks.getDueDate,
 }));
 
+vi.mock('@alga-psa/shared/services/numberingService', () => ({
+  SharedNumberingService: { getNextNumber: vi.fn(async () => 'INV-1000') },
+}));
+
 vi.mock('@alga-psa/shared/billingClients', () => ({
   getClientDefaultTaxRegionCode: mocks.getClientDefaultTaxRegionCode,
 }));
@@ -437,11 +452,33 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
   },
 }));
 
+// Creation (used by the preview-vs-created date test) runs with no pending contract events.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('../../../../../packages/billing/src/models/clientContractLine', () => ({
+  default: { getClientCredit: vi.fn(async () => 0) },
+}));
+vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
+  getAnalyticsAsync: vi.fn(async () => ({ analytics: { capture: vi.fn() }, AnalyticsEvents: { INVOICE_GENERATED: 'invoice_generated' } })),
+}));
+vi.mock('../../../../../packages/billing/src/services/pdfGenerationService', () => ({
+  createPDFGenerationService: vi.fn(),
+}));
+vi.mock('../../../../../packages/billing/src/actions/taxSourceActions', () => ({
+  getInitialInvoiceTaxSource: vi.fn(async () => 'internal'),
+  shouldUseTaxDelegation: vi.fn(async () => false),
+}));
+
 const {
   previewInvoice,
   previewInvoiceForSelectionInput,
   getPurchaseOrderOverageForSelectionInput,
   generateInvoiceForSelectionInput,
+  createInvoiceFromBillingResult,
 } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
@@ -451,6 +488,7 @@ describe('invoice preview recurring timing', () => {
     vi.clearAllMocks();
     vi.useRealTimers();
     tenantTimeZone.value = null;
+    insertedRows.length = 0;
     adjustmentPreview.mockResolvedValue({ discounts: [] });
     mocks.missingTables.clear();
     mocks.hasPermission.mockReturnValue(true);
@@ -594,6 +632,25 @@ describe('invoice preview recurring timing', () => {
     const result = await previewInvoice('cycle-1');
 
     expect(result).toMatchObject({ success: true, data: { dueDate: '2026-11-18' } });
+    vi.useRealTimers();
+  });
+
+  it('preview issue date equals the created invoice_date (Sydney, 2026-10-18T22:00Z)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+    tenantTimeZone.value = 'Australia/Sydney';
+
+    const preview = await previewInvoice('cycle-1');
+    const billingResult = await mocks.calculateBillingForExecutionWindow();
+    await createInvoiceFromBillingResult(
+      billingResult as any, 'client-1', '2025-02-01', '2025-03-01', 'cycle-1', 'user-1',
+    );
+
+    const created = insertedRows.find((r) => r.table === 'invoices')?.row;
+    expect(created?.invoice_date).toBe('2026-10-19');
+    expect(preview).toMatchObject({ success: true, data: { issueDate: '2026-10-19' } });
+    expect((preview as any).data.issueDate).toBe(created?.invoice_date);
+    expect((preview as any).data.dueDate).toBe(created?.due_date);
     vi.useRealTimers();
   });
 
