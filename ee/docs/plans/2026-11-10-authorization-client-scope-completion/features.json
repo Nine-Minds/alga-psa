@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Interaction lists and detail return only interactions of in-scope clients for a client-restricted subject.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Time-entry lists, ticket time summaries and timesheet entry reads return only entries whose work item belongs to an in-scope client for a client-restricted subject; entries with no client are visible to their own user.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]

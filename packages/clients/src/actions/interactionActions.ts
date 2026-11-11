@@ -20,6 +20,7 @@ import {
   syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
 import { getInteractionById as fetchInteractionById } from './queryActions';
+import { resolveInteractionReadScope } from '../lib/interactionAuthorizationSql';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { assertMspPermission, hasPermissionAsync } from '../lib/authHelpers';
@@ -247,7 +248,9 @@ export const getInteractionsForEntity = withAuth(async (
       if (admitted.handled) return admitted.interactions;
     }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getForEntity(entityId, entityType, tenant);
+      // The read scope is part of the native read: resolved in its transaction, never ahead of it.
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
+      return await InteractionModel.getForEntity(entityId, entityType, tenant, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -275,7 +278,8 @@ export const getRecentInteractions = withAuth(async (
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters }));
     if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getRecentInteractions(filters, tenant);
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
+      return await InteractionModel.getRecentInteractions(filters, tenant, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -297,7 +301,8 @@ export const getInteractionsPage = withAuth(async (
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true }));
     if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return InteractionModel.getInteractionsPage(filters, tenant, trx);
+      const readScope = await resolveInteractionReadScope(trx, tenant, user, 'i');
+      return InteractionModel.getInteractionsPage(filters, tenant, trx, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
