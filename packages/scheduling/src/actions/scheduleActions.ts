@@ -64,7 +64,7 @@ import {
   type CalendarAccess,
 } from '../lib/calendarAccess';
 import { createScheduleEntryReadScope } from '@alga-psa/authorization/scheduleEntryReadAuthorization';
-import { maskEntriesOutsideReadScope } from '../lib/scheduleEntryReadMask';
+import { delegatedViewAccess, maskEntriesOutsideReadScope } from '../lib/scheduleEntryReadMask';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -171,7 +171,17 @@ export const getScheduleEntries = withAuth(async (
     const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), {
       calendar: { start: start.toISOString(), end: end.toISOString(), technicianIds },
     }));
-    if (current.handled) return { success: true, entries: current.entries.map(nativeScheduleView) };
+    if (current.handled) {
+      // The delegated reader admitted these entries; the viewer's own client scope still decides what shows of the work item.
+      const delegated = await withTransaction(db, async (trx: Knex.Transaction) =>
+        maskEntriesOutsideReadScope(
+          trx,
+          await createScheduleEntryReadScope(trx, tenant, user),
+          current.entries.map(nativeScheduleView),
+          delegatedViewAccess(user.user_id)
+        ));
+      return { success: true, entries: delegated };
+    }
 
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {
@@ -1255,7 +1265,15 @@ export const getScheduleEntryById = withAuth(async (
     const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { id: entryId }));
     if (current.handled) {
       const entry = current.entries[0];
-      return entry ? nativeScheduleView(entry) : null;
+      if (!entry) return null;
+      const [masked] = await withTransaction(db, async (trx: Knex.Transaction) =>
+        maskEntriesOutsideReadScope(
+          trx,
+          await createScheduleEntryReadScope(trx, tenant, user),
+          [nativeScheduleView(entry)],
+          delegatedViewAccess(user.user_id)
+        ));
+      return masked;
     }
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {

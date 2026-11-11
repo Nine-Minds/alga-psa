@@ -24,7 +24,7 @@ import {
 // ticket of client C. The schedule read returns that entry as busy time (times intact, no title, no work item),
 // and work item search and the ticket lookup do not return client C's ticket. An unrestricted user sees it all.
 
-const auth = vi.hoisted(() => ({ user: null as any, db: null as any }));
+const auth = vi.hoisted(() => ({ user: null as any, db: null as any, delegated: null as any[] | null }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
@@ -38,6 +38,24 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return { ...actual, createTenantKnex: async () => ({ knex: auth.db, tenant: auth.user.tenant }) };
+});
+
+// The co-managed seam: when `auth.delegated` is set the schedule actions take the delegated branch with those views.
+vi.mock('../../../../../packages/scheduling/src/lib/sharedWorkScheduling', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    scheduleSeam: {
+      ...actual.scheduleSeam,
+      delegate: async (tenant: string, run: any) =>
+        auth.delegated
+          ? run({ readSchedules: async (_db: unknown, _t: string, _id: unknown, options: any) => ({
+              handled: true,
+              entries: options?.id ? auth.delegated!.filter((e) => e.entry_id === options.id) : auth.delegated,
+            }) })
+          : actual.scheduleSeam.delegate(tenant, run),
+    },
+  };
 });
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -107,6 +125,7 @@ describe('schedule, dispatch and ticket lookups respect client scope (T013)', ()
     await mk('deleted', 'ticket', randomUUID());
     await mk('foreign', 'ticket', fx.foreignTicketId);
 
+    auth.delegated = null;
     auth.db = ctx.db;
     auth.user = { ...ctx.user, tenant: ctx.tenantId, user_type: 'internal', roles: [] };
   }, HOOK_TIMEOUT);
@@ -206,6 +225,69 @@ describe('schedule, dispatch and ticket lookups respect client scope (T013)', ()
     expect((await getSchedulingTicketById(fx.a.ticketId))?.ticket_id).toBe(fx.a.ticketId);
   }, HOOK_TIMEOUT);
 
+  it('co-managed delegated reads are masked from the stored work item, even when the delegated view carries none', async () => {
+    await restrictToAAndB();
+    const view = (id: string, over: Record<string, unknown> = {}) => ({
+      tenant: ctx.tenantId, entry_id: id, title: 'Delegated title', notes: 'n', work_item_id: null, work_item_type: 'ad_hoc',
+      scheduled_start: day.toISOString(), scheduled_end: new Date(day.getTime() + 3_600_000).toISOString(),
+      assigned_user_ids: [colleague], status: 'scheduled', recurrence_pattern: null, ...over,
+    });
+    // The delegated view for C hides its work item (null id, ad_hoc); A shows it. Neither may be decided from the view.
+    auth.delegated = [view(entry.C), view(entry.A, { work_item_id: fx.a.ticketId, work_item_type: 'ticket' })];
+
+    const entries = await scheduleRead();
+    expect(entries.get(entry.C).access).toBe('busy');
+    expect(entries.get(entry.C).title).toBe('Busy');
+    expect(entries.get(entry.C).work_item_id).toBeNull();
+    expect(entries.get(entry.A).title).toBe('Delegated title');
+    expect(entries.get(entry.A).work_item_id).toBe(fx.a.ticketId);
+
+    const { getScheduleEntryById } = await import('@alga-psa/scheduling/actions/scheduleActions');
+    expect(((await getScheduleEntryById(entry.C)) as any).title).toBe('Busy');
+    expect(((await getScheduleEntryById(entry.A)) as any).title).toBe('Delegated title');
+  }, HOOK_TIMEOUT);
+
+  it('the redaction fallback decides only the caller\'s candidates and keeps counts and pages correct', async () => {
+    // Many more tickets than the page: a fallback that scanned the tenant would still be right, so check the
+    // statements too: the candidate query must carry the caller's own filters (title search) and no limit.
+    await restrictToAAndB('internal_cost');
+    const extra = randomUUID();
+    const statusId = (await ctx.db('tickets').where({ tenant: ctx.tenantId, ticket_id: fx.a.ticketId }).first('status_id')).status_id;
+    for (let i = 0; i < 3; i++) {
+      await ctx.db('tickets').insert({ tenant: ctx.tenantId, ticket_id: randomUUID(), ticket_number: `T-X-${extra.slice(0, 6)}-${i}`, title: `Unrelated ${i}`, client_id: fx.a.clientId, status_id: statusId });
+    }
+    const statements: string[] = [];
+    const listener = (q: { sql: string }) => statements.push(q.sql);
+    ctx.db.on('query', listener);
+    const { searchPickerWorkItems } = await import('@alga-psa/scheduling/actions/workItemActions');
+    const result: any = await searchPickerWorkItems({ searchTerm: 'Ticket', type: 'ticket', statusFilter: 'all_open', pageSize: 1 } as any);
+    ctx.db.removeListener('query', listener);
+    expect(result.total).toBe(2); // A and B only; C and the unrelated tickets are not counted
+    expect(result.items).toHaveLength(1);
+    const candidateQueries = statements.filter((sql) => /distinct on \("t"\."ticket_id"\)/i.test(sql) && /"t"\."billing_profile_id"/.test(sql));
+    expect(candidateQueries.length).toBe(1);
+    expect(candidateQueries[0]).toMatch(/ilike/i);
+    expect(candidateQueries[0]).not.toMatch(/\blimit\b|\boffset\b/i);
+  }, HOOK_TIMEOUT);
+
+  it('an unrestricted tenant adds at most the one cached tenant-scope probe to schedule and search reads', async () => {
+    const run = async (fn: () => Promise<unknown>) => {
+      const statements: string[] = [];
+      const listener = (q: { sql: string }) => statements.push(q.sql);
+      ctx.db.on('query', listener);
+      await fn();
+      ctx.db.removeListener('query', listener);
+      return statements;
+    };
+    for (const [label, fn] of [['getScheduleEntries', scheduleRead], ['searchPickerWorkItems', picker], ['searchDispatchWorkItems', dispatchSearch]] as const) {
+      const statements = await run(fn);
+      const probes = statements.filter((sql) => sql.includes('publishedAssignments'));
+      expect(probes.length, `${label} probes`).toBeLessThanOrEqual(1);
+      const rest = statements.filter((sql) => !sql.includes('publishedAssignments'));
+      expect(rest.filter((sql) => /authorization_bundle|user_client_portfolios/.test(sql)), `${label} policy loads`).toEqual([]);
+    }
+  }, HOOK_TIMEOUT);
+
   it('control: an unrestricted user sees the full entry and every ticket', async () => {
     const entries = await scheduleRead();
     expect(entries.get(entry.C).title).toBe('Title C');
@@ -237,7 +319,7 @@ describe('schedule, dispatch and ticket lookups respect client scope (T013)', ()
     // SQL facet agrees with the row facet on every stored entry.
     const refs = Object.values(entry).map((id) => ({ entry_id: id }));
     const rows = await ctx.db('schedule_entries').where({ tenant: ctx.tenantId }).whereIn('entry_id', refs.map((r) => r.entry_id)).select('entry_id', 'work_item_id', 'work_item_type');
-    const sqlUnreadable = await unreadableScheduleEntryIds(ctx.db, scope, rows);
+    const sqlUnreadable = await unreadableScheduleEntryIds(ctx.db, scope, rows.map((r) => r.entry_id));
     const rowUnreadable = new Set<string>();
     for (const r of rows) if (!(await isScheduleEntryReadable(ctx.db, scope, r))) rowUnreadable.add(r.entry_id);
     expect([...sqlUnreadable].sort()).toEqual([...rowUnreadable].sort());

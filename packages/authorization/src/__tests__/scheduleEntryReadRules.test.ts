@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bundleRulesRestrict, type BundleNarrowingRule } from '../kernel';
 import {
-  CLIENTLESS_WORK_ITEM_TYPES,
   scheduleEntryReadRules,
   unreadableScheduleEntryIds,
   type ScheduleEntryReadScope,
@@ -43,15 +42,11 @@ describe('unreadableScheduleEntryIds', () => {
   const noDb = new Proxy({}, { get() { throw new Error('no query expected'); } }) as any;
 
   it('costs no query for an unrestricted reader', async () => {
-    const ids = await unreadableScheduleEntryIds(noDb, unrestricted, [{ entry_id: 'e1', work_item_type: 'ticket', work_item_id: 'x' }]);
+    const ids = await unreadableScheduleEntryIds(noDb, unrestricted, ['e1']);
     expect(ids.size).toBe(0);
   });
 
-  it('never narrows entries with no client by design, and costs no query for them', async () => {
-    const entries = [
-      { entry_id: 'a', work_item_type: null, work_item_id: null },
-      ...CLIENTLESS_WORK_ITEM_TYPES.map((type, i) => ({ entry_id: `b${i}`, work_item_type: type, work_item_id: null })),
-    ];
-    expect((await unreadableScheduleEntryIds(noDb, restricted, entries)).size).toBe(0);
+  it('costs no query for an empty list', async () => {
+    expect((await unreadableScheduleEntryIds(noDb, restricted, [])).size).toBe(0);
   });
 });

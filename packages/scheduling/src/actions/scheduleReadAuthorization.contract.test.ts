@@ -23,13 +23,13 @@ function section(source: string, startMarker: string, endMarker: string): string
 describe('schedule reads mask work items the viewer may not read', () => {
   it('getScheduleEntries resolves the read scope once and masks through the single choke point', () => {
     const body = section(scheduleActions, 'export const getScheduleEntries', 'export const addScheduleEntry');
-    expect(body.match(/createScheduleEntryReadScope\(/g)).toHaveLength(1);
+    expect(body.match(/createScheduleEntryReadScope\(/g)).toHaveLength(2); // native read and delegated read, one per request
     expect(body).toContain('maskEntriesOutsideReadScope(trx, readScope');
   });
 
   it('getScheduleEntryById masks through the same choke point', () => {
     const body = section(scheduleActions, 'export const getScheduleEntryById', 'function sanitizeScheduleEntryForEvent');
-    expect(body.match(/createScheduleEntryReadScope\(/g)).toHaveLength(1);
+    expect(body.match(/createScheduleEntryReadScope\(/g)).toHaveLength(2); // native read and delegated read, one per request
     expect(body).toContain('maskEntriesOutsideReadScope(trx, readScope');
   });
 
@@ -51,8 +51,18 @@ describe('ticket lookups and work item search apply ticket read narrowing', () =
     expect(workItemActions.match(/narrowTicketsToReadable\(db, tenant, user, /g)).toHaveLength(3);
   });
 
-  it('getSchedulingTicketById and the time sheet ticket lookup narrow', () => {
+  it('getSchedulingTicketById narrows; the time sheet ticket list is left to S10 so entries and rows stay paired', () => {
     expect(ticketLookupActions).toContain('narrowTicketsToReadable(trx, tenant, user, query)');
-    expect(timeEntryWorkItemActions).toContain("narrowTicketsToReadable(db, tenant, user, ticketsQuery, 'tickets')");
+    expect(timeEntryWorkItemActions).not.toContain('narrowTicketsToReadable');
+  });
+
+  it('the delegated (co-managed) schedule reads are masked through the same choke point', () => {
+    const list = section(scheduleActions, 'export const getScheduleEntries', 'export const addScheduleEntry');
+    const byId = section(scheduleActions, 'export const getScheduleEntryById', 'function sanitizeScheduleEntryForEvent');
+    for (const body of [list, byId]) {
+      const delegated = section(body, 'if (current.handled)', 'const canRead');
+      expect(delegated).toContain('maskEntriesOutsideReadScope(');
+      expect(delegated).toContain('delegatedViewAccess(user.user_id)');
+    }
   });
 });

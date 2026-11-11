@@ -47,9 +47,10 @@ export interface TicketReadScope {
 export async function createTicketReadScope(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles
+  user: IUserWithRoles,
+  /** Share one cache across the request so the tenant fast-path probe runs once. */
+  requestCache: RequestLocalAuthorizationCache = new RequestLocalAuthorizationCache()
 ): Promise<TicketReadScope> {
-  const requestCache = new RequestLocalAuthorizationCache();
   const subject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
@@ -146,8 +147,9 @@ async function readableTicketRows<T extends Record<string, any>>(
 
 /**
  * Narrow `builder` (a tenant-scoped query over `tickets as <alias>`) to the tickets the reader may read.
- * Applied before count and pagination. Only an inexpressible policy runs a per-row decision over the
- * tenant's tickets, and the readable ids then narrow the query.
+ * Applied before count and pagination. Only an inexpressible policy takes the per-row path, and that path decides
+ * ONLY the caller's own candidate rows: the caller's query (filters and joins as built so far) with limit, offset,
+ * order and select cleared. The readable ids then narrow the original query, so counts and pages stay correct.
  */
 export async function narrowTicketQueryToReadable(
   trx: Knex | Knex.Transaction,
@@ -161,9 +163,14 @@ export async function narrowTicketQueryToReadable(
     return;
   }
 
-  const candidates = (await tenantDb(trx, scope.tenant)
-    .scoped(`tickets as ${alias}`)
-    .builder.select(
+  const candidates = (await builder
+    .clone()
+    .clearSelect()
+    .clearOrder()
+    .clear('limit')
+    .clear('offset')
+    .distinctOn(`${alias}.ticket_id`)
+    .select(
       `${alias}.ticket_id`,
       `${alias}.assigned_to`,
       `${alias}.entered_by`,

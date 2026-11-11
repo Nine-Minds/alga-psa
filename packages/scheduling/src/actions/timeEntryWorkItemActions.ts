@@ -6,7 +6,6 @@ import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { validateData } from '@alga-psa/validation';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
-import { narrowTicketsToReadable } from '../lib/ticketReadNarrowing';
 import {
   fetchTimeEntriesParamsSchema, // Re-use for fetching work items based on time sheet
   FetchTimeEntriesParams,
@@ -88,7 +87,9 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
         })
     );
   scopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 'tickets.master_ticket_id', 'mt.ticket_id', { type: 'left' });
-  await narrowTicketsToReadable(db, tenant, user, ticketsQuery, 'tickets');
+  // Not narrowed by ticket read scope here: the time sheet grid has one row per work item returned, so a time entry
+  // whose ticket is dropped would stay in the totals and submission with no row to show it. Narrowing this list
+  // belongs with the time entry list authorization (S10), which must drop the entries and the work items together.
   const tickets = await ticketsQuery
     .select(
       'tickets.ticket_id as work_item_id',

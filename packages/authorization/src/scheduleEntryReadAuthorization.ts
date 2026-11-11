@@ -81,9 +81,10 @@ export function scheduleEntryReadRules(rules: readonly BundleNarrowingRule[]): B
 export async function createScheduleEntryReadScope(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  user: SubjectUserInput
+  user: SubjectUserInput,
+  /** Share one cache across the request so the tenant fast-path probe runs once. */
+  requestCache: RequestLocalAuthorizationCache = new RequestLocalAuthorizationCache()
 ): Promise<ScheduleEntryReadScope> {
-  const requestCache = new RequestLocalAuthorizationCache();
   const subject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const assigned = await resolveBundleNarrowingRulesForEvaluation(trx, {
     subject,
@@ -126,22 +127,33 @@ function scheduleEntrySqlAdapter(alias: string): RelationshipSqlAdapter {
 }
 
 /**
- * Ids of the given entries the reader may NOT read, decided in SQL with the S4 client narrowing. Costs one
- * query for a restricted reader and none for an unrestricted one or an empty list.
+ * Ids of the given entries the reader may NOT read, decided in SQL with the S4 client narrowing. Costs nothing
+ * for an unrestricted reader or an empty list; for a restricted reader it reads the STORED work item of each
+ * entry (never the caller's view of it, which may already be masked or projected), then one narrowed query.
+ * An id with no stored entry is unreadable.
  */
 export async function unreadableScheduleEntryIds(
   trx: Knex | Knex.Transaction,
   scope: ScheduleEntryReadScope,
-  entries: readonly ScheduleEntryRef[]
+  entryIds: readonly string[]
 ): Promise<Set<string>> {
-  if (!scope.restricted || entries.length === 0) return new Set();
+  if (!scope.restricted || entryIds.length === 0) return new Set();
 
-  const candidates = entries.filter((entry) => !isClientlessByDesign(entry));
-  if (candidates.length === 0) return new Set();
+  const ids = [...new Set(entryIds)];
+  const stored = (await tenantDb(trx, scope.tenant)
+    .scoped('schedule_entries as se')
+    .builder.whereIn('se.entry_id', ids)
+    .select('se.entry_id', 'se.work_item_id', 'se.work_item_type')) as ScheduleEntryRef[];
+  const storedIds = new Set(stored.map((row) => row.entry_id));
+  const unreadable = new Set(ids.filter((id) => !storedIds.has(id)));
+
+  const candidates = stored.filter((entry) => !isClientlessByDesign(entry));
+  if (candidates.length === 0) return unreadable;
 
   // One entry is decided by the row facet; a list by the SQL facet.
   if (candidates.length === 1) {
-    return (await isScheduleEntryReadable(trx, scope, candidates[0])) ? new Set() : new Set([candidates[0].entry_id]);
+    if (!(await isScheduleEntryReadable(trx, scope, candidates[0]))) unreadable.add(candidates[0].entry_id);
+    return unreadable;
   }
 
   const alias = 'se';
@@ -158,12 +170,14 @@ export async function unreadableScheduleEntryIds(
   if (!compiled.supported) {
     // The SQL compiler cannot express this policy: decide each entry with the row facet.
     const decisions = await Promise.all(candidates.map((entry) => isScheduleEntryReadable(trx, scope, entry)));
-    return new Set(candidates.filter((_, index) => !decisions[index]).map((entry) => entry.entry_id));
+    candidates.filter((_, index) => !decisions[index]).forEach((entry) => unreadable.add(entry.entry_id));
+    return unreadable;
   }
 
   const rows = (await readable.builder.select(`${alias}.entry_id`)) as Array<{ entry_id: string }>;
   const readableIds = new Set(rows.map((row) => row.entry_id));
-  return new Set(candidates.filter((entry) => !readableIds.has(entry.entry_id)).map((entry) => entry.entry_id));
+  candidates.filter((entry) => !readableIds.has(entry.entry_id)).forEach((entry) => unreadable.add(entry.entry_id));
+  return unreadable;
 }
 
 /** Row facet: may the reader read this one entry? Uses the S4 row resolver for the entry's client. */
