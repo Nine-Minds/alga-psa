@@ -98,6 +98,31 @@ describe('authorization kernel: update and delete require read', () => {
     expect((await kernel.authorizeMutation(mutationInput('create'))).allowed).toBe(true);
   });
 
+  it.each([
+    { ownerUserId: 'user-a', allowed: false },
+    { ownerUserId: 'someone-else', allowed: true },
+  ])('loads approval rules once while enforcing the self-approval guard ($ownerUserId)', async ({ ownerUserId, allowed }) => {
+    const resolveRules = vi.fn(async (): Promise<BundleNarrowingRule[]> => [
+      { id: 'no-self-approval', resource: 'time_entry', action: 'approve', constraintKey: 'not_self_approver' },
+    ]);
+    const kernel = createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider({ relationshipRules: [] }),
+      bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules }),
+      rbacEvaluator: async () => true,
+    });
+
+    const decision = await kernel.authorizeMutation({
+      subject: subject('user-a'),
+      resource: { type: 'time_entry', action: 'approve', id: 'entry-1' },
+      record: { id: 'entry-1', ownerUserId },
+      mutation: { kind: 'approve' },
+    });
+
+    expect(decision.allowed).toBe(allowed);
+    expect(decision.reasons.some((reason) => reason.code === 'not_self_approver_denied')).toBe(!allowed);
+    expect(resolveRules).toHaveBeenCalledTimes(1);
+  });
+
   it('is unchanged for a subject with no rules', async () => {
     const { kernel } = buildKernel(() => []);
     expect((await kernel.authorizeMutation(mutationInput('update'))).allowed).toBe(true);

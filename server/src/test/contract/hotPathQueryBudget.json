@@ -60,7 +60,7 @@
     },
     {
       "name": "timeEntry.approve",
-      "statements": 25,
+      "statements": 22,
       "locks": 0
     },
     {
@@ -95,7 +95,7 @@
     }
   ],
   "totals": {
-    "statements": 506,
+    "statements": 503,
     "locks": 17
   },
   "denylist": [
