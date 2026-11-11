@@ -7,6 +7,7 @@ export * from './relationships';
 export * from './relationshipTemplates';
 export * from './clientPath';
 export * from './clientResolvers';
+export * from './ownedClients';
 export * from './polymorphicParent';
 export * from './requestCache';
 export * from './scope';

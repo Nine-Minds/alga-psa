@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "Search resolves the client-restricted access mode for an internal subject whose rules restrict clients, instead of unrestricted access for every non-client user.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Search"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "The client, contact, interaction, document and time-entry indexers set the record's client scope, and a repeatable per-tenant re-index fills existing rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Search"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "Ticket search for a subject restricted to selected boards returns only tickets on those boards.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Search"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "Records of strict types with no client scope are hidden from client-restricted subjects in search.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Search"
     ]

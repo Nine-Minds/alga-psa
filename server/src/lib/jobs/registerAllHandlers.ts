@@ -168,6 +168,11 @@ import {
   SearchVisibleUserReindexJobData,
 } from './handlers/searchVisibleUserReindexHandler';
 import {
+  SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
+  searchClientScopeReindexHandler,
+  SearchClientScopeReindexJobData,
+} from './handlers/searchClientScopeReindexHandler';
+import {
   SEARCH_RECONCILE_JOB_NAME,
   searchReconcileHandler,
   SearchReconcileJobData,
@@ -500,6 +505,18 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 300000,
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<SearchClientScopeReindexJobData & BaseJobData>(
+    {
+      name: SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
+      handler: async (_jobId, data) => {
+        await searchClientScopeReindexHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 600000,
     },
     registerOpts
   );
@@ -1040,6 +1057,7 @@ export function getAvailableJobHandlers(): string[] {
     KB_ARTICLE_IMPORT_JOB,
     // Usage & Reconciliation
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+    SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
     SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
     'reconcile-hour-block-allocations',

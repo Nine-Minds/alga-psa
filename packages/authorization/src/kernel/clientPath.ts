@@ -48,6 +48,11 @@ export interface DiscriminatorClientResolver {
   /** Row facet: the client that owns record `id`, or null when it has none or does not exist. */
   resolveClient(db: Knex | Knex.Transaction, tenant: string, id: string): Promise<string | null>;
   /**
+   * Bulk row facet: the owning client of every id, in one query. An id that has no client or does not
+   * exist maps to null. Derived from the same path as `resolveClient`, so the two cannot disagree.
+   */
+  resolveClients(db: Knex | Knex.Transaction, tenant: string, ids: readonly string[]): Promise<Map<string, string | null>>;
+  /**
    * SQL facet: fill `subquery` (the body of an `EXISTS`) so that it matches only
    * when the record the outer row points at belongs to one of `clientIds`.
    */
@@ -93,6 +98,23 @@ export function clientPath(path: ClientPath): DiscriminatorClientResolver {
         .where(`p0.${path.idColumn}`, id)
         .first<{ client_id: string | null } | undefined>({ client_id: `${last}.${path.clientColumn}` });
       return row?.client_id ?? null;
+    },
+    async resolveClients(db, tenant, ids) {
+      const owners = new Map<string, string | null>();
+      const wanted = [...new Set(ids.filter(Boolean))];
+      if (wanted.length === 0) return owners;
+      for (const id of wanted) owners.set(id, null);
+      const query = db.queryBuilder().from(`${path.table} as p0`);
+      const last = joinPath(query, path);
+      const rows = await query
+        .where('p0.tenant', tenant)
+        .whereIn(`p0.${path.idColumn}`, wanted)
+        .select<Array<{ id: string; client_id: string | null }>>({
+          id: `p0.${path.idColumn}`,
+          client_id: `${last}.${path.clientColumn}`,
+        });
+      for (const row of rows) owners.set(String(row.id), row.client_id ?? null);
+      return owners;
     },
     narrowToClients(subquery, refs, clientIds) {
       const last = pointedAt(subquery, path, refs);
