@@ -78,6 +78,14 @@
       "import": "./dist/ticketRecordAuthorization.js",
       "types": "./src/ticketRecordAuthorization.ts"
     },
+    "./clientScopeAuthorization": {
+      "import": "./dist/clientScopeAuthorization.js",
+      "types": "./src/clientScopeAuthorization.ts"
+    },
+    "./clientScopeSqlAdapters": {
+      "import": "./dist/clientScopeSqlAdapters.js",
+      "types": "./src/clientScopeSqlAdapters.ts"
+    },
     "./recordProjection": {
       "import": "./dist/recordProjection.js",
       "types": "./src/recordProjection.ts"
