@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "Policy administration offers every resource type in the kernel catalog instead of a fixed list of six.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Policy administration"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "An administrator edits a user's client portfolio on the user's record with the standard client picker; client names are shown, not identifiers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Policy administration"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "The bundle editor publishes a bundle as closed, marks closed bundles in the library, and previews the resource types a closed bundle will deny.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Policy administration"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "The simulator explains a denial caused by a closed baseline, a portfolio, a create check or a read requirement on update.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Policy administration"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "A starter bundle \"Single-client technician\" is available: closed, with `client_portfolio` rules for the operational resource types; and the duplicate starter-bundle definition on the server is removed so there is one source.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Policy administration"
     ]

@@ -188,7 +188,7 @@
   {
     "id": "T022",
     "description": "E2E: an administrator sets a user's portfolio, assigns the starter bundle, sees it marked closed with a denial preview, and the simulator explains a denial for a third client's ticket and for creating a ticket there.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F039",
