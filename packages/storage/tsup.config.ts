@@ -9,6 +9,7 @@ export default defineConfig({
     'models/storage': 'src/models/storage.ts',
     'types/storage': 'src/types/storage.ts',
     'providers/StorageProvider': 'src/providers/StorageProvider.ts',
+    'providers/S3StorageProvider': 'src/providers/S3StorageProvider.ts',
     'config/storage': 'src/config/storage.ts',
   },
   format: ['esm'],
