@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
+import { IUser, IUserWithRoles, IRole, isMspPrincipalUserType } from '@alga-psa/types';
 import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
@@ -680,7 +680,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         </div>
 
       {/* Client portfolio: MSP users only; bundles with a client_portfolio rule read it */}
-      {user.user_type !== 'client' && <UserClientPortfolioEditor userId={user.user_id} />}
+      {isMspPrincipalUserType(user.user_type) && <UserClientPortfolioEditor userId={user.user_id} />}
 
       {/* Password Change Section */}
       {isOwnProfile ? (

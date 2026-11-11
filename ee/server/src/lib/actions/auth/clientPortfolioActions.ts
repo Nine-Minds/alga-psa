@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { tenantDb } from '@alga-psa/db';
-import { TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES, isMspPrincipalUserType } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import {
@@ -55,7 +55,8 @@ async function assertPortfolioUser(
   if (!row) {
     throw new Error('User not found in tenant scope.');
   }
-  if (row.user_type === 'client') {
+  // Allow-list the MSP side (internal | service); a client or unrecognised type is refused.
+  if (!isMspPrincipalUserType(row.user_type)) {
     throw new Error('A client portfolio applies to MSP users only.');
   }
 }
