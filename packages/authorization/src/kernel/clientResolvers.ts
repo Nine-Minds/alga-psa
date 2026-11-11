@@ -39,6 +39,14 @@ export interface ClientResolverRegistry {
     discriminator: string,
     id: string
   ): Promise<string | null>;
+  /** Bulk row facet. Ids of an unknown resolver or discriminator map to null. */
+  resolveClients(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    resolver: string,
+    discriminator: string,
+    ids: readonly string[]
+  ): Promise<Map<string, string | null>>;
   /** SQL facet. Narrows `builder` to rows owned by `clientIds`; matches nothing for an empty set or unknown resolver. */
   applyClients(
     builder: Knex.QueryBuilder,
@@ -68,6 +76,11 @@ export function createClientResolverRegistry(
     async resolveClient(db, tenant, resolver, discriminator, id) {
       const entry = resolvers.get(resolver)?.get(discriminator);
       return entry ? entry.resolveClient(db, tenant, id) : null;
+    },
+    async resolveClients(db, tenant, resolver, discriminator, ids) {
+      const entry = resolvers.get(resolver)?.get(discriminator);
+      if (entry) return entry.resolveClients(db, tenant, ids);
+      return new Map(ids.map((id): [string, string | null] => [id, null]));
     },
     applyClients(builder, resolver, columns, clientIds) {
       const entries = resolvers.get(resolver);

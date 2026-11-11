@@ -6,6 +6,7 @@ export * from './relationships';
 export * from './relationshipTemplates';
 export * from './clientPath';
 export * from './clientResolvers';
+export * from './ownedClients';
 export * from './requestCache';
 export * from './scope';
 export * from './selfApproval';

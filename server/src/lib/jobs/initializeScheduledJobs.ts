@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleQuoteAutoExpirationJob, scheduleDateTriggerScanJob, scheduleGenerateRecurringTicketsJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
+import { initializeScheduler, scheduleQuoteAutoExpirationJob, scheduleDateTriggerScanJob, scheduleGenerateRecurringTicketsJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleSearchClientScopeReindexJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
@@ -11,6 +11,31 @@ const isEnterpriseWorkflowEdition = (): boolean =>
   process.env.EDITION === 'enterprise'
   || process.env.EDITION === 'ee'
   || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+/**
+ * Deploy-time, both editions: queue the per-tenant client-scope re-index of existing search rows.
+ * Every boot of a new release enqueues it; the job only reads index rows that still have no client
+ * scope, so a repeat finds nothing to change. A tenant that fails to enqueue does not stop boot.
+ */
+async function enqueueSearchClientScopeReindex(): Promise<void> {
+  try {
+    const knex = await getConnection(null);
+    const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
+      .unscoped('tenants', 'deploy-time search client-scope re-index enumerates all tenants')
+      .whereNull('suspended_at')
+      .select('tenant');
+    for (const { tenant } of tenants) {
+      try {
+        const jobId = await scheduleSearchClientScopeReindexJob(tenant);
+        logger.info('Search client-scope re-index queued', { tenantId: tenant, jobId });
+      } catch (error) {
+        logger.error(`Failed to queue search client-scope re-index for tenant ${tenant}`, error);
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to enumerate tenants for search client-scope re-index', error);
+  }
+}
 
 /**
  * Initialize all scheduled jobs for the application.
@@ -41,6 +66,8 @@ export async function initializeScheduledJobs(): Promise<void> {
         error: error instanceof Error ? error.message : 'unknown registration failure',
       });
     }
+
+    await enqueueSearchClientScopeReindex();
 
     if (isEnterpriseWorkflowEdition()) {
       logger.info('Skipping server-side recurring schedule convergence (Temporal owns recurring schedules in EE)');
