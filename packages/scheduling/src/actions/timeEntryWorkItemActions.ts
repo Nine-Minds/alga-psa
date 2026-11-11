@@ -6,6 +6,7 @@ import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { validateData } from '@alga-psa/validation';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { narrowTicketsToReadable } from '../lib/ticketReadNarrowing';
 import {
   fetchTimeEntriesParamsSchema, // Re-use for fetching work items based on time sheet
   FetchTimeEntriesParams,
@@ -87,6 +88,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
         })
     );
   scopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 'tickets.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+  await narrowTicketsToReadable(db, tenant, user, ticketsQuery, 'tickets');
   const tickets = await ticketsQuery
     .select(
       'tickets.ticket_id as work_item_id',

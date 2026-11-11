@@ -63,6 +63,8 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '../lib/calendarAccess';
+import { createScheduleEntryReadScope } from '@alga-psa/authorization/scheduleEntryReadAuthorization';
+import { maskEntriesOutsideReadScope } from '../lib/scheduleEntryReadMask';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -187,15 +189,17 @@ export const getScheduleEntries = withAuth(async (
 
       const narrowByPeople = technicianIds && technicianIds.length > 0;
       const narrowByCalendars = calendarIds && calendarIds.length > 0;
-      if (!narrowByPeople && !narrowByCalendars) {
-        return visible;
-      }
+      const shown = !narrowByPeople && !narrowByCalendars
+        ? visible
+        : visible.filter(entry =>
+            (narrowByPeople && entry.assigned_user_ids.some(assignedId => technicianIds!.includes(assignedId))) ||
+            (narrowByCalendars && !!entry.calendar_id && calendarIds!.includes(entry.calendar_id)) ||
+            (canUpdate && entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
+          );
 
-      return visible.filter(entry =>
-        (narrowByPeople && entry.assigned_user_ids.some(assignedId => technicianIds!.includes(assignedId))) ||
-        (narrowByCalendars && !!entry.calendar_id && calendarIds!.includes(entry.calendar_id)) ||
-        (canUpdate && entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
-      );
+      // The viewer's own policy, resolved once for the request: work items they may not read become busy time.
+      const readScope = await createScheduleEntryReadScope(trx, tenant, user);
+      return maskEntriesOutsideReadScope(trx, readScope, shown, access);
     });
 
     return { success: true, entries };
@@ -1294,11 +1298,12 @@ export const getScheduleEntryById = withAuth(async (
       if (decision.access === 'none') {
         return null;
       }
-      if (decision.access === 'busy') {
-        return maskEntry(scheduleEntry, access);
-      }
-
-      return { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
+      const readScope = await createScheduleEntryReadScope(trx, tenant, user);
+      const shown: IScheduleEntry = decision.access === 'busy'
+        ? maskEntry(scheduleEntry, access)
+        : { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
+      const [masked] = await maskEntriesOutsideReadScope(trx, readScope, [shown], access);
+      return masked;
     });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);

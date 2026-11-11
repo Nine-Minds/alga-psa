@@ -41,7 +41,7 @@ function tenantScopedTable(conn: Conn, tenant: string, table: string): Knex.Quer
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
-function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
+export function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
   // Only the primary assignee grants ticket read authorization. Do not trust
   // `ticket_resources.additional_user_id` as an authorization assignment because
   // time-entry workflows can create those rows without ticket row-level access.
@@ -61,7 +61,7 @@ function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRec
   };
 }
 
-async function resolveClientVisibility(
+export async function resolveClientVisibility(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,

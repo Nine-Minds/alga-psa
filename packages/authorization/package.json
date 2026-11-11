@@ -74,6 +74,14 @@
       "import": "./dist/assetReadAuthorization.js",
       "types": "./src/assetReadAuthorization.ts"
     },
+    "./scheduleEntryReadAuthorization": {
+      "import": "./dist/scheduleEntryReadAuthorization.js",
+      "types": "./src/scheduleEntryReadAuthorization.ts"
+    },
+    "./ticketReadAuthorization": {
+      "import": "./dist/ticketReadAuthorization.js",
+      "types": "./src/ticketReadAuthorization.ts"
+    },
     "./ticketRecordAuthorization": {
       "import": "./dist/ticketRecordAuthorization.js",
       "types": "./src/ticketRecordAuthorization.ts"

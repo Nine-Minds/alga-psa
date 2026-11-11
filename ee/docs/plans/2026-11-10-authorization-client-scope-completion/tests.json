@@ -105,7 +105,7 @@
   {
     "id": "T013",
     "description": "DB integration: a colleague's schedule entry for the third client's ticket is returned to that subject with no title or work item, and work item search omits it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F021"
