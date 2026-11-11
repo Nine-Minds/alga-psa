@@ -1,5 +1,6 @@
 'use server';
 
+import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   isClientUserType,
@@ -496,6 +497,12 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             const eventPublisher = new TicketModelEventPublisher(trx);
             const analyticsTracker = new TicketModelAnalyticsTracker();
 
+            await assertTicketCreateAllowed(trx, tenant, user, {
+              client_id: data.client_id,
+              board_id: data.board_id,
+              entered_by: user.user_id,
+            });
+
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
                 data,
@@ -777,6 +784,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Passing trx defers event publishing until the commit.
       const eventPublisher = new TicketModelEventPublisher(trx);
       const analyticsTracker = new TicketModelAnalyticsTracker();
+
+      await assertTicketCreateAllowed(trx, tenant, user, {
+        client_id: createTicketInput.client_id,
+        board_id: createTicketInput.board_id,
+        contact_name_id: createTicketInput.contact_id,
+        assigned_to: createTicketInput.assigned_to,
+        assigned_team_id: createTicketInput.assigned_team_id,
+        entered_by: user.user_id,
+      });
 
       // Use shared TicketModel with retry logic
       // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
@@ -1211,6 +1227,14 @@ export const duplicateTicketBatch = withAuth(async (
         const result = await withTransaction(db, async (trx: Knex.Transaction) => {
           // Re-authorize inside this copy's transaction: a source deleted mid-batch fails the rest cleanly.
           const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, sourceTicketId);
+
+          await assertTicketCreateAllowed(trx, tenant, user, {
+            client_id: source.client_id,
+            board_id: source.board_id,
+            contact_name_id: copy.contactId,
+            assigned_to: source.assigned_to,
+            entered_by: user.user_id,
+          });
 
           // LEVERAGE: pattern ticket-create-composition — single Duplicate still composes creation by hand in addTicket; moving it onto createTicketWithSideEffects removes this second composition (batch-duplicate plan, R1)
           const createdTicket = await createTicketWithSideEffects(trx, tenant, {

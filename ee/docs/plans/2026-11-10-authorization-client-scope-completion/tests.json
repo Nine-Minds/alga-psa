@@ -62,7 +62,7 @@
   {
     "id": "T008",
     "description": "DB integration: a client-restricted subject creating a ticket, contact, interaction, time entry and document association for an out-of-scope client is refused, and for an in-scope client succeeds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]

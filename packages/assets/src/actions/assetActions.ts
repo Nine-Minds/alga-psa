@@ -1,5 +1,6 @@
 'use server';
 
+import { assertAssetCreateAllowed } from '../lib/assetCreateAuthorization';
 import { revalidatePath } from 'next/cache';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
@@ -1265,7 +1266,8 @@ export async function createAssetRecord(
     data: CreateAssetRequest,
     // Importers (e.g. Hudu) project best-effort attributes and must never fail
     // on a required custom field the source didn't supply; they pass false.
-    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource },
+    hooks?: Pick<AssetWriteHooks, 'authorize'>
 ): Promise<Asset> {
     try {
         // Validate input data first
@@ -1280,9 +1282,11 @@ export async function createAssetRecord(
         }
 
         // Start transaction. The output-schema check lives inside it.
-        const created = await knex.transaction(async (trx: Knex.Transaction) =>
-            createAssetInTransaction(trx, tenant, actorUserId, data, options)
-        );
+        const created = await knex.transaction(async (trx: Knex.Transaction) => {
+            // Same hook updateAssetRecord takes: the wrapper's user-scoped decision, run before any write.
+            if (hooks?.authorize) await hooks.authorize(trx);
+            return createAssetInTransaction(trx, tenant, actorUserId, data, options);
+        });
 
         const occurredAt = created.created_at || new Date().toISOString();
         const postCommit = { tenant, assetId: created.asset_id };
@@ -1358,7 +1362,9 @@ export const createAsset = withAuth(async (
         throw new Error('Permission denied: Cannot create assets');
     }
 
-    return await createAssetRecord(knex, tenant, user.user_id, data, options);
+    return await createAssetRecord(knex, tenant, user.user_id, data, options, {
+        authorize: (trx) => assertAssetCreateAllowed(trx, tenant, user, data.client_id),
+    });
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;

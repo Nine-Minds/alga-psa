@@ -11,6 +11,8 @@
  */
 
 import type { Knex } from 'knex';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { SubjectUserInput } from '@alga-psa/authorization/subject';
 import type { IProject, IUserWithRoles } from '@alga-psa/types';
 import ProjectModel from '../models/project';
 import {
@@ -24,7 +26,7 @@ import { createBundleNarrowingProvider } from '@alga-psa/authorization/bundles/n
 
 export type ProjectAuthorizationFields = { project_id?: string | null; client_id?: string | null; assigned_to?: string | null };
 
-function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): AuthorizationRecord {
+export function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): AuthorizationRecord {
   const assignedUserIds =
     typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
 
@@ -144,4 +146,19 @@ export async function assertProjectReadAllowed(
   }
 
   return project;
+}
+
+/** The create gate for MSP project creation: the candidate project's client (and assignee) are judged by the read rules. */
+export async function assertProjectCreateAllowed(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: SubjectUserInput,
+  candidate: ProjectAuthorizationFields,
+): Promise<void> {
+  await assertRecordCreateAllowed(trx, {
+    tenant,
+    user,
+    resourceType: 'project',
+    record: toProjectAuthorizationRecord({ ...candidate, project_id: null }),
+  }, 'project');
 }

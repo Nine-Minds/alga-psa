@@ -1,5 +1,6 @@
 'use server'
 
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
@@ -314,6 +315,21 @@ async function contactActionResultErrorFrom(error: unknown, fallback: string): P
   }
 
   return fallback;
+}
+
+/** The shared create gate for every MSP contact create: the candidate contact's client must be in the subject's scope. */
+async function assertContactCreateInScope(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: Parameters<typeof assertRecordCreateAllowed>[1]['user'],
+  clientId: string | null | undefined,
+): Promise<void> {
+  await assertRecordCreateAllowed(trx, {
+    tenant,
+    user,
+    resourceType: 'contact',
+    record: { clientId: clientId ?? null },
+  }, 'contact');
 }
 
 async function prefixedContactActionErrorFrom(error: unknown, fallback: string): Promise<string> {
@@ -746,6 +762,7 @@ export const addContact = withAuth(async (
     // Use the shared ContactModel to create the contact.
     // The model handles validation and business rules.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertContactCreateInScope(trx, tenant, user, createInput.client_id);
       const contact = await ContactModel.createContact(createInput, tenant, trx);
       // Same transaction as the contact: a cross-client location rolls the contact back too.
       const locations = contactData.locations === undefined
@@ -1612,6 +1629,7 @@ export const importContactsFromCSV = withAuth(async (
                 contactData.primary_location_name,
               );
 
+            await assertContactCreateInScope(trx, tenant, user, contactToCreate.client_id);
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
             if (resolvedLocations !== undefined) {
               await replaceContactLocations(
@@ -1886,6 +1904,7 @@ export const createClientContact = withAuth(async (
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertContactCreateInScope(trx, tenant, user, clientId);
       const created = await ContactModel.createContact({
         full_name: structural.data.full_name,
         email: normalizedEmail,

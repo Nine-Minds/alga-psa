@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Creating a ticket, project, asset, contact, interaction, time entry or document association is evaluated by the kernel against the record to be created, so a client-restricted subject cannot create a record for a client outside their scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Kernel semantics"
     ]

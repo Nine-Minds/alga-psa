@@ -57,6 +57,7 @@ import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
 import type { ProjectAuthorizationAction } from '../lib/projectReadAuthorization';
 import { createProjectReadDecider } from '../lib/projectReadAuthorization';
+import { assertProjectCreateAllowed } from '../lib/projectReadAuthorization';
 import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
@@ -1599,6 +1600,11 @@ export const createProject = withAuth(async (
 
             // Add debug logging before database insert
             console.log('Creating project with data:', projectDataWithStatus);
+
+            await assertProjectCreateAllowed(trx, tenant, user, {
+                client_id: validatedData.client_id,
+                assigned_to: validatedData.assigned_to,
+            });
 
             const newProject = await ProjectModel.create(trx, tenant, {
                 ...projectDataWithStatus,

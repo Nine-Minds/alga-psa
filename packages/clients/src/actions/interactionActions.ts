@@ -11,6 +11,7 @@ import InteractionModel from '../models/interactions';
 import type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
+import { isRecordCreateDeniedError } from '@alga-psa/authorization/recordCreateAuthorization';
 import {
   createInteractionScheduleEntry,
   createInteractionWithSideEffects,
@@ -208,7 +209,7 @@ export const addInteraction = withAuth(async (
     return newInteraction;
   } catch (error) {
     if (isInteractionCommandError(error)) return actionError(error.message);
-    if (isInteractionForbidden(error)) return permissionError('Permission denied: Cannot create this interaction.');
+    if (isInteractionForbidden(error) || isRecordCreateDeniedError(error)) return permissionError('Permission denied: Cannot create this interaction.');
     console.error('Error adding interaction:', error)
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;

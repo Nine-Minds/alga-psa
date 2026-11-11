@@ -122,6 +122,10 @@ vi.mock('@alga-psa/documents/models/documentAssociation', () => ({
   },
 }));
 vi.mock('uuid', () => ({ v4: vi.fn(() => `generated-${++h.generatedId}`) }));
+// The client-scope create gate runs against a real connection (covered by T008); this file's fake trx has no query builder.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({
+  isDocumentAssociationCreateAllowed: vi.fn(async () => true),
+}));
 vi.mock('@alga-psa/authorization/assetReadAuthorization', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/authorization/assetReadAuthorization')>();
   const { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider, RequestLocalAuthorizationCache } =
