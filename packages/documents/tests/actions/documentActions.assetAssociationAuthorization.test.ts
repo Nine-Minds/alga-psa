@@ -124,18 +124,33 @@ vi.mock('@alga-psa/documents/models/documentAssociation', () => ({
 vi.mock('uuid', () => ({ v4: vi.fn(() => `generated-${++h.generatedId}`) }));
 vi.mock('@alga-psa/authorization/assetReadAuthorization', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/authorization/assetReadAuthorization')>();
+  const { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider, RequestLocalAuthorizationCache } =
+    await import('@alga-psa/authorization/kernel');
   return {
     ...actual,
     createAssetReadContext: vi.fn(async () => ({
       subject: { tenant: 'tenant-1', userId: 'user-1', userType: 'internal', roleIds: [], teamIds: [], managedUserIds: [], clientId: null, portfolioClientIds: [] },
-      authorizationKernel: {
-        authorizeResource: vi.fn(async (request: { resource: { action: string; id: string } }) => {
-          h.authorizationRequests.push({ action: request.resource.action, id: request.resource.id });
-          const allowed = { read: h.assetReadable, update: h.assetUpdatable, delete: h.assetDeletable };
-          return { allowed: allowed[request.resource.action as keyof typeof allowed] ?? false };
+      // Exercise the real read prerequisite and action evaluation, controlling only policy data.
+      authorizationKernel: createAuthorizationKernel({
+        builtinProvider: new BuiltinAuthorizationKernelProvider(),
+        bundleProvider: new BundleAuthorizationKernelProvider({
+          resolveRules: async ({ resource }) => {
+            h.authorizationRequests.push({ action: resource.action, id: resource.id! });
+            return (['read', 'update', 'delete'] as const).map((action) => ({
+              id: `asset-${action}`,
+              resource: 'asset' as const,
+              action,
+              templateKey: 'selected_clients' as const,
+              selectedClientIds: [
+                { read: h.assetReadable, update: h.assetUpdatable, delete: h.assetDeletable }[action]
+                  ? 'client-1' : 'other-client',
+              ],
+            }));
+          },
         }),
-      },
-      requestCache: {},
+        rbacEvaluator: async () => true,
+      }),
+      requestCache: new RequestLocalAuthorizationCache(),
     })),
   };
 });
