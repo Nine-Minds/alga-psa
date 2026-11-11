@@ -702,8 +702,8 @@ export const getInteractionById = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     // An interaction outside the reader's client scope is indistinguishable from a missing one.
-    const readScope = await resolveInteractionReadScope(knex, tenant, user);
     const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
       return await InteractionModel.getById(interactionId, tenant, trx, readScope);
     });
     if (!interaction) {

@@ -247,8 +247,9 @@ export const getInteractionsForEntity = withAuth(async (
       const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { entity: { id: entityId, type: entityType } }));
       if (admitted.handled) return admitted.interactions;
     }
-    const readScope = await resolveInteractionReadScope(knex, tenant, user);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // The read scope is part of the native read: resolved in its transaction, never ahead of it.
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
       return await InteractionModel.getForEntity(entityId, entityType, tenant, readScope);
     });
   } catch (error) {
@@ -276,8 +277,8 @@ export const getRecentInteractions = withAuth(async (
     const { knex } = await createTenantKnex();
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters }));
     if (admitted.handled) return admitted.interactions;
-    const readScope = await resolveInteractionReadScope(knex, tenant, user);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
       return await InteractionModel.getRecentInteractions(filters, tenant, readScope);
     });
   } catch (error) {
@@ -299,8 +300,8 @@ export const getInteractionsPage = withAuth(async (
     const { knex } = await createTenantKnex();
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true }));
     if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
-    const readScope = await resolveInteractionReadScope(knex, tenant, user, 'i');
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const readScope = await resolveInteractionReadScope(trx, tenant, user, 'i');
       return InteractionModel.getInteractionsPage(filters, tenant, trx, readScope);
     });
   } catch (error) {
