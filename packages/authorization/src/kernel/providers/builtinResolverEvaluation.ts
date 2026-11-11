@@ -6,6 +6,7 @@ import type {
 } from '../contracts';
 import { matchRulesForAction } from '../actionAliases';
 import { closedSourcesNotNaming } from '../closedBaseline';
+import { clientScopeReadRulesForCreate } from '../candidateRecord';
 import { resolveAppliedBuiltinResolvers } from '../builtinRuleResolvers';
 import { DENY_ALL_SCOPE, intersectAuthorizationScopes } from '../scope';
 import { evaluateTemplateForRule } from './bundleProvider';
@@ -40,7 +41,10 @@ export function evaluateBuiltinRuleResolvers(input: AuthorizationEvaluationInput
   );
 
   for (const resolver of applied) {
-    const matching = matchRulesForAction(resolver.rules, resource, action);
+    const matching = [
+      ...matchRulesForAction(resolver.rules, resource, action),
+      ...clientScopeReadRulesForCreate(resolver.rules, resource, action),
+    ];
 
     if (closedNotNaming.has(resolver.id)) {
       contributed = true;

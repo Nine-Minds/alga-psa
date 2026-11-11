@@ -113,6 +113,10 @@
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"
+    },
+    "./recordCreateAuthorization": {
+      "import": "./dist/recordCreateAuthorization.js",
+      "types": "./src/recordCreateAuthorization.ts"
     }
   },
   "scripts": {

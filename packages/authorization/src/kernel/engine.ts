@@ -9,6 +9,7 @@ import type {
   RbacEvaluator,
 } from './contracts';
 import { prerequisiteActionsFor } from './actionAliases';
+import { createCandidateDeniedReason, withCandidateRecord } from './candidateRecord';
 import { getRequestCache } from './requestCache';
 import { intersectAuthorizationScopes } from './scope';
 
@@ -119,9 +120,11 @@ async function findDeniedPrerequisite(
 }
 
 async function evaluateCore(
-  input: AuthorizationEvaluationInput,
+  rawInput: AuthorizationEvaluationInput,
   deps: Pick<AuthorizationKernelFactoryInput, 'builtinProvider' | 'bundleProvider' | 'rbacEvaluator'>
 ): Promise<CoreEvaluation> {
+  // `create` is judged against the candidate record (see candidateRecord.ts).
+  const input = withCandidateRecord(rawInput);
   const requestCache = getRequestCache(input.requestCache);
 
   const hasRbacAccess = await requestCache.getOrLoad(
@@ -158,6 +161,7 @@ async function evaluateCore(
       reasons: [
         ...createRbacAllowedReasons(input),
         ...rules.reasons,
+        ...(input.resource.action === 'create' && !rules.allowed ? [createCandidateDeniedReason(input)] : []),
         ...redactionResult.reasons,
       ],
     },
