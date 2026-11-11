@@ -555,7 +555,16 @@
       "invalidValue": "En av de valda rapportposterna är ogiltig. Ladda om sidan och försök igen.",
       "referenceMissing": "En av de valda rapportposterna finns inte längre. Ladda om sidan och försök igen.",
       "missingField": "Ett obligatoriskt rapportfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt rapportfält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt rapportfält saknas: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den läser {{table}}, som saknar regel för kundtillhörighet.",
+        "raw_sql": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den bygger på rå SQL.",
+        "unsupported_join": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den kopplar {{table}} på ett sätt som behåller rader från andra kunder.",
+        "no_client_anchor": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: ingen av uppgifterna den läser tillhör en kund.",
+        "not_client_attributable": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den läser {{table}}, som inte kan hänföras till en kund.",
+        "unnarrowable_report": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den summerar alla kunders konton."
+      },
+      "clientOutOfScope": "Du har inte åtkomst till den här kunden."
     }
   }
 }

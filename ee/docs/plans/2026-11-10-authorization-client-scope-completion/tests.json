@@ -141,7 +141,7 @@
   {
     "id": "T017",
     "description": "DB integration: a narrowable report returns only in-scope rows, a report that cannot be narrowed is refused, and client, contact, time and ticket exports contain only in-scope records.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027"

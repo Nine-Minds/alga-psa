@@ -27,6 +27,11 @@ vi.mock('@alga-psa/db', () => ({
   },
 }));
 
+// Client scope is not under test here (it is covered against a real database); a subject nothing narrows.
+vi.mock('../../lib/reports/clientScope/reportClientScope', () => ({
+  resolveReportClientScope: async () => ({ narrowed: false, permitsClient: async () => true }),
+}));
+
 import { getRecentClientInvoices } from './getRecentClientInvoices';
 
 describe('getRecentClientInvoices SQL shape', () => {

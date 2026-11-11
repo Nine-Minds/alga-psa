@@ -555,7 +555,16 @@
       "invalidValue": "Um dos registros de relatório selecionados é inválido. Atualize a página e tente novamente.",
       "referenceMissing": "Um dos registros de relatório selecionados não existe mais. Atualize a página e tente novamente.",
       "missingField": "Falta um campo obrigatório do relatório.",
-      "missingFieldNamed": "Falta um campo obrigatório do relatório: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório do relatório: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: ele lê {{table}}, que não tem regra de propriedade por cliente.",
+        "raw_sql": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: ele é construído com SQL bruto.",
+        "unsupported_join": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: ele une {{table}} de uma forma que mantém linhas de outros clientes.",
+        "no_client_anchor": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: nenhum dos dados lidos pertence a um cliente.",
+        "not_client_attributable": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: ele lê {{table}}, que não pode ser atribuído a um cliente.",
+        "unnarrowable_report": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: ele soma as contas de todos os clientes."
+      },
+      "clientOutOfScope": "Você não tem acesso a este cliente."
     }
   }
 }

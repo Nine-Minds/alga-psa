@@ -555,7 +555,16 @@
       "invalidValue": "One of the selected report records is invalid. Please refresh and try again.",
       "referenceMissing": "One of the selected report records no longer exists. Please refresh and try again.",
       "missingField": "Missing required report field.",
-      "missingFieldNamed": "Missing required report field: {{field}}."
+      "missingFieldNamed": "Missing required report field: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "This report is not available to you because it cannot be limited to your clients: it reads {{table}}, which has no client ownership rule.",
+        "raw_sql": "This report is not available to you because it cannot be limited to your clients: it is built from raw SQL.",
+        "unsupported_join": "This report is not available to you because it cannot be limited to your clients: it joins {{table}} in a way that keeps rows from other clients.",
+        "no_client_anchor": "This report is not available to you because it cannot be limited to your clients: none of the data it reads belongs to a client.",
+        "not_client_attributable": "This report is not available to you because it cannot be limited to your clients: it reads {{table}}, which is not attributable to a client.",
+        "unnarrowable_report": "This report is not available to you because it cannot be limited to your clients: it totals the accounts of every client together."
+      },
+      "clientOutOfScope": "You do not have access to this client."
     }
   }
 }

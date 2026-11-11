@@ -5,6 +5,8 @@
 
 import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
@@ -661,6 +663,10 @@ export class ContactService extends BaseService<IContact> {
       is_inactive: false,
       ...filters,
     }, knex, context.tenant);
+
+    // The export reads the contacts the caller may read, through the same narrowing as the contact list:
+    // contacts of clients outside the caller's scope, and contacts with no client, are not exported.
+    (await (await createClientScopeContext(knex, context.tenant, subjectFromServiceContext(context))).narrowing('contact', 'c')).apply(query);
 
     const baseRows = await query
       .select(

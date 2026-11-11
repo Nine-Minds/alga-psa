@@ -1379,8 +1379,25 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
   const { knex } = await createTenantKnex();
 
   const exportData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Fetch location data for all clients
-    const clientIds = clients.map(c => c.client_id);
+    // The browser names WHICH clients to export; it is never trusted for WHAT they contain or whether the caller
+    // may read them. Re-read the requested clients through the same narrowed client query the list uses: an id
+    // outside the caller's client scope (or one that does not exist) is dropped, and every exported value comes
+    // from the database. Rows keep the order the caller asked for.
+    const requestedIds = Array.from(new Set(
+      (Array.isArray(clients) ? clients : [])
+        .map((client) => client?.client_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ));
+    const readableQuery = tenantDb(trx, tenant).table('clients as c').whereIn('c.client_id', requestedIds);
+    (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(readableQuery);
+    const readableRows: IClient[] = requestedIds.length > 0 ? await readableQuery.select('c.*') : [];
+    const readableById = new Map(readableRows.map((row) => [row.client_id, row]));
+    const exportClients = requestedIds
+      .map((id) => readableById.get(id))
+      .filter((client): client is IClient => Boolean(client));
+
+    // Fetch location data for the readable clients
+    const clientIds = exportClients.map(c => c.client_id);
     const locations = await tenantScopedTable(trx, 'client_locations', tenant)
       .whereIn('client_id', clientIds)
       .andWhere('is_default', true);
@@ -1409,7 +1426,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
     });
 
     // Prepare export data with location fields
-    return clients.map(client => {
+    return exportClients.map(client => {
       const location = locationMap.get(client.client_id) || {};
       const clientTags = tagMap.get(client.client_id) || [];
       const tagNames = clientTags.join(', ');
