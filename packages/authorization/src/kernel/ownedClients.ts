@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { tenantClientOwnership } from '@alga-psa/db/tenantTableManifest';
 import { clientResolvers, type ClientResolverRegistry } from './clientResolvers';
 
