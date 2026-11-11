@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "A package can register a built-in rule resolver for a class of subjects; rules from a registered resolver apply before bundle rules, can declare a closed baseline, and are not editable in policy administration; with no resolver registered behavior is unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Kernel semantics"
     ]

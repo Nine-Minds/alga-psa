@@ -56,7 +56,7 @@ function buildReasons(rules: BundleNarrowingRule[]): AuthorizationReason[] {
   ];
 }
 
-function evaluateTemplateForRule(
+export function evaluateTemplateForRule(
   rule: BundleNarrowingRule,
   input: AuthorizationEvaluationInput
 ): boolean {
