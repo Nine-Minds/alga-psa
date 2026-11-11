@@ -421,6 +421,40 @@ function applyTicketReadAuthorizationSql(
   });
 }
 
+/**
+ * A tenant-scoped `tickets as t` query already narrowed by the ticket read SQL, or null when the
+ * policy cannot be expressed in SQL (the caller then falls back to the JS kernel on a fresh query;
+ * a partially compiled predicate must never run). `t` is the alias the ticket SQL adapter targets.
+ */
+function ticketReadNarrowedQuery(
+  trx: Knex.Transaction,
+  tenant: string,
+  context: TicketAuthorizationContext
+): TenantScopedQuery | null {
+  const scoped = tenantDb(trx, tenant).scoped('tickets as t');
+  return applyTicketReadAuthorizationSql(scoped, trx, tenant, context).supported ? scoped : null;
+}
+
+/**
+ * Rows of a `tickets as t` query the reader may see, narrowed in SQL (so a `limit`/count over the
+ * result is already in scope). Only a policy the SQL compiler cannot express (field redactions,
+ * unsupported constraints) takes the per-row kernel path.
+ */
+async function selectTicketsReadableBy<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+  trx: Knex.Transaction,
+  tenant: string,
+  context: TicketAuthorizationContext,
+  build: (scoped: TenantScopedQuery) => Knex.QueryBuilder
+): Promise<Array<{ ticket: T; redactedFields: string[] }>> {
+  const narrowed = ticketReadNarrowedQuery(trx, tenant, context);
+  if (narrowed) {
+    const rows = (await build(narrowed)) as T[];
+    return rows.map((ticket) => ({ ticket, redactedFields: [] as string[] }));
+  }
+  const rows = (await build(tenantDb(trx, tenant).scoped('tickets as t'))) as T[];
+  return authorizeTicketReads(trx, context, rows);
+}
+
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
   return {
@@ -976,30 +1010,32 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       .where({ master_ticket_id: bundleRootId })
       .first();
 
-    const rawBundleChildrenQuery = tenantScopedTable(trx, 'tickets as ct', tenant)
-      .select(
-        'ct.ticket_id',
-        'ct.ticket_number',
-        'ct.title',
-        'ct.client_id',
-        'ct.contact_name_id',
+    // Children are narrowed by the ticket read SQL, not filtered afterwards.
+    const bundleChildReads = await selectTicketsReadableBy<any>(trx, tenant, authorizationContext, (scoped) => {
+      const childrenQuery = scoped.builder.select(
+        't.ticket_id',
+        't.ticket_number',
+        't.title',
+        't.client_id',
+        't.contact_name_id',
         'comp.client_name',
-        'ct.status_id',
-        'ct.is_closed',
-        'ct.closed_at',
-        'ct.entered_at',
-        'ct.updated_at',
-        'ct.entered_by',
-        'ct.assigned_to',
-        'ct.board_id',
-        'ct.assigned_team_id',
-        'ct.billing_profile_id',
-        'ct.attributes'
+        't.status_id',
+        't.is_closed',
+        't.closed_at',
+        't.entered_at',
+        't.updated_at',
+        't.entered_by',
+        't.assigned_to',
+        't.board_id',
+        't.assigned_team_id',
+        't.billing_profile_id',
+        't.attributes'
       );
-    tenantLeftJoin(trx, tenant, rawBundleChildrenQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
-    const rawBundleChildren = await rawBundleChildrenQuery
-      .where({ 'ct.master_ticket_id': bundleRootId })
-      .orderBy('ct.updated_at', 'desc');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+      return childrenQuery
+        .where({ 't.master_ticket_id': bundleRootId })
+        .orderBy('t.updated_at', 'desc');
+    });
 
     const rawBundleMaster = masterTicketId
       ? await (async () => {
@@ -1037,7 +1073,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       const { attributes: _attributes, billing_profile_id: _billingProfileId, ...rest } = row;
       return rest;
     };
-    const bundleChildren = (await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren))
+    const bundleChildren = bundleChildReads
+      .flatMap(({ ticket, redactedFields }) => {
+        const projected = projectReadableRecord('ticket', ticket, redactedFields);
+        return projected ? [projected] : [];
+      })
       .map(withoutAuthorizationOnlyColumns);
     const [bundleMaster] = rawBundleMaster
       ? (await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster]))
@@ -1048,31 +1088,32 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const isBundleMaster = !isBundleChild && bundleChildren.length > 0;
     const authorizedBundleChildIds = new Set(bundleChildren.map((child) => child.ticket_id).filter(Boolean));
 
-    // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master)
-    const aggregatedChildClientComments = isBundleMaster
+    // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master).
+    // Only replies from children the reader may see, narrowed in SQL so the 200-row cap counts
+    // in-scope replies only. When the policy cannot compile to SQL, the already-authorized child
+    // ids bound the same query instead.
+    const filteredAggregatedChildClientComments = isBundleMaster
       ? await (async () => {
-        const commentsQuery = tenantScopedTable(trx, 'comments as c', tenant)
-        .select(
+        const narrowed = ticketReadNarrowedQuery(trx, tenant, authorizationContext);
+        const childTickets = narrowed ?? tenantDb(trx, tenant).scoped('tickets as t');
+        const commentsQuery = childTickets.builder.select(
           'c.*',
-          'ct.ticket_id as child_ticket_id',
-          'ct.ticket_number as child_ticket_number',
-          'ct.title as child_ticket_title',
+          't.ticket_id as child_ticket_id',
+          't.ticket_number as child_ticket_number',
+          't.title as child_ticket_title',
           'comp.client_name as child_client_name'
         );
-        tenantLeftJoin(trx, tenant, commentsQuery, 'tickets as ct', 'c.ticket_id', 'ct.ticket_id');
-        tenantLeftJoin(trx, tenant, commentsQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
+        tenantDb(trx, tenant).tenantJoin(commentsQuery, 'comments as c', 't.ticket_id', 'c.ticket_id');
+        tenantLeftJoin(trx, tenant, commentsQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+        if (!narrowed) {
+          commentsQuery.whereIn('t.ticket_id', [...authorizedBundleChildIds]);
+        }
         return commentsQuery
           .where('c.is_internal', false)
-          .andWhere('ct.master_ticket_id', ticketId)
+          .andWhere('t.master_ticket_id', ticketId)
           .orderBy('c.created_at', 'desc')
           .limit(200);
       })()
-      : [];
-
-    const filteredAggregatedChildClientComments = isBundleMaster
-      ? aggregatedChildClientComments.filter((comment: any) =>
-          typeof comment.child_ticket_id === 'string' && authorizedBundleChildIds.has(comment.child_ticket_id)
-        )
       : [];
 
     // Track ticket view analytics
@@ -3936,7 +3977,9 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         user as IUserWithRoles
       );
 
-      const childrenQuery = tenantScopedTable(trx, 'tickets as t', tenant);
+      // Children are narrowed by the ticket read SQL, not filtered afterwards.
+      const authorizedRows = await selectTicketsReadableBy<any>(trx, tenant, authorizationContext, (scoped) => {
+      const childrenQuery = scoped.builder;
       tenantLeftJoin(trx, tenant, childrenQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'statuses as s', 't.status_id', 's.status_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'priorities as p', 't.priority_id', 'p.priority_id', {
@@ -3950,7 +3993,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
       tenantLeftJoin(trx, tenant, childrenQuery, 'users as au', 't.assigned_to', 'au.user_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
 
-      const rows = await childrenQuery
+      return childrenQuery
         .select(
           't.*',
           's.name as status_name',
@@ -3969,8 +4012,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         )
         .where({ 't.master_ticket_id': masterTicketId })
         .orderBy('t.updated_at', 'desc');
-
-      const authorizedRows = await authorizeTicketReads(trx, authorizationContext, rows as any[]);
+      });
 
       // The projection runs on the mapped row, so a display default is never emitted in place of a redacted field.
       const mapped = authorizedRows.flatMap(({ ticket, redactedFields }): ITicketListItem[] => {

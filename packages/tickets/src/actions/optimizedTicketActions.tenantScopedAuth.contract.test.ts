@@ -98,9 +98,11 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedTable(trx, 'boards', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'schedule_entries as se', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'tickets as ct', tenant)");
+    // Bundle children and mirrored child comments root on a tenant-scoped `tickets as t` query that
+    // the ticket read SQL narrows (selectTicketsReadableBy / ticketReadNarrowedQuery).
+    expect(section).toContain('selectTicketsReadableBy');
+    expect(section).toContain('ticketReadNarrowedQuery');
     expect(section).toContain("tenantScopedTable(trx, 'tickets as mt', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'comments as c', tenant)");
     expect(section).not.toContain("'c.tenant': tenant");
     expect(section).not.toContain('tenant: tenant');
     expect(section).not.toContain(".andWhere({ tenant })");
@@ -309,7 +311,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(mirrorSection).toContain("tenantDb(trx, tenant).table('comments')");
     expect(mirrorSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
 
-    expect(bundleSection).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
+    expect(bundleSection).toContain('selectTicketsReadableBy');
     expect(bundleSection).not.toContain("'t.tenant': tenant");
   });
 });

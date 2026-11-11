@@ -123,7 +123,7 @@
   {
     "id": "T015",
     "description": "DB integration: project task comments on an out-of-scope project are refused through the action and through REST; a bundle with children across clients shows only in-scope children and their mirrored comments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"
