@@ -9,7 +9,7 @@ import {
   type BundleNarrowingRule,
   type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
-import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { probeTenantAuthorizationScope, resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import type { AuthorizationResourceType } from '@alga-psa/authorization/bundles/catalog';
 import {
@@ -22,10 +22,13 @@ import {
  * that produces the rows, so totals, counts and pagination come from the
  * narrowed query. Nothing here filters rows after the query.
  *
- * One context per request: the subject is resolved once (S2 resolver, with the
- * tenant fast path) and its request cache is shared by every narrowing built
- * from it. A tenant with no published bundle assignment resolves no rules, so
- * `narrow` adds nothing and the query is exactly what it was before.
+ * One context per request: the subject is resolved once (S2 resolver) and its
+ * request cache is shared by every narrowing built from it.
+ *
+ * Fast path: the tenant probe runs first. A tenant with no published bundle
+ * assignment has no rule that could narrow, so the subject is never resolved,
+ * `apply` adds nothing and the query is exactly what it was before — the only
+ * statement added is the one probe.
  */
 
 type ClientScopeResource = Extract<AuthorizationResourceType, 'client' | 'contact'>;
@@ -49,7 +52,6 @@ export interface ClientScopeNarrowing {
 }
 
 export interface ClientScopeContext {
-  readonly subject: AuthorizationSubject;
   narrowing(resource: ClientScopeResource, alias?: string): Promise<ClientScopeNarrowing>;
   /**
    * Whether the one row `id` is in scope: an existence query carrying the same
@@ -63,20 +65,31 @@ function rowNarrowingRule(rule: BundleNarrowingRule): BundleNarrowingRule {
   return rule.constraintKey === 'hide_sensitive_fields' ? { ...rule, constraintKey: null } : rule;
 }
 
+const UNNARROWED: ClientScopeNarrowing = Object.freeze({ narrowed: false, apply: <T>(query: T) => query });
+
+/** No bundle can apply in this tenant: nothing narrows and every row is in scope. */
+const UNNARROWED_CONTEXT: ClientScopeContext = Object.freeze({
+  narrowing: async () => UNNARROWED,
+  permits: async () => true,
+});
+
 export async function createClientScopeContext(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
   requestCache: RequestLocalAuthorizationCache = new RequestLocalAuthorizationCache()
 ): Promise<ClientScopeContext> {
+  // A probe that cannot be trusted reports the slow path, so this never skips rules a tenant has.
+  const scope = await probeTenantAuthorizationScope(conn, tenant, requestCache);
+  if (!scope.publishedAssignments) return UNNARROWED_CONTEXT;
+
   // A failed resolution propagates: a subject that cannot be resolved gets no rows.
-  const subject = await resolveAuthorizationSubject(conn, { tenant, user, requestCache });
+  const subject: AuthorizationSubject = await resolveAuthorizationSubject(conn, { tenant, user, requestCache });
 
   // Rules are resolved once per resource per request.
   const rulesByResource = new Map<ClientScopeResource, Promise<BundleNarrowingRule[]>>();
 
   const context: ClientScopeContext = {
-    subject,
     async permits(resource, id) {
       const narrowing = await context.narrowing(resource, 'r');
       if (!narrowing.narrowed) return true;
@@ -100,9 +113,7 @@ export async function createClientScopeContext(
       }
       const rules = await pending;
       const matching = matchRulesForAction(rules, resource, 'read');
-      if (matching.length === 0) {
-        return { narrowed: false, apply: (query) => query };
-      }
+      if (matching.length === 0) return UNNARROWED;
 
       const adapter = def.adapter(columnAlias);
       return {

@@ -341,9 +341,12 @@ export const getContactsByClient = withAuth(async (
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
+    // One scope for the request: the client check and the contact list share its probe, subject and rules.
+    const scope = await createClientScopeContext(db, tenant, user);
+
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
       const clientQuery = tenantScopedTable(trx, 'clients', tenant).where({ client_id: clientId });
-      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'clients')).apply(clientQuery);
+      (await scope.narrowing('client', 'clients')).apply(clientQuery);
       return await clientQuery.first();
     });
 
@@ -353,7 +356,6 @@ export const getContactsByClient = withAuth(async (
 
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       const facade = tenantDb(trx, tenant);
-      const contactScope = await createClientScopeContext(trx, tenant, user);
       const contactQuery = facade.table('contacts')
         .select('contacts.*', 'clients.client_name')
         .where('contacts.client_id', clientId)
@@ -365,7 +367,7 @@ export const getContactsByClient = withAuth(async (
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
 
       facade.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
-      (await contactScope.narrowing('contact', 'contacts')).apply(contactQuery);
+      (await scope.narrowing('contact', 'contacts')).apply(contactQuery);
 
       const rows = await contactQuery;
 

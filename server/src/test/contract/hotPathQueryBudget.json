@@ -85,7 +85,7 @@
     },
     {
       "name": "client.list",
-      "statements": 8,
+      "statements": 7,
       "locks": 0
     },
     {
@@ -95,7 +95,7 @@
     }
   ],
   "totals": {
-    "statements": 506,
+    "statements": 505,
     "locks": 17
   },
   "denylist": [
