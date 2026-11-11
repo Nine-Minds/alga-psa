@@ -91,6 +91,7 @@ import {
     BuiltinAuthorizationKernelProvider,
     BundleAuthorizationKernelProvider,
     RequestLocalAuthorizationCache,
+    builtinResolversRestrict,
     bundleRulesRestrict,
     createAuthorizationKernel,
     type AuthorizationRecord,
@@ -2400,7 +2401,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             // A closed bundle that does not name asset:read restricts it too, so ask the kernel rather than
             // looking for an asset:read rule; otherwise the type facet below would count every asset.
             const requiresRecordAuthorization = context.subject.userType === 'client'
-                || bundleRulesRestrict(assetReadRules, 'asset', 'read');
+                || bundleRulesRestrict(assetReadRules, 'asset', 'read')
+                // A registered built-in rule resolver (closed baseline or named rule) restricts it as well.
+                || builtinResolversRestrict({ subject: context.subject, resource: { type: 'asset', action: 'read' } });
             const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
                 rule.resource === 'asset' && rule.action === 'read'
                 && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')

@@ -8,6 +8,7 @@ import {
   BundleAuthorizationKernelProvider,
   RESOLVER_CLOSED_BASELINE_DENIED_CODE,
   RESOLVER_TEMPLATE_DENIED_CODE,
+  builtinResolversRestrict,
   compileResourceReadAuthorizationSql,
   createAuthorizationKernel,
   registerBuiltinRuleResolver,
@@ -267,5 +268,18 @@ describe('bundle service does not list or edit resolver rules', () => {
       const source = readFileSync(resolve(root, file), 'utf8');
       expect(source).not.toMatch(/BuiltinRuleResolver|builtinRuleResolvers|resolveAppliedBuiltinResolvers/);
     }
+  });
+});
+
+describe('builtinResolversRestrict (consumers that skip per-record authorization when unrestricted)', () => {
+  it('is false with nothing registered, true for a closed resolver that does not name the resource', () => {
+    const asset = inputFor(seat, 'asset', 'read', undefined);
+    expect(builtinResolversRestrict(asset)).toBe(false);
+    register('seat', [rr('s1', 'ticket', 'read')], { baseline: 'closed' });
+    expect(builtinResolversRestrict(asset)).toBe(true);
+    expect(builtinResolversRestrict(inputFor(internal, 'asset', 'read', undefined))).toBe(false);
+    resetBuiltinRuleResolversForTests();
+    register('seat', [rr('s1', 'ticket', 'read')]); // open and not naming asset
+    expect(builtinResolversRestrict(asset)).toBe(false);
   });
 });

@@ -287,6 +287,7 @@ vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
 vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => ({
   // The real restriction predicate: whether the list must authorize each record (closed bundles included).
   bundleRulesRestrict: (await importOriginal<typeof import('@alga-psa/authorization/kernel')>()).bundleRulesRestrict,
+  builtinResolversRestrict: () => false,
   BuiltinAuthorizationKernelProvider: class {},
   BundleAuthorizationKernelProvider: class {
     constructor(_opts: unknown) {}
