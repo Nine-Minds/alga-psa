@@ -225,7 +225,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
 export async function resolveSearchAclPrincipal(
   knex: Knex,
   user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'>,
-  clientAccess: ClientAccess = { mode: 'all' },
+  clientAccess: ClientAccess,
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
   const isClientPortal = isClientUserType(user.user_type);

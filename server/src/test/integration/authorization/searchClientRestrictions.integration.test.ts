@@ -8,7 +8,9 @@
  *    runAppSearch (resolveClientAccess -> ACL predicate -> per-row verifiers) and never gets the third client's records,
  *  - a subject whose bundle restricts ticket boards gets tickets of those boards only,
  *  - strict-type records with no client scope are hidden from narrowed subjects and shown to unrestricted ones,
- *  - a second re-index run changes nothing.
+ *  - a second re-index run changes nothing,
+ *  - readers of the index outside runAppSearch (smart search, the chat search tool) get the same
+ *    narrowed principal from resolveSearchPrincipal.
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -31,7 +33,8 @@ import {
   publishBundleRevision,
   upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
-import { resolveClientAccess, runAppSearch } from '@alga-psa/search/runAppSearch';
+import { resolveClientAccess, resolveSearchPrincipal, runAppSearch } from '@alga-psa/search/runAppSearch';
+import { aclPredicateSql } from '@alga-psa/search/acl';
 import { getIndexer } from '@alga-psa/search';
 import { upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { IUserWithRoles, SearchObjectType } from '@alga-psa/types';
@@ -330,6 +333,37 @@ describe('search respects client and board restrictions (T018)', () => {
     expect(seen.has(c.ticketId)).toBe(false);
     // The board restriction names tickets only: other types stay visible to this subject.
     expect(seen.has(c.contactId)).toBe(true);
+  }, HOOK_TIMEOUT);
+
+  it('readers outside runAppSearch get the same narrowed principal, client and board', async () => {
+    await reindex();
+    for (const s of [a, b, c]) {
+      const doc = await getIndexer('ticket')!.loadOne(db, tenant, s.ticketId);
+      await upsertSearchDoc(db, doc!);
+    }
+
+    // The shape smart search reads the index in: aliased `s`, filtered by the principal's predicate.
+    const readableTickets = async (user: IUserWithRoles) => {
+      const principal = await runWithTenant(tenant, () => resolveSearchPrincipal(db, tenant, user));
+      const acl = aclPredicateSql(principal);
+      const rows = await tenantDb(db, tenant)
+        .table('app_search_index as s')
+        .where('s.object_type', 'ticket')
+        .whereRaw(acl.sql, acl.bindings)
+        .select('s.object_id');
+      return new Set(rows.map((row: { object_id: string }) => row.object_id));
+    };
+
+    const restricted = await readableTickets(restrictedUser);
+    expect([a.ticketId, b.ticketId].every((id) => restricted.has(id))).toBe(true);
+    expect(restricted.has(c.ticketId)).toBe(false);
+
+    const boards = await readableTickets(boardUser);
+    expect(boards.has(a.ticketId)).toBe(true);
+    expect(boards.has(b.ticketId) || boards.has(c.ticketId)).toBe(false);
+
+    const unrestricted = await readableTickets(unrestrictedUser);
+    expect([a, b, c].every((s) => unrestricted.has(s.ticketId))).toBe(true);
   }, HOOK_TIMEOUT);
 
   it('hides strict-type records with no client scope from narrowed subjects, not from unrestricted ones', async () => {

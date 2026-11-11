@@ -11,7 +11,8 @@ const mocks = vi.hoisted(() => ({
   registeredObjectTypes: vi.fn(),
 }));
 
-vi.mock('@alga-psa/search/acl', () => ({
+vi.mock('@alga-psa/search/acl', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/search/acl')>()),
   resolveSearchAclPrincipal: mocks.resolveSearchAclPrincipal,
   verifyResultVisibility: mocks.verifyResultVisibility,
 }));
@@ -20,6 +21,11 @@ vi.mock('@alga-psa/search/query', () => ({
   runSearchQuery: mocks.runSearchQuery,
   countSearchMatchesByType: mocks.countSearchMatchesByType,
   encodeSearchCursor: mocks.encodeSearchCursor,
+}));
+
+// An internal user in a tenant whose rules do not narrow search (narrowed users: searchPrincipal.test.ts).
+vi.mock('@alga-psa/authorization/subject', () => ({
+  resolveReadableScope: async () => ({ clientIdsByResource: {}, boardIds: null }),
 }));
 
 vi.mock('@alga-psa/search/index', () => ({

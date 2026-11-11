@@ -11,6 +11,7 @@ import {
   verifyResultVisibility,
   SEARCH_TYPE_RESOURCE,
   type ClientAccess,
+  type SearchAclPrincipal,
 } from './acl';
 import {
   countSearchMatchesByType,
@@ -140,6 +141,20 @@ export async function resolveClientAccess(
   return restricted.length === 0
     ? { mode: 'all', ...boards }
     : { mode: 'by_resource', clientIdsByResource: Object.fromEntries(restricted), ...boards };
+}
+
+/**
+ * The search principal for `user`, with its client and board restriction resolved by
+ * `resolveClientAccess`. Every reader of `app_search_index` outside `runAppSearch` (smart search,
+ * the chat search tool) builds its principal here, so none of them can fall back to an
+ * unrestricted principal for a narrowed user.
+ */
+export async function resolveSearchPrincipal(
+  knex: Knex,
+  tenant: string,
+  user: IUserWithRoles,
+): Promise<SearchAclPrincipal> {
+  return resolveSearchAclPrincipal(knex, user, await resolveClientAccess(knex, tenant, user));
 }
 
 export function toSearchResultRow(

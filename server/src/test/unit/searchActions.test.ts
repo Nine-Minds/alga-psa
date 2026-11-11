@@ -28,7 +28,8 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/search/acl', () => ({
+vi.mock('@alga-psa/search/acl', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/search/acl')>()),
   resolveSearchAclPrincipal: mocks.resolveSearchAclPrincipal,
   verifyResultVisibility: mocks.verifyResultVisibility,
 }));
