@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
+import dynamic from 'next/dynamic';
+import { IUser, IUserWithRoles, IRole, isMspPrincipalUserType } from '@alga-psa/types';
 import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
@@ -53,6 +54,12 @@ function defaultWorkSchedule(): WorkScheduleDay[] {
     endTime: '17:00',
   })).sort((left, right) => left.dayOfWeek - right.dayOfWeek);
 }
+
+// Enterprise (Pro) only: the community stub renders nothing, and the editor gates itself on the tier.
+const UserClientPortfolioEditor = dynamic(
+  () => import('@enterprise/components/settings/policy/UserClientPortfolioEditor'),
+  { ssr: false }
+);
 
 const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const { t } = useTranslation('msp/settings');
@@ -671,6 +678,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             />
           </div>
         </div>
+
+      {/* Client portfolio: MSP users only; bundles with a client_portfolio rule read it */}
+      {isMspPrincipalUserType(user.user_type) && <UserClientPortfolioEditor userId={user.user_id} />}
 
       {/* Password Change Section */}
       {isOwnProfile ? (
