@@ -106,11 +106,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
-  tenantDb: () => ({
+  tenantDb: (_conn: unknown, tenant: string) => ({
     table: (table: string) => makeBuilder(table),
     unscoped: (table: string) => makeBuilder(table),
     tenantJoin: (builder: unknown) => builder,
-    scoped: (table: string) => makeBuilder(table),
+    scoped: (table: string) => ({ tenant, builder: makeBuilder(table) }),
   }),
   registerAfterCommit: vi.fn(),
   getConnection: vi.fn(),

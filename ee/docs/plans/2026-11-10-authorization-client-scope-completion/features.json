@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Project task comment reads and writes apply the project's authorization on both the server actions and the REST controller.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "For a client-restricted subject a ticket bundle shows only in-scope child tickets and their mirrored comments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
