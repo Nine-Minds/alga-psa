@@ -1,0 +1,725 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration creates the checkouts ledger (item kind/id/quantity, holder kind (contact, user, location, asset, client)/id, client, out/in timestamps and actors, expected check-in, checkout/check-in notes, source, acceptance state/request, origin stock location), tenant-distributed, with a partial unique index allowing one open asset checkout per asset",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A1",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Migration adds assets.holder_kind and assets.holder_id and backfills them from contact_name_id",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A6"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Migration backfills every open and closed asset_assignments row into checkouts as contact checkouts preserving dates, actors, source and note",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A8"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Migration backfills every on-loan stock unit into a checkout to its client (holder kind client) with loan_due_at as expected check-in, using the unit's asset as the item when present, otherwise one unit of its product",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A8",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Checkout engine checkOut(item, holder, options) validates the item/holder pair, opens a ledger row, maintains current-holder columns and writes asset_history in one transaction",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A2"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Checkout engine checkIn(checkout, options) closes the ledger row with actor, note and timestamp, clears current-holder columns, and writes asset_history",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A2"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Engine refuses a second open checkout of an asset unless transfer is requested, and transfer checks in and out atomically",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Engine validates holders by item ownership: client-owned items accept contact, location and client holders of the item's client only; MSP-owned items accept contact, location and client holders of any client; user holders must be active MSP users; contacts not shared mailboxes; asset holders same client with no self or cycle",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A4"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Engine resolves the effective contact through asset-holder chains and keeps assets.contact_name_id equal to it for the asset and every asset held by it",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A5"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Checking out to a location sets assets.location_id to that location",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A6"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "setAssetAssignee and all existing callers (form, bulk, REST, RMM auto-assign and mappings, bundles, client move, merge, import applier) route through the checkout engine, still writing asset_assignments for compatibility",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A7",
+      "FR-A A8"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Check-in sets the asset status to the chosen status, defaulting to the tenant's first active available-kind status, and optionally sets the return location",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A9"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Engine publishes ASSET_CHECKED_OUT and ASSET_CHECKED_IN after commit with item kind, holder kind/id, expected check-in, source and acceptance state",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E1"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Asset checkouts and check-ins also publish ASSET_ASSIGNED / ASSET_UNASSIGNED with owner type set to the holder kind, including from the Identity tile and bulk paths",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E1"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "New events are registered in the event bus schema, workflow event catalog, payload schemas and builders, with designer catalog rows",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E1",
+      "FR-E E2"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Tenant asset checkout settings: default checkout period, reminder lead time, default requires-acceptance, email holders on checkout/check-in, notify effective holder, and versioned agreement text",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR-C C1",
+      "FR-D D7"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Assets settings tab lets an admin edit the checkout settings",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Asset detail holder row shows holder chip with kind icon and link, expected check-in, overdue badge and acceptance badge, with Check out / Check in actions",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B1"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Check out dialog supports contact, user, location and asset holders with expected check-in (defaulted from settings), note, requires-acceptance and email-holder options",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B2",
+      "FR-C C1"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Check in dialog captures condition note, status and optional return location",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B3"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Checkouts panel on the asset detail page lists ledger history for the asset",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B4"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Asset list shows Held by (all holder kinds) and Due columns with filters for holder kind, overdue and acceptance state",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B5"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Asset list bulk Check out and bulk Check in replace bulk Assign",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B6"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Full asset form and quick-add offer a holder field for all kinds that checks out through the engine",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B7"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Asset drawer, client Assets tab and contact page render the holder chip for all holder kinds",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B8"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Accepting an RMM signed-in-user suggestion checks the asset out to the contact with source rmm",
+    "implemented": false,
+    "prdRefs": [
+      "FR-B B9"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Overdue is derived consistently (open and expected check-in in the past) and exposed in UI and API",
+    "implemented": false,
+    "prdRefs": [
+      "FR-C C2"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Editing expected check-in on an open checkout is allowed from the holder row and API and re-arms the due trigger",
+    "implemented": false,
+    "prdRefs": [
+      "FR-C C4"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Date-trigger source asset.checkin_due emits once per checkout at the due date and once at the reminder lead time, deduped via date_trigger_emissions",
+    "implemented": false,
+    "prdRefs": [
+      "FR-C C3"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Loaner loanOut, loanReturn and updateLoanDueDate go through the checkout engine (client required, contact optional), keep stock_units status and loan_due_at mirrored, and the Loaners screen, loaners-out report and overdue view read the ledger",
+    "implemented": false,
+    "prdRefs": [
+      "FR-C C5"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Migration creates acceptance_requests, acceptance_links (hashed tokens, expiry, revocation, use count) and append-only acceptance_decisions (decision, method, signer, comment, agreement hash and version, ip, user agent)",
+    "implemented": false,
+    "prdRefs": [
+      "FR-D D1"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Acceptance engine service creates a request for a subject and recipient, issues and revokes links, and records decisions idempotently",
+    "implemented": false,
+    "prdRefs": [
+      "FR-D D1"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "A checkout with requires-acceptance creates an acceptance request for a contact or user holder and sets acceptance_state pending",
+    "implemented": false,
+    "prdRefs": [
+      "FR-D D2"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Public /accept/[token] page shows the items, agreement text and holder name, and records accept (typed name) or decline (comment)",
+    "implemented": false,
+    "prdRefs": [
+      "FR-D D3"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "MSP can resend an acceptance request or mark it accepted on the holder's behalf with a note",
+    "implemented": false,
+    "prdRefs": [
+      "FR-D D5"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Accepting stores a receipt PDF (items, agreement, signer, time, IP) as a document on the asset and the holder",
+    "implemented": false,
+    "prdRefs": [
+      "FR-D D6"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Declining keeps the checkout open with acceptance_state declined and publishes CHECKOUT_DECLINED; accepting publishes CHECKOUT_ACCEPTED",
+    "implemented": false,
+    "prdRefs": [
+      "FR-D D6",
+      "FR-E E2"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Migration seeds the Assets notification category, its subtypes, and checkout receipt, check-in receipt, acceptance request, check-in reminder and overdue email templates in every supported locale",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E3"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Asset email subscriber sends checkout and check-in receipts to contact and user holders when enabled and requested",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E4"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Asset email subscriber sends the acceptance request email with the signed link",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E4",
+      "FR-D D2"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Asset email subscriber sends reminder and overdue emails from asset.checkin_due emissions",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E4"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "In-app notification to the checking-out MSP user on decline and on overdue",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E4"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Location and asset holders receive no email; effective-contact notification follows the notify-effective-holder setting",
+    "implemented": false,
+    "prdRefs": [
+      "FR-E E5"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Migration creates software_licenses with seats, client, software catalog link, manufacturer, vendor, licensed-to, purchase and expiry fields, reassignable flag and acceptance default",
+    "implemented": false,
+    "prdRefs": [
+      "FR-F F1"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "License product keys are stored through the tenant secret provider, masked in UI and API, and revealed only with license:update",
+    "implemented": false,
+    "prdRefs": [
+      "FR-F F1",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "license RBAC resource with create/read/update/delete is added to default roles",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Engine supports license items: seats check out to contact, user or asset holders, refusing beyond seat count; non-reassignable licenses refuse seat check-in",
+    "implemented": false,
+    "prdRefs": [
+      "FR-F F2",
+      "FR-F F3"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Licenses list and detail screens with seats used/total, expiry, seat holder table and seat check out / check in",
+    "implemented": false,
+    "prdRefs": [
+      "FR-F F3"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "License seats show in holder Equipment sections and on assets holding seats",
+    "implemented": false,
+    "prdRefs": [
+      "FR-F F4"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Date-trigger source license.expiration fires at expiration and at the reminder lead time",
+    "implemented": false,
+    "prdRefs": [
+      "FR-F F5"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "REST CRUD for licenses plus seat checkout and check-in, with OpenAPI docs",
+    "implemented": false,
+    "prdRefs": [
+      "FR-F F6"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Migration adds stock_locations.client_id and location type client_site so a client's spare pool is inventory stock",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G1"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Migration adds product_inventory_settings.asset_role (none, accessory, consumable, component) and requestable, plus issue_out/issue_in stock movement types",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G2",
+      "FR-H H3"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Inventory UI lets an admin create client-owned stock locations and set a product's asset role",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G1",
+      "FR-G G2"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Engine supports accessory checkout of quantity N to contact, user, location or client holders, writing issue_out and returning stock with issue_in on check-in, with partial check-in by split",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G3"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Engine supports consumable issue of quantity N, decrementing stock and recording a closed checkout",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G4"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Engine supports component install of quantity N into an asset holder and removal back to a chosen stock location",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G5"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Product checkouts use stock-movement locking and never drive on-hand negative",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G7"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Client Assets tab shows stock pools by role with on-hand and checked-out counts and Check out / Issue / Install actions",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G6"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Contact, MSP user and client location pages show an Equipment section listing held assets, license seats, accessories and components",
+    "implemented": false,
+    "prdRefs": [
+      "FR-G G6",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Printable equipment-held sheet per contact, user and location",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I2"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Client portal My equipment page lists directly and effectively held assets (including MSP-owned loaners checked out to the contact), license seats and accessories with due dates and acceptance state; client-scope users also see location- and client-held items",
+    "implemented": false,
+    "prdRefs": [
+      "FR-H H1"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Client portal shows pending acceptances with Accept / Decline for the signed-in contact",
+    "implemented": false,
+    "prdRefs": [
+      "FR-H H2",
+      "FR-D D4"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Assets and products can be flagged requestable from the MSP UI",
+    "implemented": false,
+    "prdRefs": [
+      "FR-H H3"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Service-request form builder gains an Equipment field type offering the requester's client's requestable assets and products with availability",
+    "implemented": false,
+    "prdRefs": [
+      "FR-H H3"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Service-request answer-mapping destination Check out to requester turns a fulfilled request into a checkout with source request",
+    "implemented": false,
+    "prdRefs": [
+      "FR-H H4"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Portal users with client asset scope see the client's checkout ledger read-only with commercial fields hidden",
+    "implemented": false,
+    "prdRefs": [
+      "FR-H H5"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Assets > Checkouts ledger screen with filters (item kind, holder kind, client, open/overdue/closed, acceptance, date range)",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I1"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Checkout ledger CSV export",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I1"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "REST POST /api/v1/checkouts, POST /api/v1/checkouts/{id}/checkin, PATCH /api/v1/checkouts/{id} and GET /api/v1/checkouts with OpenAPI docs",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I3"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "GET /api/v1/assets/{id}/assignments is served from the checkouts ledger with its existing response shape",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I3"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Asset check-out and check-in require asset:update plus record-level update authorization",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Mobile asset detail shows holder, due date and acceptance state",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I4"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Mobile technicians can check in an asset by scanning it",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I4"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "CSV asset import accepts holder columns (email, username or location name) and expected check-in and checks assets out on import",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I5"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Asset CSV export includes holder kind, holder name and due date",
+    "implemented": false,
+    "prdRefs": [
+      "FR-I I6"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Migration spec and appliers support checkouts, licenses, client stock locations and product stock as importable entities with external identifiers",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J4",
+      "FR-J J6"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Snipe-IT connector authenticates with base URL and API token and pulls companies, locations, users, categories, manufacturers, models, status labels, suppliers and hardware with custom fields",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J1"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Snipe-IT connector pulls licenses and seats, accessories, consumables, components, open checkouts and checkout activity history",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J1"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Snipe-IT mapping: companies to clients, users to contacts or MSP users, locations to client locations, models/categories to asset types and manufacturer/model, status labels to statuses, suppliers to vendors, with operator confirmation in preview",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J2"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Snipe-IT hardware imports as assets with serial, tag, purchase, warranty, notes and custom fields, and open checkouts import as engine checkouts preserving dates",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J3"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Snipe-IT licenses, accessories, consumables and components import into licenses and client stock locations with holders mapped",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J4"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Snipe-IT checkout activity history imports as closed ledger rows",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J5"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Snipe-IT connector runs through migration preview/apply and is idempotent on re-run",
+    "implemented": false,
+    "prdRefs": [
+      "FR-J J6"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "User-facing docs for checkouts, acceptance, licenses, stock pools, portal equipment and the Snipe-IT import",
+    "implemented": false,
+    "prdRefs": [
+      "Summary"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Checkout to a client holder is supported and shown with a client chip on asset, list, ledger and client pages",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A1",
+      "Decisions"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "MSP-owned assets use the tenant's own client record as client_id and can be created and checked out to MSP users or lent to any client's contact, location or client",
+    "implemented": false,
+    "prdRefs": [
+      "FR-A A4",
+      "Decisions"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Feature flag asset-checkout gates the changed MSP assignment surfaces, ledger screen, portal My equipment and acceptance, and the Equipment service-request field; with the flag off the existing Assign UI behaves as today",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Decisions"
+    ]
+  }
+]

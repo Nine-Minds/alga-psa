@@ -1,0 +1,379 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: migration on a seeded tenant creates checkouts, backfills open and closed asset_assignments rows with dates/actors/source intact, and sets holder_kind/holder_id; re-running is a no-op",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: on-loan stock units backfill to client-holder checkouts with due dates; loanOut with a contact and loanReturn go through the engine and keep stock_units mirrored; loaners-out report reads the ledger",
+    "implemented": false,
+    "featureIds": [
+      "F004",
+      "F030",
+      "F086"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: checkOut/checkIn of an asset to each holder kind writes the ledger, current-holder columns, location (for location holders) and asset_history, and check-in applies the default available status",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F010",
+      "F012"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration guard: second open checkout is refused, transfer succeeds atomically, and the partial unique index rejects a raw duplicate open asset checkout",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F007"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: holder validation rejects wrong-client contact/location/client for client-owned items, accepts any client's contact/location/client for MSP-owned items, rejects shared mailbox, inactive user, self holder and asset cycles",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F087"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: dock out to laptop out to contact resolves contact_name_id on both; checking the laptop in to a location clears the dock's effective contact; portal visibility follows",
+    "implemented": false,
+    "featureIds": [
+      "F009",
+      "F062"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: legacy callers (form update, bulk update, REST PUT contact_name_id, RMM auto-assign, bundle owner change, import applier) produce ledger rows with the right source and keep asset_assignments in step",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F026"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: engine publishes ASSET_CHECKED_OUT/ASSET_CHECKED_IN and ASSET_ASSIGNED/ASSET_UNASSIGNED with holder kind as owner type after commit, and nothing on rollback",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: assignAssetContact (Identity tile) and bulk check out emit ASSET_ASSIGNED",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F023"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Permissions: check out/in is refused without asset:update and for an asset outside the user's record-level update scope",
+    "implemented": false,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Playwright: technician checks an asset out to a user with expected check-in and note from the holder row, sees the chip and due date, checks it in with a condition note and status, and the Checkouts panel shows the stay",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Playwright: asset list Held by/Due columns and overdue filter show a past-due checkout; bulk check out to a location and bulk check in update all selected",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F027"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Playwright: asset form and quick-add holder field checks out to an asset holder; drawer, client tab and contact page show the chip",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: settings defaults (checkout period, requires-acceptance) apply in the dialog and engine; settings tab saves them",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F019"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: asset.checkin_due emits once at lead time and once at due date for a checkout, not again on rescan, re-arms after the expected date changes, and loaner checkouts appear overdue",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB integration: acceptance engine creates request and hashed link, rejects expired/revoked/reused tokens, records one decision with ip/user agent/agreement hash, and acceptance_decisions refuses update on plain Postgres",
+    "implemented": false,
+    "featureIds": [
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Playwright: checkout with requires-acceptance sends an email (MailHog/emulator) whose link opens /accept/[token]; accepting sets accepted, stores the receipt document on asset and contact, and publishes CHECKOUT_ACCEPTED",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F036",
+      "F037",
+      "F040"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: decline keeps checkout open as declined, notifies the MSP user in-app; MSP mark-accepted and resend work",
+    "implemented": false,
+    "featureIds": [
+      "F035",
+      "F037",
+      "F042"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Integration: receipt emails go to contact and user holders only when tenant-enabled and requested, use tenant override templates when present, and are not sent to location/asset holders",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F039",
+      "F043"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Integration: reminder and overdue emails are sent from asset.checkin_due emissions; template seed exists for every supported locale",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F041"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "DB integration: license seat checkout to contact, user and asset holders; refuses beyond seat count; non-reassignable refuses check-in",
+    "implemented": false,
+    "featureIds": [
+      "F044",
+      "F047"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Integration: product key is stored via secret provider, masked in list/detail API, and revealed only with license:update; license RBAC enforced on CRUD",
+    "implemented": false,
+    "featureIds": [
+      "F045",
+      "F046",
+      "F051"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Playwright: create a license, check seats out from the detail screen, see used/total and seat on the contact Equipment section",
+    "implemented": false,
+    "featureIds": [
+      "F048",
+      "F049",
+      "F060"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: license.expiration emits at lead time and expiration",
+    "implemented": false,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "DB integration: accessory checkout from a client stock location decrements on-hand with issue_out, partial check-in splits and returns stock with issue_in; consumable issue decrements and records a closed row; component install and removal move stock to and from an asset",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F053",
+      "F055",
+      "F056",
+      "F057"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "DB integration guard: concurrent product checkouts cannot drive on-hand negative",
+    "implemented": false,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Playwright: admin creates a client stock location and accessory product, then checks 2 out to a contact from the client Assets tab and sees counts update",
+    "implemented": false,
+    "featureIds": [
+      "F054",
+      "F059"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Playwright: printable equipment-held sheet for a contact lists assets, seats and accessories",
+    "implemented": false,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Playwright (portal): contact sees My equipment with an effectively held asset, an MSP-owned loaner checked out to them and a pending acceptance, accepts inline; a contact-scope peer cannot see it; a client-scope user also sees location-held items",
+    "implemented": false,
+    "featureIds": [
+      "F062",
+      "F063"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Playwright (portal + MSP): requestable asset offered in an Equipment service-request field; fulfilling the request checks it out to the requester with source request",
+    "implemented": false,
+    "featureIds": [
+      "F064",
+      "F065",
+      "F066"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Integration (portal): client-scope user sees the read-only checkout ledger without commercial fields",
+    "implemented": false,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Playwright: Checkouts ledger filters to overdue and exports CSV with display names only",
+    "implemented": false,
+    "featureIds": [
+      "F068",
+      "F069"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "API contract: checkouts REST endpoints check out, patch due date, check in and list with filters; assignments endpoint keeps its response shape from the ledger",
+    "implemented": false,
+    "featureIds": [
+      "F070",
+      "F071"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Mobile: asset detail shows holder/due/acceptance and scan check-in closes the checkout",
+    "implemented": false,
+    "featureIds": [
+      "F073",
+      "F074"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Integration: CSV import with holder email/location columns checks assets out; export includes holder and due columns",
+    "implemented": false,
+    "featureIds": [
+      "F075",
+      "F076"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Integration: Snipe-IT connector against a recorded API fixture (emulator) previews mappings and applies hardware, users, locations, statuses, licenses, stock and open checkouts with dates preserved",
+    "implemented": false,
+    "featureIds": [
+      "F077",
+      "F078",
+      "F079",
+      "F080",
+      "F081",
+      "F082"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: Snipe-IT history imports as closed ledger rows and a second apply creates no duplicates",
+    "implemented": false,
+    "featureIds": [
+      "F083",
+      "F084"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Docs check: user-facing pages exist for checkouts, acceptance, licenses, stock pools, portal equipment and Snipe-IT import, with screenshots",
+    "implemented": false,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration: with asset-checkout off, the asset page and list show the existing Assign UI and portal has no My equipment; with it on, the new surfaces render",
+    "implemented": false,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Playwright: create an MSP-owned asset under the tenant's own client, check it out to an MSP user, then transfer it as a loaner to another client's contact; the holder chip and ledger show both stays",
+    "implemented": false,
+    "featureIds": [
+      "F086",
+      "F087"
+    ]
+  }
+]
