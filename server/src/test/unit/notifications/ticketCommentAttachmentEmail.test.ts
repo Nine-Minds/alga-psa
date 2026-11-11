@@ -206,6 +206,8 @@ describe('managed comment email attachments', () => {
 
   it('distinguishes active staff and clients from inactive, ambiguous or unauthorized addresses', async () => {
     expect(await classifyTicketEmailRecipient(db, 'tenant-1', 'ticket-1', addresses[0])).toBe('internal');
+    state.users[0].user_type = 'service';
+    expect(await classifyTicketEmailRecipient(db, 'tenant-1', 'ticket-1', addresses[0])).toBe('unknown');
     state.users[0].user_type = 'client';
     expect(await classifyTicketEmailRecipient(db, 'tenant-1', 'ticket-1', addresses[0])).toBe('external');
     state.users[0].is_inactive = true;

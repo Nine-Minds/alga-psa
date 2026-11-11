@@ -150,15 +150,17 @@ async function prepareInlineImages(
     },
   });
   for (const outcome of rewritten.outcomes) {
-    if (outcome.strategy === 'placeholder') {
-      logger.info('[TicketEmail] Inline image was not included', {
-        tenantId: input.tenant,
-        ticketId: input.ticketId,
-        commentId: input.commentId,
-        fileId: outcome.resolvedFileId,
-        reason: outcome.reason,
-      });
-    }
+    const message = input.commentId
+      ? '[TicketEmailSubscriber] Comment inline image processing outcome'
+      : '[TicketEmail] Description inline image processing outcome';
+    logger.info(message, {
+      tenantId: input.tenant,
+      ticketId: input.ticketId,
+      commentId: input.commentId,
+      resolvedFileId: outcome.resolvedFileId,
+      strategy: outcome.strategy,
+      reason: outcome.reason,
+    });
   }
   const [safeHtml, safeText] = await Promise.all([
     redactTicketEmailRenderedContent(rewritten.html, 'html', input),

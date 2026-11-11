@@ -258,6 +258,56 @@ describe('ticket rich-text email delivery', () => {
     expect(state.authorizeDocument).not.toHaveBeenCalled();
   });
 
+  it('logs each inline image outcome without exposing its source URL', async () => {
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+    state.rewrite.mockResolvedValue({
+      html: '<p>Images processed</p>',
+      attachments: [],
+      outcomes: [
+        { sourceUrl: '/api/documents/view/file-1', resolvedFileId: 'file-1', strategy: 'cid', reason: 'converted_to_cid' },
+        { sourceUrl: 'https://example.test/image', strategy: 'url-fallback', reason: 'not_document_view_url' },
+        { sourceUrl: '/private-image', strategy: 'placeholder', reason: 'authorization_denied' },
+      ],
+    });
+
+    try {
+      await prepareTicketCommentRichTextEmail(input());
+      const outcomes = info.mock.calls.filter(([message]) =>
+        message === '[TicketEmailSubscriber] Comment inline image processing outcome');
+      expect(outcomes).toHaveLength(3);
+      expect(outcomes.map(([, fields]) => fields)).toEqual([
+        { tenantId: 'tenant-1', ticketId: 'ticket-1', commentId: 'comment-1', resolvedFileId: 'file-1', strategy: 'cid', reason: 'converted_to_cid' },
+        { tenantId: 'tenant-1', ticketId: 'ticket-1', commentId: 'comment-1', resolvedFileId: undefined, strategy: 'url-fallback', reason: 'not_document_view_url' },
+        { tenantId: 'tenant-1', ticketId: 'ticket-1', commentId: 'comment-1', resolvedFileId: undefined, strategy: 'placeholder', reason: 'authorization_denied' },
+      ]);
+    } finally {
+      info.mockRestore();
+    }
+  });
+
+  it('logs image outcomes from ticket descriptions', async () => {
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+    state.rewrite.mockResolvedValue({
+      html: '<p>Image processed</p>',
+      attachments: [],
+      outcomes: [{ sourceUrl: '/private-image', strategy: 'placeholder', reason: 'authorization_denied' }],
+    });
+
+    try {
+      await prepareTicketDescriptionRichTextEmail({ ...input(), commentId: undefined });
+      expect(info).toHaveBeenCalledWith('[TicketEmail] Description inline image processing outcome', {
+        tenantId: 'tenant-1',
+        ticketId: 'ticket-1',
+        commentId: undefined,
+        resolvedFileId: undefined,
+        strategy: 'placeholder',
+        reason: 'authorization_denied',
+      });
+    } finally {
+      info.mockRestore();
+    }
+  });
+
   it('replaces unavailable non-document sources in the text alternative', async () => {
     state.comment.note = JSON.stringify([{ type: 'image', props: { url: '/private-image' } }]);
     state.rewrite.mockResolvedValue({

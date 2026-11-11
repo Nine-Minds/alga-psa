@@ -6,6 +6,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { formatBlockNoteContent, type RichTextRenderOptions } from '@alga-psa/formatting/blocknoteUtils';
+import { isInteractiveUserType } from '@alga-psa/types';
 import { claimDelivery, finishDelivery, COMMENT_EMAIL_LEDGER } from '@shared/lib/deliveryLedger';
 import { signAttachmentLink } from '@shared/lib/ticketCommentAttachmentToken';
 import { listPublishedCommentAttachments, canAccessAttachmentTicket, isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
@@ -68,7 +69,7 @@ export async function classifyTicketEmailRecipient(
   const users = await tenantDb(db, tenant).table('users')
     .whereRaw('lower(email) = ?', [recipient.trim().toLowerCase()]);
   if (users.some(user => user.is_inactive !== false ||
-    (user.user_type !== 'internal' && user.user_type !== 'client'))) return 'unknown';
+    !isInteractiveUserType(user.user_type))) return 'unknown';
   const types = new Set(users.map(user => user.user_type));
   if (types.size > 1) return 'unknown';
   if (types.has('internal')) {
