@@ -5,12 +5,16 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  type AuthorizationDecision,
   type AuthorizationRecord,
+  type AuthorizationRequestCache,
   type AuthorizationSubject,
 } from './kernel';
+import { resolveAuthorizationSubject } from './subject/resolver';
 import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { createBundleNarrowingProvider } from './bundles/narrowingProvider';
+import { projectReadableRecord } from './recordProjection';
 
 /**
  * Asset read authorization, shared by the asset server actions and the label code paths.
@@ -30,8 +34,6 @@ export type AssetAuthUser = {
   apiKeyId?: string | null;
   client_id?: string | null;
   role_ids?: string[];
-  portfolio_client_ids?: string[];
-  portfolioClientIds?: string[];
   roles?: Array<{ role_id?: string } | string>;
 };
 
@@ -43,54 +45,15 @@ export type AssetReadAuthorizationContext = {
   requestCache: RequestLocalAuthorizationCache;
 };
 
-function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-  return user.roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
+/** Asset callers' entry to the shared resolver; kept so the asset surface keeps its name. */
 export async function resolveAuthorizationSubjectForUser(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
-  apiKeyId?: string
+  apiKeyId?: string,
+  requestCache?: AuthorizationRequestCache
 ): Promise<AuthorizationSubject> {
-  const db = tenantDb(trx, tenant);
-  let roleIds = extractRoleIdsFromUser(user);
-  roleIds = Array.from(new Set([...roleIds, ...(user.role_ids ?? [])]));
-  if (roleIds.length === 0) {
-    const roleRows = await db.table('user_roles').where({ user_id: user.user_id }).select<{ role_id: string }[]>('role_id');
-    roleIds = roleRows.map((row) => row.role_id);
-  }
-
-  const [teamRows, managedRows] = await Promise.all([
-    db.table('team_members').where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id'),
-    db.table('users').where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id'),
-  ]);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? user.client_id ?? null,
-    portfolioClientIds: Array.from(new Set([
-      ...(user.portfolio_client_ids ?? []),
-      ...(user.portfolioClientIds ?? []),
-      ...((user.clientId ?? user.client_id) ? [user.clientId ?? user.client_id!] : []),
-    ])),
-    ...((apiKeyId ?? user.apiKeyId) ? { apiKeyId: apiKeyId ?? user.apiKeyId } : {}),
-  };
+  return resolveAuthorizationSubject(trx, { tenant, user, apiKeyId, requestCache });
 }
 
 export async function resolveAssetAuthorizationRecords(
@@ -146,10 +109,11 @@ export async function createAssetReadContext(
   tenant: string,
   user: AssetAuthUser
 ): Promise<AssetReadAuthorizationContext> {
+  const requestCache = new RequestLocalAuthorizationCache();
   return {
-    subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
+    subject: await resolveAuthorizationSubjectForUser(trx, tenant, user, undefined, requestCache),
     authorizationKernel: createAssetReadKernel(trx),
-    requestCache: new RequestLocalAuthorizationCache(),
+    requestCache,
   };
 }
 
@@ -157,7 +121,8 @@ export async function createAssetReadContext(
 export async function createAssetReadContextWithRules(
   trx: Knex | Knex.Transaction,
   subject: AuthorizationSubject,
-  rules: readonly BundleNarrowingRule[]
+  rules: readonly BundleNarrowingRule[],
+  requestCache: RequestLocalAuthorizationCache = new RequestLocalAuthorizationCache()
 ): Promise<AssetReadAuthorizationContext> {
   return {
     subject,
@@ -168,7 +133,7 @@ export async function createAssetReadContextWithRules(
       }),
       rbacEvaluator: async () => true,
     }),
-    requestCache: new RequestLocalAuthorizationCache(),
+    requestCache,
   };
 }
 
@@ -228,7 +193,39 @@ export async function isAssetActionAllowed(
 /**
  * Batch authorization for one asset action. Records are resolved with one association query, while the
  * authorization kernel still evaluates each record separately (including bundle and same-team rules).
+ * Decisions align with the input rows so callers can retain field policies through pagination and enrichment.
  */
+export async function authorizeAssetsForAction<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+  action: AssetAuthorizationAction,
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
+): Promise<AuthorizationDecision[]> {
+  if (assets.length === 0) return [];
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
+  return Promise.all(assets.map(async (asset) => {
+    let record = records.get(asset.asset_id);
+    if (options?.resolveMultiUserOwnersIndividually && action === 'read' && (record?.assignedUserIds?.length ?? 0) > 1) {
+      record = (await resolveAssetAuthorizationRecords(trx, tenant, [asset])).get(asset.asset_id);
+    }
+    const request = {
+      subject: context.subject,
+      resource: { type: 'asset' as const, action: 'read' as const, id: asset.asset_id },
+      record,
+      requestCache: context.requestCache,
+      knex: trx as Knex,
+    };
+    const readDecision = await context.authorizationKernel.authorizeResource(request);
+    if (!readDecision.allowed || action === 'read') return readDecision;
+    return context.authorizationKernel.authorizeResource({
+      ...request,
+      resource: { ...request.resource, action },
+    });
+  }));
+}
+
 export async function filterAssetsAllowedForAction<T extends AssetAuthorizationInput>(
   trx: Knex | Knex.Transaction,
   tenant: string,
@@ -237,30 +234,8 @@ export async function filterAssetsAllowedForAction<T extends AssetAuthorizationI
   action: AssetAuthorizationAction,
   options?: { resolveMultiUserOwnersIndividually?: boolean }
 ): Promise<T[]> {
-  if (assets.length === 0) return [];
-  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
-  const allowed = await Promise.all(assets.map(async (asset) => {
-    const record = records.get(asset.asset_id);
-    const request = {
-      subject: context.subject,
-      resource: { type: 'asset' as const, action: 'read' as const, id: asset.asset_id },
-      record,
-      requestCache: context.requestCache,
-      knex: trx as Knex,
-    };
-    // The association query has no ordering, so batching can change which user is treated as the owner.
-    if (options?.resolveMultiUserOwnersIndividually && action === 'read' && (record?.assignedUserIds?.length ?? 0) > 1) {
-      return isAssetReadAllowed(trx, tenant, context, asset);
-    }
-    const readDecision = await context.authorizationKernel.authorizeResource(request);
-    if (!readDecision.allowed || action === 'read') return readDecision.allowed;
-    const actionDecision = await context.authorizationKernel.authorizeResource({
-      ...request,
-      resource: { ...request.resource, action },
-    });
-    return actionDecision.allowed;
-  }));
-  return assets.filter((_, index) => allowed[index]);
+  const decisions = await authorizeAssetsForAction(trx, tenant, context, assets, action, options);
+  return assets.filter((_, index) => decisions[index].allowed);
 }
 
 const CLIENT_SCOPE_TEMPLATES = new Set(['same_client', 'client_portfolio', 'selected_clients']);
@@ -290,7 +265,13 @@ export async function isAssetClientActionAllowed(
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (evaluation) => {
         const rules = await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, evaluation);
-        return rules.filter((rule) => rule.templateKey && CLIENT_SCOPE_TEMPLATES.has(rule.templateKey));
+        // Keep every rule: the provider derives closed bundles from the full assigned rule set, so dropping a
+        // rule can make a closed bundle look like it does not name the resource (or hide it entirely).
+        // Rules whose template is not a client-scope template are neutralised instead: they still name the
+        // resource and action, but do not narrow at client level.
+        return rules.map((rule) =>
+          rule.templateKey && CLIENT_SCOPE_TEMPLATES.has(rule.templateKey) ? rule : { ...rule, templateKey: null }
+        );
       },
     }),
     // Coarse asset RBAC is checked by the action boundary before this function.
@@ -357,4 +338,23 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   options?: { resolveMultiUserOwnersIndividually?: boolean }
 ): Promise<T[]> {
   return filterAssetsAllowedForAction(trx, tenant, context, assets, 'read', options);
+}
+
+/**
+ * The assets the caller may read, each as the caller may see it: fields the read decision redacts are omitted
+ * the way the REST asset endpoints omit them, and an asset whose identity is redacted (or that is not readable)
+ * is dropped. Rows of a caller without redactions are returned untouched.
+ */
+export async function projectReadableAssets<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[]
+): Promise<T[]> {
+  const decisions = await authorizeAssetsForAction(trx, tenant, context, assets, 'read');
+  const projected = assets.map((asset, index) => {
+    const decision = decisions[index];
+    return decision.allowed ? projectReadableRecord('asset', asset, decision.redactedFields) : null;
+  });
+  return projected.filter((asset): asset is NonNullable<typeof asset> => asset !== null) as T[];
 }

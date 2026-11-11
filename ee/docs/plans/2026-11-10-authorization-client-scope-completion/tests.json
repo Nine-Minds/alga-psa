@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB integration: tickets, projects, assets and documents evaluated for the same user receive the same subject, including a non-empty portfolio.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
@@ -28,7 +28,7 @@
   {
     "id": "T004",
     "description": "DB integration: polymorphic resolvers return the right client for a time entry on a ticket, on a project task and on an interaction, a schedule entry, a document association and a tag mapping; an unknown discriminator returns none.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "Query budget: a tenant with no assignments and no portfolios runs the same statement count as main on the five measured paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "Unit, property: matrix over open bundle, closed bundle, both, and neither, against named and unnamed resources and actions, asserting every allow and deny and its reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009",
@@ -123,7 +123,7 @@
   {
     "id": "T015",
     "description": "DB integration: project task comments on an out-of-scope project are refused through the action and through REST; a bundle with children across clients shows only in-scope children and their mirrored comments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"

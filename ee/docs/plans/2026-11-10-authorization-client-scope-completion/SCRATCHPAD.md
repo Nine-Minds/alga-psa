@@ -83,3 +83,12 @@ Hypotheses only.
 - A table with a `client_id` column must also be classified in `packages/clients/src/lib/clientMergePlan.ts` (TM019 reads the schema) and carry `clientKeyed: true` in the manifest. The portfolio moves with the client on merge; where the user already holds the target, the source row is dropped. S3 turns `clientKeyed` into the ownership declaration and should keep this entry.
 - The kernel exists twice: `packages/authorization/src/kernel` (live, what tests import) and a drifted copy at `server/src/lib/authorization/kernel`. S1 touched neither.
 - Tests that use `TestContext` drop and recreate the suite database. Set `TEST_DB_NAME` per worktree.
+
+## S6 — closed baseline
+
+- Migration `20261110150000_add_authorization_bundle_revision_baseline.cjs`: `authorization_bundle_revisions.baseline text NOT NULL DEFAULT 'open'`, check `authorization_bundle_revisions_baseline_check` (`open`/`closed`). Additive; every existing row is open.
+- The baseline lives on the revision row. `publishBundleRevision` takes an optional `baseline`; `setBundleRevisionBaseline` sets it on a draft. `ensureDraftBundleRevision`, `cloneAuthorizationBundle` and the `ensurePublishedBundleRule` repair revision carry it forward.
+- Reason codes (exported from `kernel/providers/bundleProvider.ts`): `bundle_closed_baseline_denied` (sourceId = bundle id; metadata bundleId, revisionId, resource, action), `bundle_template_denied` and `client_visible_only_denied` (sourceId = first denying rule; metadata ruleIds, bundleIds, resource, action), `bundle_portfolio_denied` (same shape; emitted in addition to `bundle_template_denied` when a `client_portfolio` rule denies).
+- Invariant relied on: a published closed revision has at least one rule (`publishBundleRevision` refuses an empty draft). The provider derives the closed bundles from the rule list it receives, so `resolveRules` is unchanged. A rule with no `bundleId` is never treated as closed.
+- Loaders touched (both join the revision row, tenant-qualified): `resolveBundleNarrowingRulesForEvaluation` and `authorizationEvaluationSnapshotQuery` (snapshot rules now carry `bundle_id`, `revision_id`, `baseline`). `bundleNarrowingRuleFromRow` maps a missing baseline to open.
+- Tests: `packages/authorization/src/__tests__/bundles/closedBaseline.matrix.test.ts` (T007); DB round trip in `server/src/test/integration/authorization/bundleRevisionPublishing.integration.test.ts` (`TEST_DB_NAME=test_database_s6_closed_bundles`).

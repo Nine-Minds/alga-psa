@@ -22,11 +22,12 @@ import {
 import {
   getConnection
 } from '../../db/db';
-import { authorizeApiResourceAction, authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { authorizeApiResourceAction, authorizeApiResourceRead } from './authorizationKernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { areApiRecordFieldsVisible, projectApiRecord } from './apiRecordProjection';
 import { buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
+import { RequestLocalAuthorizationCache, compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
 import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
@@ -65,15 +66,18 @@ async function resolveTicketReadAuthorizationApplier(
   apiRequest: AuthenticatedApiRequest,
   knex: Knex
 ): Promise<((query: TenantScopedQuery) => void) | null> {
-  const subject = buildAuthorizationPrincipalSubject(
-    apiRequest.context.user,
-    apiRequest.context.apiKeyId
-  );
-  subject.tenant = apiRequest.context.tenant;
+  const requestCache = new RequestLocalAuthorizationCache();
+  const subject = await resolveAuthorizationSubject(knex, {
+    tenant: apiRequest.context.tenant,
+    user: apiRequest.context.user,
+    apiKeyId: apiRequest.context.apiKeyId,
+    requestCache,
+  });
 
   const bundleRules = await resolveBundleNarrowingRulesForEvaluation(knex, {
     subject,
     resource: { type: 'ticket', action: 'read' },
+    requestCache,
     knex,
   });
   // SQL narrowing preserves row authorization but has no per-row redaction

@@ -21,21 +21,14 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(source).not.toContain('compileResourceReadAuthorizationSql,');
   });
 
-  it('uses structural tenant scoping for the authorization subject and the shared response-state engine', () => {
+  it('resolves the authorization subject through the shared resolver and the shared response-state engine', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
-    const authStart = source.indexOf('async function resolveAuthorizationSubjectForUser');
-    const authEnd = source.indexOf('function toTicketAuthorizationRecord', authStart);
 
-    expect(authStart).toBeGreaterThanOrEqual(0);
-    expect(authEnd).toBeGreaterThan(authStart);
-
-    const authSection = source.slice(authStart, authEnd);
-
-    expect(authSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
-    expect(authSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");
-    expect(authSection).toContain("tenantScopedTable(trx, 'users', tenant)");
-    expect(authSection).not.toContain(".where({ tenant, user_id: user.user_id })");
-    expect(authSection).not.toContain(".where({ tenant, reports_to: user.user_id })");
+    // No local subject builder: the one resolver (structurally tenant scoped via tenantDb) owns the lookups.
+    expect(source).not.toContain('async function resolveAuthorizationSubjectForUser');
+    expect(source).not.toContain('portfolioClientIds: []');
+    expect(source).toContain("from '@alga-psa/authorization/subject'");
+    expect(source).toContain('await resolveAuthorizationSubject(trx, { tenant, user, requestCache })');
 
     // Comment-driven response state goes through the shared engine (structurally
     // tenant scoped via tenantDb); no local copy and no direct state write.
@@ -105,9 +98,11 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedTable(trx, 'boards', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'schedule_entries as se', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'tickets as ct', tenant)");
+    // Bundle children and mirrored child comments root on a tenant-scoped `tickets as t` query that
+    // the ticket read SQL narrows (selectTicketsReadableBy / ticketReadNarrowedQuery).
+    expect(section).toContain('selectTicketsReadableBy');
+    expect(section).toContain('ticketReadNarrowedQuery');
     expect(section).toContain("tenantScopedTable(trx, 'tickets as mt', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'comments as c', tenant)");
     expect(section).not.toContain("'c.tenant': tenant");
     expect(section).not.toContain('tenant: tenant');
     expect(section).not.toContain(".andWhere({ tenant })");
@@ -316,7 +311,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(mirrorSection).toContain("tenantDb(trx, tenant).table('comments')");
     expect(mirrorSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
 
-    expect(bundleSection).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
+    expect(bundleSection).toContain('selectTicketsReadableBy');
     expect(bundleSection).not.toContain("'t.tenant': tenant");
   });
 });

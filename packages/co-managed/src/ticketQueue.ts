@@ -156,8 +156,9 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
     if (workspace?.product_code !== 'psa' || workspace.suspended_at) throw new CoManagedSharedWorkError();
     const subject = await lockCoManagedSessionIdentity(trx, actor);
     if (!await hasCoManagedLocalPermission(trx, actor, 'ticket', 'read', true)) throw new CoManagedSharedWorkError();
-    const rules = (await resolveBundleNarrowingRulesForEvaluation(trx, { subject, resource: { type: 'ticket', action: 'read' }, knex: trx }, { lock: true }))
-      .filter(rule => rule.resource === 'ticket' && rule.action === 'read');
+    // The full rule set goes to the queue policy (closed bundles are derived from it); redactions come from ticket:read rules.
+    const allRules = await resolveBundleNarrowingRulesForEvaluation(trx, { subject, resource: { type: 'ticket', action: 'read' }, knex: trx }, { lock: true });
+    const rules = allRules.filter(rule => rule.resource === 'ticket' && rule.action === 'read');
     // Sponsor-home redactions; each relationship branch adds its own `redacted_fields` (see projection()).
     const redactions = rules.flatMap(rule => rule.redactedFields ?? []);
     const queries: Knex.QueryBuilder[] = [];
@@ -222,7 +223,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
           : trx.raw('false'),
         ...policyColumns });
       const authorized = trx.from(base.as('q'));
-      applyCoManagedQueuePolicy(authorized, subject, rules, { resourceType: 'ticket', shared: true });
+      applyCoManagedQueuePolicy(authorized, subject, allRules, { resourceType: 'ticket', shared: true });
       authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.client_id', 'q.sig_escalated', 'q.sig_awaiting', 'q.can_hand_back');
       authorized.select(workspaceNameVisible ? 'q.workspace_name' : trx.raw('NULL::text as workspace_name'));
       // The mask travels with each row through the union so the response keeps absent keys (not nulls) per relationship.

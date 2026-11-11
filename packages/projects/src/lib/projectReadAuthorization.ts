@@ -11,7 +11,6 @@
  */
 
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
 import type { IProject, IUserWithRoles } from '@alga-psa/types';
 import ProjectModel from '../models/project';
 import {
@@ -19,63 +18,9 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   type AuthorizationRecord,
-  type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { createBundleNarrowingProvider } from '@alga-psa/authorization/bundles/narrowingProvider';
-
-function tenantScopedTable(
-  conn: Knex | Knex.Transaction,
-  table: string,
-  tenant: string,
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
-}
-
-function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    const roleRows = await tenantScopedTable(conn, 'user_roles', tenant)
-      .where({ user_id: user.user_id })
-      .select<{ role_id: string }[]>('role_id');
-    roleIds = roleRows.map((row) => row.role_id);
-  }
-
-  const [teamRows, managedRows] = await Promise.all([
-    tenantScopedTable(conn, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id'),
-    tenantScopedTable(conn, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id'),
-  ]);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
-}
 
 export type ProjectAuthorizationFields = { project_id?: string | null; client_id?: string | null; assigned_to?: string | null };
 
@@ -108,13 +53,14 @@ export async function createProjectReadDecider(
   user: IUserWithRoles,
   action: 'read' | 'update' = 'read'
 ): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
-  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
+  const requestCache = new RequestLocalAuthorizationCache();
+  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
+  const subject = await resolveAuthorizationSubject(conn, { tenant, user, requestCache });
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: createBundleNarrowingProvider(conn),
     rbacEvaluator: async () => true,
   });
-  const requestCache = new RequestLocalAuthorizationCache();
 
   return async (project: ProjectAuthorizationFields): Promise<ProjectReadDecision> => {
     const projectId = project.project_id;

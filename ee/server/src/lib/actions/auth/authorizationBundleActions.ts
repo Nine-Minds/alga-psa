@@ -1096,6 +1096,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       });
 
     const evaluationInput = {
+      // LEVERAGE: pattern authorization-subject-resolution — the bundle simulator hand-builds a subject with an empty portfolio; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
       subject: {
         tenant,
         userId: principal.user_id,

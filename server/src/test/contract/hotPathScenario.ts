@@ -1,7 +1,7 @@
 /**
  * Hot-path query-budget scenario (CM L0g, plan section 5 "Decision 4").
  *
- * Sixteen canonical psa-tenant steps run sequentially inside ONE outer
+ * Eighteen canonical psa-tenant steps run sequentially inside ONE outer
  * transaction that is always rolled back, so the fixture is identical every
  * run. Each step calls the REAL product code path (server actions, models,
  * services); only external I/O is stubbed, and the stubs live in the runner
@@ -61,6 +61,8 @@ export const STEP_NAMES = [
   'portal.ticketView',
   'inbound.replyHandling',
   'maintenance.fanoutTick',
+  'client.list',
+  'search.query',
 ] as const;
 
 export type StepName = (typeof STEP_NAMES)[number];
@@ -258,6 +260,8 @@ async function loadProduct() {
     fanout,
     ticketModel,
     lifecycle,
+    clientActions,
+    searchActions,
   ] = await Promise.all([
     import('@alga-psa/auth'),
     import('@alga-psa/licensing'),
@@ -276,6 +280,8 @@ async function loadProduct() {
     import('@alga-psa/jobs/fanout'),
     import('@alga-psa/shared/models/ticketModel'),
     import('@alga-psa/shared/lib/tickets/ticketLifecycleEvents'),
+    import('@alga-psa/clients/actions/clientActions'),
+    import('../../lib/actions/searchActions'),
   ]);
   return {
     auth,
@@ -295,6 +301,8 @@ async function loadProduct() {
     fanout,
     ticketModel,
     lifecycle,
+    clientActions,
+    searchActions,
   };
 }
 
@@ -645,7 +653,7 @@ async function withIdentity<T>(identity: SessionIdentity, fn: () => Promise<T>):
 }
 
 /**
- * The sixteen steps. Each `measure(...)` wraps exactly the product call named in
+ * The eighteen steps. Each `measure(...)` wraps exactly the product call named in
  * the comment above it; anything outside `measure` is fixture glue.
  */
 const STEPS: Record<StepName, StepFn> = {
@@ -912,6 +920,23 @@ const STEPS: Record<StepName, StepFn> = {
     if (outcome.failed > 0) {
       throw new Error(`hot-path scenario: maintenance fanout reported failures: ${JSON.stringify(outcome)}`);
     }
+  },
+
+  // MSP client list page loader (getAllClientsPaginated). Added by the subject
+  // resolver slice so later client-scope segments are measured against main.
+  'client.list': async ({ actAs, measure, product, fixture }) => {
+    actAs(fixture.admin);
+    const result = await measure(() =>
+      product.clientActions.getAllClientsPaginated({ page: 1, pageSize: 25, loadLogos: false }),
+    );
+    unwrap(result, 'getAllClientsPaginated');
+  },
+
+  // MSP full search (searchAppAction -> runAppSearch).
+  'search.query': async ({ actAs, measure, product, fixture }) => {
+    actAs(fixture.admin);
+    const result = await measure(() => product.searchActions.searchAppAction({ query: 'printer' } as never));
+    unwrap(result, 'searchAppAction');
   },
 };
 

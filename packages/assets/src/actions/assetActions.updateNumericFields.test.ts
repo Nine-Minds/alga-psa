@@ -284,7 +284,9 @@ vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
   computeAssetWarrantyExpiring: vi.fn(() => null),
 }));
 
-vi.mock('@alga-psa/authorization/kernel', () => ({
+vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => ({
+  // The real restriction predicate: whether the list must authorize each record (closed bundles included).
+  bundleRulesRestrict: (await importOriginal<typeof import('@alga-psa/authorization/kernel')>()).bundleRulesRestrict,
   BuiltinAuthorizationKernelProvider: class {},
   BundleAuthorizationKernelProvider: class {
     constructor(_opts: unknown) {}

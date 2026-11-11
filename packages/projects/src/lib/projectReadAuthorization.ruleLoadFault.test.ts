@@ -11,14 +11,17 @@ const state = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({
-    table: (table: string) => ({
-      where: () => ({
+    table: (table: string) => {
+      const builder: any = {
+        where: () => builder,
+        orderBy: () => builder,
         select: async () => {
           if (table === state.failingTable) throw new Error(`${table} lookup failed`);
           return [];
         },
-      }),
-    }),
+      };
+      return builder;
+    },
   }),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({

@@ -31,7 +31,7 @@ import {
   TicketWatcherPermissionError,
   TicketWatcherTicketNotFoundError,
 } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
-import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
@@ -1320,7 +1320,11 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      const subject = buildAuthorizationPrincipalSubject(context.user ?? { user_id: context.userId, tenant: context.tenant }, context.apiKeyId);
+      const subject = await resolveAuthorizationSubject(knex, {
+        tenant: context.tenant,
+        user: context.user ?? { user_id: context.userId },
+        apiKeyId: context.apiKeyId,
+      });
       const kernel = await getAuthorizationKernel();
       result = await withTransaction(knex, (trx) =>
         runAuthorizedTicketWatcherWrite({
