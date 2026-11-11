@@ -42,3 +42,35 @@ export function createClientRelationshipSqlAdapter(alias: string = 'clients'): R
 export function createContactRelationshipSqlAdapter(alias: string = 'contacts'): RelationshipSqlAdapter {
   return createClientColumnAdapter('contacts', alias);
 }
+
+/**
+ * `tickets` mapping for the read-authorization SQL compiler. `alias` is the alias the query gives
+ * `tickets` (`t` for the ticket list; `tc` for a bundle's child rows). Mirrors the ticket record mapping:
+ * a ticket is "assigned" only to its primary `assigned_to`. Tickets expose no client-visibility column,
+ * so `client_visible_only` denies, matching the JS kernel.
+ *
+ * Shared by the ticket list, the public API list and every count that must equal a ticket list.
+ */
+export function createTicketRelationshipSqlAdapter(alias: string = 't'): RelationshipSqlAdapter {
+  return {
+    ownerColumn: `${alias}.entered_by`,
+    clientColumn: `${alias}.client_id`,
+    boardColumn: `${alias}.board_id`,
+    contactColumn: `${alias}.contact_name_id`,
+    billingProfileColumn: `${alias}.billing_profile_id`,
+    watchListColumn: `${alias}.attributes`,
+    teamColumn: `${alias}.assigned_team_id`,
+    applyAssignedUsers(query, userIds) {
+      const normalized = Array.from(
+        new Set(userIds.filter((value): value is string => typeof value === 'string' && value.length > 0))
+      );
+      if (normalized.length === 0) {
+        query.whereRaw('1 = 0');
+      } else if (normalized.length === 1) {
+        query.where(`${alias}.assigned_to`, normalized[0]);
+      } else {
+        query.whereIn(`${alias}.assigned_to`, normalized);
+      }
+    },
+  };
+}

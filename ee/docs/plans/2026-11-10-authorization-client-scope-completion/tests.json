@@ -132,7 +132,7 @@
   {
     "id": "T016",
     "description": "DB integration: ticket form options contain no portal user and no tag text from out-of-scope tickets; ticket, client and dashboard counts equal the number of records the subject can list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025"

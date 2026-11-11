@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "Ticket form options and new-ticket data list internal users only as assignees, never portal users, and list tag text only from tickets the subject may read.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Aggregates, options and exports"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Counts and statistics shown on ticket, client, project and dashboard screens are computed over the records the subject may read.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Aggregates, options and exports"
     ]
