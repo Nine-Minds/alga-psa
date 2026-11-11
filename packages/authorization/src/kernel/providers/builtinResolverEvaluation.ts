@@ -1,4 +1,9 @@
-import type { AuthorizationEvaluationInput, AuthorizationReason, BuiltinAuthorizationResult } from '../contracts';
+import type {
+  AuthorizationEvaluationInput,
+  AuthorizationReason,
+  AuthorizationScope,
+  BuiltinAuthorizationResult,
+} from '../contracts';
 import { matchRulesForAction } from '../actionAliases';
 import { closedSourcesNotNaming } from '../closedBaseline';
 import { resolveAppliedBuiltinResolvers } from '../builtinRuleResolvers';
@@ -21,7 +26,7 @@ export function evaluateBuiltinRuleResolvers(input: AuthorizationEvaluationInput
   const resource = input.resource.type;
   const action = input.resource.action;
   const reasons: AuthorizationReason[] = [];
-  const scopes = [];
+  const scopes: AuthorizationScope[] = [];
   let allowed = true;
   let contributed = false;
 
