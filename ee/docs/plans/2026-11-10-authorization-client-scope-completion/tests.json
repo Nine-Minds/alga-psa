@@ -28,7 +28,7 @@
   {
     "id": "T004",
     "description": "DB integration: polymorphic resolvers return the right client for a time entry on a ticket, on a project task and on an interaction, a schedule entry, a document association and a tag mapping; an unknown discriminator returns none.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]

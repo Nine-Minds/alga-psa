@@ -82,6 +82,12 @@ export interface RelationshipSqlAdapter {
   applyOwnerUsers?(builder: Knex.QueryBuilder, userIds: string[]): void;
   /** Optional relationship-backed team mapping for resources without a scalar team column. */
   applyTeams?(builder: Knex.QueryBuilder, teamIds: string[]): void;
+  /**
+   * Narrow `builder` to rows whose client is in `clientIds`, for resources with no
+   * `clientColumn` (the polymorphic tables; see `polymorphicClientsHook`). Used only
+   * when `clientColumn` is absent. Must deny (no rows) when `clientIds` is empty.
+   */
+  applyClients?(builder: Knex.QueryBuilder, clientIds: string[]): void;
 }
 
 export interface RelationshipSqlContext {
@@ -111,6 +117,27 @@ function whereInOrDeny(
     return;
   }
   builder.whereIn(column, normalized);
+}
+
+/**
+ * Narrow to rows owned by any of `clientIds`: through the scalar client column when
+ * the resource has one, else through its `applyClients` hook, else deny.
+ */
+function whereClientsOrDeny(
+  builder: Knex.QueryBuilder,
+  adapter: RelationshipSqlAdapter,
+  clientIds: Array<string | null | undefined> | undefined
+): void {
+  if (adapter.clientColumn) {
+    whereInOrDeny(builder, adapter.clientColumn, clientIds);
+    return;
+  }
+  const normalized = uniqueNonEmpty(clientIds);
+  if (!adapter.applyClients || normalized.length === 0) {
+    deny(builder);
+    return;
+  }
+  adapter.applyClients(builder, normalized);
 }
 
 interface RelationshipTemplateDef {
@@ -188,24 +215,22 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         deny(builder);
         return;
       }
-      if (!ctx.adapter.clientColumn) { deny(builder); return; }
-      builder.where(ctx.adapter.clientColumn, ctx.subject.clientId);
+      if (ctx.adapter.clientColumn) builder.where(ctx.adapter.clientColumn, ctx.subject.clientId);
+      else whereClientsOrDeny(builder, ctx.adapter, [ctx.subject.clientId]);
     },
   },
   client_portfolio: {
     matches: (input) =>
       Boolean(input.record?.clientId && input.subject.portfolioClientIds?.includes(input.record.clientId)),
     compileSql: (builder, ctx) => {
-      if (!ctx.adapter.clientColumn) { deny(builder); return; }
-      whereInOrDeny(builder, ctx.adapter.clientColumn, ctx.subject.portfolioClientIds);
+      whereClientsOrDeny(builder, ctx.adapter, ctx.subject.portfolioClientIds);
     },
   },
   selected_clients: {
     matches: (input) =>
       Boolean(input.record?.clientId && input.selectedClientIds?.includes(input.record.clientId)),
     compileSql: (builder, ctx) => {
-      if (!ctx.adapter.clientColumn) { deny(builder); return; }
-      whereInOrDeny(builder, ctx.adapter.clientColumn, ctx.selectedClientIds);
+      whereClientsOrDeny(builder, ctx.adapter, ctx.selectedClientIds);
     },
   },
   same_team: {
