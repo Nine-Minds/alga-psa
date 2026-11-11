@@ -97,6 +97,21 @@ describe('asset authorization kernel contracts', () => {
     }
   });
 
+  it('returns read denials as permission errors instead of letting them escape the action catch', () => {
+    // An unawaited `return withTransaction(...)` inside `try` lets the rejection skip the
+    // catch that maps it to a permissionError; the asset page then showed its generic
+    // "An error occurred" instead of the denial.
+    const actionStarts = [...source.matchAll(/^export const (\w+) = withAuth\(/gm)];
+    expect(actionStarts.length).toBeGreaterThan(0);
+    const offenders = actionStarts.flatMap((match, index) => {
+      const body = source.slice(match.index, actionStarts[index + 1]?.index ?? source.length);
+      const mapsCaughtErrors = /try \{/.test(body) && body.includes('expectedAssetActionError(error)');
+      return mapsCaughtErrors && /^\s*return withTransaction\(/m.test(body) ? [match[1]] : [];
+    });
+    expect(offenders).toEqual([]);
+    expect(source).toContain('return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {');
+  });
+
   it('T018: enforces linked-child intersection semantics in asset detail bundles for linked ticket/document payloads', () => {
     expect(source).toContain('export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([])');
