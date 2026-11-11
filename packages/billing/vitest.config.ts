@@ -94,6 +94,7 @@ export default defineConfig({
       // resolved target's realm + Intuit environment that the invoice deep
       // link reads — listed for the same reason as the suites above.
       'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/accountingSyncActions.disconnectScope.test.ts',
       'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
