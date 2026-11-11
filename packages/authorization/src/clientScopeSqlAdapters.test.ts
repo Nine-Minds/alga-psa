@@ -5,8 +5,8 @@ import {
   compileTenantScopedResourceReadAuthorizationSql,
   type AuthorizationSubject,
   type BundleNarrowingRule,
-} from '@alga-psa/authorization/kernel';
-import { AUTHORIZATION_RESOURCE_TYPE_CATALOG } from '@alga-psa/authorization/bundles/catalog';
+} from './kernel/index';
+import { AUTHORIZATION_RESOURCE_TYPE_CATALOG } from './bundles/catalog';
 import { createClientRelationshipSqlAdapter, createContactRelationshipSqlAdapter } from './clientScopeSqlAdapters';
 
 const db = knexFactory({ client: 'pg' });

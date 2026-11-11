@@ -25,7 +25,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { buildContactListSearchQuery } from '../lib/listSearchSql';
-import { createClientScopeContext } from '../lib/clientScopeAuthorization';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 
 type QueryActionUser = {
   user_id: string;

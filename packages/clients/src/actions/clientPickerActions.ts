@@ -4,7 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { assertMspPermission } from '../lib/authHelpers';
 import { attachDisplayTags } from '../lib/displayTags';
-import { createClientScopeContext } from '../lib/clientScopeAuthorization';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import {
   searchClientsForPicker as searchClientsForPickerModel,
   type PickerClientWithDisplayTags,

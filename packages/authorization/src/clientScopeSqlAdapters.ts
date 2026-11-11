@@ -1,4 +1,4 @@
-import type { RelationshipSqlAdapter } from '@alga-psa/authorization/kernel';
+import type { RelationshipSqlAdapter } from './kernel/index';
 import { tenantClientOwnership } from '@alga-psa/db/tenantTableManifest';
 
 /**

@@ -8,10 +8,10 @@ import {
   type AuthorizationSubject,
   type BundleNarrowingRule,
   type RelationshipSqlAdapter,
-} from '@alga-psa/authorization/kernel';
-import { probeTenantAuthorizationScope, resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import type { AuthorizationResourceType } from '@alga-psa/authorization/bundles/catalog';
+} from './kernel/index';
+import { probeTenantAuthorizationScope, resolveAuthorizationSubject } from './subject/index';
+import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
+import type { AuthorizationResourceType } from './bundles/catalog';
 import {
   createClientRelationshipSqlAdapter,
   createContactRelationshipSqlAdapter,
@@ -34,7 +34,9 @@ import {
 type ClientScopeResource = Extract<AuthorizationResourceType, 'client' | 'contact'>;
 
 // LEVERAGE: pattern resource-sql-narrowing — adapter + rule resolve + compile + fail-closed fallback is the same shape as
-// applyTicketReadAuthorizationSql; a per-resource "narrow this query" layer in @alga-psa/authorization would absorb it.
+// applyTicketReadAuthorizationSql (and assetReadAuthorization); now living in @alga-psa/authorization and shared by
+// packages/clients and packages/tickets, the next occurrence of the pattern is the ticket/asset twins — a generic
+// per-resource "narrow this query" layer here would absorb all three.
 const RESOURCES: Record<
   ClientScopeResource,
   { adapter: (alias: string) => RelationshipSqlAdapter; defaultAlias: string; clientRequired: boolean }

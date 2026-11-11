@@ -44,6 +44,8 @@ import { searchClientsForPicker } from '../../../../../packages/clients/src/acti
 import { getContactByContactNameId, getContactByEmail, getContactsEligibleForInvitation }
   from '../../../../../packages/clients/src/actions/contact-actions/contactActions';
 
+import * as ticketLookups from '../../../../../packages/tickets/src/actions/clientLookupActions';
+
 const HOOK_TIMEOUT = 900_000;
 
 describe('client and contact reads narrowed by a client-scoped bundle (real kernel, real DB)', () => {
@@ -53,6 +55,7 @@ describe('client and contact reads narrowed by a client-scoped bundle (real kern
   const mark = uuidv4().slice(0, 8);
   const clients = { a: uuidv4(), b: uuidv4(), c: uuidv4() };
   const contacts = { a1: uuidv4(), b1: uuidv4(), c1: uuidv4(), orphan: uuidv4() };
+  const locations = { a: uuidv4(), b: uuidv4(), c: uuidv4() };
   let restrictedId = '';
   let unrestrictedId = '';
   let adminId = '';
@@ -92,6 +95,13 @@ describe('client and contact reads narrowed by a client-scoped bundle (real kern
     await insertClient(plainTenant, plainClient, `Plain ${mark}`);
     await insertContact(plainTenant, uuidv4(), `Plain Contact ${mark}`, plainClient, `plain-${mark}@example.com`);
     await insertContact(plainTenant, uuidv4(), `Plain Orphan ${mark}`, null, `plain-orphan-${mark}@example.com`);
+
+    for (const [key, id] of Object.entries(clients)) {
+      await db('client_locations').insert({
+        tenant, location_id: locations[key as keyof typeof clients], client_id: id, location_name: `Office ${key} ${mark}`,
+        address_line1: '1 Main St', city: 'Town', country_code: 'US', country_name: 'United States', is_active: true,
+      });
+    }
 
     const bundle = await createAuthorizationBundle(db, { tenant, name: `two-clients-${mark}`, actorUserId: adminId });
     for (const resourceType of ['client', 'contact']) {
@@ -170,6 +180,63 @@ describe('client and contact reads narrowed by a client-scoped bundle (real kern
       expect((await getContactByContactNameId(contacts.a1))?.contact_name_id).toBe(contacts.a1);
       expect(await getContactByEmail(emailOf('c1'), clients.c)).toBeNull();
       expect((await getContactByEmail(emailOf('a1'), clients.a))?.contact_name_id).toBe(contacts.a1);
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('restricted to two of three clients: the tickets-package lookups', () => {
+    it('picker returns only the two clients and total matches', async () => {
+      asUser(restrictedId);
+      const result = await ticketLookups.searchClientsForPicker({ search: mark, status: 'all' });
+      expect(result.total).toBe(2);
+      expect(result.clients.map((c) => c.client_id).sort()).toEqual([clients.a, clients.b].sort());
+      const lookup = await ticketLookups.searchClientsForPicker({ ids: [clients.a, clients.c] });
+      expect(lookup.clients.map((c) => c.client_id)).toEqual([clients.a]);
+      expect(lookup.total).toBe(1);
+    }, HOOK_TIMEOUT);
+
+    it('lists and reads clients in scope only', async () => {
+      asUser(restrictedId);
+      expect(names(await ticketLookups.getAllClients(), 'client_name')).toEqual([`Alpha ${mark}`, `Bravo ${mark}`]);
+      expect(await ticketLookups.getClientById(clients.c)).toBeNull();
+      expect((await ticketLookups.getClientById(clients.a))?.client_id).toBe(clients.a);
+    }, HOOK_TIMEOUT);
+
+    it('getContactsByClient throws "does not exist" out of scope and returns rows in scope', async () => {
+      asUser(restrictedId);
+      await expect(ticketLookups.getContactsByClient(clients.c, 'all')).rejects.toThrow(/VALIDATION_ERROR: The specified client does not exist/);
+      expect((await ticketLookups.getContactsByClient(clients.a, 'all')).map((c) => c.contact_name_id)).toEqual([contacts.a1]);
+    }, HOOK_TIMEOUT);
+
+    it('contact reads hide out-of-scope and client-less contacts', async () => {
+      asUser(restrictedId);
+      expect(await ticketLookups.getContactByContactNameId(contacts.c1)).toBeNull();
+      expect(await ticketLookups.getContactByContactNameId(contacts.orphan)).toBeNull();
+      expect((await ticketLookups.getContactByContactNameId(contacts.a1))?.contact_name_id).toBe(contacts.a1);
+      expect(names(await ticketLookups.getAllActiveContacts(), 'full_name')).toEqual([`Ann Alpha ${mark}`, `Bob Bravo ${mark}`]);
+    }, HOOK_TIMEOUT);
+
+    it('locations, billing profiles and contact locations do not leak out of scope', async () => {
+      asUser(restrictedId);
+      expect(await ticketLookups.getClientLocations(clients.c)).toEqual([]);
+      expect((await ticketLookups.getClientLocations(clients.a)).map((l) => l.location_id)).toEqual([locations.a]);
+      expect(await ticketLookups.getClientBillingProfiles(clients.c)).toEqual([]);
+      expect((await ticketLookups.getClientBillingProfiles(clients.a)).length).toBeGreaterThan(0);
+      expect(await ticketLookups.getContactEffectiveLocation(contacts.c1)).toEqual({ locationId: null, locations: [], workArrangement: null });
+      expect(await ticketLookups.getContactEffectiveLocation(contacts.orphan)).toEqual({ locationId: null, locations: [], workArrangement: null });
+
+      const mineLocs = (rows: any[]) => rows.filter((r) => String(r.location_name).includes(mark)).map((r) => r.location_id).sort();
+      expect(mineLocs(await ticketLookups.listTicketFilterLocations())).toEqual([locations.a, locations.b].sort());
+      expect(await ticketLookups.listTicketFilterLocations(clients.c)).toEqual([]);
+      expect(mineLocs(await ticketLookups.listTicketFilterLocations(clients.a))).toEqual([locations.a]);
+    }, HOOK_TIMEOUT);
+
+    it('a user outside the bundle gets the unnarrowed answers', async () => {
+      asUser(unrestrictedId);
+      expect((await ticketLookups.searchClientsForPicker({ search: mark, status: 'all' })).total).toBe(3);
+      expect((await ticketLookups.getClientById(clients.c))?.client_id).toBe(clients.c);
+      expect((await ticketLookups.getContactsByClient(clients.c, 'all')).map((c) => c.contact_name_id)).toEqual([contacts.c1]);
+      expect((await ticketLookups.getContactByContactNameId(contacts.orphan))?.contact_name_id).toBe(contacts.orphan);
+      expect((await ticketLookups.getClientLocations(clients.c)).length).toBe(1);
     }, HOOK_TIMEOUT);
   });
 

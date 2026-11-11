@@ -9,7 +9,7 @@ import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
-import { createClientScopeContext } from '../lib/clientScopeAuthorization';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {

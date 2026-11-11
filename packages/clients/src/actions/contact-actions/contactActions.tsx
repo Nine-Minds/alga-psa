@@ -54,7 +54,7 @@ import {
   parseSubmittedFields
 } from '@alga-psa/validation';
 import { collectReportContactIds } from '../../lib/managerSubtree';
-import { createClientScopeContext } from '../../lib/clientScopeAuthorization';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { attachContactLocations } from '../../lib/contactLocations';
 import {
   getContactLocationCount as readContactLocationCount,
