@@ -55,6 +55,19 @@ export function computeWorkDateFields(startTime: string | Date, timeZone: string
  * write keeps the stored instant consistent with what the UI shows. Seconds are
  * timezone invariant, so flooring the epoch to the minute is unambiguous across zones.
  */
+/**
+ * Convert an instant to the calendar date in the given IANA zone.
+ * Pure; null/empty/invalid zones fall back to UTC and never throw.
+ */
+export function localDateForInstant(
+  instant: Temporal.Instant | Date,
+  timeZone: string | null | undefined
+): Temporal.PlainDate {
+  return toTemporalInstant(instant instanceof Date ? instant : instant.toString())
+    .toZonedDateTimeISO(normalizeIanaTimeZone(timeZone))
+    .toPlainDate();
+}
+
 export function truncateToMinute(value: string | Date): Date {
   const epochMs = toTemporalInstant(value).epochMilliseconds;
   return new Date(Math.floor(epochMs / 60000) * 60000);
@@ -72,6 +85,7 @@ export async function resolveUserTimeZone(
   return normalizeIanaTimeZone(row?.timezone ?? null);
 }
 
+// LEVERAGE: pattern effective-timezone-resolver — duplicated in server/src/lib/utils/workDate.ts; consolidate into one implementation
 /**
  * Resolve the effective timezone for a user within a tenant.
  * Resolution chain: user timezone -> tenant timezone -> UTC.
@@ -100,4 +114,17 @@ export async function resolveEffectiveTimeZone(
   }
 
   return 'UTC';
+}
+
+/**
+ * Today's calendar date in the tenant's effective (billing) timezone.
+ * Tenant basis only (no user), so invoice dates never depend on who triggers them.
+ * Falls back to UTC when the tenant has no saved timezone. Intentionally uncached.
+ */
+export async function resolveTenantToday(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string
+): Promise<Temporal.PlainDate> {
+  const timeZone = await resolveEffectiveTimeZone(knexOrTrx, tenant);
+  return localDateForInstant(Temporal.Now.instant(), timeZone);
 }

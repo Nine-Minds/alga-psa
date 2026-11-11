@@ -190,6 +190,9 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
   return builder;
 }
 
+// Tenant timezone the stubbed resolveTenantToday reads (null = no saved timezone).
+const tenantTimeZone = vi.hoisted(() => ({ value: null as string | null }));
+
 const mocks = vi.hoisted(() => {
   const missingTables = new Set<string>();
   const rowsByTable: Record<string, Row[]> = {
@@ -367,6 +370,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  // Real conversion at the helper boundary; clock from Temporal.Now.instant (fake timers).
+  resolveTenantToday: async () => {
+    const { localDateForInstant } = await import('../../../../../packages/db/src/lib/workDate');
+    const { Temporal: T } = await import('@js-temporal/polyfill');
+    return localDateForInstant(T.Now.instant(), tenantTimeZone.value);
+  },
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   tenantDb: (conn: any, tenant: string) => ({
@@ -440,6 +449,8 @@ const {
 describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    tenantTimeZone.value = null;
     adjustmentPreview.mockResolvedValue({ discounts: [] });
     mocks.missingTables.clear();
     mocks.hasPermission.mockReturnValue(true);
@@ -575,6 +586,17 @@ describe('invoice preview recurring timing', () => {
     );
   });
 
+  it('previews the tenant-local invoice date: Sydney at 2026-10-18T22:00Z is due Net 30 from the 19th', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+    tenantTimeZone.value = 'Australia/Sydney';
+
+    const result = await previewInvoice('cycle-1');
+
+    expect(result).toMatchObject({ success: true, data: { dueDate: '2026-11-18' } });
+    vi.useRealTimers();
+  });
+
   it('T076: one-cycle invoice preview uses canonical service periods and still matches expected recurring totals', async () => {
     const result = await previewInvoice('cycle-1');
 
@@ -611,7 +633,7 @@ describe('invoice preview recurring timing', () => {
         invoiceNumber: 'PREVIEW',
         // The stubbed profile identity sets no payment terms, so the preview
         // is due on Net 30 from today.
-        dueDate: Temporal.Now.plainDateISO().add({ days: 30 }).toString(),
+        dueDate: Temporal.Now.plainDateISO('UTC').add({ days: 30 }).toString(),
         currencyCode: 'USD',
         subtotal: 4000,
         tax: 200,
