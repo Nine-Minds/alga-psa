@@ -114,7 +114,7 @@
   {
     "id": "T014",
     "description": "DB integration: document list, folder tree, folder statistics, entity-type filters and tag suggestions for that subject reveal nothing from the third client.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020"

@@ -74,6 +74,10 @@
       "import": "./dist/assetReadAuthorization.js",
       "types": "./src/assetReadAuthorization.ts"
     },
+    "./readScope": {
+      "import": "./dist/readScope.js",
+      "types": "./src/readScope.ts"
+    },
     "./scheduleEntryReadAuthorization": {
       "import": "./dist/scheduleEntryReadAuthorization.js",
       "types": "./src/scheduleEntryReadAuthorization.ts"
