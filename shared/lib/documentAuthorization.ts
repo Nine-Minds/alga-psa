@@ -276,11 +276,32 @@ async function resolveDocumentAuthorizationRecords(
   return records;
 }
 
+export type DocumentAuthorizationAction = 'read' | 'update' | 'delete';
+
 export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
   user: IUser,
   documents: T[],
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+): Promise<T[]> {
+  return authorizeAndRedactDocumentsForAction(trx, tenant, user, documents, 'read', verifiedRecipientLifecycleAccess);
+}
+
+/**
+ * The documents the user may perform `action` on, with the read redactions applied.
+ *
+ * Every action starts from the read decision: it carries the redaction set and the document-specific
+ * read checks (asset links, client visibility, comment attachments). `update` and `delete` are then
+ * decided by the kernel's mutation path, which itself refuses a record the subject's read rules do not
+ * allow before it evaluates the write rules. Coarse document RBAC stays with the caller.
+ */
+export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: T[],
+  action: DocumentAuthorizationAction,
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
   if (documents.length === 0) {
@@ -334,7 +355,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
         is_client_visible: document.is_client_visible === true,
       };
 
-      const decision = await authorizationKernel.authorizeResource({
+      const evaluation = {
         subject: authorizationSubject,
         resource: {
           type: 'document',
@@ -345,13 +366,18 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
         selectedClientIds,
         requestCache,
         knex: trx,
-      });
+      };
+      // LEVERAGE: friction mutation-decision-without-read-view — a write needs the read redactions and the mutation verdict, so read is evaluated here and again inside authorizeMutation; a kernel decision that returns both would remove the second pass.
+      const decision = await authorizationKernel.authorizeResource(evaluation);
+      const mutationAllowed = action === 'read' || !decision.allowed || (
+        await authorizationKernel.authorizeMutation({ ...evaluation, resource: { ...evaluation.resource, action } })
+      ).allowed;
 
       const isClientVisible = record.is_client_visible === true;
       const isOwnedBySubject = record.ownerUserId === authorizationSubject.userId;
       const deniedByClientVisibility =
         user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
-      const allowed = decision.allowed && !deniedDocuments.has(document.document_id) && !deniedByClientVisibility &&
+      const allowed = decision.allowed && mutationAllowed && !deniedDocuments.has(document.document_id) && !deniedByClientVisibility &&
         await (verifiedRecipientLifecycleAccess ? verifiedRecipientLifecycleAccess(document.document_id) : canReadCommentAttachment(trx, tenant, user.user_id, document.document_id));
 
       return {

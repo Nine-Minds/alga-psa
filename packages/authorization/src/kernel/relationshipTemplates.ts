@@ -9,7 +9,8 @@ import type {
 } from './contracts';
 import type { BundleNarrowingRule } from './providers/bundleProvider';
 import { matchRulesForAction } from './actionAliases';
-import { closedBundlesNotNaming } from './closedBaseline';
+import { closedBundlesNotNaming, closedSourcesNotNaming } from './closedBaseline';
+import { resolveAppliedBuiltinResolvers } from './builtinRuleResolvers';
 import { applyTicketVisibilityFilter, ticketMatchesVisibility } from '../portal/visibility';
 
 // ---------------------------------------------------------------------------
@@ -401,6 +402,34 @@ export function compileBundleReadNarrowingSql(
   return { supported: true };
 }
 
+/**
+ * Registered built-in rule resolvers for the subject, as SQL. Mirrors `evaluateBuiltinRuleResolvers`: a closed
+ * resolver that does not name this resource and action denies; a named rule's template ANDs in. No resolver
+ * registered or applying leaves the builder untouched.
+ */
+export function compileBuiltinResolverReadNarrowingSql(
+  builder: Knex.QueryBuilder,
+  resourceType: string,
+  action: string,
+  ctx: RelationshipSqlContext
+): RelationshipSqlCompileResult {
+  const applied = resolveAppliedBuiltinResolvers({ subject: ctx.subject, resource: { type: resourceType, action } });
+  if (applied.length === 0) return { supported: true };
+
+  const closed = applied.filter((resolver) => resolver.baseline === 'closed');
+  if (closedSourcesNotNaming(closed, resourceType, action).length > 0) {
+    deny(builder);
+    return { supported: true };
+  }
+  for (const resolver of applied) {
+    for (const rule of matchRulesForAction(resolver.rules, resourceType, action)) {
+      const result = compileBundleRuleSql(builder, rule, ctx);
+      if (!result.supported) return result;
+    }
+  }
+  return { supported: true };
+}
+
 export interface ResourceReadAuthorizationSqlParams {
   resourceType: string;
   action: string;
@@ -420,6 +449,13 @@ export function compileResourceReadAuthorizationSql(
   params: ResourceReadAuthorizationSqlParams
 ): RelationshipSqlCompileResult {
   compileRelationshipRulesSql(builder, params.builtinRules, params.ctx);
+  const resolverResult = compileBuiltinResolverReadNarrowingSql(
+    builder,
+    params.resourceType,
+    params.action,
+    params.ctx
+  );
+  if (!resolverResult.supported) return resolverResult;
   return compileBundleReadNarrowingSql(
     builder,
     params.bundleRules,

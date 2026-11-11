@@ -6,6 +6,9 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   type AuthorizationDecision,
+  type AuthorizationEvaluationInput,
+  type AuthorizationKernel,
+  type AuthorizationMutationDecision,
   type AuthorizationRecord,
   type AuthorizationRequestCache,
   type AuthorizationSubject,
@@ -160,10 +163,34 @@ export async function isAssetClientReadAllowed(
 }
 
 /**
+ * One asset decision for `action`. A read asks the kernel for the resource decision; a write asks for
+ * the mutation decision, where the kernel refuses a record the subject's read rules do not allow
+ * before it evaluates the write rules.
+ */
+async function isAssetRequestDecision(
+  kernel: AuthorizationKernel,
+  request: Omit<AuthorizationEvaluationInput, 'resource'> & { resource: { type: 'asset'; id?: string } },
+  action: AssetAuthorizationAction
+): Promise<AuthorizationDecision | AuthorizationMutationDecision> {
+  const evaluation = { ...request, resource: { ...request.resource, action } };
+  return action === 'read'
+    ? kernel.authorizeResource(evaluation)
+    : kernel.authorizeMutation(evaluation);
+}
+
+async function isAssetRequestAllowed(
+  kernel: AuthorizationKernel,
+  request: Omit<AuthorizationEvaluationInput, 'resource'> & { resource: { type: 'asset'; id?: string } },
+  action: AssetAuthorizationAction
+): Promise<boolean> {
+  return (await isAssetRequestDecision(kernel, request, action)).allowed;
+}
+
+/**
  * True when the caller's per-record kernel decision allows `action` on the asset. The action selects which
  * bundle rules narrow the decision (a bundle's `asset:update` rule is not its `asset:read` rule), so mutations
- * must ask for the action they perform. Mutations also require read visibility. Coarse RBAC is not
- * evaluated here; callers pre-filter with it.
+ * must ask for the action they perform. Mutations also require read visibility, which the kernel enforces.
+ * Coarse RBAC is not evaluated here; callers pre-filter with it.
  */
 export async function isAssetActionAllowed(
   trx: Knex | Knex.Transaction,
@@ -173,21 +200,13 @@ export async function isAssetActionAllowed(
   action: AssetAuthorizationAction
 ): Promise<boolean> {
   const records = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
-  const request = {
+  return isAssetRequestAllowed(context.authorizationKernel, {
     subject: context.subject,
-    resource: { type: 'asset' as const, action: 'read' as const, id: asset.asset_id },
+    resource: { type: 'asset', id: asset.asset_id },
     record: records.get(asset.asset_id),
     requestCache: context.requestCache,
     knex: trx as Knex,
-  };
-  const readDecision = await context.authorizationKernel.authorizeResource(request);
-  if (!readDecision.allowed || action === 'read') return readDecision.allowed;
-
-  const actionDecision = await context.authorizationKernel.authorizeResource({
-    ...request,
-    resource: { ...request.resource, action },
-  });
-  return actionDecision.allowed;
+  }, action);
 }
 
 /**
@@ -200,9 +219,25 @@ export async function authorizeAssetsForAction<T extends AssetAuthorizationInput
   tenant: string,
   context: AssetReadAuthorizationContext,
   assets: readonly T[],
+  action: 'read',
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
+): Promise<AuthorizationDecision[]>;
+export async function authorizeAssetsForAction<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
   action: AssetAuthorizationAction,
   options?: { resolveMultiUserOwnersIndividually?: boolean }
-): Promise<AuthorizationDecision[]> {
+): Promise<Array<AuthorizationDecision | AuthorizationMutationDecision>>;
+export async function authorizeAssetsForAction<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+  action: AssetAuthorizationAction,
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
+): Promise<Array<AuthorizationDecision | AuthorizationMutationDecision>> {
   if (assets.length === 0) return [];
   const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
   return Promise.all(assets.map(async (asset) => {
@@ -210,19 +245,13 @@ export async function authorizeAssetsForAction<T extends AssetAuthorizationInput
     if (options?.resolveMultiUserOwnersIndividually && action === 'read' && (record?.assignedUserIds?.length ?? 0) > 1) {
       record = (await resolveAssetAuthorizationRecords(trx, tenant, [asset])).get(asset.asset_id);
     }
-    const request = {
+    return isAssetRequestDecision(context.authorizationKernel, {
       subject: context.subject,
-      resource: { type: 'asset' as const, action: 'read' as const, id: asset.asset_id },
+      resource: { type: 'asset', id: asset.asset_id },
       record,
       requestCache: context.requestCache,
       knex: trx as Knex,
-    };
-    const readDecision = await context.authorizationKernel.authorizeResource(request);
-    if (!readDecision.allowed || action === 'read') return readDecision;
-    return context.authorizationKernel.authorizeResource({
-      ...request,
-      resource: { ...request.resource, action },
-    });
+    }, action);
   }));
 }
 
@@ -253,13 +282,6 @@ export async function isAssetClientActionAllowed(
   clientId: string,
   action: AssetAuthorizationAction
 ): Promise<boolean> {
-  const input = {
-    subject: context.subject,
-    resource: { type: 'asset', action },
-    record: { clientId },
-    requestCache: context.requestCache,
-    knex: trx as Knex,
-  };
   const clientKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
@@ -277,7 +299,13 @@ export async function isAssetClientActionAllowed(
     // Coarse asset RBAC is checked by the action boundary before this function.
     rbacEvaluator: async () => true,
   });
-  return (await clientKernel.authorizeResource(input)).allowed;
+  return isAssetRequestAllowed(clientKernel, {
+    subject: context.subject,
+    resource: { type: 'asset' },
+    record: { clientId },
+    requestCache: context.requestCache,
+    knex: trx as Knex,
+  }, action);
 }
 
 /** True when the caller's per-record kernel decision allows reading the asset. */
@@ -291,15 +319,14 @@ export function isAssetReadAllowed(
 }
 
 /** Mutations require both visibility of the asset and permission for the requested operation. */
-export async function isAssetMutationAllowed(
+export function isAssetMutationAllowed(
   trx: Knex | Knex.Transaction,
   tenant: string,
   context: AssetReadAuthorizationContext,
   asset: AssetAuthorizationInput,
   action: 'update' | 'delete'
 ): Promise<boolean> {
-  return await isAssetReadAllowed(trx, tenant, context, asset) &&
-    await isAssetActionAllowed(trx, tenant, context, asset, action);
+  return isAssetActionAllowed(trx, tenant, context, asset, action);
 }
 
 /**

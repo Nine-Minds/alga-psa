@@ -42,17 +42,14 @@ export interface ProjectReadDecision {
   redactedFields: string[];
 }
 
-/**
- * The record-level project read decision for one user, reusable across many projects in one request
- * (subject and kernel are resolved once). Carries the kernel's redaction set with the verdict so a caller
- * that renders or forwards project data can mask it. A row without a project id is not allowed.
- */
-export async function createProjectReadDecider(
+export type ProjectAuthorizationAction = 'read' | 'update' | 'delete';
+
+/** Subject, kernel and request cache for one user's project decisions, resolved once per request. */
+async function createProjectAuthorizationContext(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles,
-  action: 'read' | 'update' = 'read'
-): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
+  user: IUserWithRoles
+) {
   const requestCache = new RequestLocalAuthorizationCache();
   // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
   const subject = await resolveAuthorizationSubject(conn, { tenant, user, requestCache });
@@ -62,36 +59,68 @@ export async function createProjectReadDecider(
     rbacEvaluator: async () => true,
   });
 
+  return (projectId: string, project: ProjectAuthorizationFields, action: ProjectAuthorizationAction) => ({
+    authorizationKernel,
+    evaluation: {
+      subject,
+      resource: { type: 'project', action, id: projectId },
+      record: toProjectAuthorizationRecord(project),
+      requestCache,
+      knex: conn,
+    },
+  });
+}
+
+/**
+ * The record-level project read decision for one user, reusable across many projects in one request
+ * (subject and kernel are resolved once). Carries the kernel's redaction set with the verdict so a caller
+ * that renders or forwards project data can mask it. A row without a project id is not allowed.
+ */
+export async function createProjectReadDecider(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
+  const prepare = await createProjectAuthorizationContext(conn, tenant, user);
+
   return async (project: ProjectAuthorizationFields): Promise<ProjectReadDecision> => {
     const projectId = project.project_id;
     if (!projectId) {
       return { allowed: false, redactedFields: [] };
     }
 
-    const decision = await authorizationKernel.authorizeResource({
-      subject,
-      resource: { type: 'project', action, id: projectId },
-      record: toProjectAuthorizationRecord(project),
-      requestCache,
-      knex: conn,
-    });
+    const { authorizationKernel, evaluation } = prepare(projectId, project, 'read');
+    const decision = await authorizationKernel.authorizeResource(evaluation);
 
     return { allowed: decision.allowed, redactedFields: [...(decision.redactedFields ?? [])] };
   };
 }
 
 /**
- * The boolean form of `createProjectReadDecider`, for callers that only need allow/deny.
- * Returns false for a row without a project id.
+ * The boolean form of the project record decision, for callers that only need allow/deny.
+ * `update` and `delete` are decided by the kernel's mutation path, which refuses a project the user's
+ * read rules do not allow before it evaluates the write rules. Returns false for a row without a project id.
  */
 export async function createProjectReadAuthorizer(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  action: 'read' | 'update' = 'read'
+  action: ProjectAuthorizationAction = 'read'
 ): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
-  const decide = await createProjectReadDecider(conn, tenant, user, action);
-  return async (project) => (await decide(project)).allowed;
+  const prepare = await createProjectAuthorizationContext(conn, tenant, user);
+
+  return async (project) => {
+    const projectId = project.project_id;
+    if (!projectId) {
+      return false;
+    }
+
+    const { authorizationKernel, evaluation } = prepare(projectId, project, action);
+    const decision = action === 'read'
+      ? await authorizationKernel.authorizeResource(evaluation)
+      : await authorizationKernel.authorizeMutation(evaluation);
+    return decision.allowed;
+  };
 }
 
 /**

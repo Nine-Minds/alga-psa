@@ -3,12 +3,13 @@
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
-import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
+import type { DeletionValidationResult, IClient, IClientWithLocation, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
@@ -721,15 +722,20 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
     .as('cl');
 }
 
+/**
+ * Which record kinds the client-list search may match through. Asked only when
+ * there is a search term: an unfiltered list never reads these permissions.
+ */
+async function clientListSearchPermissions(user: IUserWithRoles, searchTerm: string | undefined): Promise<string[]> {
+  if (!searchTerm?.trim()) return [];
+  const permissions = ['client:read'];
+  if (await hasMspPermission(user, 'document', 'read')) permissions.push('document:read');
+  if (await hasMspPermission(user, 'interaction', 'read')) permissions.push('interaction:read');
+  return permissions;
+}
+
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
   await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
-  const searchPermissions = ['client:read'];
-  if (await hasMspPermission(user, 'document', 'read')) {
-    searchPermissions.push('document:read');
-  }
-  if (await hasMspPermission(user, 'interaction', 'read')) {
-    searchPermissions.push('interaction:read');
-  }
 
   const {
     page = 1,
@@ -745,6 +751,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     sortDirection = 'asc'
   } = params;
 
+  const searchPermissions = await clientListSearchPermissions(user, searchTerm);
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -755,6 +762,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       // Build the base query with client_locations join
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -897,13 +906,6 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
   params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
 ): Promise<PaginatedClientsResponse> => {
   await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
-  const searchPermissions = ['client:read'];
-  if (await hasMspPermission(user, 'document', 'read')) {
-    searchPermissions.push('document:read');
-  }
-  if (await hasMspPermission(user, 'interaction', 'read')) {
-    searchPermissions.push('interaction:read');
-  }
 
   const {
     page = 1,
@@ -919,6 +921,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     dateRange
   } = params;
 
+  const searchPermissions = await clientListSearchPermissions(user, searchTerm);
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -927,6 +930,8 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -1528,6 +1533,8 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
       // Build the base query - same filtering logic as getAllClientsPaginated
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
 
       // Join with locations for search if needed
       if (searchTerm) {

@@ -78,7 +78,7 @@
   {
     "id": "T010",
     "description": "Unit: a registered resolver's rules apply to its subject class, a closed baseline from a resolver denies unnamed resources, other subjects are unaffected, and the policy service does not list or edit resolver rules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F013"
@@ -87,7 +87,7 @@
   {
     "id": "T011",
     "description": "DB integration: with three clients, a subject restricted to two lists, pages, counts and picks only those two clients and their contacts; a contact with no client is hidden.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F015"
@@ -105,7 +105,7 @@
   {
     "id": "T013",
     "description": "DB integration: a colleague's schedule entry for the third client's ticket is returned to that subject with no title or work item, and work item search omits it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F021"

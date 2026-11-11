@@ -19,6 +19,26 @@ export interface ClosedBundleDenial {
   revisionId: string | null;
 }
 
+/**
+ * A source of rules that can be closed: a bundle revision, or a package-registered built-in rule resolver.
+ * `rules` is everything the source supplies for the subject, so a closed source with no rules at all still
+ * denies (a resolver may legitimately have none; a published bundle revision never does).
+ */
+export interface ClosedBaselineSource {
+  id: string;
+  revisionId?: string | null;
+  rules: Array<{ resource: string; action: string }>;
+}
+
+/** Closed sources with no rule (alias-aware, via matchRulesForAction) for this resource and action. */
+export function closedSourcesNotNaming<S extends ClosedBaselineSource>(
+  closedSources: S[],
+  resource: string,
+  action: string
+): S[] {
+  return closedSources.filter((source) => matchRulesForAction(source.rules, resource, action).length === 0);
+}
+
 /** Closed bundles with no rule (alias-aware, via matchRulesForAction) for this resource and action. */
 export function closedBundlesNotNaming(
   rules: BundleNarrowingRule[],
@@ -33,12 +53,15 @@ export function closedBundlesNotNaming(
     else closed.set(rule.bundleId, [rule]);
   }
 
-  const denials: ClosedBundleDenial[] = [];
-  for (const [bundleId, bundleRules] of closed) {
-    if (matchRulesForAction(bundleRules, resource, action).length > 0) continue;
-    denials.push({ bundleId, revisionId: bundleRules.find((rule) => rule.revisionId)?.revisionId ?? null });
-  }
-  return denials;
+  const sources = [...closed].map(([bundleId, bundleRules]) => ({
+    id: bundleId,
+    revisionId: bundleRules.find((rule) => rule.revisionId)?.revisionId ?? null,
+    rules: bundleRules,
+  }));
+  return closedSourcesNotNaming(sources, resource, action).map(({ id, revisionId }) => ({
+    bundleId: id,
+    revisionId: revisionId ?? null,
+  }));
 }
 
 /**
