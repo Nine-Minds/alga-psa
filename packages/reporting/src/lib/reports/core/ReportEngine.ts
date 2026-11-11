@@ -153,7 +153,7 @@ export class ReportEngine {
     const plans = new Map<string, QueryNarrowingPlan>();
     for (const metric of definition.metrics) {
       const plan = planQueryNarrowing(metric.query);
-      if (!plan.ok) {
+      if (plan.ok === false) {
         throw new ReportClientScopeRefusedError({ ...plan.refusal, reportId: definition.id, metricId: metric.id });
       }
       plans.set(metric.id, plan.value);

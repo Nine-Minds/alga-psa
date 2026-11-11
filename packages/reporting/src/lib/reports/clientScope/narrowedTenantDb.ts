@@ -27,7 +27,7 @@ export async function clientScopedTenantDb(
 
   const narrowRoot = <B extends Knex.QueryBuilder>(builder: B, tableExpression: string): B => {
     const result = scope.narrowTable(builder, tableExpression, options.passthrough);
-    if (!result.ok) throw new ClientScopeRefusedError({ ...result.refusal, reportId: options.reportId });
+    if (result.ok === false) throw new ClientScopeRefusedError({ ...result.refusal, reportId: options.reportId });
     return builder;
   };
   const refuseEscapeHatch = (name: string): never => {
