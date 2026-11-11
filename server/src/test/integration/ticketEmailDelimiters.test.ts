@@ -40,6 +40,19 @@ interface UserRecord {
   email?: string | null;
 }
 
+interface CommentRecord {
+  tenant: string;
+  comment_id: string;
+  ticket_id: string;
+  thread_id: string;
+  user_id: string | null;
+  author_type: 'internal';
+  note: unknown;
+  is_internal: boolean;
+  publish_state: 'published';
+  deleted_at: null;
+}
+
 interface ProjectRecord {
   project_id: string;
   project_number: string;
@@ -127,6 +140,7 @@ interface PortalDomainRecord {
 
 const templateStore = new Map<string, TemplateRecord>();
 const tokenStore = new Map<string, TokenRecord>();
+const commentStore = new Map<string, CommentRecord>();
 
 let currentTicket: TicketRecord | null = null;
 let currentUser: UserRecord | null = null;
@@ -487,9 +501,38 @@ function projectTableBuilder() {
 }
 
 function userTableBuilder() {
-  let result = currentUser;
+  let result: UserRecord | UserRecord[] | null = currentUser;
   const builder = createQuery(() => result);
   builder.where = () => builder;
+  builder.whereRaw = (query: string, bindings: string[]) => {
+    if (query !== 'lower(email) = ?') throw new Error(`Unhandled user query: ${query}`);
+    result = currentUser?.email?.toLowerCase() === bindings[0] ? [currentUser] : [];
+    return builder;
+  };
+  return builder;
+}
+
+function recordTableBuilder(rows: Array<Record<string, unknown>>) {
+  let matches = rows;
+  const builder = createQuery(() => matches);
+  builder.where = (column: string | Record<string, unknown>, value?: unknown) => {
+    if (typeof column === 'object' && column !== null) {
+      matches = matches.filter(row => matchesConditionsObject(row, column));
+    } else if (typeof column === 'string' && value !== undefined) {
+      matches = matches.filter(row => matchesCondition(row, column, value));
+    }
+    return builder;
+  };
+  builder.andWhere = builder.where;
+  return builder;
+}
+
+function emptyRecipientTableBuilder() {
+  const builder = createQuery(() => null);
+  builder.whereRaw = (query: string) => {
+    if (query !== 'lower(email) = ?') throw new Error(`Unhandled recipient query: ${query}`);
+    return builder;
+  };
   return builder;
 }
 
@@ -897,17 +940,34 @@ function createMockKnex() {
       case 'email_reply_tokens':
         return tokenTableBuilder();
       case 'comments':
+        return recordTableBuilder([...commentStore.values()].map(comment => ({ ...comment })));
       case 'comments as cm':
-        return createQuery(() => null);
+        return recordTableBuilder([...commentStore.values()].map(comment => ({
+          ...comment,
+          comment_user_id: comment.user_id,
+          comment_author_type: comment.author_type,
+          comment_user_email: currentUser?.user_id === comment.user_id ? currentUser.email : null,
+        })));
+      case 'comment_threads':
+        return recordTableBuilder([...commentStore.values()].map(comment => ({
+          tenant: comment.tenant,
+          thread_id: comment.thread_id,
+          ticket_id: comment.ticket_id,
+          is_internal: comment.is_internal,
+        })));
       case 'ticket_comment_attachments':
         // No managed comment attachments in these scenarios: plain text-only delivery.
         return createQuery(() => null);
+      case 'tickets':
       case 'tickets as t':
         return ticketTableBuilder();
       case 'projects as p':
         return projectTableBuilder();
       case 'users':
         return userTableBuilder();
+      case 'contacts':
+      case 'client_locations':
+        return emptyRecipientTableBuilder();
       case 'tenant_settings':
         return createQuery(() => null);
       case 'ticket_resources as tr':
@@ -950,7 +1010,10 @@ vi.mock('../../lib/db/db', () => ({
 vi.mock('@alga-psa/email', () => ({
   __esModule: true,
   TenantEmailService: {
-    getInstance: () => ({ sendEmail: sendEmailMock }),
+    getInstance: () => ({
+      sendEmail: sendEmailMock,
+      getAttachmentCapabilities: async () => ({ supportsAttachments: true, maxAttachmentSize: 10_000_000 }),
+    }),
     getTenantEmailSettings: getTenantEmailSettingsMock,
     getDefaultFromAddress: getDefaultFromAddressMock,
   },
@@ -1016,6 +1079,7 @@ beforeAll(async () => {
 beforeEach(() => {
   templateStore.clear();
   tokenStore.clear();
+  commentStore.clear();
   currentTicket = null;
   currentUser = null;
   currentResources = [];
@@ -1075,6 +1139,21 @@ function setPortalDomain(row: PortalDomainRecord | null) {
 
 function setResources(rows: Array<{ email: string }>) {
   currentResources = rows;
+}
+
+function seedPublicComment(tenant: string, ticketId: string, commentId: string, userId: string, note: unknown) {
+  commentStore.set(commentId, {
+    tenant,
+    comment_id: commentId,
+    ticket_id: ticketId,
+    thread_id: `thread-${commentId}`,
+    user_id: userId,
+    author_type: 'internal',
+    note,
+    is_internal: false,
+    publish_state: 'published',
+    deleted_at: null,
+  });
 }
 
 function handlerFor(eventType: string) {
@@ -1359,6 +1438,7 @@ describe('ticket email subscriber reply markers', () => {
       user_type: 'internal',
     } as any);
 
+    seedPublicComment(tenantId, ticketId, commentId, authorId, 'Follow up');
     await handlerFor('TICKET_COMMENT_ADDED')({
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
@@ -1432,6 +1512,7 @@ describe('ticket email subscriber sender routing context', () => {
       user_type: 'internal',
     } as any);
 
+    seedPublicComment(tenantId, ticketId, commentId, authorId, 'Follow up');
     await handlerFor('TICKET_COMMENT_ADDED')({
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
@@ -1474,6 +1555,7 @@ describe('ticket email subscriber sender routing context', () => {
       user_type: 'internal',
     } as any);
 
+    seedPublicComment(tenantId, ticketId, commentId, authorId, 'Follow up');
     await handlerFor('TICKET_COMMENT_ADDED')({
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
@@ -1729,6 +1811,7 @@ describe('ticket email subscriber deduplication', () => {
       { email: sharedEmail, user_id: additionalUserId },
     ] as any);
 
+    seedPublicComment(tenantId, ticketId, commentId, authorId, 'Follow up');
     await handlerFor('TICKET_COMMENT_ADDED')({
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
@@ -2075,6 +2158,7 @@ describe('ticket email subscriber rich text formatting', () => {
       user_type: 'internal',
     } as any);
 
+    seedPublicComment(tenantId, ticketId, commentId, authorId, richTextContent);
     await handlerFor('TICKET_COMMENT_ADDED')({
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
@@ -2085,7 +2169,7 @@ describe('ticket email subscriber rich text formatting', () => {
         userId: authorId,
         comment: {
           id: commentId,
-          content: richTextContent,
+          content: 'Stale event body',
           author: 'Robert Isaacs',
         },
       },
@@ -2094,6 +2178,7 @@ describe('ticket email subscriber rich text formatting', () => {
     expect(sendEmailMock).toHaveBeenCalledOnce();
     const processed = await processedCall(0);
     expect(processed.html).toContain('Another test');
+    expect(processed.html).not.toContain('Stale event body');
     expect(processed.html).not.toContain('[{');
   });
 

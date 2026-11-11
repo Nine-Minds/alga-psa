@@ -1001,6 +1001,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const { default: smtpSink } = await import('@alga-psa/emulator-smtp-sink');
     const { coManagedDeliverySeam } = await import('@shared/lib/coManagedDelivery');
     const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
+    const persistedContent = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'One recipient secret body' }] }]);
+    await table('comments').where({ comment_id: comment }).update({ note: persistedContent });
     const ids = { hidden: randomUUID(), visible: randomUUID() };
     const addresses = { [ids.hidden]: 'hidden-sponsor@example.test', [ids.visible]: 'visible-sponsor@example.test' };
     const policies: Record<string, string[]> = { [ids.hidden]: ['note', 'actor_display_name'], [ids.visible]: [] };
@@ -1041,7 +1043,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     try {
       await ticketEmailSubscriberTestHarness.handleTicketCommentAdded({ id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: {
         tenantId: tenant, ticketId: ticket, actorUserId: actor,
-        comment: { id: comment, content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'One recipient secret body' }] }]), author: 'Hidden Author', isInternal: false },
+        comment: { id: comment, content: 'Stale event body', author: 'Hidden Author', isInternal: false },
       } } as any);
       const customerMessages = await (await fetch(`http://127.0.0.1:${customerPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
       const sponsorMessages = await (await fetch(`http://127.0.0.1:${sponsorPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
@@ -1055,6 +1057,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       expect(hidden.text).not.toContain('Hidden Author');
       expect(visible.text).toContain('One recipient secret body');
       expect(visible.text).toContain('Hidden Author');
+      expect(visible.text).not.toContain('Stale event body');
     } finally {
       secret.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
       coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;
