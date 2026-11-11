@@ -292,7 +292,10 @@ vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => ({
     constructor(_opts: unknown) {}
   },
   RequestLocalAuthorizationCache: class {},
-  createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
+  createAuthorizationKernel: () => ({
+    authorizeResource: async () => ({ allowed: true }),
+    authorizeMutation: async () => ({ allowed: true }),
+  }),
 }));
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
