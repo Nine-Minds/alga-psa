@@ -58,7 +58,12 @@ import {
   documentActionErrorMessage,
   type DocumentActionError,
 } from './documentActionErrors';
-import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
+import {
+  authorizeAndRedactDocumentsForAction as authorizeDocumentRowsForAction,
+  resolveDocumentReadScope,
+  type DocumentAuthorizationAction,
+  type DocumentReadScope,
+} from '@shared/lib/documentAuthorization';
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
@@ -314,8 +319,20 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
+  return authorizeDocumentsForAction(trx, tenant, user, documents, 'read', verifiedRecipientLifecycleAccess);
+}
+
+/** `authorizeAndRedactDocuments` for any document action; `update` and `delete` also pass the kernel's mutation decision. */
+async function authorizeDocumentsForAction<T extends IDocument>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: T[],
+  action: DocumentAuthorizationAction,
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+): Promise<T[]> {
   const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
-  const authorized = await authorizeDocumentRows(trx, tenant, user, admitted.documents, verifiedRecipientLifecycleAccess);
+  const authorized = await authorizeDocumentRowsForAction(trx, tenant, user, admitted.documents, action, verifiedRecipientLifecycleAccess);
   await admitted.assertCurrent?.();
   return authorized;
 }
@@ -345,6 +362,16 @@ export async function getAuthorizedDocumentById(
   user: IUser,
   documentId: string
 ): Promise<IDocument | null> {
+  return loadAuthorizedDocumentById(trx, tenant, user, documentId, 'read');
+}
+
+async function loadAuthorizedDocumentById(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documentId: string,
+  action: DocumentAuthorizationAction
+): Promise<IDocument | null> {
   const document = await tenantScopedTable(trx, 'documents', tenant)
     .modify(query => applyDocumentProductReadScope(query, trx, user))
     .where('document_id', documentId)
@@ -354,7 +381,7 @@ export async function getAuthorizedDocumentById(
     return null;
   }
 
-  const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument]);
+  const [authorizedDocument] = await authorizeDocumentsForAction(trx, tenant, user, [document as IDocument], action);
   return authorizedDocument ?? null;
 }
 
@@ -390,11 +417,12 @@ async function assertAuthorizedDocumentSetForMutation(
     return permissionError(deniedMessage);
   }
 
-  const authorizedDocuments = await authorizeAndRedactDocuments(
+  const authorizedDocuments = await authorizeDocumentsForAction(
     trx,
     tenant,
     user,
-    documents as IDocument[]
+    documents as IDocument[],
+    'update'
   );
 
   if (authorizedDocuments.length !== uniqueDocumentIds.length) {
@@ -603,7 +631,7 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     const { knex } = await createTenantKnex();
 
     const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
       if (!authorizedDocument) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
@@ -675,7 +703,7 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
     const { knex } = await createTenantKnex();
 
     const outcome = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const target = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+      const target = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
       if (!target) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
@@ -863,7 +891,7 @@ export const deleteDocument = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const authorizedDocumentForDelete = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      getAuthorizedDocumentById(trx, tenant, user, documentId)
+      loadAuthorizedDocumentById(trx, tenant, user, documentId, 'delete')
     );
     if (!authorizedDocumentForDelete) {
       return {
@@ -877,7 +905,7 @@ export const deleteDocument = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
-      const authorizedDocument = await getAuthorizedDocumentById(trx, tenantId, user, documentId);
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenantId, user, documentId, 'delete');
       if (!authorizedDocument) {
         throw new Error('Permission denied: Cannot delete documents');
       }
@@ -1957,9 +1985,12 @@ export const getAllDocuments = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // null for a subject nothing narrows: no clause, no query beyond the tenant probe.
+      const readScope = await resolveDocumentReadScope(trx, tenant, user);
       const fetchPage = async (sourcePage: number, sourceLimit: number) => {
         const db = tenantDb(trx, tenant);
         let query = tenantScopedTable(trx, 'documents', tenant);
+        readScope?.apply(query, 'documents');
         db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
         db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
 
@@ -3200,9 +3231,21 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
     const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await tenantScopedTable(trx, 'document_associations', tenant)
+      const readScope = await resolveDocumentReadScope(trx, tenant, user);
+      const query = tenantScopedTable(trx, 'document_associations', tenant)
         .distinct('entity_type')
         .orderBy('entity_type', 'asc');
+      if (readScope) {
+        // Offer only the types that documents the subject may read have.
+        query.whereExists(function readableDocument(this: Knex.QueryBuilder) {
+          this.select(this.client.raw('1'))
+            .from('documents as scope_d')
+            .whereRaw('?? = ??', ['scope_d.tenant', 'document_associations.tenant'])
+            .whereRaw('?? = ??', ['scope_d.document_id', 'document_associations.document_id']);
+          readScope.apply(this, 'scope_d');
+        });
+      }
+      return await query;
     });
 
     return result.map((row: { entity_type: string }) => row.entity_type);
@@ -3236,10 +3279,15 @@ async function _getFolderTreeInternal(
   filters?: DocumentFilters
 ): Promise<IFolderNode[]> {
   const hasEntityScope = Boolean(entityId && entityType);
+  // A narrowed subject sees the folders that hold documents it may read (plus their ancestors) and the
+  // folders made for entities it may read. Nothing else: an empty folder made for an out-of-scope entity,
+  // or one with no entity at all, carries no fact that says it is safe to show.
+  const readScope = await resolveDocumentReadScope(knex, tenant, user);
 
   // Get explicit folders from document_folders table
   const explicitFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
     .select('folder_path', 'entity_id', 'entity_type', 'is_client_visible');
+  readScope?.applyToEntityFolders(explicitFolderQuery, 'document_folders');
 
   if (hasEntityScope) {
     explicitFolderQuery
@@ -3272,6 +3320,7 @@ async function _getFolderTreeInternal(
     .select('folder_path')
     .whereNotNull('folder_path')
     .andWhere('folder_path', '!=', '');
+  readScope?.apply(implicitFoldersQuery, 'documents');
 
   if (hasEntityScope) {
     implicitFoldersQuery.whereExists(
@@ -3296,7 +3345,7 @@ async function _getFolderTreeInternal(
   const tree = buildFolderTreeFromPaths(allPaths, explicitFolderMetadata);
 
   // Get document counts for each folder (single query)
-  await enrichFolderTreeWithCounts(tree, knex, tenant, user, entityId, entityType, filters);
+  await enrichFolderTreeWithCounts(tree, knex, tenant, user, entityId, entityType, filters, readScope);
 
   return tree;
 }
@@ -3335,10 +3384,13 @@ export const getFolders = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const hasEntityScope = Boolean(entityId && entityType);
+  // Same visibility rule as the folder tree (see _getFolderTreeInternal).
+  const readScope = await resolveDocumentReadScope(knex, tenant, user);
 
   // Get explicit folders from document_folders table
   const explicitFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
     .select('folder_path');
+  readScope?.applyToEntityFolders(explicitFolderQuery, 'document_folders');
 
   if (hasEntityScope) {
     // Entity context: show ONLY this entity's folders
@@ -3356,6 +3408,7 @@ export const getFolders = withAuth(async (
     .select('folder_path')
     .whereNotNull('folder_path')
     .andWhere('folder_path', '!=', '');
+  readScope?.apply(implicitFoldersQuery, 'documents');
 
   if (hasEntityScope) {
     // Entity context: show folders only from this entity's docs
@@ -3406,8 +3459,10 @@ export const getDocumentsByFolder = withAuth(async (
   const hasEntityScope = Boolean(entityId && entityType);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const readScope = await resolveDocumentReadScope(trx, tenant, user);
     const fetchPage = async (sourcePage: number, sourceLimit: number) => {
       let query = tenantScopedTable(trx, 'documents as d', tenant);
+      readScope?.apply(query, 'd');
       const db = tenantDb(trx, tenant);
 
       const associationExistsQuery = () =>
@@ -3959,12 +4014,15 @@ export const getFolderStats = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const rows = await tenantScopedTable(trx, 'documents', tenant)
+    const readScope = await resolveDocumentReadScope(trx, tenant, user);
+    const statsQuery = tenantScopedTable(trx, 'documents', tenant)
       .where(function() {
         this.where('folder_path', folderPath)
           .orWhere('folder_path', 'like', `${folderPath}/%`);
       })
       .select('document_id', 'created_by', 'is_client_visible', 'file_size');
+    readScope?.apply(statsQuery, 'documents');
+    const rows = await statsQuery;
 
     const authorizationInput = rows.map((row: { document_id: string; created_by: string | null; is_client_visible: boolean | null; file_size: number | string | null }) => ({
       document_id: row.document_id,
@@ -4221,7 +4279,8 @@ async function enrichFolderTreeWithCounts(
   user: IUser,
   entityId?: string | null,
   entityType?: string | null,
-  filters?: DocumentFilters
+  filters?: DocumentFilters,
+  readScope?: DocumentReadScope | null
 ): Promise<void> {
   // Collect all folder paths in the tree (including nested)
   const allPaths: string[] = [];
@@ -4247,6 +4306,7 @@ async function enrichFolderTreeWithCounts(
   documentsQuery = documentsQuery
     .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
     .whereIn('d.folder_path', allPaths);
+  readScope?.apply(documentsQuery, 'd');
 
   if (entityId && entityType) {
     documentsQuery = documentsQuery.whereExists(

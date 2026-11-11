@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "A package can register a built-in rule resolver for a class of subjects; rules from a registered resolver apply before bundle rules, can declare a closed baseline, and are not editable in policy administration; with no resolver registered behavior is unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Kernel semantics"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Client lists, client detail and client pickers return only in-scope clients for a client-restricted subject, with the restriction applied in SQL so counts and pagination match.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Contact lists, contact detail and contact pickers return only contacts of in-scope clients for a client-restricted subject, and contacts with no client are hidden from them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "On schedule and dispatch views a client-restricted subject sees an entry for an out-of-scope work item as busy time with no title or work item detail, and work item search returns only in-scope items.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Document lists, folder trees, folder statistics and the distinct entity types offered as filters are computed over documents the subject may read.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Tag lists and tag suggestions for a client-restricted subject are derived only from entities that subject may read.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "The ticket lookup and work-item lookup actions used by scheduling apply ticket read permission and narrowing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Coverage of operational resources"
     ]
@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "Ticket form options and new-ticket data list internal users only as assignees, never portal users, and list tag text only from tickets the subject may read.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Aggregates, options and exports"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Counts and statistics shown on ticket, client, project and dashboard screens are computed over the records the subject may read.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Aggregates, options and exports"
     ]

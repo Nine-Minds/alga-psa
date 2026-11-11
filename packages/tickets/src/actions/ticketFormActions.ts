@@ -27,7 +27,8 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
   try {
     // Fetch required data first
     const [users, boards, priorities] = await Promise.all([
-      getAllUsers(false).catch(error => {
+      // Assignee options are internal staff only: a portal (client) user is never a valid assignee.
+      getAllUsers(false, 'internal').catch(error => {
         console.error('Error fetching users:', error);
         return [];
       }),

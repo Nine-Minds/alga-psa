@@ -41,7 +41,7 @@ function tenantScopedTable(conn: Conn, tenant: string, table: string): Knex.Quer
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
-function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
+export function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
   // Only the primary assignee grants ticket read authorization. Do not trust
   // `ticket_resources.additional_user_id` as an authorization assignment because
   // time-entry workflows can create those rows without ticket row-level access.
@@ -61,7 +61,7 @@ function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRec
   };
 }
 
-async function resolveClientVisibility(
+export async function resolveClientVisibility(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
@@ -193,7 +193,7 @@ export async function authorizeTicketRecordAccess(input: {
   }
 
   const context = await createTicketAuthorizationContext(input.trx, input.tenant, input.user);
-  const decision = await context.authorizationKernel.authorizeResource({
+  const evaluation = {
     subject: context.authorizationSubject,
     resource: {
       type: 'ticket',
@@ -205,7 +205,12 @@ export async function authorizeTicketRecordAccess(input: {
     contactVisibility: context.contactVisibility,
     requestCache: context.requestCache,
     knex: input.trx as Knex,
-  });
+  };
+  // A write goes through the kernel's mutation path, which refuses a ticket the
+  // principal's read rules do not allow before it evaluates the write rules.
+  const decision = input.action === 'read'
+    ? await context.authorizationKernel.authorizeResource(evaluation)
+    : await context.authorizationKernel.authorizeMutation(evaluation);
 
   if (!decision.allowed) {
     throw new Error('Permission denied: Cannot access ticket');

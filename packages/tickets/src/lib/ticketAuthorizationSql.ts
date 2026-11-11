@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import type { RelationshipSqlAdapter } from '@alga-psa/authorization/kernel';
 import { tenantDb } from '@alga-psa/db';
+import { createTicketRelationshipSqlAdapter as createSharedTicketAdapter } from '@alga-psa/authorization/clientScopeSqlAdapters';
 
 type TicketDbConnection = Knex | Knex.Transaction;
 
@@ -14,34 +15,10 @@ type TicketDbConnection = Knex | Knex.Transaction;
  */
 export function createTicketRelationshipSqlAdapter(
   _conn: TicketDbConnection,
-  _tenant: string
+  _tenant: string,
+  alias: string = 't'
 ): RelationshipSqlAdapter {
-  return {
-    ownerColumn: 't.entered_by',
-    clientColumn: 't.client_id',
-    boardColumn: 't.board_id',
-    contactColumn: 't.contact_name_id',
-    billingProfileColumn: 't.billing_profile_id',
-    watchListColumn: 't.attributes',
-    teamColumn: 't.assigned_team_id',
-    // Tickets expose no client-visibility column ⇒ `client_visible_only` denies,
-    // matching the JS kernel (record.is_client_visible is absent).
-    applyAssignedUsers(query, userIds) {
-      const normalizedUserIds = Array.from(
-        new Set(userIds.filter((value): value is string => typeof value === 'string' && value.length > 0))
-      );
-      if (normalizedUserIds.length === 0) {
-        query.whereRaw('1 = 0');
-        return;
-      }
-
-      if (normalizedUserIds.length === 1) {
-        query.where('t.assigned_to', normalizedUserIds[0]);
-      } else {
-        query.whereIn('t.assigned_to', normalizedUserIds);
-      }
-    },
-  };
+  return createSharedTicketAdapter(alias);
 }
 
 /**

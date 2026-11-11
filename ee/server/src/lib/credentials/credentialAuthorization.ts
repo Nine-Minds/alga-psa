@@ -33,7 +33,7 @@ import {
   type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { compileBundleReadNarrowingSql } from '@alga-psa/authorization/kernel/relationshipTemplates';
+import { compileBuiltinResolverReadNarrowingSql, compileBundleReadNarrowingSql } from '@alga-psa/authorization/kernel/relationshipTemplates';
 import type { RelationshipSqlCompileResult } from '@alga-psa/authorization/kernel/relationshipTemplates';
 import type { TenantScopedQuery } from '@alga-psa/db';
 
@@ -245,8 +245,9 @@ export function compileCredentialReadScopeSql(
 
   // AND bundle narrowing (selected_clients → client_id, etc.). When a rule is
   // not representable the caller falls back to the JS kernel.
-  return compileBundleReadNarrowingSql(builder, context.bundleNarrowingRules, 'credential', 'read', {
-    subject,
-    adapter: createCredentialRelationshipSqlAdapter(),
-  });
+  const sqlContext = { subject, adapter: createCredentialRelationshipSqlAdapter() };
+  // Registered built-in rule resolvers narrow first (closed baselines included), then bundles.
+  const resolverResult = compileBuiltinResolverReadNarrowingSql(builder, 'credential', 'read', sqlContext);
+  if (!resolverResult.supported) return resolverResult;
+  return compileBundleReadNarrowingSql(builder, context.bundleNarrowingRules, 'credential', 'read', sqlContext);
 }

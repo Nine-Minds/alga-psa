@@ -7,6 +7,7 @@ import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
+import { resolveTagReadScope } from '../lib/tagReadScope';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -738,9 +739,12 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // null for a subject nothing narrows: no clause, no query beyond the tenant probe.
+      const readScope = await resolveTagReadScope(trx, tenant, user);
       // Join mappings with definitions to create ITag structure
       const tags = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
+        .modify((query) => readScope?.applyToMappings(query, 'tm'))
         .select(
           'tm.mapping_id as tag_id', // Use mapping_id as tag_id for backward compatibility
           'td.board_id',
@@ -787,11 +791,14 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
         .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(tagReferencesQuery, 'tr.tenant', 'td.tenant');
 
+      // A narrowed subject is offered only tags attached to records it may read (see resolveTagReadScope).
+      const readScope = await resolveTagReadScope(trx, tenant, user);
       const definitions = await scopedDb.table('tag_definitions as td')
         .distinctOn('td.tag_text')
         .select('td.*')
         .where('td.tagged_type', entityType)
         .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(tagReferencesQuery))
+        .modify((query) => readScope?.applyToDefinitions(query, 'td'))
         .orderBy('td.tag_text', 'asc')
         .orderBy('td.created_at', 'asc');
 
