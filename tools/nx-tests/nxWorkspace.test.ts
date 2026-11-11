@@ -4,47 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseTrailingJsonArray, runNx, workspaceRoot } from './nxTestUtils';
 
 const execFileAsync = promisify(execFile);
-const nxPackageRoot = path.resolve(process.cwd(), 'node_modules/nx');
-const nxPackage = JSON.parse(fs.readFileSync(path.join(nxPackageRoot, 'package.json'), 'utf8'));
-if (typeof nxPackage.bin?.nx !== 'string') {
-  throw new Error('The installed Nx package must declare its nx CLI entry point');
-}
-const nxBin = path.resolve(nxPackageRoot, nxPackage.bin.nx);
-
-async function runNx(args: string[]) {
-  const { stdout } = await execFileAsync(process.execPath, [nxBin, ...args], {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      NX_DAEMON: 'false',
-      NX_ISOLATE_PLUGINS: 'false',
-      CI: 'true',
-      // Nx loads Playwright configs while building the project graph. In some restricted
-      // environments, binding/listening on ports is not permitted (EPERM), so force a
-      // locked port to avoid probing during config evaluation.
-      PLAYWRIGHT_APP_PORT: process.env.PLAYWRIGHT_APP_PORT || '3300',
-      PLAYWRIGHT_APP_PORT_LOCKED: 'true',
-    },
-    encoding: 'utf8',
-    timeout: 180_000,
-    maxBuffer: 8 * 1024 * 1024,
-  });
-  return stdout;
-}
-
-function parseTrailingJsonArray(output: string): string[] {
-  const start = output.lastIndexOf('[');
-  const end = output.lastIndexOf(']');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error(`Expected JSON array in output. Output:\n${output}`);
-  }
-  const json = output.slice(start, end + 1);
-  const parsed = JSON.parse(json);
-  if (!Array.isArray(parsed)) throw new Error(`Expected JSON array, got: ${typeof parsed}`);
-  return parsed as string[];
-}
 
 describe('nx workspace', () => {
   it('initializes and lists projects', { timeout: 120_000 }, async () => {
@@ -101,7 +63,7 @@ describe('nx workspace', () => {
       await execFileAsync(process.execPath, [
         'scripts/check-circular-deps.mjs', outFile,
         '--baseline', '.github/known-cycles.json',
-      ], { cwd: process.cwd(), encoding: 'utf8' });
+      ], { cwd: workspaceRoot, encoding: 'utf8' });
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
