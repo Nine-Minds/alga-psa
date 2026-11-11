@@ -44,7 +44,7 @@ export interface SniffHead extends Transform {
   readonly detectedMime: string | undefined;
   readonly resolvedMime: string | undefined;
 }
-export function sniffHead(decide: (detectedMime: string | undefined) => string): SniffHead {
+export function sniffHead(decide: (detectedMime: string | undefined, info: { empty: boolean }) => string): SniffHead {
   let head: Buffer[] = [];
   let headBytes = 0;
   let decided = false;
@@ -56,7 +56,7 @@ export function sniffHead(decide: (detectedMime: string | undefined) => string):
     const buf = Buffer.concat(head, headBytes);
     head = [];
     detectedMime = (await fileTypeFromBuffer(new Uint8Array(buf)))?.mime;
-    resolvedMime = decide(detectedMime);
+    resolvedMime = decide(detectedMime, { empty: buf.length === 0 });
     return buf;
   };
 
@@ -281,7 +281,7 @@ export async function ingestToWriteSession(
   const hasher = sha256Stage();
   const sniff = options.allowedMimeTypes === null
     ? null
-    : sniffHead((detected) => resolveUploadMime(options.declaredMime, detected, options.allowedMimeTypes).mime);
+    : sniffHead((detected, info) => resolveUploadMime(options.declaredMime, detected, options.allowedMimeTypes, info).mime);
 
   // The session opens lazily, so the object is stored with the sniffed MIME.
   const sink = openWriteSessionSink(

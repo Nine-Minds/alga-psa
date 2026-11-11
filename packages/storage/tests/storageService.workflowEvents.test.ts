@@ -42,6 +42,7 @@ vi.mock('@alga-psa/validation', () => ({
 
 vi.mock('file-type', () => ({
   fileTypeFromBuffer: vi.fn(async () => undefined),
+  supportedMimeTypes: new Set<string>(),
 }));
 
 import { createTenantKnex } from '@alga-psa/db';

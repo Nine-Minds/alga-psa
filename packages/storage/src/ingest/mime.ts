@@ -1,30 +1,21 @@
+import { supportedMimeTypes } from 'file-type';
 import { isMimeAllowed } from '../config/storage-mime';
 import { UploadContentTypeError } from './errors';
 
-/**
- * Declared types `file-type` cannot detect because the format has no magic bytes
- * (plain text, CSV, JSON, SVG, HTML, ...), plus generic binary. Only these may be
- * stored on the strength of the client's declaration alone.
- */
-const UNDETECTABLE_EXACT = new Set([
-  'application/json',
-  'application/ld+json',
-  'application/x-ndjson',
-  'application/xml',
-  'application/javascript',
-  'application/x-javascript',
-  'application/x-yaml',
-  'application/yaml',
-  'application/x-sh',
-  'application/sql',
-  'application/csv',
-  'application/octet-stream',
-  'image/svg+xml',
-]);
+/** Text and XML formats are matched by file-type only when a recognisable header is present. */
+function isTextual(mime: string): boolean {
+  return mime.startsWith('text/') || mime === 'application/xml' || mime.endsWith('+xml') || mime.endsWith('+json');
+}
 
-export function isUndetectableDeclaredType(mime: string): boolean {
+/**
+ * True if file-type has a signature for the declared type, so bytes matching nothing are evidence
+ * of a mismatch. Types it has no signature for (message/rfc822, S/MIME, PGP, vendor types, plain
+ * text, CSV, JSON, SVG, octet-stream...) can never be detected, so their absence proves nothing.
+ * Textual formats are exempt even when file-type knows one by header (ics, vcard, xml).
+ */
+export function isDetectableDeclaredType(mime: string): boolean {
   const m = mime.toLowerCase();
-  return m.startsWith('text/') || UNDETECTABLE_EXACT.has(m) || m.endsWith('+xml') || m.endsWith('+json');
+  return supportedMimeTypes.has(m as never) && !isTextual(m);
 }
 
 /**
@@ -49,23 +40,31 @@ export interface ResolvedUploadMime {
  *  1. Bytes matched a type (and it is not a generic text/xml match): the detected type must be
  *     on the allowlist and is what we store. Exception: a container family (zip, CFB) whose
  *     declared type belongs to that family stores the declared type, which must be allowlisted.
- *  2. Nothing matched: fall back to the declared type, but only if it is a type file-type
- *     cannot detect anyway (text, CSV, JSON, SVG, octet-stream...). A declared image/png or
- *     video/mp4 whose bytes match nothing is rejected, as is a declared type not on the allowlist.
+ *  2. Nothing matched: reject only if the declared type is one file-type could have recognised
+ *     (it is in supportedMimeTypes; a declared image/png, video/mp4 or application/pdf whose bytes
+ *     match nothing). Otherwise fall back to the declared type, which must be allowlisted.
+ *
+ * An empty stream has no bytes to contradict the declaration: only the allowlist applies.
  *
  * `allowedMimeTypes` null means no allowlist applies (system artifacts never reach here).
  */
 export function resolveUploadMime(
   declaredMime: string,
   detectedMime: string | undefined,
-  allowedMimeTypes: string[] | null
+  allowedMimeTypes: string[] | null,
+  { empty = false }: { empty?: boolean } = {}
 ): ResolvedUploadMime {
   const allowed = (mime: string) => allowedMimeTypes === null || isMimeAllowed(allowedMimeTypes, mime);
   const reject = (why: string) => new UploadContentTypeError(why, declaredMime, detectedMime);
   const declared = declaredMime.toLowerCase();
   const detected = detectedMime?.toLowerCase();
 
-  if (detected && !isUndetectableDeclaredType(detected)) {
+  if (empty) {
+    if (!allowed(declared)) throw reject('File type not allowed');
+    return { mime: declaredMime, source: 'declared' };
+  }
+
+  if (detected && !isTextual(detected)) {
     const family = CONTAINER_FAMILIES[detected];
     if (family && family.test(declared)) {
       if (!allowed(declared)) throw reject('File type not allowed');
@@ -77,7 +76,7 @@ export function resolveUploadMime(
     return { mime: detected, source: 'detected' };
   }
 
-  if (!isUndetectableDeclaredType(declared)) {
+  if (isDetectableDeclaredType(declared)) {
     throw reject(`File content does not match the declared type ${declaredMime}`);
   }
   if (!allowed(declared)) throw reject('File type not allowed');

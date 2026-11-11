@@ -124,6 +124,16 @@ describe('resolveUploadMime', () => {
     expect(() => resolveUploadMime('video/mp4', undefined, ['*/*'])).toThrow(/does not match/);
     expect(() => resolveUploadMime('application/pdf', undefined, ['*/*'])).toThrow();
     expect(() => resolveUploadMime('text/html', undefined, allow)).toThrow(/not allowed/);
+    expect(() => resolveUploadMime('application/x-undetectable', undefined, allow)).toThrow(/not allowed/);
+  });
+  it('accepts declared types file-type has no signature for, under */*, stored as declared', () => {
+    for (const t of ['message/rfc822', 'application/pkcs7-signature', 'application/pkcs7-mime', 'application/pgp-signature', 'application/x-x509-ca-cert', 'application/vnd.example', 'text/calendar']) {
+      expect(resolveUploadMime(t, undefined, ['*/*'])).toEqual({ mime: t, source: 'declared' });
+    }
+  });
+  it('only the allowlist applies to an empty stream', () => {
+    expect(resolveUploadMime('application/pdf', undefined, ['application/pdf'], { empty: true }).mime).toBe('application/pdf');
+    expect(() => resolveUploadMime('application/pdf', undefined, ['text/plain'], { empty: true })).toThrow(/not allowed/);
   });
   it('accepts a declared document type inside a generic container family', () => {
     expect(resolveUploadMime('application/msword', 'application/x-cfb', allow).mime).toBe('application/msword');
@@ -230,6 +240,28 @@ describe('uploadFile streaming ingest (local provider)', () => {
     vi.spyOn(provider, 'completeWrite').mockRejectedValue(new Error('complete failed'));
     await expect(upload(Buffer.from('abc'), 'c.txt', 'text/plain')).rejects.toThrow(/complete failed/);
     await expectNothingStored();
+  });
+
+  it('stores unrecognisable declared types as declared under */*, and still rejects garbage declared as pdf', async () => {
+    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = '*/*';
+    clearCachedStorageConfig();
+    for (const [i, t] of ['message/rfc822', 'application/pkcs7-signature', 'application/vnd.example'].entries()) {
+      await upload(Buffer.from('Subject: hi\r\n\r\nbody'), `m${i}.bin`, t);
+    }
+    const mimes = vi.mocked(FileStoreModel.create).mock.calls.map((c: any) => c[1].mime_type);
+    expect(mimes).toEqual(['message/rfc822', 'application/pkcs7-signature', 'application/vnd.example']);
+    await expect(upload(randomBytes(2048), 'g.pdf', 'application/pdf')).rejects.toSatisfy(isUploadContentTypeError);
+    await expect(upload(randomBytes(2048), 'g.mp4', 'video/mp4')).rejects.toSatisfy(isUploadContentTypeError);
+  });
+
+  it('rejects an undetectable declared type that is not allowlisted', async () => {
+    await expect(upload(Buffer.from('x'), 'e.eml', 'message/rfc822')).rejects.toThrow(/File type not allowed/);
+    expect(FileStoreModel.create).not.toHaveBeenCalled();
+  });
+
+  it('stores an empty file with a detectable declared type', async () => {
+    await upload(Buffer.alloc(0), 'empty.pdf', 'application/pdf');
+    expect(FileStoreModel.create).toHaveBeenCalledWith({}, expect.objectContaining({ file_size: 0, mime_type: 'application/pdf' }));
   });
 
   it('stores an empty file', async () => {
