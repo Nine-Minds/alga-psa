@@ -1,5 +1,6 @@
 'use server'
 
+import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { canWriteAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
 import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments, canUploadDocument } from '../lib/documentPermissions';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -1236,6 +1237,14 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
         return permissionError('Permission denied: Cannot associate documents', 'documents:errors.permissions.associate');
       }
 
+      if (!await isDocumentAssociationCreateAllowed(trx, {
+        tenant,
+        user,
+        targets: [{ entityType: 'client', entityId: input.entity_id }],
+      })) {
+        return permissionError('Permission denied: Cannot associate documents', 'documents:errors.permissions.associate');
+      }
+
       const association = await DocumentAssociation.create(trx, {
         ...input,
         entity_type: 'client',
@@ -1384,6 +1393,14 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
     const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, input.document_id);
       if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot associate documents', 'documents:errors.permissions.associate');
+      }
+
+      if (!await isDocumentAssociationCreateAllowed(trx, {
+        tenant,
+        user,
+        targets: [{ entityType: 'contract', entityId: input.entity_id }],
+      })) {
         return permissionError('Permission denied: Cannot associate documents', 'documents:errors.permissions.associate');
       }
 
@@ -2443,6 +2460,14 @@ export const createDocumentAssociations = withAuth(async (
         return authorizationResult;
       }
 
+      if (!await isDocumentAssociationCreateAllowed(trx, {
+        tenant,
+        user,
+        targets: associations.map((association) => ({ entityType: association.entity_type, entityId: association.entity_id })),
+      })) {
+        return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
+      }
+
       return await Promise.all(
         associations.map(async (association): Promise<Pick<IDocumentAssociation, 'association_id'>> => {
           const [row] = await tenantScopedTable(trx, 'document_associations', tenant)
@@ -2853,6 +2878,25 @@ export const uploadDocument = withAuth(async (
         if (options.assetId) {
           const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, options.assetId);
           if (assetAuthorization) return assetAuthorization;
+        }
+        // Refused before anything is written: the document row is part of the same create.
+        const associationTargets: Array<{ entityType: string; entityId: string | undefined }> = [
+          { entityType: 'ticket', entityId: options.ticketId },
+          { entityType: 'client', entityId: options.clientId },
+          { entityType: 'contact', entityId: options.contactNameId },
+          { entityType: 'asset', entityId: options.assetId },
+          { entityType: 'project_task', entityId: options.projectTaskId },
+          { entityType: 'contract', entityId: options.contractId },
+          { entityType: 'opportunity', entityId: options.opportunityId },
+        ];
+        if (!await isDocumentAssociationCreateAllowed(trx, {
+          tenant,
+          user,
+          targets: associationTargets.flatMap((target) => target.entityId
+            ? [{ entityType: target.entityType, entityId: target.entityId }]
+            : []),
+        })) {
+          return permissionError('Permission denied: Cannot associate documents', 'documents:errors.permissions.associate');
         }
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
         if (options.commentAttachmentDraft) {

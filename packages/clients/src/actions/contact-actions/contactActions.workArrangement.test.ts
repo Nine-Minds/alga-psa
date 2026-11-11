@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The client-scope create gate needs a real connection; it is covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn(async () => undefined) }));
+
 /**
  * The work-arrangement contract of the update action: `undefined` leaves the stored value alone,
  * while the editor's "Not set" (null) clears it. Collapsing null to undefined made "Not set" a

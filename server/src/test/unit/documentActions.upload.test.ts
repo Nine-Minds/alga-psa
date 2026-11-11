@@ -23,6 +23,13 @@ vi.mock('@shared/lib/documentAuthorization', () => ({
   authorizeAndRedactDocumentsForAction: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => documents,
 }));
 
+// The client-scope create gate needs a real connection; its decisions are covered by the T008 integration test.
+const isDocumentAssociationCreateAllowedMock = vi.hoisted(() => vi.fn());
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  isDocumentAssociationCreateAllowed: isDocumentAssociationCreateAllowedMock,
+}));
+
 vi.mock('../lib/meetingDocumentAdmission', () => ({
   admitMeetingDocumentsForBrowser: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => ({ documents }),
 }));
@@ -140,6 +147,7 @@ describe('uploadDocument', () => {
     withTransactionMock.mockImplementation(async (_knex: Knex, callback) => callback(knexStub.trx));
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-123' });
     hasPermissionMock.mockResolvedValue(true);
+    isDocumentAssociationCreateAllowedMock.mockResolvedValue(true);
     documentAssociationCreateMock.mockResolvedValue({ association_id: 'assoc-1' } as any);
     validateFileUploadMock.mockResolvedValue(undefined);
     uploadFileMock.mockResolvedValue({
@@ -215,6 +223,25 @@ describe('uploadDocument', () => {
         preview_generated_at: new Date('2024-01-01T00:00:00.000Z'),
       }),
     ]);
+  });
+
+  it('asks the create gate about the ticket it associates with, and writes nothing when it is refused', async () => {
+    isDocumentAssociationCreateAllowedMock.mockResolvedValue(false);
+    const formData = new FormData();
+    formData.set('file', new File([Buffer.from('hello world')], 'example.png', { type: 'image/png' }));
+
+    const result = await documentActions.uploadDocument(formData, { userId: 'user-1', ticketId: 'ticket-out-of-scope' });
+
+    expect(isDocumentAssociationCreateAllowedMock).toHaveBeenCalledWith(
+      knexStub.trx,
+      expect.objectContaining({
+        tenant: 'tenant-123',
+        targets: [{ entityType: 'ticket', entityId: 'ticket-out-of-scope' }],
+      }),
+    );
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Cannot associate documents') });
+    expect(knexStub.inserts).toHaveLength(0);
+    expect(documentAssociationCreateMock).not.toHaveBeenCalled();
   });
 
   it('keeps the existing thumbnail reference when updateDocument receives a client supplied reference', async () => {

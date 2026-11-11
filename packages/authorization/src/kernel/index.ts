@@ -15,3 +15,4 @@ export * from './selfApproval';
 export * from './actionAliases';
 export * from './closedBaseline';
 export * from './builtinRuleResolvers';
+export * from './candidateRecord';

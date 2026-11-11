@@ -1,5 +1,6 @@
 'use server'
 
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { queueContactCreated } from '../lib/contactEvents';
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -641,6 +642,12 @@ export const createOrFindContactByEmail = withAuth(async (
         return { contact: contactWithClientName, isNew: false };
       }
 
+      await assertRecordCreateAllowed(trx, {
+        tenant,
+        user,
+        resourceType: 'contact',
+        record: { clientId },
+      }, 'contact');
       const newContact = await ContactModel.createContact({
         full_name: name || extractNameFromEmail(email),
         email: normalizedEmail,

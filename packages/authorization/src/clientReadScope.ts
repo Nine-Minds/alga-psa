@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import {
   RequestLocalAuthorizationCache,
   closedBundlesNotNaming,
+  CLIENT_SCOPE_TEMPLATES,
   matchRulesForAction,
   compileBundleReadNarrowingSql,
   type AuthorizationRequestCache,
@@ -28,7 +29,7 @@ import { probeTenantAuthorizationScope } from './subject/tenantScope';
  * probe, so no subject, portfolio or rule is loaded and `apply` adds nothing to the query.
  */
 
-export const CLIENT_SCOPE_TEMPLATES: ReadonlySet<string> = new Set(['same_client', 'client_portfolio', 'selected_clients']);
+export { CLIENT_SCOPE_TEMPLATES };
 
 export interface ClientReadScope {
   /** False on the fast path: nothing narrows this subject, `apply` is a no-op and no subject was resolved. */

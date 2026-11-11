@@ -11,6 +11,7 @@ import { evaluateRelationshipTemplate } from '../relationshipTemplates';
 import { isSelfApprovalBlocked } from '../selfApproval';
 import { matchRulesForAction } from '../actionAliases';
 import { closedBundlesNotNaming } from '../closedBaseline';
+import { clientScopeReadRulesForCreate } from '../candidateRecord';
 
 export const BUNDLE_CLOSED_BASELINE_DENIED_CODE = 'bundle_closed_baseline_denied';
 export const BUNDLE_TEMPLATE_DENIED_CODE = 'bundle_template_denied';
@@ -126,7 +127,11 @@ export class BundleAuthorizationKernelProvider implements BundleAuthorizationPro
 
   async evaluateNarrowing(input: AuthorizationEvaluationInput): Promise<BundleAuthorizationResult> {
     const rules = await this.resolveRules(input);
-    const matchingRules = matchRulesForAction(rules, input.resource.type, input.resource.action);
+    // A create is also fenced by the client-scope part of the read rules (see candidateRecord.ts).
+    const matchingRules = [
+      ...matchRulesForAction(rules, input.resource.type, input.resource.action),
+      ...clientScopeReadRulesForCreate(rules, input.resource.type, input.resource.action),
+    ];
     const closedReasons = closedBaselineReasons(rules, input);
 
     if (matchingRules.length === 0) {
