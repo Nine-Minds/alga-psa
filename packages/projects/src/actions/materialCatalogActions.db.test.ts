@@ -232,6 +232,33 @@ describe('project material actions: coarse RBAC and record scope', () => {
     expect(await knex('project_materials').where({ tenant: FOREIGN_TENANT, project_material_id: FOREIGN_MATERIAL_ID }).first()).toEqual(beforeForeign);
   });
 
+  it.each([true, false])('allows in-bundle edits with billing configuration present=%s', async (hasConfig) => {
+    const projectA = await makeProject(CLIENT_A);
+    const product = await makeProduct({ stock: 5 });
+    const materialId = await seedConsumedMaterial(projectA, CLIENT_A, product);
+    const config = await trx()('project_billing_configs').where({ tenant: TENANT, project_id: projectA }).first();
+    const entry = await trx()('project_billing_schedule_entries').where({ tenant: TENANT, config_id: config.config_id }).first();
+    if (!hasConfig) {
+      await trx()('project_billing_schedule_entries').where({ tenant: TENANT, config_id: config.config_id }).delete();
+      await trx()('project_billing_configs').where({ tenant: TENANT, config_id: config.config_id }).delete();
+    }
+    const beforeStock = await trx()('stock_levels').where({ tenant: TENANT, service_id: product }).first();
+    const beforeMoves = await count('stock_movements', { service_id: product });
+    const input = {
+      rate: 750,
+      billing_destination: hasConfig ? 'schedule_entry' as const : 'separate' as const,
+      billing_schedule_entry_id: hasConfig ? entry.schedule_entry_id : null,
+    };
+    const updated: any = await updateProjectMaterial(materialId, input);
+    expect(updated).toMatchObject({ project_material_id: materialId, billing_destination: input.billing_destination, billing_schedule_entry_id: input.billing_schedule_entry_id });
+    expect(Number(updated.rate)).toBe(750);
+    const persisted = await trx()('project_materials').where({ tenant: TENANT, project_material_id: materialId }).first();
+    expect(persisted).toMatchObject({ billing_destination: input.billing_destination, billing_schedule_entry_id: input.billing_schedule_entry_id });
+    expect(Number(persisted.rate)).toBe(750);
+    expect(await trx()('stock_levels').where({ tenant: TENANT, service_id: product }).first()).toEqual(beforeStock);
+    expect(await count('stock_movements', { service_id: product })).toBe(beforeMoves);
+  });
+
   it('allows in-bundle add/delete and applies inventory effects', async () => {
     const projectA = await makeProject(CLIENT_A);
     const lowStockProduct = await makeProduct({ stock: 3, reorder: 1 });

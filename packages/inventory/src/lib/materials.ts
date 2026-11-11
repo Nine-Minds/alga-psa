@@ -409,7 +409,9 @@ export async function updateProjectMaterialBilling(
       })
       .where({ 'material.tenant': tenant, 'material.project_material_id': projectMaterialId })
       .select('material.*', 'config.config_id', 'config.currency as project_currency')
-      .forUpdate()
+      // The optional billing config is on the nullable side of the join and
+      // cannot be row-locked by PostgreSQL. Lock the material and its parent.
+      .forUpdate('material', 'project')
       .first();
 
     if (!material) {
