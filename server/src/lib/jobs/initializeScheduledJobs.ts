@@ -12,28 +12,29 @@ const isEnterpriseWorkflowEdition = (): boolean =>
   || process.env.EDITION === 'ee'
   || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
+/** Every non-suspended tenant, read once per boot and shared by each per-tenant step below. */
+async function listActiveTenants(): Promise<string[]> {
+  const knex = await getConnection(null);
+  const rows = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
+    .unscoped('tenants', 'scheduler enumerates all tenants to register per-tenant jobs')
+    .whereNull('suspended_at')
+    .select('tenant');
+  return rows.map((row: { tenant: string }) => row.tenant);
+}
+
 /**
  * Deploy-time, both editions: queue the per-tenant client-scope re-index of existing search rows.
  * Every boot of a new release enqueues it; the job only reads index rows that still have no client
  * scope, so a repeat finds nothing to change. A tenant that fails to enqueue does not stop boot.
  */
-async function enqueueSearchClientScopeReindex(): Promise<void> {
-  try {
-    const knex = await getConnection(null);
-    const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
-      .unscoped('tenants', 'deploy-time search client-scope re-index enumerates all tenants')
-      .whereNull('suspended_at')
-      .select('tenant');
-    for (const { tenant } of tenants) {
-      try {
-        const jobId = await scheduleSearchClientScopeReindexJob(tenant);
-        logger.info('Search client-scope re-index queued', { tenantId: tenant, jobId });
-      } catch (error) {
-        logger.error(`Failed to queue search client-scope re-index for tenant ${tenant}`, error);
-      }
+async function enqueueSearchClientScopeReindex(tenantIds: readonly string[]): Promise<void> {
+  for (const tenant of tenantIds) {
+    try {
+      const jobId = await scheduleSearchClientScopeReindexJob(tenant);
+      logger.info('Search client-scope re-index queued', { tenantId: tenant, jobId });
+    } catch (error) {
+      logger.error(`Failed to queue search client-scope re-index for tenant ${tenant}`, error);
     }
-  } catch (error) {
-    logger.error('Failed to enumerate tenants for search client-scope re-index', error);
   }
 }
 
@@ -67,9 +68,13 @@ export async function initializeScheduledJobs(): Promise<void> {
       });
     }
 
-    await enqueueSearchClientScopeReindex();
-
     if (isEnterpriseWorkflowEdition()) {
+      // EE has no per-tenant pg-boss schedules, so a failed enumeration only skips the re-index.
+      try {
+        await enqueueSearchClientScopeReindex(await listActiveTenants());
+      } catch (error) {
+        logger.error('Failed to enumerate tenants for search client-scope re-index', error);
+      }
       logger.info('Skipping server-side recurring schedule convergence (Temporal owns recurring schedules in EE)');
       return;
     }
@@ -79,19 +84,14 @@ export async function initializeScheduledJobs(): Promise<void> {
     // firing, so new tenants are covered without a restart.
     await convergeCeMaintenanceSchedules(await initializeJobRunner());
 
-    // Get all tenants using root connection
-    const knex = await getConnection(null);
-    const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
-      .unscoped('tenants', 'scheduler enumerates all tenants to register recurring jobs')
-      .whereNull('suspended_at')
-      .select('tenant');
-    logger.info(`Preparing to schedule jobs for ${tenants.length} tenants`);
+    const tenantIds = await listActiveTenants();
+    logger.info(`Preparing to schedule jobs for ${tenantIds.length} tenants`);
+
+    await enqueueSearchClientScopeReindex(tenantIds);
     
     // LEVERAGE: pattern ce-per-tenant-runner-schedules — the jobs below still schedule one pg-boss cron per tenant (queues, pollers and `jobs` rows grow with jobs x tenants); they belong on the global maintenance-fanout schedules.
     // Remaining per-tenant runner-path schedules
-    for (const tenantRecord of tenants) {
-      const tenantId = tenantRecord.tenant;
-
+    for (const tenantId of tenantIds) {
       try {
         const disciplineJobId = await scheduleOpportunityDisciplineJob(tenantId, '0 7 * * *');
         logger.info('Opportunity discipline schedule converged', { tenantId, disciplineJobId });
