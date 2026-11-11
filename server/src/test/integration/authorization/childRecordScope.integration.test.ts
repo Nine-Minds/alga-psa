@@ -4,7 +4,7 @@
  *  - F022: project task comments use the parent project's decision on every server action and on the REST
  *    service. A subject narrowed to client A is refused on a client B project, and counts do not leak.
  *  - F023: a ticket bundle shows a narrowed subject only the in-scope children, and only the replies mirrored
- *    from those children, narrowed in SQL (so the 200-row cap and counts follow).
+ *    from those children, narrowed in SQL (so the 200-row cap counts in-scope replies only).
  *
  * Real DB, real kernel, real bundle resolution. Only the session (withAuth), the DB handle and the coarse RBAC
  * grant are stood in for, so the record-level decision under test comes from the bundle rules.
@@ -247,6 +247,47 @@ describe('T015: project task comments and ticket bundles follow their parent sco
       const result: any = await fetchBundleChildrenForMaster(ids.master);
       const rows: any[] = result.tickets ?? result.rows ?? result;
       expect(rows.map((r) => r.ticket_id)).toEqual([ids.childA]);
+    });
+
+    it('counts only in-scope replies toward the 200-reply cap', async () => {
+      // A second bundle whose in-scope reply is older than 205 out-of-scope replies. Filtering after the
+      // capped query (the previous behaviour) left the narrowed reader with no mirrored replies at all.
+      const capIds = { master: uuidv4(), childA: uuidv4(), childB: uuidv4() };
+      for (const [ticketId, label, clientId, masterId] of [
+        [capIds.master, 'CAP-MASTER', ids.clientA, null],
+        [capIds.childA, 'CAP-A', ids.clientA, capIds.master],
+        [capIds.childB, 'CAP-B', ids.clientB, capIds.master],
+      ] as const) {
+        await db('tickets').insert({
+          tenant, ticket_id: ticketId, ticket_number: `T-${mark}-${label}`, title: `Ticket ${label} ${mark}`,
+          client_id: clientId, board_id: ids.board, status_id: ids.status, priority_id: ids.priority,
+          entered_by: ids.admin, master_ticket_id: masterId,
+        });
+      }
+      await db('ticket_bundle_settings').insert({ tenant, master_ticket_id: capIds.master, mode: 'link_only', reopen_on_child_reply: false });
+      const replies = [
+        { ticketId: capIds.childA, text: `cap-reply-A-${mark}`, minutesAgo: 1000 },
+        ...Array.from({ length: 205 }, (_, i) => ({ ticketId: capIds.childB, text: `cap-reply-B${i}-${mark}`, minutesAgo: 500 - i })),
+      ];
+      for (const reply of replies) {
+        const commentId = uuidv4();
+        const threadId = uuidv4();
+        const at = db.raw(`now() - (? * interval '1 minute')`, [reply.minutesAgo]);
+        await db('comment_threads').insert({ tenant, thread_id: threadId, ticket_id: reply.ticketId, root_comment_id: commentId, is_internal: false });
+        await db('comments').insert({
+          tenant, comment_id: commentId, thread_id: threadId, ticket_id: reply.ticketId, user_id: ids.admin, author_type: 'internal',
+          is_internal: false, is_resolution: false, note: reply.text, markdown_content: reply.text, created_at: at, updated_at: at,
+        });
+      }
+
+      actAs(ids.narrowed);
+      const narrowed = await getConsolidatedTicketData(capIds.master);
+      expect(narrowed.aggregatedChildClientComments.map((c: any) => c.child_ticket_id)).toEqual([capIds.childA]);
+
+      actAs(ids.unrestricted);
+      const unrestricted = await getConsolidatedTicketData(capIds.master);
+      expect(unrestricted.aggregatedChildClientComments).toHaveLength(200);
+      expect(new Set(unrestricted.aggregatedChildClientComments.map((c: any) => c.child_ticket_id))).toEqual(new Set([capIds.childB]));
     });
 
     it('an unnarrowed internal user still sees every child and reply', async () => {
