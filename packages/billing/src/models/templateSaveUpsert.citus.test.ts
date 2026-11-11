@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import knexFactory, { type Knex } from 'knex';
+import type { Knex } from 'knex';
 import Invoice from './invoice';
 import QuoteDocumentTemplate from './quoteDocumentTemplate';
+import { recordingKnex, type CapturedKnexQuery } from '../../../../server/src/test/helpers/recordingKnex';
 
 // invoice_templates and quote_document_templates are distributed on Citus, which
 // rejects any non-IMMUTABLE function (now(), CURRENT_TIMESTAMP) in the DO UPDATE
@@ -10,20 +11,6 @@ import QuoteDocumentTemplate from './quoteDocumentTemplate';
 // IMMUTABLE" while plain Postgres accepted it. The saves run against a pg client
 // whose driver only records the statement, so the SQL each model sends is checked
 // without a database.
-
-type Captured = { sql: string; bindings: readonly unknown[] };
-
-function recordingKnex(captured: Captured[]): Knex {
-  const db = knexFactory({ client: 'pg' });
-  const client = db.client as any;
-  client.acquireConnection = async () => ({});
-  client.releaseConnection = async () => undefined;
-  client._query = async (_connection: unknown, query: { sql: string; bindings: unknown[] }) => {
-    captured.push({ sql: query.sql, bindings: query.bindings });
-    return { ...query, response: { rows: [{}], command: 'INSERT' } };
-  };
-  return db;
-}
 
 const NON_IMMUTABLE = /\b(now\s*\(|current_timestamp|current_date|localtimestamp|clock_timestamp|statement_timestamp|transaction_timestamp)/i;
 
@@ -52,7 +39,7 @@ describe('template saves are valid upserts on Citus distributed tables', () => {
     ['invoice templates', (db: Knex) => Invoice.saveTemplate(db, 'tenant-1', template)],
     ['quote document templates', (db: Knex) => QuoteDocumentTemplate.saveTemplate(db, 'tenant-1', template)],
   ])('%s bump updated_at with a bound timestamp, not a database function', async (_label, save) => {
-    const captured: Captured[] = [];
+    const captured: CapturedKnexQuery[] = [];
     const db = recordingKnex(captured);
     dbs.push(db);
 

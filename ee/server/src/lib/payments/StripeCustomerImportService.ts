@@ -212,6 +212,7 @@ export class StripeCustomerImportService {
 
     // Adoption order (2): local writes, one transaction per row.
     let imported = 0;
+    const ts = new Date().toISOString();
     await this.knex.transaction(async (trx) => {
       await this.table('client_billing_profiles', trx).where({ client_id: row.clientId, billing_profile_id: row.billingProfileId }).forUpdate().first();
       if (row.needsMapping) {
@@ -229,14 +230,14 @@ export class StripeCustomerImportService {
         await trx.raw(
           `INSERT INTO payment_methods (tenant, payment_method_id, client_id, billing_profile_id, type, last4, exp_month, exp_year,
              is_default, is_deleted, provider_type, external_payment_method_id, external_customer_id, brand, fingerprint, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'credit_card', ?, ?, ?, false, false, 'stripe', ?, ?, ?, ?, 'active', now(), now())
+           VALUES (?, ?, ?, ?, 'credit_card', ?, ?, ?, false, false, 'stripe', ?, ?, ?, ?, 'active', ?, ?)
            ON CONFLICT (tenant, provider_type, external_payment_method_id) WHERE external_payment_method_id IS NOT NULL
            DO UPDATE SET client_id = EXCLUDED.client_id, billing_profile_id = EXCLUDED.billing_profile_id, type = EXCLUDED.type,
              last4 = EXCLUDED.last4, exp_month = EXCLUDED.exp_month, exp_year = EXCLUDED.exp_year, brand = EXCLUDED.brand,
              fingerprint = EXCLUDED.fingerprint, external_customer_id = EXCLUDED.external_customer_id,
-             is_deleted = false, is_default = false, status = 'active', updated_at = now()`,
+             is_deleted = false, is_default = false, status = 'active', updated_at = EXCLUDED.updated_at`,
           [this.tenantId, uuidv4(), row.clientId, row.billingProfileId, card.last4, card.expMonth, card.expYear,
-            card.externalPaymentMethodId, row.customerId, card.brand, card.fingerprint],
+            card.externalPaymentMethodId, row.customerId, card.brand, card.fingerprint, ts, ts],
         );
         imported += 1;
       }
