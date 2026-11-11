@@ -14,7 +14,13 @@ import { ticketIndexer } from '@alga-psa/search/indexers/ticket';
 import { ticketCommentIndexer } from '@alga-psa/search/indexers/ticket_comment';
 import { upsertSearchDoc } from '@alga-psa/search/upsert';
 import { verifyResultVisibility, type SearchAclPrincipal } from '@alga-psa/search/acl';
-import { countSearchMatchesByType, runSearchQuery } from '@alga-psa/search/query';
+import {
+  countSearchMatchesByType,
+  encodeSearchCursor,
+  runSearchPage,
+  runSearchQuery,
+  type SearchIndexHit,
+} from '@alga-psa/search/query';
 import {
   deleteRowsMissingFromSource,
   insertRowsMissingFromIndex,
@@ -197,6 +203,52 @@ describe('ticket search client scope (integration)', () => {
       expect(groups.ticket_comment).toBe(2);
       expect(results).toContain(`ticket:${otherTicketId}`);
       expect(results).toContain(`ticket_comment:${otherCommentId}`);
+    });
+  });
+
+  describe('one-statement search page', () => {
+    const statementsDuring = async <T>(work: () => Promise<T>): Promise<{ result: T; statements: number }> => {
+      let statements = 0;
+      const listener = () => { statements += 1; };
+      knex.on('query', listener);
+      try {
+        return { result: await work(), statements };
+      } finally {
+        knex.removeListener('query', listener);
+      }
+    };
+
+    // Score decays with now(), which moves between statements: compare it approximately, everything else exactly.
+    const expectSameHits = (actual: SearchIndexHit[], expected: SearchIndexHit[]) => {
+      expect(actual.map(({ score: _score, ...rest }) => rest)).toEqual(expected.map(({ score: _score, ...rest }) => rest));
+      actual.forEach((hit, i) => expect(hit.score).toBeCloseTo(expected[i].score, 6));
+    };
+
+    it.each([
+      ['an unrestricted principal', () => principal({ isInternal: true, clientAccess: { mode: 'all' } })],
+      ['a client-scoped principal', () => principal({ clientAccess: { mode: 'scoped', clientIds: [ownClientId] } })],
+    ])('reads the same hits and counts as the separate queries for %s, in one statement', async (_label, makeAcl) => {
+      const acl = makeAcl();
+      const base = { knex, tenant, query: TERM, allowedTypes: ['ticket', 'ticket_comment', 'kb_article'] as any, acl };
+
+      const { result: first, statements } = await statementsDuring(() => runSearchPage({ ...base, limit: 2 }));
+      expect(statements).toBe(1);
+      expect(first.countsByType).toEqual(await countSearchMatchesByType(base));
+      expectSameHits(first.hits, await runSearchQuery({ ...base, limit: 2 }));
+
+      // Counts cover every match, not the page; the cursor continues where the page stopped. The
+      // continuation uses the recency order: a relevance cursor re-scores against a later now().
+      const total = Object.values(first.countsByType).reduce((sum, n) => sum + n, 0);
+      expect(total).toBeGreaterThan(first.hits.length);
+      const recent = { ...base, sort: 'recent' as const };
+      const head = await runSearchPage({ ...recent, limit: 2 });
+      const cursor = encodeSearchCursor(head.hits[head.hits.length - 1]);
+      const tail = await runSearchPage({ ...recent, limit: 50, cursor });
+      expectSameHits(tail.hits, await runSearchQuery({ ...recent, limit: 50, cursor }));
+      expect(tail.countsByType).toEqual(first.countsByType);
+      expect([...head.hits, ...tail.hits].map((h) => `${h.type}:${h.id}`))
+        .toEqual((await runSearchQuery({ ...recent, limit: 50 })).map((h) => `${h.type}:${h.id}`));
+      expect(head.hits.length + tail.hits.length).toBe(total);
     });
   });
 });

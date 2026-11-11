@@ -35,6 +35,11 @@ vi.mock('@alga-psa/search/acl', async (importOriginal) => ({
 }));
 
 vi.mock('@alga-psa/search/query', () => ({
+  // The full search reads its page and counts in one statement; the double composes the two halves.
+  runSearchPage: async (options: unknown) => ({
+    hits: await mocks.runSearchQuery(options),
+    countsByType: await mocks.countSearchMatchesByType(options),
+  }),
   runSearchQuery: mocks.runSearchQuery,
   runSearchTypeaheadQuery: mocks.runSearchTypeaheadQuery,
   countSearchMatches: mocks.countSearchMatches,

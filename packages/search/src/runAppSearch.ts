@@ -14,9 +14,9 @@ import {
   type SearchAclPrincipal,
 } from './acl';
 import {
-  countSearchMatchesByType,
   encodeSearchCursor,
-  runSearchQuery,
+  runSearchPage,
+  type SearchIndexHit,
   type SearchQueryOptions,
 } from './query';
 import {
@@ -158,7 +158,7 @@ export async function resolveSearchPrincipal(
 }
 
 export function toSearchResultRow(
-  hit: Awaited<ReturnType<typeof runSearchQuery>>[number],
+  hit: SearchIndexHit,
 ): SearchResultRow {
   return {
     type: hit.type,
@@ -196,28 +196,18 @@ export async function runAppSearch(
   const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
   const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
-  const [hits, typeCounts] = await Promise.all([
-    runSearchQuery({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      limit: limit + 1,
-      cursor: input.cursor,
-      sort: input.sort,
-      includeSnippets: true,
-      acl,
-      searchIndex,
-    }),
-    countSearchMatchesByType({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      acl,
-      searchIndex,
-    }),
-  ]);
+  const { hits, countsByType: typeCounts } = await runSearchPage({
+    knex,
+    tenant,
+    query: input.query,
+    allowedTypes,
+    limit: limit + 1,
+    cursor: input.cursor,
+    sort: input.sort,
+    includeSnippets: true,
+    acl,
+    searchIndex,
+  });
 
   const visibleHits = await verifyResultVisibility(knex, acl, hits);
   const pageHits = visibleHits.slice(0, limit);
