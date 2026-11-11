@@ -349,8 +349,14 @@ function compileBundleRuleSql(
     return { supported: true };
   }
 
-  // `not_self_approver` only constrains mutations; it never denies a read.
-  if (rule.constraintKey && rule.constraintKey !== 'not_self_approver') {
+  // `not_self_approver` only constrains mutations and `hide_sensitive_fields` only redacts fields of rows
+  // the rule already lets through: neither denies a read, so neither stops the rule narrowing in SQL.
+  // Redaction is applied afterwards as a projection over the narrowed page (see `projectNarrowedPage`).
+  if (
+    rule.constraintKey &&
+    rule.constraintKey !== 'not_self_approver' &&
+    rule.constraintKey !== 'hide_sensitive_fields'
+  ) {
     return { supported: false, reason: `unsupported bundle constraint ${rule.constraintKey}` };
   }
 

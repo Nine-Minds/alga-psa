@@ -161,7 +161,7 @@
   {
     "id": "T019",
     "description": "API integration: with a bundle assigned to an API key, the eight controllers return only in-scope records, totals match, a create for an out-of-scope client is refused, and MCP search and endpoint calls with that key agree.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F033",

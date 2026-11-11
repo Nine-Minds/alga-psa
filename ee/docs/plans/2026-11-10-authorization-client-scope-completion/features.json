@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "The REST controllers for clients, contacts, interactions, time entries, time sheets, document lists, project task comments and search apply the same permission, narrowing and create checks as the corresponding actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — REST and MCP parity"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "A bundle assigned to an API key narrows that key's requests on those controllers, and MCP search and endpoint calls made with the key return only in-scope records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — REST and MCP parity"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "List totals and pagination on REST endpoints reflect the narrowed set, including when a rule redacts fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — REST and MCP parity"
     ]

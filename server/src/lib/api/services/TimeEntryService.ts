@@ -56,6 +56,15 @@ import {
   type ContractLineSource,
 } from '@alga-psa/types';
 
+/** `readScope.apply` narrows the builder in place; this returns it so it chains with the query it was applied to. */
+function narrowToReadScope<Q extends Knex.QueryBuilder>(
+  readScope: { apply(builder: Knex.QueryBuilder): void },
+  query: Q,
+): Q {
+  readScope.apply(query);
+  return query;
+}
+
 export class TimeEntryService extends BaseService<any> {
   constructor() {
     super({
@@ -188,7 +197,8 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'list', [options, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Extract filters from options
     const filters = options.filters as TimeEntryFilterData;
@@ -222,7 +232,7 @@ export class TimeEntryService extends BaseService<any> {
     query.limit(limit).offset(offset);
 
     // Get total count - need to apply same filters to count query
-    const countQuery = this.buildTenantScopedQuery(knex, context);
+    const countQuery = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     
     // Apply same filters to count query
     this.applyFilters(countQuery, filters, knex, context.tenant);
@@ -243,8 +253,9 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getById', [id, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
     const scopedDb = tenantDb(knex, context.tenant);
-    const query = this.buildTenantScopedQuery(knex, context);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'service_catalog', 'time_entries.service_id', 'service_catalog.service_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'time_sheets', 'time_entries.time_sheet_id', 'time_sheets.id', { type: 'left' });
@@ -910,11 +921,12 @@ export class TimeEntryService extends BaseService<any> {
     // Human-work guard: approval requires a human approver. Checked before the per-entry
     // loop, whose catch would otherwise swallow the error into a per-entry failure.
     await assertHumanWorkOwner(knex, context.tenant, context.userId, 'approved_by');
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
 
     for (const entryId of data.entry_ids) {
       try {
         // First check if the entry exists
-        const entry = await this.buildTenantScopedQuery(knex, context)
+        const entry = await narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context))
           .where('entry_id', entryId)
           .first();
           
@@ -991,10 +1003,11 @@ export class TimeEntryService extends BaseService<any> {
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
     
     for (const entryId of data.entry_ids) {
       try {
-        await this.buildTenantScopedQuery(knex, context)
+        await narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context))
           .where('entry_id', entryId)
           .where('approval_status', 'SUBMITTED')
           .update(withViaPrincipal(context, {
@@ -1030,7 +1043,8 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'searchTimeEntries', [searchData, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
     const tableName = this.tableName;
@@ -1078,7 +1092,7 @@ export class TimeEntryService extends BaseService<any> {
     query.limit(limit).offset(offset);
 
     // Get total count
-    const countQuery = this.buildTenantScopedQuery(knex, context);
+    const countQuery = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     
     if (searchData.query) {
       countQuery.where(`${this.tableName}.notes`, 'ilike', `%${searchData.query}%`);
@@ -1099,7 +1113,8 @@ export class TimeEntryService extends BaseService<any> {
   
   async search(searchData: TimeEntrySearchData, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
     if (searchData.fields && searchData.fields.length > 0) {
@@ -1175,7 +1190,8 @@ export class TimeEntryService extends BaseService<any> {
   
   async getStatistics(context: ServiceContext, filters?: TimeEntryFilterData): Promise<any> {
     const { knex } = await this.getKnex();
-    let query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    let query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Apply date filters if provided
     if (filters?.date_from) {

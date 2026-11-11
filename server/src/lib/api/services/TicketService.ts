@@ -1,3 +1,5 @@
+import { assertTicketCreateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
@@ -1924,6 +1926,9 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
+        // Same create gate as the MSP ticket actions: the candidate ticket must be one the caller's scope includes.
+        await assertTicketCreateAllowed(trx, context.tenant, subjectFromServiceContext(context), data);
+
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,

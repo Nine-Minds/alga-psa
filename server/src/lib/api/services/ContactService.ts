@@ -6,6 +6,7 @@
 import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { subjectFromServiceContext } from './serviceContextSubject';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
@@ -166,6 +167,23 @@ export class ContactService extends BaseService<IContact> {
     });
   }
 
+  /**
+   * The contacts the caller may read, as one SQL predicate (the same compiled narrowing the contact actions use, with
+   * the API key's bundles folded into the subject). Free for a caller nothing narrows.
+   */
+  private async contactNarrowing(conn: Knex | Knex.Transaction, context: ServiceContext, alias: string) {
+    return (await createClientScopeContext(conn, context.tenant, subjectFromServiceContext(context))).narrowing('contact', alias);
+  }
+
+  // LEVERAGE: pattern rest-assert-in-scope — twin of ClientService.assertClientInScope.
+  /** 404 for a contact the caller may not read: an out-of-scope contact is indistinguishable from a missing one. */
+  private async assertContactInScope(conn: Knex | Knex.Transaction, contactId: string, context: ServiceContext): Promise<void> {
+    const scope = await createClientScopeContext(conn, context.tenant, subjectFromServiceContext(context));
+    if (!(await scope.permits('contact', contactId))) {
+      throw new NotFoundError('Contact not found');
+    }
+  }
+
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IContact>> {
     const { knex } = await this.getKnex();
     const {
@@ -187,6 +205,11 @@ export class ContactService extends BaseService<IContact> {
 
     dataQuery = this.applyContactFilters(dataQuery, filters, knex, context.tenant);
     countQuery = this.applyContactFilters(countQuery, filters, knex, context.tenant);
+
+    // Narrow both queries before pagination: the page and the total cover the readable set.
+    const narrowing = await this.contactNarrowing(knex, context, 'c');
+    narrowing.apply(dataQuery);
+    narrowing.apply(countQuery);
 
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;
@@ -260,6 +283,7 @@ export class ContactService extends BaseService<IContact> {
           { column: 'location_id', order: 'desc' },
         ],
       });
+      (await this.contactNarrowing(trx, context, 'c')).apply(contactQuery);
       const baseContact = await applyDefaultPhoneJoins(contactQuery, trx, context.tenant)
         .where('c.contact_name_id', id)
         .select(
@@ -305,6 +329,13 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const contact = await withTransaction(knex, async (trx) => {
+      // Same create gate as the contact actions: the candidate contact's client must be in the caller's scope.
+      await assertRecordCreateAllowed(trx, {
+        tenant: context.tenant,
+        user: subjectFromServiceContext(context),
+        resourceType: 'contact',
+        record: { clientId: data.client_id ?? null },
+      }, 'contact');
       const created = await ContactModel.createContact(
         {
           full_name: data.full_name ?? '',
@@ -409,6 +440,7 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const result = await withTransaction(knex, async (trx) => {
+      await this.assertContactInScope(trx, id, context);
       const before = await ContactModel.getContactById(id, context.tenant, trx);
       if (!before) {
         throw new NotFoundError('Contact not found');
@@ -484,6 +516,7 @@ export class ContactService extends BaseService<IContact> {
       const scopedDb = tenantDb(trx, context.tenant);
       const contactsQuery = scopedDb.table('contacts as c');
       scopedDb.tenantJoin(contactsQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+      (await this.contactNarrowing(trx, context, 'c')).apply(contactsQuery);
       const rows = await applyDefaultPhoneJoins(contactsQuery, trx, context.tenant)
         .where('c.client_id', clientId)
         .select(
@@ -510,6 +543,7 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const deletedContact = await withTransaction(knex, async (trx) => {
+      await this.assertContactInScope(trx, id, context);
       const before = await ContactModel.getContactById(id, context.tenant, trx);
       if (!before) {
         throw new NotFoundError('Contact not found');
@@ -546,6 +580,8 @@ export class ContactService extends BaseService<IContact> {
     let query = scopedDb.table('contacts as c');
     query = scopedDb.tenantJoin(query, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
     query = applyDefaultPhoneJoins(query, knex, context.tenant);
+
+    (await this.contactNarrowing(knex, context, 'c')).apply(query);
 
     if (!searchData.include_inactive) {
       query = query.where('c.is_inactive', false);
@@ -612,8 +648,10 @@ export class ContactService extends BaseService<IContact> {
   async getContactStats(context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
+    // Statistics cover the contacts the caller may read.
+    const narrowing = await this.contactNarrowing(knex, context, 'contacts');
     const [totalStats, roleStats, recentStats] = await Promise.all([
-      tenantDb(knex, context.tenant).table('contacts')
+      narrowing.apply(tenantDb(knex, context.tenant).table('contacts'))
         .select(
           knex.raw('COUNT(*) as total_contacts'),
           knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_contacts'),
@@ -622,12 +660,12 @@ export class ContactService extends BaseService<IContact> {
           knex.raw('COUNT(CASE WHEN client_id IS NULL THEN 1 END) as contacts_without_client')
         )
         .first(),
-      tenantDb(knex, context.tenant).table('contacts')
+      narrowing.apply(tenantDb(knex, context.tenant).table('contacts'))
         .whereNotNull('role')
         .where('role', '!=', '')
         .groupBy('role')
         .select('role', knex.raw('COUNT(*) as count')),
-      tenantDb(knex, context.tenant).table('contacts')
+      narrowing.apply(tenantDb(knex, context.tenant).table('contacts'))
         .where('created_at', '>=', knex.raw("now() - interval '30 days'"))
         .count('* as recent_contacts')
         .first(),

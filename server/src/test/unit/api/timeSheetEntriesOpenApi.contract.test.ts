@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/scheduling/lib/timeEntryAuthorizationSql', () => ({ resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined, applyWith: () => undefined, subject: null }) }));
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
