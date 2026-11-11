@@ -34,6 +34,7 @@ describe('interaction table pagination contract', () => {
 
     expect(action).toContain("assertMspPermission(user, 'interaction', 'read'");
     expect(action).toContain('withTransaction(knex, async (trx: Knex.Transaction)');
-    expect(action).toContain('InteractionModel.getInteractionsPage(filters, tenant, trx)');
+    expect(action).toContain('InteractionModel.getInteractionsPage(filters, tenant, trx, readScope)');
+    expect(action).toContain("resolveInteractionReadScope(knex, tenant, user, 'i')");
   });
 });

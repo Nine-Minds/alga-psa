@@ -44,6 +44,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// The client read scope has its own DB test (T012); here the subject is not client-restricted.
+vi.mock('../src/lib/timeEntryAuthorizationSql', () => ({
+  resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined }),
+}));
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
   assertCanActOnBehalf: (...args: any[]) => assertCanActOnBehalfMock(...args),
 }));

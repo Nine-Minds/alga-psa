@@ -96,7 +96,7 @@
   {
     "id": "T012",
     "description": "DB integration: interaction lists, time-entry lists, ticket time summaries and timesheet reads for that subject contain nothing from the third client; an ad hoc entry is visible only to its own user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017"

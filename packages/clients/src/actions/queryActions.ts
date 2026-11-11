@@ -18,6 +18,7 @@ import { attachDisplayTags } from '../lib/displayTags';
 import { attachContactLocations } from '../lib/contactLocations';
 import { contactLocationSortKey } from '../lib/contactLocationDisplay';
 import InteractionModel from '../models/interactions';
+import { resolveInteractionReadScope } from '../lib/interactionAuthorizationSql';
 import {
   actionError,
   permissionError,
@@ -683,8 +684,10 @@ export const getInteractionById = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    // An interaction outside the reader's client scope is indistinguishable from a missing one.
+    const readScope = await resolveInteractionReadScope(knex, tenant, user);
     const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getById(interactionId, tenant, trx);
+      return await InteractionModel.getById(interactionId, tenant, trx, readScope);
     });
     if (!interaction) {
       throw new Error('Interaction not found');

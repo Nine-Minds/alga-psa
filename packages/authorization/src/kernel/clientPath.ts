@@ -52,6 +52,11 @@ export interface DiscriminatorClientResolver {
    * when the record the outer row points at belongs to one of `clientIds`.
    */
   narrowToClients(subquery: Knex.QueryBuilder, refs: PolymorphicRowRefs, clientIds: readonly string[]): void;
+  /**
+   * SQL facet: fill `subquery` (the body of an `EXISTS`) so that it matches when the record the outer row
+   * points at has A client, any client. Negated, this is "the row has no client": the row facet's null.
+   */
+  narrowToOwned(subquery: Knex.QueryBuilder, refs: PolymorphicRowRefs): void;
 }
 
 function joinPath(query: Knex.QueryBuilder, path: ClientPath): string {
@@ -64,6 +69,16 @@ function joinPath(query: Knex.QueryBuilder, path: ClientPath): string {
     previous = alias;
   });
   return previous;
+}
+
+/** The shared body of both SQL facets: the record the outer row points at, joined along the path. Returns the last alias. */
+function pointedAt(subquery: Knex.QueryBuilder, path: ClientPath, refs: PolymorphicRowRefs): string {
+  subquery.from(`${path.table} as p0`).select('p0.tenant');
+  const last = joinPath(subquery, path);
+  subquery
+    .whereRaw('?? = ??', ['p0.tenant', refs.tenantRef])
+    .whereRaw('?? = ??', [`p0.${path.idColumn}`, refs.idRef]);
+  return last;
 }
 
 /** Build both facets from one path declaration. */
@@ -80,12 +95,12 @@ export function clientPath(path: ClientPath): DiscriminatorClientResolver {
       return row?.client_id ?? null;
     },
     narrowToClients(subquery, refs, clientIds) {
-      subquery.from(`${path.table} as p0`).select('p0.tenant');
-      const last = joinPath(subquery, path);
-      subquery
-        .whereRaw('?? = ??', ['p0.tenant', refs.tenantRef])
-        .whereRaw('?? = ??', [`p0.${path.idColumn}`, refs.idRef])
-        .whereIn(`${last}.${path.clientColumn}`, [...clientIds]);
+      const last = pointedAt(subquery, path, refs);
+      subquery.whereIn(`${last}.${path.clientColumn}`, [...clientIds]);
+    },
+    narrowToOwned(subquery, refs) {
+      const last = pointedAt(subquery, path, refs);
+      subquery.whereNotNull(`${last}.${path.clientColumn}`);
     },
   };
 }

@@ -85,7 +85,9 @@ export interface RelationshipSqlAdapter {
   /**
    * Narrow `builder` to rows whose client is in `clientIds`, for resources with no
    * `clientColumn` (the polymorphic tables; see `polymorphicClientsHook`). Used only
-   * when `clientColumn` is absent. Must deny (no rows) when `clientIds` is empty.
+   * when `clientColumn` is absent. Called with an empty set too, so a resource may keep rows
+   * that need no client (a user's own client-less rows); the clause it adds for the clients
+   * themselves must match nothing when `clientIds` is empty.
    */
   applyClients?(builder: Knex.QueryBuilder, clientIds: string[]): void;
 }
@@ -132,12 +134,11 @@ function whereClientsOrDeny(
     whereInOrDeny(builder, adapter.clientColumn, clientIds);
     return;
   }
-  const normalized = uniqueNonEmpty(clientIds);
-  if (!adapter.applyClients || normalized.length === 0) {
+  if (!adapter.applyClients) {
     deny(builder);
     return;
   }
-  adapter.applyClients(builder, normalized);
+  adapter.applyClients(builder, uniqueNonEmpty(clientIds));
 }
 
 interface RelationshipTemplateDef {
