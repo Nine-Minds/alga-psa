@@ -3,6 +3,8 @@ import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 
+import { resolveReadableScope } from '@alga-psa/authorization/subject';
+
 import { registeredObjectTypes } from './index';
 import {
   resolveSearchAclPrincipal,
@@ -101,24 +103,55 @@ export function emptyGroups(): Record<SearchObjectType, number> {
 }
 
 /**
- * Single source of truth for which clients a search principal may see.
- *
- * Internal/MSP users are currently unrestricted, so they get `{ mode: 'all' }`
- * — no `clients` table scan and no giant UUID array bound into every search
- * query. Client-portal users are scoped to their own client.
- *
- * When ABAC per-internal-user client restrictions are introduced, the *only*
- * change is here: return `{ mode: 'scoped', clientIds }` for restricted
- * internal users. The SQL predicate and the per-row visibility verifier both
- * consume this mode, so the restriction is enforced in both layers without
- * an `isInternal` shortcut to audit.
+ * Resources whose `read` rules bound the clients a search principal may see. Search has one client
+ * set per principal, so it is the intersection over these: a restriction on any of them narrows
+ * every client-keyed search result (fail closed).
  */
-export function resolveClientAccess(user: IUserWithRoles): ClientAccess {
+// LEVERAGE: friction search-single-client-set — one client set per principal makes a bundle that restricts only
+// one resource (say assets) narrow every search type; per-type sets would follow each resource's own rules.
+export const SEARCH_CLIENT_RESOURCES = [
+  'client',
+  'contact',
+  'ticket',
+  'project',
+  'asset',
+  'document',
+  'interaction',
+  'time_entry',
+] as const;
+
+/**
+ * Single source of truth for which clients and boards a search principal may see.
+ *
+ * Client-portal users are scoped to their own client. An internal/MSP user is resolved through the
+ * authorization subject resolver and their bundle rules: when those restrict clients they get
+ * `{ mode: 'scoped', clientIds }`, when they restrict ticket boards they also get `boardIds`.
+ * The SQL predicate and the per-row visibility verifier both consume this value, so the
+ * restriction is enforced in both layers without an `isInternal` shortcut to audit.
+ *
+ * Unrestricted users stay on `{ mode: 'all' }`: in a tenant with no published bundle assignment the
+ * cached tenant probe is the only query (no subject load, no rule load, no `clients` scan, no
+ * UUID array bound into the search query).
+ */
+export async function resolveClientAccess(
+  knex: Knex,
+  tenant: string,
+  user: IUserWithRoles,
+): Promise<ClientAccess> {
   if (user.user_type === 'client') {
     return { mode: 'scoped', clientIds: user.clientId ? [user.clientId] : [] };
   }
 
-  return { mode: 'all' };
+  const scope = await resolveReadableScope(knex, {
+    tenant,
+    user,
+    clientResources: SEARCH_CLIENT_RESOURCES,
+    boardResource: 'ticket',
+  });
+  const boards = scope.boardIds === null ? {} : { boardIds: scope.boardIds };
+  return scope.clientIds === null
+    ? { mode: 'all', ...boards }
+    : { mode: 'scoped', clientIds: scope.clientIds, ...boards };
 }
 
 export function toSearchResultRow(
@@ -156,7 +189,7 @@ export async function runAppSearch(
 ): Promise<SearchAppResult> {
   const limit = normalizeLimit(input.limit);
   const requestedTypes = resolveAllowedTypes(input.types);
-  const clientAccess = resolveClientAccess(user);
+  const clientAccess = await resolveClientAccess(knex, tenant, user);
   const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
   const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 

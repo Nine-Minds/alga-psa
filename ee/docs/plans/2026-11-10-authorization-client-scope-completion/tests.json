@@ -150,7 +150,7 @@
   {
     "id": "T018",
     "description": "DB integration: after re-index, search by a subject restricted to two clients returns no client, contact, interaction, document, time entry or ticket of the third, and a subject restricted to selected boards gets no ticket from another board; a strict-type record with no client scope is hidden.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029",
