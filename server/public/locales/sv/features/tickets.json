@@ -1,4 +1,9 @@
 {
+  "emailRichText": {
+    "imageNotIncluded": "[Bilden ingår inte]",
+    "protectedContentNotIncluded": "[Skyddat innehåll ingår inte]",
+    "unsupportedContent": "[Innehåll som inte stöds]"
+  },
   "importDialog": {
     "errorCount_one": "{{count}} fel:",
     "errorCount_other": "{{count}} fel:",

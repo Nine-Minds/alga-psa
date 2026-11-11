@@ -1,4 +1,9 @@
 {
+  "emailRichText": {
+    "imageNotIncluded": "[Image non incluse]",
+    "protectedContentNotIncluded": "[Contenu protégé non inclus]",
+    "unsupportedContent": "[Contenu non pris en charge]"
+  },
   "importDialog": {
     "errorCount_one": "{{count}} erreur :",
     "errorCount_other": "{{count}} erreurs :",

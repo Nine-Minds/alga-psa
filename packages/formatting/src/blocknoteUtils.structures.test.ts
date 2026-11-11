@@ -97,6 +97,131 @@ describe('rich-text export structures', () => {
     expect(plainText).toContain('Expanded child content');
   });
 
+  it('keeps nested lists, quotes and toggle children structured in the text alternative', () => {
+    const blocks = [
+      { type: 'bulletListItem', content: text('Parent'), children: [
+        { type: 'numberedListItem', content: text('Nested step'), children: [
+          { type: 'bulletListItem', content: text('Deep item') },
+        ] },
+      ] },
+      { type: 'quote', content: text('Outer quote'), children: [
+        { type: 'paragraph', content: text('Quoted paragraph') },
+        { type: 'quote', content: text('Inner quote'), children: [
+          { type: 'paragraph', content: text('Deep quote') },
+        ] },
+      ] },
+      { type: 'toggleListItem', content: text('More'), children: [
+        { type: 'paragraph', content: text('Expanded') },
+        { type: 'checkListItem', props: { checked: true }, content: text('Child task') },
+      ] },
+    ];
+    const expected = [
+      '* Parent',
+      '  1. Nested step',
+      '     * Deep item',
+      '',
+      '> Outer quote',
+      '> Quoted paragraph',
+      '>',
+      '> > Inner quote',
+      '> > Deep quote',
+      '',
+      '- More',
+      '  Expanded',
+      '',
+      '  - [x] Child task',
+    ].join('\n');
+
+    expect(convertBlockContentToMarkdown(blocks)).toBe(expected);
+    const { text: plainText } = formatBlockNoteContent(blocks);
+    expect(plainText).toBe(expected);
+    for (const value of ['Nested step', 'Deep item', 'Quoted paragraph', 'Deep quote', 'Expanded', 'Child task']) {
+      expect(plainText.split(value)).toHaveLength(2);
+    }
+  });
+
+  it.each(['quote', 'toggleListItem'])('renders %s children when inline content is absent', (type) => {
+    const blocks = [{ type, content: null, children: [{ type: 'paragraph', content: text('Child') }] }];
+    const { html, text: plainText } = formatBlockNoteContent(blocks);
+
+    expect(html).toContain('Child');
+    expect(plainText).toContain('Child');
+    expect(plainText.split('Child')).toHaveLength(2);
+    expect(html).not.toContain('"children"');
+  });
+
+  it('renders BlockNote and ProseMirror table cells with null metadata', () => {
+    const inputs = [
+      [{
+        type: 'table',
+        content: { type: 'tableContent', rows: [{ cells: [{ ...cell('BlockNote cell'), props: null }] }] },
+      }],
+      {
+        type: 'doc',
+        content: [{ type: 'table', content: [{ type: 'tableRow', content: [{
+          type: 'tableCell',
+          attrs: null,
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'ProseMirror cell' }] }],
+        }] }] }],
+      },
+    ];
+
+    for (const [index, input] of inputs.entries()) {
+      const expected = index === 0 ? 'BlockNote cell' : 'ProseMirror cell';
+      expect(convertBlockContentToHTML(input)).toContain(expected);
+      const { html, text: plainText } = formatBlockNoteContent(input);
+      expect(html).toContain('<table');
+      expect(html).toContain(expected);
+      expect(plainText).toContain(expected);
+    }
+  });
+
+  it.each([
+    ['BlockNote', [
+      { type: 'paragraph', content: text('[Unsupported content]') },
+      { type: 'quote', content: text('Parent'), children: [{ type: 'unknownBlock' }] },
+      { type: 'file', props: { url: 'javascript:unsafe' } },
+      { type: 'table', content: null },
+    ]],
+    ['ProseMirror', {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: '[Unsupported content]' }] },
+        { type: 'blockquote', content: [{ type: 'unknownNode' }] },
+        { type: 'file', attrs: { url: 'javascript:unsafe' } },
+      ],
+    }],
+  ])('uses the caller-provided unsupported-content marker for %s without rewriting authored text', (_format, input) => {
+    const marker = '[Contenu <indisponible>]';
+    const { html, text: plainText } = formatBlockNoteContent(input, {
+      unsupportedContentPlaceholder: marker,
+    });
+
+    expect(html).toContain('[Contenu &lt;indisponible&gt;]');
+    expect(html).toContain('[Unsupported content]');
+    expect(plainText).toContain(marker);
+    expect(plainText).toContain('[Unsupported content]');
+  });
+
+  it.each([
+    ['BlockNote', [{ type: 'image', props: { url: 'javascript:unsafe' } }]],
+    ['ProseMirror', { type: 'doc', content: [{ type: 'image', attrs: { src: '' } }] }],
+  ])('marks an unusable %s image in HTML and text', (_format, input) => {
+    const { html, text: plainText } = formatBlockNoteContent(input, {
+      missingImagePlaceholder: '[Image <not included>]',
+    });
+
+    expect(html).toContain('[Image &lt;not included&gt;]');
+    expect(plainText).toContain('[Image <not included>]');
+    expect(html).not.toContain('javascript:');
+    expect(plainText).not.toContain('javascript:');
+  });
+
+  it('rejects empty custom rich-text markers', () => {
+    expect(() => formatBlockNoteContent([], { unsupportedContentPlaceholder: ' ' })).toThrow(/must not be empty/);
+    expect(() => formatBlockNoteContent([], { missingImagePlaceholder: '' })).toThrow(/must not be empty/);
+  });
+
   it('preserves code token boundaries and authored line breaks without inline markup', () => {
     const content = [
       { type: 'text', text: 'const ', styles: {} },

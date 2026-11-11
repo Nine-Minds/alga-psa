@@ -1,4 +1,11 @@
-import { prepareCommentAttachmentEmail, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import { recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import {
+  messageRecipients,
+  prepareTicketCommentRichTextEmail,
+  prepareTicketDescriptionRichTextEmail,
+  resolveTicketEmailAudience,
+} from './ticketRichTextEmail';
+import { isImageFile, redactTicketEmailRenderedContent, type TicketEmailAudiencePolicy } from './ticketEmailContentPolicy';
 import { claimDelivery, finishDelivery, COMMENT_EMAIL_LEDGER, type DeliveryLedger, type DeliveryKey, type DeliveryFinishState } from '@shared/lib/deliveryLedger';
 import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
@@ -88,6 +95,10 @@ export interface SendEmailParams {
   notificationSubtypeId?: number;
   /** Source publication when a bundle notification replies to a different ticket. */
   commentSource?: { ticketId: string; commentId: string };
+  /** Persisted rich-text source used to reconstruct ticket descriptions on each send. */
+  ticketDescriptionSource?: { ticketId: string; commentId?: string };
+  /** Persisted resolution and its audience, rechecked before delivery and retry. */
+  ticketResolutionSource?: { ticketId: string; commentId: string; audience: 'public' | 'authorized' };
   replyContext?: {
     ticketId?: string;
     projectId?: string;
@@ -280,6 +291,72 @@ export function resolveDeliveryClaim(
     return { ledger: COMMENT_EMAIL_LEDGER, tenant: params.tenantId, key: { comment_id: managedCommentId, recipient: params.to } };
   }
   return null;
+}
+
+export function removeUnreferencedInlineAttachments(
+  html: string,
+  attachments: readonly EmailAttachment[],
+): EmailAttachment[] {
+  const referenced = new Set<string>();
+  const attributes = /\s(?:src|href|background)\s*=\s*(?:"cid:([^"]+)"|'cid:([^']+)'|cid:([^\s>]+))/gi;
+  for (const match of html.matchAll(attributes)) referenced.add(match[1] || match[2] || match[3]);
+  const cssUrls = /url\(\s*["']?cid:([^"')\s]+)["']?\s*\)/gi;
+  for (const match of html.matchAll(cssUrls)) referenced.add(match[1]);
+  return attachments.filter(attachment => !attachment.cid || referenced.has(attachment.cid));
+}
+
+function retainSafeSuppliedAttachments(
+  attachments: readonly EmailAttachment[],
+  policy: TicketEmailAudiencePolicy,
+): EmailAttachment[] {
+  if (!policy.allowInlineImages || policy.suppressProtectedContent) return [];
+  return attachments.filter(attachment => !attachment.cid && !isImageAttachment(attachment));
+}
+
+function isImageAttachment(attachment: EmailAttachment): boolean {
+  return isImageFile(attachment.filename, attachment.contentType);
+}
+
+function retainSafePreparedAttachments(
+  attachments: readonly EmailAttachment[],
+  policy: TicketEmailAudiencePolicy,
+): EmailAttachment[] {
+  if (policy.suppressProtectedContent) return [];
+  return policy.allowInlineImages ? [...attachments] :
+    attachments.filter(attachment => !attachment.cid && !isImageAttachment(attachment));
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown> : undefined;
+}
+
+async function redactTicketEmailContext(
+  context: Record<string, unknown>,
+  policy: TicketEmailAudiencePolicy & { missingImageText: string; protectedContentText: string },
+): Promise<Record<string, unknown>> {
+  const result = { ...context };
+  const sections: Array<[string, Record<string, 'html' | 'text'>]> = [
+    ['comment', { content: 'html', html: 'html', text: 'text', plainText: 'text' }],
+    ['ticket', { description: 'text', descriptionText: 'text', descriptionHtml: 'html', resolution: 'html' }],
+  ];
+  for (const [section, fields] of sections) {
+    const original = objectRecord(context[section]);
+    if (!original) continue;
+    const sanitized = { ...original };
+    for (const [field, format] of Object.entries(fields)) {
+      if (typeof sanitized[field] === 'string') {
+        sanitized[field] = (await redactTicketEmailRenderedContent(sanitized[field], format, policy)).value;
+      } else if (sanitized[field] !== undefined && sanitized[field] !== null) {
+        sanitized[field] = '';
+      }
+    }
+    if (section === 'comment' && (!policy.allowInlineImages || policy.suppressProtectedContent)) {
+      sanitized.rawContent = null;
+    }
+    result[section] = sanitized;
+  }
+  return result;
 }
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
@@ -498,55 +575,136 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     const attachmentCommentId = params.template === 'ticket-comment-added'
       ? params.commentSource?.commentId || params.replyContext?.commentId : undefined;
     const attachmentTicketId = params.commentSource?.ticketId || params.replyContext?.ticketId;
-    if (params.template === 'ticket-comment-added' && params.commentSource) {
-      const destinationTicketId = params.replyContext?.ticketId;
-      // Bundling shares public updates, not document permissions. Recheck the
-      // destination and source on every retry before preparing source files.
+    const hasRichTextSource = Boolean(
+      (attachmentCommentId && attachmentTicketId) || params.ticketDescriptionSource || params.ticketResolutionSource,
+    );
+    const ticketContext = objectRecord(params.context.ticket);
+    const commentContext = objectRecord(params.context.comment);
+    const hasRichTextContext = Boolean(
+      commentContext && ['content', 'html', 'text', 'plainText', 'rawContent'].some(key => key in commentContext) ||
+      ticketContext && ['description', 'descriptionText', 'descriptionHtml', 'resolution'].some(key => key in ticketContext),
+    );
+    const needsRichTextPolicy = hasRichTextSource || (params.mailClass === 'ticket' && Boolean(
+      hasRichTextContext || (params.template === 'ticket-comment-added' && params.attachments?.length),
+    ));
+    const recipients = needsRichTextPolicy ? messageRecipients(params.to, params.cc, params.bcc) : [];
+    const destinationTicketId = params.replyContext?.ticketId || params.entityId;
+    const bundleSource = params.commentSource ||
+      (params.ticketResolutionSource && params.ticketResolutionSource.ticketId !== destinationTicketId
+        ? params.ticketResolutionSource : undefined);
+    let sharedDocumentAccess = true;
+    if (bundleSource) {
+      if (!destinationTicketId) throw new Error('A bundled ticket email requires a destination ticket');
       const child = destinationTicketId && await db.table('tickets').where({
-        ticket_id: destinationTicketId, master_ticket_id: attachmentTicketId,
+        ticket_id: destinationTicketId, master_ticket_id: bundleSource.ticketId,
       }).first();
-      if (!child || !await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId!, attachmentTicketId!) ||
-        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return;
+      if (!child || !await isPublicAttachmentComment(knex, params.tenantId, bundleSource.commentId, bundleSource.ticketId)) return;
+      const destinationAccess = await Promise.all(recipients.map(recipient =>
+        recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId, recipient)));
+      if (!destinationAccess[0]) return;
+      sharedDocumentAccess = destinationAccess.every(Boolean);
 
       const mirror = await db.table('ticket_bundle_mirrors').where({
-        source_comment_id: attachmentCommentId!, child_ticket_id: destinationTicketId!,
+        source_comment_id: bundleSource.commentId, child_ticket_id: destinationTicketId,
       }).first();
-      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return;
-      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return;
-      // Link-only bundles have no child comment. Never persist a master comment
-      // under a child's reply token; incoming replies still target that ticket.
-      params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };
+      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId)) return;
+      if (params.commentSource) {
+        if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return;
+        // Link-only bundles have no child comment; replies still target the child.
+        params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };
+      }
     }
     let managedCommentDelivery = false;
     let attachmentDownloadText = '';
-    if (attachmentCommentId && attachmentTicketId) {
-      managedCommentDelivery = Boolean(await db.table('ticket_comment_attachments').where({ comment_id: attachmentCommentId }).first());
-      if (managedCommentDelivery) {
-        // Recheck persisted visibility on each queued attempt, never trust an old event payload.
-        if (!await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId, attachmentTicketId)) {
-          const current = await db.table('comments').where({ comment_id: attachmentCommentId, ticket_id: attachmentTicketId }).first();
-          const staffRecipient = await db.table('users').where({ user_type: 'internal', is_inactive: false })
-            .whereRaw('lower(email) = ?', [params.to.trim().toLowerCase()]).first();
-          // Preserve staff text notifications; never send private files or stale
-          // public-event content to a customer after a visibility change.
-          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return;
-        }
-        const service = TenantEmailService.getInstance(params.tenantId);
-        const capabilities = await service.getAttachmentCapabilities();
-        const prepared = await prepareCommentAttachmentEmail({
-          db: knex, tenant: params.tenantId, ticketId: attachmentTicketId,
-          commentId: attachmentCommentId, recipient: params.to,
-          supportsAttachments: capabilities.supportsAttachments,
-          blockedAttachmentExtensions: capabilities.blockedAttachmentExtensions,
-          maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
-          // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL; recipient may be MSP or client, so surface is not known here (left canonical).
-          baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
+    let contentPolicy: (TicketEmailAudiencePolicy & {
+      missingImageText: string; protectedContentText: string; unsupportedContentText: string;
+    }) | undefined;
+    let initialAudience: TicketEmailAudiencePolicy | undefined;
+    const audienceTicketIds = [
+      attachmentTicketId, params.ticketDescriptionSource?.ticketId,
+      params.ticketResolutionSource?.ticketId, destinationTicketId,
+    ].filter((ticketId): ticketId is string => Boolean(ticketId));
+    if (needsRichTextPolicy) {
+      const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
+      const { t } = await getServerTranslation(recipientLocale, 'features/tickets');
+      initialAudience = await resolveTicketEmailAudience(knex, params.tenantId, audienceTicketIds, recipients);
+      contentPolicy = {
+        ...(hasRichTextSource ? initialAudience : { allowInlineImages: false, suppressProtectedContent: true }),
+        missingImageText: t('emailRichText.imageNotIncluded', { defaultValue: '[Image not included]' }),
+        protectedContentText: t('emailRichText.protectedContentNotIncluded', { defaultValue: '[Protected content not included]' }),
+        unsupportedContentText: t('emailRichText.unsupportedContent', { defaultValue: '[Unsupported content]' }),
+      };
+      const suppliedAttachments = retainSafeSuppliedAttachments(params.attachments ?? [], contentPolicy);
+      if (suppliedAttachments.length !== (params.attachments?.length ?? 0)) {
+        logger.info('[TicketEmail] Unverified supplied attachments were not included', {
+          tenantId: params.tenantId, ticketId: destinationTicketId,
         });
-        if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');
-        params = { ...params, attachments: prepared.attachments, context: {
+      }
+      params = { ...params, attachments: suppliedAttachments };
+    }
+    if (hasRichTextSource && contentPolicy) {
+      const service = TenantEmailService.getInstance(params.tenantId);
+      const capabilities = await service.getAttachmentCapabilities();
+      const common = {
+        db: knex,
+        tenant: params.tenantId,
+        recipients,
+        capabilities,
+        sharedDocumentAccess,
+        // LEVERAGE: pattern tenant-link-context — recipient surface is not known here.
+        baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
+        ...contentPolicy,
+      };
+
+      if (attachmentCommentId && attachmentTicketId) {
+        const sponsor = params.coManagedRecipient;
+        const authorizedSponsorRecipient = sponsor &&
+          sponsor.ticketId === attachmentTicketId && sponsor.commentId === attachmentCommentId
+          ? recipients[0] : undefined;
+        const prepared = await prepareTicketCommentRichTextEmail({
+          ...common,
+          ticketId: attachmentTicketId,
+          commentId: attachmentCommentId,
+          audience: params.commentSource ? 'public' : 'authorized',
+          authorizedSponsorRecipient,
+        });
+        if (!prepared) return;
+        managedCommentDelivery = prepared.managed;
+        if (prepared.downloadLinks.length && !contentPolicy.suppressProtectedContent) {
+          attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');
+        }
+        params = { ...params, attachments: [
+          ...(params.attachments ?? []), ...retainSafePreparedAttachments(prepared.attachments, contentPolicy),
+        ], context: {
           ...params.context,
           comment: { ...(params.context.comment as Record<string, unknown> || {}),
-            content: prepared.html, html: prepared.html, text: prepared.text, plainText: prepared.text },
+            content: prepared.html, html: prepared.html, text: prepared.text, plainText: prepared.text,
+            rawContent: prepared.rawContent },
+        } };
+      }
+
+      if (params.ticketDescriptionSource) {
+        const prepared = await prepareTicketDescriptionRichTextEmail({
+          ...common, ...params.ticketDescriptionSource, audience: 'authorized',
+        });
+        params = { ...params, attachments: [
+          ...(params.attachments ?? []), ...retainSafePreparedAttachments(prepared?.attachments ?? [], contentPolicy),
+        ], context: {
+          ...params.context,
+          ticket: { ...(params.context.ticket as Record<string, unknown> || {}),
+            description: prepared?.text ?? '', descriptionText: prepared?.text ?? '', descriptionHtml: prepared?.html ?? '' },
+        } };
+      }
+
+      if (params.ticketResolutionSource) {
+        const prepared = await prepareTicketCommentRichTextEmail({
+          ...common, ...params.ticketResolutionSource, requireResolution: true, imageOnly: true,
+        });
+        params = { ...params, attachments: [
+          ...(params.attachments ?? []), ...retainSafePreparedAttachments(prepared?.attachments ?? [], contentPolicy),
+        ], context: {
+          ...params.context,
+          ticket: { ...(params.context.ticket as Record<string, unknown> || {}), resolution: prepared?.html ?? '' },
         } };
       }
     }
@@ -559,6 +717,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         ? await provider.reauthorizeCommentRecipient(params.coManagedRecipient)
         : null;
       if (!current?.email) return;
+      if (current.email.trim().toLowerCase() !== params.to.trim().toLowerCase()) {
+        throw new EmailProviderError('Sponsor recipient changed while preparing the email; retry authorization.',
+          'unknown', 'unknown', true, 'SPONSOR_RECIPIENT_CHANGED', { definitelyNotSent: true });
+      }
       params = { ...params, to: current.email, recipientUserId: current.principalId };
       sponsorRedactions = current.redactedFields ?? [];
       params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
@@ -570,7 +732,19 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       }
     }
 
+    if (hasRichTextSource && initialAudience) {
+      const currentAudience = await resolveTicketEmailAudience(knex, params.tenantId, audienceTicketIds, recipients);
+      if (currentAudience.allowInlineImages !== initialAudience.allowInlineImages ||
+        currentAudience.suppressProtectedContent !== initialAudience.suppressProtectedContent) {
+        throw new EmailProviderError('Ticket email audience changed while preparing the message; retry authorization.',
+          'unknown', 'unknown', true, 'TICKET_EMAIL_AUDIENCE_CHANGED', { definitelyNotSent: true });
+      }
+    }
+    if (contentPolicy) params = { ...params, context: await redactTicketEmailContext(params.context, contentPolicy) };
     let html = htmlTemplate(params.context);
+    if (needsRichTextPolicy && params.attachments) {
+      params = { ...params, attachments: removeUnreferencedInlineAttachments(html, params.attachments) };
+    }
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
     if (params.coManagedRecipient && params.template === 'ticket-comment-added') {
       const title = (params.context.ticket as Record<string, unknown> | undefined)?.title;
@@ -655,7 +829,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       senderId: params.senderId,
       // Sponsor deliveries must return through EventEmailRetryQueue (or routing recovery)
       // so persisted rendered messages cannot bypass current authorization on rate-limit retry.
-      revalidateCommentOnRetry: managedCommentDelivery || Boolean(params.coManagedRecipient) || Boolean(params.coManagedRouting),
+      revalidateCommentOnRetry: needsRichTextPolicy || Boolean(params.coManagedRecipient) || Boolean(params.coManagedRouting),
       to: params.to,
       ...(params.cc?.length ? { cc: params.cc } : {}),
       ...(params.bcc?.length ? { bcc: params.bcc } : {}),
