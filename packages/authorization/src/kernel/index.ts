@@ -8,3 +8,4 @@ export * from './requestCache';
 export * from './scope';
 export * from './selfApproval';
 export * from './actionAliases';
+export * from './closedBaseline';

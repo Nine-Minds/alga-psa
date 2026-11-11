@@ -9,6 +9,7 @@ import type {
 } from './contracts';
 import type { BundleNarrowingRule } from './providers/bundleProvider';
 import { matchRulesForAction } from './actionAliases';
+import { closedBundlesNotNaming } from './closedBaseline';
 import { applyTicketVisibilityFilter, ticketMatchesVisibility } from '../portal/visibility';
 
 // ---------------------------------------------------------------------------
@@ -357,6 +358,13 @@ export function compileBundleReadNarrowingSql(
   action: string,
   ctx: RelationshipSqlContext
 ): RelationshipSqlCompileResult {
+  // A closed bundle that does not name this resource and action denies everything: representable in SQL, so
+  // it is `supported`, never a fall-back. Mirrors the closed-baseline branch of the bundle provider.
+  if (closedBundlesNotNaming(bundleRules, resourceType, action).length > 0) {
+    deny(builder);
+    return { supported: true };
+  }
+
   const matching = matchRulesForAction(bundleRules, resourceType, action);
   for (const rule of matching) {
     const result = compileBundleRuleSql(builder, rule, ctx);

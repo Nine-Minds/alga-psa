@@ -265,7 +265,13 @@ export async function isAssetClientActionAllowed(
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (evaluation) => {
         const rules = await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, evaluation);
-        return rules.filter((rule) => rule.templateKey && CLIENT_SCOPE_TEMPLATES.has(rule.templateKey));
+        // Keep every rule: the provider derives closed bundles from the full assigned rule set, so dropping a
+        // rule can make a closed bundle look like it does not name the resource (or hide it entirely).
+        // Rules whose template is not a client-scope template are neutralised instead: they still name the
+        // resource and action, but do not narrow at client level.
+        return rules.map((rule) =>
+          rule.templateKey && CLIENT_SCOPE_TEMPLATES.has(rule.templateKey) ? rule : { ...rule, templateKey: null }
+        );
       },
     }),
     // Coarse asset RBAC is checked by the action boundary before this function.
