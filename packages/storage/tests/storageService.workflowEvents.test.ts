@@ -18,6 +18,7 @@ vi.mock('../src/config/storage', () => ({
   getProviderConfig: vi.fn(),
   getStorageConfig: vi.fn(),
   validateFileUpload: vi.fn(async () => {}),
+  getUploadPolicy: vi.fn(async () => ({ maxFileSize: 1024 * 1024, allowedMimeTypes: ['*/*'] })),
 }));
 
 vi.mock('../src/StorageProviderFactory', () => ({
@@ -73,7 +74,11 @@ describe('StorageService.uploadFile workflow events', () => {
 
   it('publishes FILE_UPLOADED after creating the file record', async () => {
     createProviderMock.mockResolvedValue({
-      upload: vi.fn(async () => ({ path: 'tenant-1/files/sample.txt' })),
+      // uploadFile streams into a write session rather than calling upload().
+      beginWrite: vi.fn(async () => ({ provider: 'local', path: 'tenant-1/files/sample.txt', partialPath: 'p' })),
+      writePart: vi.fn(async (_h: unknown, partNumber: number, _d: unknown, size: number) => ({ partNumber, size, final: true })),
+      completeWrite: vi.fn(async () => ({ path: 'tenant-1/files/sample.txt', size: 3, mime_type: 'text/plain' })),
+      abortWrite: vi.fn(async () => undefined),
     } as any);
 
     createTenantKnexMock.mockResolvedValue({ knex: {} } as any);
