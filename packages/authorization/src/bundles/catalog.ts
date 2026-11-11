@@ -42,3 +42,18 @@ export function assertBundleRuleCatalogInput(input: BundleRuleCatalogInput): voi
     throw new Error(`Unsupported authorization constraint key: ${input.constraintKey}`);
   }
 }
+
+/**
+ * Resource types a bundle rule can name. `tag` covers tag lists and tag suggestions: a
+ * tag is visible to a narrowed subject when a record it is attached to belongs to a
+ * client in scope (see `parentVisibleViaChildClients`).
+ */
+export const AUTHORIZATION_RESOURCE_TYPE_CATALOG: ReadonlySet<string> = new Set([
+  'ticket',
+  'document',
+  'time_entry',
+  'project',
+  'asset',
+  'billing',
+  'tag',
+]);
