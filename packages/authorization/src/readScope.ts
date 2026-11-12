@@ -84,6 +84,8 @@ export interface ApplyReadScopeInput {
  */
 // LEVERAGE: friction sql-compiler-redaction-unsupported — the compiler reports a redaction-only constraint as
 // unsupported, so every visibility prefilter has to strip it first; the compiler should classify it as a no-op.
+// The compiler now treats hide_sensitive_fields as a read no-op (relationshipTemplates.ts), so this strip, the one in
+// clientScopeAuthorization.ts and the one in ticketScopeAuthorization.ts are redundant and can be removed together.
 function withoutRedactionOnlyConstraints(rules: BundleNarrowingRule[]): BundleNarrowingRule[] {
   return rules.map((rule) =>
     rule.constraintKey === 'hide_sensitive_fields' ? { ...rule, constraintKey: null } : rule

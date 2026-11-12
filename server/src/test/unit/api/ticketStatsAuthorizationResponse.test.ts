@@ -19,6 +19,10 @@ vi.mock('@alga-psa/authorization/subject', async (original) => ({
   })),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => [{ redactedFields: ['tickets.status_id'] }]) }));
+// Narrowing is compiled into SQL even when a rule redacts; this suite has no database, so the compile step is a no-op
+// and the page is projected through the per-row decisions.
+vi.mock('@alga-psa/authorization/kernel', async (original) => ({ ...(await original<any>()), compileTenantScopedResourceReadAuthorizationSql: vi.fn(() => ({ supported: true })) }));
+vi.mock('@alga-psa/db', async (original) => ({ ...(await original<any>()), tenantDb: vi.fn(() => ({ scoped: () => ({}) })) }));
 vi.mock('@/lib/api/services/TicketService', () => ({ TicketService: class { list = async () => ({ data: state.tickets, total: state.tickets.length }); } }));
 
 import { ApiTicketController } from '@/lib/api/controllers/ApiTicketController';
@@ -52,7 +56,7 @@ describe('ticket statistics authorization response', () => {
     expect((await controller().getById()(request())).status).toBe(403);
   });
 
-  it('projects list responses using per-row decisions when SQL narrowing cannot carry redactions', async () => {
+  it('projects list responses through per-row redactions applied over the SQL-narrowed page', async () => {
     state.tickets = [ticket('t1'), ticket('t2')];
     state.decision = () => ({ allowed: true, redactedFields: ['tickets.status_id'] });
     const listRequest = new NextRequest('http://localhost/api/v1/tickets?page=1&limit=25');

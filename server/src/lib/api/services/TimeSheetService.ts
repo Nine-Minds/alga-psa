@@ -5,6 +5,8 @@
 
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
+import { resolveTimeEntryReadScope } from '@alga-psa/scheduling/lib/timeEntryAuthorizationSql';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { v4 as uuidv4 } from 'uuid';
 import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
@@ -241,6 +243,10 @@ export class TimeSheetService extends BaseService<any> {
       // The controller passes filters as options.filters; direct callers use the third argument.
       const effectiveFilters = filters ?? (options.filters as TimeSheetFilterData | undefined);
 
+      // A time sheet belongs to its user, not to a client; what a client scope narrows is the entries on it. Every entry the
+      // sheet shows, counts or sums is one the caller may read (the same scope the time sheet actions apply).
+      const entryScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context));
+
       let query = this.buildTenantScopedQuery(knex, context);
 
       // time_periods is joined exactly once: filters and ORDER BY both reference it.
@@ -264,6 +270,7 @@ export class TimeSheetService extends BaseService<any> {
           const subquery = tenantDb(knex, context.tenant).table('time_entries')
             .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
             .select(knex.raw('1'));
+          entryScope.apply(subquery);
           
           if (effectiveFilters.has_entries) {
             query.whereExists(subquery);
@@ -293,11 +300,12 @@ export class TimeSheetService extends BaseService<any> {
   
       // Add computed fields
       // One correlated scalar subquery per aggregate (each selects exactly one column).
-      const entryAggregate = (expression: string) =>
-        tenantDb(knex, context.tenant).table('time_entries')
-          .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-          .select(knex.raw(expression))
-          .toQuery();
+      const entryAggregate = (expression: string) => {
+        const aggregate = tenantDb(knex, context.tenant).table('time_entries')
+          .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`));
+        entryScope.apply(aggregate);
+        return aggregate.select(knex.raw(expression)).toQuery();
+      };
 
       query.select([
         knex.raw(`(${entryAggregate('SUM(billable_duration) / 60.0')}) as total_hours`),
@@ -1585,6 +1593,7 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const tableName = this.tableName;
+      const entryScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context));
 
       const query = this.buildTenantScopedQuery(knex, context);
 
@@ -1610,11 +1619,12 @@ export class TimeSheetService extends BaseService<any> {
       }
 
       // One correlated scalar subquery per aggregate (each selects exactly one column).
-      const entryAggregate = (expression: string) =>
-        tenantDb(knex, context.tenant).table('time_entries')
-          .where('time_entries.time_sheet_id', knex.raw(`${tableName}.id`))
-          .select(knex.raw(expression))
-          .toQuery();
+      const entryAggregate = (expression: string) => {
+        const aggregate = tenantDb(knex, context.tenant).table('time_entries')
+          .where('time_entries.time_sheet_id', knex.raw(`${tableName}.id`));
+        entryScope.apply(aggregate);
+        return aggregate.select(knex.raw(expression)).toQuery();
+      };
 
       query.select(
           `${tableName}.*`,
@@ -1775,8 +1785,10 @@ export class TimeSheetService extends BaseService<any> {
       
       // work_date is a DATE column; node-pg would turn it into a JS Date (serialized as an
       // ISO datetime), so format it in SQL. The later alias overrides the `*` value.
-      return tenantDb(knex, context.tenant).table('time_entries')
-        .where({ time_sheet_id: timeSheetId })
+      const entriesQuery = tenantDb(knex, context.tenant).table('time_entries')
+        .where({ time_sheet_id: timeSheetId });
+      (await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context))).apply(entriesQuery);
+      return entriesQuery
         .select('time_entries.*', knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"))
         .orderBy('start_time');
     }
@@ -1793,8 +1805,10 @@ export class TimeSheetService extends BaseService<any> {
       // clamped to the entry's worked minutes (an entry with NULL start_time/end_time has 0
       // worked minutes but may still carry a billable_duration), so billable <= total and
       // non-billable >= 0 always hold.
-      const rows = await tenantDb(knex, context.tenant).table('time_entries')
-        .where({ time_sheet_id: timeSheetId })
+      const summaryQuery = tenantDb(knex, context.tenant).table('time_entries')
+        .where({ time_sheet_id: timeSheetId });
+      (await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context))).apply(summaryQuery);
+      const rows = await summaryQuery
         .select([
           knex.raw("COALESCE(work_item_type, 'unknown') as work_item_type"),
           knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"),

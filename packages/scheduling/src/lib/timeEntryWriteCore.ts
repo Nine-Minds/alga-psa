@@ -245,7 +245,7 @@ export async function publishPersistedTimeEntryEvents(persisted: PersistedTimeEn
  * user (see timeEntryAuthorizationSql.ts); for anyone else's, the candidate has no client and a narrowed
  * subject is refused.
  */
-async function assertTimeEntryCreateInScope(
+export async function assertTimeEntryCreateInScope(
   trx: Knex.Transaction,
   tenant: string,
   actor: IUser,
