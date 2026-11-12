@@ -12,7 +12,7 @@ import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
-import { normalizeAssignedToIds } from '@alga-psa/tickets/lib/ticketFilterUtils';
+import { foldLegacyClientId, normalizeAssignedToIds } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import {
   hasBoardFilterParam,
   hasTicketViewFilterParams,
@@ -227,6 +227,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.bundleView = bundleView;
       }
     }
+
+    // A legacy `?clientId=` is a v2 filter: fold it into the client.id `where` row (the explicit
+    // row wins), so old links open with the client selected in "Any of" mode.
+    const foldedFromURL = foldLegacyClientId(filtersFromURL);
+    delete filtersFromURL.clientId;
+    if (foldedFromURL.where) filtersFromURL.where = foldedFromURL.where;
 
     // ── Board memory, resolved before first paint ──────────────────────────
     //

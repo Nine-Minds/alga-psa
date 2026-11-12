@@ -68,7 +68,7 @@ describe('AsyncClientPicker', () => {
   const renderPicker = (props: Partial<React.ComponentProps<typeof AsyncClientPicker>> & { searchClients: any }) =>
     render(
       <ClientTagsProvider value={{ fetchClientTags, fetchClientTagOptions }}>
-        <AsyncClientPicker id="cp" onSelect={vi.fn()} selectedClientId={null} debounceMs={0} {...props} />
+        <AsyncClientPicker id="cp" onSelect={vi.fn()} selectedClientId={null} debounceMs={0} {...(props as any)} />
       </ClientTagsProvider>
     );
 

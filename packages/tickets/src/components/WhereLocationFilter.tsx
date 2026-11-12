@@ -2,9 +2,8 @@
 
 import React from 'react';
 import type { ITag } from '@alga-psa/types';
-import { Button } from '@alga-psa/ui/components/Button';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { WhereModeButton } from './WhereModeButton';
 import {
   locationFilterLabel,
   type WhereLocationOption,
@@ -32,7 +31,6 @@ interface WhereLocationFilterProps {
  * leaves a saved view working.
  */
 export function WhereLocationFilter({ id, label, options, selection, onChange }: WhereLocationFilterProps) {
-  const { t } = useTranslation('features/tickets');
   const mode: WhereTagMode = selection?.mode ?? 'in';
 
   // TagFilter is a checkbox popover keyed on display text, so the mapping lives here and nowhere else.
@@ -71,19 +69,7 @@ export function WhereLocationFilter({ id, label, options, selection, onChange }:
         }
         onClearTags={() => onChange(null)}
       />
-      {selection && (
-        <Button
-          id={`${id}-mode`}
-          variant="outline"
-          size="sm"
-          className="h-9 whitespace-nowrap"
-          onClick={() => emit(mode === 'in' ? 'not_in' : 'in', selectedTexts)}
-        >
-          {mode === 'in'
-            ? t('filters.tagModeAny', 'Any of')
-            : t('filters.tagModeNone', 'None of')}
-        </Button>
-      )}
+      <WhereModeButton id={id} selection={selection} onChange={onChange} />
     </div>
   );
 }

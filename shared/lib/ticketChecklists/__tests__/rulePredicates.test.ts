@@ -88,3 +88,17 @@ describe('checklist persisted predicate format', () => {
     expect(checklistWhereTagIds(where)).toEqual([owner, other]);
   });
 });
+
+describe('checklist client.id complements (T006)', () => {
+  it('turns not_in [owner] into FALSE for an owned template', () => {
+    const parsed = readChecklistWhere({ join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [owner] }] }, 1);
+    const simplified = checklistWhereForOwner(parsed, owner);
+    expect(simplified).toEqual({ join: 'or', clauses: [] });
+    expect(evaluatePredicate(simplified, { client: { id: owner } })).toBe(false);
+  });
+
+  it('still rejects a foreign id in a not_in clause', () => {
+    const parsed = readChecklistWhere({ join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [owner, other] }] }, 1);
+    expect(() => checklistWhereForOwner(parsed, owner)).toThrow(/outside this template's ownership/);
+  });
+});

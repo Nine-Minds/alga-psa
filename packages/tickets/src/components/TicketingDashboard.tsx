@@ -39,18 +39,23 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { useClientNames } from '@alga-psa/ui/hooks/useClientNames';
 import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import { WhereTagFilter } from './WhereTagFilter';
 import {
   WHERE_FILTERS,
-  WHERE_TAG_FILTERS,
+  getSingleClientScope,
   getWhereTagSelection,
   setWhereTagSelection,
   whereFilterChips,
+  whereFiltersFor,
+  type WhereFilterDescriptor,
+  type WhereSelection,
 } from '../lib/ticketWhereFilters';
+import { WhereClientFilter } from './WhereClientFilter';
 import { WhereLocationFilter, locationFilterLabel, type WhereLocationOption } from './WhereLocationFilter';
 import { listTicketFilterLocations } from '../actions/clientLookupActions';
 import type { TagSize } from '@alga-psa/ui/components/tags';
@@ -134,7 +139,7 @@ import {
   getContactByContactNameId,
   getContactsByClient,
 } from '../actions/clientLookupActions';
-import { contactFilterUpdateForClientChange } from '../lib/ticketFilterUtils';
+import { clientRowAllows, contactFilterUpdateForClientChange } from '../lib/ticketFilterUtils';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
@@ -448,21 +453,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedBoard = selectedBoards.length === 1 && selectedBoards[0] !== NO_BOARD_VALUE
     ? selectedBoards[0]
     : null;
-  const selectedClient = filterValues.clientId ?? null;
-  // The client filter is a server-searched picker, so the chip label is resolved by id on demand.
-  // LEVERAGE: pattern fetch-selected-client-by-id — single-client lookup for a picker's selected value
-  const [selectedClientLabel, setSelectedClientLabel] = useState<{ id: string; name: string } | null>(null);
-  useEffect(() => {
-    if (!selectedClient) return;
-    let cancelled = false;
-    searchClientsForPicker({ ids: [selectedClient] })
-      .then((result) => {
-        const match = result.clients.find((c) => c.client_id === selectedClient);
-        if (!cancelled && match) setSelectedClientLabel({ id: selectedClient, name: match.client_name });
-      })
-      .catch((error) => console.error('Error resolving selected client filter label:', error));
-    return () => { cancelled = true; };
-  }, [selectedClient]);
   const selectedContact = filterValues.contactId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
@@ -568,6 +558,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   );
   const hasWhereTagFilters = WHERE_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
   const whereTagFilterCount = WHERE_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
+  // The client row: names for its chips come from one batched id lookup, and "Any of" exactly one
+  // client scopes the contact and location options (anything else leaves them tenant-wide).
+  const clientRow = getWhereTagSelection(selectedWhere, 'client.id');
+  const clientRowIds = clientRow?.ids ?? EMPTY_STRING_ARRAY;
+  const clientNames = useClientNames(clientRowIds, searchClientsForPicker);
+  const scopedClientId = getSingleClientScope(selectedWhere);
 
   // The filtered client's locations, or every active tenant location grouped by client when no
   // client narrows the list. Both Location filters share the one list.
@@ -576,7 +572,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     let cancelled = false;
     (async () => {
       try {
-        const rows = await listTicketFilterLocations(selectedClient ?? null);
+        const rows = await listTicketFilterLocations(scopedClientId);
         // The options are informational: anything other than a list leaves the control empty
         // rather than failing the toolbar.
         if (!cancelled) setWhereLocationOptions(Array.isArray(rows) ? rows : []);
@@ -586,7 +582,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedClient]);
+  }, [scopedClientId]);
   const whereLocationLabelById = useMemo(
     () => new Map(whereLocationOptions.map((option) => [option.location_id, locationFilterLabel(option)])),
     [whereLocationOptions],
@@ -596,7 +592,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isFiltered = useMemo(() => {
     return selectedBoards.length > 0 ||
       excludedBoards.length > 0 ||
-      selectedClient !== null ||
       selectedContact !== null ||
       selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
@@ -611,14 +606,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, hasWhereTagFilters]);
+  }, [selectedBoards, excludedBoards, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, hasWhereTagFilters]);
 
   // Count of active filter groups (excludes the always-visible search box) — drives
   // the "Filters" button badge in the candidate #1 collapsed toolbar.
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (selectedBoards.length > 0 || excludedBoards.length > 0) n++;
-    if (selectedClient !== null) n++;
     if (selectedContact !== null) n++;
     if (selectedAssignees.length > 0 || selectedTeams.length > 0 || includeUnassigned) n++;
     if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) n++;
@@ -630,7 +624,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedTags.length > 0) n++;
     n += whereTagFilterCount;
     return n;
-  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags, whereTagFilterCount]);
+  }, [selectedBoards, excludedBoards, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags, whereTagFilterCount]);
 
   // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
   const [showFilters, setShowFilters] = useState(false);
@@ -651,8 +645,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       try {
         // 'all' rather than 'active': a ticket can name a contact who has since
         // been deactivated, and that ticket still has to be findable.
-        const contacts = selectedClient
-          ? await getContactsByClient(selectedClient, 'all')
+        const contacts = scopedClientId
+          ? await getContactsByClient(scopedClientId, 'all')
           : await getAllActiveContacts();
         if (!cancelled) setContactOptions(contacts);
       } catch {
@@ -661,7 +655,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
     })();
     return () => { cancelled = true; };
-  }, [needsContactOptions, selectedClient]);
+  }, [needsContactOptions, scopedClientId]);
+  // Outside the one-client scope the list is tenant-wide, so the row narrows it here. The applied
+  // contact always stays listed so the control can show (and clear) it.
+  const visibleContactOptions = useMemo(
+    () => scopedClientId
+      ? contactOptions
+      : contactOptions.filter((c) => c.contact_name_id === selectedContact || clientRowAllows(clientRow, c.client_id)),
+    [contactOptions, scopedClientId, clientRow, selectedContact],
+  );
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -928,7 +930,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.excludeBoardIds && f.excludeBoardIds.length > 0) {
       params.set('excludeBoardIds', f.excludeBoardIds.join(','));
     }
-    if (f.clientId) params.set('clientId', f.clientId);
     if (f.contactId) params.set('contactId', f.contactId);
     if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
@@ -1293,7 +1294,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     priorityId: selectedPriority,
     categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
     excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
-    clientId: selectedClient ?? undefined,
     contactId: selectedContact ?? undefined,
     searchQuery: debouncedSearchQuery,
     boardFilterState: boardFilterState,
@@ -1313,7 +1313,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     where: selectedWhere,
   }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
-    selectedClient, selectedContact, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedContact, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
     allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView, selectedWhere,
@@ -2188,16 +2188,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange]);
 
-  // Client and contact move together: a contact that does not belong to the
-  // newly selected client is cleared in the *same* update, so one click is one
-  // debounced fetch and no intermediate state applies both at once.
-  const handleClientSelect = useCallback((clientId: string | null) => {
+  // Every `where` control and chip changes the row through here. Client and contact move together:
+  // a contact the client row forbids is cleared in the *same* update, so one click is one debounced
+  // fetch and no intermediate state applies both at once.
+  const handleWhereChange = useCallback((nextWhere: PredicateGroup | undefined) => {
+    const nextClientRow = getWhereTagSelection(nextWhere, 'client.id');
+    const sameRow = JSON.stringify(nextClientRow) === JSON.stringify(clientRow);
+    if (sameRow || !selectedContact) {
+      onFilterChange({ where: nextWhere });
+      return;
+    }
     onFilterChange(contactFilterUpdateForClientChange({
-      nextClientId: clientId,
+      currentWhere: nextWhere,
+      nextSelection: nextClientRow,
       currentContactId: selectedContact,
       contactClientId: contactOptions.find((c) => c.contact_name_id === selectedContact)?.client_id,
     }));
-  }, [onFilterChange, selectedContact, contactOptions]);
+  }, [onFilterChange, clientRow, selectedContact, contactOptions]);
 
   const handleContactSelect = useCallback((contactId: string) => {
     onFilterChange({ contactId: contactId || undefined });
@@ -2222,7 +2229,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardId: undefined,
       boardIds: undefined,
       excludeBoardIds: undefined,
-      clientId: undefined,
       contactId: undefined,
       statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
@@ -2276,11 +2282,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onRemove: () => handleBoardSelect(selectedBoards, excludedBoards.filter((id) => id !== boardId)),
       });
     });
-
-    if (selectedClient) {
-      const name = (selectedClientLabel?.id === selectedClient ? selectedClientLabel.name : null) ?? t('fields.client', 'Client');
-      chips.push({ key: `client:${selectedClient}`, label: `${t('fields.client', 'Client')}: ${name}`, onRemove: () => handleClientSelect(null) });
-    }
 
     if (selectedContact) {
       const contactLabel = t('fields.contact', 'Contact');
@@ -2383,15 +2384,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     whereFilterChips(
       selectedWhere,
-      (descriptor, valueId) => ('tags' in descriptor.options
-        ? whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags'].find((d) => d.tag_id === valueId)?.tag_text
-        : whereLocationLabelById.get(valueId)),
+      (descriptor, valueId) => {
+        if ('tags' in descriptor.options) {
+          return whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags'].find((d) => d.tag_id === valueId)?.tag_text;
+        }
+        if ('clients' in descriptor.options) {
+          // Still resolving: a neutral ellipsis, never the id. Resolved-but-missing falls through
+          // to the descriptor's "Unknown client" label.
+          return clientNames.clients[valueId]?.client_name ?? (clientNames.unresolved.has(valueId) ? undefined : '…');
+        }
+        return whereLocationLabelById.get(valueId);
+      },
       (descriptor) => t(descriptor.labelKey, descriptor.defaultLabel),
+      WHERE_FILTERS,
+      (descriptor) => descriptor.unknownValue ? t(descriptor.unknownValue.labelKey, descriptor.unknownValue.defaultLabel) : undefined,
     ).forEach((chip) => {
       chips.push({
         key: chip.key,
         label: chip.label,
-        onRemove: () => onFilterChange({ where: chip.clear() }),
+        onRemove: () => handleWhereChange(chip.clear()),
       });
     });
 
@@ -2399,7 +2410,52 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       ...chip,
       removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
     }));
-  }, [selectedBoards, excludedBoards, boards, selectedClient, selectedClientLabel, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, whereLocationLabelById, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
+  }, [selectedBoards, excludedBoards, boards, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, whereLocationLabelById, clientNames, handleWhereChange, handleBoardSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
+
+  // One control per `where` descriptor row; the row's options source picks the control, and its
+  // placement picks the toolbar row. Every change goes through handleWhereChange.
+  const renderWhereFilter = (descriptor: WhereFilterDescriptor) => {
+    const selection = getWhereTagSelection(selectedWhere, descriptor.path);
+    const onChange = (next: WhereSelection | null) =>
+      handleWhereChange(setWhereTagSelection(selectedWhere, descriptor.path, next));
+    if ('tags' in descriptor.options) {
+      return (
+        <WhereTagFilter
+          key={descriptor.path}
+          id={`${id}-where-${descriptor.options.tags}-tags`}
+          label={t(descriptor.labelKey, descriptor.defaultLabel)}
+          definitions={whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags']}
+          selection={selection}
+          onChange={onChange}
+        />
+      );
+    }
+    if ('clients' in descriptor.options) {
+      return (
+        <WhereClientFilter
+          key={descriptor.path}
+          id={`${id}-where-client`}
+          searchClients={searchClientsForPicker}
+          selection={selection}
+          onChange={onChange}
+          filterState={clientFilterState}
+          onFilterStateChange={handleClientFilterStateChange}
+          clientTypeFilter={clientTypeFilter}
+          onClientTypeFilterChange={handleClientTypeFilterChange}
+        />
+      );
+    }
+    return (
+      <WhereLocationFilter
+        key={descriptor.path}
+        id={`${id}-where-${descriptor.options.locations}-location`}
+        label={t(descriptor.labelKey, descriptor.defaultLabel)}
+        options={whereLocationOptions}
+        selection={selection}
+        onChange={onChange}
+      />
+    );
+  };
 
   return (
     <>
@@ -2580,27 +2636,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   allowEmpty={true}
                   className="text-sm min-w-[200px]"
                 />
-                <ClientPicker
-                  id='client-picker'
-                  data-automation-id={`${id}-client-picker`}
-                  searchClients={searchClientsForPicker}
-                  onSelect={handleClientSelect}
-                  selectedClientId={selectedClient}
-                  filterState={clientFilterState}
-                  onFilterStateChange={handleClientFilterStateChange}
-                  clientTypeFilter={clientTypeFilter}
-                  onClientTypeFilterChange={handleClientTypeFilterChange}
-                  fitContent={true}
-                />
+                {whereFiltersFor('primary').map(renderWhereFilter)}
                 <ContactPicker
                   id="contact-picker"
                   data-automation-id={`${id}-contact-picker`}
-                  contacts={contactOptions}
+                  contacts={visibleContactOptions}
                   value={selectedContact ?? ''}
                   onValueChange={handleContactSelect}
                   // Belt to the braces of the scoped fetch: even a mid-flight
                   // option list cannot offer another client's contact.
-                  clientId={selectedClient ?? undefined}
+                  clientId={scopedClientId ?? undefined}
                   placeholder={t('dashboard.filters.allContacts', 'All Contacts')}
                   buttonWidth="fit"
                   className="text-sm min-w-[180px]"
@@ -2764,31 +2809,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
-                {WHERE_FILTERS.map((descriptor) => (
-                  'tags' in descriptor.options ? (
-                    <WhereTagFilter
-                      key={descriptor.path}
-                      id={`${id}-where-${descriptor.options.tags}-tags`}
-                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
-                      definitions={whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags']}
-                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
-                      onChange={(selection) =>
-                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
-                      }
-                    />
-                  ) : (
-                    <WhereLocationFilter
-                      key={descriptor.path}
-                      id={`${id}-where-${descriptor.options.locations}-location`}
-                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
-                      options={whereLocationOptions}
-                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
-                      onChange={(selection) =>
-                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
-                      }
-                    />
-                  )
-                ))}
+                {whereFiltersFor('secondary').map(renderWhereFilter)}
                 </div>
               </div>
               </ListFilterPanel>

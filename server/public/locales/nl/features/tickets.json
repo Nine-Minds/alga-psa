@@ -214,6 +214,8 @@
   "resetFilters": "Resetten",
   "filters": {
     "allStatuses": "Alle statussen",
+    "allClients": "Alle klanten",
+    "unknownClient": "Onbekende klant",
     "allOpen": "Alle open tickets",
     "allClosed": "Alle gesloten tickets",
     "allPriorities": "Alle prioriteiten",

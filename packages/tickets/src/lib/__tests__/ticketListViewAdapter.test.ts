@@ -164,4 +164,37 @@ describe('ticket list view adapter', () => {
     expect(baseline.filters.boardIds).toEqual([BOARD_SERVICE_DESK]);
     expect(baseline.columnSizing).toBeUndefined();
   });
+
+  describe('client.id where row (T005)', () => {
+    const C1 = 'c0000000-0000-4000-8000-000000000001';
+    const C2 = 'c0000000-0000-4000-8000-000000000002';
+    const row = (operator: 'in' | 'not_in', ...ids: string[]) =>
+      ({ join: 'and' as const, clauses: [{ path: 'client.id', operator, value: ids }] });
+
+    it('captures a not_in row, applies it to a fresh state, and reports clean', () => {
+      const live = liveState({ filters: { ...neutral(), where: row('not_in', C1, C2) } });
+      const captured = adapter.capture(live);
+      expect(envelopeSchema.safeParse(captured).success).toBe(true);
+      const applied = adapter.apply(captured, liveState({ filters: neutral() }));
+      expect(applied.filters.where).toEqual(row('not_in', C1, C2));
+      expect(adapter.differs(applied, captured)).toBe(false);
+    });
+
+    it('applies a stored v2 view holding clientId as an Any-of row that is not dirty against the folded URL state', async () => {
+      const { migrateListViewSettings, getListViewDefinition } = await import('@alga-psa/list-views');
+      const { foldLegacyClientId } = await import('../ticketFilterUtils');
+      const def = getListViewDefinition('tickets')!;
+      const urlState = foldLegacyClientId({ ...neutral(), clientId: C1 });
+      const live = liveState({ filters: urlState });
+      const base = adapter.capture(live);
+      // The same view as an old document stored it: clientId instead of the row, at version 2.
+      const { where: _where, ...filters } = base.filters as Record<string, unknown>;
+      const stored = { ...base, filters: { ...filters, clientId: C1 } };
+      const migrated = migrateListViewSettings(def, stored as never, 2) as never;
+      const applied = adapter.apply(migrated, liveState({ filters: neutral() }));
+      expect(applied.filters.where).toEqual(row('in', C1));
+      expect(applied.filters.clientId).toBeUndefined();
+      expect(adapter.differs(live, migrated)).toBe(false);
+    });
+  });
 });

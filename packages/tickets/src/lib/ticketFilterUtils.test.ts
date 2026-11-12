@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
+import { encodeTicketWhere } from './ticketWhereUrl';
 import {
   contactFilterUpdateForClientChange,
   normalizeAssignedToIdList,
@@ -116,74 +117,104 @@ describe('parseReturnFilters assignee handling', () => {
   });
 });
 
-describe('contactFilterUpdateForClientChange (client ↔ contact cross-link)', () => {
-  it('emits the client alone when no contact is applied', () => {
-    expect(contactFilterUpdateForClientChange({
-      nextClientId: CLIENT_A,
-      currentContactId: null,
-    })).toEqual({ clientId: CLIENT_A, contactId: undefined });
-  });
+describe('contactFilterUpdateForClientChange (client row ↔ contact cross-link)', () => {
+  const row = (mode: 'in' | 'not_in', ...ids: string[]) => ({ mode, ids });
+  const whereOf = (mode: 'in' | 'not_in', ...ids: string[]) =>
+    ({ join: 'and', clauses: [{ path: 'client.id', operator: mode, value: ids }] });
+  const OTHER = { path: 'contact.tags', operator: 'in' as const, value: ['t1'] };
 
-  it('keeps the contact when the client filter is cleared', () => {
-    // With no client selected every contact is reachable again, so the already
-    // applied contact is still a legal — and intentional — filter.
-    expect(contactFilterUpdateForClientChange({
-      nextClientId: null,
-      currentContactId: CONTACT_A,
-      contactClientId: CLIENT_A,
-    })).toEqual({ clientId: undefined, contactId: CONTACT_A });
-  });
-
-  it('treats an empty client string as no client', () => {
-    expect(contactFilterUpdateForClientChange({
-      nextClientId: '',
-      currentContactId: CONTACT_A,
-      contactClientId: CLIENT_A,
-    })).toEqual({ clientId: undefined, contactId: CONTACT_A });
-  });
-
-  it('keeps the contact when it belongs to the newly selected client', () => {
-    expect(contactFilterUpdateForClientChange({
-      nextClientId: CLIENT_A,
-      currentContactId: CONTACT_A,
-      contactClientId: CLIENT_A,
-    })).toEqual({ clientId: CLIENT_A, contactId: CONTACT_A });
-  });
-
-  it('clears the contact when it belongs to a different client', () => {
-    // Otherwise the list would be filtered to an impossible pair and come back
-    // empty, which reads as a bug rather than as a filter.
-    expect(contactFilterUpdateForClientChange({
-      nextClientId: CLIENT_B,
-      currentContactId: CONTACT_A,
-      contactClientId: CLIENT_A,
-    })).toEqual({ clientId: CLIENT_B, contactId: undefined });
-  });
-
-  it('clears the contact when its ownership is unknown', () => {
-    // Unknown means the contact is absent from the client-scoped option list,
-    // which is exactly the evidence that it is not this client's contact.
-    expect(contactFilterUpdateForClientChange({
-      nextClientId: CLIENT_B,
-      currentContactId: CONTACT_A,
-    })).toEqual({ clientId: CLIENT_B, contactId: undefined });
-    expect(contactFilterUpdateForClientChange({
-      nextClientId: CLIENT_B,
-      currentContactId: CONTACT_A,
-      contactClientId: null,
-    })).toEqual({ clientId: CLIENT_B, contactId: undefined });
-  });
-
-  it('always names both keys, so the update clears rather than merges', () => {
-    // handleFilterChange merges the update onto the live filters, so a dropped
-    // contact has to arrive as an explicit undefined — omitting the key would
-    // leave the stale contact filter applied.
+  it('writes the row and leaves other clauses alone when no contact is applied', () => {
     const update = contactFilterUpdateForClientChange({
-      nextClientId: CLIENT_B,
+      currentWhere: { join: 'and', clauses: [OTHER] },
+      nextSelection: row('in', CLIENT_A),
+      currentContactId: null,
+    });
+    expect(update.where).toEqual({ join: 'and', clauses: [OTHER, { path: 'client.id', operator: 'in', value: [CLIENT_A] }] });
+    expect(update.contactId).toBeUndefined();
+  });
+
+  it('keeps the contact when its client is listed in an in row', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_A, CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBe(CONTACT_A);
+  });
+
+  it('clears the contact when its client is not listed in an in row', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBeUndefined();
+  });
+
+  it('clears the contact when its client is listed in a not_in row, and keeps it otherwise', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('not_in', CLIENT_A),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBeUndefined();
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('not_in', CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBe(CONTACT_A);
+  });
+
+  it('keeps the contact when the row is removed, and drops the row from where', () => {
+    const update = contactFilterUpdateForClientChange({
+      currentWhere: whereOf('in', CLIENT_A) as any,
+      nextSelection: null,
       currentContactId: CONTACT_A,
       contactClientId: CLIENT_A,
     });
-    expect(Object.keys(update).sort()).toEqual(['clientId', 'contactId']);
+    expect(update.contactId).toBe(CONTACT_A);
+    expect(update.where).toBeUndefined();
+  });
+
+  it('clears the contact when its ownership is unknown and a row applies', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_B),
+      currentContactId: CONTACT_A,
+    }).contactId).toBeUndefined();
+  });
+
+  it('always names every key, so the update clears rather than merges', () => {
+    const update = contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    });
+    expect(Object.keys(update).sort()).toEqual(['clientId', 'contactId', 'where']);
+    expect(update.clientId).toBeUndefined();
+  });
+});
+
+describe('legacy clientId folding in URL parsers', () => {
+  it('parseReturnFilters folds ?clientId= into an Any-of client.id row', () => {
+    const filters = parseReturnFilters(encodeURIComponent(`clientId=${CLIENT_A}`));
+    expect(filters.clientId).toBeUndefined();
+    expect(filters.where).toEqual({ join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [CLIENT_A] }] });
+  });
+
+  it('an explicit client row in the URL wins over clientId', () => {
+    const where = encodeTicketWhere({ join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [CLIENT_B] }] });
+    const filters = parseReturnFilters(encodeURIComponent(`clientId=${CLIENT_A}&where=${where}`));
+    expect(filters.clientId).toBeUndefined();
+    expect(filters.where?.clauses).toEqual([{ path: 'client.id', operator: 'not_in', value: [CLIENT_B] }]);
+  });
+
+  it('encoding a not_in row and parsing it back yields the same where', () => {
+    const original = { join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [CLIENT_A, CLIENT_B] }] } as const;
+    const params = new URLSearchParams({ where: encodeTicketWhere(original as any)! });
+    expect(parseReturnFilters(encodeURIComponent(params.toString())).where).toEqual(original);
   });
 });
 

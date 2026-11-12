@@ -182,6 +182,8 @@
   "resetFilters": "Återställ",
   "filters": {
     "allStatuses": "Alla statusar",
+    "allClients": "Alla kunder",
+    "unknownClient": "Okänd kund",
     "allOpen": "Alla öppna ärenden",
     "allClosed": "Alla stängda ärenden",
     "allPriorities": "Alla prioriteter",

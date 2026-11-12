@@ -115,19 +115,28 @@ describe('TicketingDashboard wiring (descriptor table)', () => {
   it('renders the toolbar filters, chips and reset from the descriptor table', () => {
     // The table is WHERE_FILTERS now that it holds location rows as well as tag rows; the control
     // each row renders is chosen from its options source, so a new row is still never new wiring.
-    expect(source).toContain('WHERE_FILTERS.map((descriptor) =>');
+    expect(source).toContain("whereFiltersFor('primary').map(renderWhereFilter)");
+    expect(source).toContain("whereFiltersFor('secondary').map(renderWhereFilter)");
     expect(source).toContain('whereFilterChips(');
     expect(source).toMatch(/where: undefined,\s*\n\s*assignedToIds: undefined/);
-    expect(source).toContain('onFilterChange({ where: chip.clear() })');
+    expect(source).toContain('handleWhereChange(chip.clear())');
   });
 
   // T063: one option list behind both Location filters, narrowed to the filtered client and
   // reloaded when that filter changes.
   it('loads the location options for the filtered client and shares them between both rows', () => {
-    expect(source).toContain('listTicketFilterLocations(selectedClient ?? null)');
-    expect(source).toMatch(/return \(\) => \{ cancelled = true; \};\s*\n\s*\}, \[selectedClient\]\);/);
+    expect(source).toContain('listTicketFilterLocations(scopedClientId)');
+    expect(source).toMatch(/return \(\) => \{ cancelled = true; \};\s*\n\s*\}, \[scopedClientId\]\);/);
     expect((source.match(/options=\{whereLocationOptions\}/g) ?? []).length).toBe(1);
     expect(source).toContain('<WhereLocationFilter');
+  });
+
+  it('has no dashboard-only client branch: the client row is read from the table', () => {
+    expect(source).not.toContain('selectedClient');
+    expect(source).not.toContain('<ClientPicker');
+    expect(source).not.toContain('fetch-selected-client-by-id');
+    expect(source).toContain('<WhereClientFilter');
+    expect(source).toContain("getSingleClientScope(selectedWhere)");
   });
 
   it('derives the active-filter count and the toolbar controls from the same table', () => {

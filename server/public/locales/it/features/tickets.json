@@ -214,6 +214,8 @@
   "resetFilters": "Reimposta",
   "filters": {
     "allStatuses": "Tutti gli stati",
+    "allClients": "Tutti i clienti",
+    "unknownClient": "Cliente sconosciuto",
     "allOpen": "Tutti i ticket aperti",
     "allClosed": "Tutti i ticket chiusi",
     "allPriorities": "Tutte le priorità",

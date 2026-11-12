@@ -28,14 +28,17 @@ export interface SelectOption {
   };
 }
 
+/** The overlay list's minimum width (18rem), so rows stay readable under a narrow trigger. */
+const OVERLAY_MIN_WIDTH_PX = 288;
+/** Space kept between an overlay list and the viewport edge. */
+const OVERLAY_EDGE_GAP_PX = 8;
+
 type LoadOptionsResult = {
   options: SelectOption[];
   total: number;
 };
 
-interface AsyncSearchableSelectProps {
-  value: string;
-  onChange: (value: string, option?: SelectOption) => void;
+interface AsyncSearchableSelectBaseProps {
   loadOptions: (args: { search: string; page: number; limit: number }) => Promise<LoadOptionsResult>;
   limit?: number;
   placeholder?: string;
@@ -65,9 +68,35 @@ interface AsyncSearchableSelectProps {
   selectedTrailing?: React.ReactNode;
 }
 
+/** One value: picking a row commits it and closes the list. */
+interface AsyncSearchableSingleProps {
+  value: string;
+  onChange: (value: string, option?: SelectOption) => void;
+  values?: undefined;
+  onValuesChange?: undefined;
+}
+
+/**
+ * Many values: picking a row toggles it and the list stays open. The trigger shows `selectedLabel`
+ * (the caller owns the wording: a name, a count) once anything is selected, and the footer gains a
+ * Clear action. Rows are never fetched for selected values that are off the loaded page; the caller
+ * hydrates labels for those.
+ */
+interface AsyncSearchableMultiProps {
+  values: string[];
+  onValuesChange: (values: string[]) => void;
+  value?: undefined;
+  onChange?: undefined;
+}
+
+export type AsyncSearchableSelectProps = AsyncSearchableSelectBaseProps &
+  (AsyncSearchableSingleProps | AsyncSearchableMultiProps);
+
 export function AsyncSearchableSelect({
-  value,
+  value: singleValue,
   onChange,
+  values,
+  onValuesChange,
   loadOptions,
   limit = 10,
   placeholder,
@@ -92,6 +121,14 @@ export function AsyncSearchableSelect({
   triggerId,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
+  const isMulti = values !== undefined;
+  const selectedValues = useMemo(
+    () => (values !== undefined ? values : singleValue ? [singleValue] : []),
+    [values, singleValue],
+  );
+  // Single mode keeps its string; multi mode has no one value, so the trigger keys off the list.
+  const value = isMulti ? (selectedValues.length > 0 ? selectedValues.join(',') : '') : (singleValue ?? '');
+  const isSelected = (optionValue: string) => selectedValues.includes(optionValue);
   const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
   const resolvedEmptyMessage = emptyMessage ?? t('form.noResults', { defaultValue: 'No results found' });
   const [open, setOpen] = useState(false);
@@ -110,9 +147,9 @@ export function AsyncSearchableSelect({
   const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const selectedOption = useMemo(() => {
-    if (!value) return undefined;
+    if (isMulti || !value) return undefined;
     return options.find((o) => o.value === value);
-  }, [options, value]);
+  }, [options, value, isMulti]);
 
   const resolvedSearchPlaceholder =
     searchPlaceholder ?? t('form.searchPlaceholder', { defaultValue: 'Search...' });
@@ -152,11 +189,18 @@ export function AsyncSearchableSelect({
     const rect = triggerRef.current.getBoundingClientRect();
     const container = getResolvedPortalContainer();
 
+    // The list is never narrower than a readable minimum: a content-sized trigger in a toolbar
+    // ("All Clients", "3 clients") would otherwise squeeze every row to a few characters. A list
+    // wider than its trigger shifts left as needed to stay inside the viewport.
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const width = Math.min(Math.max(rect.width, OVERLAY_MIN_WIDTH_PX), Math.max(viewportWidth - 2 * OVERLAY_EDGE_GAP_PX, rect.width));
+    const left = Math.max(OVERLAY_EDGE_GAP_PX, Math.min(rect.left, viewportWidth - width - OVERLAY_EDGE_GAP_PX));
+
     if (!container || container === document.body) {
       setOverlayPosition({
         top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
+        left,
+        width,
       });
       return;
     }
@@ -164,8 +208,8 @@ export function AsyncSearchableSelect({
     const containerRect = container.getBoundingClientRect();
     setOverlayPosition({
       top: rect.bottom - containerRect.top + 4,
-      left: rect.left - containerRect.left,
-      width: rect.width,
+      left: left - containerRect.left,
+      width,
     });
   }, [getResolvedPortalContainer]);
 
@@ -349,7 +393,15 @@ export function AsyncSearchableSelect({
                   disabled={option.disabled}
                   onSelect={() => {
                     if (option.disabled) return;
-                    onChange(option.value, option);
+                    if (isMulti) {
+                      onValuesChange!(
+                        isSelected(option.value)
+                          ? selectedValues.filter((v) => v !== option.value)
+                          : [...selectedValues, option.value],
+                      );
+                      return;
+                    }
+                    onChange!(option.value, option);
                     setOpen(false);
                   }}
                   aria-disabled={option.disabled || undefined}
@@ -358,7 +410,7 @@ export function AsyncSearchableSelect({
                     option.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
                     'hover:bg-[rgb(var(--color-border-100))]',
                     'aria-selected:bg-[rgb(var(--color-border-100))]',
-                    value === option.value && 'bg-[rgb(var(--color-border-100))]'
+                    isSelected(option.value) && 'bg-[rgb(var(--color-border-100))]'
                   )}
                 >
                   {/* cmdk overwrites `id` on Command.Item, so the stable option id lives on this child; clicks bubble to the item. */}
@@ -390,7 +442,7 @@ export function AsyncSearchableSelect({
                     </span>
                     {option.trailing}
                   </span>
-                  {value === option.value && <Check className="w-4 h-4 text-primary-600" />}
+                  {isSelected(option.value) && <Check className="w-4 h-4 text-primary-600" aria-label="selected" />}
                 </Command.Item>
               ))}
 
@@ -414,9 +466,21 @@ export function AsyncSearchableSelect({
           )}
         </Command.List>
 
-        {footerContent && (
+        {(footerContent || (isMulti && selectedValues.length > 0)) && (
           <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))]">
-            {footerContent({ search, close: () => setOpen(false) })}
+            {isMulti && selectedValues.length > 0 && (
+              <Button
+                id={`${id ?? "async-searchable-select"}-clear`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start rounded-none"
+                onClick={() => onValuesChange!([])}
+              >
+                {t('actions.clear', { defaultValue: 'Clear' })}
+              </Button>
+            )}
+            {footerContent?.({ search, close: () => setOpen(false) })}
           </div>
         )}
       </Command>
@@ -459,7 +523,7 @@ export function AsyncSearchableSelect({
           <span className="flex items-center gap-2 min-w-0">
             {value ? selectedIcon : null}
             <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
-              {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
+              {selectedOption?.label ?? selectedLabel ?? (value && !isMulti ? value : resolvedPlaceholder)}
             </span>
             {value ? selectedTrailing : null}
           </span>

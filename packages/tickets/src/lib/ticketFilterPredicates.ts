@@ -95,7 +95,12 @@ export function ticketFiltersToPredicates(
   const excludeRealCategories = excludeCategoryIds.filter((id) => id !== 'no-category' && id !== 'all');
   if (excludeRealCategories.length > 0) all.push(clause('category', 'not_in', excludeRealCategories));
 
-  if (filters.clientId) all.push(clause('client.id', 'equals', filters.clientId));
+  // Legacy single client. An explicit `client.id` in/not_in row in `where` wins (as boardIds wins
+  // over boardId), matching the v2->v3 view migration.
+  const whereHasClientRow = (filters.where?.clauses ?? []).some(
+    (node) => !('clauses' in node) && node.path === 'client.id' && (node.operator === 'in' || node.operator === 'not_in'),
+  );
+  if (filters.clientId && !whereHasClientRow) all.push(clause('client.id', 'equals', filters.clientId));
   if (filters.contactId) all.push(clause('contact.id', 'equals', filters.contactId));
 
   // Legacy ticket tags are tag text; the model keys on the definition id. Unknown text matches nothing.

@@ -216,6 +216,8 @@
   "resetFilters": "Resetuj",
   "filters": {
     "allStatuses": "Wszystkie statusy",
+    "allClients": "Wszyscy klienci",
+    "unknownClient": "Nieznany klient",
     "allOpen": "Wszystkie otwarte zgłoszenia",
     "allClosed": "Wszystkie zamknięte zgłoszenia",
     "allPriorities": "Wszystkie priorytety",
