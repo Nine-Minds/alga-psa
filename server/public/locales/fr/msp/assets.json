@@ -2236,7 +2236,6 @@
       "starting": "Démarrage…"
     },
     "detail": {
-      "backToClient": "Revenir aux audits du client",
       "reference": "Audit",
       "untitledClient": "Client",
       "location": "Emplacement",

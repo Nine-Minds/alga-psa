@@ -12,6 +12,7 @@ import type {
   ITicket,
 } from '@alga-psa/types';
 import useSWR from 'swr';
+import { useClientDrawer } from '@alga-psa/ui';
 import {
   BentoChip,
   BentoLabelValue,
@@ -110,6 +111,10 @@ export interface AssetAuditDetailProps {
 export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDetailProps) {
   const { t, i18n } = useTranslation('msp/assets');
   const router = useRouter();
+  // Provided by MspClientDrawerProvider in WorkspaceProviders, so it is present
+  // on every /msp route. Optional by design — the name reads as plain text
+  // wherever no drawer host is mounted.
+  const clientDrawer = useClientDrawer();
   const crossFeature = useAssetCrossFeature();
   const { canUpdate } = useAssetAuditCapability();
   const { data: audit, error, isLoading, mutate } = useAssetAuditDetail(auditId);
@@ -425,8 +430,11 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
   return (
     <div id={id} className="space-y-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <BackNav id={`${id}-back-button`} href={`/msp/clients/${audit.client_id}?tab=audits`}>
-          {t('assetAudits.detail.backToClient', { defaultValue: 'Back to client audits' })}
+        {/* Back goes where the run was opened from: the audits list. The client
+            is one click away in the header, in its own drawer, so leaving this
+            page is never the price of looking the client up. */}
+        <BackNav id={`${id}-back-button`} href="/msp/assets/audits">
+          ← {t('assetAudits.title', { defaultValue: 'Site audits' })}
         </BackNav>
         <div className="flex flex-wrap items-center gap-2">
           <Button id={`${id}-export-button`} variant="outline" size="sm" onClick={exportCsv}>
@@ -487,6 +495,27 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
           />
         </div>
         <div className="grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
+          {/* The client this run belongs to, opened in the quick-view drawer
+              over this page rather than navigated to, so a walk in progress is
+              never lost to a lookup. */}
+          <BentoLabelValue
+            id={`${id}-client`}
+            label={t('assetAudits.columns.client', { defaultValue: 'Client' })}
+            value={
+              clientDrawer ? (
+                <button
+                  id={`${id}-client-link`}
+                  type="button"
+                  className="text-[rgb(var(--color-primary-600))] hover:underline"
+                  onClick={() => clientDrawer.openClientDrawer(audit.client_id)}
+                >
+                  {audit.client_name || audit.client_id}
+                </button>
+              ) : (
+                audit.client_name || audit.client_id
+              )
+            }
+          />
           {/* The same handle the list shows in its first column, so a row and
               the page it opens can be told to be the same run. */}
           <BentoLabelValue

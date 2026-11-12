@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   getAssetTypes: vi.fn(),
   renderQuickAddTicket: vi.fn(),
   push: vi.fn(),
+  openClientDrawer: vi.fn(),
   toastSuccess: vi.fn(),
   toastPlain: vi.fn(),
   lastColumns: [] as any[],
@@ -46,6 +47,7 @@ vi.mock('../../context/AssetCrossFeatureContext', () => ({
   useAssetCrossFeature: () => ({ renderQuickAddTicket: h.renderQuickAddTicket }),
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: h.push }) }));
+vi.mock('@alga-psa/ui', () => ({ useClientDrawer: () => ({ openClientDrawer: h.openClientDrawer }) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (key: string, options?: any) => {
@@ -235,7 +237,10 @@ describe('AssetAuditDetail', () => {
   it('heads the run with its scope, counts and who started it', async () => {
     renderDetail();
 
-    expect(await screen.findByText('Acme Corp')).toBeInTheDocument();
+    // The client names the run twice: as the tile heading and as the row that
+    // opens its drawer.
+    expect((await screen.findAllByText('Acme Corp')).length).toBeGreaterThan(0);
+    expect(document.getElementById('asset-audit-client')).toHaveTextContent('Acme Corp');
     // The same handle the list links from, so a row and this page read as one run.
     expect(document.getElementById('asset-audit-reference')).toHaveTextContent('#au-1');
     expect(document.getElementById('asset-audit-location')).toHaveTextContent('HQ');
@@ -540,14 +545,24 @@ describe('AssetAuditDetail', () => {
     expect(h.toastPlain).toHaveBeenCalledWith('There is nothing to export in this view.');
   });
 
-  it('goes back to the client Audits tab', async () => {
+  it('goes back to the audits list, not to the client', async () => {
     renderDetail();
 
     await waitFor(() => expect(document.getElementById('asset-audit-back-button')).not.toBeNull());
-    expect(document.getElementById('asset-audit-back-button')).toHaveAttribute(
-      'href',
-      '/msp/clients/acme?tab=audits',
-    );
+    const back = document.getElementById('asset-audit-back-button')!;
+    expect(back).toHaveAttribute('href', '/msp/assets/audits');
+    expect(back).toHaveTextContent('Site audits');
+  });
+
+  it('opens the client in a drawer instead of leaving the run', async () => {
+    renderDetail();
+
+    await waitFor(() => expect(document.getElementById('asset-audit-client-link')).not.toBeNull());
+
+    fireEvent.click(document.getElementById('asset-audit-client-link')!);
+
+    expect(h.openClientDrawer).toHaveBeenCalledWith('acme');
+    expect(h.push).not.toHaveBeenCalled();
   });
 
   it('opens the asset page from an item', async () => {

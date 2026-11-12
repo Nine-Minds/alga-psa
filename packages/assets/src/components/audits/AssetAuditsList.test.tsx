@@ -11,6 +11,9 @@ const h = vi.hoisted(() => ({
   previewAssetAuditScope: vi.fn(),
   getClientLocationsForAssets: vi.fn(),
   push: vi.fn(),
+  openClientDrawer: vi.fn(),
+  /** Null stands for a host with no drawer provider mounted. */
+  clientDrawer: null as { openClientDrawer: (clientId: string) => void } | null,
   lastColumns: [] as any[],
 }));
 
@@ -22,6 +25,7 @@ vi.mock('../../actions/clientLookupActions', () => ({
   getClientLocationsForAssets: h.getClientLocationsForAssets,
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: h.push }) }));
+vi.mock('@alga-psa/ui', () => ({ useClientDrawer: () => h.clientDrawer }));
 vi.mock('./StartAuditDialog', () => ({
   NO_LOCATION_VALUE: '__none__',
   StartAuditDialog: ({ clientId }: { clientId?: string | null }) => (
@@ -141,6 +145,8 @@ beforeEach(() => {
   h.previewAssetAuditScope.mockReset();
   h.getClientLocationsForAssets.mockReset();
   h.push.mockReset();
+  h.openClientDrawer.mockReset();
+  h.clientDrawer = { openClientDrawer: h.openClientDrawer };
   h.listAssetAudits.mockResolvedValue({ success: true, data: { audits: [audit()], total: 1 } });
   h.previewAssetAuditScope.mockResolvedValue({ success: true, data: { expected_count: 0 } });
   h.getClientLocationsForAssets.mockResolvedValue([{ location_id: 'loc-1', location_name: 'HQ' }]);
@@ -257,7 +263,18 @@ describe('AssetAuditsList', () => {
     expect(visibleColumnIds).toEqual(columns.map((column) => getColumnId(column)));
   });
 
-  it('links the client column to the client Audits tab', async () => {
+  it('opens the client in a drawer instead of leaving the list', async () => {
+    renderList();
+    await waitFor(() => expect(document.getElementById('asset-audits-client-link-au-1')).not.toBeNull());
+
+    fireEvent.click(document.getElementById('asset-audits-client-link-au-1')!);
+
+    expect(h.openClientDrawer).toHaveBeenCalledWith('acme');
+    expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the client page where no drawer host is mounted', async () => {
+    h.clientDrawer = null;
     renderList();
     await waitFor(() => expect(document.getElementById('asset-audits-client-link-au-1')).not.toBeNull());
 

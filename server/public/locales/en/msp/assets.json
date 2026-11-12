@@ -2236,7 +2236,6 @@
       "starting": "Starting…"
     },
     "detail": {
-      "backToClient": "Back to client audits",
       "reference": "Audit",
       "untitledClient": "Client",
       "location": "Location",

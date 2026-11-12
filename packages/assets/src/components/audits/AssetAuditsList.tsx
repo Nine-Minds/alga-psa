@@ -10,6 +10,7 @@ import type {
   ColumnDefinition,
   IClientLocation,
 } from '@alga-psa/types';
+import { useClientDrawer } from '@alga-psa/ui';
 import { BentoChip } from '@alga-psa/ui/components/bento';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -90,6 +91,9 @@ export interface AssetAuditsListProps {
 export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits' }: AssetAuditsListProps) {
   const { t, i18n } = useTranslation('msp/assets');
   const router = useRouter();
+  // Provided by MspClientDrawerProvider in WorkspaceProviders, so it is present
+  // on every /msp route. Optional by design — fall back to the client page.
+  const clientDrawer = useClientDrawer();
   const { canUpdate } = useAssetAuditCapability();
 
   const [clientFilter, setClientFilter] = useState<string | null>(clientId ?? null);
@@ -172,6 +176,10 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
               title: t('assetAudits.columns.client', { defaultValue: 'Client' }),
               dataIndex: 'client_name',
               minWidth: '140px',
+              // The client opens in the quick-view drawer over this table, the
+              // way every other client link in the app does: a list being
+              // compared row by row must not be navigated away from to answer
+              // "who is this run for?".
               render: (_value: unknown, row: AssetAuditRecord) => (
                 <button
                   id={`${id}-client-link-${row.audit_id}`}
@@ -179,6 +187,10 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
                   className="text-left text-[rgb(var(--color-primary-600))] hover:underline"
                   onClick={(event) => {
                     event.stopPropagation();
+                    if (clientDrawer) {
+                      clientDrawer.openClientDrawer(row.client_id);
+                      return;
+                    }
                     router.push(`/msp/clients/${row.client_id}?tab=audits`);
                   }}
                 >
@@ -234,7 +246,7 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
         'warning',
       ),
     ],
-    [t, i18n?.language, clientId, id, router],
+    [t, i18n?.language, clientId, id, router, clientDrawer],
   );
 
   return (
