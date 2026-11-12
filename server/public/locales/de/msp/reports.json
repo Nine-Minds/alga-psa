@@ -66,7 +66,10 @@
     "fallbackTitle": "Bericht",
     "dateRange": {
       "lastDays": "Letzte {{count}} Tage",
-      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn"
+      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn",
+      "customRange": "{{start}} bis {{end}}",
+      "customFrom": "Von",
+      "customTo": "Bis"
     },
     "units": {
       "daysWithCount": "{{count}} Tage"

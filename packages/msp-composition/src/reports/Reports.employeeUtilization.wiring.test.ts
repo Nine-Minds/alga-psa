@@ -20,17 +20,28 @@ describe('Employee Utilization report wiring', () => {
     expect(source).toContain("category: 'operations'");
     expect(source).toContain("minimumTier: 'pro'");
     expect(source).toContain("selectedReportId === 'employee-utilization' ? (");
-    expect(source).toContain('<EmployeeUtilizationView rangeDays={rangeDays} />');
+    expect(source).toContain('<EmployeeUtilizationView range={range} />');
   });
 
   it('handles the loading and error states of the report action', () => {
-    expect(view).toContain('getEmployeeUtilizationReport(rangeDays)');
+    expect(view).toContain('getEmployeeUtilizationReport(range)');
     expect(view).toContain('if (isReportActionError(data))');
     expect(view).toContain('if (error) return');
     expect(view).toContain('if (!report) return <LoadingReport />;');
-    // The effect re-runs per range and drops results from a stale range.
-    expect(view).toContain('}, [rangeDays, t]);');
+    // The effect re-runs per range — preset or custom — and drops results from
+    // a stale one.
+    expect(view).toContain('}, [range, t]);');
     expect(view).toContain('cancelled = true;');
+  });
+
+  it('switches to a custom window only once both bounds are picked, and back on a preset', () => {
+    expect(source).toContain('<DateRangePicker');
+    expect(source).toContain('customRange.from && customRange.to');
+    expect(source).toContain('formatLocalYMD(customRange.from)');
+    // Clicking a preset clears the custom span rather than leaving two filters on.
+    expect(source).toContain("setCustomRange({ from: undefined, to: undefined });");
+    // The subtitle labels a custom span by its bounds, not as "last N days".
+    expect(source).toContain("t('reportsPage.dateRange.customRange'");
   });
 
   it('renders capacity-aware metrics, including employees without capacity', () => {

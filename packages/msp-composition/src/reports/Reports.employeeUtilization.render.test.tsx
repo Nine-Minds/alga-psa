@@ -31,6 +31,23 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
+// Driving the real calendar popover (and the i18n hooks DateTimeField wants)
+// is not what this suite is about: the stub picks a fixed span in one click,
+// exactly as the picker's onChange hands both bounds over.
+vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
+  DateRangePicker: ({ id, onChange }: any) => (
+    <button
+      type="button"
+      id={id}
+      onClick={() => onChange({ from: new Date(2026, 0, 5), to: new Date(2026, 1, 3) })}
+    >
+      pick custom range
+    </button>
+  ),
+  formatLocalYMD: (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+}));
+
 vi.mock('@alga-psa/reporting/actions/helpdeskReportActions', () => ({
   getEmployeeUtilizationReport: (...args: unknown[]) => getEmployeeUtilizationReport(...args),
   // The other reports stay pending so only the report under test renders content.
@@ -52,6 +69,7 @@ const { default: Reports } = await import('./Reports');
 function reportWith(byUser: any[], summary: Partial<Record<string, unknown>> = {}) {
   return {
     rangeDays: 30,
+    range: null,
     summary: {
       activeUsers: byUser.length,
       usersWithoutCapacity: byUser.filter((row) => row.capacityHours === null).length,
@@ -124,6 +142,24 @@ describe('Employee Utilization report rendering', () => {
     // Only the estimated row is flagged; a scheduled denominator is exact.
     const flags = await screen.findAllByTitle('Estimated from weekly capacity; no working hours set.');
     expect(flags.length).toBe(1);
+  });
+
+  it('re-requests the report for a custom window once both bounds are picked', async () => {
+    getEmployeeUtilizationReport.mockResolvedValue(reportWith([]));
+
+    const { container } = render(<Reports productCode="psa" tier="pro" />);
+    await userEvent.click(container.querySelector('#reports-view-employee-utilization') as Element);
+    await waitFor(() => expect(getEmployeeUtilizationReport).toHaveBeenCalledWith(30));
+
+    await userEvent.click(container.querySelector('#reports-custom-range') as Element);
+
+    await waitFor(() =>
+      expect(getEmployeeUtilizationReport).toHaveBeenLastCalledWith({ from: '2026-01-05', to: '2026-02-03' }),
+    );
+
+    // Back to a preset: the custom span is cleared, not stacked on top.
+    await userEvent.click(container.querySelector('#reports-range-7') as Element);
+    await waitFor(() => expect(getEmployeeUtilizationReport).toHaveBeenLastCalledWith(7));
   });
 
   it('renders the empty state when no active users are returned', async () => {

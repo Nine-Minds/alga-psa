@@ -66,7 +66,10 @@
     "fallbackTitle": "Informe",
     "dateRange": {
       "lastDays": "Últimos {{count}} días",
-      "allActiveProjects": "Todos los proyectos activos, desde el inicio"
+      "allActiveProjects": "Todos los proyectos activos, desde el inicio",
+      "customRange": "{{start}} a {{end}}",
+      "customFrom": "Desde",
+      "customTo": "Hasta"
     },
     "units": {
       "daysWithCount": "{{count}} días"

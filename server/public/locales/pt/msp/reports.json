@@ -66,7 +66,10 @@
     "fallbackTitle": "Relatório",
     "dateRange": {
       "lastDays": "Últimos dias {{count}}",
-      "allActiveProjects": "Todos os projetos ativos, desde o início"
+      "allActiveProjects": "Todos os projetos ativos, desde o início",
+      "customRange": "{{start}} a {{end}}",
+      "customFrom": "Data de início",
+      "customTo": "Data de término"
     },
     "units": {
       "daysWithCount": "{{count}} dias"

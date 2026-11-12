@@ -66,7 +66,10 @@
     "fallbackTitle": "Rapport",
     "dateRange": {
       "lastDays": "{{count}} derniers jours",
-      "allActiveProjects": "Tous les projets actifs, depuis le début"
+      "allActiveProjects": "Tous les projets actifs, depuis le début",
+      "customRange": "Du {{start}} au {{end}}",
+      "customFrom": "Du",
+      "customTo": "Au"
     },
     "units": {
       "daysWithCount": "{{count}} jours"

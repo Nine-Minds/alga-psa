@@ -66,7 +66,10 @@
     "fallbackTitle": "Rapport",
     "dateRange": {
       "lastDays": "Senaste {{count}} dagarna",
-      "allActiveProjects": "Alla aktiva projekt, från start till idag"
+      "allActiveProjects": "Alla aktiva projekt, från start till idag",
+      "customRange": "{{start}} till {{end}}",
+      "customFrom": "Från datum",
+      "customTo": "Till datum"
     },
     "units": {
       "daysWithCount": "{{count}} d"
