@@ -19,7 +19,7 @@
   {
     "id": "T003",
     "description": "DB integration: the capacity function equals the previous three queries on a pool with workspace-only allocations, and counts seat rows once on a mixed pool.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]

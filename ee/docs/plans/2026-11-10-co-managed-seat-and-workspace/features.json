@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "One capacity function returns purchased, allocated, available and a per-kind breakdown for a sponsor, and the entitlement, purchase and reservation code paths all use it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
