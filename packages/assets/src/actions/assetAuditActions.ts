@@ -16,7 +16,7 @@ import {
   markAssetAuditItemSchema,
   startAssetAuditSchema,
 } from '../lib/schemas/assetAudit.schema';
-import { AssetAuditService } from '../lib/audits/service';
+import type { AssetAuditService } from '../lib/audits/service';
 import { toAuditResult, type AssetAuditActionResult } from '../lib/audits/actionResult';
 
 /**
@@ -40,8 +40,17 @@ async function denyUnless(
     : (permissionError(`Permission denied: Cannot ${action} asset audits`) as Denied);
 }
 
-function service() {
-  return new AssetAuditService();
+/**
+ * Loaded lazily so merely importing this module (every other action in the
+ * barrel pulls it in) never evaluates `../lib/audits/service`: that module
+ * declares `class AssetAuditService extends BaseService`, a module-scope
+ * side effect that throws if a caller's '@alga-psa/db' mock doesn't happen to
+ * export `BaseService` — a mock written long before this action, and for a
+ * module it never otherwise touches.
+ */
+async function service(): Promise<AssetAuditService> {
+  const { AssetAuditService: Service } = await import('../lib/audits/service');
+  return new Service();
 }
 
 async function serviceContext(tenant: string, user: { user_id: string }): Promise<ServiceContext> {
@@ -60,7 +69,7 @@ export const listAssetAudits = withAuth(
     if (denied) return denied;
     return toAuditResult(async () => {
       const parsed = assetAuditListFiltersSchema.parse(filters);
-      const page = await service().list(parsed, await serviceContext(tenant, user as { user_id: string }));
+      const page = await (await service()).list(parsed, await serviceContext(tenant, user as { user_id: string }));
       return { audits: page.data, total: page.total };
     });
   },
@@ -75,7 +84,7 @@ export const getAssetAudit = withAuth(
     const denied = await denyUnless(user, 'read');
     if (denied) return denied;
     return toAuditResult(async () =>
-      service().get(auditIdSchema.parse(auditId), await serviceContext(tenant, user as { user_id: string })),
+      (await service()).get(auditIdSchema.parse(auditId), await serviceContext(tenant, user as { user_id: string })),
     );
   },
 );
@@ -98,7 +107,7 @@ export const previewAssetAuditScope = withAuth(
     return toAuditResult(async () => {
       const parsed = assetAuditScopeSchema.parse(scope);
       if (!parsed.client_id) return { expected_count: 0 };
-      const expected = await service().previewScope(
+      const expected = await (await service()).previewScope(
         {
           client_id: parsed.client_id,
           location_id: parsed.location_id ?? null,
@@ -120,7 +129,7 @@ export const startAssetAudit = withAuth(
     const denied = await denyUnless(user, 'update');
     if (denied) return denied;
     return toAuditResult(async () =>
-      service().start(
+      (await service()).start(
         startAssetAuditSchema.parse(input),
         await serviceContext(tenant, user as { user_id: string }),
       ),
@@ -144,7 +153,7 @@ export const markAssetAuditItem = withAuth(
     if (denied) return denied;
     return toAuditResult(async () => {
       const parsed = markAssetAuditItemSchema.parse({ asset_id: assetId, method: 'manual' });
-      return service().markItem(
+      return (await service()).markItem(
         auditIdSchema.parse(auditId),
         parsed,
         await serviceContext(tenant, user as { user_id: string }),
@@ -168,7 +177,7 @@ export const addUnexpectedAuditAsset = withAuth(
     if (denied) return denied;
     return toAuditResult(async () => {
       const parsed = markAssetAuditItemSchema.parse({ asset_id: assetId, method: 'manual' });
-      return service().markItem(
+      return (await service()).markItem(
         auditIdSchema.parse(auditId),
         parsed,
         await serviceContext(tenant, user as { user_id: string }),
@@ -187,7 +196,7 @@ export const unmarkAssetAuditItem = withAuth(
     const denied = await denyUnless(user, 'update');
     if (denied) return denied;
     return toAuditResult(async () =>
-      service().unmarkItem(
+      (await service()).unmarkItem(
         auditIdSchema.parse(auditId),
         z.string().guid().parse(assetId),
         await serviceContext(tenant, user as { user_id: string }),
@@ -205,7 +214,7 @@ export const completeAssetAudit = withAuth(
     const denied = await denyUnless(user, 'update');
     if (denied) return denied;
     return toAuditResult(async () =>
-      service().complete(auditIdSchema.parse(auditId), await serviceContext(tenant, user as { user_id: string })),
+      (await service()).complete(auditIdSchema.parse(auditId), await serviceContext(tenant, user as { user_id: string })),
     );
   },
 );
@@ -219,7 +228,7 @@ export const cancelAssetAudit = withAuth(
     const denied = await denyUnless(user, 'update');
     if (denied) return denied;
     return toAuditResult(async () =>
-      service().cancel(auditIdSchema.parse(auditId), await serviceContext(tenant, user as { user_id: string })),
+      (await service()).cancel(auditIdSchema.parse(auditId), await serviceContext(tenant, user as { user_id: string })),
     );
   },
 );
