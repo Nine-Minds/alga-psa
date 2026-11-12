@@ -45,7 +45,7 @@ describe('employee utilization report tenant-scoped query contract', () => {
     const section = employeeUtilizationSection();
 
     expect(section).toContain('SELECT CURRENT_DATE::text AS today');
-    expect(section).toContain('buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate)');
+    expect(section).toContain('buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate, reportWindow.range)');
   });
 
   it('restricts the roster to active internal users and windows time entries by calendar day', () => {
@@ -55,9 +55,21 @@ describe('employee utilization report tenant-scoped query contract', () => {
     expect(section).toContain("where('is_inactive', false)");
     // Explicit work_date boundaries, so the numerator covers exactly the
     // rangeDays calendar days the capacity denominator is prorated over.
-    expect(section).toContain("where('work_date', '>=', knex.raw(`CURRENT_DATE - INTERVAL '${rangeDays - 1} days'`))");
+    expect(section).toContain("where('work_date', '>=', knex.raw(`CURRENT_DATE - INTERVAL '${reportWindow.rangeDays - 1} days'`))");
     expect(section).toContain("where('work_date', '<=', knex.raw('CURRENT_DATE'))");
     expect(section).not.toContain("where('start_time'");
+  });
+
+  it('binds a custom window and clamps its end to the database date', () => {
+    const section = employeeUtilizationSection();
+
+    // Caller-supplied dates are parameters, never spliced into the SQL text.
+    expect(section).toContain("whereRaw('work_date >= ?::date', [reportWindow.range.from])");
+    expect(section).toContain("whereRaw('work_date <= LEAST(?::date, CURRENT_DATE)', [reportWindow.range.to])");
+    expect(section).not.toMatch(/work_date\s*[<>]=?\s*'?\$\{reportWindow\.range/);
+    // The day count follows the clamped end, so capacity cannot be prorated
+    // over days the worked-hours numerator never reached.
+    expect(section).toContain('inclusiveDayCount(reportWindow.range.from, rangeEndDate)');
   });
 
   it('reads one capacity row per user rather than aggregating duplicates', () => {
@@ -69,6 +81,6 @@ describe('employee utilization report tenant-scoped query contract', () => {
 
   it('delegates utilization math to the pure builder', () => {
     const section = employeeUtilizationSection();
-    expect(section).toContain('return buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate);');
+    expect(section).toContain('return buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate, reportWindow.range);');
   });
 });
