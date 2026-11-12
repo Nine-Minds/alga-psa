@@ -329,7 +329,8 @@
       "empty": "No hay plantillas de listas de verificación específicas del cliente.",
       "loadFailed": "No se pudieron cargar las plantillas de listas de verificación",
       "retry": "Reintentar"
-    }
+    },
+    "audits": "Auditorías"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} fuera de garantía",
       "warrantyExpiring_one": "1 vence en ≤90 d",
       "warrantyExpiring_other": "{{count}} vencen en ≤90 d",
-      "warrantyTracked": " (de {{count}} con seguimiento)"
+      "warrantyTracked": " (de {{count}} con seguimiento)",
+      "auditsLink": "Auditorías de sitios",
+      "lastAudit": "Última auditoría: {{date}}",
+      "lastAuditMissing_one": "1 faltante",
+      "lastAuditMissing_other": "{{count}} faltantes",
+      "neverAudited": "Nunca auditado"
     },
     "locations": {
       "billing": "Facturación",
@@ -392,7 +398,9 @@
       "manage": "Gestionar",
       "more": "+{{count}} más",
       "none": "Aún no hay ubicaciones.",
-      "shipping": "Envío"
+      "shipping": "Envío",
+      "lastAudit": "Auditada el {{date}}",
+      "neverAudited": "Nunca auditada"
     },
     "money": {
       "activeContracts": "Contratos activos",
@@ -1803,7 +1811,8 @@
           "members": "Miembros",
           "people": "Personas"
         }
-      }
+      },
+      "startAudit": "Iniciar auditoría"
     },
     "tickets": {
       "addTicket": "Agregar ticket",

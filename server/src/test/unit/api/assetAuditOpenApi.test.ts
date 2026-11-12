@@ -58,6 +58,37 @@ describe('asset audit OpenAPI', () => {
     }
   });
 
+  it('documents the list filters mobile and the web share', () => {
+    const document = buildDocument();
+    const query = document.components.schemas.AssetAuditListQuery;
+
+    expect(Object.keys(query.properties)).toEqual([
+      'page',
+      'limit',
+      'client_id',
+      'location_id',
+      'no_location',
+      'status',
+      'started_from',
+      'started_to',
+    ]);
+    expect(query.properties.status.enum).toEqual(['in_progress', 'completed', 'cancelled']);
+    // Every filter is optional: the unfiltered list is the mobile call.
+    expect(query.required ?? []).toEqual([]);
+  });
+
+  it('types the item payload with the columns the web table reads', () => {
+    const document = buildDocument();
+    const item = document.components.schemas.AssetAuditResponse.properties.data.properties.items.items;
+
+    expect(Object.keys(item.properties)).toEqual(
+      expect.arrayContaining(['asset_type', 'marked_by_name', 'asset_tag', 'serial_number']),
+    );
+    expect(
+      Object.keys(document.components.schemas.AssetAuditResponse.properties.data.properties),
+    ).toContain('started_by_name');
+  });
+
   it('types the audit payload with its counts and items', () => {
     const document = buildDocument();
     const audit = document.components.schemas.AssetAuditResponse.properties.data;

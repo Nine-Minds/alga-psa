@@ -329,7 +329,8 @@
       "empty": "No client-specific checklist templates.",
       "loadFailed": "Failed to load checklist templates",
       "retry": "Retry"
-    }
+    },
+    "audits": "Audits"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} out of warranty",
       "warrantyExpiring_one": "1 expiring ≤90d",
       "warrantyExpiring_other": "{{count}} expiring ≤90d",
-      "warrantyTracked": " (of {{count}} tracked)"
+      "warrantyTracked": " (of {{count}} tracked)",
+      "auditsLink": "Site audits",
+      "lastAudit": "Last audit {{date}}",
+      "lastAuditMissing_one": "1 missing",
+      "lastAuditMissing_other": "{{count}} missing",
+      "neverAudited": "Never audited"
     },
     "locations": {
       "billing": "Billing",
@@ -392,7 +398,9 @@
       "manage": "Manage",
       "more": "+{{count}} more",
       "none": "No locations yet.",
-      "shipping": "Shipping"
+      "shipping": "Shipping",
+      "lastAudit": "Audited {{date}}",
+      "neverAudited": "Never audited"
     },
     "money": {
       "activeContracts": "Active contracts",
@@ -1830,7 +1838,8 @@
           "members": "Members",
           "people": "People"
         }
-      }
+      },
+      "startAudit": "Start audit"
     },
     "tickets": {
       "addTicket": "Add Ticket",

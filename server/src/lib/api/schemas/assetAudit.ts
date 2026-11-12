@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import { uuidSchema } from './common';
+import { booleanTransform, uuidSchema } from './common';
 
 export const assetAuditStatusSchema = z.enum(['in_progress', 'completed', 'cancelled']);
 export const assetAuditItemResultSchema = z.enum(['expected', 'present', 'missing', 'unexpected']);
@@ -28,7 +28,14 @@ export const markAssetAuditItemSchema = z.object({
 export const assetAuditListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  client_id: uuidSchema.optional()
+  client_id: uuidSchema.optional(),
+  location_id: uuidSchema.optional(),
+  /** Only audits of the client's assets that have no location. Wins over location_id. */
+  no_location: booleanTransform.or(z.boolean()).optional(),
+  status: assetAuditStatusSchema.optional(),
+  /** ISO timestamps; the web UI sends day boundaries in the viewer's time zone. */
+  started_from: z.string().datetime({ offset: true }).optional(),
+  started_to: z.string().datetime({ offset: true }).optional()
 });
 
 export const assetAuditItemResponseSchema = z.object({
@@ -40,9 +47,12 @@ export const assetAuditItemResponseSchema = z.object({
   asset_name: z.string().nullable().optional(),
   asset_tag: z.string().nullable().optional(),
   serial_number: z.string().nullable().optional(),
+  /** Registry slug (built-in or tenant asset_type_registry). */
+  asset_type: z.string().nullable().optional(),
   client_id: uuidSchema.nullable().optional(),
   location_id: uuidSchema.nullable().optional(),
-  location: z.string().nullable().optional()
+  location: z.string().nullable().optional(),
+  marked_by_name: z.string().nullable().optional()
 });
 
 export const assetAuditResponseSchema = z.object({
@@ -62,6 +72,7 @@ export const assetAuditResponseSchema = z.object({
   notes: z.string().nullable().optional(),
   client_name: z.string().nullable().optional(),
   location_name: z.string().nullable().optional(),
+  started_by_name: z.string().nullable().optional(),
   items: z.array(assetAuditItemResponseSchema).optional()
 });
 

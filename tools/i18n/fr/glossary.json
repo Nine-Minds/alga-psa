@@ -2278,6 +2278,8 @@
       "Code 128",
       "RMA {{number}} · {{status}}",
       "Page {{page}}",
+      "Audit",
+      "Audits",
       "ticket",
       "tickets",
       "RAM",

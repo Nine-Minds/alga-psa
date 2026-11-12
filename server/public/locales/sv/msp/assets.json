@@ -54,6 +54,22 @@
       "closed": "Stängt",
       "warranty_review": "Garantigranskning",
       "repaired": "Reparerad"
+    },
+    "assetAuditStatus": {
+      "in_progress": "Pågår",
+      "completed": "Slutförd",
+      "cancelled": "Avbruten"
+    },
+    "assetAuditResult": {
+      "expected": "Förväntad",
+      "present": "På plats",
+      "missing": "Saknas",
+      "unexpected": "Oväntad"
+    },
+    "assetAuditMethod": {
+      "scan": "Skanning",
+      "manual": "Manuell",
+      "register": "Registrerad på plats"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Valfritt förvar",
         "inCustody": "I MSP:ns förvar",
         "notInCustody": "Inte i MSP:ns förvar"
+      },
+      "audit": {
+        "any": "Alla inventeringsresultat",
+        "present": "Senaste inventering: på plats",
+        "missing": "Senaste inventering: saknas",
+        "never": "Aldrig inventerad",
+        "stale": "Inte inventerad de senaste 90 dagarna"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Plats",
       "purchaseDate": "Inköpsdatum",
       "warrantyEnd": "Garantins slutdatum",
-      "notProvided": "Inte angivet"
+      "notProvided": "Inte angivet",
+      "lastAudited": "Senast inventerad",
+      "neverAudited": "Aldrig inventerad"
     },
     "info": {
       "client": "Kund",
@@ -1839,7 +1864,8 @@
     "assignDialogTitle": "Tilldela den här tillgången",
     "sharedWorkspace": "Delad arbetsplats",
     "sharedWorkspaceValue": "{{name}} · {{count}} personer",
-    "billingProfile": "Faktureringsprofil"
+    "billingProfile": "Faktureringsprofil",
+    "lastAudited": "Senast inventerad"
   },
   "assetTimeline": {
     "title": "Tidslinje",
@@ -1869,7 +1895,11 @@
       "aGroup": "en grupp",
       "autoAssignedFrom": "Tilldelades automatiskt {{contact}} från {{provider}}",
       "groupLocationMoved": "Flyttad till {{location}} med {{group}}",
-      "groupLocationCleared": "Plats rensad med {{group}}"
+      "groupLocationCleared": "Plats rensad med {{group}}",
+      "audit": "Inventering",
+      "auditPresent": "Inventering: på plats",
+      "auditMissing": "Inventering: saknas",
+      "auditMethod": "Markeringsmetod: {{method}}"
     },
     "changeTypes": {
       "created": "Skapad",
@@ -2332,6 +2362,108 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Inventeringar på plats",
+    "startAudit": "Starta inventering",
+    "noLocation": "Ingen plats",
+    "loading": "Läser in inventeringar…",
+    "empty": "Inga inventeringar på plats matchar den här vyn ännu.",
+    "columns": {
+      "audit": "Inventering",
+      "client": "Kund",
+      "location": "Plats",
+      "status": "Status",
+      "startedBy": "Startad av",
+      "started": "Startad",
+      "completed": "Slutförd",
+      "expected": "Förväntade",
+      "present": "På plats",
+      "missing": "Saknas",
+      "unexpected": "Oväntade"
+    },
+    "filters": {
+      "client": "Kund",
+      "allLocations": "Alla platser",
+      "allStatuses": "Alla statusar",
+      "started": "Startdatum"
+    },
+    "stats": {
+      "expected": "förväntade",
+      "present": "på plats",
+      "missing": "saknas",
+      "remaining": "återstående",
+      "unexpected": "oväntade"
+    },
+    "segments": {
+      "remaining": "Återstående",
+      "present": "På plats",
+      "missing": "Saknas",
+      "unexpected": "Oväntade",
+      "all": "Alla"
+    },
+    "start": {
+      "title": "Starta inventering på plats",
+      "client": "Kund",
+      "clientPlaceholder": "Välj en kund",
+      "location": "Plats",
+      "locationHint": "Med ”Ingen plats” inventeras kundens enheter som saknar registrerad plats.",
+      "statuses": "Tillgångsstatusar som ingår",
+      "statusesHint": "Om ingen status väljs omfattar inventeringen alla statusar.",
+      "statusesLoading": "Läser in statusar…",
+      "notes": "Anteckningar",
+      "notesPlaceholder": "Syftet med den här inventeringen (valfritt)",
+      "pickClient": "Välj en kund för att se vad som ingår.",
+      "counting": "Räknar enheterna som ingår…",
+      "countUnavailable": "Antalet enheter är inte tillgängligt just nu.",
+      "expected_one": "1 enhet förväntas ingå i den här inventeringen",
+      "expected_other": "{{count}} enheter förväntas ingå i den här inventeringen",
+      "submit": "Starta inventering",
+      "starting": "Startar…"
+    },
+    "detail": {
+      "reference": "Inventering",
+      "untitledClient": "Kund",
+      "location": "Plats",
+      "startedBy": "Startad av",
+      "started": "Startad",
+      "completed": "Slutförd",
+      "scopeStatuses": "Statusar som ingår",
+      "allStatuses": "Alla statusar",
+      "notes": "Anteckningar",
+      "exportCsv": "Exportera CSV",
+      "exportStarted": "CSV-exporten har startat.",
+      "exportEmpty": "Det finns inget att exportera i den här vyn.",
+      "addUnexpected": "Lägg till oväntad tillgång",
+      "addUnexpectedHint": "En enhet som hittas på plats men ligger utanför inventeringens omfattning registreras som oväntad, aldrig som förväntad.",
+      "addUnexpectedPlaceholder": "Sök efter en tillgång…",
+      "addUnexpectedEmpty": "Inga andra tillgångar för den här kunden.",
+      "complete": "Slutför inventering",
+      "completeConfirm_one": "1 omarkerad enhet registreras som saknad.",
+      "completeConfirm_other": "{{count}} omarkerade enheter registreras som saknade.",
+      "cancelAudit": "Avbryt inventering",
+      "cancelConfirm": "Inventeringen avbryts och inga uppgifter sparas på tillgångarna. Det går inte att ångra.",
+      "keepAudit": "Fortsätt inventera"
+    },
+    "items": {
+      "columns": {
+        "asset": "Tillgång",
+        "type": "Typ",
+        "serial": "Serienummer / inventarienummer",
+        "result": "Resultat",
+        "method": "Metod",
+        "markedBy": "Markerad av",
+        "markedAt": "Markerad den",
+        "actions": "Åtgärder"
+      },
+      "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
+      "empty": "Inga tillgångar i den här vyn.",
+      "markPresent": "Markera som på plats",
+      "undoMark": "Ångra",
+      "createTicket": "Skapa ärende",
+      "ticketTitle": "Saknas vid inventering på plats: {{asset}}",
+      "ticketDescription": "Hittades inte vid inventeringen på plats som startades {{date}}."
     }
   },
   "scanLookup": {

@@ -274,6 +274,7 @@ async function fetchLocations(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
+  canReadAssets: boolean,
 ): Promise<ClientPulseLocations> {
   const rows = await trx('client_locations')
     .where({ tenant, client_id: clientId, is_active: true })
@@ -297,6 +298,21 @@ async function fetchLocations(
   // reader having to open Manage Locations.
   const contactCounts = await getContactCountsByLocation(trx, tenant, rows.map((row: any) => row.location_id));
 
+  // Site audits are scoped to a location, so "when was this site last walked"
+  // belongs on the location row. One grouped query, and only for a reader who
+  // may see assets at all.
+  const lastAuditByLocation = new Map<string, string | null>();
+  if (canReadAssets && rows.length > 0) {
+    const auditRows = await trx('asset_audits')
+      .where({ tenant, client_id: clientId, status: 'completed' })
+      .whereIn('location_id', rows.map((row: any) => row.location_id))
+      .groupBy('location_id')
+      .select('location_id', trx.raw('MAX(completed_at) as last_audit_at'));
+    for (const row of auditRows as any[]) {
+      lastAuditByLocation.set(row.location_id, toIsoString(row.last_audit_at));
+    }
+  }
+
   return rows.map((row: any) => ({
     location_id: row.location_id,
     location_name: row.location_name ?? null,
@@ -310,6 +326,7 @@ async function fetchLocations(
     is_billing: Boolean(row.is_billing_address),
     is_shipping: Boolean(row.is_shipping_address),
     contact_count: contactCounts.get(row.location_id) ?? 0,
+    ...(canReadAssets ? { last_audit_at: lastAuditByLocation.get(row.location_id) ?? null } : {}),
   }));
 }
 
@@ -877,7 +894,7 @@ async function fetchInstallBase(
 ): Promise<{ installBase: ClientPulseInstallBase; flags: ClientAttentionFlag[] }> {
   const now = new Date(nowMs);
   const warrantySoon = new Date(nowMs + 90 * DAY_MS);
-  const [soldCountRow, recentRows, rmaRows, assetCountRow, partialSoRows, unitWarrantyRow, assetWarrantyRow] = await Promise.all([
+  const [soldCountRow, recentRows, rmaRows, assetCountRow, partialSoRows, unitWarrantyRow, assetWarrantyRow, lastAuditRow] = await Promise.all([
     trx('stock_units')
       .where({ tenant, client_id: clientId, status: DELIVERED_STOCK_UNIT_STATUS })
       .count<{ count: string }>('unit_id as count')
@@ -946,6 +963,16 @@ async function fetchInstallBase(
         )
         .first()
       : Promise.resolve(null),
+    // The client's most recent closed walk, for the tile's "Last audit" stat.
+    // idx_asset_audits_tenant_client_started narrows the (tenant, client_id)
+    // rows; the completed_at ordering is sorted on top of that handful.
+    canReadAssets
+      ? trx('asset_audits')
+        .where({ tenant, client_id: clientId, status: 'completed' })
+        .select('audit_id', 'completed_at', 'missing_count')
+        .orderByRaw('completed_at DESC NULLS LAST')
+        .first()
+      : Promise.resolve(null),
   ]);
 
   const flags: ClientAttentionFlag[] = [];
@@ -989,6 +1016,19 @@ async function fetchInstallBase(
         asset_id: row.asset_id ?? null,
       })),
       warranty: combineWarrantyRows([unitWarrantyRow as any, assetWarrantyRow as any]),
+      // Absent for a reader without asset:read; null when the client has never
+      // had a completed audit — "Never audited" is a fact, an empty stat is not.
+      ...(canReadAssets
+        ? {
+          lastAudit: lastAuditRow
+            ? {
+              audit_id: (lastAuditRow as any).audit_id,
+              completed_at: toIsoString((lastAuditRow as any).completed_at),
+              missing_count: toNumber((lastAuditRow as any).missing_count),
+            }
+            : null,
+        }
+        : {}),
     },
     flags,
   };
@@ -1136,7 +1176,7 @@ export const getClientPulse = withAuth(async (
       notes,
     ] = await Promise.all([
       fetchPeople(trx, tenant, clientId, defaultContactId),
-      fetchLocations(trx, tenant, clientId),
+      fetchLocations(trx, tenant, clientId, canReadAssets),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
       fetchNotes(trx, tenant, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
     ]);

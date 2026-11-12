@@ -359,7 +359,8 @@
       "empty": "Brak szablonów list kontrolnych specyficznych dla klienta.",
       "loadFailed": "Nie udało się wczytać szablonów list kontrolnych",
       "retry": "Ponów"
-    }
+    },
+    "audits": "Audyty"
   },
   "clientCommandCenter": {
     "cards": {
@@ -431,7 +432,14 @@
       "warrantyExpiring_few": "{{count}} wygasają w ≤90 dni",
       "warrantyExpiring_many": "{{count}} wygasa w ≤90 dni",
       "warrantyExpiring_other": "{{count}} wygasa w ≤90 dni",
-      "warrantyTracked": " (z {{count}} śledzonych)"
+      "warrantyTracked": " (z {{count}} śledzonych)",
+      "auditsLink": "Audyty lokalizacji",
+      "lastAudit": "Ostatni audyt: {{date}}",
+      "lastAuditMissing_one": "1 brakujący zasób",
+      "lastAuditMissing_few": "{{count}} brakujące zasoby",
+      "lastAuditMissing_many": "{{count}} brakujących zasobów",
+      "lastAuditMissing_other": "{{count}} brakującego zasobu",
+      "neverAudited": "Nigdy nie audytowano"
     },
     "locations": {
       "billing": "Rozliczenia",
@@ -442,7 +450,9 @@
       "manage": "Zarządzaj",
       "more": "+{{count}} więcej",
       "none": "Brak lokalizacji.",
-      "shipping": "Wysyłka"
+      "shipping": "Wysyłka",
+      "lastAudit": "Audyt: {{date}}",
+      "neverAudited": "Nigdy nie audytowano"
     },
     "money": {
       "activeContracts": "Aktywne umowy",
@@ -1861,7 +1871,8 @@
           "members": "Elementy",
           "people": "Osoby"
         }
-      }
+      },
+      "startAudit": "Rozpocznij audyt"
     },
     "tickets": {
       "addTicket": "Dodaj zgłoszenie",
