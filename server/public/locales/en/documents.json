@@ -179,6 +179,7 @@
     "upload": {
       "fileRequired": "Choose a file before uploading.",
       "typeNotAllowed": "This file type is not allowed.",
+      "contentMismatch": "This file's contents don't match its file type, so it was not uploaded. Check that you picked the right file.",
       "sessionRequired": "Your session is required to upload documents. Please sign in again."
     }
   },

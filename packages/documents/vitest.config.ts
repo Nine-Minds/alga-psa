@@ -82,6 +82,8 @@ const workspaceAliases = [
 // environment cannot bundle. Component tests mock the document actions, so a
 // load-only stub keeps the module graph resolvable without node builtins.
 const storageStubAlias = [
+  // The ingest error classes are pure (no node builtins); action error mapping needs the real ones.
+  { find: /^@alga-psa\/storage\/ingest\/errors$/, replacement: path.resolve(__dirname, '../storage/src/ingest/errors.ts') },
   { find: /^@alga-psa\/storage(\/.*)?$/, replacement: path.resolve(__dirname, './tests/stubs/storage.ts') },
 ];
 
@@ -94,6 +96,8 @@ const nodeAliases = [
     find: /^@alga-psa\/workflow-streams$/,
     replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts'),
   },
+  // The ingest error classes are pure (no node builtins); action error mapping needs the real ones.
+  { find: /^@alga-psa\/storage\/ingest\/errors$/, replacement: path.resolve(__dirname, '../storage/src/ingest/errors.ts') },
   { find: /^@alga-psa\/storage(\/.*)?$/, replacement: path.resolve(__dirname, './tests/stubs/storage.ts') },
   { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
   { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
