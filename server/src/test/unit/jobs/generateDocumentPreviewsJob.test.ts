@@ -12,7 +12,7 @@ const h = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({ runWithTenant: h.runWithTenant }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({ generatePreviewsForDocument: h.generate }));
-vi.mock('@alga-psa/jobs/runner', () => ({ getJobRunner: h.getJobRunner }));
+vi.mock('@alga-psa/core/jobRunnerAccessor', () => ({ getJobRunner: h.getJobRunner }));
 
 import { generateDocumentPreviewsHandler } from '../../../lib/jobs/handlers/generateDocumentPreviewsHandler';
 import {

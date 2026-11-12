@@ -7,7 +7,7 @@
  * Enqueued directly (not from the DOCUMENT_UPLOADED event): that event fires from StorageService
  * before any document row exists, so a subscriber would have nothing to load.
  */
-import { getJobRunner } from '@alga-psa/jobs/runner';
+import { getJobRunner } from '@alga-psa/core/jobRunnerAccessor';
 
 export const GENERATE_DOCUMENT_PREVIEWS_JOB = 'generate-document-previews';
 
