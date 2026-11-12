@@ -1,0 +1,459 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: existing workspace allocations read as `workspace` after migration, and the kind-aware constraints reject a seat row with a customer tenant and a workspace row without one.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: capability matrix for `co-managed-seat` across flag, entitlement, product code, participation and both `FORCE_CAPABILITIES` values, with `co-managed` unaffected.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: the capacity function equals the previous three queries on a pool with workspace-only allocations, and counts seat rows once on a mixed pool.",
+    "implemented": false,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: seat reservation happy path and replay by operation id; refused for insufficient capacity, ineligible sponsor and lapse grace.",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration, concurrent: with one seat available, a seat reservation and a workspace reservation race and exactly one succeeds.",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F007",
+      "F004"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: resize refuses a decrease below committed seats; release returns seats once and a replay changes nothing; a purchase reduction below allocated across both kinds is refused.",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: capacity below allocated with only seat allocations starts grace and then read-only on the same deadlines as a workspace pool.",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration: arrangement creation is atomic with its allocation, replays to the same arrangement, and is refused for an inactive client and for a client with a live workspace relationship.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F007"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB integration, concurrent: eight invitations against one remaining seat produce one success; an invitation for an email claimed by another tenant's internal user is refused with that reason.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F025"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB integration, concurrent: seat admission running against reservation, purchase intent and hosted reconcile completes without deadlock.",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB integration: accepting an invitation creates an internal user with only the seat role; the role and its permissions exist for that tenant and no other, and the role editor omits them for a tenant not served.",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB integration: with a tenant at its licensed seat limit, seat technicians can still be added up to the allocation, and every licence count site returns the same number as before they existed.",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "DB integration: revoking a seat deactivates the user and frees the seat; converting a seat technician to an MSP user is refused at the MSP seat limit and succeeds with a free seat; assigning a non-seat role or a team to a seat technician is refused.",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "DB integration: an empty board scope yields no ticket access and a board marked no-create refuses ticket creation.",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit, property: seat subject against every resource type and action in the kernel catalog, asserting own-client allow, other-client deny, out-of-scope board deny, unshared project deny and unnamed resource deny, each with its reason.",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Contract: adding a resource type to the kernel catalog without classifying it for seat subjects fails; the policy service lists no seat rule as editable.",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F026"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "E2E: a seat technician's menu shows only the operational surface; requesting billing, settings, user administration, dispatch and reports routes answers not found; an API key cannot be created and a REST request is refused.",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "DB integration: a seat technician and a portal user calling the service catalog and contract-line lookups are refused; an internal user with permission succeeds; a client read by a seat technician contains no billing column.",
+    "implemented": false,
+    "featureIds": [
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "DB integration: a seat technician's user list, assignee options and mention suggestions contain no user outside the projection and no MSP staff email or phone.",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "DB integration: after revoking an assignment or removing a board from scope, the technician's next request is denied without a new sign-in.",
+    "implemented": false,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Query budget: native ticket list, ticket detail, comment write and time-entry paths for a tenant not served run the same statement count as on main.",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: audience truth table over audience, reader organization and requester flag, with inconsistent legacy rows resolving private; the SQL form agrees with the TypeScript form on the same rows.",
+    "implemented": false,
+    "featureIds": [
+      "F035",
+      "F036",
+      "F037",
+      "F038"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "DB integration: a ticket with ten legacy internal notes shows a seat technician none of them, in the conversation, the activity list, attachments and search.",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F044",
+      "F043",
+      "F045"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "DB integration: MSP staff post shared IT on an arrangement client's ticket and are refused on another client's ticket; a seat technician is refused a private note and a legacy internal note.",
+    "implemented": false,
+    "featureIds": [
+      "F039",
+      "F040"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "DB integration: a reply inherits its thread's audience; a seat technician cannot change audience; an MSP widening without confirmation is refused.",
+    "implemented": false,
+    "featureIds": [
+      "F041",
+      "F042"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "E2E: a seat technician opens the native ticket list, sees only their client's in-scope tickets, and each view's count matches its rows.",
+    "implemented": false,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "E2E: on the native ticket screen a seat technician sees no billing, materials, credentials, bundle, delete or scheduling affordance and no billing profile picker; the network log shows no billing rollup or materials request.",
+    "implemented": false,
+    "featureIds": [
+      "F047",
+      "F048",
+      "F049"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "DB integration: a seat technician creates a ticket for their client; a request naming another client or an out-of-scope board is refused; an edit changing the client or moving to an out-of-scope board is refused.",
+    "implemented": false,
+    "featureIds": [
+      "F050",
+      "F051"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "DB integration: assigning a seat technician is accepted on an own-client in-scope ticket and refused on another client's ticket, an out-of-scope board and a task of an unshared project; the technician's picker lists no MSP user.",
+    "implemented": false,
+    "featureIds": [
+      "F053",
+      "F052"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "DB integration: hand to MSP and hand to client IT change responsibility, store a receipt, replay to the original receipt, and fail on a stale revision or an out-of-scope board.",
+    "implemented": false,
+    "featureIds": [
+      "F054",
+      "F055",
+      "F056",
+      "F057"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "E2E: an MSP technician hands a ticket to client IT from the native screen, the seat technician sees it under Client IT, hands it back, and the MSP sees the chip change.",
+    "implemented": false,
+    "featureIds": [
+      "F058",
+      "F056",
+      "F055",
+      "F046"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "E2E: on an arrangement client's ticket the MSP composer shows three audiences defaulting to Private and the picker shows a Client IT group; on another client's ticket both are unchanged; the technician's composer shows two audiences.",
+    "implemented": false,
+    "featureIds": [
+      "F060",
+      "F059",
+      "F061"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "DB integration: MSP SLA elapsed time does not advance while responsibility is with client IT and resumes after handback; a ticket of a client with no arrangement is unaffected.",
+    "implemented": false,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "DB integration: a bulk handoff over a mixed selection acts on qualifying tickets and reports each failure; the responsibility filter returns the expected rows; a seat technician creating a tag is refused.",
+    "implemented": false,
+    "featureIds": [
+      "F064",
+      "F062",
+      "F065"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "E2E: a seat technician opens the time-entry dialog and saves an entry; the network log shows no service catalog, tax or contract request, and the stored entry is operational with no service or contract line.",
+    "implemented": false,
+    "featureIds": [
+      "F066",
+      "F067"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "DB integration: a billing run, invoice preview, unbilled-time list and approval queue for the period do not include seat technician entries; the technician lists, edits and deletes their own.",
+    "implemented": false,
+    "featureIds": [
+      "F068",
+      "F070"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "DB integration: the effort summary hides the MSP total from a seat technician by default, shows it when the arrangement allows, and shows both totals to MSP staff.",
+    "implemented": false,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "DB integration: a seat technician sees only shared projects; the project and task reads contain no budget, billing or rate key; task status, assignment, comment and time writes succeed on a shared project and fail on an unshared one.",
+    "implemented": false,
+    "featureIds": [
+      "F071",
+      "F072",
+      "F073"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "DB integration: a seat technician reads own-client assets with inventory fields and no billing profile or purchase cost, another client's asset answers not found, and no remote or script action is reachable; linking an asset to a ticket and creating a ticket from an asset succeed.",
+    "implemented": false,
+    "featureIds": [
+      "F074",
+      "F075"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "DB integration: a seat technician reads client-visible documents and client-audience articles, and is refused an internal-only document, an internal-audience article and any stored credential.",
+    "implemented": false,
+    "featureIds": [
+      "F076",
+      "F077",
+      "F078"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "DB integration: handoff with and without a named technician, handoff to the MSP and a shared IT note each notify the expected recipients and no one else.",
+    "implemented": false,
+    "featureIds": [
+      "F079",
+      "F081"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "DB integration: the rendered email to a seat technician for a ticket with private notes contains no private text, a private note produces no technician notification, and a technician cannot watch an out-of-scope ticket.",
+    "implemented": false,
+    "featureIds": [
+      "F080",
+      "F083"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Integration with the email emulator: a seat technician's reply to a shared IT notification is stored as shared IT and a reply to a requester notification as requester.",
+    "implemented": false,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "E2E: on a client with no arrangement an administrator chooses Seat, sets seats, scope and a first technician, and the overview shows the arrangement with pool totals reduced; choosing Workspace opens the existing provisioning flow.",
+    "implemented": false,
+    "featureIds": [
+      "F084",
+      "F085",
+      "F086",
+      "F013"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "E2E with the Stripe emulator: an allocation larger than available capacity leads to a purchase review for the new total and completes with one charge.",
+    "implemented": false,
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "E2E: user administration lists a seat technician under their client apart from MSP staff with licence usage unchanged, and the effective access view explains a denial caused by board scope.",
+    "implemented": false,
+    "featureIds": [
+      "F088",
+      "F089"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Contract: no seat UI file reads the raw release flag, and with the capability off the client tab, overview rows and ticket affordances are absent.",
+    "implemented": false,
+    "featureIds": [
+      "F090",
+      "F002"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "DB integration: ending an arrangement deactivates technicians, releases the allocation once, returns responsibility to the MSP and leaves shared notes readable by MSP staff; a replay changes nothing; reactivating a technician without a live assignment is refused.",
+    "implemented": false,
+    "featureIds": [
+      "F091",
+      "F095"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "DB integration: after grace expires a seat technician's write is refused with the lifecycle error while reads succeed, and an MSP user and a requester on the same ticket are unaffected.",
+    "implemented": false,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "DB integration: client delete, merge and inactivate are refused while an arrangement is live; a contract test finds every arrangement table in the client-owned roster; changing a ticket's client or board clears the technician assignee and returns responsibility to the MSP.",
+    "implemented": false,
+    "featureIds": [
+      "F093",
+      "F094"
+    ]
+  }
+]
