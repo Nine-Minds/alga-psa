@@ -10,8 +10,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn(async () => ({ knex: {} as any })));
 const withTransactionMock = vi.hoisted(() => vi.fn());
-const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
-const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
+const hasPermissionMock = vi.hoisted(() => vi.fn(async (..._args: any[]): Promise<boolean> => true));
+const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true })));
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const getUserWithRolesMock = vi.hoisted(() => vi.fn(async () => ({ user_id: 'target-1' })));

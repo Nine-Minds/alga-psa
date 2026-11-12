@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // What is pinned here is the wiring — the guard runs on the write transaction,
 // before the delete, and its refusal is reported with the right i18n key.
 
-const hasPermissionMock = vi.fn(async () => true);
+const hasPermissionMock = vi.fn(async (..._args: any[]): Promise<boolean> => true);
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 const withTransactionMock = vi.fn();
-const assertUserRoleFloorMock = vi.fn();
+const assertUserRoleFloorMock = vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),

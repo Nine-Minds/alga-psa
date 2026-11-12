@@ -16,7 +16,7 @@ const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
 // The role floors have their own suite (packages/db userRoleFloor.test.ts);
 // here they allow everything unless a case says otherwise.
-const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
+const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true })));
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {

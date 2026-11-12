@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // the client portal and the contact portal tab call). Pins the wiring: the
 // guard runs before the delete, and a portal caller is told in portal copy.
 
-const hasPermissionMock = vi.fn(async () => true);
+const hasPermissionMock = vi.fn(async (..._args: any[]): Promise<boolean> => true);
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 const withTransactionMock = vi.fn();
-const assertUserRoleFloorMock = vi.fn();
+const assertUserRoleFloorMock = vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true }));
 
 let actor: Record<string, unknown> = { user_id: 'actor-1', tenant: 'tenant-1', user_type: 'internal' };
 

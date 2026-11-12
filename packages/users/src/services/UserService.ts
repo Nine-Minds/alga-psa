@@ -1238,7 +1238,7 @@ export class UserService extends BaseService<IUser> {
       // Only interactive users are managed here; non-interactive ids are skipped.
       const result = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
         .whereIn('user_id', userIds)
-        .update({
+        .update({ 
           is_inactive: deactivate,
           updated_at: knex.raw('now()')
         });
