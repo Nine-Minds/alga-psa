@@ -23,6 +23,7 @@ import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 import { tableHasColumn, resolveViaPrincipalNames } from '@alga-psa/shared/lib/viaPrincipal/viaPrincipalNames';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -81,7 +82,10 @@ export async function fetchTimeEntriesForTicketCore(
   }
 
   const scopedDb = tenantDb(db, tenant);
+  // Entries of clients the reader may not see are not entries they can read: they are neither listed nor counted.
+  const readScope = await resolveTimeEntryReadScope(db, tenant, user);
   const query = scopedDb.table('time_entries');
+  readScope.apply(query);
   scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
   scopedDb.tenantJoin(query, 'service_catalog', 'time_entries.service_id', 'service_catalog.service_id', { type: 'left' });
 
@@ -122,6 +126,7 @@ export async function fetchTimeEntriesForTicketCore(
 
   const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);
 
+  // LEVERAGE: pattern authorization-subject-resolution — time-entry ticket reads hand-build a subject with no roles or teams; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
   const subject: AuthorizationSubject = {
     tenant,
     userId: user.user_id,

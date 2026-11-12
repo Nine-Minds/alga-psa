@@ -15,12 +15,12 @@
     },
     {
       "name": "ticket.list",
-      "statements": 17,
+      "statements": 14,
       "locks": 0
     },
     {
       "name": "ticket.open",
-      "statements": 32,
+      "statements": 29,
       "locks": 0
     },
     {
@@ -60,12 +60,12 @@
     },
     {
       "name": "timeEntry.approve",
-      "statements": 25,
+      "statements": 22,
       "locks": 0
     },
     {
       "name": "invoice.generate",
-      "statements": 229,
+      "statements": 230,
       "locks": 4
     },
     {
@@ -82,10 +82,20 @@
       "name": "maintenance.fanoutTick",
       "statements": 5,
       "locks": 0
+    },
+    {
+      "name": "client.list",
+      "statements": 7,
+      "locks": 0
+    },
+    {
+      "name": "search.query",
+      "statements": 6,
+      "locks": 0
     }
   ],
   "totals": {
-    "statements": 498,
+    "statements": 503,
     "locks": 17
   },
   "denylist": [

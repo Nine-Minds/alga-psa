@@ -1,6 +1,7 @@
 'use server'
 
 import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 // Bucket usage MUST go through the shared canonical service. This package used
 // to carry a local fork (src/services/bucketUsageService.ts) that kept querying
@@ -134,6 +135,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
   }
+  const readScope = await resolveTimeEntryReadScope(db, tenant, user);
 
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
@@ -150,6 +152,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
   const timeEntriesQuery = tenantScopedDb.table('time_entries');
+  readScope.apply(timeEntriesQuery);
   tenantScopedDb.tenantJoin(
     timeEntriesQuery,
     'service_catalog',
@@ -741,9 +744,11 @@ export const getTimeEntryById = withAuth(async (
     throw new Error('Permission denied: Cannot read time entries');
   }
 
-      const entry = await tenantScopedDb.table('time_entries')
-        .where({ entry_id: entryId })
-        .first();
+      // An entry outside the reader's client scope reads as missing.
+      const readScope = await resolveTimeEntryReadScope(db, tenant, user);
+      const entryQuery = tenantScopedDb.table('time_entries').where({ entry_id: entryId });
+      readScope.apply(entryQuery);
+      const entry = await entryQuery.first();
 
       if (!entry) {
         return null;

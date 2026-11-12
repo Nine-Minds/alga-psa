@@ -756,6 +756,7 @@
       "pending": "Ausstehend",
       "error": "Dokument konnte nicht hochgeladen werden",
       "fileError": "Datei konnte nicht hochgeladen werden",
+      "fileTooLarge": "Diese Datei ist {{size}} groß. Das aktuelle Limit beträgt {{limit}} pro Datei.",
       "associatedEntityTypeLabel": "Verknüpfen mit",
       "noAssociation": "Keine Verknüpfung",
       "selectAssociatedEntityError": "Wählen Sie vor dem Hochladen eine verknüpfte Entität aus.",

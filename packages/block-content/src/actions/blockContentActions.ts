@@ -1,5 +1,6 @@
 'use server';
 
+import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
@@ -39,6 +40,13 @@ export const createBlockDocument = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (input.entityId && input.entityType && !await isDocumentAssociationCreateAllowed(trx, {
+      tenant,
+      user,
+      targets: [{ entityType: input.entityType, entityId: input.entityId }],
+    })) {
+      throw new Error('Permission denied: Cannot create documents');
+    }
     const documentId = uuidv4();
 
     const documentData: Partial<IDocument> = {

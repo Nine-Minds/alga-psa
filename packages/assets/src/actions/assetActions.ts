@@ -1,5 +1,6 @@
 'use server';
 
+import { assertAssetCreateAllowed } from '../lib/assetCreateAuthorization';
 import { revalidatePath } from 'next/cache';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
@@ -91,11 +92,15 @@ import {
     BuiltinAuthorizationKernelProvider,
     BundleAuthorizationKernelProvider,
     RequestLocalAuthorizationCache,
+    builtinResolversRestrict,
+    bundleRulesRestrict,
     createAuthorizationKernel,
     type AuthorizationRecord,
     type AuthorizationSubject,
     type BundleNarrowingRule,
+    type AuthorizationDecision,
 } from '@alga-psa/authorization/kernel';
+import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
@@ -111,7 +116,8 @@ import {
     resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
     isAssetActionAllowed as isSharedAssetActionAllowed,
     isAssetReadAllowed as isSharedAssetReadAllowed,
-    filterReadableAssets,
+    authorizeAssetsForAction,
+    projectReadableAssets,
     type AssetAuthUser as SharedAssetAuthUser,
     type AssetAuthorizationAction,
 } from '../lib/assetReadAuthorization';
@@ -513,9 +519,10 @@ type AssetAuthUser = SharedAssetAuthUser;
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
-    user: AssetAuthUser
+    user: AssetAuthUser,
+    requestCache?: RequestLocalAuthorizationCache
 ): Promise<AuthorizationSubject> {
-    return resolveSharedAuthorizationSubject(trx, tenant, user);
+    return resolveSharedAuthorizationSubject(trx, tenant, user, undefined, requestCache);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -559,10 +566,11 @@ async function createAssetReadAuthorizationContext(
     tenant: string,
     user: AssetAuthUser
 ): Promise<AssetReadAuthorizationContext> {
+    const requestCache = new RequestLocalAuthorizationCache();
     return {
-        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
+        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user, requestCache),
         authorizationKernel: createAssetReadAuthorizationKernel(trx),
-        requestCache: new RequestLocalAuthorizationCache(),
+        requestCache,
     };
 }
 
@@ -611,6 +619,20 @@ async function assertAssetReadAllowed(
     asset: AssetAuthorizationInput
 ): Promise<void> {
     await assertAssetActionAllowed(trx, tenant, context, asset, 'read');
+}
+
+/** The asset as its reader may see it; a redaction that hides its identity hides the asset. */
+async function readableAssetOrNotFound<T extends AssetAuthorizationInput>(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset: T
+): Promise<T> {
+    const [readable] = await projectReadableAssets(trx, tenant, context, [asset]);
+    if (!readable) {
+        throw new Error('Asset not found');
+    }
+    return readable;
 }
 
 async function resolveAssetAuthorizationInputById(
@@ -836,14 +858,14 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
         const asset = await getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser);
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
         await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
-        return asset;
+        // Same normalisation every other read path applies (getAssetDetailBundle,
+        // create, update): pg returns NUMERIC columns as strings and timestamps as
+        // Date, neither of which matches the declared Asset contract or what the
+        // edit form can round-trip back through updateAssetSchema (alga0002283).
+        return readableAssetOrNotFound(trx, tenant, context, formatAssetForOutput(asset));
     });
 
-    // Same normalisation every other read path applies (getAssetDetailBundle,
-    // create, update): pg returns NUMERIC columns as strings and timestamps as
-    // Date, neither of which matches the declared Asset contract or what the
-    // edit form can round-trip back through updateAssetSchema (alga0002283).
-    return formatAssetForOutput(asset);
+    return asset;
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -858,7 +880,7 @@ export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id
         throw new Error('Permission denied: Cannot read asset facts');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
         await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
         return listAvailableAssetFactsForAsset(trx, { tenant, assetId: asset_id });
     });
@@ -877,7 +899,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         throw new Error('Permission denied: Cannot read assets');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
         const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
             getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser),
             hasPermission(user, 'ticket', 'read', trx),
@@ -892,7 +914,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
             { asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }
         );
 
-        const formattedAsset = formatAssetForOutput(assetRecord);
+        const formattedAsset = await readableAssetOrNotFound(trx, tenant, context, formatAssetForOutput(assetRecord));
 
         // Structural child data inherits parent-asset authorization. Linked ticket/document data
         // additionally intersects with their own resource-family authorization.
@@ -1244,7 +1266,8 @@ export async function createAssetRecord(
     data: CreateAssetRequest,
     // Importers (e.g. Hudu) project best-effort attributes and must never fail
     // on a required custom field the source didn't supply; they pass false.
-    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource },
+    hooks?: Pick<AssetWriteHooks, 'authorize'>
 ): Promise<Asset> {
     try {
         // Validate input data first
@@ -1259,9 +1282,11 @@ export async function createAssetRecord(
         }
 
         // Start transaction. The output-schema check lives inside it.
-        const created = await knex.transaction(async (trx: Knex.Transaction) =>
-            createAssetInTransaction(trx, tenant, actorUserId, data, options)
-        );
+        const created = await knex.transaction(async (trx: Knex.Transaction) => {
+            // Same hook updateAssetRecord takes: the wrapper's user-scoped decision, run before any write.
+            if (hooks?.authorize) await hooks.authorize(trx);
+            return createAssetInTransaction(trx, tenant, actorUserId, data, options);
+        });
 
         const occurredAt = created.created_at || new Date().toISOString();
         const postCommit = { tenant, assetId: created.asset_id };
@@ -1337,7 +1362,9 @@ export const createAsset = withAuth(async (
         throw new Error('Permission denied: Cannot create assets');
     }
 
-    return await createAssetRecord(knex, tenant, user.user_id, data, options);
+    return await createAssetRecord(knex, tenant, user.user_id, data, options, {
+        authorize: (trx) => assertAssetCreateAllowed(trx, tenant, user, data.client_id),
+    });
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -2377,8 +2404,12 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 ...baseContext,
                 authorizationKernel: createAssetReadAuthorizationKernel(trx, assetReadRules),
             };
+            // A closed bundle that does not name asset:read restricts it too, so ask the kernel rather than
+            // looking for an asset:read rule; otherwise the type facet below would count every asset.
             const requiresRecordAuthorization = context.subject.userType === 'client'
-                || assetReadRules.some((rule) => rule.resource === 'asset' && rule.action === 'read');
+                || bundleRulesRestrict(assetReadRules, 'asset', 'read')
+                // A registered built-in rule resolver (closed baseline or named rule) restricts it as well.
+                || builtinResolversRestrict({ subject: context.subject, resource: { type: 'asset', action: 'read' } });
             const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
                 rule.resource === 'asset' && rule.action === 'read'
                 && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')
@@ -2401,7 +2432,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             }
 
             type AssetListQueryRow = Asset & { client_name: string | null };
-            type AssetListScanRow = { asset: AssetListQueryRow; readable: boolean };
+            type AssetListScanRow = { asset: AssetListQueryRow; decision: AuthorizationDecision };
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
                 const offset = (sourcePage - 1) * sourceLimit;
                 const countRow = await listQuery.clone()
@@ -2419,13 +2450,12 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
-                const readableAssets = await filterReadableAssets(trx, tenant, context, rows, {
+                const decisions = await authorizeAssetsForAction(trx, tenant, context, rows, 'read', {
                     resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,
                 });
-                const readableAssetIds = new Set(readableAssets.map((asset) => asset.asset_id));
 
                 return {
-                    data: rows.map((asset) => ({ asset, readable: readableAssetIds.has(asset.asset_id) })),
+                    data: rows.map((asset, index) => ({ asset, decision: decisions[index] })),
                     total: sourceTotal,
                 };
             };
@@ -2436,8 +2466,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 page,
                 limit,
                 fetchPage,
-                authorizeRecord: async ({ asset, readable }) => {
-                    if (!readable) return false;
+                authorizeRecord: async ({ asset, decision }) => {
+                    // Identity-hidden rows must be excluded before pagination and facet counts.
+                    if (!decision.allowed || !projectReadableRecord('asset', asset, decision.redactedFields)) return false;
                     if (requiresRecordAuthorization) {
                         const assetType = asset.asset_type ?? 'unknown';
                         assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
@@ -2490,7 +2521,11 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
         );
 
             const response = {
-                assets: assetsWithExtensions,
+                // Reuse the scan's decisions after enrichment so derived fields cannot reappear,
+                // without resolving associations or evaluating authorization a second time.
+                assets: assetsWithExtensions.map((asset, index) =>
+                    projectReadableRecord('asset', asset, authorizedPage.data[index].decision.redactedFields)!
+                ),
                 total: authorizedPage.total,
                 page,
                 limit,
@@ -3716,7 +3751,7 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                 )
             );
 
-            return assets;
+            return projectReadableAssets(trx, tenant, context, assets);
         });
     } catch (error) {
         console.error('Error listing entity assets:', error);

@@ -555,7 +555,16 @@
       "invalidValue": "Jeden z wybranych rekordów raportu jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
       "referenceMissing": "Jeden z wybranych rekordów raportu już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola raportu.",
-      "missingFieldNamed": "Brakuje wymaganego pola raportu: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola raportu: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: odczytuje {{table}}, dla którego nie ma reguły przynależności do klienta.",
+        "raw_sql": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: jest zbudowany z surowego SQL.",
+        "unsupported_join": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: łączy {{table}} w sposób, który zachowuje wiersze innych klientów.",
+        "no_client_anchor": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: żadne z odczytywanych danych nie należy do klienta.",
+        "not_client_attributable": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: odczytuje {{table}}, którego nie można przypisać do klienta.",
+        "unnarrowable_report": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: sumuje rozliczenia wszystkich klientów."
+      },
+      "clientOutOfScope": "Nie masz dostępu do tego klienta."
     }
   }
 }

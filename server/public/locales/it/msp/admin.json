@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Ticket",
-      "documents": "Documenti",
-      "time": "Tempo",
-      "projects": "Progetti",
-      "assets": "Asset",
-      "billing": "Fatturazione"
-    },
     "targetTypes": {
       "role": "Ruolo",
       "team": "Team",
@@ -453,11 +445,13 @@
         "custom": "Personalizzato"
       },
       "badges": {
-        "starter": "Iniziale"
+        "starter": "Iniziale",
+        "closed": "Chiuso"
       },
       "descriptions": {
         "systemStarter": "Pacchetto iniziale di sistema.",
-        "customBundle": "Pacchetto di restrizione personalizzato per assegnazioni a ruolo, team, utente o chiave API."
+        "customBundle": "Pacchetto di restrizione personalizzato per assegnazioni a ruolo, team, utente o chiave API.",
+        "closed": "Chiuso: nega tutto ciò che non nomina."
       },
       "effectiveSummary": "Riepilogo effettivo: pacchetto {{status}} con {{count}} assegnazione/i attiva/e.",
       "empty": "Nessun pacchetto di autorizzazione trovato.",
@@ -542,6 +536,17 @@
         "label": "Campi redatti",
         "placeholder": "internal_cost, margin",
         "helper": "Nomi dei campi separati da virgole da redigere quando questa regola consente l'accesso."
+      },
+      "baseline": {
+        "title": "Bundle chiuso",
+        "explanation": "Un bundle chiuso nega ogni tipo di record e azione che non nomina. Un bundle aperto limita solo quelli che nomina.",
+        "closedToggle": "Pubblica come chiuso",
+        "openBadge": "Aperto",
+        "previewTitle": "Questo bundle chiuso negherà",
+        "previewIntro": "Agli utenti che hanno questo bundle vengono negati questi tipi di record e azioni, perché il bundle non ha regole per essi.",
+        "previewNothing": "Il bundle nomina ogni tipo di record e azione, quindi non nega nulla oltre alle proprie regole.",
+        "deniedAll": "Tutte le azioni",
+        "deniedActions": "Negato: {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Record dati",
       "useSynthetic": "Usa scenario record sintetico",
       "syntheticOwnerPlaceholder": "ID utente proprietario (facoltativo)",
-      "syntheticClientPlaceholder": "ID cliente (facoltativo)",
+      "syntheticClientPlaceholder": "Cliente (facoltativo)",
       "syntheticBoardPlaceholder": "ID bacheca (facoltativo)",
       "clientVisible": "Visibile al cliente",
       "run": "Esegui simulazione",
@@ -584,7 +589,18 @@
       "publishedRevision": "Revisione pubblicata",
       "allowed": "Consentito",
       "denied": "Negato",
-      "empty": "Esegui una simulazione per confrontare il comportamento in bozza e pubblicato."
+      "empty": "Esegui una simulazione per confrontare il comportamento in bozza e pubblicato.",
+      "explanations": {
+        "closedBaseline": "Il bundle è chiuso e non ha regole per {{action}} su {{resource}}, quindi l’accesso è negato.",
+        "clientPortfolio": "Il record appartiene a un cliente fuori dal portafoglio clienti di questo utente, quindi la regola del portafoglio lo nega.",
+        "createOutOfScope": "La creazione di {{resource}} per questo cliente è negata: il cliente è fuori dall’ambito di questo utente.",
+        "readRequired": "{{action}} su {{resource}} richiede anche l’accesso in lettura al record, e le regole di lettura lo negano.",
+        "templateDenied": "Una regola del bundle limita {{action}} su {{resource}} ai record con cui questo utente non corrisponde.",
+        "clientVisibleOnly": "Il bundle consente {{action}} su {{resource}} solo quando il record è visibile al cliente.",
+        "notSelfApprover": "Gli utenti non possono approvare i propri record.",
+        "rulesUnavailable": "Non è stato possibile caricare le regole del bundle, quindi l’accesso è negato.",
+        "rbacDenied": "Il ruolo dell’utente non concede {{action}} su {{resource}}."
+      }
     },
     "createDialog": {
       "title": "Crea pacchetto di autorizzazione",
@@ -622,9 +638,47 @@
       "selectRecord": "Seleziona un record prima di eseguire la simulazione.",
       "runSimulation": "Impossibile eseguire la simulazione.",
       "simulator": {
-        "unsupportedAction": "Il simulatore attualmente supporta solo i controlli di Lettura e Approvazione. Scegli una di queste azioni e riprova.",
+        "unsupportedAction": "Il simulatore supporta i controlli Leggi, Crea, Aggiorna, Elimina e Approva. Scegli una di queste azioni e riprova.",
         "unsupportedResource": "Questo tipo di record non è ancora disponibile nel simulatore. Scegli un tipo di record supportato e riprova.",
-        "clientTicketNotSupported": "I controlli dei ticket per gli utenti client non sono ancora disponibili nel simulatore perché la visibilità della bacheca dei ticket non è inclusa. Prova con un utente interno o verifica l'accesso ai ticket client nell'app."
+        "clientTicketNotSupported": "I controlli dei ticket per gli utenti client non sono ancora disponibili nel simulatore perché la visibilità della bacheca dei ticket non è inclusa. Prova con un utente interno o verifica l'accesso ai ticket client nell'app.",
+        "syntheticRecordRequired": "Questo tipo di record non ha record memorizzati da scegliere. Usa uno scenario di record sintetico e riprova."
+      },
+      "saveBaseline": "Impossibile modificare lo stato chiuso del bundle."
+    },
+    "resourceTypes": {
+      "ticket": "Ticket",
+      "document": "Documenti",
+      "time_entry": "Tempo",
+      "project": "Progetti",
+      "asset": "Asset",
+      "billing": "Fatturazione",
+      "tag": "Tag",
+      "client": "Clienti",
+      "contact": "Contatti",
+      "interaction": "Interazioni",
+      "schedule_entry": "Voci di pianificazione"
+    },
+    "actions": {
+      "read": "Leggi",
+      "create": "Crea",
+      "update": "Aggiorna",
+      "delete": "Elimina",
+      "approve": "Approva"
+    },
+    "portfolio": {
+      "title": "Portafoglio clienti",
+      "description": "I clienti per cui lavora questo utente. I bundle con una regola di portafoglio clienti limitano l’utente a questi clienti.",
+      "addClient": "Aggiungi un cliente",
+      "loading": "Caricamento del portafoglio clienti...",
+      "empty": "Nessun cliente. A un utente con portafoglio vuoto viene negato tutto ciò che una regola di portafoglio clienti copre.",
+      "removeClient": "Rimuovi {{client}}",
+      "save": "Salva portafoglio",
+      "saving": "Salvataggio...",
+      "saved": "Portafoglio clienti salvato.",
+      "errors": {
+        "load": "Impossibile caricare il portafoglio clienti.",
+        "lookup": "Impossibile cercare il cliente.",
+        "save": "Impossibile salvare il portafoglio clienti."
       }
     }
   },

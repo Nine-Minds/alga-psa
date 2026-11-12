@@ -22,11 +22,12 @@ import {
 import {
   getConnection
 } from '../../db/db';
-import { authorizeApiResourceAction, authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { authorizeApiResourceAction, authorizeApiResourceRead } from './authorizationKernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { areApiRecordFieldsVisible, projectApiRecord } from './apiRecordProjection';
 import { buildTicketRecordContext } from './recordContexts';
-import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
+import { projectNarrowedPage } from '@alga-psa/authorization/pagination';
+import { RequestLocalAuthorizationCache, compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
 import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
@@ -58,27 +59,38 @@ import {
 // kernel for ticket:read. The built-in rules come from the same subject-aware
 // default resolver the kernel factories use: client subjects resolve to a
 // same_client rule, internal subjects to an empty set (bundle narrowing only —
-// empty in CE, populated in EE). Returns null when a rule isn't representable in
-// SQL so the caller falls back to the per-row JS kernel. RBAC is gated upstream
-// by checkPermission('read'), exactly as the per-row path relies on.
-async function resolveTicketReadAuthorizationApplier(
+// empty in CE, populated in EE). RBAC is gated upstream by checkPermission('read').
+//
+// Narrowing always happens in SQL, so the page and the total are computed over the
+// readable set. A rule that redacts fields does not change that: `redactsFields`
+// tells the caller to project the narrowed page afterwards. A policy SQL cannot
+// express denies every row (fail closed); it never falls back to filtering rows
+// after the query, which would break `total` and pagination.
+// LEVERAGE: pattern narrow-then-project — ticket is the only resource with a redaction projection (recordProjection.ts has no
+// client/contact/interaction/time-entry definitions); when those gain one, each list reuses projectNarrowedPage over its narrowed page.
+interface TicketReadAuthorization {
+  apply: (query: TenantScopedQuery) => void;
+  redactsFields: boolean;
+}
+
+async function resolveTicketReadAuthorization(
   apiRequest: AuthenticatedApiRequest,
   knex: Knex
-): Promise<((query: TenantScopedQuery) => void) | null> {
-  const subject = buildAuthorizationPrincipalSubject(
-    apiRequest.context.user,
-    apiRequest.context.apiKeyId
-  );
-  subject.tenant = apiRequest.context.tenant;
+): Promise<TicketReadAuthorization> {
+  const requestCache = new RequestLocalAuthorizationCache();
+  const subject = await resolveAuthorizationSubject(knex, {
+    tenant: apiRequest.context.tenant,
+    user: apiRequest.context.user,
+    apiKeyId: apiRequest.context.apiKeyId,
+    requestCache,
+  });
 
   const bundleRules = await resolveBundleNarrowingRulesForEvaluation(knex, {
     subject,
     resource: { type: 'ticket', action: 'read' },
+    requestCache,
     knex,
   });
-  // SQL narrowing preserves row authorization but has no per-row redaction
-  // metadata. Use the kernel path whenever a policy carries field redactions.
-  if (bundleRules.some((rule: any) => (rule.redactedFields?.length ?? 0) > 0)) return null;
   const builtinRules = resolveDefaultBuiltinRelationshipRules({
     subject,
     resource: { type: 'ticket', action: 'read' },
@@ -94,12 +106,16 @@ async function resolveTicketReadAuthorizationApplier(
     });
 
   // Probe representability on a throwaway builder before committing to SQL.
-  const probe = tenantDb(knex, subject.tenant).scoped('tickets as t');
-  if (!compile(probe).supported) {
-    return null;
-  }
-  return (query: TenantScopedQuery) => {
-    compile(query);
+  const supported = compile(tenantDb(knex, subject.tenant).scoped('tickets as t')).supported;
+  return {
+    apply: (query: TenantScopedQuery) => {
+      if (!supported) {
+        query.builder.whereRaw('1 = 0');
+        return;
+      }
+      compile(query);
+    },
+    redactsFields: bundleRules.some((rule: any) => (rule.redactedFields?.length ?? 0) > 0),
   };
 }
 
@@ -387,56 +403,38 @@ export class ApiTicketController extends ApiBaseController {
 
           const knex = await getConnection(apiRequest.context.tenant);
 
-          // Preferred path: push read-authorization into SQL so the database
-          // paginates and counts only the authorized set (one data + one count
-          // query, accurate total). RBAC was already enforced by checkPermission
-          // above. Falls back to the per-row JS kernel when a narrowing rule
-          // isn't representable in SQL.
-          const applyAuthorization = await resolveTicketReadAuthorizationApplier(apiRequest, knex);
-          if (applyAuthorization) {
-            const authorizedResult = await this.ticketService.list(
-              {
-                page,
-                limit,
-                filters,
-                sort,
-                order,
-                fields: fields.length > 0 ? fields : undefined,
-                applyAuthorization,
-              },
-              apiRequest.context
-            );
-
-            return createPaginatedResponse(
-              authorizedResult.data,
-              authorizedResult.total,
+          // Narrow in SQL (page and total over the readable set), then project the page through the
+          // reader's field redactions.
+          const authorization = await resolveTicketReadAuthorization(apiRequest, knex);
+          const narrowed = await this.ticketService.list(
+            {
               page,
               limit,
-              { sort, order, filters },
-              apiRequest
-            );
-          }
-
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
-            page,
-            limit,
-            fetchPage: (sourcePage, sourceLimit) =>
-              this.ticketService.list(
-                { page: sourcePage, limit: sourceLimit, filters, sort, order, fields: fields.length > 0 ? fields : undefined },
-                apiRequest.context
-              ),
-            authorizeRecord: (ticket) =>
-              authorizeApiResourceRead({
-                knex,
-                tenant: apiRequest.context.tenant,
-                user: apiRequest.context.user,
-                apiKeyId: apiRequest.context.apiKeyId,
-                resource: 'ticket',
-                recordContext: this.buildTicketRecordContext(ticket),
-              }),
-            projectRecord: (ticket, redactedFields) => projectApiRecord('ticket', ticket, redactedFields) as Record<string, any> | null,
-            scanLimit: 100,
-          });
+              filters,
+              sort,
+              order,
+              fields: fields.length > 0 ? fields : undefined,
+              applyAuthorization: authorization.apply,
+            },
+            apiRequest.context
+          );
+          const authorizedPage = await projectNarrowedPage<Record<string, any>>(
+            narrowed as { data: Record<string, any>[]; total: number },
+            {
+              redactsFields: authorization.redactsFields,
+              decideRow: (ticket) =>
+                authorizeApiResourceRead({
+                  knex,
+                  tenant: apiRequest.context.tenant,
+                  user: apiRequest.context.user,
+                  apiKeyId: apiRequest.context.apiKeyId,
+                  resource: 'ticket',
+                  recordContext: this.buildTicketRecordContext(ticket),
+                }),
+              projectRow: (ticket, redactedFields) =>
+                projectApiRecord('ticket', ticket, redactedFields) as Record<string, any> | null,
+            }
+          );
 
           return createPaginatedResponse(
             authorizedPage.data,

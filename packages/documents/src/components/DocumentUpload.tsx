@@ -16,6 +16,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import AssociatedEntityPicker, { type PickerAssociationEntityType } from './AssociatedEntityPicker';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
+import { formatBytes } from '@alga-psa/core/formatters';
+import { MAX_UPLOAD_BYTES } from '../lib/uploadLimits';
 
 /** Terminal counts for one bulk upload batch, passed to `onAllUploadsComplete`. */
 export interface DocumentUploadBatchSummary {
@@ -183,9 +185,11 @@ export default function DocumentUpload({
 
         setShowEmptyDrop(false);
 
-        // If folderPath is already provided (e.g., current folder in folder mode), upload directly
-        if (folderPath !== undefined) {
-            await startBulkUpload(files, folderPath);
+        // If folderPath is already provided (e.g., current folder in folder mode), upload directly.
+        // When every file is over the size limit nothing will be sent, so skip the
+        // folder picker and show the per-file reasons right away.
+        if (folderPath !== undefined || files.every(file => file.size > MAX_UPLOAD_BYTES)) {
+            await startBulkUpload(files, folderPath ?? null);
         } else {
             // Otherwise, always show folder selector to let user choose destination
             setPendingFiles(files);
@@ -202,6 +206,18 @@ export default function DocumentUpload({
         if (files.length > 0) {
             await startBulkUpload(files, selectedFolder);
         }
+    };
+
+    const fileTooLargeMessage = (file: File) => {
+        const limit = formatBytes(MAX_UPLOAD_BYTES);
+        let size = formatBytes(file.size);
+        // Never show a size that rounds to the limit itself.
+        if (size === limit) size = `${file.size.toLocaleString()} bytes`;
+        return t('documents.uploadSection.fileTooLarge', {
+            size,
+            limit,
+            defaultValue: `This file is ${size}. The current limit is ${limit} per file.`
+        });
     };
 
     const startBulkUpload = async (files: File[], targetFolderPath: string | null | undefined) => {
@@ -234,6 +250,16 @@ export default function DocumentUpload({
         try {
             for (let i = 0; i < files.length; i++) {
                 setCurrentFileIndex(i);
+                // The single size gate: an oversized file is failed here and never
+                // reaches uploadDocument. All entry paths end up in this loop.
+                if (files[i].size > MAX_UPLOAD_BYTES) {
+                    const error = fileTooLargeMessage(files[i]);
+                    setUploadQueue(prev => prev.map((item, idx) =>
+                        idx === i ? { ...item, status: 'error' as const, error } : item
+                    ));
+                    outcomes.push({ file: files[i], status: 'error', error });
+                    continue;
+                }
                 outcomes.push(await processFileUpload(i, files[i], targetFolderPath, callbackErrors));
             }
         } finally {

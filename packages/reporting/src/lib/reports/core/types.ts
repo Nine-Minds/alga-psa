@@ -1,5 +1,8 @@
 // Core types and interfaces for the hierarchical report system
 
+import type { SubjectUserInput } from '@alga-psa/authorization/subject';
+import type { ClientScopeRefusal } from '../clientScope/refusal';
+
 export type ReportCategory = 'billing' | 'operations' | 'financial' | 'analytics' | 'compliance';
 export type MetricType = 'count' | 'sum' | 'average' | 'min' | 'max' | 'ratio' | 'trend';
 export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'count_distinct';
@@ -185,6 +188,17 @@ export class ReportPermissionError extends ReportError {
   }
 }
 
+/**
+ * The subject's client narrowing could not be applied to this report, so it was not run.
+ * Carries the typed refusal; the action boundary renders it through the reporting error catalogue.
+ */
+export class ReportClientScopeRefusedError extends ReportError {
+  constructor(public refusal: ClientScopeRefusal) {
+    super(`Report refused for a client-restricted user: ${refusal.reason}`, refusal.reportId, refusal.metricId);
+    this.name = 'ReportClientScopeRefusedError';
+  }
+}
+
 // Utility types
 export type ReportRegistry = Record<string, ReportDefinition>;
 
@@ -193,4 +207,10 @@ export interface ReportExecutionOptions {
   forceRefresh?: boolean;         // Force cache refresh
   timeout?: number;               // Query timeout in milliseconds
   locale?: string;                // BCP 47 locale for formatted values; defaults to 'en-US'
+  /**
+   * Whose client scope the report runs under. Set by every user-facing entry point (`executeReport`);
+   * a subject nothing narrows runs the report exactly as before, a narrowed one gets only the rows of
+   * clients they may read, or a `ReportClientScopeRefusedError`. Unset means a system caller (platform reports).
+   */
+  scopeSubject?: SubjectUserInput;
 }

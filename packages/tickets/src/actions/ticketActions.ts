@@ -1,5 +1,6 @@
 'use server';
 
+import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   isClientUserType,
@@ -96,6 +97,8 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -230,72 +233,6 @@ function captureAnalytics(_event: string, _properties?: Record<string, any>, _us
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
 }
 
-function extractRoleIdsFromUser(user: unknown): string[] {
-  const roles = (user as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      if (role && typeof role === 'object' && 'role_id' in role) {
-        const roleId = (role as { role_id?: unknown }).role_id;
-        return typeof roleId === 'string' ? roleId : null;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-      .where({ user_id: user.user_id })
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, 'users', tenant)
-      .where({ reports_to: user.user_id })
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
-}
-
 function toTicketAuthorizationRecord(
   ticket: Partial<ITicket>
 ): AuthorizationRecord {
@@ -346,7 +283,18 @@ async function authorizeTicketRead(
   user: IUserWithRoles,
   ticket: Partial<ITicket>
 ): Promise<boolean> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  return (await decideTicketRead(trx, tenant, user, ticket)).allowed;
+}
+
+/** The read decision with the fields it redacts, for reads that return the ticket itself. */
+async function decideTicketRead(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  ticket: Partial<ITicket>
+): Promise<{ allowed: boolean; redactedFields: string[] }> {
+  const requestCache = new RequestLocalAuthorizationCache();
+  const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
@@ -366,11 +314,10 @@ async function authorizeTicketRead(
     }),
     rbacEvaluator: async () => true,
   });
-  const requestCache = new RequestLocalAuthorizationCache();
 
   if (user.user_type === 'client' && user.clientId) {
     if (ticket.client_id !== user.clientId) {
-      return false;
+      return { allowed: false, redactedFields: [] };
     }
   }
 
@@ -388,7 +335,7 @@ async function authorizeTicketRead(
     knex: trx,
   });
 
-  return authorizationDecision.allowed;
+  return { allowed: authorizationDecision.allowed, redactedFields: authorizationDecision.redactedFields ?? [] };
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -549,6 +496,12 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             // Passing trx defers event publishing until the commit.
             const eventPublisher = new TicketModelEventPublisher(trx);
             const analyticsTracker = new TicketModelAnalyticsTracker();
+
+            await assertTicketCreateAllowed(trx, tenant, user, {
+              client_id: data.client_id,
+              board_id: data.board_id,
+              entered_by: user.user_id,
+            });
 
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
@@ -831,6 +784,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Passing trx defers event publishing until the commit.
       const eventPublisher = new TicketModelEventPublisher(trx);
       const analyticsTracker = new TicketModelAnalyticsTracker();
+
+      await assertTicketCreateAllowed(trx, tenant, user, {
+        client_id: createTicketInput.client_id,
+        board_id: createTicketInput.board_id,
+        contact_name_id: createTicketInput.contact_id,
+        assigned_to: createTicketInput.assigned_to,
+        assigned_team_id: createTicketInput.assigned_team_id,
+        entered_by: user.user_id,
+      });
 
       // Use shared TicketModel with retry logic
       // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
@@ -1265,6 +1227,14 @@ export const duplicateTicketBatch = withAuth(async (
         const result = await withTransaction(db, async (trx: Knex.Transaction) => {
           // Re-authorize inside this copy's transaction: a source deleted mid-batch fails the rest cleanly.
           const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, sourceTicketId);
+
+          await assertTicketCreateAllowed(trx, tenant, user, {
+            client_id: source.client_id,
+            board_id: source.board_id,
+            contact_name_id: copy.contactId,
+            assigned_to: source.assigned_to,
+            entered_by: user.user_id,
+          });
 
           // LEVERAGE: pattern ticket-create-composition — single Duplicate still composes creation by hand in addTicket; moving it onto createTicketWithSideEffects removes this second composition (batch-duplicate plan, R1)
           const createdTicket = await createTicketWithSideEffects(trx, tenant, {
@@ -2121,11 +2091,12 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         throw new Error('Permission denied: Cannot view tickets');
       }
 
-      const authorizationSubject = await resolveAuthorizationSubjectForUser(
-        trx,
+      const requestCache = new RequestLocalAuthorizationCache();
+      const authorizationSubject = await resolveAuthorizationSubject(trx, {
         tenant,
-        user as IUserWithRoles
-      );
+        user: user as IUserWithRoles,
+        requestCache,
+      });
       const contactVisibility = await resolveClientVisibility(trx, tenant, user as IUserWithRoles);
       const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
       const relationshipRules =
@@ -2145,7 +2116,6 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         }),
         rbacEvaluator: async () => true,
       });
-      const requestCache = new RequestLocalAuthorizationCache();
 
       const tenantFacade = tenantDb(trx, tenant);
       let query = tenantFacade.table('tickets as t')
@@ -2295,10 +2265,17 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           })
         )
       );
-      const authorizedTickets = tickets.filter((_ticket: any, index: number) => decisions[index]?.allowed);
+      // A redaction that hides the ticket's identity hides the ticket, as on REST.
+      const authorizedTickets = tickets.flatMap((ticket: any, index: number) => {
+        const redactedFields: string[] = decisions[index]?.redactedFields ?? [];
+        return decisions[index]?.allowed && projectReadableRecord('ticket', ticket, redactedFields)
+          ? [{ ticket, redactedFields }]
+          : [];
+      });
 
-      // Transform and validate the data
-      const ticketListItems = authorizedTickets.map((ticket: any): ITicketListItem => {
+      // Transform and validate the data. The projection runs on the mapped row, so a display
+      // default ('Unknown') is never emitted in place of a redacted field.
+      const ticketListItems = authorizedTickets.flatMap(({ ticket, redactedFields }: { ticket: any; redactedFields: string[] }): ITicketListItem[] => {
         const {
           status_id,
           priority_id,
@@ -2315,7 +2292,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           ...rest
         } = ticket;
 
-        return {
+        const item: ITicketListItem = {
           status_id: status_id || null,
           priority_id: priority_id || null,
           board_id: board_id || null,
@@ -2337,6 +2314,8 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           estimated_hours: rest.estimated_hours === null || rest.estimated_hours === undefined ? undefined : rest.estimated_hours,
           due_date: rest.due_date === null || rest.due_date === undefined ? undefined : rest.due_date
         };
+        const readable = projectReadableRecord('ticket', item, redactedFields);
+        return readable ? [readable] : [];
       });
 
       return ticketListItems as ITicketListItem[];
@@ -3127,7 +3106,8 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         throw new Error('Ticket not found');
       }
 
-      if (!await authorizeTicketRead(trx, tenant, user as IUserWithRoles, ticket)) {
+      const ticketRead = await decideTicketRead(trx, tenant, user as IUserWithRoles, ticket);
+      if (!ticketRead.allowed) {
         throw new Error('Permission denied: Cannot view ticket');
       }
 
@@ -3189,7 +3169,13 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       view_source: 'ticket_by_id'
     }, user.user_id);
 
-      return convertDates(detailedTicket);
+      // Fields the decision redacts are omitted the way the REST ticket endpoints omit them;
+      // a redaction that hides the ticket's identity hides the ticket.
+      const readableTicket = projectReadableRecord('ticket', convertDates(detailedTicket), ticketRead.redactedFields);
+      if (!readableTicket) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+      return readableTicket;
     });
 
     return result;

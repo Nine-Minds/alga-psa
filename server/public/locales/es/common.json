@@ -871,6 +871,7 @@
       "pending": "Pendiente",
       "error": "No se pudo subir el documento",
       "fileError": "No se pudo subir el archivo",
+      "fileTooLarge": "Este archivo ocupa {{size}}. El límite actual es de {{limit}} por archivo.",
       "associatedEntityTypeLabel": "Asociar con",
       "noAssociation": "Sin asociación",
       "selectAssociatedEntityError": "Seleccione una entidad asociada antes de subir.",

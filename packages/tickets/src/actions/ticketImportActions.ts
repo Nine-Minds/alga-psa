@@ -1,5 +1,6 @@
 'use server';
 
+import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
@@ -726,6 +727,15 @@ export const importTickets = withAuth(async (
     async function createSingleTicket(rt: ResolvedTicket): Promise<{ ticket_id: string; ticket_number: string } | null> {
       const { ticket, clientId, statusId, priorityId, categoryId, isClosed } = rt;
       let { contactId } = rt;
+
+      // Before the placeholder contact (or the ticket) is written: a row for a client outside the importer's scope is refused.
+      await assertTicketCreateAllowed(trx, tenant, user, {
+        client_id: clientId,
+        board_id: ticket.board_id ?? defaultBoardId,
+        assigned_to: ticket.assigned_to || undefined,
+        assigned_team_id: ticket.assigned_team_id || undefined,
+        entered_by: user.user_id,
+      });
 
       // Resolve __create__ contact placeholder — create contact for this client
       if (contactId?.startsWith('__create__:')) {

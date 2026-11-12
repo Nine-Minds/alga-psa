@@ -34,9 +34,17 @@
       "import": "./dist/providers/StorageProvider.mjs",
       "types": "./src/providers/StorageProvider.ts"
     },
+    "./providers/S3StorageProvider": {
+      "import": "./dist/providers/S3StorageProvider.mjs",
+      "types": "./src/providers/S3StorageProvider.ts"
+    },
     "./config/storage": {
       "import": "./dist/config/storage.mjs",
       "types": "./src/config/storage.ts"
+    },
+    "./ingest/errors": {
+      "import": "./dist/ingest/errors.mjs",
+      "types": "./src/ingest/errors.ts"
     }
   },
   "scripts": {

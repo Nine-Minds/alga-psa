@@ -9,6 +9,7 @@ import type { IDocument } from '@alga-psa/types';
 // that Vite's default extension order would otherwise prefer.
 import DocumentUpload from './DocumentUpload.tsx';
 import { uploadDocument } from '../actions/documentActions';
+import { MAX_UPLOAD_BYTES } from '../lib/uploadLimits';
 
 const { toastError, toastFn, folderModalSpy } = vi.hoisted(() => ({
   toastError: vi.fn(),
@@ -105,6 +106,31 @@ describe('DocumentUpload outcome feedback', () => {
     expect(screen.getByText('report.eml')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(toastError).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects an oversized file in the browser while uploading the rest of the batch', async () => {
+    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
+      success: true,
+      document: makeDocument('small.pdf'),
+    });
+    const { input } = renderUpload();
+    const big = makeFile('huge.iso');
+    Object.defineProperty(big, 'size', { value: 340 * 1024 * 1024 });
+
+    selectFiles(input, [big, makeFile('small.pdf')]);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('This file is 340 MB. The current limit is 99 MB per file.'),
+      ).toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Browse Files/i })).not.toBeDisabled(),
+    );
+    expect(MAX_UPLOAD_BYTES).toBe(99 * 1024 * 1024);
+    expect(uploadDocument).toHaveBeenCalledTimes(1);
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('huge.iso')).toBeInTheDocument();
   });
 
   it('keeps a permission error readable after processing', async () => {

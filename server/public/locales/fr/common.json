@@ -756,6 +756,7 @@
       "pending": "En attente",
       "error": "Impossible de téléverser le document",
       "fileError": "Impossible de téléverser le fichier",
+      "fileTooLarge": "Ce fichier fait {{size}}. La limite actuelle est de {{limit}} par fichier.",
       "associatedEntityTypeLabel": "Associer à",
       "noAssociation": "Aucune association",
       "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser.",

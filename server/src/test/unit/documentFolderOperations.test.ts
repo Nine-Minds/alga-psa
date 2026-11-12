@@ -34,6 +34,13 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// These tests mock the query builder, not the authorization tables. Nothing narrows the subject here
+// (the S2 fast path), so the read scope resolves to "no clause".
+vi.mock('@alga-psa/authorization/readScope', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/readScope')>()),
+  resolveNarrowedReadScope: vi.fn(async () => null),
+}));
+
 vi.mock('@alga-psa/auth', () => {
   const getCurrentUser = vi.fn();
   const hasPermission = vi.fn();

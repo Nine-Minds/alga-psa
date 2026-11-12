@@ -55,7 +55,10 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import type { ProjectAuthorizationAction } from '../lib/projectReadAuthorization';
 import { createProjectReadDecider } from '../lib/projectReadAuthorization';
+import { assertProjectCreateAllowed } from '../lib/projectReadAuthorization';
+import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -325,19 +328,55 @@ async function decideAuthorizedProjects<T extends Partial<IProject>>(
   );
 }
 
+/**
+ * The projects the caller may read, each as the caller may see it: fields the decision redacts are omitted the
+ * way the REST project endpoints omit them, and a project whose identity is redacted is dropped. Rows of a
+ * caller without redactions are returned untouched.
+ */
 async function filterAuthorizedProjects<T extends Partial<IProject>>(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
   projects: T[]
 ): Promise<T[]> {
-  if (projects.length === 0) {
-    return [];
-  }
+  const authorized = await decideAuthorizedProjects(trx, tenant, user, projects);
+  return authorized.flatMap(({ project, redactedFields }) => {
+    const readable = projectReadableRecord('project', project, redactedFields);
+    return readable ? [readable] : [];
+  });
+}
 
-  const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-  const decisions = await Promise.all(projects.map((project) => authorizeProjectRead(project)));
-  return projects.filter((_, index) => decisions[index]);
+/** Asserts the project is readable and returns the fields the caller's decision redacts on it. */
+async function assertProjectReadableWithRedactions(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  projectId: string
+): Promise<string[]> {
+  const project = await assertProjectReadAllowed(trx, tenant, user, projectId);
+  const [decided] = await decideAuthorizedProjects(trx, tenant, user, [project]);
+  if (!decided || !projectReadableRecord('project', project, decided.redactedFields)) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+  return decided.redactedFields;
+}
+
+/** The detail payload's project and the records derived from its fields, as the reader may see them. */
+function readableProjectDetail<Contact, AssignedUser>(
+  project: IProject,
+  contact: Contact,
+  assignedUser: AssignedUser,
+  redactedFields: readonly string[]
+): { project: IProject; contact: Contact | undefined; assignedUser: AssignedUser | null } {
+  const readable = projectReadableRecord('project', project, redactedFields);
+  if (!readable) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+  return {
+    project: readable,
+    contact: isRecordFieldHidden('project', 'contact_name', redactedFields) ? undefined : contact,
+    assignedUser: isRecordFieldHidden('project', 'assigned_user_name', redactedFields) ? null : assignedUser,
+  };
 }
 
 async function assertProjectReadAllowed(
@@ -346,13 +385,27 @@ async function assertProjectReadAllowed(
   user: IUserWithRoles,
   projectId: string
 ): Promise<IProject> {
+  return assertProjectActionAllowed(trx, tenant, user, projectId, 'read');
+}
+
+/**
+ * Loads the project and throws unless the caller's record-level decision allows `action` on it.
+ * A refused write reports the same error as an unreadable project, so it does not reveal which rule denied.
+ */
+async function assertProjectActionAllowed(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  projectId: string,
+  action: ProjectAuthorizationAction
+): Promise<IProject> {
   const project = await ProjectModel.getById(trx, tenant, projectId);
   if (!project) {
     throw new Error('Project not found');
   }
 
-  const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-  if (!await authorizeProjectRead(project)) {
+  const authorizeProject = await createProjectReadAuthorizer(trx, tenant, user, action);
+  if (!await authorizeProject(project)) {
     throw new Error('Permission denied: Cannot read project');
   }
 
@@ -1548,6 +1601,11 @@ export const createProject = withAuth(async (
             // Add debug logging before database insert
             console.log('Creating project with data:', projectDataWithStatus);
 
+            await assertProjectCreateAllowed(trx, tenant, user, {
+                client_id: validatedData.client_id,
+                assigned_to: validatedData.assigned_to,
+            });
+
             const newProject = await ProjectModel.create(trx, tenant, {
                 ...projectDataWithStatus,
                 assigned_to: validatedData.assigned_to || null,
@@ -1745,7 +1803,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         if (denied) return denied;
 
         const { beforeProject, updatedProject, billingCloseResult, activeStagingClaims } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            const beforeProject = await assertProjectActionAllowed(trx, tenant, user as IUserWithRoles, projectId, 'update');
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
             // If status was updated, fetch the status details
@@ -1878,7 +1936,7 @@ export const deleteProject = withAuth(async (
         if (denied) return denied;
 
         const result = await deleteEntityWithValidation('project', projectId, knex, tenant, async (trx, tenantId) => {
-            await assertProjectReadAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId);
+            await assertProjectActionAllowed(trx as Knex.Transaction, tenantId, user as IUserWithRoles, projectId, 'delete');
 
             await deleteEntityTags(trx, projectId, 'project');
 
@@ -1956,9 +2014,9 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         const denied = await checkPermission(user, 'project', 'read', knex);
         if (denied) return denied;
 
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-        });
+        const projectRedactions = await withTransaction(knex, async (trx: Knex.Transaction) =>
+            assertProjectReadableWithRedactions(trx, tenant, user as IUserWithRoles, projectId)
+        );
 
         // Fetch data that doesn't need to be in a transaction
         const [statuses, users] = await Promise.all([
@@ -2001,12 +2059,10 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         }
 
         return {
-            project,
+            ...readableProjectDetail(project, contact, assignedUser, projectRedactions),
             phases,
             statuses,
-            users,
-            contact,
-            assignedUser
+            users
         };
     } catch (error) {
         console.error('Error getting project metadata:', error);
@@ -2165,9 +2221,9 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         const denied = await checkPermission(user, 'project', 'read', knex);
         if (denied) return denied;
 
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-        });
+        const projectRedactions = await withTransaction(knex, async (trx: Knex.Transaction) =>
+            assertProjectReadableWithRedactions(trx, tenant, user as IUserWithRoles, projectId)
+        );
 
         // Fetch data that doesn't need to be in a transaction
         const [statuses, users] = await Promise.all([
@@ -2226,14 +2282,12 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         } : undefined;
 
         return {
-            project,
+            ...readableProjectDetail(project, contact, project.assigned_user || null, projectRedactions),
             phases,
             tasks,
             ticketLinks: authorizedTicketLinks,
             statuses,
-            users,
-            contact,
-            assignedUser: project.assigned_user || null
+            users
         };
     } catch (error) {
         console.error('Error fetching project details:', error);

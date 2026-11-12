@@ -871,6 +871,7 @@
       "pending": "Oczekujące",
       "error": "Nie udało się przesłać dokumentu",
       "fileError": "Nie udało się przesłać pliku",
+      "fileTooLarge": "Ten plik ma rozmiar {{size}}. Obecny limit to {{limit}} na plik.",
       "associatedEntityTypeLabel": "Powiąż z",
       "noAssociation": "Brak powiązania",
       "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt.",
