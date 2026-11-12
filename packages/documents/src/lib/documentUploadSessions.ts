@@ -40,6 +40,7 @@ import { createDocumentFromCommittedFile, isActionPermissionErrorResult, type Do
 import { assertDocumentUploadAllowed } from './documentUploadAuthorization';
 import { resolveDocumentTypeForMime } from './documentTypeLookup';
 
+// LEVERAGE: pattern conditional-status-transition — claim-by-`UPDATE ... WHERE status = <expected>` (transition() below) is the same shape as claimCommentEmailDelivery and the comment-attachment draft cleanup; a shared claim/lease primitive would own the row-count check and the lease expiry.
 export const UPLOAD_SESSION_TABLE = 'document_upload_sessions';
 
 export type UploadSessionStatus = 'active' | 'completing' | 'completed' | 'aborted' | 'expired';
@@ -462,6 +463,7 @@ export async function receiveChunk(input: ReceiveChunkInput): Promise<ChunkRecei
     const provider = input.provider ?? await StorageProviderFactory.createProvider();
     const partNumber = session.parts.length + 1;
 
+    // LEVERAGE: friction storage-ingest-pipeline — ingestToWriteSession assumes one request owns a whole write session (open, stream, commit, hash); a chunk is one part of a session that lives across requests, so the stages are composed by hand here and no content hash can be taken.
     // byteCounter enforces the file limit mid-stream (413); exactLength the Content-Range (400).
     // The first chunk is also sniffed against the declared type, exactly as a one-shot upload is.
     const counter = byteCounter(limit - range.start);

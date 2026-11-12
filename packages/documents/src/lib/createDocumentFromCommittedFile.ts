@@ -26,6 +26,7 @@ import { authorizeAssetAssociationWrite } from './assetAssociationAuthorization'
 import { scheduleDocumentPreviews } from './documentPreviewJob';
 import type { DocumentUploadTarget } from './documentPermissions';
 
+// LEVERAGE: pattern action-permission-error-guard — identical guard lives in documentActions.ts (not exportable from a 'use server' module); one shared export in @alga-psa/ui/lib/errorHandling would replace both.
 export function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {
   return Boolean(value) && typeof value === 'object' && typeof (value as { permissionError?: unknown }).permissionError === 'string';
 }

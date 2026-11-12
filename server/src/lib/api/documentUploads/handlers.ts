@@ -40,6 +40,7 @@ function errorResponse(status: number, code: string, message: string, headers: R
  * primitives every other session/API-key route uses, so a revoked session or a non-interactive key
  * is refused exactly as elsewhere.
  */
+// LEVERAGE: pattern session-or-api-key-principal — documents/[documentId]/content and the other dual-auth routes each re-derive 'session user, else x-api-key principal'; a single resolver beside buildAuthenticatedApiContext would serve them all.
 async function resolvePrincipal(request: NextRequest): Promise<{ tenant: string; user: IUser } | null> {
   try {
     const fromSession = await withAuth(async (user, { tenant }) => ({ user: user as unknown as IUser, tenant }))();
