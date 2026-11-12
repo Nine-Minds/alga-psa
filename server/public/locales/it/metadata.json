@@ -375,6 +375,10 @@
       "title": "Asset",
       "custody": {
         "title": "Apparecchiature in custodia"
+      },
+      "audits": {
+        "title": "Audit delle sedi",
+        "detailTitle": "Audit della sede"
       }
     },
     "chat": {

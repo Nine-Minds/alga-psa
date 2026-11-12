@@ -10,6 +10,7 @@ import {
     UploadResult,
     StorageError,
     RangeOptions,
+    type SeekableInput,
     type LocalWriteSessionHandle,
     type PartReceipt,
     type WriteSessionHandle,
@@ -43,7 +44,8 @@ export class LocalStorageProvider extends BaseStorageProvider {
         handle: WriteSessionHandle,
         partNumber: number,
         part: Readable | Buffer,
-        size: number
+        size: number,
+        signal?: AbortSignal
     ): Promise<Partial<PartReceipt>> {
         const { partialPath } = this.localHandle(handle);
         const sidecar = this.resolveRelative(`${partialPath}.${partNumber}`);
@@ -53,6 +55,7 @@ export class LocalStorageProvider extends BaseStorageProvider {
         try {
             const chunks: Iterable<Buffer | string> | AsyncIterable<Buffer | string> = Buffer.isBuffer(part) ? [part] : part;
             for await (const raw of chunks) {
+                signal?.throwIfAborted();
                 const chunk = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
                 let offset = 0;
                 while (offset < chunk.length) {
@@ -277,6 +280,16 @@ export class LocalStorageProvider extends BaseStorageProvider {
         } catch (error) {
             this.handleError('download', error);
         }
+    }
+
+    async getSeekableInput(storagePath: string, _ttlSeconds: number): Promise<SeekableInput> {
+        // Stored paths are rooted ("/<tenant>/<file>"): join them under basePath like every other
+        // method here (path.resolve would discard basePath), then make the result absolute.
+        const fullPath = path.resolve(path.join(this.basePath, storagePath));
+        if (!await this.exists(storagePath)) {
+            throw new StorageError('File not found', 'NOT_FOUND', 'local', 'download');
+        }
+        return { kind: 'file', path: fullPath };
     }
 
     async getMetadata(storagePath: string): Promise<Record<string, string>> {

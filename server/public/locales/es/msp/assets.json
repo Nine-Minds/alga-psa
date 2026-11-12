@@ -54,6 +54,22 @@
       "closed": "Cerrado",
       "warranty_review": "Revisión de garantía",
       "repaired": "Reparado"
+    },
+    "assetAuditStatus": {
+      "in_progress": "En curso",
+      "completed": "Completada",
+      "cancelled": "Cancelada"
+    },
+    "assetAuditResult": {
+      "expected": "Esperado",
+      "present": "Presente",
+      "missing": "Faltante",
+      "unexpected": "No esperado"
+    },
+    "assetAuditMethod": {
+      "scan": "Escaneo",
+      "manual": "Manual",
+      "register": "Registro en sitio"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Cualquier custodia",
         "inCustody": "En custodia del MSP",
         "notInCustody": "Fuera de custodia del MSP"
+      },
+      "audit": {
+        "any": "Cualquier resultado de auditoría",
+        "present": "Última auditoría: presente",
+        "missing": "Última auditoría: faltante",
+        "never": "Nunca auditado",
+        "stale": "Sin auditar en los últimos 90 días"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Ubicación",
       "purchaseDate": "Fecha de compra",
       "warrantyEnd": "Fin de garantía",
-      "notProvided": "No proporcionado"
+      "notProvided": "No proporcionado",
+      "lastAudited": "Última auditoría",
+      "neverAudited": "Nunca auditado"
     },
     "info": {
       "client": "Cliente",
@@ -850,24 +875,6 @@
     "links": {
       "title": "Enlaces de acceso remoto",
       "description": "Configura plantillas de URL para ScreenConnect y otras herramientas de acceso remoto.",
-      "errors": {
-        "load": "No se pudieron cargar los enlaces de acceso remoto.",
-        "save": "No se pudo guardar el enlace de acceso remoto.",
-        "delete": "No se pudo eliminar el enlace de acceso remoto.",
-        "templateHttp": "La plantilla debe comenzar con http:// o https:// y un host literal.",
-        "templatePlaceholder": "La plantilla contiene un marcador de posición no compatible.",
-        "templateUrl": "La plantilla debe generar una URL http o https válida.",
-        "required": "Se requieren una etiqueta y una plantilla de URL.",
-        "partialDelete": "No se pudieron eliminar {{count}} enlace(s) seleccionado(s)."
-      },
-      "noneAvailable": "No hay opciones de acceso remoto disponibles.",
-      "confirmDeleteTitle": "¿Eliminar enlace de acceso remoto?",
-      "confirmDeleteMessage": "¿Seguro que desea eliminar “{{label}}”? Esta acción no se puede deshacer.",
-      "openMenu": "Abrir menú",
-      "selectLabel": "Seleccionar {{label}}",
-      "confirmBulkDeleteTitle": "¿Eliminar los enlaces seleccionados?",
-      "confirmBulkDeleteMessage": "¿Eliminar {{count}} enlace(s) de acceso remoto seleccionado(s)?",
-      "selectedCount": "{{count}} seleccionado(s)",
       "add": "Agregar enlace",
       "empty": "No hay enlaces de acceso remoto configurados.",
       "edit": "Editar",
@@ -880,10 +887,28 @@
       "template": "Plantilla de URL",
       "ninjaExample": "Ejemplo del panel de dispositivo de NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Sustituya el host por su región de NinjaOne: app, eu, ca, oc o us2 .ninjarmm.com.",
       "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} y {field.<key>} con claves de campos personalizados definidas en Configuración → Activos → Tipos de activo.",
+      "errors": {
+        "load": "No se pudieron cargar los enlaces de acceso remoto.",
+        "save": "No se pudo guardar el enlace de acceso remoto.",
+        "delete": "No se pudo eliminar el enlace de acceso remoto.",
+        "templateHttp": "La plantilla debe comenzar con http:// o https:// y un host literal.",
+        "templatePlaceholder": "La plantilla contiene un marcador de posición no compatible.",
+        "templateUrl": "La plantilla debe generar una URL http o https válida.",
+        "required": "Se requieren una etiqueta y una plantilla de URL.",
+        "partialDelete": "No se pudieron eliminar {{count}} enlace(s) seleccionado(s)."
+      },
       "loading": "Cargando opciones de acceso remoto…",
+      "noneAvailable": "No hay opciones de acceso remoto disponibles.",
       "unavailable": "No disponible para este activo",
+      "confirmDeleteTitle": "¿Eliminar enlace de acceso remoto?",
+      "confirmDeleteMessage": "¿Seguro que desea eliminar “{{label}}”? Esta acción no se puede deshacer.",
       "actions": "Acciones",
-      "selectAll": "Seleccionar todos los enlaces"
+      "openMenu": "Abrir menú",
+      "selectLabel": "Seleccionar {{label}}",
+      "selectAll": "Seleccionar todos los enlaces",
+      "confirmBulkDeleteTitle": "¿Eliminar los enlaces seleccionados?",
+      "confirmBulkDeleteMessage": "¿Eliminar {{count}} enlace(s) de acceso remoto seleccionado(s)?",
+      "selectedCount": "{{count}} seleccionado(s)"
     }
   },
   "assetListErrors": {
@@ -1839,7 +1864,8 @@
     "assignDialogTitle": "Asignar este activo",
     "sharedWorkspace": "Espacio compartido",
     "sharedWorkspaceValue": "{{name}} · {{count}} personas",
-    "billingProfile": "Perfil de facturación"
+    "billingProfile": "Perfil de facturación",
+    "lastAudited": "Última auditoría"
   },
   "assetTimeline": {
     "title": "Cronología",
@@ -1869,7 +1895,11 @@
       "aGroup": "un grupo",
       "autoAssignedFrom": "Asignado automáticamente a {{contact}} desde {{provider}}",
       "groupLocationMoved": "Movido a {{location}} con {{group}}",
-      "groupLocationCleared": "Ubicación borrada con {{group}}"
+      "groupLocationCleared": "Ubicación borrada con {{group}}",
+      "audit": "Auditoría",
+      "auditPresent": "Auditoría: presente",
+      "auditMissing": "Auditoría: faltante",
+      "auditMethod": "Marcado mediante {{method}}"
     },
     "changeTypes": {
       "created": "Creado",
@@ -2332,6 +2362,108 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Auditorías de sitios",
+    "startAudit": "Iniciar auditoría",
+    "noLocation": "Sin ubicación",
+    "loading": "Cargando auditorías…",
+    "empty": "Aún no hay auditorías de sitios que coincidan con esta vista.",
+    "columns": {
+      "audit": "Auditoría",
+      "client": "Cliente",
+      "location": "Ubicación",
+      "status": "Estado",
+      "startedBy": "Iniciado por",
+      "started": "Iniciado",
+      "completed": "Completado",
+      "expected": "Esperados",
+      "present": "Presentes",
+      "missing": "Faltantes",
+      "unexpected": "No esperados"
+    },
+    "filters": {
+      "client": "Cliente",
+      "allLocations": "Todas las ubicaciones",
+      "allStatuses": "Todos los estados",
+      "started": "Iniciado"
+    },
+    "stats": {
+      "expected": "esperados",
+      "present": "presentes",
+      "missing": "faltantes",
+      "remaining": "restantes",
+      "unexpected": "no esperados"
+    },
+    "segments": {
+      "remaining": "Restantes",
+      "present": "Presentes",
+      "missing": "Faltantes",
+      "unexpected": "No esperados",
+      "all": "Todos"
+    },
+    "start": {
+      "title": "Iniciar auditoría de sitio",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleccione un cliente",
+      "location": "Ubicación",
+      "locationHint": "\"Sin ubicación\" audita los dispositivos del cliente que no tienen una ubicación registrada.",
+      "statuses": "Estados de activos incluidos en la auditoría",
+      "statusesHint": "Si no selecciona ningún estado, se auditarán todos los estados.",
+      "statusesLoading": "Cargando estados…",
+      "notes": "Notas",
+      "notesPlaceholder": "Motivo de este recorrido (opcional)",
+      "pickClient": "Seleccione un cliente para ver qué se incluye en la auditoría.",
+      "counting": "Contando los dispositivos incluidos en la auditoría…",
+      "countUnavailable": "La cantidad de dispositivos no está disponible en este momento.",
+      "expected_one": "Se espera 1 dispositivo en esta auditoría",
+      "expected_other": "Se esperan {{count}} dispositivos en esta auditoría",
+      "submit": "Iniciar auditoría",
+      "starting": "Iniciando…"
+    },
+    "detail": {
+      "reference": "Auditoría",
+      "untitledClient": "Cliente",
+      "location": "Ubicación",
+      "startedBy": "Iniciado por",
+      "started": "Iniciado",
+      "completed": "Completado",
+      "scopeStatuses": "Estados incluidos en la auditoría",
+      "allStatuses": "Todos los estados",
+      "notes": "Notas",
+      "exportCsv": "Exportar CSV",
+      "exportStarted": "Se inició la exportación CSV.",
+      "exportEmpty": "No hay nada que exportar en esta vista.",
+      "addUnexpected": "Agregar activo no esperado",
+      "addUnexpectedHint": "Un dispositivo encontrado en sitio pero fuera del alcance de esta auditoría se registra como no esperado, nunca como esperado.",
+      "addUnexpectedPlaceholder": "Buscar un activo…",
+      "addUnexpectedEmpty": "No hay otros activos para este cliente.",
+      "complete": "Completar auditoría",
+      "completeConfirm_one": "1 dispositivo sin marcar se registrará como faltante.",
+      "completeConfirm_other": "{{count}} dispositivos sin marcar se registrarán como faltantes.",
+      "cancelAudit": "Cancelar auditoría",
+      "cancelConfirm": "Se abandona la auditoría y no se guarda ningún cambio en los activos. Esta acción no se puede deshacer.",
+      "keepAudit": "Seguir auditando"
+    },
+    "items": {
+      "columns": {
+        "asset": "Activo",
+        "type": "Tipo",
+        "serial": "Número de serie / etiqueta",
+        "result": "Resultado",
+        "method": "Método",
+        "markedBy": "Marcado por",
+        "markedAt": "Fecha de marcado",
+        "actions": "Acciones"
+      },
+      "searchPlaceholder": "Buscar por nombre, etiqueta o número de serie",
+      "empty": "No hay activos en esta vista.",
+      "markPresent": "Marcar como presente",
+      "undoMark": "Deshacer",
+      "createTicket": "Crear ticket",
+      "ticketTitle": "Faltante en la auditoría de sitio: {{asset}}",
+      "ticketDescription": "No se encontró durante la auditoría de sitio iniciada el {{date}}."
     }
   },
   "scanLookup": {

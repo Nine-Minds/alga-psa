@@ -245,6 +245,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   // C4: '' = any. Ownership and "in MSP custody" are server-side listAssets params.
   const [ownershipFilter, setOwnershipFilter] = useState<'' | 'client' | 'msp'>('');
   const [inCustodyFilter, setInCustodyFilter] = useState<'' | 'yes' | 'no'>('');
+  // Site audits: one select over two server params — the last verdict, or
+  // "nothing has looked at this device in 90 days".
+  const [auditFilter, setAuditFilter] = useState<'' | 'present' | 'missing' | 'never' | 'stale90'>('');
   const [confirmBulkWorkspace, setConfirmBulkWorkspace] = useState(false);
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -436,7 +439,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     agentStatusFilters.length > 0 ||
     rmmManagedFilter.length > 0 ||
     ownershipFilter !== '' ||
-    inCustodyFilter !== ''
+    inCustodyFilter !== '' ||
+    auditFilter !== ''
   );
 
   const isAllSelected = filteredCount > 0 && assets.every(asset => selectedAssetIds.includes(asset.asset_id));
@@ -518,6 +522,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       group_id: groupFilter || undefined,
       ownership: ownershipFilter || undefined,
       in_custody: inCustodyFilter === '' ? undefined : inCustodyFilter === 'yes',
+      last_audit_result: auditFilter === '' || auditFilter === 'stale90' ? undefined : auditFilter,
+      not_audited_days: auditFilter === 'stale90' ? 90 : undefined,
       // Patch/OS state lives on the per-type extension row.
       include_extension_data: true,
       sort_by: sortBy,
@@ -526,6 +532,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     };
   }, [
     agentStatusFilters,
+    auditFilter,
     clientFilters,
     debouncedSearchTerm,
     groupFilter,
@@ -570,11 +577,12 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       rmmManaged: rmmManagedFilter,
       ownership: ownershipFilter,
       inCustody: inCustodyFilter,
+      audit: auditFilter,
       pageSize,
       sortBy,
       sortDirection,
     });
-  }, [agentStatusFilters, clientFilters, debouncedSearchTerm, inCustodyFilter, ownershipFilter, pageSize, rmmManagedFilter, sortBy, sortDirection, statusFilters, typeFilters]);
+  }, [agentStatusFilters, auditFilter, clientFilters, debouncedSearchTerm, inCustodyFilter, ownershipFilter, pageSize, rmmManagedFilter, sortBy, sortDirection, statusFilters, typeFilters]);
 
   useEffect(() => {
     const queryChanged = assetsQueryKey !== lastAssetsQueryKeyRef.current;
@@ -648,6 +656,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setRmmManagedFilter([]);
     setOwnershipFilter('');
     setInCustodyFilter('');
+    setAuditFilter('');
   };
 
   const bulkLocationOptions = useMemo<SelectOption[]>(() => (
@@ -1562,7 +1571,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     variant="ghost"
                     size="sm"
                     onClick={clearFilters}
-                    disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0 && ownershipFilter === '' && inCustodyFilter === ''}
+                    disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0 && ownershipFilter === '' && inCustodyFilter === '' && auditFilter === ''}
                   >
                   {t('assetDashboardClient.filters.reset', { defaultValue: 'Reset' })}
                   </Button>
@@ -1628,6 +1637,19 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     { value: 'no', label: t('assetDashboardClient.filters.custody.notInCustody', { defaultValue: 'Not in MSP custody' }) },
                   ]}
                   className="min-w-[160px]"
+                />
+                <CustomSelect
+                  id="audit-filter-select"
+                  value={auditFilter}
+                  onValueChange={(value) => setAuditFilter(value as '' | 'present' | 'missing' | 'never' | 'stale90')}
+                  options={[
+                    { value: '', label: t('assetDashboardClient.filters.audit.any', { defaultValue: 'Any audit result' }) },
+                    { value: 'present', label: t('assetDashboardClient.filters.audit.present', { defaultValue: 'Last audit: present' }) },
+                    { value: 'missing', label: t('assetDashboardClient.filters.audit.missing', { defaultValue: 'Last audit: missing' }) },
+                    { value: 'never', label: t('assetDashboardClient.filters.audit.never', { defaultValue: 'Never audited' }) },
+                    { value: 'stale90', label: t('assetDashboardClient.filters.audit.stale', { defaultValue: 'Not audited in 90 days' }) },
+                  ]}
+                  className="min-w-[180px]"
                 />
 
                 <DropdownMenu>

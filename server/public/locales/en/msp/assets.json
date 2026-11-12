@@ -54,6 +54,22 @@
       "closed": "Closed",
       "warranty_review": "Warranty review",
       "repaired": "Repaired"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "assetAuditResult": {
+      "expected": "Expected",
+      "present": "Present",
+      "missing": "Missing",
+      "unexpected": "Unexpected"
+    },
+    "assetAuditMethod": {
+      "scan": "Scan",
+      "manual": "Manual",
+      "register": "Registered on site"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Any custody",
         "inCustody": "In MSP custody",
         "notInCustody": "Not in MSP custody"
+      },
+      "audit": {
+        "any": "Any audit result",
+        "present": "Last audit: present",
+        "missing": "Last audit: missing",
+        "never": "Never audited",
+        "stale": "Not audited in 90 days"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Location",
       "purchaseDate": "Purchase date",
       "warrantyEnd": "Warranty end",
-      "notProvided": "Not provided"
+      "notProvided": "Not provided",
+      "lastAudited": "Last audited",
+      "neverAudited": "Never audited"
     },
     "info": {
       "client": "Client",
@@ -1839,7 +1864,8 @@
     "assignDialogTitle": "Assign this asset",
     "sharedWorkspace": "Shared workspace",
     "sharedWorkspaceValue": "{{name}} · {{count}} people",
-    "billingProfile": "Billing profile"
+    "billingProfile": "Billing profile",
+    "lastAudited": "Last audited"
   },
   "assetTimeline": {
     "title": "Timeline",
@@ -1869,7 +1895,11 @@
       "aGroup": "a group",
       "autoAssignedFrom": "Auto-assigned to {{contact}} from {{provider}}",
       "groupLocationMoved": "Moved to {{location}} with {{group}}",
-      "groupLocationCleared": "Location cleared with {{group}}"
+      "groupLocationCleared": "Location cleared with {{group}}",
+      "audit": "Audit",
+      "auditPresent": "Audit: present",
+      "auditMissing": "Audit: missing",
+      "auditMethod": "Marked by {{method}}"
     },
     "changeTypes": {
       "created": "Created",
@@ -2332,6 +2362,108 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Site audits",
+    "startAudit": "Start audit",
+    "noLocation": "No location",
+    "loading": "Loading audits…",
+    "empty": "No site audits match this view yet.",
+    "columns": {
+      "audit": "Audit",
+      "client": "Client",
+      "location": "Location",
+      "status": "Status",
+      "startedBy": "Started by",
+      "started": "Started",
+      "completed": "Completed",
+      "expected": "Expected",
+      "present": "Present",
+      "missing": "Missing",
+      "unexpected": "Unexpected"
+    },
+    "filters": {
+      "client": "Client",
+      "allLocations": "All locations",
+      "allStatuses": "All statuses",
+      "started": "Started"
+    },
+    "stats": {
+      "expected": "expected",
+      "present": "present",
+      "missing": "missing",
+      "remaining": "remaining",
+      "unexpected": "unexpected"
+    },
+    "segments": {
+      "remaining": "Remaining",
+      "present": "Present",
+      "missing": "Missing",
+      "unexpected": "Unexpected",
+      "all": "All"
+    },
+    "start": {
+      "title": "Start site audit",
+      "client": "Client",
+      "clientPlaceholder": "Select a client",
+      "location": "Location",
+      "locationHint": "\"No location\" audits the client devices that have no location on record.",
+      "statuses": "Asset statuses in scope",
+      "statusesHint": "No status selected audits every status.",
+      "statusesLoading": "Loading statuses…",
+      "notes": "Notes",
+      "notesPlaceholder": "What this walk is for (optional)",
+      "pickClient": "Pick a client to see what is in scope.",
+      "counting": "Counting the devices in scope…",
+      "countUnavailable": "The device count is unavailable right now.",
+      "expected_one": "1 device expected in this scope",
+      "expected_other": "{{count}} devices expected in this scope",
+      "submit": "Start audit",
+      "starting": "Starting…"
+    },
+    "detail": {
+      "reference": "Audit",
+      "untitledClient": "Client",
+      "location": "Location",
+      "startedBy": "Started by",
+      "started": "Started",
+      "completed": "Completed",
+      "scopeStatuses": "Statuses in scope",
+      "allStatuses": "Every status",
+      "notes": "Notes",
+      "exportCsv": "Export CSV",
+      "exportStarted": "CSV export started.",
+      "exportEmpty": "There is nothing to export in this view.",
+      "addUnexpected": "Add unexpected asset",
+      "addUnexpectedHint": "A device found on site but outside this audit scope is recorded as unexpected, never as expected.",
+      "addUnexpectedPlaceholder": "Find an asset…",
+      "addUnexpectedEmpty": "No other assets for this client.",
+      "complete": "Complete audit",
+      "completeConfirm_one": "1 unmarked device will be recorded as missing.",
+      "completeConfirm_other": "{{count}} unmarked devices will be recorded as missing.",
+      "cancelAudit": "Cancel audit",
+      "cancelConfirm": "The run is abandoned and nothing is written to the assets. This cannot be undone.",
+      "keepAudit": "Keep auditing"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Type",
+        "serial": "Serial / tag",
+        "result": "Result",
+        "method": "Method",
+        "markedBy": "Marked by",
+        "markedAt": "Marked at",
+        "actions": "Actions"
+      },
+      "searchPlaceholder": "Search by name, tag or serial",
+      "empty": "No assets in this view.",
+      "markPresent": "Mark present",
+      "undoMark": "Undo",
+      "createTicket": "Create ticket",
+      "ticketTitle": "Missing at site audit: {{asset}}",
+      "ticketDescription": "Not found during the site audit started on {{date}}."
     }
   },
   "scanLookup": {

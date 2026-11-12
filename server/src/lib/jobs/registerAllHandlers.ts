@@ -14,6 +14,11 @@ import {
   ProjectDateReadinessJobData,
 } from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { generateDocumentPreviewsHandler } from './handlers/generateDocumentPreviewsHandler';
+import {
+  GENERATE_DOCUMENT_PREVIEWS_JOB,
+  GenerateDocumentPreviewsJobData,
+} from '@alga-psa/documents/lib/documentPreviewJob';
 import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import {
   KB_ARTICLE_IMPORT_JOB,
@@ -489,6 +494,18 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 2 },
       timeoutMs: 600000, // 10 minutes for large imports
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<GenerateDocumentPreviewsJobData & BaseJobData>(
+    {
+      name: GENERATE_DOCUMENT_PREVIEWS_JOB,
+      handler: async (_jobId, data) => {
+        await generateDocumentPreviewsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000,
     },
     registerOpts
   );
@@ -1054,6 +1071,7 @@ export function getAvailableJobHandlers(): string[] {
     'opportunity-generators',
     // Assets & Import
     'asset_import',
+    GENERATE_DOCUMENT_PREVIEWS_JOB,
     KB_ARTICLE_IMPORT_JOB,
     // Usage & Reconciliation
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,

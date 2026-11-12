@@ -1,38 +1,50 @@
 /**
  * Document Preview Generator
  *
- * Generates thumbnails and previews for uploaded documents at upload time.
- * This replaces the legacy on-demand preview generation system with a cached approach.
+ * Generates thumbnails and previews for a document from its stored file. Runs in the background
+ * (`generate-document-previews` job, see documentPreviewJob.ts); it never receives file bytes from
+ * a caller and never loads a whole source file into memory.
  *
  * Preview Sizes:
  * - Thumbnail: 200x200 (cover fit) - for list views and cards
  * - Preview: 800x600 (inside fit) - for preview modal/drawer
  *
- * Supported File Types:
- * - Images (image/*): Direct thumbnail/preview generation
- * - PDFs (application/pdf): Render first page to image
- * - Videos (video/*): Extract frame at 1 second (requires ffmpeg)
- * - Other types: Return null (use type-based icons in UI)
+ * Supported File Types and how the source is read:
+ * - Images (image/*): storage read stream piped into sharp (one decode, two outputs via clone()).
+ * - PDFs (application/pdf): streamed to a temp file (pdf2pic/Ghostscript need a path), capped at
+ *   MAX_PDF_PREVIEW_BYTES. Larger PDFs get no preview (placeholder), not a failure.
+ * - Videos (video/*): ffmpeg opens a seekable input directly (local file path, or an internal
+ *   presigned URL for S3/MinIO) and grabs one frame with -ss; the video never enters this process.
+ * - Other types: no previews (UI shows type icons).
+ *
+ * Idempotent: re-running for a document leaves exactly one thumbnail and one preview derivative
+ * (see persistPreviewResult).
  */
 
-import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
+import type { Knex } from 'knex';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { deferFileUploadEvents } from '@alga-psa/storage/fileUploadTransaction';
-import { createTenantKnex, getTenantContext, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { withFileUploadTransaction } from '@alga-psa/storage/fileUploadTransaction';
 import type { IDocument } from '@alga-psa/types';
 import { validateDocumentPreviewProvenance } from './documentPreviewProvenance';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
 import { v4 as uuidv4 } from 'uuid';
+import { createWriteStream } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { execFile, spawnSync } from 'child_process';
+import { promisify } from 'util';
+import { Readable, Transform } from 'stream';
+import { pipeline } from 'stream/promises';
 import {
   buildMediaProcessingFailedPayload,
   buildMediaProcessingSucceededPayload,
 } from '@alga-psa/workflow-streams';
+
+const execFileAsync = promisify(execFile);
 
 async function loadSharp() {
   try {
@@ -63,6 +75,29 @@ const QUALITY_SETTINGS = {
 };
 
 /**
+ * PDF size cap. pdf2pic/Ghostscript only accept a file path, so the PDF is streamed to a temp file
+ * (disk, not process memory) first. Beyond this size the document gets no preview.
+ * Override with DOCUMENT_PREVIEW_MAX_PDF_BYTES.
+ */
+export const MAX_PDF_PREVIEW_BYTES = (() => {
+  const configured = Number(process.env.DOCUMENT_PREVIEW_MAX_PDF_BYTES);
+  return Number.isFinite(configured) && configured > 0 ? configured : 100 * 1024 * 1024;
+})();
+
+/** Lifetime of the presigned URL handed to ffmpeg; must outlast the frame extraction. */
+const SEEKABLE_URL_TTL_SECONDS = 900;
+const FFMPEG_TIMEOUT_MS = 120_000;
+
+/**
+ * Upper bound on one pdf2pic/Ghostscript page render. A hung Ghostscript would otherwise block the
+ * serial job consumer forever. Override with DOCUMENT_PREVIEW_PDF_RENDER_TIMEOUT_MS.
+ */
+export const PDF_RENDER_TIMEOUT_MS = (() => {
+  const configured = Number(process.env.DOCUMENT_PREVIEW_PDF_RENDER_TIMEOUT_MS);
+  return Number.isFinite(configured) && configured > 0 ? configured : 120_000;
+})();
+
+/**
  * Result from preview generation
  */
 export interface PreviewGenerationResult {
@@ -71,87 +106,197 @@ export interface PreviewGenerationResult {
   preview_generated_at: Date;
 }
 
+/** Deliberate, non-error outcome: nothing to generate (e.g. PDF over the cap). */
+class PreviewSkipped extends Error {}
+
+const emptyResult = (): PreviewGenerationResult => ({
+  thumbnail_file_id: null,
+  preview_file_id: null,
+  preview_generated_at: new Date(),
+});
+
+type SourceKind = 'image' | 'pdf' | 'video';
+
+function sourceKindOf(mimeType: string | null | undefined): SourceKind | null {
+  const mime = mimeType?.toLowerCase() || '';
+  if (mime.startsWith('image/')) return 'image';
+  if (mime === 'application/pdf') return 'pdf';
+  if (mime.startsWith('video/')) return 'video';
+  return null;
+}
+
 /**
- * Generates thumbnail and preview images for a document
+ * Generates (or regenerates) the thumbnail and preview for one document, reading the source from
+ * storage, and writes them to the document row. Tenant-scoped through the ambient tenant context
+ * (createTenantKnex), so callers run it inside the tenant's context.
  *
- * @param document - The document to generate previews for
- * @param fileBuffer - The file content as a buffer
- * @returns Promise with file IDs for generated previews
+ * Throws on failure after publishing MEDIA_PROCESSING_FAILED, so the job runner can retry.
+ * Returns empty ids (and publishes nothing) for documents with no file or an unsupported type.
  */
-export async function generateDocumentPreviews(
-  document: IDocument,
-  fileBuffer: Buffer
-): Promise<PreviewGenerationResult> {
-  console.log(`[generateDocumentPreviews] Generating previews for document ${document.document_id} (${document.mime_type})`);
+export async function generatePreviewsForDocument(documentId: string): Promise<PreviewGenerationResult> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+  const db = tenantDb(knex, tenant);
+
+  const document = await db.table<IDocument>('documents').where({ document_id: documentId }).first();
+  if (!document) {
+    console.warn(`[generatePreviewsForDocument] Document not found: ${documentId}`);
+    return emptyResult();
+  }
+  if (!document.file_id) {
+    return emptyResult();
+  }
+
+  const file = await db
+    .table('external_files')
+    .where({ file_id: document.file_id, is_deleted: false })
+    .first('file_id', 'mime_type', 'file_size');
+  const kind = sourceKindOf(document.mime_type ?? file?.mime_type);
+  if (!kind) {
+    console.log(`[generatePreviewsForDocument] Unsupported file type: ${document.mime_type}`);
+    return emptyResult();
+  }
 
   const startedAtMs = Date.now();
-
   try {
-    const mimeType = document.mime_type?.toLowerCase() || '';
-    const shouldProcess =
-      mimeType.startsWith('image/') || mimeType === 'application/pdf' || mimeType.startsWith('video/');
-
-    // Determine file type and generate previews accordingly
-    if (mimeType.startsWith('image/')) {
-      const result = await generateImagePreviews(document, fileBuffer);
-      await maybePublishProcessingSucceeded({ document, result, shouldProcess, startedAtMs });
-      return result;
-    } else if (mimeType === 'application/pdf') {
-      const result = await generatePdfPreviews(document, fileBuffer);
-      await maybePublishProcessingSucceeded({ document, result, shouldProcess, startedAtMs });
-      return result;
-    } else if (mimeType.startsWith('video/')) {
-      const result = await generateVideoPreviews(document, fileBuffer);
-      await maybePublishProcessingSucceeded({ document, result, shouldProcess, startedAtMs });
-      return result;
-    } else {
-      // Unsupported file type - return null for previews
-      console.log(`[generateDocumentPreviews] Unsupported file type: ${mimeType}`);
-      return {
-        thumbnail_file_id: null,
-        preview_file_id: null,
-        preview_generated_at: new Date(),
-      };
+    if (!file) {
+      throw new Error(`Source file ${document.file_id} not found for document ${documentId}`);
     }
+
+    // Derivative writes are owned by an upload session: whatever this run writes but the document
+    // does not end up referencing (a write that failed after the provider stored it, a superseded
+    // run, a crash before commit) is reclaimed by upload recovery instead of leaking in storage.
+    let outcome: { result: PreviewGenerationResult; superseded: boolean };
+    try {
+      outcome = await withFileUploadTransaction(knex, tenant, async (trx) => {
+        const produced =
+          kind === 'image'
+            ? await generateImagePreviews(tenant, document)
+            : kind === 'pdf'
+              ? await generatePdfPreviews(tenant, document, Number(file.file_size))
+              : await generateVideoPreviews(tenant, document);
+        const persisted = await persistPreviewResult(trx, tenant, document, produced);
+        const retained = persisted.superseded
+          ? []
+          : [persisted.result.thumbnail_file_id, persisted.result.preview_file_id].filter(
+              (id): id is string => Boolean(id),
+            );
+        return { value: persisted, fileIds: retained };
+      });
+    } catch (error) {
+      if (error instanceof PreviewSkipped) {
+        console.warn(`[generatePreviewsForDocument] ${error.message} (document ${documentId})`);
+        return emptyResult();
+      }
+      throw error;
+    }
+    if (!outcome.superseded) {
+      await publishProcessingSucceeded({ tenant, document, result: outcome.result, startedAtMs });
+    }
+    return outcome.result;
   } catch (error) {
-    console.error(`[generateDocumentPreviews] Error generating previews for document ${document.document_id}:`, error);
-    await maybePublishProcessingFailed({ document, error, startedAtMs });
-    // Return null IDs on error - document upload should still succeed
-    return {
-      thumbnail_file_id: null,
-      preview_file_id: null,
-      preview_generated_at: new Date(),
-    };
+    console.error(`[generatePreviewsForDocument] Error generating previews for document ${documentId}:`, error);
+    await publishProcessingFailed({ tenant, document, error, startedAtMs });
+    throw error;
   }
 }
 
-async function maybePublishProcessingSucceeded(params: {
+/**
+ * Write the derivative ids to the document row and remove superseded derivatives, atomically
+ * under a row lock. This is what makes a retried (or concurrent) job leave exactly one thumbnail
+ * and one preview: every derivative of this document that is not the final one is deleted.
+ *
+ * // LEVERAGE: friction storage-replace-object — StorageService can neither overwrite a file in place nor
+ * // upload from a stream without buffering, so "reuse the preview row" is implemented as upload-new then delete-the-rest.
+ *
+ * - A kind that failed this run keeps its existing derivative (same source file, still valid).
+ * - If the document's file changed while we worked (replaceDocumentFile), our output is for the
+ *   wrong bytes: discard it and let the job enqueued for the new file win.
+ */
+async function persistPreviewResult(
+  trx: Knex.Transaction,
+  tenant: string,
+  document: IDocument,
+  produced: { thumbnail_file_id: string | null; preview_file_id: string | null },
+): Promise<{ result: PreviewGenerationResult; superseded: boolean }> {
+  const actor = document.created_by ?? document.user_id ?? '';
+
+  const db = tenantDb(trx, tenant);
+  const current = await db
+    .table<IDocument>('documents')
+    .where({ document_id: document.document_id })
+    .forUpdate()
+    .first();
+
+  const newIds = [produced.thumbnail_file_id, produced.preview_file_id].filter((id): id is string => Boolean(id));
+  const discard = async (ids: string[]) => {
+    for (const id of ids) {
+      try {
+        await StorageService.deleteFile(id, actor, trx);
+      } catch (error) {
+        console.error(`[persistPreviewResult] Could not delete derivative ${id}:`, error);
+      }
+    }
+  };
+
+  if (!current || current.file_id !== document.file_id) {
+    await discard(newIds);
+    return { result: emptyResult(), superseded: true };
+  }
+
+  // A concurrent run may already have removed a derivative we just uploaded.
+  const live = new Set<string>(
+    newIds.length
+      ? (await db.table('external_files').where({ is_deleted: false }).whereIn('file_id', newIds).select('file_id')).map(
+          (row: { file_id: string }) => row.file_id,
+        )
+      : [],
+  );
+  const liveOrNull = (id: string | null) => (id && live.has(id) ? id : null);
+  const result: PreviewGenerationResult = {
+    thumbnail_file_id: liveOrNull(produced.thumbnail_file_id) ?? current.thumbnail_file_id ?? null,
+    preview_file_id: liveOrNull(produced.preview_file_id) ?? current.preview_file_id ?? null,
+    preview_generated_at: new Date(),
+  };
+
+  await validateDocumentPreviewProvenance(trx, tenant, document.document_id, result);
+  await db
+    .table('documents')
+    .where({ document_id: document.document_id })
+    .update({
+      thumbnail_file_id: result.thumbnail_file_id,
+      preview_file_id: result.preview_file_id,
+      preview_generated_at: result.preview_generated_at,
+      updated_at: new Date(),
+    });
+
+  const keep = new Set([result.thumbnail_file_id, result.preview_file_id]);
+  const derivatives: Array<{ file_id: string }> = await db
+    .table('external_files')
+    .where({ is_deleted: false })
+    .whereRaw("metadata->>'source_document_id' = ?", [document.document_id])
+    .whereRaw("metadata->>'context' in ('document_thumbnail', 'document_preview')")
+    .select('file_id');
+  await discard(derivatives.map((row) => row.file_id).filter((id) => !keep.has(id)));
+
+  return { result, superseded: false };
+}
+
+/** Background job: there is no acting user. */
+const SYSTEM_ACTOR = { actorType: 'SYSTEM' as const };
+
+async function publishProcessingSucceeded(params: {
+  tenant: string;
   document: IDocument;
   result: PreviewGenerationResult;
-  shouldProcess: boolean;
   startedAtMs: number;
 }): Promise<void> {
   const fileId = typeof params.document.file_id === 'string' ? params.document.file_id : undefined;
-  if (!params.shouldProcess || !fileId || !isValidUUID(fileId)) {
+  if (!fileId || !isValidUUID(fileId)) {
     return;
   }
-
-  if (deferFileUploadEvents(fileId, () => maybePublishProcessingSucceeded(params))) return;
-
-  const currentUser = await getCurrentUser();
-  const tenantId =
-    (typeof (currentUser as any)?.tenant === 'string' ? (currentUser as any).tenant : undefined) ?? getTenantContext();
-  if (!tenantId) {
-    return;
-  }
-
-  const actorUserId =
-    (typeof (currentUser as any)?.user_id === 'string' && isValidUUID((currentUser as any).user_id)
-      ? (currentUser as any).user_id
-      : undefined) ??
-    (typeof (params.document.created_by as any) === 'string' && isValidUUID(params.document.created_by as any)
-      ? (params.document.created_by as any)
-      : undefined);
 
   const occurredAt = new Date().toISOString();
   const outputs: unknown[] = [];
@@ -171,47 +316,24 @@ async function maybePublishProcessingSucceeded(params: {
         durationMs: Math.max(0, Date.now() - params.startedAtMs),
         outputs: outputs.length > 0 ? outputs : undefined,
       }),
-      ctx: {
-        tenantId,
-        occurredAt,
-        actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' },
-      },
+      ctx: { tenantId: params.tenant, occurredAt, actor: SYSTEM_ACTOR },
       idempotencyKey: `media_processing_succeeded:document_previews:${fileId}:${occurredAt}`,
     });
   } catch (eventError) {
-    console.error('[generateDocumentPreviews] Failed to publish MEDIA_PROCESSING_SUCCEEDED workflow event', eventError);
+    console.error('[generatePreviewsForDocument] Failed to publish MEDIA_PROCESSING_SUCCEEDED workflow event', eventError);
   }
 }
 
-async function maybePublishProcessingFailed(params: {
+async function publishProcessingFailed(params: {
+  tenant: string;
   document: IDocument;
   error: unknown;
   startedAtMs: number;
 }): Promise<void> {
-  const mimeType = params.document.mime_type?.toLowerCase() || '';
-  const shouldProcess =
-    mimeType.startsWith('image/') || mimeType === 'application/pdf' || mimeType.startsWith('video/');
   const fileId = typeof params.document.file_id === 'string' ? params.document.file_id : undefined;
-  if (!shouldProcess || !fileId || !isValidUUID(fileId)) {
+  if (!fileId || !isValidUUID(fileId)) {
     return;
   }
-
-  if (deferFileUploadEvents(fileId, () => maybePublishProcessingFailed(params))) return;
-
-  const currentUser = await getCurrentUser();
-  const tenantId =
-    (typeof (currentUser as any)?.tenant === 'string' ? (currentUser as any).tenant : undefined) ?? getTenantContext();
-  if (!tenantId) {
-    return;
-  }
-
-  const actorUserId =
-    (typeof (currentUser as any)?.user_id === 'string' && isValidUUID((currentUser as any).user_id)
-      ? (currentUser as any).user_id
-      : undefined) ??
-    (typeof (params.document.created_by as any) === 'string' && isValidUUID(params.document.created_by as any)
-      ? (params.document.created_by as any)
-      : undefined);
 
   const occurredAt = new Date().toISOString();
   const errorMessage = params.error instanceof Error ? params.error.message : String(params.error);
@@ -226,461 +348,231 @@ async function maybePublishProcessingFailed(params: {
         errorMessage,
         retryable: true,
       }),
-      ctx: {
-        tenantId,
-        occurredAt,
-        actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' },
-      },
+      ctx: { tenantId: params.tenant, occurredAt, actor: SYSTEM_ACTOR },
       idempotencyKey: `media_processing_failed:document_previews:${fileId}:${occurredAt}`,
     });
   } catch (eventError) {
-    console.error('[generateDocumentPreviews] Failed to publish MEDIA_PROCESSING_FAILED workflow event', eventError);
+    console.error('[generatePreviewsForDocument] Failed to publish MEDIA_PROCESSING_FAILED workflow event', eventError);
   }
 }
 
 /**
- * Generates thumbnail and preview for image files
- *
- * @param document - The document record
- * @param fileBuffer - The image file buffer
- * @returns Preview generation result
+ * Encode the two JPEG derivatives from one decoded source (a storage stream or a small rendered
+ * frame) and store them. Each derivative fails independently; both failing is an error.
+ * Derivatives are always re-encoded JPEGs, never an alias of the original (which may be active
+ * content such as SVG).
  */
-async function generateImagePreviews(
+async function storeDerivatives(
+  tenant: string,
   document: IDocument,
-  fileBuffer: Buffer
-): Promise<PreviewGenerationResult> {
-  try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+  source: Readable | Buffer,
+  extraMetadata: Record<string, unknown> = {},
+): Promise<{ thumbnail_file_id: string | null; preview_file_id: string | null }> {
+  const sharp = await loadSharp();
 
-    const sharp = await loadSharp();
-
-    // Get image metadata to check dimensions
-    const metadata = await sharp(fileBuffer).metadata();
-    console.log(`[generateImagePreviews] Image dimensions: ${metadata.width}x${metadata.height}`);
-
-    let thumbnailFileId: string | null = null;
-    let previewFileId: string | null = null;
-
-    // Generate thumbnail (200x200 cover crop)
-    try {
-      const thumbnailBuffer = await sharp(fileBuffer)
-        .resize(PREVIEW_SIZES.thumbnail.width, PREVIEW_SIZES.thumbnail.height, {
-          fit: PREVIEW_SIZES.thumbnail.fit,
-          withoutEnlargement: false, // Always generate thumbnail even for small images
-        })
-        .jpeg({ quality: QUALITY_SETTINGS.thumbnail })
-        .toBuffer();
-
-      // Upload thumbnail to storage
-      const thumbnailFileName = `${document.document_id}_thumbnail.jpg`;
-      const thumbnailUploadResult = await StorageService.uploadFile(
-        tenant,
-        thumbnailBuffer,
-        thumbnailFileName,
-        {
-          mime_type: 'image/jpeg',
-          uploaded_by_id: document.created_by,
-          origin: 'system-artifact',
-          metadata: {
-            context: 'document_thumbnail',
-            source_document_id: document.document_id,
-          },
-        }
-      );
-
-      thumbnailFileId = thumbnailUploadResult.file_id;
-      console.log(`[generateImagePreviews] Thumbnail generated: ${thumbnailFileId}`);
-    } catch (thumbnailError) {
-      console.error('[generateImagePreviews] Thumbnail generation failed:', thumbnailError);
-      // Continue to try preview generation even if thumbnail fails
-    }
-
-    // Generate preview (800x600 inside fit, never enlarged). Always a re-encoded
-    // JPEG derivative: a preview must never alias the uploaded original, which
-    // may be active content (e.g. SVG). On failure the preview stays null.
-    try {
-      const previewBuffer = await sharp(fileBuffer)
-        .resize(PREVIEW_SIZES.preview.width, PREVIEW_SIZES.preview.height, {
-          fit: PREVIEW_SIZES.preview.fit,
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: QUALITY_SETTINGS.preview })
-        .toBuffer();
-
-      const previewFileName = `${document.document_id}_preview.jpg`;
-      const previewUploadResult = await StorageService.uploadFile(
-        tenant,
-        previewBuffer,
-        previewFileName,
-        {
-          mime_type: 'image/jpeg',
-          uploaded_by_id: document.created_by,
-          origin: 'system-artifact',
-          metadata: {
-            context: 'document_preview',
-            source_document_id: document.document_id,
-          },
-        }
-      );
-
-      previewFileId = previewUploadResult.file_id;
-      console.log(`[generateImagePreviews] Preview generated: ${previewFileId}`);
-    } catch (previewError) {
-      console.error('[generateImagePreviews] Preview generation failed:', previewError);
-      previewFileId = null;
-    }
-
-    return {
-      thumbnail_file_id: thumbnailFileId,
-      preview_file_id: previewFileId,
-      preview_generated_at: new Date(),
-    };
-  } catch (error) {
-    console.error('[generateImagePreviews] Error:', error);
-    throw error;
+  // One sharp pipeline fed by the source, cloned per output: a stream is decoded once and is
+  // never collected into a buffer.
+  const base = Buffer.isBuffer(source) ? sharp(source) : sharp();
+  if (!Buffer.isBuffer(source)) {
+    source.on('error', (error) => base.destroy(error));
+    source.pipe(base);
   }
+
+  const encode = (kind: 'thumbnail' | 'preview') =>
+    base
+      .clone()
+      .resize(PREVIEW_SIZES[kind].width, PREVIEW_SIZES[kind].height, {
+        fit: PREVIEW_SIZES[kind].fit,
+        // Thumbnails are always produced at full size; previews are never enlarged.
+        withoutEnlargement: kind === 'preview',
+      })
+      .jpeg({ quality: QUALITY_SETTINGS[kind] })
+      .toBuffer();
+
+  const [thumbnail, preview] = await Promise.allSettled([encode('thumbnail'), encode('preview')]);
+
+  const store = async (kind: 'thumbnail' | 'preview', encoded: PromiseSettledResult<Buffer>) => {
+    if (encoded.status === 'rejected') {
+      console.error(`[storeDerivatives] ${kind} generation failed:`, encoded.reason);
+      return null;
+    }
+    try {
+      const uploaded = await StorageService.uploadFile(tenant, encoded.value, `${document.document_id}_${kind}.jpg`, {
+        mime_type: 'image/jpeg',
+        uploaded_by_id: document.created_by,
+        origin: 'system-artifact',
+        // Derived artifacts are not first-class documents: don't re-trigger DOCUMENT_UPLOADED.
+        isDerivedArtifact: true,
+        metadata: {
+          context: kind === 'thumbnail' ? 'document_thumbnail' : 'document_preview',
+          source_document_id: document.document_id,
+          ...extraMetadata,
+        },
+      });
+      return uploaded.file_id as string;
+    } catch (error) {
+      console.error(`[storeDerivatives] ${kind} upload failed:`, error);
+      return null;
+    }
+  };
+
+  const [thumbnailFileId, previewFileId] = await Promise.all([
+    store('thumbnail', thumbnail),
+    store('preview', preview),
+  ]);
+
+  if (!thumbnailFileId && !previewFileId) {
+    const reason = thumbnail.status === 'rejected' ? thumbnail.reason : preview.status === 'rejected' ? preview.reason : null;
+    throw reason instanceof Error ? reason : new Error('No preview derivative could be stored');
+  }
+  return { thumbnail_file_id: thumbnailFileId, preview_file_id: previewFileId };
+}
+
+/** Images: stream from storage straight into sharp. */
+async function generateImagePreviews(tenant: string, document: IDocument) {
+  const stream = await new StorageService().getFileReadStream(document.file_id!);
+  return storeDerivatives(tenant, document, stream);
 }
 
 /**
- * Generates thumbnail and preview for PDF files
- * Renders the first page of the PDF to an image
- *
- * @param document - The document record
- * @param fileBuffer - The PDF file buffer
- * @returns Preview generation result
+ * PDFs: pdf2pic needs a file path, so stream the PDF to a temp file (bounded by
+ * MAX_PDF_PREVIEW_BYTES), render page 1, and encode the rendered page.
  */
-async function generatePdfPreviews(
-  document: IDocument,
-  fileBuffer: Buffer
-): Promise<PreviewGenerationResult> {
-  let tempPdfPath: string | null = null;
+async function generatePdfPreviews(tenant: string, document: IDocument, declaredSize: number) {
+  if (Number.isFinite(declaredSize) && declaredSize > MAX_PDF_PREVIEW_BYTES) {
+    throw new PreviewSkipped(`PDF is ${declaredSize} bytes, over the ${MAX_PDF_PREVIEW_BYTES} byte preview limit`);
+  }
 
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'doc-preview-pdf-'));
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
+    const source = await new StorageService().getFileReadStream(document.file_id!);
 
-    const sharp = await loadSharp();
+    let received = 0;
+    const cap = new Transform({
+      transform(chunk, _encoding, callback) {
+        received += chunk.length;
+        if (received > MAX_PDF_PREVIEW_BYTES) {
+          callback(new PreviewSkipped(`PDF exceeds the ${MAX_PDF_PREVIEW_BYTES} byte preview limit`));
+          return;
+        }
+        callback(null, chunk);
+      },
+    });
+    await pipeline(source, cap, createWriteStream(tempPdfPath));
 
-    // Create temporary file for PDF (pdf2pic requires a file path)
-    const tempDir = os.tmpdir();
-    tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
-    await fs.writeFile(tempPdfPath, new Uint8Array(fileBuffer));
-
-    // Configure pdf2pic to render first page
-    const options = {
-      density: 150, // DPI for rendering
+    const converter = fromPath(tempPdfPath, {
+      density: 150,
       saveFilename: uuidv4(),
       savePath: tempDir,
       format: 'png',
-      width: 1200, // Render at higher resolution for quality
+      width: 1200,
       height: 1600,
-    };
-
-    const converter = fromPath(tempPdfPath, options);
-
-    // Render first page
-    const result = await converter(1, { responseType: 'buffer' });
-
-    if (!result || !result.buffer) {
+    });
+    // pdf2pic cannot be aborted, so the race only frees the job; the timeout is an ordinary Error,
+    // which takes the same failure path (event + rethrow => retry) as any other render failure.
+    let renderTimer: ReturnType<typeof setTimeout> | undefined;
+    const rendered = await Promise.race([
+      converter(1, { responseType: 'buffer' }),
+      new Promise<never>((_resolve, reject) => {
+        renderTimer = setTimeout(
+          () => reject(new Error(`PDF render timed out after ${PDF_RENDER_TIMEOUT_MS}ms`)),
+          PDF_RENDER_TIMEOUT_MS,
+        );
+      }),
+    ]).finally(() => clearTimeout(renderTimer));
+    if (!rendered || !rendered.buffer) {
       throw new Error('Failed to render PDF page');
     }
-
-    const renderedImageBuffer = result.buffer as Buffer;
-    console.log(`[generatePdfPreviews] PDF first page rendered`);
-
-    // Now generate thumbnail and preview from the rendered image
-    let thumbnailFileId: string | null = null;
-    let previewFileId: string | null = null;
-
-    // Generate thumbnail (200x200 cover crop)
-    try {
-      const thumbnailBuffer = await sharp(renderedImageBuffer)
-        .resize(PREVIEW_SIZES.thumbnail.width, PREVIEW_SIZES.thumbnail.height, {
-          fit: PREVIEW_SIZES.thumbnail.fit,
-        })
-        .jpeg({ quality: QUALITY_SETTINGS.thumbnail })
-        .toBuffer();
-
-      const thumbnailFileName = `${document.document_id}_thumbnail.jpg`;
-      const thumbnailUploadResult = await StorageService.uploadFile(
-        tenant,
-        thumbnailBuffer,
-        thumbnailFileName,
-        {
-          mime_type: 'image/jpeg',
-          uploaded_by_id: document.created_by,
-          origin: 'system-artifact',
-          metadata: {
-            context: 'document_thumbnail',
-            source_document_id: document.document_id,
-          },
-        }
-      );
-
-      thumbnailFileId = thumbnailUploadResult.file_id;
-      console.log(`[generatePdfPreviews] Thumbnail generated: ${thumbnailFileId}`);
-    } catch (thumbnailError) {
-      console.error('[generatePdfPreviews] Thumbnail generation failed:', thumbnailError);
-    }
-
-    // Generate preview (800x600 inside fit)
-    try {
-      const previewBuffer = await sharp(renderedImageBuffer)
-        .resize(PREVIEW_SIZES.preview.width, PREVIEW_SIZES.preview.height, {
-          fit: PREVIEW_SIZES.preview.fit,
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: QUALITY_SETTINGS.preview })
-        .toBuffer();
-
-      const previewFileName = `${document.document_id}_preview.jpg`;
-      const previewUploadResult = await StorageService.uploadFile(
-        tenant,
-        previewBuffer,
-        previewFileName,
-        {
-          mime_type: 'image/jpeg',
-          uploaded_by_id: document.created_by,
-          origin: 'system-artifact',
-          metadata: {
-            context: 'document_preview',
-            source_document_id: document.document_id,
-          },
-        }
-      );
-
-      previewFileId = previewUploadResult.file_id;
-      console.log(`[generatePdfPreviews] Preview generated: ${previewFileId}`);
-    } catch (previewError) {
-      console.error('[generatePdfPreviews] Preview generation failed:', previewError);
-    }
-
-    return {
-      thumbnail_file_id: thumbnailFileId,
-      preview_file_id: previewFileId,
-      preview_generated_at: new Date(),
-    };
-  } catch (error) {
-    console.error('[generatePdfPreviews] Error:', error);
-    throw error;
+    return await storeDerivatives(tenant, document, rendered.buffer as Buffer);
   } finally {
-    // Clean up temporary PDF file
-    if (tempPdfPath) {
-      try {
-        await fs.unlink(tempPdfPath);
-      } catch (cleanupError) {
-        console.error('[generatePdfPreviews] Failed to clean up temp file:', cleanupError);
-      }
-    }
+    await fs.rm(tempDir, { recursive: true, force: true }).catch((cleanupError) => {
+      console.error('[generatePdfPreviews] Failed to clean up temp dir:', cleanupError);
+    });
   }
 }
 
+let cachedFfmpegPath: string | null | undefined;
+
 /**
- * Generates thumbnail and preview for video files
- * Extracts a frame at 1 second (or 0s if seeking not supported)
- *
- * NOTE: This function requires ffmpeg to be installed on the system.
- * To install ffmpeg:
- * - macOS: brew install ffmpeg
- * - Ubuntu/Debian: apt-get install ffmpeg
- * - Windows: Download from https://ffmpeg.org/download.html
- *
- * TODO: Add fluent-ffmpeg npm package for video processing
- *
- * @param document - The document record
- * @param fileBuffer - The video file buffer
- * @returns Preview generation result
+ * FFMPEG_PATH, then ffmpeg on PATH (production images), then the ffmpeg-static binary (dev, CI).
+ * The first candidate that runs wins; the result is cached for the process.
  */
-async function generateVideoPreviews(
-  document: IDocument,
-  fileBuffer: Buffer
-): Promise<PreviewGenerationResult> {
-  let tempVideoPath: string | null = null;
-  let tempFramePath: string | null = null;
-
+export function resolveFfmpegPath(): string | null {
+  if (cachedFfmpegPath !== undefined) return cachedFfmpegPath;
+  const candidates: string[] = [];
+  if (process.env.FFMPEG_PATH) candidates.push(process.env.FFMPEG_PATH);
+  candidates.push('ffmpeg');
   try {
-    // Check if fluent-ffmpeg is available
-    let ffmpeg: any;
-    try {
-      ffmpeg = require('fluent-ffmpeg');
-    } catch (requireError) {
-      console.warn('[generateVideoPreviews] fluent-ffmpeg not installed. Install with: npm install fluent-ffmpeg');
-      console.warn('[generateVideoPreviews] Video previews disabled until ffmpeg is installed');
-      return {
-        thumbnail_file_id: null,
-        preview_file_id: null,
-        preview_generated_at: new Date(),
-      };
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const bundled = require('ffmpeg-static');
+    if (typeof bundled === 'string') candidates.push(bundled);
+  } catch {
+    // ffmpeg-static is optional.
+  }
+  cachedFfmpegPath =
+    candidates.find((candidate) => spawnSync(candidate, ['-version'], { stdio: 'ignore' }).status === 0) ?? null;
+  return cachedFfmpegPath;
+}
+
+/**
+ * Extract one frame at `seekSeconds` from a seekable input into `outputPath`.
+ * `-ss` before `-i` is an input seek, so ffmpeg jumps via the index (moov atom wherever it is,
+ * HTTP range requests for URLs) instead of decoding from the start. Returns whether a frame was
+ * written: a clip shorter than the seek point exits 0 without output.
+ */
+async function extractFrame(
+  ffmpegPath: string,
+  input: string,
+  isUrl: boolean,
+  seekSeconds: number,
+  outputPath: string,
+): Promise<boolean> {
+  await fs.rm(outputPath, { force: true });
+  const args = [
+    '-nostdin',
+    '-hide_banner',
+    '-loglevel', 'error',
+    ...(isUrl ? ['-protocol_whitelist', 'http,https,tcp,tls,crypto', '-rw_timeout', '30000000'] : []),
+    '-ss', String(seekSeconds),
+    '-i', input,
+    '-frames:v', '1',
+    '-an',
+    '-vf', "scale='min(1280,iw)':-2",
+    '-y',
+    outputPath,
+  ];
+  await execFileAsync(ffmpegPath, args, { timeout: FFMPEG_TIMEOUT_MS, maxBuffer: 1024 * 1024 });
+  const stat = await fs.stat(outputPath).catch(() => null);
+  return Boolean(stat && stat.size > 0);
+}
+
+/** Videos: ffmpeg reads the source itself from a seekable location; only the one frame is loaded. */
+async function generateVideoPreviews(tenant: string, document: IDocument) {
+  const ffmpegPath = resolveFfmpegPath();
+  if (!ffmpegPath) {
+    throw new PreviewSkipped('ffmpeg is not available; video previews are disabled');
+  }
+
+  const input = await StorageService.getSeekableInput(document.file_id!, SEEKABLE_URL_TTL_SECONDS);
+  const location = input.kind === 'file' ? input.path : input.url;
+
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'doc-preview-video-'));
+  try {
+    const framePath = path.join(tempDir, 'frame.png');
+    // One second in; clips shorter than that fall back to the first frame.
+    const extracted =
+      (await extractFrame(ffmpegPath, location, input.kind === 'url', 1, framePath)) ||
+      (await extractFrame(ffmpegPath, location, input.kind === 'url', 0, framePath));
+    if (!extracted) {
+      throw new Error('ffmpeg produced no frame');
     }
-
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-    const sharp = await loadSharp();
-
-    console.log(`[generateVideoPreviews] Extracting frame from video for document ${document.document_id}`);
-
-    // Create temporary files for video and extracted frame
-    const tempDir = os.tmpdir();
-    const videoExtension = document.mime_type?.split('/')[1] || 'mp4';
-    tempVideoPath = path.join(tempDir, `${uuidv4()}.${videoExtension}`);
-    tempFramePath = path.join(tempDir, `${uuidv4()}.png`);
-
-    // Write video buffer to temporary file
-    await fs.writeFile(tempVideoPath, new Uint8Array(fileBuffer));
-
-    // Extract frame at 1 second (with fallback to 0s)
-    await new Promise<void>((resolve, reject) => {
-      const extractFrame = (timestamp: string) => {
-        return new Promise<void>((resolveExtract, rejectExtract) => {
-          if (!tempFramePath) {
-            rejectExtract(new Error('tempFramePath is null'));
-            return;
-          }
-
-          ffmpeg(tempVideoPath)
-            .screenshots({
-              timestamps: [timestamp],
-              filename: path.basename(tempFramePath),
-              folder: path.dirname(tempFramePath),
-              size: '1280x720',
-            })
-            .on('end', () => {
-              console.log(`[generateVideoPreviews] Frame extracted at ${timestamp}`);
-              resolveExtract();
-            })
-            .on('error', (err: Error) => {
-              console.error(`[generateVideoPreviews] Failed to extract frame at ${timestamp}:`, err.message);
-              rejectExtract(err);
-            });
-        });
-      };
-
-      // Try extracting at 1 second first, fallback to 0s if it fails
-      extractFrame('00:00:01')
-        .then(() => resolve())
-        .catch(() => {
-          console.log('[generateVideoPreviews] Retrying frame extraction at 00:00:00');
-          extractFrame('00:00:00')
-            .then(() => resolve())
-            .catch((err) => {
-              console.error('[generateVideoPreviews] Failed to extract frame at both timestamps');
-              reject(err);
-            });
-        });
-    });
-
-    // Read the extracted frame
-    const frameBuffer = await fs.readFile(tempFramePath);
-    console.log(`[generateVideoPreviews] Frame buffer size: ${frameBuffer.length} bytes`);
-
-    // Now generate thumbnail and preview from the extracted frame (same as image processing)
-    let thumbnailFileId: string | null = null;
-    let previewFileId: string | null = null;
-
-    // Generate thumbnail (200x200 cover crop)
-    try {
-      const thumbnailBuffer = await sharp(frameBuffer)
-        .resize(PREVIEW_SIZES.thumbnail.width, PREVIEW_SIZES.thumbnail.height, {
-          fit: PREVIEW_SIZES.thumbnail.fit,
-        })
-        .jpeg({ quality: QUALITY_SETTINGS.thumbnail })
-        .toBuffer();
-
-      const thumbnailFileName = `${document.document_id}_thumbnail.jpg`;
-      const thumbnailUploadResult = await StorageService.uploadFile(
-        tenant,
-        thumbnailBuffer,
-        thumbnailFileName,
-        {
-          mime_type: 'image/jpeg',
-          uploaded_by_id: document.created_by,
-          origin: 'system-artifact',
-          metadata: {
-            context: 'document_thumbnail',
-            source_document_id: document.document_id,
-            source_type: 'video',
-          },
-        }
-      );
-
-      thumbnailFileId = thumbnailUploadResult.file_id;
-      console.log(`[generateVideoPreviews] Thumbnail generated: ${thumbnailFileId}`);
-    } catch (thumbnailError) {
-      console.error('[generateVideoPreviews] Thumbnail generation failed:', thumbnailError);
-    }
-
-    // Generate preview (800x600 inside fit)
-    try {
-      const previewBuffer = await sharp(frameBuffer)
-        .resize(PREVIEW_SIZES.preview.width, PREVIEW_SIZES.preview.height, {
-          fit: PREVIEW_SIZES.preview.fit,
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: QUALITY_SETTINGS.preview })
-        .toBuffer();
-
-      const previewFileName = `${document.document_id}_preview.jpg`;
-      const previewUploadResult = await StorageService.uploadFile(
-        tenant,
-        previewBuffer,
-        previewFileName,
-        {
-          mime_type: 'image/jpeg',
-          uploaded_by_id: document.created_by,
-          origin: 'system-artifact',
-          metadata: {
-            context: 'document_preview',
-            source_document_id: document.document_id,
-            source_type: 'video',
-          },
-        }
-      );
-
-      previewFileId = previewUploadResult.file_id;
-      console.log(`[generateVideoPreviews] Preview generated: ${previewFileId}`);
-    } catch (previewError) {
-      console.error('[generateVideoPreviews] Preview generation failed:', previewError);
-    }
-
-    return {
-      thumbnail_file_id: thumbnailFileId,
-      preview_file_id: previewFileId,
-      preview_generated_at: new Date(),
-    };
-  } catch (error) {
-    console.error('[generateVideoPreviews] Error:', error);
-    // Return null instead of throwing - allow video upload to succeed even if preview fails
-    return {
-      thumbnail_file_id: null,
-      preview_file_id: null,
-      preview_generated_at: new Date(),
-    };
+    const frame = await fs.readFile(framePath); // one small PNG frame, not the video
+    return await storeDerivatives(tenant, document, frame, { source_type: 'video' });
   } finally {
-    // Clean up temporary files
-    if (tempVideoPath) {
-      try {
-        await fs.unlink(tempVideoPath);
-        console.log('[generateVideoPreviews] Cleaned up temporary video file');
-      } catch (cleanupError) {
-        console.error('[generateVideoPreviews] Failed to clean up temp video file:', cleanupError);
-      }
-    }
-    if (tempFramePath) {
-      try {
-        await fs.unlink(tempFramePath);
-        console.log('[generateVideoPreviews] Cleaned up temporary frame file');
-      } catch (cleanupError) {
-        console.error('[generateVideoPreviews] Failed to clean up temp frame file:', cleanupError);
-      }
-    }
+    await fs.rm(tempDir, { recursive: true, force: true }).catch((cleanupError) => {
+      console.error('[generateVideoPreviews] Failed to clean up temp dir:', cleanupError);
+    });
   }
 }
 
@@ -705,7 +597,7 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
       .whereNotNull('file_id')
       .whereNull('preview_file_id')
       .limit(limit)
-      .select('*');
+      .select('document_id');
 
     console.log(`[batchGeneratePreviews] Found ${documents.length} documents to process`);
 
@@ -715,36 +607,8 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
     for (const doc of documents) {
       try {
         console.log(`[batchGeneratePreviews] Processing document ${doc.document_id}`);
-
-        if (!doc.file_id) {
-          errorCount++;
-          continue;
-        }
-
-        // Download file from storage
-        const downloadResult = await StorageService.downloadFile(doc.file_id);
-        if (!downloadResult) {
-          console.error(`[batchGeneratePreviews] File not found for document ${doc.document_id}`);
-          errorCount++;
-          continue;
-        }
-
-        // Generate previews
-        const previewResult = await generateDocumentPreviews(doc, downloadResult.buffer);
-        await validateDocumentPreviewProvenance(knex, tenant, doc.document_id, previewResult);
-
-        // Update document with preview file IDs
-        await tenantDb(knex, tenant).table('documents')
-          .where({ document_id: doc.document_id })
-          .update({
-            thumbnail_file_id: previewResult.thumbnail_file_id,
-            preview_file_id: previewResult.preview_file_id,
-            preview_generated_at: previewResult.preview_generated_at,
-            updated_at: new Date(),
-          });
-
+        await generatePreviewsForDocument(doc.document_id);
         processedCount++;
-        console.log(`[batchGeneratePreviews] Successfully processed document ${doc.document_id}`);
       } catch (error) {
         console.error(`[batchGeneratePreviews] Error processing document ${doc.document_id}:`, error);
         errorCount++;
@@ -769,50 +633,16 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
  */
 export async function regenerateDocumentPreview(documentId: string): Promise<boolean> {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
     console.log(`[regenerateDocumentPreview] Regenerating preview for document ${documentId}`);
-
-    // Get document
-    const document = await tenantDb(knex, tenant).table<IDocument>('documents')
-      .where({ document_id: documentId })
-      .first();
-
-    if (!document) {
-      console.error(`[regenerateDocumentPreview] Document not found: ${documentId}`);
+    const { knex, tenant } = await createTenantKnex();
+    const document = tenant
+      ? await tenantDb(knex, tenant).table<IDocument>('documents').where({ document_id: documentId }).first('file_id')
+      : null;
+    if (!document?.file_id) {
+      console.error(`[regenerateDocumentPreview] Document not found or has no file: ${documentId}`);
       return false;
     }
-
-    if (!document.file_id) {
-      console.error(`[regenerateDocumentPreview] Document has no file: ${documentId}`);
-      return false;
-    }
-
-    // Download file from storage
-    const downloadResult = await StorageService.downloadFile(document.file_id);
-    if (!downloadResult) {
-      console.error(`[regenerateDocumentPreview] File not found for document ${documentId}`);
-      return false;
-    }
-
-    // Generate previews
-    const previewResult = await generateDocumentPreviews(document, downloadResult.buffer);
-    await validateDocumentPreviewProvenance(knex, tenant, documentId, previewResult);
-
-    // Update document with preview file IDs
-    await tenantDb(knex, tenant).table('documents')
-      .where({ document_id: documentId })
-      .update({
-        thumbnail_file_id: previewResult.thumbnail_file_id,
-        preview_file_id: previewResult.preview_file_id,
-        preview_generated_at: previewResult.preview_generated_at,
-        updated_at: new Date(),
-      });
-
-    console.log(`[regenerateDocumentPreview] Successfully regenerated preview for document ${documentId}`);
+    await generatePreviewsForDocument(documentId);
     return true;
   } catch (error) {
     console.error(`[regenerateDocumentPreview] Error regenerating preview for document ${documentId}:`, error);

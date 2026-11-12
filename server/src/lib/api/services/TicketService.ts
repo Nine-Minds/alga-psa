@@ -154,8 +154,8 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
+import { generatePreviewsForDocument } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { attachDocumentFromBytes } from './documents/attachDocument';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -1644,9 +1644,14 @@ export class TicketService extends BaseService<ITicket> {
     let fileId = doc[column] ?? null;
 
     if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
-      const original = await StorageService.downloadFile(doc.file_id);
-      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
-      fileId = generated?.[column] ?? null;
+      // Lazy backfill for documents that predate previews: inline because this response needs the
+      // image. Reads from storage; the request never holds the original in memory.
+      try {
+        const generated = await generatePreviewsForDocument(doc.document_id);
+        fileId = generated[column] ?? null;
+      } catch (error) {
+        console.error(`[TicketService] Preview backfill failed for document ${doc.document_id}:`, error);
+      }
     }
 
     if (!fileId) {
@@ -1659,15 +1664,6 @@ export class TicketService extends BaseService<ITicket> {
       fileId,
       mimeType: result.metadata.mime_type ?? null,
     };
-  }
-
-  private persistDocumentPreviews(
-    knex: Knex,
-    document: IDocument,
-    buffer: Buffer,
-    tenant: string,
-  ): Promise<PreviewGenerationResult | null> {
-    return persistDocumentPreviews(knex, document, buffer, tenant);
   }
 
   async deleteTicketDocument(

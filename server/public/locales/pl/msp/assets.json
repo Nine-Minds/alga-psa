@@ -54,6 +54,22 @@
       "closed": "Zamknięte",
       "warranty_review": "Weryfikacja gwarancji",
       "repaired": "Naprawione"
+    },
+    "assetAuditStatus": {
+      "in_progress": "W toku",
+      "completed": "Zakończony",
+      "cancelled": "Anulowany"
+    },
+    "assetAuditResult": {
+      "expected": "Oczekiwany",
+      "present": "Obecny",
+      "missing": "Brakujący",
+      "unexpected": "Nieoczekiwany"
+    },
+    "assetAuditMethod": {
+      "scan": "Skanowanie",
+      "manual": "Ręcznie",
+      "register": "Rejestracja na miejscu"
     }
   },
   "assetAlertsSection": {
@@ -120,9 +136,9 @@
       "selectAllVisibleAssets": "Wybierz wszystkie widoczne zasoby",
       "selectAsset": "Wybierz zasób {{name}}",
       "selectedAssets_one": "Wybrano {{count}} zasób",
+      "selectedAssets_other": "Wybrano {{count}} zasobów",
       "selectedAssets_few": "Wybrano {{count}} zasoby",
       "selectedAssets_many": "Wybrano {{count}} zasobów",
-      "selectedAssets_other": "Wybrano {{count}} zasobów",
       "clearSelection": "Wyczyść wybór",
       "bulkActionsComingSoon": "Działania zbiorcze już wkrótce"
     },
@@ -204,6 +220,13 @@
         "any": "Dowolne przechowanie",
         "inCustody": "W przechowaniu MSP",
         "notInCustody": "Poza przechowaniem MSP"
+      },
+      "audit": {
+        "any": "Dowolny wynik audytu",
+        "present": "Ostatni wynik audytu: obecny",
+        "missing": "Ostatni wynik audytu: brakujący",
+        "never": "Nigdy nie audytowano",
+        "stale": "Nie audytowano od 90 dni"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Lokalizacja",
       "purchaseDate": "Data zakupu",
       "warrantyEnd": "Koniec gwarancji",
-      "notProvided": "Nie podano"
+      "notProvided": "Nie podano",
+      "lastAudited": "Ostatni audyt",
+      "neverAudited": "Nigdy nie audytowano"
     },
     "info": {
       "client": "Klient",
@@ -434,17 +459,17 @@
     "relative": {
       "momentsAgo": "chwilę temu",
       "minutesAgo_one": "{{count}} minutę temu",
+      "minutesAgo_other": "{{count}} minuty temu",
       "minutesAgo_few": "{{count}} minuty temu",
       "minutesAgo_many": "{{count}} minut temu",
-      "minutesAgo_other": "{{count}} minuty temu",
       "hoursAgo_one": "{{count}} godzinę temu",
+      "hoursAgo_other": "{{count}} godziny temu",
       "hoursAgo_few": "{{count}} godziny temu",
       "hoursAgo_many": "{{count}} godzin temu",
-      "hoursAgo_other": "{{count}} godziny temu",
       "daysAgo_one": "{{count}} dzień temu",
+      "daysAgo_other": "{{count}} dni temu",
       "daysAgo_few": "{{count}} dni temu",
-      "daysAgo_many": "{{count}} dni temu",
-      "daysAgo_other": "{{count}} dni temu"
+      "daysAgo_many": "{{count}} dni temu"
     }
   },
   "assetDetailHeader": {
@@ -850,24 +875,6 @@
     "links": {
       "title": "Łącza dostępu zdalnego",
       "description": "Skonfiguruj szablony adresów URL dla ScreenConnect i innych narzędzi dostępu zdalnego.",
-      "errors": {
-        "load": "Nie udało się wczytać łączy dostępu zdalnego.",
-        "save": "Nie udało się zapisać łącza dostępu zdalnego.",
-        "delete": "Nie udało się usunąć łącza dostępu zdalnego.",
-        "templateHttp": "Szablon musi zaczynać się od http:// lub https:// i zawierać dosłowną nazwę hosta.",
-        "templatePlaceholder": "Szablon zawiera nieobsługiwany symbol zastępczy.",
-        "templateUrl": "Szablon musi tworzyć prawidłowy adres URL http lub https.",
-        "required": "Etykieta i szablon adresu URL są wymagane.",
-        "partialDelete": "Nie udało się usunąć {{count}} zaznaczonych łączy."
-      },
-      "noneAvailable": "Brak dostępnych opcji dostępu zdalnego.",
-      "confirmDeleteTitle": "Usunąć łącze dostępu zdalnego?",
-      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej czynności nie można cofnąć.",
-      "openMenu": "Otwórz menu",
-      "selectLabel": "Wybierz {{label}}",
-      "confirmBulkDeleteTitle": "Usunąć zaznaczone łącza?",
-      "confirmBulkDeleteMessage": "Usunąć {{count}} zaznaczonych łączy dostępu zdalnego?",
-      "selectedCount": "Wybrano: {{count}}",
       "add": "Dodaj łącze",
       "empty": "Nie skonfigurowano łączy dostępu zdalnego.",
       "edit": "Edytuj",
@@ -880,10 +887,28 @@
       "template": "Szablon adresu URL",
       "ninjaExample": "Przykład pulpitu urządzenia NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Zastąp host swoim regionem NinjaOne: app, eu, ca, oc lub us2 .ninjarmm.com.",
       "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
+      "errors": {
+        "load": "Nie udało się wczytać łączy dostępu zdalnego.",
+        "save": "Nie udało się zapisać łącza dostępu zdalnego.",
+        "delete": "Nie udało się usunąć łącza dostępu zdalnego.",
+        "templateHttp": "Szablon musi zaczynać się od http:// lub https:// i zawierać dosłowną nazwę hosta.",
+        "templatePlaceholder": "Szablon zawiera nieobsługiwany symbol zastępczy.",
+        "templateUrl": "Szablon musi tworzyć prawidłowy adres URL http lub https.",
+        "required": "Etykieta i szablon adresu URL są wymagane.",
+        "partialDelete": "Nie udało się usunąć {{count}} zaznaczonych łączy."
+      },
       "loading": "Wczytywanie opcji dostępu zdalnego…",
+      "noneAvailable": "Brak dostępnych opcji dostępu zdalnego.",
       "unavailable": "Niedostępne dla tego zasobu",
+      "confirmDeleteTitle": "Usunąć łącze dostępu zdalnego?",
+      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej czynności nie można cofnąć.",
       "actions": "Działania",
-      "selectAll": "Zaznacz wszystkie łącza"
+      "openMenu": "Otwórz menu",
+      "selectLabel": "Wybierz {{label}}",
+      "selectAll": "Zaznacz wszystkie łącza",
+      "confirmBulkDeleteTitle": "Usunąć zaznaczone łącza?",
+      "confirmBulkDeleteMessage": "Usunąć {{count}} zaznaczonych łączy dostępu zdalnego?",
+      "selectedCount": "Wybrano: {{count}}"
     }
   },
   "assetListErrors": {
@@ -903,9 +928,9 @@
       "addAsset": "Dodaj zasób",
       "showLess": "Pokaż mniej",
       "moreAssets_one": "Jeszcze {{count}} zasób",
+      "moreAssets_other": "Jeszcze {{count}} zasobów",
       "moreAssets_few": "Jeszcze {{count}} zasoby",
-      "moreAssets_many": "Jeszcze {{count}} zasobów",
-      "moreAssets_other": "Jeszcze {{count}} zasobów"
+      "moreAssets_many": "Jeszcze {{count}} zasobów"
     },
     "errors": {
       "loadAvailableAssets": "Nie udało się załadować dostępnych zasobów",
@@ -918,13 +943,13 @@
     },
     "success": {
       "associated_one": "Pomyślnie powiązano {{count}} zasób",
+      "associated_other": "Pomyślnie powiązano {{count}} zasobów",
       "associated_few": "Pomyślnie powiązano {{count}} zasoby",
       "associated_many": "Pomyślnie powiązano {{count}} zasobów",
-      "associated_other": "Pomyślnie powiązano {{count}} zasobów",
       "associatedPartial_one": "Pomyślnie powiązano {{count}} zasób, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
+      "associatedPartial_other": "Pomyślnie powiązano {{count}} zasobów, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
       "associatedPartial_few": "Pomyślnie powiązano {{count}} zasoby, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
       "associatedPartial_many": "Pomyślnie powiązano {{count}} zasobów, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
-      "associatedPartial_other": "Pomyślnie powiązano {{count}} zasobów, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
       "removed": "Usunięto powiązanie z zasobami"
     },
     "empty": {
@@ -948,9 +973,9 @@
       },
       "actions": {
         "addAssets_one": "Dodaj zasób",
+        "addAssets_other": "Dodaj zasoby",
         "addAssets_few": "Dodaj zasoby",
-        "addAssets_many": "Dodaj zasoby",
-        "addAssets_other": "Dodaj zasoby"
+        "addAssets_many": "Dodaj zasoby"
       }
     },
     "table": {
@@ -1371,30 +1396,30 @@
     },
     "frequency": {
       "every_one": "Co {{frequency}}",
+      "every_other": "Co {{count}} {{frequency}}",
       "every_few": "Co {{count}} {{frequency}}",
       "every_many": "Co {{count}} {{frequency}}",
-      "every_other": "Co {{count}} {{frequency}}",
       "units": {
         "daily_one": "dzień",
+        "daily_other": "dni",
         "daily_few": "dni",
         "daily_many": "dni",
-        "daily_other": "dni",
         "weekly_one": "tydzień",
+        "weekly_other": "tygodni",
         "weekly_few": "tygodnie",
         "weekly_many": "tygodni",
-        "weekly_other": "tygodni",
         "monthly_one": "miesiąc",
+        "monthly_other": "miesięcy",
         "monthly_few": "miesiące",
         "monthly_many": "miesięcy",
-        "monthly_other": "miesięcy",
         "quarterly_one": "kwartał",
+        "quarterly_other": "kwartałów",
         "quarterly_few": "kwartały",
         "quarterly_many": "kwartałów",
-        "quarterly_other": "kwartałów",
         "yearly_one": "rok",
+        "yearly_other": "lat",
         "yearly_few": "lata",
-        "yearly_many": "lat",
-        "yearly_other": "lat"
+        "yearly_many": "lat"
       },
       "customUnconfigured": "Niestandardowa (nieskonfigurowana)",
       "onWeekdays": "{{cadence}} w {{days}}",
@@ -1841,7 +1866,8 @@
     "assignDialogTitle": "Przypisz ten zasób",
     "sharedWorkspace": "Współdzielone stanowisko",
     "sharedWorkspaceValue": "{{name}} · {{count}} osób",
-    "billingProfile": "Profil rozliczeniowy"
+    "billingProfile": "Profil rozliczeniowy",
+    "lastAudited": "Ostatni audyt"
   },
   "assetTimeline": {
     "title": "Oś czasu",
@@ -1871,7 +1897,11 @@
       "aGroup": "grupy",
       "autoAssignedFrom": "Automatycznie przypisano do {{contact}} z {{provider}}",
       "groupLocationMoved": "Przeniesiono do {{location}} wraz z {{group}}",
-      "groupLocationCleared": "Lokalizacja wyczyszczona wraz z {{group}}"
+      "groupLocationCleared": "Lokalizacja wyczyszczona wraz z {{group}}",
+      "audit": "Audyt",
+      "auditPresent": "Wynik audytu: obecny",
+      "auditMissing": "Wynik audytu: brakujący",
+      "auditMethod": "Metoda oznaczenia: {{method}}"
     },
     "changeTypes": {
       "created": "Utworzono",
@@ -2097,9 +2127,9 @@
     "empty": "Do tego kontaktu nie przypisano żadnych zasobów.",
     "sharedWorkspaces": "Współdzielone stanowiska",
     "memberCount_one": "{{count}} zasób",
+    "memberCount_other": "{{count}} zasobów",
     "memberCount_few": "{{count}} zasoby",
-    "memberCount_many": "{{count}} zasobów",
-    "memberCount_other": "{{count}} zasobów"
+    "memberCount_many": "{{count}} zasobów"
   },
   "assetGroups": {
     "kinds": {
@@ -2336,6 +2366,112 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Audyty lokalizacji",
+    "startAudit": "Rozpocznij audyt",
+    "noLocation": "Brak lokalizacji",
+    "loading": "Ładowanie audytów…",
+    "empty": "Nie ma jeszcze audytów lokalizacji pasujących do tego widoku.",
+    "columns": {
+      "audit": "Audyt",
+      "client": "Klient",
+      "location": "Lokalizacja",
+      "status": "Status",
+      "startedBy": "Rozpoczęty przez",
+      "started": "Rozpoczęto",
+      "completed": "Zakończono",
+      "expected": "Oczekiwane",
+      "present": "Obecne",
+      "missing": "Brakujące",
+      "unexpected": "Nieoczekiwane"
+    },
+    "filters": {
+      "client": "Klient",
+      "allLocations": "Wszystkie lokalizacje",
+      "allStatuses": "Wszystkie statusy",
+      "started": "Data rozpoczęcia"
+    },
+    "stats": {
+      "expected": "oczekiwane",
+      "present": "obecne",
+      "missing": "brakujące",
+      "remaining": "pozostałe",
+      "unexpected": "nieoczekiwane"
+    },
+    "segments": {
+      "remaining": "Pozostałe",
+      "present": "Obecne",
+      "missing": "Brakujące",
+      "unexpected": "Nieoczekiwane",
+      "all": "Wszystkie"
+    },
+    "start": {
+      "title": "Rozpocznij audyt lokalizacji",
+      "client": "Klient",
+      "clientPlaceholder": "Wybierz klienta",
+      "location": "Lokalizacja",
+      "locationHint": "Opcja „Brak lokalizacji” obejmuje audytem urządzenia klienta bez zapisanej lokalizacji.",
+      "statuses": "Statusy zasobów objęte audytem",
+      "statusesHint": "Jeśli nie wybierzesz żadnego statusu, audyt obejmie wszystkie statusy.",
+      "statusesLoading": "Ładowanie statusów…",
+      "notes": "Notatki",
+      "notesPlaceholder": "Cel wizyty na miejscu (opcjonalnie)",
+      "pickClient": "Wybierz klienta, aby zobaczyć zakres audytu.",
+      "counting": "Liczenie urządzeń objętych audytem…",
+      "countUnavailable": "Liczba urządzeń jest obecnie niedostępna.",
+      "expected_one": "W tym zakresie oczekiwane jest 1 urządzenie",
+      "expected_other": "W tym zakresie oczekiwanych jest {{count}} urządzeń",
+      "expected_few": "W tym zakresie oczekiwane są {{count}} urządzenia",
+      "expected_many": "W tym zakresie oczekiwanych jest {{count}} urządzeń",
+      "submit": "Rozpocznij audyt",
+      "starting": "Rozpoczynanie…"
+    },
+    "detail": {
+      "reference": "Audyt",
+      "untitledClient": "Klient",
+      "location": "Lokalizacja",
+      "startedBy": "Rozpoczęty przez",
+      "started": "Rozpoczęto",
+      "completed": "Zakończono",
+      "scopeStatuses": "Statusy objęte audytem",
+      "allStatuses": "Wszystkie statusy",
+      "notes": "Notatki",
+      "exportCsv": "Eksportuj CSV",
+      "exportStarted": "Rozpoczęto eksport CSV.",
+      "exportEmpty": "W tym widoku nie ma nic do wyeksportowania.",
+      "addUnexpected": "Dodaj nieoczekiwany zasób",
+      "addUnexpectedHint": "Urządzenie znalezione na miejscu, ale poza zakresem tego audytu, jest zapisywane jako nieoczekiwane, nigdy jako oczekiwane.",
+      "addUnexpectedPlaceholder": "Znajdź zasób…",
+      "addUnexpectedEmpty": "Brak innych zasobów tego klienta.",
+      "complete": "Zakończ audyt",
+      "completeConfirm_one": "1 nieoznaczone urządzenie zostanie zapisane jako brakujące.",
+      "completeConfirm_other": "{{count}} nieoznaczonych urządzeń zostanie zapisanych jako brakujące.",
+      "completeConfirm_few": "{{count}} nieoznaczone urządzenia zostaną zapisane jako brakujące.",
+      "completeConfirm_many": "{{count}} nieoznaczonych urządzeń zostanie zapisanych jako brakujące.",
+      "cancelAudit": "Anuluj audyt",
+      "cancelConfirm": "Audyt zostanie anulowany, a w zasobach nie zostaną zapisane żadne zmiany. Tej operacji nie można cofnąć.",
+      "keepAudit": "Kontynuuj audyt"
+    },
+    "items": {
+      "columns": {
+        "asset": "Zasób",
+        "type": "Typ",
+        "serial": "Numer seryjny / tag",
+        "result": "Wynik",
+        "method": "Metoda",
+        "markedBy": "Oznaczony przez",
+        "markedAt": "Data oznaczenia",
+        "actions": "Akcje"
+      },
+      "searchPlaceholder": "Szukaj według nazwy, tagu lub numeru seryjnego",
+      "empty": "Brak zasobów w tym widoku.",
+      "markPresent": "Oznacz jako obecny",
+      "undoMark": "Cofnij",
+      "createTicket": "Utwórz zgłoszenie",
+      "ticketTitle": "Brak podczas audytu lokalizacji: {{asset}}",
+      "ticketDescription": "Nie znaleziono podczas audytu lokalizacji rozpoczętego {{date}}."
     }
   },
   "scanLookup": {

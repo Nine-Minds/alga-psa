@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
 import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
-import { StorageError } from './providers/StorageProvider';
+import { StorageError, type SeekableInput } from './providers/StorageProvider';
 import { isUploadContentTypeError, isUploadSizeLimitError } from './ingest/errors';
 import { collect, ingestToWriteSession, runPipeline } from './ingest/pipeline';
 import { renderSquareMark, type LogoCropRect } from './imageCrop';
@@ -108,6 +108,23 @@ export class StorageService {
     const provider = await StorageProviderFactory.createProvider();
     return provider.getReadStream(file.storage_path, range);
   }
+    /**
+     * Seekable location of a stored file for external tools (ffmpeg): an absolute path (local)
+     * or a short-lived presigned URL on the internal endpoint (S3/MinIO). Server-side use only.
+     */
+    static async getSeekableInput(fileId: string, ttlSeconds = 900): Promise<SeekableInput> {
+      const { knex } = await createTenantKnex();
+      const file = await FileStoreModel.findById(knex, fileId);
+      if (!file) {
+        throw new Error('File not found');
+      }
+      const provider = await StorageProviderFactory.createProvider();
+      if (!provider.getSeekableInput) {
+        throw new Error('Storage provider does not support seekable input');
+      }
+      return provider.getSeekableInput(file.storage_path, ttlSeconds);
+    }
+
     private static async getTypedProviderConfig<T>(providerType: string): Promise<T> {
         const config = await getStorageConfig();
         const providerConfig = await getProviderConfig(config.defaultProvider);
@@ -213,7 +230,8 @@ export class StorageService {
         originalName: string;
         mime: string;
         size: number;
-        sha256: string;
+        /** Null when the bytes were stored in several requests and never passed through one hash stage. */
+        sha256: string | null;
       },
       options: UploadFileOptions,
       isEntityImage: boolean,
@@ -318,6 +336,29 @@ export class StorageService {
       };
       if (!deferFileUploadEvents(fileId, publishUploaded)) await publishUploaded();
       return fileRecord;
+    }
+
+    /**
+     * Record (and publish the upload events for) an object whose bytes were already committed by a
+     * provider write session, e.g. a resumable chunked upload. The caller owns validation: the size
+     * and MIME were checked while the chunks streamed in. No content hash is recorded because the
+     * bytes arrived in separate requests.
+     */
+    static async recordCommittedUpload(
+      tenant: string,
+      stored: { storagePath: string; originalName: string; mime: string; size: number },
+      options: { uploaded_by_id: string; metadata?: Record<string, any> }
+    ): Promise<FileStore> {
+      if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
+      return StorageService.recordUpload(tenant, {
+        fileId: uuidv4(),
+        storagePath: stored.storagePath,
+        uploadedPath: stored.storagePath,
+        originalName: stored.originalName,
+        mime: stored.mime,
+        size: stored.size,
+        sha256: null,
+      }, options, false, Date.now());
     }
 
     static async uploadFile(

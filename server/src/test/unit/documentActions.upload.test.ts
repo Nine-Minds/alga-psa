@@ -100,8 +100,8 @@ vi.mock('uuid', () => ({
   v4: vi.fn(),
 }));
 
-vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
-  generateDocumentPreviews: vi.fn(),
+vi.mock('@alga-psa/documents/lib/documentPreviewJob', () => ({
+  scheduleDocumentPreviews: vi.fn(async () => true),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -120,7 +120,7 @@ import { withTransaction } from '@alga-psa/db';
 import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { v4 as uuidv4 } from 'uuid';
-import { generateDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { scheduleDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewJob';
 import * as documentActions from '@alga-psa/documents/actions/documentActions';
 
 const cast = vi.mocked;
@@ -135,7 +135,7 @@ describe('uploadDocument', () => {
   const hasPermissionMock = cast(hasPermission);
   const documentAssociationCreateMock = cast(DocumentAssociation.create);
   const uuidMock = cast(uuidv4);
-  const generateDocumentPreviewsMock = cast(generateDocumentPreviews);
+  const scheduleDocumentPreviewsMock = cast(scheduleDocumentPreviews);
 
   let knexStub: ReturnType<typeof createKnexStub>;
 
@@ -154,11 +154,6 @@ describe('uploadDocument', () => {
       file_id: 'file-123',
       storage_path: '/docs/file-123',
     } as any);
-    generateDocumentPreviewsMock.mockResolvedValue({
-      thumbnail_file_id: 'thumb-123',
-      preview_file_id: 'preview-456',
-      preview_generated_at: new Date('2024-01-01T00:00:00.000Z'),
-    });
     getDocumentTypeIdSpy.mockResolvedValue({
       typeId: 'type-xyz',
       isShared: false,
@@ -208,21 +203,9 @@ describe('uploadDocument', () => {
       }),
     );
 
-    expect(generateDocumentPreviewsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ document_id: insertedDocument.document_id }),
-      expect.any(Buffer),
-    );
-
-    await flushMicrotasks();
-
-    expect(knexStub.whereArgs).toEqual([{ document_id: insertedDocument.document_id, tenant: 'tenant-123' }]);
-    expect(knexStub.updateArgs).toEqual([
-      expect.objectContaining({
-        thumbnail_file_id: 'thumb-123',
-        preview_file_id: 'preview-456',
-        preview_generated_at: new Date('2024-01-01T00:00:00.000Z'),
-      }),
-    ]);
+    // Previews are scheduled (not generated) after commit; the request never writes preview columns.
+    expect(scheduleDocumentPreviewsMock).toHaveBeenCalledWith('tenant-123', insertedDocument.document_id, 'user-1');
+    expect(knexStub.updateArgs).toEqual([]);
   });
 
   it('asks the create gate about the ticket it associates with, and writes nothing when it is refused', async () => {
@@ -372,7 +355,7 @@ describe('uploadDocument', () => {
       userId: 'user-1',
     })).rejects.toThrow('invalid file');
     expect(uploadFileMock).not.toHaveBeenCalled();
-    expect(generateDocumentPreviewsMock).not.toHaveBeenCalled();
+    expect(scheduleDocumentPreviewsMock).not.toHaveBeenCalled();
   });
 });
 

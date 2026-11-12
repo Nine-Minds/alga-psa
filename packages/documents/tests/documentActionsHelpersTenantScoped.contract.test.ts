@@ -8,7 +8,9 @@ const helperSection = source.slice(
   source.indexOf('export async function authorizeAndRedactDocuments')
 ) + readFileSync(resolve(__dirname, '../../../shared/lib/documentAuthorization.ts'), 'utf8').split(
   'export async function authorizeAndRedactDocuments'
-)[0];
+)[0]
+  // ensureEntityFoldersInitializedInternal moved with the shared document-creation code.
+  + readFileSync(resolve(__dirname, '../src/lib/createDocumentFromCommittedFile.ts'), 'utf8');
 
 describe('document action helper tenant-scoped query contract', () => {
   it('uses structural tenant scoping for picker and authorization helper roots', () => {

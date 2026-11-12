@@ -228,6 +228,11 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // PDF generation), so the worker forwards them like the jobs above.
   registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
   registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
+  // Document thumbnail/preview generation, enqueued after a document row commits. It reads the
+  // stored file with sharp/pdf2pic/ffmpeg, which only the server image carries, so it executes
+  // server-side via the event bus. Literal must match GENERATE_DOCUMENT_PREVIEWS_JOB in
+  // packages/documents/src/lib/documentPreviewJob.ts.
+  registerJobHandlerForActivities('generate-document-previews', forwardJobToServer('generate-document-previews'));
   // Scheduled comment publication reaches server-local ticket settings and job
   // modules, so execute it through the same server-side forwarding boundary.
   registerJobHandlerForActivities(

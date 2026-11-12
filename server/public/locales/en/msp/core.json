@@ -113,7 +113,8 @@
     "signOut": "Sign out",
     "coManaged": "Co-managed IT",
     "coManagedArchive": "Co-managed archive",
-    "coManagedAdministration": "Access & administration"
+    "coManagedAdministration": "Access & administration",
+    "assetsAudits": "Site audits"
   },
   "marketing": {
     "dialogs": {

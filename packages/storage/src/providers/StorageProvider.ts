@@ -15,6 +15,13 @@ export interface RangeOptions {
     end: number;
 }
 
+/**
+ * A location a tool such as ffmpeg can open and seek in directly, without the
+ * bytes passing through this process: an absolute file path (local provider)
+ * or a time-limited URL on the provider's own (internal) endpoint.
+ */
+export type SeekableInput = { kind: 'file'; path: string } | { kind: 'url'; url: string };
+
 /** Smallest size of any part that is not the last one (S3's multipart minimum, enforced on every provider). */
 export const MIN_NON_FINAL_PART_SIZE = 5 * 1024 * 1024;
 /** Highest part number a session accepts (S3's limit, enforced on every provider). */
@@ -65,6 +72,12 @@ export interface PartReceipt {
 export interface WritePartOptions {
     /** Declares this to be the last part of the object. */
     final?: boolean;
+    /**
+     * Cancels the write. A part streamed from a request body that has failed must be abandoned
+     * at once: without this an S3 request waits for the bytes its Content-Length promised until
+     * the socket times out. A part cancelled this way is never stored.
+     */
+    signal?: AbortSignal;
 }
 
 export type StorageOperation = 'upload' | 'download' | 'delete' | 'exists' | 'metadata' | 'list';
@@ -103,6 +116,8 @@ export interface StorageProviderInterface {
 
     download(path: string): Promise<Buffer>;
     getReadStream(path: string, range?: RangeOptions): Promise<Readable>;
+    /** Seekable input for external tools; `ttlSeconds` bounds a URL's validity. */
+    getSeekableInput?(path: string, ttlSeconds: number): Promise<SeekableInput>;
     delete(path: string): Promise<void>;
     exists(path: string): Promise<boolean>;
     getMetadata?(path: string): Promise<Record<string, string>>;
@@ -194,7 +209,7 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
                     `Part ${partNumber} is ${size} bytes; parts below ${MIN_NON_FINAL_PART_SIZE} bytes must be written with { final: true }`
                 );
             }
-            const receipt = await this.doWritePart(handle, partNumber, part, size);
+            const receipt = await this.doWritePart(handle, partNumber, part, size, options.signal);
             return { ...receipt, partNumber, size, final };
         } catch (error) {
             return this.handleError('upload', error);
@@ -221,7 +236,7 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
 
     protected abstract doBeginWrite(path: string, options: WriteSessionOptions): Promise<WriteSessionHandle>;
     /** Receives a validated part; returns provider-specific receipt fields (e.g. etag). */
-    protected abstract doWritePart(handle: WriteSessionHandle, partNumber: number, part: Readable | Buffer, size: number): Promise<Partial<PartReceipt>>;
+    protected abstract doWritePart(handle: WriteSessionHandle, partNumber: number, part: Readable | Buffer, size: number, signal?: AbortSignal): Promise<Partial<PartReceipt>>;
     /** Receives receipts already validated and sorted by part number. */
     protected abstract doCompleteWrite(handle: WriteSessionHandle, parts: PartReceipt[]): Promise<UploadResult>;
     protected abstract doAbortWrite(handle: WriteSessionHandle): Promise<void>;

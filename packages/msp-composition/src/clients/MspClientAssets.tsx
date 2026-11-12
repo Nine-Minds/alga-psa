@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClientMaintenanceSummary, Asset, AssetGroup, AssetGroupKind, AssetTypeRegistryEntry } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { BentoStat, BentoTile, BENTO_TONE_TEXT, type BentoTone } from '@alga-psa/ui/components/bento';
@@ -15,6 +15,8 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Button } from '@alga-psa/ui/components/Button';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
+import { StartAuditDialog } from '@alga-psa/assets/components/audits/StartAuditDialog';
+import { useAssetAuditCapability } from '@alga-psa/assets/components/audits/auditClient';
 import { AssetGroupDrawer } from '@alga-psa/assets/components/groups/AssetGroupDrawer';
 import { createAssetGroup, listAssetGroups } from '@alga-psa/assets/actions/assetGroupActions';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -42,6 +44,11 @@ interface ClientAssetsProps {
 const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const { t } = useTranslation('msp/clients');
   const searchParams = useSearchParams();
+  const router = useRouter();
+  // A tech already looking at the client's devices can open a walk from here;
+  // gated up front on asset:update, not hidden after a refusal.
+  const { canUpdate: canStartAudit } = useAssetAuditCapability();
+  const [isStartAuditOpen, setIsStartAuditOpen] = useState(false);
   const assetTypeOptions: SelectOption[] = [
     { value: 'all', label: t('clientTabs.assets.types.all', { defaultValue: 'All Asset Types' }) },
     { value: 'workstation', label: t('clientTabs.assets.types.workstation', { defaultValue: 'Workstation' }) },
@@ -417,7 +424,16 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
               placeholder={t('clientTabs.assets.typePlaceholder', { defaultValue: 'All asset types...' })}
             />
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
+            {canStartAudit ? (
+              <Button
+                id="client-assets-start-audit-button"
+                variant="outline"
+                onClick={() => setIsStartAuditOpen(true)}
+              >
+                {t('clientTabs.assets.startAudit', { defaultValue: 'Start audit' })}
+              </Button>
+            ) : null}
             <QuickAddAsset
               clientId={clientId}
               onAssetAdded={handleAssetAdded}
@@ -555,6 +571,15 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {isStartAuditOpen ? (
+        <StartAuditDialog
+          open={isStartAuditOpen}
+          onOpenChange={setIsStartAuditOpen}
+          clientId={clientId}
+          onStarted={(auditId) => router.push(`/msp/assets/audits/${auditId}`)}
+        />
+      ) : null}
 
       <AssetDetailDrawerClient
         isOpen={isDrawerOpen}
