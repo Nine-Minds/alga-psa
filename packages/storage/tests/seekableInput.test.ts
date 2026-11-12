@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { S3StorageProvider } from '../src/providers/S3StorageProvider';
@@ -32,6 +32,14 @@ describe('provider seekable input for ffmpeg', () => {
 
       expect(await provider.getSeekableInput('v.mp4', 60)).toEqual({ kind: 'file', path: path.join(base, 'v.mp4') });
       await expect(provider.getSeekableInput('missing.mp4', 60)).rejects.toThrow('File not found');
+
+      // Real storage paths are rooted at the tenant ("/<tenant>/<file>"); they still resolve under basePath.
+      await mkdir(path.join(base, 'tenant-a'), { recursive: true });
+      await writeFile(path.join(base, 'tenant-a', 'clip.mp4'), 'x');
+      expect(await provider.getSeekableInput('/tenant-a/clip.mp4', 60)).toEqual({
+        kind: 'file',
+        path: path.join(base, 'tenant-a', 'clip.mp4'),
+      });
     } finally {
       await rm(base, { recursive: true, force: true });
     }

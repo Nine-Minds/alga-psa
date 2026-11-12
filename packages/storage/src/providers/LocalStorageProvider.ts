@@ -160,7 +160,9 @@ export class LocalStorageProvider extends BaseStorageProvider {
     }
 
     async getSeekableInput(storagePath: string, _ttlSeconds: number): Promise<SeekableInput> {
-        const fullPath = path.resolve(this.basePath, storagePath);
+        // Stored paths are rooted ("/<tenant>/<file>"): join them under basePath like every other
+        // method here (path.resolve would discard basePath), then make the result absolute.
+        const fullPath = path.resolve(path.join(this.basePath, storagePath));
         if (!await this.exists(storagePath)) {
             throw new StorageError('File not found', 'NOT_FOUND', 'local', 'download');
         }
