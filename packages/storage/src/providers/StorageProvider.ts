@@ -15,6 +15,13 @@ export interface RangeOptions {
     end: number;
 }
 
+/**
+ * A location a tool such as ffmpeg can open and seek in directly, without the
+ * bytes passing through this process: an absolute file path (local provider)
+ * or a time-limited URL on the provider's own (internal) endpoint.
+ */
+export type SeekableInput = { kind: 'file'; path: string } | { kind: 'url'; url: string };
+
 /** Smallest size of any part that is not the last one (S3's multipart minimum, enforced on every provider). */
 export const MIN_NON_FINAL_PART_SIZE = 5 * 1024 * 1024;
 /** Highest part number a session accepts (S3's limit, enforced on every provider). */
@@ -103,6 +110,8 @@ export interface StorageProviderInterface {
 
     download(path: string): Promise<Buffer>;
     getReadStream(path: string, range?: RangeOptions): Promise<Readable>;
+    /** Seekable input for external tools; `ttlSeconds` bounds a URL's validity. */
+    getSeekableInput?(path: string, ttlSeconds: number): Promise<SeekableInput>;
     delete(path: string): Promise<void>;
     exists(path: string): Promise<boolean>;
     getMetadata?(path: string): Promise<Record<string, string>>;

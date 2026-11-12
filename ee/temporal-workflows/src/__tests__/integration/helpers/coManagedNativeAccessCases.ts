@@ -25,7 +25,8 @@ vi.mock('../../../../../../server/src/lib/db/db', () => ({ getConnection: async 
 vi.mock('../../../../../../server/src/lib/api/rateLimit/enforce', () => ({ enforceApiRateLimit: async () => null }));
 vi.mock('@alga-psa/tags', async () => await import('../../../../../../packages/tags/src/actions'));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: async () => undefined, publishWorkflowEvent: async () => undefined }));
-vi.mock('../../../../../../packages/documents/src/lib/documentPreviewGenerator', () => ({ generateDocumentPreviews: async () => ({}) }));
+vi.mock('../../../../../../packages/documents/src/lib/documentPreviewGenerator', () => ({ generatePreviewsForDocument: async () => ({}) }));
+vi.mock('../../../../../../packages/documents/src/lib/documentPreviewJob', () => ({ scheduleDocumentPreviews: async () => true }));
 const appliance = vi.hoisted(() => ({ check: vi.fn(async () => ({ seats: 0 })) }));
 vi.mock('@alga-psa/db/tenant', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/db/tenant')>();

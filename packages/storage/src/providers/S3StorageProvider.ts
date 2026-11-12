@@ -9,11 +9,13 @@ import {
   S3Client,
   S3ServiceException,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
 import type { S3ProviderConfig, StorageCapabilities } from '../types/storage';
 import {
   BaseStorageProvider,
   type PartReceipt,
+  type SeekableInput,
   type S3WriteSessionHandle,
   type UploadResult,
   type WriteSessionHandle,
@@ -197,6 +199,26 @@ export class S3StorageProvider extends BaseStorageProvider {
     } catch (error) {
       this.handleError('download', error);
     }
+  }
+
+  /**
+   * Presigned GET for server-side tools (ffmpeg). Signed by this provider's own client, so the
+   * host is the configured STORAGE_S3_ENDPOINT -- the internal endpoint the server already
+   * reaches -- and never a browser-facing/public URL. Must not be returned to clients.
+   */
+  // LEVERAGE: pattern s3-stream-put — ee/server/src/lib/storage has a second S3 provider that does not have getSeekableInput/getInternalReadUrl
+  async getInternalReadUrl(path: string, ttlSeconds: number): Promise<string> {
+    try {
+      return await getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: path }), {
+        expiresIn: ttlSeconds,
+      });
+    } catch (error) {
+      this.handleError('download', error);
+    }
+  }
+
+  async getSeekableInput(path: string, ttlSeconds: number): Promise<SeekableInput> {
+    return { kind: 'url', url: await this.getInternalReadUrl(path, ttlSeconds) };
   }
 
   async delete(path: string): Promise<void> {

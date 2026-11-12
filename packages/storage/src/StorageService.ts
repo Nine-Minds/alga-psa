@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
 import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
-import { StorageError } from './providers/StorageProvider';
+import { StorageError, type SeekableInput } from './providers/StorageProvider';
 import { isUploadContentTypeError, isUploadSizeLimitError } from './ingest/errors';
 import { collect, ingestToWriteSession, runPipeline } from './ingest/pipeline';
 import { renderSquareMark, type LogoCropRect } from './imageCrop';
@@ -108,6 +108,23 @@ export class StorageService {
     const provider = await StorageProviderFactory.createProvider();
     return provider.getReadStream(file.storage_path, range);
   }
+    /**
+     * Seekable location of a stored file for external tools (ffmpeg): an absolute path (local)
+     * or a short-lived presigned URL on the internal endpoint (S3/MinIO). Server-side use only.
+     */
+    static async getSeekableInput(fileId: string, ttlSeconds = 900): Promise<SeekableInput> {
+      const { knex } = await createTenantKnex();
+      const file = await FileStoreModel.findById(knex, fileId);
+      if (!file) {
+        throw new Error('File not found');
+      }
+      const provider = await StorageProviderFactory.createProvider();
+      if (!provider.getSeekableInput) {
+        throw new Error('Storage provider does not support seekable input');
+      }
+      return provider.getSeekableInput(file.storage_path, ttlSeconds);
+    }
+
     private static async getTypedProviderConfig<T>(providerType: string): Promise<T> {
         const config = await getStorageConfig();
         const providerConfig = await getProviderConfig(config.defaultProvider);

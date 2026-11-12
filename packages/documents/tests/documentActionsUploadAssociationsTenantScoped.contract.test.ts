@@ -12,7 +12,9 @@ describe('document upload and association mutation tenant-scoped query contract'
   it('uses structural tenant scoping for association removal and upload helper roots', () => {
     expect(uploadAssociationSection).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
     expect(uploadAssociationSection).toContain("tenantScopedTable(knex, 'document_folders', tenant)");
-    expect(uploadAssociationSection).toContain("tenantScopedTable(knex, 'documents', tenant)");
+    // uploadDocument no longer updates the documents row after commit: previews are written by the
+    // background job (generatePreviewsForDocument), whose tenant scoping is covered by
+    // src/lib/documentPreviewContentTenantScoped.contract.test.ts.
     expect(uploadAssociationSection).not.toContain("trx('document_associations')");
     expect(uploadAssociationSection).not.toContain("knex('document_folders')");
     expect(uploadAssociationSection).not.toContain("knex('documents')");

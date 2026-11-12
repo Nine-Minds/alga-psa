@@ -10,6 +10,7 @@ import {
     UploadResult,
     StorageError,
     RangeOptions,
+    type SeekableInput,
     type LocalWriteSessionHandle,
     type PartReceipt,
     type WriteSessionHandle,
@@ -277,6 +278,16 @@ export class LocalStorageProvider extends BaseStorageProvider {
         } catch (error) {
             this.handleError('download', error);
         }
+    }
+
+    async getSeekableInput(storagePath: string, _ttlSeconds: number): Promise<SeekableInput> {
+        // Stored paths are rooted ("/<tenant>/<file>"): join them under basePath like every other
+        // method here (path.resolve would discard basePath), then make the result absolute.
+        const fullPath = path.resolve(path.join(this.basePath, storagePath));
+        if (!await this.exists(storagePath)) {
+            throw new StorageError('File not found', 'NOT_FOUND', 'local', 'download');
+        }
+        return { kind: 'file', path: fullPath };
     }
 
     async getMetadata(storagePath: string): Promise<Record<string, string>> {

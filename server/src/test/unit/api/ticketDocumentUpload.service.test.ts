@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { validateFileUploadMock, uploadFileMock, withTransactionMock, generateDocumentPreviewsMock, externalFiles } = vi.hoisted(() => ({
+const { validateFileUploadMock, uploadFileMock, withTransactionMock, scheduleDocumentPreviewsMock, externalFiles } = vi.hoisted(() => ({
   validateFileUploadMock: vi.fn(),
   uploadFileMock: vi.fn(),
   withTransactionMock: vi.fn(),
-  generateDocumentPreviewsMock: vi.fn(),
+  scheduleDocumentPreviewsMock: vi.fn(),
   externalFiles: [] as Array<{ tenant: string; file_id: string; is_deleted: boolean; metadata: Record<string, unknown> }>,
 }));
 
-vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
-  generateDocumentPreviews: (...args: unknown[]) => generateDocumentPreviewsMock(...args),
+vi.mock('@alga-psa/documents/lib/documentPreviewJob', () => ({
+  scheduleDocumentPreviews: (...args: unknown[]) => scheduleDocumentPreviewsMock(...args),
 }));
 
 vi.mock('@alga-psa/storage/StorageService', () => ({
@@ -86,17 +86,7 @@ describe('TicketService.uploadTicketDocument', () => {
       file_id: 'file-1',
       storage_path: '/docs/file-1',
     });
-    generateDocumentPreviewsMock.mockImplementation(async (document: { document_id: string }) => {
-      externalFiles.push(
-        { tenant: 'tenant-1', file_id: 'thumb-1', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: document.document_id } },
-        { tenant: 'tenant-1', file_id: 'preview-1', is_deleted: false, metadata: { context: 'document_preview', source_document_id: document.document_id } },
-      );
-      return {
-        thumbnail_file_id: 'thumb-1',
-        preview_file_id: 'preview-1',
-        preview_generated_at: new Date('2026-09-10T00:00:00.000Z'),
-      };
-    });
+    scheduleDocumentPreviewsMock.mockResolvedValue(true);
   });
 
   it.each([undefined, 'delegating-user'])('uploads and records activity with via attribution %s', async (viaPrincipalUserId) => {
@@ -220,19 +210,14 @@ describe('TicketService.uploadTicketDocument', () => {
       document_name: 'report.pdf',
       file_id: 'file-1',
     });
-    // Previews are generated after commit and persisted on the document row.
-    expect(generateDocumentPreviewsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ document_id: insertedDocuments[0]?.document_id, mime_type: 'application/pdf' }),
-      expect.any(Buffer),
-    );
-    expect(previewUpdates).toEqual([
-      expect.objectContaining({ thumbnail_file_id: 'thumb-1', preview_file_id: 'preview-1' }),
-    ]);
+    // Previews are only scheduled after commit; nothing on the request path writes preview columns.
+    expect(scheduleDocumentPreviewsMock).toHaveBeenCalledWith('tenant-1', insertedDocuments[0]?.document_id, 'user-1');
+    expect(previewUpdates).toEqual([]);
   });
 
-  it('T016: a preview generation failure does not fail the upload', async () => {
+  it('T016: failing to schedule previews does not fail the upload', async () => {
     const service = new TicketService();
-    generateDocumentPreviewsMock.mockRejectedValue(new Error('sharp missing'));
+    scheduleDocumentPreviewsMock.mockResolvedValue(false);
     withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trxArg: unknown) => unknown) =>
       callback((table: string) => ({
         insert: vi.fn(async () => undefined),
@@ -253,44 +238,6 @@ describe('TicketService.uploadTicketDocument', () => {
 
     const file = new File([Buffer.from('img')], 'photo.jpg', { type: 'image/jpeg' });
     await expect(service.uploadTicketDocument(ticketId, file, context)).resolves.toMatchObject({ document_id: 'doc-2' });
-  });
-
-  it.each([
-    ['wrong tenant', (documentId: string) => ({ tenant: 'tenant-2', file_id: 'thumb-1', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: documentId } })],
-    ['wrong source document', (documentId: string) => ({ tenant: 'tenant-1', file_id: 'thumb-1', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: 'another-document' } })],
-    ['wrong derivative role', (documentId: string) => ({ tenant: 'tenant-1', file_id: 'thumb-1', is_deleted: false, metadata: { context: 'document_preview', source_document_id: documentId } })],
-  ])('does not persist generated thumbnails with %s provenance', async (_caseName, makeRecord) => {
-    const service = new TicketService();
-    const previewUpdates: Record<string, unknown>[] = [];
-    const insertedDocuments: Record<string, unknown>[] = [];
-    const trx = ((table: string) => {
-      if (table === 'documents') return { insert: vi.fn(async (record: Record<string, unknown>) => { insertedDocuments.push(record); }) };
-      if (table === 'document_associations' || table === 'ticket_audit_logs') return { insert: vi.fn(async () => undefined) };
-      if (table === 'users') return { where: vi.fn(() => ({ first: vi.fn().mockResolvedValue(null) })) };
-      throw new Error(`Unexpected transaction table ${table}`);
-    }) as any;
-    withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trxArg: unknown) => unknown) => callback(trx));
-    const knex = vi.fn((table: string) => {
-      if (table === 'tickets') return createSelectBuilder({ ticket_id: ticketId });
-      if (table === 'document_folders') return createSelectBuilder({ folder_path: '/Tickets/Attachments' });
-      if (table === 'document_types') return createTypeBuilder(null);
-      if (table === 'shared_document_types') return createTypeBuilder({ type_id: 'shared-pdf' });
-      if (table === 'documents') return { where: vi.fn(() => ({ update: vi.fn(async (patch: Record<string, unknown>) => { previewUpdates.push(patch); }) })) };
-      throw new Error(`Unexpected table ${table}`);
-    }) as any;
-    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
-    vi.spyOn(service as any, 'getDocumentById').mockResolvedValue({ document_id: 'doc-upload-invalid', file_id: 'file-1' });
-    generateDocumentPreviewsMock.mockImplementation(async (document: { document_id: string }) => {
-      externalFiles.push(makeRecord(document.document_id));
-      return { thumbnail_file_id: 'thumb-1', preview_file_id: null, preview_generated_at: new Date() };
-    });
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-
-    const file = new File([Buffer.from('image')], 'photo.jpg', { type: 'image/jpeg' });
-    await expect(service.uploadTicketDocument(ticketId, file, context)).resolves.toMatchObject({ document_id: 'doc-upload-invalid' });
-
-    expect(insertedDocuments).toHaveLength(1);
-    expect(previewUpdates).toEqual([]);
   });
 
   it('T015: rejects uploads that omit the file payload', async () => {
