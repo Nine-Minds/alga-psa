@@ -56,15 +56,36 @@ const storage = vi.hoisted(() => ({
 }));
 vi.mock('@alga-psa/storage/StorageProviderFactory', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/storage/StorageProviderFactory')>();
+  // Stores on commit, then fails on demand: the object exists, so only upload cleanup can remove it.
+  const store = (path: string, body: Buffer, mimeType = 'application/octet-stream') => {
+    storage.files.set(path, body);
+    if ((mimeType === 'image/png' && ++storage.originalCount === storage.failOriginal) ||
+        (mimeType === 'image/jpeg' && storage.failDerived)) {
+      throw new Error('provider failed after writing');
+    }
+    return { path, size: body.length, mime_type: mimeType };
+  };
+  const sessions = new Map<string, { path: string; mimeType?: string; parts: Map<number, Buffer> }>();
+  let sessionCount = 0;
   return { ...actual, StorageProviderFactory: { createProvider: async () => ({
-    upload: async (buffer: Buffer, path: string, options: { mime_type: string }) => {
-      storage.files.set(path, buffer);
-      if ((options.mime_type === 'image/png' && ++storage.originalCount === storage.failOriginal) ||
-          (options.mime_type === 'image/jpeg' && storage.failDerived)) {
-        throw new Error('provider failed after writing');
-      }
-      return { path, size: buffer.length, mime_type: options.mime_type };
+    upload: async (buffer: Buffer, path: string, options: { mime_type: string }) => store(path, buffer, options.mime_type),
+    // uploadFile streams through the write-session API.
+    beginWrite: async (path: string, options: { mimeType?: string } = {}) => {
+      const partialPath = `${path}.partial-${++sessionCount}`;
+      sessions.set(partialPath, { path, mimeType: options.mimeType, parts: new Map() });
+      return { provider: 'local', path, partialPath };
     },
+    writePart: async (handle: { partialPath: string }, partNumber: number, part: Buffer, size: number, options: { final?: boolean } = {}) => {
+      sessions.get(handle.partialPath)!.parts.set(partNumber, Buffer.from(part));
+      return { partNumber, size, final: options.final === true };
+    },
+    completeWrite: async (handle: { partialPath: string }) => {
+      const session = sessions.get(handle.partialPath)!;
+      sessions.delete(handle.partialPath);
+      const body = Buffer.concat([...session.parts.entries()].sort(([a], [b]) => a - b).map(([, part]) => part));
+      return store(session.path, body, session.mimeType);
+    },
+    abortWrite: async (handle: { partialPath: string }) => { sessions.delete(handle.partialPath); },
     delete: async (path: string) => {
       if (storage.failDelete) throw new Error('provider temporarily unavailable');
       storage.files.delete(path);
