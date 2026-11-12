@@ -180,11 +180,27 @@ describe('AsyncClientPicker', () => {
     // jsdom lays the trigger out at 0px wide, the narrowest possible filter-bar trigger.
     const panel = screen.getByPlaceholderText('Search clients...').closest('[class*="z-["]') as HTMLElement;
     const zIndexOf = (className: string) => Number(/z-\[(\d+)\]/.exec(className)?.[1]);
-    expect(panel.style.width).toBe('300px');
+    expect(panel.style.width).toBe('360px');
     for (const filterId of ['cp-state-filter', 'cp-type-filter']) {
       const contentClass = screen.getByTestId(filterId).getAttribute('data-content-class') ?? '';
       expect(zIndexOf(contentClass)).toBeGreaterThan(zIndexOf(panel.className));
     }
+  });
+
+  it('lets the filter selects shrink so the tag filter is never clipped by the panel', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
+    renderPicker({ searchClients });
+    open();
+    const tagTrigger = await screen.findByText('tag:vip');
+    const filterRow = tagTrigger.closest('div.flex.items-center') as HTMLElement;
+
+    for (const filterId of ['cp-state-filter', 'cp-type-filter']) {
+      const wrapper = screen.getByTestId(filterId).closest('div[class]') as HTMLElement;
+      expect(wrapper.className).toContain('flex-1');
+      expect(wrapper.className).toContain('min-w-0');
+    }
+    const tagWrapper = [...filterRow.children].at(-1) as HTMLElement;
+    expect(tagWrapper.className).toContain('shrink-0');
   });
 
   it('does not refetch when a new but equal disabled Set / tooltip arrives while open', async () => {

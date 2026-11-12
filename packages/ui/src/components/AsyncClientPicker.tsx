@@ -95,8 +95,9 @@ const missingSearcher: ClientPickerSearchFn = async () => {
 
 // The picker panel is z-[99999]; a select's option list defaults to z-[10001] and would open underneath it.
 const ABOVE_PICKER_PANEL = { content: 'z-[100000]' };
-// Room for the status, type and tag filters side by side under a narrow trigger.
-const PANEL_MIN_WIDTH = 300;
+// Room for the status and type selects plus the tag filter side by side under a narrow trigger:
+// at their natural widths that row needs ~344px, and the panel clips what does not fit.
+const PANEL_MIN_WIDTH = 360;
 
 function PickerFilters({
   id,
@@ -151,41 +152,46 @@ function PickerFilters({
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 border-b border-[rgb(var(--color-border-200))]">
-      <CustomSelect
-        id={`${id}-state-filter`}
-        value={status}
-        onValueChange={(value) => onStatusChange(value as ClientPickerStatusFilter)}
-        options={statusOptions}
-        placeholder="Filter"
-        className="flex-1 min-w-0"
-        customStyles={ABOVE_PICKER_PANEL}
-      />
-      <CustomSelect
-        id={`${id}-type-filter`}
-        value={clientType}
-        onValueChange={(value) => onClientTypeChange(value as ClientPickerTypeFilter)}
-        options={typeOptions}
-        placeholder="Type"
-        className="flex-1 min-w-0"
-        customStyles={ABOVE_PICKER_PANEL}
-      />
-      {tagOptions.length > 0 && (
-        <TagFilter
-          id={`${id}-tag-filter`}
-          tags={tagOptions}
-          selectedTags={selectedTags}
-          onToggleTag={(tagText) =>
-            onSelectedTagsChange(
-              selectedTags.includes(tagText)
-                ? selectedTags.filter((text) => text !== tagText)
-                : [...selectedTags, tagText]
-            )
-          }
-          onClearTags={() => onSelectedTagsChange([])}
-          modal
-          align="start"
-          contentClassName="z-[100000]"
+      {/* The selects truncate so the tag filter is never pushed past the panel edge, which clips it. */}
+      <div className="flex-1 min-w-0">
+        <CustomSelect
+          id={`${id}-state-filter`}
+          value={status}
+          onValueChange={(value) => onStatusChange(value as ClientPickerStatusFilter)}
+          options={statusOptions}
+          placeholder="Filter"
+          customStyles={ABOVE_PICKER_PANEL}
         />
+      </div>
+      <div className="flex-1 min-w-0">
+        <CustomSelect
+          id={`${id}-type-filter`}
+          value={clientType}
+          onValueChange={(value) => onClientTypeChange(value as ClientPickerTypeFilter)}
+          options={typeOptions}
+          placeholder="Type"
+          customStyles={ABOVE_PICKER_PANEL}
+        />
+      </div>
+      {tagOptions.length > 0 && (
+        <div className="shrink-0">
+          <TagFilter
+            id={`${id}-tag-filter`}
+            tags={tagOptions}
+            selectedTags={selectedTags}
+            onToggleTag={(tagText) =>
+              onSelectedTagsChange(
+                selectedTags.includes(tagText)
+                  ? selectedTags.filter((text) => text !== tagText)
+                  : [...selectedTags, tagText]
+              )
+            }
+            onClearTags={() => onSelectedTagsChange([])}
+            modal
+            align="start"
+            contentClassName="z-[100000]"
+          />
+        </div>
       )}
     </div>
   );
