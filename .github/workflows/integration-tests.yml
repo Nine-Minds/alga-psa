@@ -217,6 +217,18 @@ jobs:
             sleep 2
           done
 
+      # Suites that exercise the S3 storage provider end to end (resumable
+      # document uploads) default to MinIO's standard local address and
+      # credentials. They are deliberately not exported as STORAGE_S3_* for
+      # the whole job, which would switch every other suite's storage config.
+      - name: Start disposable object storage
+        uses: ./.github/actions/start-minio
+        with:
+          name: integration-test-minio
+          port: '9000'
+          access-key: minioadmin
+          secret-key: minioadmin
+
       # Some tests read credentials from secrets/ files directly (getSecret falls back to env).
       - name: Create secrets files
         run: |
@@ -249,6 +261,10 @@ jobs:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ''
+
+      - name: Stop disposable object storage
+        if: always()
+        run: docker rm -f integration-test-minio || true
 
       - name: Upload integration execution diagnostics
         if: always()

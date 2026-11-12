@@ -1,15 +1,17 @@
 /**
- * Memory is flat for a very large chunked upload: drives the route handlers directly with a 600 MiB
- * generated stream, one 8 MiB chunk per request, to MinIO, and reports the peak RSS growth.
+ * Memory is flat for a large chunked upload: drives the route handlers directly with a generated
+ * stream, one 8 MiB chunk per request, to MinIO, and reports the peak RSS growth.
  *
- * Opt-in (like the 1 GiB storage test): registered only when requested, never skipped.
+ * Always registered (the integration lane starts MinIO; an empty file fails the test inventory).
+ * The default 256 MiB is well over the 100 MiB ceiling, so a buffering regression fails it; set
+ * ALGA_UPLOAD_MEMORY_MIB=600 for the full-size measurement.
  *
- *   ALGA_UPLOAD_MEMORY_TEST=1 TEST_DB_NAME=up47_test DB_HOST=127.0.0.1 DB_PORT=55747 \
+ *   TEST_DB_NAME=up47_test DB_HOST=127.0.0.1 DB_PORT=55747 \
  *   STORAGE_S3_ENDPOINT=http://127.0.0.1:59747 \
  *   npx vitest run src/test/integration/documentUploadSessions.memory.integration.test.ts
  *
  * ALGA_UPLOAD_MEMORY_REPORT=<file> also writes the measurements as JSON.
- * Size and ceiling are overridable: ALGA_UPLOAD_MEMORY_MIB (default 600), ALGA_UPLOAD_MEMORY_CEILING_MIB (default 100).
+ * Size and ceiling are overridable: ALGA_UPLOAD_MEMORY_MIB (default 256), ALGA_UPLOAD_MEMORY_CEILING_MIB (default 100).
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { writeFileSync } from 'node:fs';
@@ -46,13 +48,10 @@ import { clearCachedStorageConfig } from '@alga-psa/storage/config/storage';
 import { completeUploadHandler, createUploadHandler, putChunkHandler } from '@/lib/api/documentUploads/handlers';
 import { MiB, contentRange, createUploadFixture, dropUploadFixture, generatedBody, request, type UploadFixture } from './support/documentUploadHarness';
 
-const TOTAL_MIB = Number(process.env.ALGA_UPLOAD_MEMORY_MIB || 600);
+const TOTAL_MIB = Number(process.env.ALGA_UPLOAD_MEMORY_MIB || 256);
 const CEILING_MIB = Number(process.env.ALGA_UPLOAD_MEMORY_CEILING_MIB || 100);
 
-// Registered only on request rather than skipped: the server unit evidence gate treats a skip as a failure.
-const suite = process.env.ALGA_UPLOAD_MEMORY_TEST === '1' ? describe : (() => {}) as unknown as typeof describe;
-
-suite('chunked upload memory', () => {
+describe('chunked upload memory', () => {
   let db: Knex;
   let fx: UploadFixture;
   let s3: S3Client;
