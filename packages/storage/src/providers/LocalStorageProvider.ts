@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import { createWriteStream, createReadStream } from 'fs';
 import { Buffer } from 'buffer';
 import { LocalProviderConfig, StorageCapabilities } from '../types/storage';
-import { BaseStorageProvider, UploadResult, StorageError, RangeOptions } from './StorageProvider';
+import { BaseStorageProvider, UploadResult, StorageError, RangeOptions, SeekableInput } from './StorageProvider';
 
 export class LocalStorageProvider extends BaseStorageProvider {
     private readonly basePath: string;
@@ -157,6 +157,14 @@ export class LocalStorageProvider extends BaseStorageProvider {
         } catch (error) {
             this.handleError('download', error);
         }
+    }
+
+    async getSeekableInput(storagePath: string, _ttlSeconds: number): Promise<SeekableInput> {
+        const fullPath = path.resolve(this.basePath, storagePath);
+        if (!await this.exists(storagePath)) {
+            throw new StorageError('File not found', 'NOT_FOUND', 'local', 'download');
+        }
+        return { kind: 'file', path: fullPath };
     }
 
     async getMetadata(storagePath: string): Promise<Record<string, string>> {

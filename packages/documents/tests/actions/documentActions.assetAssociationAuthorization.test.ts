@@ -97,7 +97,8 @@ vi.mock('@alga-psa/storage/StorageService', () => ({
     deleteFile: vi.fn(async (fileId: string) => { h.deletedStorageFileIds.push(fileId); }),
   },
 }));
-vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({ generateDocumentPreviews: vi.fn(async () => ({})) }));
+vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({ generatePreviewsForDocument: vi.fn(async () => ({})) }));
+vi.mock('@alga-psa/documents/lib/documentPreviewJob', () => ({ scheduleDocumentPreviews: vi.fn(async () => true) }));
 vi.mock('../../src/lib/documentPermissions', () => ({
   applyDocumentProductReadScope: vi.fn(),
   canReadDocument: vi.fn(async () => true),

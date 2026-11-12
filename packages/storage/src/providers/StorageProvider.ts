@@ -15,6 +15,13 @@ export interface RangeOptions {
     end: number;
 }
 
+/**
+ * A location a tool such as ffmpeg can open and seek in directly, without the
+ * bytes passing through this process: an absolute file path (local provider)
+ * or a time-limited URL on the provider's own (internal) endpoint.
+ */
+export type SeekableInput = { kind: 'file'; path: string } | { kind: 'url'; url: string };
+
 export interface StorageProviderInterface {
     getCapabilities(): StorageCapabilities;
     /** Stable object-store location, without credentials. Durable maintenance
@@ -23,6 +30,8 @@ export interface StorageProviderInterface {
     upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string>; size?: number }): Promise<UploadResult>;
     download(path: string): Promise<Buffer>;
     getReadStream(path: string, range?: RangeOptions): Promise<Readable>;
+    /** Seekable input for external tools; `ttlSeconds` bounds a URL's validity. */
+    getSeekableInput?(path: string, ttlSeconds: number): Promise<SeekableInput>;
     delete(path: string): Promise<void>;
     exists(path: string): Promise<boolean>;
     getMetadata?(path: string): Promise<Record<string, string>>;
