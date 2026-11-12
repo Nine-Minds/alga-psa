@@ -48,7 +48,14 @@ function parseCalendarDay(value: unknown): number | null {
  * not a form worth failing.
  */
 export function resolveReportRange(input?: ReportRangeInput): ResolvedReportRange {
-  if (typeof input === 'object' && input !== null) {
+  // Two separate `typeof` checks, not one `&&`-joined guard: the ee/server
+  // tsconfig runs with strictNullChecks off, where an `input !== null`
+  // clause doesn't narrow and the compiler can't tell the fallthrough
+  // below is number-only anymore.
+  if (typeof input === 'object') {
+    if (input === null) {
+      return { rangeDays: DEFAULT_RANGE_DAYS, range: null };
+    }
     const from = parseCalendarDay(input.from);
     const to = parseCalendarDay(input.to);
     if (from !== null && to !== null && from <= to) {
