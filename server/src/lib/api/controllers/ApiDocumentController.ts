@@ -12,8 +12,14 @@ import { ApiBaseController } from './ApiBaseController';
 import { ApiDocumentService } from '../services/ApiDocumentService';
 import { attachDocumentSchema } from '../schemas/documentAttach';
 import { ENTITY_ADAPTERS, assertEntityAvailableForProduct } from '../services/documents/entityAdapters';
-import { attachDocumentFromBytes } from '../services/documents/attachDocument';
-import { resolveSource } from '../services/documents/resolveSource';
+import { attachDocument } from '../services/documents/attachDocument';
+import {
+  assertBase64EncodedWithinCap,
+  base64SourceCap,
+  getMaxUploadBytes,
+  mapFetchError,
+  resolveSource,
+} from '../services/documents/resolveSource';
 import { runWithTenant } from '../../db';
 import { getConnection } from '../../db/db';
 import { hasPermission } from '../../auth/rbac';
@@ -46,6 +52,13 @@ export class ApiDocumentController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot create document');
           }
 
+          // `req.json()` holds the whole body, so refuse an oversized one on Content-Length before
+          // reading it: a url source is tiny, so anything past the base64 cap is base64.
+          const declaredLength = req.headers.get('content-length');
+          if (declaredLength !== null && /^\d+$/.test(declaredLength)) {
+            assertBase64EncodedWithinCap(Number(declaredLength), base64SourceCap(await getMaxUploadBytes()));
+          }
+
           let input;
           try {
             input = attachDocumentSchema.parse(await req.json().catch(() => ({})));
@@ -67,12 +80,16 @@ export class ApiDocumentController extends ApiBaseController {
             { knex, tenant: apiRequest.context.tenant },
           );
 
-          const document = await attachDocumentFromBytes({
+          const providerMax = await getMaxUploadBytes();
+          const document = await attachDocument({
             knex,
             tenant: apiRequest.context.tenant,
             actorUserId: apiRequest.context.userId,
             target: { entityType: input.entity_type, entityId: input.entity_id },
-            file,
+            file: {
+              ...file,
+              mapSourceError: (error) => mapFetchError(error, apiRequest.context.tenant, providerMax),
+            },
             source: input.source.type,
           });
 

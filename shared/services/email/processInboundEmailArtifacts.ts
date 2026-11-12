@@ -197,26 +197,31 @@ function parseTrailFilesFromMetadata(metadata: unknown): InboundAttachmentTrailO
 }
 
 /**
- * Resolve the shared storage size ceiling so inbound uses the same limit as
- * manual upload. Returns null when storage config is unavailable (the
- * validator still enforces the ceiling itself; this only drives the cheap
- * pre-download early-out).
+ * The most an inbound attachment may be: `MAX_ATTACHMENT_BYTES`, clamped to the storage provider
+ * max. mail-parser and the provider adapters hand us whole buffers (base64 `content`, Graph/Gmail
+ * downloads), so this path buffers by nature; this cap is what keeps that bounded and it is never
+ * above what the provider would accept. Larger attachments are skipped and trailed on the ticket.
+ * Falls back to `MAX_ATTACHMENT_BYTES` when storage config is unavailable (the validators still
+ * enforce the provider ceiling themselves).
  *
- * Loads the narrow `config/storage` subpath, never the package barrel: the
- * built email-service worker (native Node, `tsc` + `tsc-alias`) cannot resolve
- * the barrel's transitive `@alga-psa/validation` source exports.
+ * Loads the narrow `config/storage` and `ingest/bufferedCap` subpaths, never the package barrel:
+ * the built email-service worker (native Node, `tsc` + `tsc-alias`) cannot resolve the barrel's
+ * transitive `@alga-psa/validation` source exports.
  */
-async function resolveInboundMaxAttachmentBytes(): Promise<number | null> {
+async function resolveInboundMaxAttachmentBytes(): Promise<number> {
   try {
     const { getStorageConfig } = await import('@alga-psa/storage/config/storage');
+    const { effectiveBufferedCap } = await import('@alga-psa/storage/ingest/bufferedCap');
     const config = await getStorageConfig();
     const provider = config?.providers?.[config.defaultProvider];
-    return typeof provider?.maxFileSize === 'number' ? provider.maxFileSize : null;
+    return typeof provider?.maxFileSize === 'number'
+      ? effectiveBufferedCap(MAX_ATTACHMENT_BYTES, provider.maxFileSize)
+      : MAX_ATTACHMENT_BYTES;
   } catch (error) {
     console.warn('processInboundEmailInApp: failed to resolve storage size ceiling (continuing)', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return null;
+    return MAX_ATTACHMENT_BYTES;
   }
 }
 
@@ -861,11 +866,23 @@ async function persistDocumentForBuffer(args: {
   const storageProvider = await StorageProviderFactory.createProvider();
   const storagePath = generateStoragePath(args.tenantId, '', safeFileName);
 
-  let uploadResult: any;
+  // The buffer goes through the streaming ingest so the byte guard, the write session and the
+  // content hash live in one place. The type was already judged by validateInbound* above (the
+  // allowlist does not apply to product-generated artifacts), so the ingest skips its own type check.
+  let uploadResult: { path: string };
+  let contentSha256: string;
+  let storedSize: number;
   try {
-    uploadResult = await storageProvider.upload(args.buffer, storagePath, {
-      mime_type: args.mimeType,
+    const { ingestToWriteSession } = await import('@alga-psa/storage/ingest/pipeline');
+    const { Readable } = await import('node:stream');
+    const ingested = await ingestToWriteSession(Readable.from(args.buffer), storageProvider, storagePath, {
+      maxFileSize: await resolveInboundMaxAttachmentBytes(),
+      declaredMime: args.mimeType,
+      allowedMimeTypes: null,
     });
+    uploadResult = { path: ingested.upload.path };
+    contentSha256 = ingested.sha256;
+    storedSize = ingested.size;
   } catch (uploadErr: any) {
     await markProcessedAttachment(args.knex, {
       tenantId: args.tenantId,
@@ -898,7 +915,8 @@ async function persistDocumentForBuffer(args: {
         file_name: String(storagePath).split('/').pop(),
         original_name: safeFileName,
         mime_type: args.mimeType,
-        file_size: args.buffer.length,
+        file_size: storedSize,
+        content_sha256: contentSha256,
         storage_path: uploadResult.path,
         uploaded_by_id: args.systemUserId,
         created_at: now,
@@ -1155,8 +1173,24 @@ async function persistInboundEmailAttachment(input: PersistAttachmentInput): Pro
   let buffer: Buffer;
   let resolvedMimeType = requestedContentType;
   let resolvedFileName = requestedFileName;
+  const skipOversize = async (size: number) => {
+    const reason = `attachment_too_large:${size}`;
+    await markProcessedAttachment(knex, {
+      tenantId: input.tenantId,
+      providerId: input.providerId,
+      emailId: input.emailId,
+      attachmentId: input.attachmentId,
+      status: 'skipped',
+      errorMessage: reason,
+    });
+    return { success: true, skipped: true, reason: 'too_large', message: reason };
+  };
   try {
     if (providedContentBase64) {
+      // Checked on the encoded length, before anything is decoded.
+      if (maxAttachmentBytes !== null && Math.floor((providedContentBase64.length * 3) / 4) > maxAttachmentBytes) {
+        return await skipOversize(Math.floor((providedContentBase64.length * 3) / 4));
+      }
       if (!isBase64(providedContentBase64)) {
         throw new Error('Invalid base64 attachment payload');
       }
@@ -1196,6 +1230,11 @@ async function persistInboundEmailAttachment(input: PersistAttachmentInput): Pro
     return isUnsupported
       ? { success: true, skipped: true, reason: 'unsupported_attachment' }
       : { success: false, message };
+  }
+
+  // The declared size can be absent or wrong, and the download is already in memory: hold the cap on the bytes.
+  if (maxAttachmentBytes !== null && buffer.length > maxAttachmentBytes) {
+    return await skipOversize(buffer.length);
   }
 
   if (allowInlineProcessing) {

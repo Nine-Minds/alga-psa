@@ -297,7 +297,7 @@ describe('POST /api/v1/documents', () => {
     expect(after).toBe(before);
   }, HOOK_TIMEOUT);
 
-  it('returns 400 for an oversize file', async () => {
+  it('returns 413 for an oversize file', async () => {
     state.allow = true;
     const { status, json } = await post({
       entity_type: 'ticket',
@@ -305,7 +305,7 @@ describe('POST /api/v1/documents', () => {
       source: { type: 'base64', content: Buffer.alloc(8192, 'a').toString('base64') },
       file_name: 'big.txt',
     });
-    expect(status, JSON.stringify(json)).toBe(400);
+    expect(status, JSON.stringify(json)).toBe(413);
   }, HOOK_TIMEOUT);
 
   it('returns 404 when the entity does not exist', async () => {

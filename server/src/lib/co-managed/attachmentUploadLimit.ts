@@ -1,3 +1,4 @@
+// LEVERAGE: pattern server-action-file-limit — same "SERVER_ACTIONS_BODY_LIMIT less the multipart envelope" as serverActionFileLimitBytes (packages/storage/src/ingest/bufferedCap.ts); this one adds a 25 MiB ceiling. Could call the shared parser.
 /** Reserve space for multipart headers and the action's qualified arguments.
  * Next rejects an oversized action before its handler can return a typed error. */
 export function coManagedAttachmentUploadLimit(bodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb'): number {

@@ -155,7 +155,9 @@ import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-p
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { generatePreviewsForDocument } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { attachDocumentFromBytes } from './documents/attachDocument';
+import { attachDocument } from './documents/attachDocument';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -1547,7 +1549,7 @@ export class TicketService extends BaseService<ITicket> {
 
     // Validation, storage, the transaction, rollback cleanup, previews and events all
     // live in the shared upload core; the draft branch is a ticket-adapter option.
-    return attachDocumentFromBytes({
+    return attachDocument({
       knex,
       tenant: context.tenant,
       actorUserId: context.userId,
@@ -1556,7 +1558,8 @@ export class TicketService extends BaseService<ITicket> {
       file: {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
-        bytes: Buffer.from(await file.arrayBuffer()),
+        // The part is streamed into the ingest; no whole-file copy of it.
+        body: Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
       },
       source: 'multipart',
       options: { commentAttachmentDraft },

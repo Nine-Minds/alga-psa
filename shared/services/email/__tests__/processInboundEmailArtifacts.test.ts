@@ -220,11 +220,18 @@ function fakeStorageModule() {
     }
   };
 
+  // A write-session provider: persisted artifacts reach it through the streaming ingest.
   const createProvider = async () => ({
-    upload: async (file: Buffer, path: string, options?: { mime_type?: string }) => {
-      h.uploads.push({ path, size: file.length, mime: options?.mime_type });
-      return { path, size: file.length };
+    beginWrite: async (path: string, options?: { mimeType?: string }) => ({ provider: 'local', path, partialPath: path, mimeType: options?.mimeType, written: 0 }),
+    writePart: async (handle: any, partNumber: number, part: Buffer, size: number, opts?: { final?: boolean }) => {
+      handle.written += size;
+      return { partNumber, size, final: Boolean(opts?.final) };
     },
+    completeWrite: async (handle: any) => {
+      h.uploads.push({ path: handle.path, size: handle.written, mime: handle.mimeType });
+      return { path: handle.path, size: handle.written, mime_type: handle.mimeType };
+    },
+    abortWrite: async () => undefined,
   });
 
   const generateStoragePath = (tenant: string, _base: string, filename: string) =>
@@ -400,6 +407,36 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
     expect(h.comments).toHaveLength(1);
     expect(h.comments[0].content).toContain('voicemail.wav');
     expect(h.comments[0].content).toContain('attachment_too_large:12');
+  });
+
+  it('skips an attachment over the named inbound cap even though the provider max is larger', async () => {
+    // Provider max is 500 MB here; the inbound cap (MAX_ATTACHMENT_BYTES, 100 MiB) is what applies.
+    const { MAX_ATTACHMENT_BYTES } = await import('../inboundEmailArtifactHelpers');
+    const oversize = MAX_ATTACHMENT_BYTES + 1;
+
+    await run({ attachments: [{ ...wavAttachment(), size: oversize }] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('skipped');
+    expect(processed.error_message).toBe(`attachment_too_large:${oversize}`);
+    expect(h.uploads.filter((u) => u.path.endsWith('voicemail.wav'))).toHaveLength(0);
+    expect(h.comments[0].content).toContain('voicemail.wav');
+  });
+
+  it('skips an attachment whose real bytes exceed the cap although its declared size was small', async () => {
+    process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '8';
+
+    // Declared 4 bytes, actually 12: the provider max (8) is the effective cap, checked on the encoded content.
+    await run({ attachments: [{ ...wavAttachment(), size: 4 }] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('skipped');
+    expect(processed.error_message).toBe('attachment_too_large:12');
+    expect(h.uploads.filter((u) => u.path.endsWith('voicemail.wav'))).toHaveLength(0);
   });
 
   it('marks an arbitrary validator failure as failed (not skipped, not too_large) and reports the real error', async () => {

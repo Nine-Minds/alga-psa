@@ -17,8 +17,7 @@ import {
   requirePermission,
   writeRunAudit,
   throwActionError,
-  MAX_ATTACHMENT_BYTES,
-  isAllowedAttachmentMimeType
+  MAX_ATTACHMENT_BYTES
 } from './shared';
 import {
   workflowUserRecipientsSchema,
@@ -304,8 +303,16 @@ export function registerEmailActions(): void {
             throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
           }
           const mimeType = (file.mime_type as string | null) ?? null;
-          if (!isAllowedAttachmentMimeType(mimeType)) {
-            throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment mime_type not allowed' });
+          // The provider's allowlist, the same policy that accepted the file when it was stored.
+          try {
+            const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
+            await validateFileUpload(mimeType ?? 'application/octet-stream', size);
+          } catch (error) {
+            throwActionError(ctx, {
+              category: 'ValidationError',
+              code: 'VALIDATION_ERROR',
+              message: error instanceof Error ? error.message : 'Attachment mime_type not allowed'
+            });
           }
           const content = await storage.download(String(file.storage_path));
           attachments.push({

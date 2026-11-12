@@ -346,21 +346,15 @@ export const attachmentSourceSchema = z.object({
 
 export type AttachmentSource = z.infer<typeof attachmentSourceSchema>;
 
+/**
+ * What a workflow action may attach, in bytes. Deliberately below the provider max: a workflow
+ * runs unattended and an attachment is also re-read into memory when an email action sends it.
+ * Never advertised above the provider's own limit: `effectiveBufferedCap` clamps it at use.
+ */
 export const MAX_ATTACHMENT_BYTES = Number(process.env.WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES ?? 10 * 1024 * 1024);
-export const ALLOWED_ATTACHMENT_MIME_TYPES = new Set<string>([
-  'application/pdf',
-  'text/plain',
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'application/octet-stream'
-]);
 
-export function isAllowedAttachmentMimeType(mimeType: string | null): boolean {
-  if (!mimeType) return true;
-  const normalized = mimeType.split(';')[0]?.trim().toLowerCase() ?? mimeType.toLowerCase();
-  return ALLOWED_ATTACHMENT_MIME_TYPES.has(normalized);
-}
+/** Total time a url attachment may take to download (headers and body), via AbortController. */
+export const ATTACHMENT_URL_FETCH_TIMEOUT_MS = 60_000;
 
 export async function attachDocumentToTicket(
   ctx: ActionContext,
@@ -438,58 +432,71 @@ export async function attachDocumentToTicket(
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Only http(s) URLs are allowed for attachment ingest' });
     }
 
-    let buffer: Buffer;
+    // The policy is the provider's: size ceiling and MIME allowlist, same as manual upload. Narrow
+    // subpaths only (never the barrel): the native workflow-worker runtime cannot resolve it.
+    const { getUploadPolicy } = await import('@alga-psa/storage/config/storage');
+    const { effectiveBufferedCap } = await import('@alga-psa/storage/ingest/bufferedCap');
+    const { ingestToWriteSession } = await import('@alga-psa/storage/ingest/pipeline');
+    const { isUploadContentTypeError, isUploadSizeLimitError } = await import('@alga-psa/storage/ingest/errors');
+    const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage/StorageProviderFactory');
+    const { Readable } = await import('node:stream');
+
+    const policy = await getUploadPolicy();
+    const cap = effectiveBufferedCap(MAX_ATTACHMENT_BYTES, policy.maxFileSize);
+    const filename = input.filename ?? new URL(input.source.url).pathname.split('/').filter(Boolean).pop() ?? 'attachment.bin';
+    const provider = await StorageProviderFactory.createProvider();
+    const storagePath = generateStoragePath(tx.tenantId, '', filename);
+
+    // LEVERAGE: friction safe-fetch-in-shared — server/src/lib/net/safeFetch (SSRF policy, host allowlist, pinned DNS, byte guard) is the fetch the REST url source uses, but shared/ cannot import server/; this is a bare fetch with only a byte guard and timeout. Moving safeFetch into shared/ would give workflows the same policy.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), ATTACHMENT_URL_FETCH_TIMEOUT_MS);
+    let ingested: Awaited<ReturnType<typeof ingestToWriteSession>>;
     let contentType: string | null = null;
     try {
-      const response = await (globalThis as any).fetch(input.source.url);
+      const response = await (globalThis as any).fetch(input.source.url, { signal: abort.signal });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const arrayBuf = await response.arrayBuffer();
-      buffer = Buffer.from(arrayBuf);
       contentType = response.headers.get('content-type');
+      const declaredLength = Number(response.headers.get('content-length'));
+      if (Number.isFinite(declaredLength) && declaredLength > cap) {
+        await response.body?.cancel?.().catch?.(() => undefined);
+        throw Object.assign(new Error('Attachment too large'), { tooLarge: true });
+      }
+      // Streamed into the ingest: the byte guard aborts past the cap, so the body is never held whole.
+      ingested = await ingestToWriteSession(
+        response.body ? Readable.fromWeb(response.body) : Readable.from([]),
+        provider,
+        storagePath,
+        {
+          maxFileSize: cap,
+          declaredMime: contentType?.split(';')[0]?.trim().toLowerCase() || 'application/octet-stream',
+          allowedMimeTypes: policy.allowedMimeTypes,
+        }
+      );
     } catch (error) {
+      if (isUploadSizeLimitError(error) || (error as any)?.tooLarge) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
+      }
+      if (isUploadContentTypeError(error)) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: error.message });
+      }
       throwActionError(ctx, {
         category: 'TransientError',
         code: 'TRANSIENT_FAILURE',
         message: 'Failed to download attachment URL',
-        details: { url: input.source.url, error: error instanceof Error ? error.message : String(error) }
+        details: {
+          url: input.source.url,
+          error: abort.signal.aborted ? 'Timed out' : error instanceof Error ? error.message : String(error)
+        }
       });
+    } finally {
+      clearTimeout(timer);
+      abort.abort();
     }
 
-    if (buffer.length > MAX_ATTACHMENT_BYTES) {
-      throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
-    }
-    // Same shared policy as manual upload (see the file_id branch above).
-    try {
-      const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
-      await validateFileUpload(contentType ?? 'application/octet-stream', buffer.length);
-    } catch (error) {
-      throwActionError(ctx, {
-        category: 'ValidationError',
-        code: 'VALIDATION_ERROR',
-        message: error instanceof Error ? error.message : 'Attachment mime_type not allowed'
-      });
-    }
-
-    const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage/StorageProviderFactory');
-    const provider = await StorageProviderFactory.createProvider();
-    const filename = input.filename ?? new URL(input.source.url).pathname.split('/').filter(Boolean).pop() ?? 'attachment.bin';
-    const storagePath = generateStoragePath(tx.tenantId, '', filename);
-
-    let uploadPath: string;
-    try {
-      const result = await provider.upload(buffer, storagePath, { mime_type: contentType ?? 'application/octet-stream' } as any);
-      uploadPath = (result as any).path ?? storagePath;
-    } catch (error) {
-      throwActionError(ctx, {
-        category: 'TransientError',
-        code: 'TRANSIENT_FAILURE',
-        message: 'Failed to upload attachment to storage',
-        details: { error: error instanceof Error ? error.message : String(error) }
-      });
-    }
-
+    const uploadPath = ingested.upload.path ?? storagePath;
+    const storedMime = ingested.mime;
     const fileId = uuidv4();
     const fileName = storagePath.split('/').pop() ?? filename;
     await db.table('external_files').insert({
@@ -497,8 +504,9 @@ export async function attachDocumentToTicket(
       file_id: fileId,
       file_name: fileName,
       original_name: filename,
-      mime_type: contentType ?? 'application/octet-stream',
-      file_size: buffer.length,
+      mime_type: storedMime,
+      file_size: ingested.size,
+      content_sha256: ingested.sha256,
       storage_path: uploadPath,
       uploaded_by_id: tx.actorUserId,
       created_at: nowIso,
@@ -511,8 +519,8 @@ export async function attachDocumentToTicket(
       file_id: fileId,
       file_name: fileName,
       original_name: filename,
-      mime_type: contentType ?? 'application/octet-stream',
-      file_size: buffer.length,
+      mime_type: storedMime,
+      file_size: ingested.size,
       storage_path: uploadPath
     };
   }
