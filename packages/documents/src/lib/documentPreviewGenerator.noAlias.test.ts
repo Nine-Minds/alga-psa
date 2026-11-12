@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { spawnSync } from 'child_process';
-import { mkdtempSync, rmSync } from 'fs';
+import fs, { mkdtempSync, rmSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import { Readable } from 'stream';
@@ -17,6 +17,8 @@ const DOC = 'doc-1';
 const ORIGINAL = 'original-file-id';
 
 const h = vi.hoisted(() => ({
+  // Read once at module load: keep the pdf2pic timeout test fast.
+  _env: (process.env.DOCUMENT_PREVIEW_PDF_RENDER_TIMEOUT_MS = '50'),
   documents: [] as Array<Record<string, any>>,
   files: [] as Array<Record<string, any>>,
   uploads: [] as Array<{ name: string; options: any; bytes: number }>,
@@ -247,6 +249,28 @@ describe('generatePreviewsForDocument', () => {
     expect(r.preview_file_id).toBeNull();
     expect(h.streamRequests).toBe(0);
     expect(h.published).toHaveLength(0);
+  });
+
+  it('a hung pdf2pic render times out, fails the job (retryable) and removes the temp PDF', async () => {
+    seedDocument('application/pdf');
+    h.source.stream = () => Readable.from([Buffer.from('%PDF-1.4 fake')]);
+    const pdf2pic = await import('pdf2pic');
+    let renderedFrom = '';
+    (pdf2pic.fromPath as any).mockImplementation((p: string) => {
+      renderedFrom = p;
+      return () => new Promise(() => undefined); // Ghostscript never returns
+    });
+    const { generatePreviewsForDocument, PDF_RENDER_TIMEOUT_MS } = await import('./documentPreviewGenerator');
+    expect(PDF_RENDER_TIMEOUT_MS).toBe(50);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(generatePreviewsForDocument(DOC)).rejects.toThrow(/PDF render timed out/);
+
+    expect(h.published.map((e) => e.eventType)).toEqual(['MEDIA_PROCESSING_FAILED']);
+    expect(h.published[0]).toMatchObject({ payload: { retryable: true } });
+    expect(renderedFrom).not.toBe('');
+    expect(fs.existsSync(renderedFrom)).toBe(false);
+    expect(fs.existsSync(path.dirname(renderedFrom))).toBe(false);
   });
 
   const ffmpegAvailable = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0;

@@ -28,6 +28,7 @@ import FolderSelectorModal from './FolderSelectorModal';
 import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, X, FolderInput, Trash2, Printer } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
+import { isAwaitingPreview } from '../lib/documentPreviewPending';
 import toast from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -94,16 +95,6 @@ const isDocumentActionError = (value: unknown): value is ActionMessageError | Ac
 const PREVIEW_POLL_BASE_MS = 2000;
 const PREVIEW_POLL_MAX_MS = 10000;
 const PREVIEW_POLL_MAX_ATTEMPTS = 8;
-const PREVIEW_POLL_WINDOW_MS = 10 * 60 * 1000;
-
-/** A recently saved image/PDF/video whose background preview has not landed yet. */
-function isAwaitingPreview(doc: IDocument): boolean {
-  const mime = doc.mime_type?.toLowerCase() ?? '';
-  if (!(mime.startsWith('image/') || mime.startsWith('video/') || mime === 'application/pdf')) return false;
-  if (!doc.file_id || doc.thumbnail_file_id || doc.preview_generated_at) return false;
-  const changedAt = new Date((doc.updated_at ?? doc.entered_at) as Date).getTime();
-  return Number.isFinite(changedAt) && Date.now() - changedAt < PREVIEW_POLL_WINDOW_MS;
-}
 
 interface DocumentsProps {
   /** Open the standard document editor without showing the document manager. */

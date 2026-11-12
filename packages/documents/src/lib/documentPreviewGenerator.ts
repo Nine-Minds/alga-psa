@@ -87,6 +87,15 @@ const SEEKABLE_URL_TTL_SECONDS = 900;
 const FFMPEG_TIMEOUT_MS = 120_000;
 
 /**
+ * Upper bound on one pdf2pic/Ghostscript page render. A hung Ghostscript would otherwise block the
+ * serial job consumer forever. Override with DOCUMENT_PREVIEW_PDF_RENDER_TIMEOUT_MS.
+ */
+export const PDF_RENDER_TIMEOUT_MS = (() => {
+  const configured = Number(process.env.DOCUMENT_PREVIEW_PDF_RENDER_TIMEOUT_MS);
+  return Number.isFinite(configured) && configured > 0 ? configured : 120_000;
+})();
+
+/**
  * Result from preview generation
  */
 export interface PreviewGenerationResult {
@@ -450,7 +459,18 @@ async function generatePdfPreviews(tenant: string, document: IDocument, declared
       width: 1200,
       height: 1600,
     });
-    const rendered = await converter(1, { responseType: 'buffer' });
+    // pdf2pic cannot be aborted, so the race only frees the job; the timeout is an ordinary Error,
+    // which takes the same failure path (event + rethrow => retry) as any other render failure.
+    let renderTimer: ReturnType<typeof setTimeout> | undefined;
+    const rendered = await Promise.race([
+      converter(1, { responseType: 'buffer' }),
+      new Promise<never>((_resolve, reject) => {
+        renderTimer = setTimeout(
+          () => reject(new Error(`PDF render timed out after ${PDF_RENDER_TIMEOUT_MS}ms`)),
+          PDF_RENDER_TIMEOUT_MS,
+        );
+      }),
+    ]).finally(() => clearTimeout(renderTimer));
     if (!rendered || !rendered.buffer) {
       throw new Error('Failed to render PDF page');
     }
