@@ -4,8 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { Command } from 'cmdk';
 import { Check, ChevronsUpDown, Loader2, Search } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
-import { Button } from './Button';
+import { Button, buttonVariants } from './Button';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { useTranslation } from '../lib/i18n/client';
@@ -32,6 +33,9 @@ type LoadOptionsResult = {
   options: SelectOption[];
   total: number;
 };
+
+type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
+type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 
 // Overlay flip estimates, mirroring the in-memory ClientPicker: the search row, the
 // optional filter row and the optional footer surround the scrollable list.
@@ -78,6 +82,14 @@ interface AsyncSearchableSelectProps {
   selectedIcon?: React.ReactNode;
   /** Trailing visual after the selected value (e.g. tag badges). */
   selectedTrailing?: React.ReactNode;
+  /** Trigger sizes itself to its content instead of filling the row. */
+  fitContent?: boolean;
+  triggerVariant?: ButtonVariant;
+  triggerSize?: ButtonSize;
+  /** Extra classes for the trigger button only (the root `className` also lands there). */
+  triggerClassName?: string;
+  /** `data-automation-type` for the trigger button; the root keeps its own. */
+  triggerDataAutomationType?: string;
 }
 
 export function AsyncSearchableSelect({
@@ -107,6 +119,11 @@ export function AsyncSearchableSelect({
   selectedIcon,
   selectedTrailing,
   triggerId,
+  fitContent = false,
+  triggerVariant = 'outline',
+  triggerSize,
+  triggerClassName,
+  triggerDataAutomationType,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
@@ -495,7 +512,7 @@ export function AsyncSearchableSelect({
        that margin assumes a stacked form, and in a horizontal row it pushes
        the control 16px above the baseline of whatever sits beside it. */
     <div
-      className={cn(label ? 'mb-4' : '', className)}
+      className={cn(label ? 'mb-4' : '', fitContent ? 'inline-block' : '', className)}
       id={id}
       data-automation-type="async-searchable-select"
     >
@@ -505,10 +522,17 @@ export function AsyncSearchableSelect({
         <Button
           ref={triggerRef}
           type="button"
-          variant="outline"
+          variant={triggerVariant}
+          size={triggerSize}
           role="combobox"
           aria-expanded={open}
-          className={cn('w-full justify-between', disabled && 'opacity-50 cursor-not-allowed', className)}
+          className={cn(
+            fitContent ? 'w-auto' : 'w-full',
+            'justify-between',
+            disabled && 'opacity-50 cursor-not-allowed',
+            className,
+            triggerClassName
+          )}
           onClick={() => !disabled && setOpen(!open)}
           onKeyDown={(e) => {
             if (disabled) return;
@@ -520,6 +544,7 @@ export function AsyncSearchableSelect({
           disabled={disabled}
           {...automationIdProps}
           {...(triggerId ? { id: triggerId } : {})}
+          {...(triggerDataAutomationType ? { 'data-automation-type': triggerDataAutomationType } : {})}
         >
           <span className="flex items-center gap-2 min-w-0">
             {value ? selectedIcon : null}

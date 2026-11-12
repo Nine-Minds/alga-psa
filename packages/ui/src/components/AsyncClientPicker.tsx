@@ -2,12 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 import type { IDisplayTag, ITag } from '@alga-psa/types';
 
 import { AsyncSearchableSelect, type SelectOption } from './AsyncSearchableSelect';
 import CustomSelect from './CustomSelect';
-import { Button } from './Button';
+import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
+import type { EntityAvatarProps } from './EntityAvatar';
 import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
@@ -17,6 +19,9 @@ import type { AutomationProps } from '../ui-reflection/types';
 
 export type ClientPickerStatusFilter = 'all' | 'active' | 'inactive';
 export type ClientPickerTypeFilter = 'all' | 'company' | 'individual';
+
+type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
+type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 
 /** Slim row returned by the server-side picker search. */
 export interface PickerClientOption {
@@ -67,6 +72,13 @@ export interface AsyncClientPickerProps {
   className?: string;
   placeholder?: string;
   modal?: boolean;
+  /** Trigger sizes itself to its content instead of filling the row. */
+  fitContent?: boolean;
+  /** Avatar size on the trigger. */
+  size?: EntityAvatarProps['size'];
+  triggerVariant?: ButtonVariant;
+  triggerSize?: ButtonSize;
+  triggerButtonClassName?: string;
   onAddNew?: () => void;
   disabled?: boolean;
   pageSize?: number;
@@ -199,10 +211,16 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   className = '',
   placeholder = 'Select Client',
   modal = true,
+  fitContent = false,
+  size = 'sm',
+  triggerVariant = 'outline',
+  triggerSize,
+  triggerButtonClassName = '',
   onAddNew,
   disabled = false,
   pageSize = DEFAULT_PAGE_SIZE,
   debounceMs,
+  'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const { t } = useTranslation('common');
   const contextSearch = useClientPickerSearch();
@@ -330,7 +348,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
             clientId={selected.client_id}
             clientName={selected.client_name}
             logoUrl={selected.logoUrl ?? null}
-            size="sm"
+            size={size === 'xs' ? 'xs' : 'sm'}
           />
         ) : undefined
       }
@@ -338,6 +356,11 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       emptyMessage="No clients found."
       className={className}
       disabled={disabled}
+      fitContent={fitContent}
+      triggerVariant={triggerVariant}
+      triggerSize={triggerSize}
+      triggerClassName={triggerButtonClassName}
+      triggerDataAutomationType={dataAutomationType}
       dropdownMode={modal ? 'overlay' : 'inline'}
       overlayMinWidth={PANEL_MIN_WIDTH}
       overlayFlip

@@ -301,6 +301,33 @@ describe('ClientPicker', () => {
     expect(fromContext).not.toHaveBeenCalled();
   });
 
+  it('forwards fitContent and the trigger props into async mode', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
+    render(
+      <ClientPicker
+        id="cp7"
+        searchClients={searchClients}
+        onSelect={vi.fn()}
+        selectedClientId={null}
+        fitContent
+        triggerVariant="ghost"
+        triggerSize="sm"
+        triggerButtonClassName="pl-0 text-left"
+      />
+    );
+    const trigger = screen.getByRole('combobox');
+    expect(trigger.className).toContain('w-auto');
+    expect(trigger.className).not.toContain('w-full');
+    expect(trigger.className).toContain('pl-0');
+    expect(trigger.className).toContain('text-left');
+    // size="sm", and variant="ghost" instead of the outline default.
+    expect(trigger.className).toContain('h-9');
+    expect(trigger.className).not.toContain('border-[rgb(var(--color-border-400))]');
+    expect(trigger.getAttribute('data-automation-type')).toBe('picker');
+    // fitContent shrinks the wrapper too, otherwise the row still reserves full width.
+    expect(document.getElementById('cp7')?.className).toContain('inline-block');
+  });
+
   it('logs an error and renders an empty in-memory picker when no searcher is available', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<ClientPicker id="cp6" onSelect={vi.fn()} selectedClientId={null} />);
