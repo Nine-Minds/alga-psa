@@ -570,7 +570,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
         <div
           id={`${id}-action-error`}
           role="alert"
-          className="rounded-md border border-[rgb(var(--color-accent-300))] bg-[rgb(var(--color-accent-50))] p-3 text-sm text-[rgb(var(--color-accent-700))]"
+          className="rounded-md border border-[rgb(var(--color-accent-300))] bg-[rgb(var(--color-accent-50))] p-3 text-sm text-[rgb(var(--color-accent-900))]"
         >
           {actionError}
         </div>

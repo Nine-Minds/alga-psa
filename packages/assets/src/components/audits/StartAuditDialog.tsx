@@ -261,7 +261,7 @@ export function StartAuditDialog({
             <div
               id={`${id}-error`}
               role="alert"
-              className="rounded-md border border-[rgb(var(--color-accent-300))] bg-[rgb(var(--color-accent-50))] p-2 text-sm text-[rgb(var(--color-accent-700))]"
+              className="rounded-md border border-[rgb(var(--color-accent-300))] bg-[rgb(var(--color-accent-50))] p-2 text-sm text-[rgb(var(--color-accent-900))]"
             >
               {error}
             </div>

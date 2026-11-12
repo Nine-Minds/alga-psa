@@ -322,7 +322,7 @@ export function AssetAuditsList({ clientId, embedded = false, id = 'asset-audits
         <div
           id={`${id}-error`}
           role="alert"
-          className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-accent-300))] bg-[rgb(var(--color-accent-50))] p-3 text-sm text-[rgb(var(--color-accent-700))]"
+          className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-accent-300))] bg-[rgb(var(--color-accent-50))] p-3 text-sm text-[rgb(var(--color-accent-900))]"
         >
           <span>{auditErrorText(t, error)}</span>
           <Button id={`${id}-retry-button`} variant="outline" size="sm" onClick={() => void mutate()}>
