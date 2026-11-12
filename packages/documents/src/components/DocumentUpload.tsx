@@ -89,7 +89,7 @@ export default function DocumentUpload({
     const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
 
     // Upload queue state: per-file status and committed bytes live in the hook.
-    const { items: uploadQueue, uploadBatch, cancel: cancelUpload, clear: clearUploads } = useDocumentUploads();
+    const { items: uploadQueue, uploadBatch, retry: retryUpload, cancel: cancelUpload, clear: clearUploads } = useDocumentUploads();
     const currentFileIndex = Math.max(0, uploadQueue.findIndex(item => item.status === 'uploading'));
     // The destination of the last batch, so "Try again" resends one file to the same folder.
     const lastFolderRef = useRef<string | null | undefined>(undefined);
@@ -301,7 +301,45 @@ export default function DocumentUpload({
         }
     };
 
-    const retryFile = (file: File) => startBulkUpload([file], lastFolderRef.current);
+    /** Retries one failed row in place; the other rows keep their outcomes. */
+    const retryFile = async (index: number) => {
+        if (isUploadingRef.current) {
+            announceUploadInProgress();
+            return;
+        }
+        isUploadingRef.current = true;
+        setIsUploading(true);
+        const callbackErrors = { onUploadComplete: false };
+        let outcome: UploadOutcome | null = null;
+        try {
+            outcome = await retryUpload(index, currentTarget(), async (document) => {
+                try {
+                    await onUploadComplete({ success: true, document: document as unknown as IDocument });
+                } catch (callbackError) {
+                    console.error('Document uploaded but onUploadComplete handler failed:', callbackError);
+                    callbackErrors.onUploadComplete = true;
+                }
+            });
+        } finally {
+            setIsUploading(false);
+            setIsFinalizing(true);
+        }
+        try {
+            if (callbackErrors.onUploadComplete) {
+                toast.error(t('documents.uploadSection.refreshFailed', 'Your files were uploaded, but the document list could not refresh. Reload the page to see them.'));
+            }
+            if (outcome?.status === 'success' && onAllUploadsComplete) {
+                const succeeded = uploadQueue.filter((item, i) => i !== index && item.status === 'success').length + 1;
+                await onAllUploadsComplete({ total: uploadQueue.length, succeeded, failed: uploadQueue.length - succeeded });
+            }
+        } catch (callbackError) {
+            console.error('Retry completed but onAllUploadsComplete handler failed:', callbackError);
+            toast.error(t('documents.uploadSection.refreshFailed', 'Your files were uploaded, but the document list could not refresh. Reload the page to see them.'));
+        } finally {
+            setIsFinalizing(false);
+            isUploadingRef.current = false;
+        }
+    };
 
     const succeededCount = uploadQueue.filter(item => item.status === 'success').length;
 
@@ -518,7 +556,7 @@ export default function DocumentUpload({
                                                                 variant="outline"
                                                                 size="sm"
                                                                 disabled={isBusy}
-                                                                onClick={() => retryFile(item.file)}
+                                                                onClick={() => retryFile(index)}
                                                             >
                                                                 <RotateCcw className="w-3 h-3 mr-1" aria-hidden="true" />
                                                                 {t('documents.uploadSection.tryAgain', 'Try again')}

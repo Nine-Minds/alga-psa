@@ -36,6 +36,8 @@ export function useDocumentUploads() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const controllers = useRef(new Map<number, AbortController>());
   const cancelledIndexes = useRef(new Set<number>());
+  const itemsRef = useRef<UploadItem[]>([]);
+  itemsRef.current = items;
 
   useEffect(() => {
     const running = controllers.current;
@@ -60,6 +62,49 @@ export function useDocumentUploads() {
     }
   }, []);
 
+  /** Uploads one row to its terminal state; the other rows are not touched. */
+  const runRow = useCallback(async (
+    index: number,
+    file: File,
+    target: UploadTarget,
+    onFileUploaded?: (document: UploadedDocument) => Promise<void>,
+  ): Promise<UploadOutcome> => {
+    const controller = new AbortController();
+    controllers.current.set(index, controller);
+    patch(index, { status: 'uploading', committed: 0, failure: undefined, document: undefined });
+    let outcome: UploadOutcome;
+    try {
+      const document = await uploadFileInSession({
+        file,
+        target,
+        signal: controller.signal,
+        onProgress: ({ committed }) => patch(index, { committed }),
+      });
+      outcome = { file, status: 'success', document };
+    } catch (error) {
+      if (error instanceof UploadSessionClientError) {
+        outcome = error.reason === 'cancelled'
+          ? { file, status: 'cancelled' }
+          : { file, status: 'error', failure: { reason: error.reason, message: error.message, maxFileSize: error.details.maxFileSize } };
+      } else {
+        console.error('Unexpected upload failure:', error);
+        outcome = { file, status: 'error', failure: { reason: 'unknown', message: error instanceof Error ? error.message : String(error) } };
+      }
+    } finally {
+      controllers.current.delete(index);
+    }
+    patch(index, {
+      status: outcome.status,
+      failure: outcome.failure,
+      document: outcome.document,
+      ...(outcome.status === 'success' ? { committed: file.size } : {}),
+    });
+    if (outcome.status === 'success' && outcome.document) {
+      await onFileUploaded?.(outcome.document);
+    }
+    return outcome;
+  }, [patch]);
+
   /** Replaces the previous batch and resolves with one terminal outcome per file. */
   const uploadBatch = useCallback(async (
     files: File[],
@@ -79,43 +124,22 @@ export function useDocumentUploads() {
         patch(index, { status: 'cancelled' });
         continue;
       }
-      const controller = new AbortController();
-      controllers.current.set(index, controller);
-      patch(index, { status: 'uploading' });
-      let outcome: UploadOutcome;
-      try {
-        const document = await uploadFileInSession({
-          file,
-          target,
-          signal: controller.signal,
-          onProgress: ({ committed }) => patch(index, { committed }),
-        });
-        outcome = { file, status: 'success', document };
-      } catch (error) {
-        if (error instanceof UploadSessionClientError) {
-          outcome = error.reason === 'cancelled'
-            ? { file, status: 'cancelled' }
-            : { file, status: 'error', failure: { reason: error.reason, message: error.message, maxFileSize: error.details.maxFileSize } };
-        } else {
-          console.error('Unexpected upload failure:', error);
-          outcome = { file, status: 'error', failure: { reason: 'unknown', message: error instanceof Error ? error.message : String(error) } };
-        }
-      } finally {
-        controllers.current.delete(index);
-      }
-      patch(index, {
-        status: outcome.status,
-        failure: outcome.failure,
-        document: outcome.document,
-        ...(outcome.status === 'success' ? { committed: file.size } : {}),
-      });
-      outcomes.push(outcome);
-      if (outcome.status === 'success' && outcome.document) {
-        await onFileUploaded?.(outcome.document);
-      }
+      outcomes.push(await runRow(index, file, target, onFileUploaded));
     }
     return outcomes;
-  }, [patch]);
+  }, [patch, runRow]);
 
-  return { items, uploadBatch, cancel, clear };
+  /** Starts one failed row over in place: its session is new, every other row keeps its outcome. */
+  const retry = useCallback(async (
+    index: number,
+    target: UploadTarget,
+    onFileUploaded?: (document: UploadedDocument) => Promise<void>,
+  ): Promise<UploadOutcome | null> => {
+    const item = itemsRef.current[index];
+    if (!item || item.status !== 'error') return null;
+    cancelledIndexes.current.delete(index);
+    return runRow(index, item.file, target, onFileUploaded);
+  }, [runRow]);
+
+  return { items, uploadBatch, retry, cancel, clear };
 }

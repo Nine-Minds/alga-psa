@@ -124,30 +124,29 @@ test.describe('Chunked document upload on a ticket', () => {
   test('names the file size and the limit the API reports when a file is over it', async () => {
     test.setTimeout(120_000);
     const { page } = context;
-    const limit = 5 * 1024 * MIB; // 5 GiB, shown as "5 GB"
+    const limit = 1 * MIB;
     const fileName = `too-big-${Date.now()}.bin`;
-    const sent: string[] = [];
+    const followUps: string[] = [];
 
-    // The refusal comes from create, before any chunk goes out; the route stands in for a provider limit below the file size.
+    // The API refuses at create, before any chunk goes out. The mocked limit is below the 2 MiB file.
     await page.route('**/api/documents/uploads', async (route) => {
       if (route.request().method() !== 'POST') return route.continue();
-      sent.push('POST');
       await route.fulfill({
         status: 413,
         contentType: 'application/json',
         body: JSON.stringify({ error: { code: 'UPLOAD_TOO_LARGE', message: 'File size exceeds limit', maxFileSize: limit } }),
       });
     });
-    await page.route('**/api/documents/uploads/*', async (route) => {
-      sent.push(route.request().method());
-      await route.continue();
+    // Any request on a session URL (a chunk PUT, HEAD, complete or DELETE) means bytes were sent.
+    page.on('request', (request) => {
+      if (/\/api\/documents\/uploads\/[^/?]+/.test(request.url())) followUps.push(`${request.method()} ${request.url()}`);
     });
 
     await openUploader(page);
-    await chooseFile(page, { name: fileName, mimeType: 'application/octet-stream', buffer: Buffer.alloc(1 * MIB) });
+    await chooseFile(page, { name: fileName, mimeType: 'application/octet-stream', buffer: Buffer.alloc(2 * MIB) });
 
-    await expect(page.getByText('This file is 1 MB. The current limit is 5 GB per file.')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('This file is 2 MB. The current limit is 1 MB per file.')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('Failed to upload file')).toHaveCount(0);
-    expect(sent).toEqual(['POST']);
+    expect(followUps).toEqual([]); // no PUT, no complete
   });
 });

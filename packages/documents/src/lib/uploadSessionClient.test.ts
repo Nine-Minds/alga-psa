@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   BACKOFF_BASE_MS,
+  BACKOFF_CAP_MS,
+  RETRY_WINDOW_MS,
   UploadSessionClientError,
   reasonForApiError,
   uploadFileInSession,
@@ -131,7 +133,9 @@ describe('uploadFileInSession', () => {
       `bytes ${CHUNK}-${2 * CHUNK - 1}/${size}`, // resent from the committed offset
       `bytes ${2 * CHUNK}-${size - 1}/${size}`,
     ]);
-    expect(sleep).toHaveBeenCalledWith(BACKOFF_BASE_MS, undefined);
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(sleep.mock.calls[0][0]).toBeGreaterThanOrEqual(BACKOFF_BASE_MS * 0.75);
+    expect(sleep.mock.calls[0][0]).toBeLessThanOrEqual(BACKOFF_BASE_MS);
   });
 
   it('skips a chunk the server committed after the client lost the response', async () => {
@@ -175,33 +179,122 @@ describe('uploadFileInSession', () => {
     expect(server.calls.map((c) => c.method)).toEqual(['POST', 'PUT', 'HEAD', 'PUT', 'POST']);
   });
 
-  it('retries a 5xx chunk, backing off exponentially, and gives up as a network failure after three retries', async () => {
+  it('retries a 5xx chunk with capped, jittered exponential backoff, and gives up as a network failure when the window runs out', async () => {
     const server = fakeServer({ intercept: ({ method }) => (method === 'PUT' ? apiError(503, 'UNAVAILABLE') : undefined) });
     const sleep = noSleep();
 
-    const failure = await uploadFileInSession({ file: fileOf(MIB), transport: { fetch: server.fetchFn, sleep } })
+    const failure = await uploadFileInSession({ file: fileOf(MIB), transport: { fetch: server.fetchFn, sleep, random: () => 1 } })
       .catch((e) => e as UploadSessionClientError);
 
     expect(failure).toBeInstanceOf(UploadSessionClientError);
     expect(failure.reason).toBe('network');
-    expect(puts(server.calls)).toHaveLength(4); // the attempt plus three retries
-    expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([BACKOFF_BASE_MS, BACKOFF_BASE_MS * 2, BACKOFF_BASE_MS * 4]);
+    const waits = sleep.mock.calls.map(([ms]) => ms);
+    expect(waits.slice(0, 5)).toEqual([BACKOFF_BASE_MS, 2000, 4000, 8000, BACKOFF_CAP_MS]);
+    expect(Math.max(...waits)).toBe(BACKOFF_CAP_MS);
+    // The window is at least a minute even with the most jitter (75 %).
+    const minimumWindow = waits.reduce((a, b) => a + b, 0) * 0.75;
+    expect(minimumWindow).toBeGreaterThanOrEqual(60_000);
+    expect(waits.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(RETRY_WINDOW_MS);
+    expect(puts(server.calls)).toHaveLength(waits.length + 1);
     // The session is released rather than left active.
     expect(server.calls.at(-1)).toMatchObject({ method: 'DELETE', url: SESSION_URL });
   });
 
-  it('spends a retry when the offset check itself fails, and still stops after three', async () => {
+  it('applies jitter between 75 % and 100 % of the scheduled wait', async () => {
+    const server = fakeServer({ intercept: ({ method }) => (method === 'PUT' ? apiError(503, 'UNAVAILABLE') : undefined) });
+    const sleep = noSleep();
+    await uploadFileInSession({ file: fileOf(MIB), transport: { fetch: server.fetchFn, sleep, random: () => 0 } }).catch(() => undefined);
+    expect(sleep.mock.calls[0][0]).toBe(BACKOFF_BASE_MS * 0.75);
+  });
+
+  it('rides out an outage far longer than the old 3.5 s and resumes from the HEAD offset', async () => {
+    let outageAttempts = 6; // six failed requests with backoff in between: well over a 3.5 s outage
+    const server = fakeServer({
+      intercept: ({ method }, state) => {
+        if (state.committed >= CHUNK && outageAttempts > 0 && (method === 'PUT' || method === 'HEAD')) {
+          outageAttempts -= 1;
+          throw new TypeError('network down');
+        }
+      },
+    });
+    const sleep = noSleep();
+    const size = 3 * CHUNK;
+
+    await uploadFileInSession({ file: fileOf(size), transport: { fetch: server.fetchFn, sleep, random: () => 1 } });
+
+    const waited = sleep.mock.calls.reduce((total, [ms]) => total + ms, 0);
+    expect(waited).toBeGreaterThan(3500);
+    expect(puts(server.calls).filter((r) => r === `bytes ${CHUNK}-${2 * CHUNK - 1}/${size}`).length).toBeGreaterThan(1);
+    expect(server.state.committed).toBe(size);
+    expect(server.calls.at(-1)).toMatchObject({ url: `${SESSION_URL}/complete` });
+  });
+
+  it('waits for the browser to come back online before the next HEAD, without spending retries', async () => {
+    let online = false;
+    let release: () => void = () => {};
+    const waitForOnline = vi.fn(async () => {
+      if (online) return false;
+      await new Promise<void>((resolve) => { release = resolve; });
+      return true;
+    });
+    let dropped = false;
+    const server = fakeServer({
+      intercept: ({ method }, state) => {
+        if (method === 'PUT' && !dropped && state.committed === CHUNK) {
+          dropped = true;
+          throw new TypeError('offline');
+        }
+      },
+    });
+    const sleep = noSleep();
+    const size = 3 * CHUNK;
+
+    const upload = uploadFileInSession({ file: fileOf(size), transport: { fetch: server.fetchFn, sleep, waitForOnline } });
+    await vi.waitFor(() => expect(waitForOnline).toHaveBeenCalled());
+    // Parked offline: no HEAD yet, and the upload is not finished.
+    expect(server.calls.some((c) => c.method === 'HEAD')).toBe(false);
+    online = true;
+    release();
+    await upload;
+
+    expect(sleep).not.toHaveBeenCalled(); // offline time is neither backoff nor a retry
+    expect(server.calls.map((c) => c.method).slice(0, 5)).toEqual(['POST', 'PUT', 'PUT', 'HEAD', 'PUT']);
+    expect(server.state.committed).toBe(size);
+  });
+
+  it('sends DELETE when cancelled while waiting offline', async () => {
+    const controller = new AbortController();
+    const waitForOnline = vi.fn((signal?: AbortSignal) => new Promise<boolean>((_resolve, reject) => {
+      signal?.addEventListener('abort', () => reject(new UploadSessionClientError('cancelled', 'Upload cancelled')));
+      queueMicrotask(() => controller.abort());
+    }));
+    const server = fakeServer({ intercept: ({ method }) => { if (method === 'PUT') throw new TypeError('offline'); } });
+
+    const failure = await uploadFileInSession({
+      file: fileOf(MIB),
+      signal: controller.signal,
+      transport: { fetch: server.fetchFn, sleep: noSleep(), waitForOnline },
+    }).catch((e) => e as UploadSessionClientError);
+
+    expect(failure.reason).toBe('cancelled');
+    expect(server.calls.at(-1)).toMatchObject({ method: 'DELETE', url: SESSION_URL });
+    expect(server.calls.some((c) => c.method === 'HEAD')).toBe(false);
+  });
+
+  it('spends a retry when the offset check itself fails, and still runs out as a network failure', async () => {
     const server = fakeServer({
       intercept: ({ method }) => {
         if (method === 'PUT') throw new TypeError('offline');
         if (method === 'HEAD') throw new TypeError('offline');
       },
     });
-    const failure = await uploadFileInSession({ file: fileOf(MIB), transport: { fetch: server.fetchFn, sleep: noSleep() } })
+    const sleep = noSleep();
+    const failure = await uploadFileInSession({ file: fileOf(MIB), transport: { fetch: server.fetchFn, sleep } })
       .catch((e) => e as UploadSessionClientError);
     expect(failure.reason).toBe('network');
     expect(server.calls.filter((c) => c.method === 'PUT')).toHaveLength(1);
-    expect(server.calls.filter((c) => c.method === 'HEAD')).toHaveLength(3);
+    expect(server.calls.filter((c) => c.method === 'HEAD').length).toBe(sleep.mock.calls.length);
+    expect(sleep.mock.calls.length).toBeGreaterThanOrEqual(8);
   });
 
   it('treats a 410 on the offset check as terminal and does not send a DELETE', async () => {

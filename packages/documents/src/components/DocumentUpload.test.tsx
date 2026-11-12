@@ -175,6 +175,34 @@ describe('DocumentUpload outcome feedback', () => {
     expect(uploadMock.mock.calls[1][0].target.folderPath).toBe('/Clients/Acme');
   });
 
+  it('retries one failed row in place and keeps the other rows outcomes', async () => {
+    uploadMock
+      .mockRejectedValueOnce(refuse('network', 'dropped'))
+      .mockRejectedValueOnce(refuse('permissionDenied', 'denied'))
+      .mockResolvedValueOnce(makeDocument('c.pdf'))
+      .mockResolvedValueOnce(makeDocument('a.pdf'));
+    const { input, props } = renderUpload();
+
+    selectFiles(input, [makeFile('a.pdf'), makeFile('b.pdf'), makeFile('c.pdf')]);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument());
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
+
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(screen.getAllByText('Uploaded')).toHaveLength(2));
+    // All three rows are still listed; b keeps its own error.
+    expect(screen.getByText('a.pdf')).toBeInTheDocument();
+    expect(screen.getByText('b.pdf')).toBeInTheDocument();
+    expect(screen.getByText('c.pdf')).toBeInTheDocument();
+    expect(screen.getByText(/don't have permission/)).toBeInTheDocument();
+    expect(screen.queryByText(/connection was interrupted/)).not.toBeInTheDocument();
+    expect(uploadMock.mock.calls[3][0].file.name).toBe('a.pdf');
+    await waitFor(() =>
+      expect(props.onAllUploadsComplete).toHaveBeenLastCalledWith({ total: 3, succeeded: 2, failed: 1 }),
+    );
+  });
+
   it('keeps the generic message for a failure with no known cause', async () => {
     uploadMock.mockRejectedValueOnce(new Error('socket hang up at internal stack line 42'));
     const { input } = renderUpload();

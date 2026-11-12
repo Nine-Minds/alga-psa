@@ -12,9 +12,17 @@
 
 export const UPLOADS_PATH = '/api/documents/uploads';
 
-/** Retries per chunk (and per complete) before the upload is reported as interrupted. */
-export const MAX_RETRIES = 3;
-export const BACKOFF_BASE_MS = 500;
+/**
+ * Retry policy for a failed chunk (and for complete): capped exponential backoff with jitter,
+ * 1 s, 2 s, 4 s, 8 s, then 15 s, until the scheduled waits add up to `RETRY_WINDOW_MS`. Jitter
+ * scales each wait to 75-100 %, so an outage of about a minute is always ridden out. Time spent
+ * offline (see `UploadTransport.waitForOnline`) never uses up the window.
+ */
+export const BACKOFF_BASE_MS = 1000;
+export const BACKOFF_CAP_MS = 15_000;
+export const RETRY_WINDOW_MS = 90_000;
+
+const scheduledBackoffMs = (attempt: number) => Math.min(BACKOFF_CAP_MS, BACKOFF_BASE_MS * 2 ** (attempt - 1));
 
 /** Why an upload stopped; each value has its own message in the UI. */
 export type UploadFailureReason =
@@ -91,6 +99,31 @@ export interface UploadProgress {
 export interface UploadTransport {
   fetch: typeof fetch;
   sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Jitter factor in [0, 1). */
+  random: () => number;
+  /**
+   * Resolves `false` at once when the browser is online. When it is offline, waits for it to come
+   * back and resolves `true`. Rejects as cancelled if `signal` aborts meanwhile.
+   */
+  waitForOnline: (signal?: AbortSignal) => Promise<boolean>;
+}
+
+async function waitForBrowserOnline(signal?: AbortSignal): Promise<boolean> {
+  if (typeof navigator === 'undefined' || navigator.onLine !== false || typeof window === 'undefined') return false;
+  await new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(cancelled());
+    const onOnline = () => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    };
+    const onAbort = () => {
+      window.removeEventListener('online', onOnline);
+      reject(cancelled());
+    };
+    window.addEventListener('online', onOnline, { once: true });
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+  return true;
 }
 
 function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -159,6 +192,8 @@ export async function uploadFileInSession(input: UploadFileInput): Promise<Uploa
   const http: UploadTransport = {
     fetch: input.transport?.fetch ?? ((url, init) => fetch(url, init)),
     sleep: input.transport?.sleep ?? abortableSleep,
+    random: input.transport?.random ?? Math.random,
+    waitForOnline: input.transport?.waitForOnline ?? waitForBrowserOnline,
   };
   const total = file.size;
 
@@ -208,19 +243,27 @@ export async function uploadFileInSession(input: UploadFileInput): Promise<Uploa
   };
 
   const withRetries = async <T>(operation: () => Promise<T>, beforeRetry?: () => Promise<void>): Promise<T> => {
-    let failures = 0;
+    let attempts = 0;
+    let scheduled = 0;
     for (;;) {
       try {
         return await operation();
       } catch (error) {
         if (!(error instanceof RetryableFailure)) throw error;
-        // Each failed attempt, including a failed offset check, spends one retry.
+        // Every failure, including a failed offset check, is followed by a wait and a HEAD.
         for (;;) {
-          failures += 1;
-          if (failures > MAX_RETRIES) {
-            throw new UploadSessionClientError('network', error instanceof Error ? error.message : 'Upload interrupted');
+          // A failure while offline says nothing about the server: wait for the network, and
+          // neither count it nor back off.
+          const wasOffline = await http.waitForOnline(signal);
+          if (!wasOffline) {
+            attempts += 1;
+            const wait = scheduledBackoffMs(attempts);
+            scheduled += wait;
+            if (scheduled > RETRY_WINDOW_MS) {
+              throw new UploadSessionClientError('network', error instanceof Error ? error.message : 'Upload interrupted');
+            }
+            await http.sleep(Math.round(wait * (0.75 + 0.25 * http.random())), signal);
           }
-          await http.sleep(BACKOFF_BASE_MS * 2 ** (failures - 1), signal);
           try {
             await beforeRetry?.();
             break;
