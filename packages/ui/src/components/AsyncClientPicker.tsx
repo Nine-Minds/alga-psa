@@ -81,6 +81,11 @@ const missingSearcher: ClientPickerSearchFn = async () => {
   );
 };
 
+// The picker panel is z-[99999]; a select's option list defaults to z-[10001] and would open underneath it.
+const ABOVE_PICKER_PANEL = { content: 'z-[100000]' };
+// Room for the status, type and tag filters side by side under a narrow trigger.
+const PANEL_MIN_WIDTH = 300;
+
 function PickerFilters({
   id,
   status,
@@ -141,6 +146,7 @@ function PickerFilters({
         options={statusOptions}
         placeholder="Filter"
         className="flex-1 min-w-0"
+        customStyles={ABOVE_PICKER_PANEL}
       />
       <CustomSelect
         id={`${id}-type-filter`}
@@ -149,6 +155,7 @@ function PickerFilters({
         options={typeOptions}
         placeholder="Type"
         className="flex-1 min-w-0"
+        customStyles={ABOVE_PICKER_PANEL}
       />
       {tagOptions.length > 0 && (
         <TagFilter
@@ -332,6 +339,8 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       className={className}
       disabled={disabled}
       dropdownMode={modal ? 'overlay' : 'inline'}
+      overlayMinWidth={PANEL_MIN_WIDTH}
+      overlayFlip
       headerContent={
         <PickerFilters
           id={id}

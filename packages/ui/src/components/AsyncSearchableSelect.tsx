@@ -33,6 +33,14 @@ type LoadOptionsResult = {
   total: number;
 };
 
+// Overlay flip estimates, mirroring the in-memory ClientPicker: the search row, the
+// optional filter row and the optional footer surround the scrollable list.
+const SEARCH_ROW_HEIGHT = 53;
+const HEADER_ROW_HEIGHT = 56;
+const FOOTER_ROW_HEIGHT = 49;
+const MIN_LIST_HEIGHT = 150;
+const MAX_LIST_HEIGHT = 320;
+
 interface AsyncSearchableSelectProps {
   value: string;
   onChange: (value: string, option?: SelectOption) => void;
@@ -47,6 +55,13 @@ interface AsyncSearchableSelectProps {
   required?: boolean;
   emptyMessage?: string;
   dropdownMode?: 'inline' | 'overlay';
+  /** Overlay mode only: the panel is at least this wide, even under a narrower trigger. */
+  overlayMinWidth?: number;
+  /**
+   * Overlay mode only: open above the trigger when there is no room below, and cap the list at
+   * the space that is actually free (overriding `maxListHeight`).
+   */
+  overlayFlip?: boolean;
   searchPlaceholder?: string;
   autoFocusSearch?: boolean;
   maxListHeight?: string;
@@ -79,6 +94,8 @@ export function AsyncSearchableSelect({
   required = false,
   emptyMessage,
   dropdownMode = 'inline',
+  overlayMinWidth,
+  overlayFlip = false,
   searchPlaceholder,
   autoFocusSearch = true,
   maxListHeight = '15rem',
@@ -107,7 +124,13 @@ export function AsyncSearchableSelect({
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [overlayPosition, setOverlayPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    listMaxHeight?: number;
+  } | null>(null);
 
   const selectedOption = useMemo(() => {
     if (!value) return undefined;
@@ -147,27 +170,64 @@ export function AsyncSearchableSelect({
     return dialog ?? document.body;
   }, [portalContainer]);
 
+  // Booleans, not the nodes: a new header/footer element on every render would make
+  // updateOverlayPosition unstable and the reposition effect would loop.
+  const hasHeaderContent = !!headerContent;
+  const hasFooterContent = !!footerContent;
+
   const updateOverlayPosition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const container = getResolvedPortalContainer();
+    const bounds =
+      !container || container === document.body
+        ? { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight }
+        : container.getBoundingClientRect();
 
-    if (!container || container === document.body) {
+    // LEVERAGE: pattern dropdown-overlay-position — ContactPicker and the in-memory ClientPicker hand-roll the same widen-and-clamp math.
+    const margin = 16;
+    const width = Math.max(rect.width, Math.min(overlayMinWidth ?? 0, bounds.width - margin * 2));
+    let left = rect.left - bounds.left;
+    // A panel wider than its trigger right-aligns to it rather than running off the edge.
+    if (width > rect.width && left + width > bounds.width - margin) {
+      left = Math.max(margin, rect.right - bounds.left - width);
+    }
+
+    if (!overlayFlip) {
       setOverlayPosition({
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
+        top: rect.bottom - bounds.top + 4,
+        left,
+        width,
       });
       return;
     }
 
-    const containerRect = container.getBoundingClientRect();
+    // Space is measured against the viewport; coordinates stay relative to the portal container.
+    const chromeHeight =
+      SEARCH_ROW_HEIGHT + (hasHeaderContent ? HEADER_ROW_HEIGHT : 0) + (hasFooterContent ? FOOTER_ROW_HEIGHT : 0);
+    const spaceBelow = window.innerHeight - rect.bottom - 4 - margin;
+    const spaceAbove = rect.top - 4 - margin;
+    const showAbove = spaceBelow < chromeHeight + MIN_LIST_HEIGHT && spaceAbove > spaceBelow;
+    const available = (showAbove ? spaceAbove : spaceBelow) - chromeHeight;
+
     setOverlayPosition({
-      top: rect.bottom - containerRect.top + 4,
-      left: rect.left - containerRect.left,
-      width: rect.width,
+      top: showAbove ? undefined : rect.bottom - bounds.top + 4,
+      bottom: showAbove ? bounds.top + bounds.height - rect.top + 4 : undefined,
+      left,
+      width,
+      listMaxHeight: Math.max(MIN_LIST_HEIGHT, Math.min(MAX_LIST_HEIGHT, available)),
     });
-  }, [getResolvedPortalContainer]);
+  }, [getResolvedPortalContainer, overlayMinWidth, overlayFlip, hasHeaderContent, hasFooterContent]);
+
+  // Closing must not strand the keyboard on a removed panel, so focus goes back to the
+  // trigger - but only when it would otherwise be lost, never stealing it from whatever
+  // the user just clicked outside.
+  const closeAndRestoreFocus = useCallback(() => {
+    const active = document.activeElement;
+    const focusWasInPanel = !active || active === document.body || !!contentRef.current?.contains(active);
+    setOpen(false);
+    if (focusWasInPanel) triggerRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!open || disabled || dropdownMode !== 'overlay') return;
@@ -201,13 +261,13 @@ export function AsyncSearchableSelect({
         contentRef.current &&
         !contentRef.current.contains(target)
       ) {
-        setOpen(false);
+        closeAndRestoreFocus();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open, disabled]);
+  }, [open, disabled, closeAndRestoreFocus]);
 
   // Escape belongs to the top-most layer: while this dropdown is open it must
   // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
@@ -229,6 +289,11 @@ export function AsyncSearchableSelect({
     window.addEventListener('keydown', handleEscape, true);
     return () => window.removeEventListener('keydown', handleEscape, true);
   }, [open, disabled]);
+
+  const resolvedMaxListHeight =
+    dropdownMode === 'overlay' && overlayPosition?.listMaxHeight != null
+      ? `${overlayPosition.listMaxHeight}px`
+      : maxListHeight;
 
   useEffect(() => {
     if (open) return;
@@ -336,7 +401,7 @@ export function AsyncSearchableSelect({
 
         {headerContent}
 
-        <Command.List ref={listRef} className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: maxListHeight }}>
+        <Command.List ref={listRef} className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: resolvedMaxListHeight }}>
           {loadError ? (
             <div className="py-6 text-center text-sm text-red-600">{loadError}</div>
           ) : options.length > 0 ? (
@@ -350,7 +415,7 @@ export function AsyncSearchableSelect({
                   onSelect={() => {
                     if (option.disabled) return;
                     onChange(option.value, option);
-                    setOpen(false);
+                    closeAndRestoreFocus();
                   }}
                   aria-disabled={option.disabled || undefined}
                   className={cn(
@@ -483,6 +548,7 @@ export function AsyncSearchableSelect({
                 style={{
                   position: container === document.body ? 'fixed' : 'absolute',
                   top: overlayPosition.top,
+                  bottom: overlayPosition.bottom,
                   left: overlayPosition.left,
                   width: overlayPosition.width,
                   marginTop: 0,

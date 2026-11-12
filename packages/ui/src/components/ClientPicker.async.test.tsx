@@ -12,8 +12,13 @@ vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
   useAutomationIdAndRegister: (info: any) => ({ automationIdProps: { id: info.id }, updateMetadata: vi.fn() }),
 }));
 vi.mock('./CustomSelect', () => ({
-  default: ({ id, value, onValueChange, options }: any) => (
-    <select data-testid={id} value={value} onChange={(e) => onValueChange(e.target.value)}>
+  default: ({ id, value, onValueChange, options, customStyles }: any) => (
+    <select
+      data-testid={id}
+      data-content-class={customStyles?.content ?? ''}
+      value={value}
+      onChange={(e) => onValueChange(e.target.value)}
+    >
       {options.map((o: any) => (
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
@@ -164,6 +169,22 @@ describe('AsyncClientPicker', () => {
     await waitFor(() => expect(searchClients).toHaveBeenCalledTimes(4));
     expect(searchClients.mock.calls[3][0]).toMatchObject({ status: 'inactive', clientType: 'individual', tags: ['vip'], page: 0 });
     expect(fetchClientTags).not.toHaveBeenCalled();
+  });
+
+  it('opens a panel wider than a narrow trigger, with filter lists stacked above it', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(2), total: 2 }));
+    renderPicker({ searchClients });
+    open();
+    await screen.findByText('Client 0');
+
+    // jsdom lays the trigger out at 0px wide, the narrowest possible filter-bar trigger.
+    const panel = screen.getByPlaceholderText('Search clients...').closest('[class*="z-["]') as HTMLElement;
+    const zIndexOf = (className: string) => Number(/z-\[(\d+)\]/.exec(className)?.[1]);
+    expect(panel.style.width).toBe('300px');
+    for (const filterId of ['cp-state-filter', 'cp-type-filter']) {
+      const contentClass = screen.getByTestId(filterId).getAttribute('data-content-class') ?? '';
+      expect(zIndexOf(contentClass)).toBeGreaterThan(zIndexOf(panel.className));
+    }
   });
 
   it('does not refetch when a new but equal disabled Set / tooltip arrives while open', async () => {
