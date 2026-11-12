@@ -37,9 +37,10 @@ export async function getCoManagedLocalProjectSearchPolicy(trx: Knex.Transaction
   if (actor.userType !== 'internal' || !authentication) throw new CoManagedSharedWorkError();
   const { subject, assertCurrent } = await lockCoManagedLocalAuthentication(trx, { tenant: actor.tenant, userId: actor.userId, ...authentication });
   if (!await hasCoManagedLocalPermission(trx, actor, 'project', 'read', true)) projects.whereRaw('false');
-  const rules = (await resolveBundleNarrowingRulesForEvaluation(trx, { subject, resource: { type: 'project', action: 'read' }, knex: trx }, { lock: true }))
-    .filter(rule => rule.resource === 'project' && rule.action === 'read');
-  applyCoManagedQueuePolicy(projects, subject, rules, { resourceType: 'project', shared: false, ownerAvailable: false, boardAvailable: false });
+  // The full rule set goes to the queue policy (closed bundles are derived from it); redactions come from project:read rules.
+  const allRules = await resolveBundleNarrowingRulesForEvaluation(trx, { subject, resource: { type: 'project', action: 'read' }, knex: trx }, { lock: true });
+  const rules = allRules.filter(rule => rule.resource === 'project' && rule.action === 'read');
+  applyCoManagedQueuePolicy(projects, subject, allRules, { resourceType: 'project', shared: false, ownerAvailable: false, boardAvailable: false });
   await assertCurrent();
   return { projects, redactedFields: rules.flatMap(rule => rule.redactedFields ?? []), assertCurrent };
 }

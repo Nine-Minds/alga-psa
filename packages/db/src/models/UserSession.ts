@@ -65,6 +65,7 @@ export type RevocationReason =
   | 'security'
   | 'scim'
   | 'inactivity'
+  | 'login_policy_sso_required'
   | 'expired';
 
 function sessions<Row extends object = IUserSession>(
@@ -204,6 +205,40 @@ export class UserSession {
         revoked_reason: 'admin_revoke',
         updated_at: knex.fn.now(),
       });
+
+    return Number(count);
+  }
+
+  /**
+   * Revoke every live password (`login_method='credentials'`) session of the
+   * tenant's internal users, except the listed users (break-glass). SSO and
+   * client sessions are untouched. Pass `trx` to commit with the caller's work.
+   */
+  static async revokePasswordSessionsForTenant(
+    tenant: string,
+    excludeUserIds: string[],
+    reason: RevocationReason,
+    trx?: Knex.Transaction,
+  ): Promise<number> {
+    const conn = trx ?? (await getConnection(tenant));
+
+    const internalUserIds = tenantDb(conn, tenant)
+      .table('users')
+      .where({ user_type: 'internal' })
+      .select('user_id');
+
+    const query = sessions(conn, tenant)
+      .where({ login_method: 'credentials' })
+      .whereNull('revoked_at')
+      .whereIn('user_id', internalUserIds);
+    if (excludeUserIds.length > 0) {
+      query.whereNotIn('user_id', excludeUserIds);
+    }
+    const count = await query.update({
+      revoked_at: conn.fn.now(),
+      revoked_reason: reason,
+      updated_at: conn.fn.now(),
+    });
 
     return Number(count);
   }

@@ -6,6 +6,7 @@ import { runWithTenant } from '../../db';
 import { hasPermission } from '../../auth/rbac';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { projectApiRecord } from './apiRecordProjection';
 import type { InventoryLookupAssetAuthorizer } from '../services/InventoryService';
 import {
   createPaginatedResponse,
@@ -99,9 +100,10 @@ export class ApiInventoryController extends ApiBaseController {
       for (const asset of assets) {
         const recordContext = records.get(asset.asset_id);
         if (!recordContext) continue;
-        if (await authorizeApiResourceRead({ knex: trx, tenant, user, apiKeyId, resource: 'asset', recordContext })) {
-          readable.push(asset);
-        }
+        const decision = await authorizeApiResourceRead({ knex: trx, tenant, user, apiKeyId, resource: 'asset', recordContext });
+        if (!decision.allowed) continue;
+        const projected = projectApiRecord('asset', asset as Record<string, any>, decision.redactedFields);
+        if (projected) readable.push(projected as typeof asset);
       }
       return readable;
     };

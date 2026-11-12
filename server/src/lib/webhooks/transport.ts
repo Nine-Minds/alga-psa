@@ -1,8 +1,9 @@
-import { Agent, fetch } from 'undici';
 import type { LookupFunction } from 'node:net';
+import { Agent, fetch } from 'undici';
+import { isGlobalUnicastAddress } from '../net/publicAddress';
+import { MAX_WEBHOOK_RESPONSE_BODY_CHARS, readBoundedResponseText } from './responseBody';
 import {
   assertSafeWebhookUrl,
-  isGlobalUnicastAddress,
   isPrivateWebhookTargetAllowed,
   resolveValidatedAddresses,
   UnsafeWebhookTargetError,
@@ -131,7 +132,11 @@ export async function sendWithValidatedRedirects(
           ok: response.ok,
           status: response.status,
           headers: Object.fromEntries(response.headers.entries()),
-          text: await response.text(),
+          text: await readBoundedResponseText(
+            response.body,
+            MAX_WEBHOOK_RESPONSE_BODY_CHARS,
+            request.signal,
+          ),
         };
       }
 

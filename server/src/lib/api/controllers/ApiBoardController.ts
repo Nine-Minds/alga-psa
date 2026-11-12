@@ -6,6 +6,10 @@
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { BoardService } from '../services/BoardService';
+import {
+  BOARD_PERMISSION_DENIED,
+  evaluateBoardMutationPolicy,
+} from '@alga-psa/auth/boardPolicy';
 import { boardListQuerySchema, createBoardSchema, updateBoardSchema } from '../schemas/board';
 
 export class ApiBoardController extends ApiBaseController {
@@ -28,23 +32,39 @@ export class ApiBoardController extends ApiBaseController {
   }
 
   /**
-   * Override permission check to use 'ticket' resource
-   * since boards are ticket reference data
+   * Board writes are governed by the same policy as the board server actions
+   * (packages/auth boardPolicy): an internal principal holding
+   * ticket_settings:<create|update|delete>. The generic 'ticket' resource is not
+   * enough - it is held by every technician. API requests made through a service
+   * principal must have the permission on both the effective user and principal.
+   * Reads stay on ticket permissions, as boards are ticket reference data.
    */
   protected async checkPermission(req: AuthenticatedApiRequest, action: string): Promise<void> {
     const { hasPermission } = await import('@/lib/auth/rbac');
     const { getConnection } = await import('@/lib/db/db');
+    const { ForbiddenError, UnauthorizedError } = await import('../middleware/apiMiddleware');
 
     if (!req.context?.user) {
-      const { UnauthorizedError } = await import('../middleware/apiMiddleware');
       throw new UnauthorizedError('User context required');
     }
 
     const knex = await getConnection(req.context.tenant);
-    const hasAccess = await hasApiContextPermission(req.context, 'ticket', action, knex);
+    if (action === 'create' || action === 'update' || action === 'delete') {
+      const decision = await evaluateBoardMutationPolicy(
+        { ...req.context.user, tenant: req.context.tenant },
+        action,
+        (_user, resource, permissionAction, trx) =>
+          hasApiContextPermission(req.context, resource, permissionAction, trx),
+        knex
+      );
+      if (!decision.allowed) {
+        // Same non-leaky text for both refusals; the code is logged by the policy.
+        throw new ForbiddenError(BOARD_PERMISSION_DENIED[action].message);
+      }
+      return;
+    }
 
-    if (!hasAccess) {
-      const { ForbiddenError } = await import('../middleware/apiMiddleware');
+    if (!await hasApiContextPermission(req.context, 'ticket', action, knex)) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} board`);
     }
   }

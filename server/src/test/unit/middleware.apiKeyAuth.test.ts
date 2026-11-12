@@ -148,6 +148,7 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/ai-gateway')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments/0ad8e710-13bc-4e01-a6ca-3f8992978ae8')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/other-provider')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });

@@ -35,7 +35,7 @@ describe('asset action helper tenant-scoped query contract', () => {
         for (const table of ['user_roles', 'team_members', 'users', 'asset_associations']) {
             expect(helperSection).not.toContain(`'${table}'`);
         }
-        expect(helperSection).toContain('resolveSharedAuthorizationSubject(trx, tenant, user)');
+        expect(helperSection).toContain('resolveSharedAuthorizationSubject(trx, tenant, user, undefined, requestCache)');
         expect(helperSection).toContain('resolveSharedAssetAuthorizationRecords(trx, tenant, assets)');
         expect(helperSection).toContain("tenantScopedTable(trx, 'assets', tenant)");
         expect(helperSection).toContain("tenantScopedTable(knex, 'workstation_assets', tenant)");
@@ -50,10 +50,9 @@ describe('asset action helper tenant-scoped query contract', () => {
 
     it('keeps the extracted asset read authorization helpers structurally tenant-scoped', () => {
         expect(readAuthSource).toContain("import { tenantDb } from '@alga-psa/db'");
-        expect(readAuthSource).toContain('const db = tenantDb(trx, tenant);');
-        expect(readAuthSource).toContain("db.table('user_roles')");
-        expect(readAuthSource).toContain("db.table('team_members')");
-        expect(readAuthSource).toContain("db.table('users')");
+        // The subject lookups live in the shared resolver (packages/authorization/src/subject), not here.
+        expect(readAuthSource).toContain('resolveAuthorizationSubject(trx, { tenant, user, apiKeyId, requestCache })');
+        expect(readAuthSource).not.toContain('portfolioClientIds');
         expect(readAuthSource).toContain("tenantDb(trx, tenant)\n    .table('asset_associations')");
         // No raw knex(table) root and no hand-written tenant predicates.
         expect(readAuthSource).not.toMatch(/\b(trx|knex)\(\s*['"`a-z_]/);

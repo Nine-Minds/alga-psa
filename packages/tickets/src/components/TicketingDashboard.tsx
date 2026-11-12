@@ -10,6 +10,7 @@ import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
+import BatchDuplicateTicketDialog from './ticket/BatchDuplicateTicketDialog';
 import { useTicketTemplatePermissions } from './templates/useTicketTemplatePermissions';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
@@ -401,6 +402,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const currentUser = user || null;
   const { openDrawer, replaceDrawer } = useDrawer();
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [batchDuplicateSourceId, setBatchDuplicateSourceId] = useState<string | null>(null);
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
@@ -1760,6 +1762,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         duplicateFromTicketId: ticketId,
         isAlgaDeskMode: useAlgaDeskQuickAddForm,
       })),
+      onBatchDuplicate: (ticketId) => setBatchDuplicateSourceId(ticketId),
       // Opens the template editor prefilled from the ticket. Nothing is saved until Save there.
       onCreateTemplate: (ticketId) => navigateAwayTo(`/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticketId)}`),
       canCreateTemplate: templatePermissions.create,
@@ -1797,6 +1800,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     densityClasses.tagSize,
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
+    setBatchDuplicateSourceId,
     templatePermissions.create,
     t,
     locale,
@@ -3184,6 +3188,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         );
       })()}
 
+      {batchDuplicateSourceId && (
+        <BatchDuplicateTicketDialog
+          sourceTicketId={batchDuplicateSourceId}
+          isOpen
+          onClose={() => setBatchDuplicateSourceId(null)}
+          onCompleted={() => onFilterChange({})}
+        />
+      )}
       <BulkBundleDialog
         id={id}
         isOpen={isBundleDialogOpen}

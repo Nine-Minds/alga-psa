@@ -8,6 +8,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import { PriorityBoardTypeError } from '../lib/ticketFieldReferences';
+
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
 /**
@@ -62,6 +64,7 @@ export const TICKET_NOT_FOUND_MESSAGE_KEY = TICKET_CODE_MESSAGE_KEYS.TICKET_NOT_
  */
 const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Client users can only create their own comments',
+  'Contact does not belong to',
   'Client users cannot create internal comments',
   'Bundle settings not found',
   'Cannot add children to a bundled child ticket',
@@ -110,6 +113,7 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Ticket is already bundled',
   'Ticket is not bundled',
   'Ticket cannot be closed',
+  'Title is empty or contains an unresolved',
   'Ticket status does not belong to the selected board',
   'Ticket not found',
   'Ticket resource not found',
@@ -150,7 +154,16 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
     return permissionError(error instanceof Error ? error.message : String(error));
   }
 
+  if (error instanceof PriorityBoardTypeError) {
+    return actionError(error.message, error.messageKey, error.messageParams);
+  }
+
   const audienceCode = (error as { code?: unknown } | null)?.code;
+  if (audienceCode === 'HUMAN_WORK_ASSIGNEE_INVALID') {
+    return actionError(
+      'One or more selected agents cannot be assigned. Choose active internal agents and try again.',
+    );
+  }
   if (audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED' || audienceCode === 'COMMENT_AUDIENCE_INVALID') {
     return actionError(
       (error as Error).message,

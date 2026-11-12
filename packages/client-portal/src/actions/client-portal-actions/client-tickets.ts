@@ -13,7 +13,7 @@ import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 
 import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
-import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import { canWriteAttachmentTicket, reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tickets/lib/commentVisibility';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
@@ -68,6 +68,10 @@ const clientTicketSchema = z.object({
   board_id: z.string().optional(),
   asset_id: z.string().guid().optional(),
 });
+
+// Pasted description images can only be uploaded once the ticket exists, so the
+// rewritten description comes back in a second call validated the same way.
+const clientTicketDescriptionSchema = clientTicketSchema.pick({ description: true });
 
 const VISIBILITY_NOT_FOUND_ERROR =
   'Visibility group assignment is invalid for this contact.';
@@ -1598,5 +1602,97 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
     return result;
   } catch (error) {
     return expectedOrThrow(error, 'Failed to create client ticket:');
+  }
+});
+
+/**
+ * Second write of a portal-created ticket's description.
+ *
+ * An image pasted into the create dialog has nowhere to live until the ticket
+ * exists, so createClientTicket is sent the description without those blocks and
+ * the dialog replays it here once every image is uploaded against the new
+ * ticket. The gate is the same one the uploads passed (`ticket:update` plus the
+ * record-scope attachment write check), narrowed to the ticket this user filed:
+ * finalizing is never a way to rewrite a colleague's description.
+ *
+ * Only attributes.description changes; the rest of the attributes document
+ * (watch list, custom fields) is carried over untouched.
+ */
+export const finalizeClientTicketDescription = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string,
+  description: string
+): Promise<ClientTicketActionResult<void>> => {
+  try {
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
+    }
+
+    const db = await getConnection(tenant);
+
+    const userForPermission = {
+      user_id: userId,
+      email: user.email,
+      user_type: 'client',
+      is_inactive: false,
+      tenant
+    } as IUser;
+    const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
+    if (!canUpdate) {
+      return permissionError('Insufficient permissions to update tickets', 'common:errors.permissions.tickets.update');
+    }
+
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
+    }
+
+    const validatedData = (() => {
+      try {
+        return validateData(clientTicketDescriptionSchema, { description });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const zodFailure = zodErrorMessage(error);
+          throw expectedClientTicketActionError(
+            zodFailure.message,
+            zodFailure.messageKey,
+            zodFailure.messageParams,
+          );
+        }
+        throw error;
+      }
+    })();
+
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const ticket = await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: ticketId })
+        .first('ticket_id', 'entered_by', 'attributes');
+
+      if (
+        !ticket ||
+        ticket.entered_by !== userId ||
+        !await canWriteAttachmentTicket(trx, tenant, userId, ticketId)
+      ) {
+        throw expectedClientTicketActionError(
+          'Ticket not found or access denied',
+          'client-portal:errors.tickets.notFoundOrDenied',
+        );
+      }
+
+      await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: ticketId })
+        .update({
+          attributes: {
+            ...((ticket.attributes || {}) as Record<string, unknown>),
+            description: validatedData.description,
+          },
+          updated_at: new Date().toISOString(),
+          updated_by: userId,
+        });
+    });
+  } catch (error) {
+    return expectedOrThrow(error, 'Failed to finalize client ticket description:');
   }
 });

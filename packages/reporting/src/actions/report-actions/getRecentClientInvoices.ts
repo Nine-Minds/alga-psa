@@ -8,7 +8,7 @@ import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
+import { clientOutOfScopeError, reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -61,6 +61,10 @@ export const getRecentClientInvoices = withAuth(async (
       return permissionError('Permission denied: cannot access invoices for another client', 'msp/invoicing:errors.permissions.otherClientInvoices');
     }
   }
+
+  // A client-restricted internal user gets no invoices of a client outside their scope.
+  const outOfScope = await clientOutOfScopeError(knex, tenant, user, clientId);
+  if (outOfScope) return outOfScope;
 
   console.log(`Fetching recent invoices for client ${clientId} in tenant ${tenant}, limit ${limit}`);
 

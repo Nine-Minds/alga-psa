@@ -7,6 +7,7 @@ import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
+import { resolveTagReadScope } from '../lib/tagReadScope';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -738,9 +739,12 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // null for a subject nothing narrows: no clause, no query beyond the tenant probe.
+      const readScope = await resolveTagReadScope(trx, tenant, user);
       // Join mappings with definitions to create ITag structure
       const tags = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
+        .modify((query) => readScope?.applyToMappings(query, 'tm'))
         .select(
           'tm.mapping_id as tag_id', // Use mapping_id as tag_id for backward compatibility
           'td.board_id',
@@ -787,11 +791,14 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
         .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(tagReferencesQuery, 'tr.tenant', 'td.tenant');
 
+      // A narrowed subject is offered only tags attached to records it may read (see resolveTagReadScope).
+      const readScope = await resolveTagReadScope(trx, tenant, user);
       const definitions = await scopedDb.table('tag_definitions as td')
         .distinctOn('td.tag_text')
         .select('td.*')
         .where('td.tagged_type', entityType)
         .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(tagReferencesQuery))
+        .modify((query) => readScope?.applyToDefinitions(query, 'td'))
         .orderBy('td.tag_text', 'asc')
         .orderBy('td.created_at', 'asc');
 
@@ -1040,8 +1047,12 @@ export const bulkApplyTagsToEntities = withAuth(async (
       const seen = new Set<string>();
       const newTexts: string[] = [];
       for (const raw of app.newTexts) {
-        const text = raw.trim();
-        if (!text) continue;
+        const validation = validateTagText(raw);
+        if (isTagTextValidationFailure(validation)) {
+          console.warn(`Skipping tag "${raw}": ${validation.message}`);
+          continue;
+        }
+        const text = validation.text;
         const lower = text.toLowerCase();
         if (existingLower.has(lower) || seen.has(lower)) continue;
         seen.add(lower);
@@ -1071,10 +1082,6 @@ export const bulkApplyTagsToEntities = withAuth(async (
   const definitionByLowerText = new Map<string, ITagDefinition>();
   const createdDefinitions: ITagDefinition[] = [];
   for (const [lower, text] of uniqueTexts) {
-    if (text.length > 50) {
-      console.warn(`Tag text "${text}" too long, skipping`);
-      continue;
-    }
     if (!userHasTagCreate) {
       // Can only apply texts whose definition already exists.
       const existingDefinition = await TagDefinition.findByTextAndType(trx, tenant, text, taggedType);
@@ -1146,7 +1153,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
   const occurredAt = new Date().toISOString();
 
   for (const definition of createdDefinitions) {
-    await publishWorkflowEvent({
+    registerAfterCommit(trx, () => publishWorkflowEvent({
       eventType: 'TAG_DEFINITION_CREATED',
       payload: buildTagDefinitionCreatedPayload({
         tagId: definition.tag_id,
@@ -1159,13 +1166,13 @@ export const bulkApplyTagsToEntities = withAuth(async (
         occurredAt,
         actor: { actorType: 'USER', actorUserId: userId },
       },
-    });
+    }), `TAG_DEFINITION_CREATED tag=${definition.tag_id}`);
   }
 
   // TAG_APPLIED per actually-inserted mapping; track which entities changed.
   const changedEntities = new Set<string>();
   for (const row of insertedRows) {
-    await publishWorkflowEvent({
+    registerAfterCommit(trx, () => publishWorkflowEvent({
       eventType: 'TAG_APPLIED',
       payload: buildTagAppliedPayload({
         tagId: row.tag_id,
@@ -1179,7 +1186,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
         occurredAt,
         actor: { actorType: 'USER', actorUserId: userId },
       },
-    });
+    }), `TAG_APPLIED tag=${row.tag_id} entity=${row.tagged_id}`);
     changedEntities.add(row.tagged_id);
   }
 
@@ -1202,7 +1209,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
     if (!changedEntities.has(app.entityId)) continue;
     const previousTags = Array.from(new Set(app.existingTexts)).sort((a, b) => a.localeCompare(b));
     const newTags = Array.from(new Set(finalTagsByEntity.get(app.entityId) ?? [])).sort((a, b) => a.localeCompare(b));
-    await publishEntityTagUpdateEvent({
+    registerAfterCommit(trx, () => publishEntityTagUpdateEvent({
       trx,
       tenant,
       taggedId: app.entityId,
@@ -1214,7 +1221,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
       projectTaskContext: projectTaskContexts
         ? (projectTaskContexts.get(app.entityId) ?? null)
         : undefined,
-    });
+    }), `${taggedType.toUpperCase()}_UPDATED entity=${app.entityId}`);
   }
 
   return { appliedByEntity };

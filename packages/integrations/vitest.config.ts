@@ -1,6 +1,7 @@
 import { defineConfig, configDefaults } from 'vitest/config';
 import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   plugins: [
@@ -41,10 +42,8 @@ export default defineConfig({
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../event-schemas/src/index.ts') },
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../event-schemas/src/$1') },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
-      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
-      // tenantDb (like admin above) lives under src/lib, not src directly, so
-      // it needs its own rule ahead of the generic one below.
-      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../db/src/lib/tenantDb.ts') },
+      // Published @alga-psa/db subpaths come from its exports map (most live under src/lib).
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../db')),
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },

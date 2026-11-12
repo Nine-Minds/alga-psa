@@ -99,6 +99,21 @@ vi.mock('@alga-psa/assets/lib/assetAttributeWrites', () => ({
   serializeAttributesForInsert: vi.fn((value: unknown) => JSON.stringify(value)),
 }));
 
+// Identity arbitration is covered by the PostgreSQL persistence suite. These
+// lightweight query doubles exercise extension/assignment behavior only.
+vi.mock('@alga-psa/shared/services/assetNumbering', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/services/assetNumbering')>();
+  return {
+    ...actual,
+    prepareAssetIdentity: vi.fn(async (_trx: unknown, args: { assetTag?: string }) => ({
+      asset_id: 'new-asset',
+      asset_tag: args.assetTag ?? 'AUTO-00001',
+      asset_tag_normalized: actual.normalizeAssetTag(args.assetTag ?? 'AUTO-00001'),
+      asset_tag_legacy_exempt: false,
+    })),
+  };
+});
+
 import { AssetService } from '../../../lib/api/services/AssetService';
 import { createAssetWithExtensionSchema, parseAssetExtensionData, updateAssetSchema } from '../../../lib/api/schemas/asset';
 

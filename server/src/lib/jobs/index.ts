@@ -81,6 +81,11 @@ import {
   SearchVisibleUserReindexJobData,
 } from './handlers/searchVisibleUserReindexHandler';
 import {
+  SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
+  searchClientScopeReindexHandler,
+  SearchClientScopeReindexJobData,
+} from './handlers/searchClientScopeReindexHandler';
+import {
   SearchReconcileJobData,
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
@@ -265,6 +270,13 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       }
     );
 
+    jobScheduler.registerJobHandler<SearchClientScopeReindexJobData>(
+      SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
+      async (job: Job<SearchClientScopeReindexJobData>) => {
+        await searchClientScopeReindexHandler(job.data);
+      }
+    );
+
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
 
@@ -300,6 +312,7 @@ export type {
   SlaTimerJobData,
   WorkflowQuotaResumeScanJobData,
   SearchVisibleUserReindexJobData,
+  SearchClientScopeReindexJobData,
   SearchReconcileJobData
 };
 // Export job scheduling helper functions
@@ -378,6 +391,16 @@ export const scheduleSearchVisibleUserReindexJob = async (
   return await scheduleImmediateJob<SearchVisibleUserReindexJobData>(
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
     { tenantId, userId, batchSize }
+  );
+};
+
+export const scheduleSearchClientScopeReindexJob = async (
+  tenantId: string,
+  batchSize: number = 500
+): Promise<string | null> => {
+  return await scheduleImmediateJob<SearchClientScopeReindexJobData>(
+    SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
+    { tenantId, batchSize }
   );
 };
 

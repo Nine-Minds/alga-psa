@@ -38,9 +38,33 @@
       "import": "./dist/bundles/service.js",
       "types": "./src/bundles/service.ts"
     },
+    "./bundles/narrowingProvider": {
+      "import": "./dist/bundles/narrowingProvider.js",
+      "types": "./src/bundles/narrowingProvider.ts"
+    },
     "./bundles/starterBundles": {
       "import": "./dist/bundles/starterBundles.js",
       "types": "./src/bundles/starterBundles.ts"
+    },
+    "./bundles/closedBundlePreview": {
+      "import": "./dist/bundles/closedBundlePreview.js",
+      "types": "./src/bundles/closedBundlePreview.ts"
+    },
+    "./bundles/denialExplanations": {
+      "import": "./dist/bundles/denialExplanations.js",
+      "types": "./src/bundles/denialExplanations.ts"
+    },
+    "./portfolios/service": {
+      "import": "./dist/portfolios/service.js",
+      "types": "./src/portfolios/service.ts"
+    },
+    "./subject": {
+      "import": "./dist/subject/index.js",
+      "types": "./src/subject/index.ts"
+    },
+    "./subject/*": {
+      "import": "./dist/subject/*.js",
+      "types": "./src/subject/*.ts"
     },
     "./adapters/rbac": {
       "import": "./dist/adapters/rbac.js",
@@ -58,9 +82,49 @@
       "import": "./dist/assetReadAuthorization.js",
       "types": "./src/assetReadAuthorization.ts"
     },
+    "./clientReadScope": {
+      "import": "./dist/clientReadScope.js",
+      "types": "./src/clientReadScope.ts"
+    },
+    "./readScope": {
+      "import": "./dist/readScope.js",
+      "types": "./src/readScope.ts"
+    },
+    "./scheduleEntryReadAuthorization": {
+      "import": "./dist/scheduleEntryReadAuthorization.js",
+      "types": "./src/scheduleEntryReadAuthorization.ts"
+    },
+    "./ticketReadAuthorization": {
+      "import": "./dist/ticketReadAuthorization.js",
+      "types": "./src/ticketReadAuthorization.ts"
+    },
+    "./ticketRecordAuthorization": {
+      "import": "./dist/ticketRecordAuthorization.js",
+      "types": "./src/ticketRecordAuthorization.ts"
+    },
+    "./clientScopeAuthorization": {
+      "import": "./dist/clientScopeAuthorization.js",
+      "types": "./src/clientScopeAuthorization.ts"
+    },
+    "./ticketScopeAuthorization": {
+      "import": "./dist/ticketScopeAuthorization.js",
+      "types": "./src/ticketScopeAuthorization.ts"
+    },
+    "./clientScopeSqlAdapters": {
+      "import": "./dist/clientScopeSqlAdapters.js",
+      "types": "./src/clientScopeSqlAdapters.ts"
+    },
+    "./recordProjection": {
+      "import": "./dist/recordProjection.js",
+      "types": "./src/recordProjection.ts"
+    },
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"
+    },
+    "./recordCreateAuthorization": {
+      "import": "./dist/recordCreateAuthorization.js",
+      "types": "./src/recordCreateAuthorization.ts"
     }
   },
   "scripts": {

@@ -12,6 +12,8 @@ import {
 } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { isLicensedUserType } from '@alga-psa/types';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { SubjectUserInput } from '@alga-psa/authorization/subject';
 import InteractionModel from '../models/interactions';
 
 type InteractionInput = Partial<IInteraction> & {
@@ -147,6 +149,16 @@ export async function createInteractionRecord({
 
   if (!resolvedClientId) {
     throw new Error('Interactions must be linked to a client');
+  }
+
+  // A signed-in caller may only log an interaction for a client in their scope. System callers pass no user.
+  if (user) {
+    await assertRecordCreateAllowed(trx, {
+      tenant,
+      user: user as SubjectUserInput,
+      resourceType: 'interaction',
+      record: { clientId: resolvedClientId, ownerUserId: interactionData.user_id },
+    }, 'interaction');
   }
 
   const { interaction_id: _ignoredInteractionId, ...insertData } = interactionData;

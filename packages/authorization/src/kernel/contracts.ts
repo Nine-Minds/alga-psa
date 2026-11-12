@@ -7,7 +7,7 @@ export interface AuthorizationReason {
   stage: AuthorizationDecisionStage;
   code: string;
   message: string;
-  sourceType?: 'builtin' | 'bundle' | 'system';
+  sourceType?: 'builtin' | 'bundle' | 'system' | 'resolver';
   sourceId?: string;
   metadata?: Record<string, unknown>;
   /** Set only on joint (two-subject) evaluations: whose evaluation produced this reason. */

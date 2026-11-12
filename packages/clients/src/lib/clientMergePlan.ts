@@ -406,6 +406,8 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // moves, so its custody (open or closed) follows; one open record per asset,
   // not per client, so a move cannot collide.
   { table: 'asset_custody', label: 'equipment custody record' },
+  // The destination client changes; the reserved physical label stays fixed.
+  { table: 'asset_number_reservations', label: 'asset number reservation' },
   // A site audit is a record of walking one client's location. The location and
   // the audited assets both move, so the audit follows them; audits are keyed by
   // audit_id alone, so nothing can collide. Its items are keyed by audit, not client.
@@ -413,6 +415,15 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
+  // A user's portfolio names the clients they are responsible for. A row left on the tombstone
+  // would silently drop the surviving client from that user's scope. Where the user already
+  // holds the target, that row is the answer and the source's is dropped.
+  {
+    table: 'user_client_portfolios',
+    label: 'client portfolio entry',
+    conflictKeyColumns: ['user_id'],
+    onCollision: 'drop',
+  },
   // Client-scoped checklist and ticket templates keep applying to the surviving client's tickets.
   { table: 'checklist_templates', label: 'checklist template' },
   { table: 'ticket_templates', label: 'ticket template' },

@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getCoManagedLicenseCapacity } from './co-managed-license';
 import { admitCoManagedPermissions } from './co-managed-admission-permissions';
+import { readCoManagedPoolCapacity } from './co-managed-capacity';
 
 export class CoManagedReservationError extends Error {
   constructor(public readonly code:
@@ -88,9 +89,8 @@ export async function reserveCoManagedWorkspace(
     const capacity = entitlement.source === 'self_host'
       ? getCoManagedLicenseCapacity(entitlement.signed_license, input.sponsorTenant, now)
       : entitlement.source === 'hosted' || entitlement.source === 'admin_grant' ? entitlement.capacity : 0;
-    const totals = await sponsor.table('co_managed_allocations')
-      .whereNot('state', 'released').sum('seats as used').first();
-    if (Number(totals?.used ?? 0) + input.seats > capacity) {
+    const pool = await readCoManagedPoolCapacity(trx, input.sponsorTenant, capacity);
+    if (input.seats > pool.available) {
       throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
     }
 

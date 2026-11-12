@@ -6,6 +6,8 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { toCalendarDateString } from '@alga-psa/core';
 import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import type { Knex } from 'knex';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope, type TicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
 import { getContactCountsByLocation } from '../models/contactLocation';
@@ -455,8 +457,11 @@ async function fetchService(
   tenant: string,
   clientId: string,
   nowMs: number,
+  readable: TicketReadScope,
 ): Promise<{ service: ClientPulseService; flags: ClientAttentionFlag[] }> {
-  const openRows = await trx('tickets as t')
+  // Every ticket figure on this card (open, overdue, unassigned, waiting, SLA flags) is computed over the
+  // tickets the viewer may read: the same narrowing as the ticket list, applied to these queries.
+  const openQuery = trx('tickets as t')
     .leftJoin('priorities as p', function joinPriorities() {
       this.on('t.priority_id', '=', 'p.priority_id').andOn('t.tenant', '=', 'p.tenant');
     })
@@ -496,6 +501,7 @@ async function fetchService(
       'assigned_user.username as assigned_username',
       'assigned_user.email as assigned_email',
     );
+  const openRows = await readable.apply(openQuery, 't');
 
   const overdueRows = openRows.filter((row: any) => row.due_date && new Date(row.due_date).getTime() < nowMs);
   const oldestOpen = openRows.reduce<unknown | null>((oldest, row: any) => {
@@ -610,7 +616,7 @@ async function fetchService(
     )
     .as('lc');
 
-  const waitingRows = await trx.from(latestComments)
+  const waitingQuery = trx.from(latestComments)
     .join('tickets as t', function joinTickets() {
       this.on('lc.ticket_id', '=', 't.ticket_id').andOn('lc.tenant', '=', 't.tenant');
     })
@@ -624,6 +630,7 @@ async function fetchService(
     .andWhere('lc.author_type', 'client')
     .select('t.ticket_id', 't.ticket_number', 'lc.created_at')
     .orderBy('lc.created_at', 'asc');
+  const waitingRows = await readable.apply(waitingQuery, 't');
 
   if (waitingRows.length > 0) {
     const longestWaiting = waitingRows[0] as any;
@@ -1177,7 +1184,8 @@ export const getClientPulse = withAuth(async (
     // Each optional section degrades on its own (see optionalSection): one
     // broken rollup costs the client screen a card, not the whole page.
     const serviceResult = canReadTickets
-      ? await optionalSection(trx, 'service', () => fetchService(trx, tenant, clientId, nowMs))
+      ? await optionalSection(trx, 'service', async () =>
+          fetchService(trx, tenant, clientId, nowMs, await createTicketReadScope(trx, tenant, user as IUserWithRoles)))
       : null;
     const moneyResult = canReadBilling
       ? await optionalSection(trx, 'money', () => fetchMoney(trx, tenant, clientId, nowMs))

@@ -45,6 +45,8 @@ export interface FileStore {
   original_name: string;
   mime_type: string;
   file_size: number;
+  /** Hex sha256 of the stored bytes; null for rows written before hashing. */
+  content_sha256?: string | null;
   storage_path: string;
   uploaded_by_id: string;
   created_at: string;

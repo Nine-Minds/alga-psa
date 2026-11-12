@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { createHash } from 'node:crypto';
@@ -770,7 +771,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     const targetBackups = await enrol(backups, target);
 
     const assetId = uuidv4();
-    await table('assets').insert({
+    await insertTestAssets(db, {
       tenant: tenantId, asset_id: assetId, asset_type: 'workstation', client_id: source,
       asset_tag: 'RT-1', name: 'RT-1', status: 'active',
     });
@@ -886,7 +887,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
       });
 
       const assetId = uuidv4();
-      await table('assets').insert({
+      await insertTestAssets(db, {
         tenant: tenantId,
         asset_id: assetId,
         asset_type: 'unknown',

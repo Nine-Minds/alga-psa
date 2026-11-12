@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Tickets",
-      "documents": "Documents",
-      "time": "Time",
-      "projects": "Projects",
-      "assets": "Assets",
-      "billing": "Billing"
-    },
     "targetTypes": {
       "role": "Role",
       "team": "Team",
@@ -453,11 +445,13 @@
         "custom": "Custom"
       },
       "badges": {
-        "starter": "Starter"
+        "starter": "Starter",
+        "closed": "Closed"
       },
       "descriptions": {
         "systemStarter": "System starter bundle.",
-        "customBundle": "Custom narrowing bundle for role, team, user, or API key assignments."
+        "customBundle": "Custom narrowing bundle for role, team, user, or API key assignments.",
+        "closed": "Closed: denies everything it does not name."
       },
       "effectiveSummary": "Effective summary: {{status}} bundle with {{count}} active assignment(s).",
       "empty": "No authorization bundles found.",
@@ -542,6 +536,17 @@
         "label": "Redacted fields",
         "placeholder": "internal_cost, margin",
         "helper": "Comma-separated field names to redact when this rule allows access."
+      },
+      "baseline": {
+        "title": "Closed bundle",
+        "explanation": "A closed bundle denies every record type and action it does not name. An open bundle limits only the ones it names.",
+        "closedToggle": "Publish as closed",
+        "openBadge": "Open",
+        "previewTitle": "This closed bundle will deny",
+        "previewIntro": "Users who hold this bundle are denied these record types and actions, because the bundle has no rule for them.",
+        "previewNothing": "The bundle names every record type and action, so it denies nothing beyond its own rules.",
+        "deniedAll": "All actions",
+        "deniedActions": "Denied: {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Record",
       "useSynthetic": "Use synthetic record scenario",
       "syntheticOwnerPlaceholder": "Owner user ID (optional)",
-      "syntheticClientPlaceholder": "Client ID (optional)",
+      "syntheticClientPlaceholder": "Client (optional)",
       "syntheticBoardPlaceholder": "Board ID (optional)",
       "clientVisible": "Client visible",
       "run": "Run simulation",
@@ -584,7 +589,18 @@
       "publishedRevision": "Published revision",
       "allowed": "Allowed",
       "denied": "Denied",
-      "empty": "Run a simulation to compare draft and published behavior."
+      "empty": "Run a simulation to compare draft and published behavior.",
+      "explanations": {
+        "closedBaseline": "The bundle is closed and has no rule for {{action}} on {{resource}}, so access is denied.",
+        "clientPortfolio": "The record belongs to a client outside this user's client portfolio, so the portfolio rule denies it.",
+        "createOutOfScope": "Creating {{resource}} for this client is denied: the client is outside this user's scope.",
+        "readRequired": "{{action}} on {{resource}} also requires read access to the record, and the read rules deny it.",
+        "templateDenied": "A rule in the bundle limits {{action}} on {{resource}} to records this user does not match.",
+        "clientVisibleOnly": "The bundle allows {{action}} on {{resource}} only when the record is visible to the client.",
+        "notSelfApprover": "Users cannot approve their own records.",
+        "rulesUnavailable": "The bundle's rules could not be loaded, so access is denied.",
+        "rbacDenied": "The user's role does not grant {{action}} on {{resource}}."
+      }
     },
     "createDialog": {
       "title": "Create Authorization Bundle",
@@ -622,9 +638,47 @@
       "selectRecord": "Select a record before running simulation.",
       "runSimulation": "Failed to run simulation.",
       "simulator": {
-        "unsupportedAction": "The simulator currently supports only Read and Approve checks. Choose one of those actions and try again.",
+        "unsupportedAction": "The simulator supports only Read, Create, Update, Delete and Approve checks. Choose one of those actions and try again.",
         "unsupportedResource": "This record type is not available in the simulator yet. Choose a supported record type and try again.",
-        "clientTicketNotSupported": "Ticket checks for client users are not available in the simulator yet because ticket board visibility is not included. Try an internal user, or verify client ticket access in the app."
+        "clientTicketNotSupported": "Ticket checks for client users are not available in the simulator yet because ticket board visibility is not included. Try an internal user, or verify client ticket access in the app.",
+        "syntheticRecordRequired": "This record type has no stored records to pick. Use a synthetic record scenario and try again."
+      },
+      "saveBaseline": "Failed to change whether the bundle is closed."
+    },
+    "resourceTypes": {
+      "ticket": "Tickets",
+      "document": "Documents",
+      "time_entry": "Time",
+      "project": "Projects",
+      "asset": "Assets",
+      "billing": "Billing",
+      "tag": "Tags",
+      "client": "Clients",
+      "contact": "Contacts",
+      "interaction": "Interactions",
+      "schedule_entry": "Schedule entries"
+    },
+    "actions": {
+      "read": "Read",
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "approve": "Approve"
+    },
+    "portfolio": {
+      "title": "Client portfolio",
+      "description": "The clients this user works for. Bundles with a client portfolio rule limit the user to these clients.",
+      "addClient": "Add a client",
+      "loading": "Loading client portfolio...",
+      "empty": "No clients. A user with an empty portfolio is denied everything a client portfolio rule covers.",
+      "removeClient": "Remove {{client}}",
+      "save": "Save portfolio",
+      "saving": "Saving...",
+      "saved": "Client portfolio saved.",
+      "errors": {
+        "load": "Failed to load the client portfolio.",
+        "lookup": "Failed to look up the client.",
+        "save": "Failed to save the client portfolio."
       }
     }
   },

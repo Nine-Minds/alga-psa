@@ -1,5 +1,6 @@
 'use server';
 
+import { assertAssetCreateAllowed } from '../lib/assetCreateAuthorization';
 import { revalidatePath } from 'next/cache';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
@@ -91,11 +92,15 @@ import {
     BuiltinAuthorizationKernelProvider,
     BundleAuthorizationKernelProvider,
     RequestLocalAuthorizationCache,
+    builtinResolversRestrict,
+    bundleRulesRestrict,
     createAuthorizationKernel,
     type AuthorizationRecord,
     type AuthorizationSubject,
     type BundleNarrowingRule,
+    type AuthorizationDecision,
 } from '@alga-psa/authorization/kernel';
+import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
@@ -111,11 +116,14 @@ import {
     resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
     isAssetActionAllowed as isSharedAssetActionAllowed,
     isAssetReadAllowed as isSharedAssetReadAllowed,
-    filterReadableAssets,
+    authorizeAssetsForAction,
+    projectReadableAssets,
     type AssetAuthUser as SharedAssetAuthUser,
+    type AssetAuthorizationAction,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
-import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
+import { prepareAssetIdentity, claimAssetTag, normalizeAssetTag, assetTagClaimsRequired } from '../lib/assetNumbering';
+import { getAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
     assertBillingProfileForClient,
@@ -511,9 +519,10 @@ type AssetAuthUser = SharedAssetAuthUser;
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
-    user: AssetAuthUser
+    user: AssetAuthUser,
+    requestCache?: RequestLocalAuthorizationCache
 ): Promise<AuthorizationSubject> {
-    return resolveSharedAuthorizationSubject(trx, tenant, user);
+    return resolveSharedAuthorizationSubject(trx, tenant, user, undefined, requestCache);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -557,11 +566,24 @@ async function createAssetReadAuthorizationContext(
     tenant: string,
     user: AssetAuthUser
 ): Promise<AssetReadAuthorizationContext> {
+    const requestCache = new RequestLocalAuthorizationCache();
     return {
-        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
+        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user, requestCache),
         authorizationKernel: createAssetReadAuthorizationKernel(trx),
-        requestCache: new RequestLocalAuthorizationCache(),
+        requestCache,
     };
+}
+
+type AssetAction = AssetAuthorizationAction;
+
+async function authorizeAssetDecision(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset: AssetAuthorizationInput,
+    action: AssetAction
+) {
+    return { allowed: await isSharedAssetActionAllowed(trx, tenant, context, asset, action) };
 }
 
 async function authorizeAssetReadDecision(
@@ -570,18 +592,24 @@ async function authorizeAssetReadDecision(
     context: AssetReadAuthorizationContext,
     asset: AssetAuthorizationInput
 ) {
-    const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
-    return context.authorizationKernel.authorizeResource({
-        subject: context.subject,
-        resource: {
-            type: 'asset',
-            action: 'read',
-            id: asset.asset_id,
-        },
-        record: assetRecords.get(asset.asset_id),
-        requestCache: context.requestCache,
-        knex: trx,
-    });
+    return authorizeAssetDecision(trx, tenant, context, asset, 'read');
+}
+
+async function assertAssetActionAllowed(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset: AssetAuthorizationInput,
+    action: AssetAction
+): Promise<void> {
+    if (action !== 'read' && !await isSharedAssetReadAllowed(trx, tenant, context, asset)) {
+        // Keep unreadable records indistinguishable from missing records.
+        throw new Error('Asset not found');
+    }
+    const allowed = await isSharedAssetActionAllowed(trx, tenant, context, asset, action);
+    if (!allowed) {
+        throw new Error(`Permission denied: Cannot ${action} assets`);
+    }
 }
 
 async function assertAssetReadAllowed(
@@ -590,10 +618,21 @@ async function assertAssetReadAllowed(
     context: AssetReadAuthorizationContext,
     asset: AssetAuthorizationInput
 ): Promise<void> {
-    const decision = await authorizeAssetReadDecision(trx, tenant, context, asset);
-    if (!decision.allowed) {
-        throw new Error('Permission denied: Cannot read assets');
+    await assertAssetActionAllowed(trx, tenant, context, asset, 'read');
+}
+
+/** The asset as its reader may see it; a redaction that hides its identity hides the asset. */
+async function readableAssetOrNotFound<T extends AssetAuthorizationInput>(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset: T
+): Promise<T> {
+    const [readable] = await projectReadableAssets(trx, tenant, context, [asset]);
+    if (!readable) {
+        throw new Error('Asset not found');
     }
+    return readable;
 }
 
 async function resolveAssetAuthorizationInputById(
@@ -613,25 +652,37 @@ async function resolveAssetAuthorizationInputById(
     return asset;
 }
 
+async function assertAssetActionAllowedById(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset_id: string,
+    action: AssetAction
+): Promise<AssetAuthorizationInput> {
+    const asset = await resolveAssetAuthorizationInputById(trx, tenant, asset_id);
+    await assertAssetActionAllowed(trx, tenant, context, asset, action);
+    return asset;
+}
+
 async function assertAssetReadAllowedById(
     trx: Knex.Transaction,
     tenant: string,
     context: AssetReadAuthorizationContext,
     asset_id: string
 ): Promise<AssetAuthorizationInput> {
-    const asset = await resolveAssetAuthorizationInputById(trx, tenant, asset_id);
-    await assertAssetReadAllowed(trx, tenant, context, asset);
-    return asset;
+    return assertAssetActionAllowedById(trx, tenant, context, asset_id, 'read');
 }
 
-async function createAuthorizedAssetReadContextForUser(
+/** Builds the subject context and makes the per-record decision for `action` on `asset_id`. */
+async function createAuthorizedAssetContextForUser(
     trx: Knex.Transaction,
     tenant: string,
     user: AssetAuthUser,
-    asset_id: string
+    asset_id: string,
+    action: AssetAction
 ): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput }> {
     const context = await createAssetReadAuthorizationContext(trx, tenant, user);
-    const asset = await assertAssetReadAllowedById(trx, tenant, context, asset_id);
+    const asset = await assertAssetActionAllowedById(trx, tenant, context, asset_id, action);
     return { context, asset };
 }
 
@@ -803,17 +854,18 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
         throw new Error('Permission denied: Cannot read assets');
     }
 
-    const asset = await getAssetWithExtensions(knex, tenant, asset_id);
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const asset = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const asset = await getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser);
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
         await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
+        // Same normalisation every other read path applies (getAssetDetailBundle,
+        // create, update): pg returns NUMERIC columns as strings and timestamps as
+        // Date, neither of which matches the declared Asset contract or what the
+        // edit form can round-trip back through updateAssetSchema (alga0002283).
+        return readableAssetOrNotFound(trx, tenant, context, formatAssetForOutput(asset));
     });
 
-    // Same normalisation every other read path applies (getAssetDetailBundle,
-    // create, update): pg returns NUMERIC columns as strings and timestamps as
-    // Date, neither of which matches the declared Asset contract or what the
-    // edit form can round-trip back through updateAssetSchema (alga0002283).
-    return formatAssetForOutput(asset);
+    return asset;
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -828,8 +880,8 @@ export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id
         throw new Error('Permission denied: Cannot read asset facts');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
-        await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
+        await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
         return listAvailableAssetFactsForAsset(trx, { tenant, assetId: asset_id });
     });
     } catch (error) {
@@ -847,9 +899,9 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         throw new Error('Permission denied: Cannot read assets');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
         const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
-            getAssetWithExtensions(trx, tenant, asset_id),
+            getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser),
             hasPermission(user, 'ticket', 'read', trx),
             hasPermission(user, 'document', 'read', trx)
         ]);
@@ -862,7 +914,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
             { asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }
         );
 
-        const formattedAsset = formatAssetForOutput(assetRecord);
+        const formattedAsset = await readableAssetOrNotFound(trx, tenant, context, formatAssetForOutput(assetRecord));
 
         // Structural child data inherits parent-asset authorization. Linked ticket/document data
         // additionally intersects with their own resource-family authorization.
@@ -1123,12 +1175,18 @@ export async function createAssetInTransaction(
                 await applyPurchaseCostCurrency(trx, tenant, procurement);
             }
 
+            const identity = await prepareAssetIdentity(trx, {
+                tenant, clientId: validatedData.client_id,
+                assetTag: validatedData.asset_tag,
+                reservationId: validatedData.asset_number_reservation_id,
+            });
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
                 asset_type: validatedData.asset_type,
                 client_id: validatedData.client_id,
-                asset_tag: validatedData.asset_tag,
+                ...identity,
                 name: validatedData.name,
                 status: validatedData.status,
                 ownership: validatedData.ownership ?? 'client',
@@ -1208,7 +1266,8 @@ export async function createAssetRecord(
     data: CreateAssetRequest,
     // Importers (e.g. Hudu) project best-effort attributes and must never fail
     // on a required custom field the source didn't supply; they pass false.
-    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource },
+    hooks?: Pick<AssetWriteHooks, 'authorize'>
 ): Promise<Asset> {
     try {
         // Validate input data first
@@ -1223,9 +1282,11 @@ export async function createAssetRecord(
         }
 
         // Start transaction. The output-schema check lives inside it.
-        const created = await knex.transaction(async (trx: Knex.Transaction) =>
-            createAssetInTransaction(trx, tenant, actorUserId, data, options)
-        );
+        const created = await knex.transaction(async (trx: Knex.Transaction) => {
+            // Same hook updateAssetRecord takes: the wrapper's user-scoped decision, run before any write.
+            if (hooks?.authorize) await hooks.authorize(trx);
+            return createAssetInTransaction(trx, tenant, actorUserId, data, options);
+        });
 
         const occurredAt = created.created_at || new Date().toISOString();
         const postCommit = { tenant, assetId: created.asset_id };
@@ -1301,7 +1362,9 @@ export const createAsset = withAuth(async (
         throw new Error('Permission denied: Cannot create assets');
     }
 
-    return createAssetRecord(knex, tenant, user.user_id, data, options);
+    return await createAssetRecord(knex, tenant, user.user_id, data, options, {
+        authorize: (trx) => assertAssetCreateAllowed(trx, tenant, user, data.client_id),
+    });
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -1316,6 +1379,8 @@ export interface AssetWriteHooks {
      * Hudu background sync) omit it and write as a full-access system actor.
      */
     authorize?: (trx: Knex.Transaction) => Promise<void>;
+    /** The caller whose visibility must also constrain the returned group summary. */
+    summaryUser?: AssetAuthUser;
 }
 
 /**
@@ -1350,7 +1415,7 @@ export async function updateAssetRecord(
                 ...baseCandidate
             } = validatedData;
 
-            const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id);
+            const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id, hooks?.summaryUser, !hooks);
             const beforeFormatted = formatAssetForOutput(beforeCompleteAsset) as unknown as Record<string, unknown>;
 
             const extensionPayloads = {
@@ -1494,6 +1559,17 @@ export async function updateAssetRecord(
                 }
             });
 
+            if (Object.prototype.hasOwnProperty.call(baseUpdateData, 'asset_tag')) {
+                const nextTag = String(baseUpdateData.asset_tag ?? '');
+                const normalizedTag = normalizeAssetTag(nextTag);
+                baseUpdateData.asset_tag_normalized = normalizedTag || null;
+                if (normalizedTag !== normalizeAssetTag(asset.asset_tag ?? '')) {
+                    baseUpdateData.asset_tag_legacy_exempt = false;
+                    baseUpdateData.asset_tag_managed = await assetTagClaimsRequired(trx, tenant);
+                    await claimAssetTag(trx, { tenant, assetTag: nextTag, ownerKind: 'asset', ownerId: asset_id });
+                }
+            }
+
             if (attributesPayload !== undefined) {
                 // jsonb merge (not replace) so sibling namespaces like
                 // hudu_fields survive partial attribute writes.
@@ -1552,7 +1628,7 @@ export async function updateAssetRecord(
             });
 
             // Return normalized asset data for client consumption
-            const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id);
+            const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id, hooks?.summaryUser, !hooks);
             const afterFormatted = formatAssetForOutput(completeAsset) as unknown as Record<string, unknown>;
 
             // Output-schema check inside the transaction: a failure rolls the write
@@ -1697,8 +1773,9 @@ export const updateAsset = withAuth(async (
     // `await` so a rejection from the core lands in the catch below and is returned.
     return await updateAssetRecord(knex, tenant, user.user_id, asset_id, data, opts, {
         authorize: async (trx) => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'update');
         },
+        summaryUser: user as AssetAuthUser,
     });
     } catch (error) {
         // Validation and invalid-type failures are RETURNED, not thrown: Next.js
@@ -1738,6 +1815,10 @@ export async function deleteAssetRecord(
                 throw new Error('Asset not found');
             }
 
+            // Serialize asset deletion with group mutations and membership writers before
+            // removing anything that belongs to this asset.
+            await removeAssetFromAnyGroup(trx as Knex.Transaction, tenantId, asset_id, { actorUserId });
+
             // C4: custody is a chain of custody, so an asset that is physically here cannot be deleted, and
             // closed episodes (append-only events with FKs to the asset) keep the row alive as history.
             const custodyRows = await tenantScopedTable(trx as Knex.Transaction, 'asset_custody', tenantId)
@@ -1770,7 +1851,6 @@ export async function deleteAssetRecord(
             // FR-C1 / FR-E6: the assignment history and group membership point
             // at the asset row, so both go before it.
             await tenantScopedTable(trx as Knex.Transaction, 'asset_assignments', tenantId).where({ asset_id }).delete();
-            await tenantScopedTable(trx as Knex.Transaction, 'asset_group_members', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_schedules', tenantId).where({ asset_id }).delete();
@@ -1875,7 +1955,7 @@ export const deleteAsset = withAuth(async (
 
     return deleteAssetRecord(knex, tenant, user.user_id, asset_id, opts, {
         authorize: async (trx, tenantId) => {
-            await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);
+            await createAuthorizedAssetContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id, 'delete');
         },
     });
     } catch (error) {
@@ -2008,7 +2088,13 @@ export const bulkDeleteAssets = withAuth(async (
     }
 });
 
-async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: string): Promise<Asset> {
+async function getAssetWithExtensions(
+    knex: Knex,
+    tenant: string,
+    asset_id: string,
+    groupSummaryUser?: AssetAuthUser,
+    trustedGroupSummaryRead = false
+): Promise<Asset> {
     // Get base asset data with client info
     const db = tenantDb(knex, tenant);
     const assetQuery = tenantScopedTable(knex, 'assets', tenant)
@@ -2033,7 +2119,11 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
 
     // FR-E12: the group summary travels with the asset so the details page,
     // the drawer and mobile all render it without a second round trip.
-    const group = await getAssetGroupSummary(knex, tenant, asset_id);
+    const group = groupSummaryUser
+        ? await getAuthorizedAssetGroupSummary(knex, tenant, groupSummaryUser, asset_id)
+        : trustedGroupSummaryRead
+            ? await getAssetGroupSummary(knex, tenant, asset_id)
+            : null;
 
     // Get extension table data if applicable
     const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);
@@ -2097,7 +2187,7 @@ export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id:
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetRelationship[]> => {
-        await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+        await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
 
         const db = tenantDb(trx, tenant);
         const relationshipsQuery = tenantScopedTable(trx, 'asset_relationships as ar', tenant)
@@ -2156,8 +2246,8 @@ export const createAssetRelationship = withAuth(async (user, { tenant }, data: C
 
     const rel = await withTransaction(knex, async (trx: Knex.Transaction) => {
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-        await assertAssetReadAllowedById(trx, tenant, context, validated.parent_asset_id);
-        await assertAssetReadAllowedById(trx, tenant, context, validated.child_asset_id);
+        await assertAssetActionAllowedById(trx, tenant, context, validated.parent_asset_id, 'update');
+        await assertAssetActionAllowedById(trx, tenant, context, validated.child_asset_id, 'update');
 
         await tenantScopedTable(trx, 'asset_relationships', tenant)
             .insert({
@@ -2230,8 +2320,8 @@ export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_
     try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-        await assertAssetReadAllowedById(trx, tenant, context, parent_asset_id);
-        await assertAssetReadAllowedById(trx, tenant, context, child_asset_id);
+        await assertAssetActionAllowedById(trx, tenant, context, parent_asset_id, 'update');
+        await assertAssetActionAllowedById(trx, tenant, context, child_asset_id, 'update');
 
         await tenantScopedTable(trx, 'asset_relationships', tenant)
             .where({
@@ -2314,8 +2404,12 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 ...baseContext,
                 authorizationKernel: createAssetReadAuthorizationKernel(trx, assetReadRules),
             };
+            // A closed bundle that does not name asset:read restricts it too, so ask the kernel rather than
+            // looking for an asset:read rule; otherwise the type facet below would count every asset.
             const requiresRecordAuthorization = context.subject.userType === 'client'
-                || assetReadRules.some((rule) => rule.resource === 'asset' && rule.action === 'read');
+                || bundleRulesRestrict(assetReadRules, 'asset', 'read')
+                // A registered built-in rule resolver (closed baseline or named rule) restricts it as well.
+                || builtinResolversRestrict({ subject: context.subject, resource: { type: 'asset', action: 'read' } });
             const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
                 rule.resource === 'asset' && rule.action === 'read'
                 && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')
@@ -2338,7 +2432,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             }
 
             type AssetListQueryRow = Asset & { client_name: string | null };
-            type AssetListScanRow = { asset: AssetListQueryRow; readable: boolean };
+            type AssetListScanRow = { asset: AssetListQueryRow; decision: AuthorizationDecision };
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
                 const offset = (sourcePage - 1) * sourceLimit;
                 const countRow = await listQuery.clone()
@@ -2356,13 +2450,12 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
-                const readableAssets = await filterReadableAssets(trx, tenant, context, rows, {
+                const decisions = await authorizeAssetsForAction(trx, tenant, context, rows, 'read', {
                     resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,
                 });
-                const readableAssetIds = new Set(readableAssets.map((asset) => asset.asset_id));
 
                 return {
-                    data: rows.map((asset) => ({ asset, readable: readableAssetIds.has(asset.asset_id) })),
+                    data: rows.map((asset, index) => ({ asset, decision: decisions[index] })),
                     total: sourceTotal,
                 };
             };
@@ -2373,8 +2466,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 page,
                 limit,
                 fetchPage,
-                authorizeRecord: async ({ asset, readable }) => {
-                    if (!readable) return false;
+                authorizeRecord: async ({ asset, decision }) => {
+                    // Identity-hidden rows must be excluded before pagination and facet counts.
+                    if (!decision.allowed || !projectReadableRecord('asset', asset, decision.redactedFields)) return false;
                     if (requiresRecordAuthorization) {
                         const assetType = asset.asset_type ?? 'unknown';
                         assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
@@ -2388,9 +2482,10 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
 
         // F075: the Group column reads `asset.group`, so the page's summaries
         // are fetched in one batch rather than per row.
-        const groupSummaries = await getAssetGroupSummariesForAssets(
+        const groupSummaries = await getAuthorizedAssetGroupSummariesForAssets(
             trx,
             tenant,
+            user as AssetAuthUser,
             pageAssets.map((asset) => asset.asset_id)
         );
 
@@ -2426,7 +2521,11 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
         );
 
             const response = {
-                assets: assetsWithExtensions,
+                // Reuse the scan's decisions after enrichment so derived fields cannot reappear,
+                // without resolving associations or evaluating authorization a second time.
+                assets: assetsWithExtensions.map((asset, index) =>
+                    projectReadableRecord('asset', asset, authorizedPage.data[index].decision.redactedFields)!
+                ),
                 total: authorizedPage.total,
                 page,
                 limit,
@@ -2657,7 +2756,7 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
                 throw new Error('Maintenance schedule not found');
             }
 
-            await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id, 'delete');
 
             const history = await tenantScopedTable(trx, 'asset_maintenance_history', tenant)
                 .where({ schedule_id })
@@ -2998,7 +3097,7 @@ export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, as
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceSchedule[]> => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
 
             const schedules = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
                 .where({ asset_id })
@@ -3041,7 +3140,7 @@ export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceReport> => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
             return fetchAssetMaintenanceReport(trx, tenant, asset_id);
         });
     } catch (error) {
@@ -3061,7 +3160,7 @@ export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: strin
                 throw new Error('Permission denied: Cannot read asset history');
             }
 
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
 
             return fetchAssetHistory(trx, tenant, asset_id);
         });
@@ -3103,7 +3202,7 @@ export const getAssetLinkedTickets = withAuth(async (user, { tenant }, asset_id:
                 throw new Error('Permission denied: Cannot read linked tickets');
             }
 
-            const { context } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            const { context } = await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
 
             return fetchAssetLinkedTickets(trx, tenant, asset_id, context);
         });
@@ -3648,11 +3747,11 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
 
             const assets = await Promise.all(
                 authorizedAssetIds.map(async (authorizedAssetId): Promise<Asset> =>
-                    getAssetWithExtensions(trx, tenant, authorizedAssetId)
+                    getAssetWithExtensions(trx, tenant, authorizedAssetId, user as AssetAuthUser)
                 )
             );
 
-            return assets;
+            return projectReadableAssets(trx, tenant, context, assets);
         });
     } catch (error) {
         console.error('Error listing entity assets:', error);
@@ -3675,7 +3774,7 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
         const validatedData = validateData(createAssetAssociationSchema, data);
 
         const association = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id, 'update');
 
             // Create the association
             const [createdAssociation] = await tenantScopedTable(trx, 'asset_associations', tenant)
@@ -3748,7 +3847,7 @@ export const removeAssetAssociation = withAuth(async (
 
     try {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'delete');
 
             await tenantScopedTable(trx, 'asset_associations', tenant)
                 .where({
@@ -3797,7 +3896,7 @@ export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetSummaryMetrics> => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
 
             // Get asset info
             const asset = await tenantScopedTable(trx, 'assets', tenant)

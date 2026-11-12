@@ -46,9 +46,21 @@
       "import": "./src/lib/collabPersistence.ts",
       "types": "./src/lib/collabPersistence.ts"
     },
+    "./lib/documentPreviewJob": {
+      "import": "./src/lib/documentPreviewJob.ts",
+      "types": "./src/lib/documentPreviewJob.ts"
+    },
     "./lib/documentPreviewGenerator": {
       "import": "./src/lib/documentPreviewGenerator.ts",
       "types": "./src/lib/documentPreviewGenerator.ts"
+    },
+    "./lib/renderHtmlToPng": {
+      "import": "./src/lib/renderHtmlToPng.ts",
+      "types": "./src/lib/renderHtmlToPng.ts"
+    },
+    "./lib/documentPreviewProvenance": {
+      "import": "./src/lib/documentPreviewProvenance.ts",
+      "types": "./src/lib/documentPreviewProvenance.ts"
     },
     "./lib/documentMarkdownExport": {
       "import": "./src/lib/documentMarkdownExport.ts",
@@ -107,6 +119,8 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
+    "dompurify": ">=3.4.17",
+    "jsdom": "^25.0.1",
     "zod": "^4.6.7"
   },
   "peerDependencies": {

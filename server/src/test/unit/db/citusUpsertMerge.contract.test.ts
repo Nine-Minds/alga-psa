@@ -35,6 +35,7 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', '.next', 'build', 'migrations
 
 /** Postgres clock/volatile functions that realistically appear in merge objects. */
 const NON_IMMUTABLE_FUNCTIONS: { name: string; pattern: RegExp }[] = [
+  { name: 'now()', pattern: /\bnow\s*\(/i },
   { name: 'fn.now()', pattern: /\bfn\s*\.\s*now\s*\(/ },
   { name: "raw('now()')", pattern: /raw\s*\(\s*['"`][^'"`]*\bnow\s*\(\s*\)/i },
   { name: 'CURRENT_TIMESTAMP', pattern: /\bCURRENT_TIMESTAMP\b/i },
@@ -126,6 +127,26 @@ function lineOf(text: string, index: number): number {
   return text.slice(0, index).split('\n').length;
 }
 
+/** Raw SQL conflict actions, cut at the enclosing template, statement, or RETURNING tail. */
+function rawConflictUpdates(text: string): { start: number; clause: string }[] {
+  const clauses: { start: number; clause: string }[] = [];
+  for (const match of text.matchAll(/\bDO\s+UPDATE\s+SET\b/gi)) {
+    const start = match.index! + match[0].length;
+    let end = text.length;
+    for (const terminator of [/`/g, /;/g, /\bRETURNING\b/gi]) {
+      terminator.lastIndex = start;
+      const found = terminator.exec(text);
+      if (found && found.index < end) end = found.index;
+    }
+    clauses.push({ start: match.index!, clause: text.slice(start, end) });
+  }
+  return clauses;
+}
+
+function prohibitedFunctions(text: string): string[] {
+  return NON_IMMUTABLE_FUNCTIONS.filter(({ pattern }) => pattern.test(text)).map(({ name }) => name);
+}
+
 describe('Citus: no non-IMMUTABLE functions in tenant-keyed ON CONFLICT merges', () => {
   const files = sourceFiles();
 
@@ -148,6 +169,38 @@ describe('Citus: no non-IMMUTABLE functions in tenant-keyed ON CONFLICT merges',
     expect(conflictMerges(`await trx('t').insert({}).onConflict(['tenant']).ignore();`)).toHaveLength(0);
   });
 
+  it('scans raw conflict-update SQL without inspecting INSERT values or RETURNING', () => {
+    const sql = `INSERT INTO t (created_at) VALUES (now())
+      ON CONFLICT (tenant, id) DO UPDATE SET updated_at = now() RETURNING id`;
+    const [clause] = rawConflictUpdates(sql);
+    expect(clause.clause).toContain('updated_at = now()');
+    expect(clause.clause).not.toContain('VALUES (now())');
+    expect(clause.clause).not.toContain('RETURNING');
+    expect(prohibitedFunctions(clause.clause)).toContain('now()');
+
+    const valuesOnly = rawConflictUpdates(
+      'INSERT INTO t (created_at) VALUES (now()) ON CONFLICT (tenant, id) DO UPDATE SET created_at = EXCLUDED.created_at;',
+    )[0];
+    expect(prohibitedFunctions(valuesOnly.clause)).toEqual([]);
+  });
+
+  it('finds prohibited functions nested in CASE and COALESCE expressions', () => {
+    const caseClause = rawConflictUpdates(
+      'INSERT INTO t VALUES (1) ON CONFLICT (tenant, id) DO UPDATE SET updated_at = CASE WHEN ready THEN now() ELSE updated_at END;',
+    )[0];
+    expect(prohibitedFunctions(caseClause.clause)).toContain('now()');
+
+    const currentTimestampClause = rawConflictUpdates(
+      'INSERT INTO t VALUES (1) ON CONFLICT (tenant, id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP;',
+    )[0];
+    expect(prohibitedFunctions(currentTimestampClause.clause)).toContain('CURRENT_TIMESTAMP');
+
+    const coalesceClause = rawConflictUpdates(
+      'INSERT INTO t VALUES (1) ON CONFLICT (tenant, id) DO UPDATE SET updated_at = COALESCE(now(), updated_at);',
+    )[0];
+    expect(prohibitedFunctions(coalesceClause.clause)).toContain('now()');
+  });
+
   it('no tenant-keyed upsert passes a non-IMMUTABLE function to DO UPDATE SET', () => {
     const violations: string[] = [];
 
@@ -162,6 +215,16 @@ describe('Citus: no non-IMMUTABLE functions in tenant-keyed ON CONFLICT merges',
           if (pattern.test(body)) {
             violations.push(`${relative}:${lineOf(text, start)} — ${name} in .merge()`);
           }
+        }
+      }
+    }
+
+    for (const file of files) {
+      const text = readFileSync(file, 'utf8');
+      const relative = path.relative(repoRoot, file);
+      for (const { start, clause } of rawConflictUpdates(text)) {
+        for (const name of prohibitedFunctions(clause)) {
+          violations.push(`${relative}:${lineOf(text, start)} — ${name} in raw SQL DO UPDATE SET`);
         }
       }
     }

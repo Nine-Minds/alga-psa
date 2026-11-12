@@ -1,7 +1,8 @@
 'use server';
 
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
+import { clientScopedTenantDb } from '../lib/reports/clientScope';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
@@ -166,7 +167,7 @@ export const getTicketWorkloadReport = withAuth(
       const rangeDays = normalizeRangeDays(rangeDaysInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
-      const scopedDb = tenantDb(knex, tenant);
+      const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.ticket_workload', passthrough: [] });
       const withStatus = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
       const withPriority = (query: Knex.QueryBuilder) =>
@@ -263,7 +264,7 @@ export const getTimeUtilizationReport = withAuth(
       const rangeDays = normalizeRangeDays(rangeDaysInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
-      const scopedDb = tenantDb(knex, tenant);
+      const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.time_utilization', passthrough: [] });
       const withUser = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
       const withService = (query: Knex.QueryBuilder) =>
@@ -349,7 +350,7 @@ export const getTeamPerformanceReport = withAuth(
       const rangeDays = normalizeRangeDays(rangeDaysInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
-      const scopedDb = tenantDb(knex, tenant);
+      const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.team_performance', passthrough: [] });
       const withAssignee = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
       const withStatus = (query: Knex.QueryBuilder, type: 'inner' | 'left' = 'inner') =>
@@ -465,7 +466,7 @@ export const getEmailChannelHealthReport = withAuth(
       const rangeDays = normalizeRangeDays(rangeDaysInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
-      const scopedDb = tenantDb(knex, tenant);
+      const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.email_channel_health', passthrough: ['email_providers'] });
       const withTicketFromProcessedMessage = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'tickets as t', 'epm.ticket_id', 't.ticket_id', { type: 'left' });
       const withRecentProcessedMessages = (query: Knex.QueryBuilder) =>
@@ -579,7 +580,7 @@ export const getTicketAgingReport = withAuth(
       const rangeDays = normalizeRangeDays(rangeDaysInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
-      const scopedDb = tenantDb(knex, tenant);
+      const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.ticket_aging', passthrough: [] });
       const withStatus = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
       const withClient = (query: Knex.QueryBuilder) =>
@@ -694,7 +695,7 @@ export const getEmployeeUtilizationReport = withAuth(
       const rangeDays = normalizeRangeDays(rangeDaysInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
-      const scopedDb = tenantDb(knex, tenant);
+      const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.employee_utilization', passthrough: ['users', 'resources', 'user_work_schedules'] });
 
       const [userRows, timeRows, capacityRows, scheduleRows, todayRow] = await Promise.all([
         scopedDb.table('users')

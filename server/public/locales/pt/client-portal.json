@@ -775,7 +775,40 @@
       "reportsToHelp": "Um gestor pode ver os tickets, dispositivos e projetos das pessoas que se reportam a ele, quando o grupo de visibilidade dele está limitado aos próprios registros.",
       "locations": "Localizações",
       "primaryLocation": "Principal",
-      "remote": "Remoto"
+      "remote": "Remoto",
+      "thisUser": "este usuário",
+      "deactivate": {
+        "title": "Desativar usuário e definir o destino do trabalho em aberto",
+        "confirm": "Desativar usuário",
+        "deactivating": "Desativando…",
+        "thisUserCapitalized": "Este usuário",
+        "openWorkPrompt": "tem trabalho em aberto. Escolha o que deve acontecer antes de desativar o usuário.",
+        "reassignTo": "Reatribuir o trabalho em aberto para",
+        "selectAssignee": "Selecione um usuário interno ativo",
+        "noAssignee": "Nenhum usuário interno ativo está disponível para reatribuição.",
+        "selectedUser": "o usuário selecionado",
+        "buckets": {
+          "tickets": "Tickets",
+          "tasks": "Tarefas de projeto"
+        },
+        "openCount": "{{count}} {{label}} em aberto",
+        "actions": {
+          "reassign": "Reatribuir",
+          "unassign": "Remover atribuição",
+          "archive": "Arquivar"
+        },
+        "labels": {
+          "ticket": "ticket",
+          "tickets": "tickets",
+          "projectTask": "tarefa de projeto",
+          "projectTasks": "tarefas de projeto"
+        },
+        "summary": {
+          "archived": "{{count}} {{label}}: arquivar",
+          "unassigned": "{{count}} {{label}}: remover atribuição",
+          "reassigned": "{{count}} {{label}}: reatribuir para {{name}}"
+        }
+      }
     },
     "messages": {
       "saveChanges": "Salvar alterações",
@@ -915,7 +948,12 @@
       "noMessage": "Nenhuma mensagem"
     },
     "unreadCount_few": "{{count}} notificações não lidas",
-    "unreadCount_many": "{{count}} notificações não lidas"
+    "unreadCount_many": "{{count}} notificações não lidas",
+    "reconnectingToServer": "Reconectando ao servidor...",
+    "refresh": "Atualizar",
+    "markAllRead": "Marcar todas como lidas",
+    "emptyTitle": "Nenhuma notificação",
+    "emptyDescription": "Você está em dia!"
   },
   "billing": {
     "columns": {
@@ -1045,7 +1083,34 @@
     },
     "unassigned": "Não atribuído",
     "sharedWorkspace": "Espaço compartilhado: {{name}}",
-    "sharedWorkspaceLabel": "Espaço compartilhado"
+    "sharedWorkspaceLabel": "Espaço compartilhado",
+    "details": {
+      "notProvided": "Não informado",
+      "notAvailable": "N/D",
+      "cpuWithModel": "{{model}} ({{count}} núcleos)",
+      "cpuCores": "{{count}} núcleos",
+      "workstationTitle": "Detalhes da estação de trabalho",
+      "networkDeviceTitle": "Detalhes do dispositivo de rede",
+      "serverTitle": "Detalhes do servidor",
+      "basicInformation": "Informações básicas",
+      "os": "SO",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Armazenamento",
+      "deviceType": "Tipo de dispositivo",
+      "ipAddress": "Endereço IP",
+      "ports": "Portas",
+      "firmware": "Firmware",
+      "type": "Tipo",
+      "virtual": "Virtual",
+      "physical": "Físico",
+      "assetTag": "Etiqueta do ativo",
+      "serialNumber": "Número de série",
+      "status": "Status",
+      "location": "Local",
+      "purchaseDate": "Data de compra",
+      "warrantyEndDate": "Data de término da garantia"
+    }
   },
   "errors": {
     "account": {

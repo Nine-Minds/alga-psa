@@ -5,9 +5,6 @@ const baseInvoice = {
   client_id: '11111111-1111-4111-8111-111111111111',
   invoice_date: '2026-08-06',
   due_date: '2026-09-05',
-  subtotal: 7500,
-  tax: 0,
-  total_amount: 7500,
   status: 'draft',
 };
 
@@ -20,6 +17,21 @@ const baseItem = {
 };
 
 describe('invoice create item validation', () => {
+  it('rejects caller-supplied invoice totals because the server derives them', () => {
+    const result = createInvoiceSchema.safeParse({
+      ...baseInvoice,
+      subtotal: 7500,
+      tax: 0,
+      total_amount: 7500,
+      items: [baseItem],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map(({ path }) => path[0])).toEqual(['subtotal', 'tax', 'total_amount']);
+    }
+  });
+
   it('accepts an item that omits net_amount and total_price (server calculates them)', () => {
     const result = createInvoiceSchema.safeParse({
       ...baseInvoice,

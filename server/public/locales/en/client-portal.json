@@ -781,7 +781,40 @@
       "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records.",
       "locations": "Locations",
       "primaryLocation": "Primary",
-      "remote": "Remote"
+      "remote": "Remote",
+      "thisUser": "this user",
+      "deactivate": {
+        "title": "Deactivate user and dispose of open work",
+        "confirm": "Deactivate user",
+        "deactivating": "Deactivating…",
+        "thisUserCapitalized": "This user",
+        "openWorkPrompt": "has open work. Choose what should happen before they are deactivated.",
+        "reassignTo": "Reassign open work to",
+        "selectAssignee": "Select an active internal user",
+        "noAssignee": "No active internal user is available for reassignment.",
+        "selectedUser": "the selected user",
+        "buckets": {
+          "tickets": "Tickets",
+          "tasks": "Project tasks"
+        },
+        "openCount": "{{count}} open {{label}}",
+        "actions": {
+          "reassign": "Reassign",
+          "unassign": "Unassign",
+          "archive": "Archive"
+        },
+        "labels": {
+          "ticket": "ticket",
+          "tickets": "tickets",
+          "projectTask": "project task",
+          "projectTasks": "project tasks"
+        },
+        "summary": {
+          "archived": "{{count}} {{label}} will be archived",
+          "unassigned": "{{count}} {{label}} will be unassigned",
+          "reassigned": "{{count}} {{label}} will be reassigned to {{name}}"
+        }
+      }
     },
     "messages": {
       "saveChanges": "Save Changes",
@@ -921,7 +954,12 @@
       "noMessage": "No message"
     },
     "unreadCount_few": "{{count}} unread notifications",
-    "unreadCount_many": "{{count}} unread notifications"
+    "unreadCount_many": "{{count}} unread notifications",
+    "reconnectingToServer": "Reconnecting to server...",
+    "refresh": "Refresh",
+    "markAllRead": "Mark all read",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "You're all caught up!"
   },
   "billing": {
     "columns": {
@@ -1051,7 +1089,34 @@
     },
     "unassigned": "Unassigned",
     "sharedWorkspace": "Shared workspace: {{name}}",
-    "sharedWorkspaceLabel": "Shared workspace"
+    "sharedWorkspaceLabel": "Shared workspace",
+    "details": {
+      "notProvided": "Not provided",
+      "notAvailable": "N/A",
+      "cpuWithModel": "{{model}} ({{count}} cores)",
+      "cpuCores": "{{count}} cores",
+      "workstationTitle": "Workstation Details",
+      "networkDeviceTitle": "Network Device Details",
+      "serverTitle": "Server Details",
+      "basicInformation": "Basic Information",
+      "os": "OS",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "deviceType": "Device Type",
+      "ipAddress": "IP Address",
+      "ports": "Ports",
+      "firmware": "Firmware",
+      "type": "Type",
+      "virtual": "Virtual",
+      "physical": "Physical",
+      "assetTag": "Asset Tag",
+      "serialNumber": "Serial Number",
+      "status": "Status",
+      "location": "Location",
+      "purchaseDate": "Purchase Date",
+      "warrantyEndDate": "Warranty End Date"
+    }
   },
   "errors": {
     "account": {

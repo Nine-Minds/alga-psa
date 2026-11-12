@@ -131,7 +131,7 @@ export const searchAppTypeaheadAction = withAuth(async (
     const { knex } = await createTenantKnex();
     const { visibleHits, totalCount } = await withProjectSearchAccess(knex, tenant, user, () => coManagedSearchAuthentication(user, tenant), async (accessKnex, searchIndex) => {
       const requestedTypes = resolveAllowedTypes(parsedInput.types);
-      const clientAccess = resolveClientAccess(user);
+      const clientAccess = await resolveClientAccess(accessKnex, tenant, user);
       const acl = await resolveSearchAclPrincipal(accessKnex, user, clientAccess);
       const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 

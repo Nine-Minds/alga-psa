@@ -32,6 +32,7 @@ export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
 export * from './lib/tenancy';
+export * from './lib/userResponse';
 export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './lib/senderActionResult';

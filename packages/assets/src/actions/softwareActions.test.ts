@@ -6,8 +6,13 @@ const h = vi.hoisted(() => {
   const state = {
     permitted: true,
     clientExists: true,
+    assetExists: true,
+    assetClientId: 'x',
+    readableClients: ['x'],
+    assets: [{ asset_id: 'a1', client_id: 'x' }, { asset_id: 'a2', client_id: 'y' }],
     countRow: { count: '1' } as { count: string },
     rows: [] as any[],
+    catalogUpdates: [] as any[],
   };
 
   // Chainable recorder: every method records itself and returns the builder;
@@ -17,13 +22,18 @@ const h = vi.hoisted(() => {
     const builder: any = new Proxy(function () {}, {
       get(_t, prop: string) {
         if (prop === 'then') {
-          return (resolve: (v: unknown) => void) => resolve(state.rows);
+          return (resolve: (v: unknown) => void) => resolve(table === 'assets' ? state.assets : state.rows);
         }
         return (...args: unknown[]) => {
           calls.push({ table, method: prop, args });
           if (prop === 'first') {
+            if (table === 'assets') return Promise.resolve(state.assetExists ? { asset_id: 'asset-1', client_id: state.assetClientId } : undefined);
             if (table === 'clients') return Promise.resolve(state.clientExists ? { client_id: 'x' } : undefined);
             return Promise.resolve(state.countRow);
+          }
+          if (prop === 'update') {
+            state.catalogUpdates.push({ table, data: args[0] });
+            return Promise.resolve(1);
           }
           return builder;
         };
@@ -36,7 +46,7 @@ const h = vi.hoisted(() => {
     raw: (sql: string) => ({ __raw: sql }),
   });
 
-  return { TENANT, calls, state, knexMock, makeBuilder, user: { user_id: 'u1' } };
+  return { TENANT, calls, state, knexMock, makeBuilder, user: { user_id: 'u1', user_type: 'internal' } };
 });
 
 vi.mock('@alga-psa/auth', () => ({
@@ -55,11 +65,30 @@ vi.mock('@alga-psa/db', () => ({
       h.calls.push({ table: t, method: 'tenantJoin', args: [l, r] });
       return q;
     },
+    tenantJoinSubquery: (q: any, subquery: any, l: string, r: string, options: any) => {
+      h.calls.push({ table: 'subquery', method: 'tenantJoinSubquery', args: [l, r, options] });
+      return q;
+    },
   }),
 }));
 
+vi.mock('../lib/assetReadAuthorization', () => ({
+  createAssetReadContext: vi.fn(async () => ({})),
+  isAssetReadAllowed: vi.fn(async (_knex: any, _tenant: string, _ctx: any, asset: any) => h.state.readableClients.includes(asset.client_id)),
+  filterReadableAssets: vi.fn(async (_knex: any, _tenant: string, _ctx: any, assets: any[]) =>
+    assets.filter((asset) => h.state.readableClients.includes(asset.client_id))
+  ),
+}));
+
 import { hasPermission } from '@alga-psa/auth';
-import { getAssetSoftware, getClientSoftwareSummary } from './softwareActions';
+import {
+  getAssetSoftware,
+  getAssetSoftwareSummary,
+  getRecentSoftwareChanges,
+  getClientSoftwareSummary,
+  searchSoftwareFleetWide,
+  updateSoftwareCatalogEntry,
+} from './softwareActions';
 
 const CLIENT = 'c1000000-0000-4000-8000-0000000000c1';
 
@@ -70,8 +99,13 @@ describe('getClientSoftwareSummary', () => {
     h.calls.length = 0;
     h.state.permitted = true;
     h.state.clientExists = true;
+    h.state.assetExists = true;
+    h.state.assetClientId = 'x';
+    h.state.readableClients = ['x'];
+    h.state.assets = [{ asset_id: 'a1', client_id: 'x' }, { asset_id: 'a2', client_id: 'y' }];
     h.state.countRow = { count: '1' };
     h.state.rows = [];
+    h.state.catalogUpdates = [];
     vi.mocked(hasPermission).mockClear();
   });
 
@@ -159,6 +193,10 @@ describe('getAssetSoftware', () => {
   beforeEach(() => {
     h.calls.length = 0;
     h.state.permitted = true;
+    h.state.assetExists = true;
+    h.state.assetClientId = 'x';
+    h.state.clientExists = true;
+    h.state.readableClients = ['x'];
     h.state.countRow = { count: '0' };
     h.state.rows = [];
     vi.mocked(hasPermission).mockClear();
@@ -181,7 +219,9 @@ describe('getAssetSoftware', () => {
     }];
     const result: any = await getAssetSoftware({ asset_id: ASSET, limit: 50 });
 
-    expect(callsOf('tenantDb.table').map((c) => [c.table, c.args[0]])).toEqual([['v_asset_software_details', h.TENANT]]);
+    expect(callsOf('tenantDb.table').map((c) => [c.table, c.args[0]])).toEqual([
+      ['assets', h.TENANT], ['clients', h.TENANT], ['v_asset_software_details', h.TENANT],
+    ]);
     const wheres = callsOf('where').map((c) => c.args);
     expect(wheres).toContainEqual(['asset_id', ASSET]);
     expect(wheres).toContainEqual(['is_current', true]);
@@ -205,5 +245,116 @@ describe('getAssetSoftware', () => {
   it('skips the search clause for a blank term', async () => {
     await getAssetSoftware({ asset_id: ASSET, search: '   ' });
     expect(callsOf('where').some((c) => typeof c.args[0] === 'function')).toBe(false);
+  });
+
+  it('returns the same empty list for an excluded asset and an asset missing in this tenant', async () => {
+    h.state.assetClientId = 'excluded-client';
+    const excluded = await getAssetSoftware({ asset_id: ASSET });
+    h.state.assetExists = false;
+    const missing = await getAssetSoftware({ asset_id: ASSET });
+    expect(excluded).toEqual({ software: [], total: 0, page: 1, limit: 50 });
+    expect(missing).toEqual(excluded);
+  });
+
+  it('applies the same asset authorization before summary and recent-change queries', async () => {
+    h.state.readableClients = [];
+    const summaryDenied = await getAssetSoftwareSummary(ASSET);
+    const recentDenied = await getRecentSoftwareChanges(ASSET);
+    h.state.assetExists = false;
+    const summaryMissing = await getAssetSoftwareSummary(ASSET);
+    const recentMissing = await getRecentSoftwareChanges(ASSET);
+    expect(summaryDenied).toEqual(summaryMissing);
+    expect(recentDenied).toEqual(recentMissing);
+    expect(summaryDenied).toMatchObject({ total_installed: 0 });
+    expect(recentDenied).toEqual({ installed: [], uninstalled: [] });
+    expect(callsOf('tenantDb.table').some((c) => String(c.table).startsWith('v_asset_software_details'))).toBe(false);
+  });
+
+  it('requires the coarse asset:read permission for all three per-asset actions', async () => {
+    h.state.permitted = false;
+    const results = await Promise.all([
+      getAssetSoftware({ asset_id: ASSET }),
+      getAssetSoftwareSummary(ASSET),
+      getRecentSoftwareChanges(ASSET),
+    ]);
+    expect(results.every((result: any) => result.permissionError?.includes('Permission denied'))).toBe(true);
+    expect(vi.mocked(hasPermission).mock.calls).toEqual([
+      [h.user, 'asset', 'read'], [h.user, 'asset', 'read'], [h.user, 'asset', 'read'],
+    ]);
+    expect(callsOf('tenantDb.table')).toHaveLength(0);
+  });
+
+  it('keeps authorized summary and recent-change reads successful', async () => {
+    h.state.countRow = { count: '1' };
+    const summary = await getAssetSoftwareSummary(ASSET);
+    const recent = await getRecentSoftwareChanges(ASSET);
+    expect(summary).toMatchObject({ total_installed: 1 });
+    expect(recent).toEqual({ installed: [], uninstalled: [] });
+  });
+});
+
+describe('fleet search and software catalog mutation authorization', () => {
+  beforeEach(() => {
+    h.calls.length = 0;
+    h.state.permitted = true;
+    h.state.assetExists = true;
+    h.state.clientExists = true;
+    h.state.readableClients = ['x'];
+    h.state.assets = [{ asset_id: 'a1', client_id: 'x' }, { asset_id: 'a2', client_id: 'y' }];
+    h.state.countRow = { count: '1' };
+    h.state.rows = [];
+    h.state.catalogUpdates = [];
+    vi.mocked(hasPermission).mockClear();
+  });
+
+  it('requires asset:read before fleet data access', async () => {
+    h.state.permitted = false;
+    const result: any = await searchSoftwareFleetWide({ page: 1 });
+    expect(hasPermission).toHaveBeenCalledWith(h.user, 'asset', 'read');
+    expect(result.permissionError).toContain('Permission denied');
+    expect(callsOf('tenantDb.table')).toHaveLength(0);
+  });
+
+  it('constrains all fleet aggregates and previews to the authorized asset IDs and tenant', async () => {
+    h.state.rows = [{
+      software_id: 'sw1', name: 'App', publisher: 'Vendor', category: 'Productivity',
+      software_type: 'application', is_managed: false, is_security_relevant: false, install_count: '1',
+    }];
+    const result: any = await searchSoftwareFleetWide({ client_id: 'x' });
+    expect(result.results).toHaveLength(1);
+    expect(result.total).toBe(1);
+    const scopedAssetSubqueries = callsOf('whereIn').filter((call) =>
+      call.args[0] === 'scoped_asw.asset_id' || call.args[0] === 'scoped_a.asset_id'
+    );
+    expect(scopedAssetSubqueries).toHaveLength(2);
+    expect(scopedAssetSubqueries.every((call) => (call.args[1] as any[]).includes('a1') && !(call.args[1] as any[]).includes('a2'))).toBe(true);
+    const previewScope = callsOf('whereIn').find((call) => call.args[0] === 'asset_id');
+    expect(previewScope?.args[1]).toEqual(['a1']);
+    expect(callsOf('tenantJoinSubquery')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ args: ['asw.software_id', 'sc.software_id', expect.objectContaining({ type: 'inner' })] }),
+      expect.objectContaining({ args: ['a.asset_id', 'asw.asset_id', expect.objectContaining({ type: 'inner' })] }),
+    ]));
+    expect(callsOf('tenantDb.table').every((call) => call.args[0] === h.TENANT)).toBe(true);
+    expect(callsOf('where')).toContainEqual(expect.objectContaining({ args: ['a.client_id', 'x'] }));
+    const clientFilterIndex = h.calls.findIndex((call) => call.method === 'where' && call.args[0] === 'a.client_id');
+    const totalCountIndex = h.calls.findIndex((call) => call.method === 'countDistinct');
+    expect(clientFilterIndex).toBeGreaterThan(-1);
+    expect(totalCountIndex).toBeGreaterThan(clientFilterIndex);
+  });
+
+  it('requires asset:update and does not mutate catalog classifications when denied', async () => {
+    h.state.permitted = false;
+    const denied: any = await updateSoftwareCatalogEntry('sw1', { is_security_relevant: true });
+    expect(hasPermission).toHaveBeenCalledWith(h.user, 'asset', 'update');
+    expect(denied.permissionError).toContain('Permission denied');
+    expect(h.state.catalogUpdates).toEqual([]);
+  });
+
+  it('updates a catalog entry for an authorized asset manager', async () => {
+    await updateSoftwareCatalogEntry('sw1', { category: 'Browser', is_managed: true });
+    expect(h.state.catalogUpdates).toEqual([{
+      table: 'software_catalog',
+      data: { category: 'Browser', is_managed: true },
+    }]);
   });
 });

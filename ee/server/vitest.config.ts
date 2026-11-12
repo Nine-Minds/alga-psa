@@ -141,6 +141,7 @@ export default defineConfig({
       { find: /^@alga-psa\/clients\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/clients/src')}/$1` },
       { find: /^@alga-psa\/tickets$/, replacement: `${path.resolve(__dirname, '../../packages/tickets/src/index.ts')}` },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/tickets/src')}/$1` },
+      { find: /^@alga-psa\/reference-data\/(actions|components)$/, replacement: `${path.resolve(__dirname, '../../packages/reference-data/src')}/$1/index.ts` },
       { find: /^@alga-psa\/projects$/, replacement: `${path.resolve(__dirname, '../../packages/projects/src/index.ts')}` },
       { find: /^@alga-psa\/projects\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/projects/src')}/$1` },
       { find: /^@alga-psa\/teams$/, replacement: `${path.resolve(__dirname, '../../packages/teams/src/index.ts')}` },
@@ -156,6 +157,10 @@ export default defineConfig({
       { find: /^@product\/service-principals\/entry$/, replacement: `${path.resolve(__dirname, '../../packages/product-service-principals/ee/entry.ts')}` },
       { find: /^@product\/service-principals\/types$/, replacement: `${path.resolve(__dirname, '../../packages/product-service-principals/types.ts')}` },
       { find: /^@product\/billing\/entry$/, replacement: `${path.resolve(__dirname, '../../packages/product-billing/oss/entry.tsx')}` },
+      // Service principals: EE tests must resolve the EE entry, as the build does.
+      { find: /^@product\/service-principals\/entry$/, replacement: `${path.resolve(__dirname, '../../packages/product-service-principals/ee/entry.ts')}` },
+      { find: /^@product\/service-principals\/types$/, replacement: `${path.resolve(__dirname, '../../packages/product-service-principals/types.ts')}` },
+      { find: /^@product\/service-principals\/ee\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/product-service-principals/ee')}/$1` },
       { find: /^@alga-psa\/user-composition$/, replacement: `${path.resolve(__dirname, '../../packages/user-composition/src/index.ts')}` },
       { find: /^@alga-psa\/user-composition\/actions$/, replacement: `${path.resolve(__dirname, '../../packages/user-composition/src/actions/index.ts')}` },
       { find: /^@alga-psa\/user-composition\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/user-composition/src')}/$1` },

@@ -12,6 +12,11 @@ const OPERATIONS = [
   'customers.retrieve',
   'checkout.sessions.create',
   'checkout.sessions.retrieve',
+  'webhook_endpoints.create',
+  'webhook_endpoints.retrieve',
+  'webhook_endpoints.update',
+  'webhook_endpoints.delete',
+  'webhook_endpoints.list',
 ] as const;
 
 const KNOWN_ERROR_TYPES = new Set([
@@ -64,6 +69,18 @@ function sessionResponse(core: StripeEmulatorCore, session: StripeCheckoutSessio
   return { ...session };
 }
 
+/** Form-encoded `enabled_events[0]=…` arrives as an array (or index-keyed object). */
+function stringList(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  const raw = Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [value];
+  return raw.map(String);
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  if (value === undefined) return undefined;
+  return value === true || value === 'true';
+}
+
 function formatMoney(cents: number, currency: string): string {
   return `${currency.toUpperCase()} ${(cents / 100).toFixed(2)}`;
 }
@@ -106,7 +123,8 @@ function hostedDeclinePage(session: StripeCheckoutSession, message: string): str
 }
 
 /**
- * Stripe-shaped vendor surface: the /v1 API (customers + checkout sessions)
+ * Stripe-shaped vendor surface: the /v1 API (customers, checkout sessions,
+ * subscriptions, webhook endpoints)
  * and the browser-facing simulated Checkout page with Pay / Decline / Cancel
  * controls. Point STRIPE_API_BASE_URL at the /v1 origin.
  */
@@ -235,6 +253,47 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     // reconciliation on the application side never learns of the expiry.
     await deliverEvent(core, event, env);
     res.json(core.getCheckoutSession(sessionId));
+  }));
+
+  // ── Webhook endpoints ─────────────────────────────────────────────────────
+
+  v1.post('/webhook_endpoints', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.create');
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.createWebhookEndpoint({
+      url: typeof body.url === 'string' ? body.url : '',
+      enabled_events: stringList(body.enabled_events) ?? [],
+      description: typeof body.description === 'string' ? body.description : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+      api_version: typeof body.api_version === 'string' ? body.api_version : undefined,
+    }));
+  }));
+
+  v1.get('/webhook_endpoints', route((_req, res) => {
+    checkFault(core, 'webhook_endpoints.list');
+    res.json(core.listWebhookEndpoints());
+  }));
+
+  v1.get('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.retrieve');
+    res.json(core.getWebhookEndpoint(String(req.params.id)));
+  }));
+
+  v1.post('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.update');
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.updateWebhookEndpoint(String(req.params.id), {
+      url: typeof body.url === 'string' ? body.url : undefined,
+      enabled_events: stringList(body.enabled_events),
+      disabled: optionalBoolean(body.disabled),
+      description: typeof body.description === 'string' ? body.description : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+    }));
+  }));
+
+  v1.delete('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.delete');
+    res.json(core.deleteWebhookEndpoint(String(req.params.id)));
   }));
 
   // ── Browser-facing simulated Checkout ────────────────────────────────────

@@ -2,20 +2,30 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket creation intentionally composes ticket feature actions for customer-submitted requests. */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Link2 } from 'lucide-react';
-import { createClientTicket } from '@alga-psa/client-portal/actions';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Link2, Paperclip, X } from 'lucide-react';
+import { createClientTicket, finalizeClientTicketDescription } from '@alga-psa/client-portal/actions';
 import { getClientTicketFormData, getClientTicketPrioritiesForBoard } from '@alga-psa/tickets/actions/ticketFormActions';
-import { IPriority, IBoard } from '@alga-psa/types';
+import { IPriority, IBoard, ITicket } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextEditor } from '@alga-psa/ui/editor';
-import { parseTicketRichTextContent, serializeTicketRichTextContent } from '@alga-psa/tickets/lib';
+import {
+  parseTicketRichTextContent,
+  removeTicketRichTextImageUrls,
+  replaceTicketRichTextImageUrls,
+  resolveDocumentViewUrl,
+  serializeTicketRichTextContent,
+} from '@alga-psa/tickets/lib';
+import { useQuickAddRichTextUploadSession } from '@alga-psa/tickets/components/useQuickAddRichTextUploadSession';
 import type { PartialBlock } from '@blocknote/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -85,6 +95,21 @@ export function ClientAddTicket({
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [boardId, setBoardId] = useState('');
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
+  // An image pasted into the description has no ticket to belong to yet, so it is
+  // staged as a local object URL and uploaded once the ticket exists.
+  const descriptionUploadSession = useQuickAddRichTextUploadSession({
+    componentLabel: 'ClientAddTicket',
+    onDiscard: () => {
+      resetForm();
+      onOpenChange(false);
+    },
+  });
+  const stagedClipboardImages = descriptionUploadSession.stagedClipboardImages;
 
   useEffect(() => {
     if (!open) {
@@ -113,6 +138,9 @@ export function ClientAddTicket({
     };
 
     fetchData();
+    // Only an open/close transition reloads the form; resetForm is re-created every
+    // render and would otherwise refetch the boards on each keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleBoardChange = async (nextBoardId: string) => {
@@ -139,19 +167,25 @@ export function ClientAddTicket({
     setDescriptionContent(parseTicketRichTextContent(''));
     setDescriptionEditorInstanceKey((prev) => prev + 1);
     setPriorityId('');
+    setAttachments([]);
     setError(null);
     setHasAttemptedSubmit(false);
+    descriptionUploadSession.resetDraftTracking();
   };
 
+  // Staged images carry their own discard confirmation, so closing goes through it.
   const handleClose = () => {
-    resetForm();
-    onOpenChange(false);
+    descriptionUploadSession.requestDiscard();
   };
 
   const validateForm = () => {
     const validationErrors: string[] = [];
     if (!title.trim()) validationErrors.push(t('create.errors.titleRequired'));
-    if (!blockNoteHasText(descriptionContent)) validationErrors.push(t('create.errors.descriptionRequired'));
+    // A screenshot on its own is a description: pasted images hold no text, and
+    // asking for a sentence first is exactly what customers were tripping over.
+    if (!blockNoteHasText(descriptionContent) && stagedClipboardImages.length === 0) {
+      validationErrors.push(t('create.errors.descriptionRequired'));
+    }
     if (!priorityId) validationErrors.push(t('create.errors.priorityRequired'));
     if (boards.length > 0 && !boardId) validationErrors.push(t('create.errors.boardRequired'));
     if (boards.length === 0) validationErrors.push(noBoardsAvailableMessage);
@@ -172,6 +206,68 @@ export function ClientAddTicket({
     return errorMap[message] || message;
   };
 
+  // Uploads every staged image against the created ticket and persists the
+  // description that points at the uploaded documents instead of the object URLs.
+  const finalizeDescriptionForCreatedTicket = async (ticketId: string) => {
+    if (!userId) {
+      throw new Error(t('quickAdd.clipboardUploadSessionRequired', 'User session is required for clipboard image upload.'));
+    }
+
+    const replacementUrls = new Map<string, string>();
+    const { uploadDocument } = await import('@alga-psa/documents/actions/documentActions');
+
+    for (const stagedImage of stagedClipboardImages) {
+      const fileFormData = new FormData();
+      fileFormData.append('file', stagedImage.file);
+
+      const uploadResult = await uploadDocument(fileFormData, { userId, ticketId });
+
+      if (isActionPermissionError(uploadResult)) {
+        throw new Error(uploadResult.permissionError || t('quickAdd.clipboardUploadFailed', 'Clipboard image upload failed.'));
+      }
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || t('quickAdd.clipboardUploadFailed', 'Clipboard image upload failed.'));
+      }
+
+      replacementUrls.set(stagedImage.url, resolveDocumentViewUrl(uploadResult.document));
+    }
+
+    const finalizeResult = await finalizeClientTicketDescription(
+      ticketId,
+      serializeTicketRichTextContent(
+        replaceTicketRichTextImageUrls(descriptionContent, replacementUrls)
+      )
+    );
+    if (isReturnedActionError(finalizeResult)) {
+      throw new Error(getErrorMessage(finalizeResult));
+    }
+  };
+
+  // Returns the names of files that failed to upload. Never throws.
+  const uploadAttachmentsForTicket = async (ticketId: string): Promise<string[]> => {
+    if (!userId) {
+      return attachments.map((file) => file.name);
+    }
+
+    const failed: string[] = [];
+    const { uploadDocument } = await import('@alga-psa/documents/actions/documentActions');
+    for (const file of attachments) {
+      try {
+        const fileFormData = new FormData();
+        fileFormData.append('file', file);
+        const uploadResult = await uploadDocument(fileFormData, { userId, ticketId });
+        if (isActionPermissionError(uploadResult) || !uploadResult.success) {
+          failed.push(file.name);
+        }
+      } catch (uploadError) {
+        console.error(`Failed to upload attachment ${file.name}:`, uploadError);
+        failed.push(file.name);
+      }
+    }
+    return failed;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -183,9 +279,18 @@ export function ClientAddTicket({
         throw new UserFacingError(validationErrors.join('\n'));
       }
 
+      // The create call cannot carry object URLs: their documents only exist once
+      // the ticket does, so the images are dropped here and replayed afterwards.
+      const descriptionForCreate = stagedClipboardImages.length > 0
+        ? removeTicketRichTextImageUrls(
+            descriptionContent,
+            new Set(stagedClipboardImages.map((image) => image.url))
+          )
+        : descriptionContent;
+
       const formData = new FormData();
       formData.append('title', title);
-      formData.append('description', serializeTicketRichTextContent(descriptionContent));
+      formData.append('description', serializeTicketRichTextContent(descriptionForCreate));
       formData.append('priority_id', priorityId);
       if (boardId) {
         formData.append('board_id', boardId);
@@ -198,6 +303,29 @@ export function ClientAddTicket({
       if (isReturnedActionError(result)) {
         setError(mapCreateTicketError(getErrorMessage(result)));
         return;
+      }
+
+      const createdTicketId = (result as ITicket).ticket_id;
+
+      // Uploads happen after the ticket exists, outside its transaction, one file
+      // at a time: a failed file never costs the customer the ticket they filed.
+      if (createdTicketId && stagedClipboardImages.length > 0) {
+        try {
+          await finalizeDescriptionForCreatedTicket(createdTicketId);
+        } catch (descriptionFinalizeError) {
+          console.error('Failed to finalize client ticket description:', descriptionFinalizeError);
+          toast.error(t('quickAdd.clipboardUploadPartialFailure', 'Ticket created, but pasted images could not be attached to the description.'));
+        }
+      }
+
+      if (createdTicketId && attachments.length > 0) {
+        const failedFiles = await uploadAttachmentsForTicket(createdTicketId);
+        if (failedFiles.length > 0) {
+          toast.error(t('quickAdd.attachmentsPartialFailure', {
+            defaultValue: 'Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.',
+            files: failedFiles.join(', '),
+          }), { duration: 10000 });
+        }
       }
 
       resetForm();
@@ -258,6 +386,7 @@ export function ClientAddTicket({
   ) : undefined;
 
   return (
+    <>
     <Dialog
       isOpen={open}
       onClose={handleClose}
@@ -318,6 +447,7 @@ export function ClientAddTicket({
                     clearErrorIfSubmitted();
                   }}
                   placeholder={t('create.descriptionPlaceholder')}
+                  uploadFile={descriptionUploadSession.uploadFile}
                 />
               </div>
 
@@ -352,10 +482,80 @@ export function ClientAddTicket({
                   placeholder={t('create.priorityPlaceholder')}
                 />
               </div>
+
+              <div
+                id="client-add-ticket-attachments-section"
+                className="space-y-2"
+                data-testid="client-add-ticket-attachments"
+              >
+                <div className="text-sm font-medium text-gray-700">
+                  {t('quickAdd.attachments.heading', 'Attachments')}
+                </div>
+                <input
+                  ref={attachmentInputRef}
+                  id="client-add-ticket-attachments-input"
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const picked = Array.from(e.target.files ?? []);
+                    if (picked.length > 0) setAttachments((current) => [...current, ...picked]);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  id="client-add-ticket-attachments-add"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => attachmentInputRef.current?.click()}
+                  disabled={isSubmitting}
+                >
+                  <Paperclip className="h-4 w-4 mr-1" />
+                  {t('quickAdd.attachments.add', 'Add files')}
+                </Button>
+                {attachments.length > 0 && (
+                  <ul className="space-y-1" id="client-add-ticket-attachments-list">
+                    {attachments.map((file, index) => (
+                      <li
+                        key={`${index}-${file.name}-${file.size}`}
+                        className="flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <span className="truncate">{file.name}</span>
+                        <Button
+                          id={`client-add-ticket-attachment-remove-${index}`}
+                          type="button"
+                          variant="icon"
+                          size="icon"
+                          aria-label={t('quickAdd.attachments.remove', { defaultValue: 'Remove {{name}}', name: file.name })}
+                          onClick={() => setAttachments((current) => current.filter((_, candidate) => candidate !== index))}
+                          disabled={isSubmitting}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </form>
           </>
         )}
       </DialogContent>
     </Dialog>
+    {descriptionUploadSession.showDraftCancelDialog && (
+    <ConfirmationDialog
+      id="client-add-ticket-description-clipboard-draft-cancel-dialog"
+      isOpen
+      onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
+      onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
+      title={t('conversation.clipboardDraftCancelTitle', 'Pasted Images Detected')}
+      message={t('quickAdd.clipboardDraftMessage', 'This quick-add description includes pasted images that have not been attached to a saved ticket yet. Continue editing, or delete the staged images and close?')}
+      confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
+      cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
+      isConfirming={descriptionUploadSession.isDeletingDraftImages}
+    />
+    )}
+    </>
   );
 }

@@ -14,6 +14,11 @@ import {
   ProjectDateReadinessJobData,
 } from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { generateDocumentPreviewsHandler } from './handlers/generateDocumentPreviewsHandler';
+import {
+  GENERATE_DOCUMENT_PREVIEWS_JOB,
+  GenerateDocumentPreviewsJobData,
+} from '@alga-psa/documents/lib/documentPreviewJob';
 import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import {
   KB_ARTICLE_IMPORT_JOB,
@@ -39,6 +44,11 @@ import {
   ExpiringHourBlocksNotificationJobData,
 } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
+import {
+  FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+  finalizeLinkAcceptedQuoteHandler,
+  FinalizeLinkAcceptedQuoteJobData,
+} from './handlers/finalizeLinkAcceptedQuoteHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
@@ -162,6 +172,11 @@ import {
   searchVisibleUserReindexHandler,
   SearchVisibleUserReindexJobData,
 } from './handlers/searchVisibleUserReindexHandler';
+import {
+  SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
+  searchClientScopeReindexHandler,
+  SearchClientScopeReindexJobData,
+} from './handlers/searchClientScopeReindexHandler';
 import {
   SEARCH_RECONCILE_JOB_NAME,
   searchReconcileHandler,
@@ -396,6 +411,18 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  JobHandlerRegistry.register<FinalizeLinkAcceptedQuoteJobData & BaseJobData>(
+    {
+      name: FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+      handler: async (_jobId, data) => {
+        await finalizeLinkAcceptedQuoteHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000, // PDF render + SMTP
+    },
+    registerOpts
+  );
+
   JobHandlerRegistry.register<OpportunityDisciplineJobData & BaseJobData>(
     {
       name: 'opportunity-discipline',
@@ -471,6 +498,18 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  JobHandlerRegistry.register<GenerateDocumentPreviewsJobData & BaseJobData>(
+    {
+      name: GENERATE_DOCUMENT_PREVIEWS_JOB,
+      handler: async (_jobId, data) => {
+        await generateDocumentPreviewsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000,
+    },
+    registerOpts
+  );
+
   // ============================================================================
   // USAGE & RECONCILIATION HANDLERS
   // ============================================================================
@@ -483,6 +522,18 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 300000,
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<SearchClientScopeReindexJobData & BaseJobData>(
+    {
+      name: SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
+      handler: async (_jobId, data) => {
+        await searchClientScopeReindexHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 600000,
     },
     registerOpts
   );
@@ -1007,6 +1058,7 @@ export function getAvailableJobHandlers(): string[] {
     'generate-invoice',
     'invoice_zip',
     'invoice_email',
+    FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
     PROJECT_DATE_READINESS_JOB,
     // Credits
     'expired-credits',
@@ -1019,9 +1071,11 @@ export function getAvailableJobHandlers(): string[] {
     'opportunity-generators',
     // Assets & Import
     'asset_import',
+    GENERATE_DOCUMENT_PREVIEWS_JOB,
     KB_ARTICLE_IMPORT_JOB,
     // Usage & Reconciliation
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+    SEARCH_CLIENT_SCOPE_REINDEX_JOB_NAME,
     SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
     'reconcile-hour-block-allocations',
