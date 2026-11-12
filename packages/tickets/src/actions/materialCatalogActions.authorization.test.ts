@@ -20,6 +20,12 @@ const h = vi.hoisted(() => ({
   queryCatalog: vi.fn(),
   queryPrices: vi.fn(),
   queryAvailable: vi.fn(),
+  TicketRecordAccessDeniedError: class extends Error {
+    constructor() {
+      super('Permission denied: Cannot access ticket');
+      this.name = 'TicketRecordAccessDeniedError';
+    }
+  },
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -44,13 +50,15 @@ vi.mock('@alga-psa/inventory/lib/consume', () => ({
   InsufficientStockError: class InsufficientStockError extends Error {},
   stockConflictResultFrom: () => null,
 }));
-vi.mock('../lib/ticketRecordAuthorization', () => ({
+vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
   authorizeTicketRecordAccess: (...args: any[]) => h.authorizeTicket(...args),
+  TicketRecordAccessDeniedError: h.TicketRecordAccessDeniedError,
 }));
 
 import {
   addTicketMaterial,
   deleteTicketMaterial,
+  getTicketCatalogCategories,
   getServicePrices,
   listTicketMaterials,
   searchServiceCatalogForPicker,
@@ -113,7 +121,7 @@ beforeEach(() => {
     },
   }));
   h.authorizeTicket.mockReset().mockImplementation(async ({ ticketId }: { ticketId: string }) => {
-    if (!h.visibleTickets.has(ticketId)) throw new Error('Permission denied: Cannot access ticket');
+    if (!h.visibleTickets.has(ticketId)) throw new h.TicketRecordAccessDeniedError();
     return { ticket_id: ticketId };
   });
   h.addMaterial.mockReset().mockResolvedValue({ ticket_material_id: 'material-new' });
@@ -128,6 +136,7 @@ describe('material catalog action authorization', () => {
   it('denies clients catalog and price reads before reaching internal catalog queries', async () => {
     h.currentUser = user('client');
     expect(await searchServiceCatalogForPicker({})).toEqual({ items: [], totalCount: 0 });
+    expect(await getTicketCatalogCategories()).toEqual([]);
     expect(await getServicePrices('service-1')).toEqual([]);
     expect(h.queryCatalog).not.toHaveBeenCalled();
     expect(h.queryPrices).not.toHaveBeenCalled();
@@ -136,12 +145,14 @@ describe('material catalog action authorization', () => {
   it('requires both MSP catalog and inventory read permissions for both catalog entry points', async () => {
     setPermission('inventory', 'read', false);
     expect(await searchServiceCatalogForPicker({})).toEqual({ items: [], totalCount: 0 });
+    expect(await getTicketCatalogCategories()).toEqual([]);
     expect(await getServicePrices('service-1')).toEqual([]);
     expect(h.queryCatalog).not.toHaveBeenCalled();
     expect(h.queryPrices).not.toHaveBeenCalled();
     setPermission('inventory', 'read', true);
     setPermission('service', 'read', false);
     expect(await searchServiceCatalogForPicker({})).toEqual({ items: [], totalCount: 0 });
+    expect(await getTicketCatalogCategories()).toEqual([]);
     expect(await getServicePrices('service-1')).toEqual([]);
     expect(h.queryCatalog).not.toHaveBeenCalled();
     expect(h.queryPrices).not.toHaveBeenCalled();

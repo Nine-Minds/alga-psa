@@ -29,6 +29,7 @@ vi.mock('../lib/authHelpers', () => ({
 }));
 
 const { persistManualInvoiceCharges } = await import('../services/invoiceService');
+const MATERIAL_SOURCE_VERSION = '2026-10-28T12:00:00.123456Z';
 
 let db: Knex;
 let tenant: string;
@@ -50,12 +51,13 @@ interface SeededContext {
 async function insertTimeEntry(params: {
   ownerTenant?: string;
   ownerUserId?: string;
+  entryId?: string;
   ticket?: string;
   service?: string | null;
   invoiced?: boolean;
   approvalStatus?: string;
 } = {}): Promise<string> {
-  const entryId = uuidv4();
+  const entryId = params.entryId ?? uuidv4();
   await db('time_entries').insert({
     tenant: params.ownerTenant ?? tenant,
     entry_id: entryId,
@@ -92,6 +94,7 @@ async function insertTicketMaterial(params: {
     currency_code: params.currency ?? 'USD',
     description: 'Replacement widget',
     is_billed: params.isBilled ?? false,
+    updated_at: MATERIAL_SOURCE_VERSION,
   });
   return materialId;
 }
@@ -319,7 +322,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
           quantity: 2,
           rate: 2500,
           description: 'Replacement widget',
-          source_link: { kind: 'ticket_material', materialId },
+          source_link: { kind: 'ticket_material', materialId, updatedAt: MATERIAL_SOURCE_VERSION },
         },
       ],
     });
@@ -374,7 +377,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
             quantity: 2,
             rate: 2500,
             description: 'Replacement widget',
-            source_link: { kind: 'ticket_material', materialId },
+            source_link: { kind: 'ticket_material', materialId, updatedAt: MATERIAL_SOURCE_VERSION },
           },
         ],
       }),
@@ -385,7 +388,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
     expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
   });
 
-  it('does not claim a time entry owned by another tenant', async () => {
+  it('claims only the same-id time entry owned by the invoice tenant', async () => {
     const otherUser = uuidv4();
     await db('users').insert({
       tenant: OTHER_TENANT,
@@ -394,36 +397,28 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
       hashed_password: 'x',
       email: `other-${otherUser.slice(0, 8)}@example.com`,
     });
-    const foreignEntryId = await insertTimeEntry({
+    const sharedEntryId = await insertTimeEntry();
+    await insertTimeEntry({
       ownerTenant: OTHER_TENANT,
       ownerUserId: otherUser,
+      entryId: sharedEntryId,
       ticket: uuidv4(),
       service: null,
     });
     const invoiceId = uuidv4();
 
-    await expect(
-      runPersist({
-        invoiceId,
-        items: [
-          {
-            service_id: serviceId,
-            quantity: 2,
-            rate: 12000,
-            description: 'Remote Support',
-            source_link: { kind: 'time_entry', entryId: foreignEntryId },
-          },
-        ],
-      }),
-    ).rejects.toBeInstanceOf(ManualInvoiceError);
+    await runPersist({ invoiceId, items: [timeItem(sharedEntryId)] });
 
-    const foreignEntry = await db('time_entries')
-      .where({ tenant: OTHER_TENANT, entry_id: foreignEntryId })
+    const tenantEntry = await db('time_entries')
+      .where({ tenant, entry_id: sharedEntryId })
       .first('invoiced');
+    const foreignEntry = await db('time_entries')
+      .where({ tenant: OTHER_TENANT, entry_id: sharedEntryId })
+      .first('invoiced');
+    expect(tenantEntry.invoiced).toBe(true);
     expect(foreignEntry.invoiced).toBe(false);
     const charges = await db('invoice_charges').where({ tenant, invoice_id: invoiceId });
-    expect(charges).toHaveLength(0);
-    expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
+    expect(charges).toHaveLength(1);
   });
 
   const timeItem = (entryId: string) => ({
@@ -432,7 +427,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
   });
   const materialItem = (materialId: string) => ({
     service_id: serviceId, quantity: 2, rate: 2500, description: 'Replacement widget',
-    source_link: { kind: 'ticket_material' as const, materialId },
+    source_link: { kind: 'ticket_material' as const, materialId, updatedAt: MATERIAL_SOURCE_VERSION },
   });
 
   async function expectNoInvoice(invoiceId: string) {

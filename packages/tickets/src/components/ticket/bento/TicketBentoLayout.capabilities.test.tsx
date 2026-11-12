@@ -167,6 +167,7 @@ const SECTIONS: Array<[TicketCapabilityKey, string]> = [
   ['credentials', 's-credentials'],
   ['externalLinks', 's-externalLinks'],
   ['materials', 's-materials'],
+  ['fixedFeeServices', 's-fixed-fees'],
   ['billing', 's-billing'],
   ['scheduling', 's-scheduling'],
   ['survey', 's-survey'],
@@ -209,6 +210,11 @@ describe('T002 bento layout capability gating', () => {
   it('renders none of the gated sections, and no placeholders, when all capabilities are off', () => {
     renderWith(withCaps({}));
     for (const [, testId] of SECTIONS) expect(screen.queryByTestId(testId)).toBeNull();
+  });
+
+  it('hides fixed-fee services when an alternate source does not implement that method group', () => {
+    renderWith(composeTicketDataSource(nativeTicketDataSource, { kind: 'alternate' }));
+    expect(screen.queryByTestId('s-fixed-fees')).toBeNull();
   });
 
   // Mutation check: each capability alone must bring back exactly its own section.

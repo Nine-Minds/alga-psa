@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import knexFactory from 'knex';
+import { claimTicketChargeSources } from '../../../../../packages/billing/src/lib/billing/ticketChargeClaims';
 import { tenantDb } from '@alga-psa/db/tenantDb';
 
 const require = createRequire(import.meta.url);
@@ -24,13 +25,30 @@ describe.each([
     expect(sql).toMatch(/"s"\."tenant" = "f"\."tenant"|"s"\."tenant" = 'tenant-a'/);
   });
 
-  it('scopes material compare-and-swap updates to the current tenant', () => {
-    const sql = facade(knex, 'tenant-a').table('ticket_materials')
-      .where({ ticket_material_id: 'material-a', is_billed: false, updated_at: 'source-version' })
-      .update({ is_billed: true, billed_invoice_id: 'invoice-a' }).toString();
-    expect(sql).toContain('"tenant" = \'tenant-a\'');
-    expect(sql).toContain('"ticket_material_id" = \'material-a\'');
-    expect(sql).toContain('"is_billed" = false');
-    expect(sql).toContain('"updated_at" = \'source-version\'');
-  });
+});
+
+it('uses the set-based source claim helper with an explicit tenant predicate', async () => {
+  const raw = vi.fn(async (sql: string, bindings: Array<string | number | null>) => ({
+    rows: [{ source_id: 'material-a' }],
+    sql,
+    bindings,
+  }));
+  const trx = { raw } as unknown as Knex.Transaction;
+
+  const claimed = await claimTicketChargeSources(
+    trx,
+    'tenant-a',
+    'ticket_material',
+    [{ sourceId: 'material-a', sourceUpdatedAt: '2026-11-12T15:00:00.123456Z' }],
+    'invoice-a',
+    '2026-11-12T15:01:00Z',
+  );
+
+  expect(claimed).toEqual(new Set(['material-a']));
+  const [sql, bindings] = raw.mock.calls[0];
+  expect(sql).toContain('UPDATE ticket_materials AS source');
+  expect(sql).toContain('FROM (VALUES (?::uuid, ?::timestamptz');
+  expect(sql).toContain('source.tenant = ?');
+  expect(sql).toContain('source.is_billed = FALSE');
+  expect(bindings.at(-1)).toBe('tenant-a');
 });

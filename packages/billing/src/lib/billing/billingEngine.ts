@@ -7344,7 +7344,6 @@ export class BillingEngine {
     const rows = await query.where({
       "f.client_id": clientId, "f.is_billed": false, "f.currency_code": currencyCode,
     })
-      .where("f.created_at", ">=", billingPeriod.startDate)
       .where("f.created_at", "<", billingPeriod.endDate)
       .orderBy("f.entry_id")
       .select("f.*", "sc.service_name", "sc.tax_rate_id",
@@ -7488,8 +7487,7 @@ export class BillingEngine {
             "tm.is_billed": false,
             "tm.currency_code": currencyCode,
           })
-          .where("tm.created_at", ">=", billingPeriod.startDate)
-          .andWhere("tm.created_at", "<", billingPeriod.endDate);
+          .where("tm.created_at", "<", billingPeriod.endDate);
       }
     } catch (err: any) {
       if (err?.code === "42P01") {
