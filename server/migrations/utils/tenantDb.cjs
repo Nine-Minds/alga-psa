@@ -183,6 +183,7 @@ const TENANT_TABLE_METADATA = {
   default_billing_settings: { scope: 'tenant' },
   discounts: { scope: 'tenant' },
   document_associations: { scope: 'tenant' },
+  document_upload_sessions: { scope: 'tenant' },
   document_block_content: { scope: 'tenant' },
   document_content: { scope: 'tenant' },
   document_default_folders: { scope: 'tenant' },

@@ -908,6 +908,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'document_folder_template_items', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'document_entity_folder_init', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'document_folder_templates', deletion: 'ordered', scope: { scope: 'tenant' } },
+  { table: 'document_upload_sessions', deletion: 'ordered' },
   { table: 'document_associations', deletion: 'ordered', clientKeyed: { by: 'resolver', resolver: 'document_entity', discriminator: 'entity_type', id: 'entity_id' } },
   { table: 'credential_associations', deletion: 'ordered' },
   { table: 'credential_access_grants', deletion: 'ordered' },

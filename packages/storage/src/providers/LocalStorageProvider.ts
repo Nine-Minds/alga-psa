@@ -44,7 +44,8 @@ export class LocalStorageProvider extends BaseStorageProvider {
         handle: WriteSessionHandle,
         partNumber: number,
         part: Readable | Buffer,
-        size: number
+        size: number,
+        signal?: AbortSignal
     ): Promise<Partial<PartReceipt>> {
         const { partialPath } = this.localHandle(handle);
         const sidecar = this.resolveRelative(`${partialPath}.${partNumber}`);
@@ -54,6 +55,7 @@ export class LocalStorageProvider extends BaseStorageProvider {
         try {
             const chunks: Iterable<Buffer | string> | AsyncIterable<Buffer | string> = Buffer.isBuffer(part) ? [part] : part;
             for await (const raw of chunks) {
+                signal?.throwIfAborted();
                 const chunk = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
                 let offset = 0;
                 while (offset < chunk.length) {
