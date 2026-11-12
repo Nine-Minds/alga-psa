@@ -298,12 +298,15 @@ export function AsyncSearchableSelect({
       if (event.key !== 'Escape') return;
       // A select list or popover opened from headerContent (the client picker's status,
       // type and tag filters) is the layer above this panel: let Radix dismiss just that
-      // one, the same exemption the outside-click handler makes.
+      // one, the same exemption the outside-click handler makes. A layer that wraps this
+      // control instead of sitting on top of it (an inline dropdown inside a popover) is
+      // below us and still loses Escape to the panel.
       const target = event.target;
-      if (
-        target instanceof Element &&
-        target.closest('[data-radix-select-content], [data-radix-popper-content-wrapper]')
-      ) {
+      const layer =
+        target instanceof Element
+          ? target.closest('[data-radix-select-content], [data-radix-popper-content-wrapper]')
+          : null;
+      if (layer && !layer.contains(contentRef.current) && !layer.contains(triggerRef.current)) {
         return;
       }
       event.preventDefault();

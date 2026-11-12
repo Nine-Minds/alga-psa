@@ -113,6 +113,26 @@ describe('AsyncSearchableSelect escape ownership', () => {
     await waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('false'));
   });
 
+  it('still owns Escape when the control itself lives inside a popover layer', async () => {
+    render(
+      <div data-radix-popper-content-wrapper="">
+        <AsyncSearchableSelect
+          id="inside-popover-select"
+          value=""
+          onChange={vi.fn()}
+          loadOptions={async () => ({ options: [{ value: 'one', label: 'One result' }], total: 1 })}
+          debounceMs={0}
+        />
+      </div>
+    );
+    const trigger = screen.getByRole('combobox');
+    fireEvent.click(trigger);
+    await screen.findByText('One result');
+
+    fireEvent.keyDown(screen.getByPlaceholderText('Search...'), { key: 'Escape' });
+    await waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('false'));
+  });
+
   it('ignores arrow keys on a disabled trigger', () => {
     const loadOptions = vi.fn(async () => ({ options: [], total: 0 }));
     render(
