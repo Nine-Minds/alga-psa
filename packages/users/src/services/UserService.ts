@@ -7,7 +7,8 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
+import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
   INTERACTIVE_USER_TYPES,
@@ -71,6 +72,35 @@ class ValidationError extends Error {
   readonly name = 'ValidationError';
   readonly statusCode = 400;
   readonly code = 'VALIDATION_ERROR';
+}
+class ConflictError extends Error {
+  readonly name = 'ConflictError';
+  readonly statusCode = 409;
+  readonly code = 'CONFLICT';
+}
+
+/**
+ * Both role floors, in the one place the API service reports them: a last-role
+ * refusal is a 400 the caller can fix by assigning another role first, a
+ * last-admin refusal is a 409 on the tenant's state.
+ */
+function throwOnUserRoleFloor(violation: UserRoleFloorViolation, message: string): never {
+  if (violation === 'last_msp_admin') {
+    throw new ConflictError(message);
+  }
+  throw new ValidationError(message);
+}
+
+async function enforceUserRoleFloor(
+  trx: Knex.Transaction,
+  tenant: string,
+  change: UserRoleFloorChange,
+  options?: { alsoAffectedUserIds?: readonly string[] }
+): Promise<void> {
+  const floor = await assertUserRoleFloor(trx, tenant, change, options);
+  if (isUserRoleFloorRejected(floor)) {
+    throwOnUserRoleFloor(floor.violation, floor.message);
+  }
 }
 
 function toSafeBulkErrorData(userData: Partial<CreateUserData>): Pick<CreateUserData, 'email'> & {
@@ -320,6 +350,12 @@ export class UserService extends BaseService<IUser> {
         throw new Error('A user with this username already exists for this user type');
       }
 
+      // There is no "no roles" state: a user is created with at least one role
+      // (belt for callers that bypass createUserSchema).
+      if (!data.role_ids || data.role_ids.length === 0) {
+        throw new ValidationError('At least one role is required');
+      }
+
       // Validate role IDs if provided
       if (data.role_ids && data.role_ids.length > 0) {
         const roles = await tenantDb(trx, context.tenant).table('roles')
@@ -460,6 +496,11 @@ export class UserService extends BaseService<IUser> {
         (data.user_type ?? existingUser.user_type) === 'internal'
         && ((data as { is_inactive?: boolean }).is_inactive ?? existingUser.is_inactive) === false;
       const takesNewSeat = occupiesSeatAfter && !occupiesSeatNow;
+      // The mirror image: a change that gives up an active internal seat must
+      // not take the tenant's last admin with it.
+      if (occupiesSeatNow && !occupiesSeatAfter) {
+        await enforceUserRoleFloor(trx, context.tenant, { kind: 'deactivate_user', userId: id });
+      }
       if (takesNewSeat) {
         const licenseCheck = await admitInternalUserSeat(trx, context.tenant, { email: existingUser.email, kind: 'user', existingUserId: id });
         if (isInternalUserLicenseLimitRejected(licenseCheck)) {
@@ -517,6 +558,8 @@ export class UserService extends BaseService<IUser> {
       if (!existingUser || !isInteractiveUserType(existingUser.user_type)) {
         throw new NotFoundError('User not found');
       }
+
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'delete_user', userId: id });
 
       // Delete related data in correct order to avoid foreign key constraints
       // 1. Delete user preferences
@@ -767,6 +810,11 @@ export class UserService extends BaseService<IUser> {
         throw new Error('One or more invalid role IDs provided');
       }
 
+      // Assignment replaces the role set, so the floors are decided on the
+      // final set: Admin -> Admin+other passes, Admin -> other on the last
+      // admin does not, and an empty list never does.
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
+
       // Remove existing roles
       await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
@@ -810,6 +858,18 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Verify user exists
+      const user = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
+        .select('user_id')
+        .first();
+
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
+
       // Remove specified roles
       await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
@@ -1155,10 +1215,30 @@ export class UserService extends BaseService<IUser> {
         }
       }
 
+      // Deactivation is checked over the whole set: each target is told about
+      // the others, so a request that deactivates every admin at once is
+      // refused as surely as one that deactivates the last remaining admin.
+      if (deactivate) {
+        const targets: Array<{ user_id: string }> = await this.restrictToInteractiveUsers(
+          this.buildTenantScopedQuery(trx, context), false
+        )
+          .whereIn('user_id', userIds)
+          .select('user_id');
+        const targetIds = targets.map((target) => target.user_id);
+        for (const targetId of targetIds) {
+          await enforceUserRoleFloor(
+            trx,
+            context.tenant,
+            { kind: 'deactivate_user', userId: targetId },
+            { alsoAffectedUserIds: targetIds.filter((other) => other !== targetId) }
+          );
+        }
+      }
+
       // Only interactive users are managed here; non-interactive ids are skipped.
       const result = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
         .whereIn('user_id', userIds)
-        .update({ 
+        .update({
           is_inactive: deactivate,
           updated_at: knex.raw('now()')
         });

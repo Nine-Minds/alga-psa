@@ -11,7 +11,7 @@ import {
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorError, isUserRoleFloorRejected, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -47,6 +47,13 @@ interface ActionResult {
   error?: string;
 }
 
+/** The i18n key each role-floor refusal reports; see assertUserRoleFloor. */
+function userRoleFloorMessageKey(violation: UserRoleFloorViolation): string {
+  return violation === 'last_msp_admin'
+    ? 'msp/settings:errors.roles.lastMspAdmin'
+    : 'msp/settings:errors.roles.lastRole';
+}
+
 /**
  * A password-change outcome. `messageKey` is the localization seam: `withAuth`
  * rewrites `error` into the caller's locale before the payload reaches the
@@ -74,6 +81,7 @@ type AddUserResult =
   | { success: false; code: AddUserErrorCode; error: string };
 
 export type UpdateUserErrorCode =
+  | 'LAST_MSP_ADMIN'
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'
@@ -88,7 +96,7 @@ export type UpdateUserErrorCode =
 
 export type UpdateUserResult =
   | { success: true; user: SafeApiUser | null }
-  | { success: false; code: UpdateUserErrorCode; error: string };
+  | ({ success: false; code: UpdateUserErrorCode; error: string } & ActionResultMessageKey);
 
 export type OpenWorkDisposition =
   | { action: "reassign"; assigneeId: string }
@@ -107,11 +115,11 @@ export interface UserOpenWorkCounts {
 
 export type DeactivateUserWithDispositionResult =
   | { success: true; user: SafeApiUser | null }
-  | {
+  | ({
       success: false;
       code: "PERMISSION_DENIED" | "DEACTIVATION_FAILED";
       error: string;
-    };
+    } & ActionResultMessageKey);
 
 export type RegisterClientUserErrorCode =
   | 'CONTACT_NOT_FOUND'
@@ -753,6 +761,13 @@ export const deleteUser = withAuth(async (
       const actorId = user.user_id;
       const tenantScopedTable = (table: string) => tenantDb(trx, tenantId).table(table);
 
+      // Deleting the last active MSP admin would leave the tenant unrepairable.
+      // Runs in the deletion transaction, so the refusal rolls the delete back.
+      const floor = await assertUserRoleFloor(trx, tenantId, { kind: 'delete_user', userId });
+      if (isUserRoleFloorRejected(floor)) {
+        throw new UserRoleFloorError(floor.message, floor.violation);
+      }
+
       // Citus does not enforce ON DELETE SET NULL / CASCADE on distributed
       // tables, so every FK pointing at users(tenant, user_id) must be
       // cleared explicitly here regardless of what the migration declared.
@@ -970,6 +985,17 @@ export const deleteUser = withAuth(async (
   } catch (error) {
     logger.error('Error deleting user:', error);
     const message = getErrorMessage(error);
+    // Same shape (and un-localized `message`) as the other deleteUser refusals.
+    if (isUserRoleFloorError(error)) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error.message,
+        dependencies: [],
+        alternatives: []
+      };
+    }
     if (message.startsWith('Permission denied:')) {
       return {
         success: false,
@@ -1070,6 +1096,16 @@ export const updateUser = withAuth(async (
 
       // If user is being deactivated, clear default_assigned_to on boards
       if (userData.is_inactive === true) {
+        const floor = await assertUserRoleFloor(trx, tenant, { kind: 'deactivate_user', userId });
+        if (isUserRoleFloorRejected(floor)) {
+          return {
+            success: false,
+            code: 'LAST_MSP_ADMIN',
+            error: floor.message,
+            messageKey: userRoleFloorMessageKey(floor.violation),
+          };
+        }
+
         await tenantDb(trx, tenant).table('boards')
           .where({ default_assigned_to: userId })
           .update({ default_assigned_to: null });
@@ -1338,6 +1374,19 @@ export const deactivateUserWithDisposition = withAuth(
 
           await assertInteractiveUserTarget(tenant, trx, userId);
 
+          const floor = await assertUserRoleFloor(trx, tenant, {
+            kind: "deactivate_user",
+            userId,
+          });
+          if (isUserRoleFloorRejected(floor)) {
+            return {
+              success: false as const,
+              code: "DEACTIVATION_FAILED" as const,
+              error: floor.message,
+              messageKey: userRoleFloorMessageKey(floor.violation),
+            };
+          }
+
           for (const bucket of [
             disposition.tickets,
             disposition.projectTasks,
@@ -1507,6 +1556,10 @@ export const deactivateUserWithDisposition = withAuth(
         },
       );
 
+      if (result.success === false) {
+        return result;
+      }
+
       revalidatePath("/settings");
       const occurredAt = new Date().toISOString();
       try {
@@ -1559,15 +1612,26 @@ export const updateUserRoles = withAuth(async (
   { tenant },
   userId: string,
   roleIds: string[]
-): Promise<void | ActionResult> => {
+): Promise<void | (ActionResult & ActionResultMessageKey)> => {
   try {
     const {knex: db} = await createTenantKnex();
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+    const floorRejection = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throwPermissionError('update user roles');
       }
       await assertInteractiveUserTarget(tenant, trx, userId);
+
+      // The final role set decides: swapping Admin for another role on the last
+      // admin is refused, a swap that keeps Admin is not.
+      const floor = await assertUserRoleFloor(trx, tenant, { kind: 'set_roles', userId, roleIds });
+      if (isUserRoleFloorRejected(floor)) {
+        return {
+          success: false,
+          error: floor.message,
+          messageKey: userRoleFloorMessageKey(floor.violation),
+        } satisfies ActionResult & ActionResultMessageKey;
+      }
 
       // Delete existing roles
       await tenantDb(trx, tenant).table('user_roles')
@@ -1583,7 +1647,12 @@ export const updateUserRoles = withAuth(async (
         }));
         await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
       }
+      return null;
     });
+
+    if (floorRejection) {
+      return floorRejection;
+    }
 
     const occurredAt = new Date().toISOString();
     await publishNonCatalogWorkflowEvent({

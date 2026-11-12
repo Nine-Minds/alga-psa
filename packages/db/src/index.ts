@@ -100,6 +100,7 @@ export {
   USER_ROLE_FLOOR_LOCK_NAMESPACE,
   UserRoleFloorError,
   assertUserRoleFloor,
+  isUserRoleFloorError,
   isUserRoleFloorRejected,
   lockUserRoleFloor,
 } from './lib/userRoleFloor';

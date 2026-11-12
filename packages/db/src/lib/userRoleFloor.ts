@@ -51,6 +51,14 @@ export class UserRoleFloorError extends Error {
   }
 }
 
+/** Recognises the error across bundle boundaries, where instanceof can fail. */
+export function isUserRoleFloorError(error: unknown): error is UserRoleFloorError {
+  return (
+    error instanceof UserRoleFloorError
+    || (typeof error === 'object' && error !== null && (error as { name?: string }).name === 'UserRoleFloorError')
+  );
+}
+
 /**
  * Per-tenant floor lock. `pg_advisory_xact_lock` is transaction scoped, so it
  * is held through the caller's write: two requests that each remove a different

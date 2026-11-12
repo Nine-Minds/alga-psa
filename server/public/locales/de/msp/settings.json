@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}.",
       "nameRequired": "Rollenname ist erforderlich.",
       "builtInRename": "Integrierte Rollen können nicht umbenannt werden.",
-      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits."
+      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits.",
+      "lastMspAdmin": "Ein Mandant muss mindestens einen aktiven MSP-Admin-Benutzer behalten.",
+      "lastRole": "Ein Benutzer muss mindestens eine Rolle behalten. Weisen Sie zuerst eine andere Rolle zu und entfernen Sie dann diese."
     },
     "secrets": {
       "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
