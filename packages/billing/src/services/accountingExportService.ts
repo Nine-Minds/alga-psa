@@ -44,6 +44,41 @@ export interface ExternalTaxImporter {
 
 export interface CreateExportBatchOptions extends CreateExportBatchInput {}
 
+/** A document the provider rejected, keyed by the Alga entity (invoice / credit memo / vendor bill) id. */
+export interface AccountingExportFailedEntity {
+  entityId: string;
+  code: string;
+  message: string;
+}
+
+/**
+ * Delivery result plus a per-Alga-entity outcome. Entities are resolved through
+ * the batch lines (line.document_id), so callers need not know how adapters
+ * group lines into provider documents. An entity is delivered only when none of
+ * its lines were rejected.
+ */
+export interface AccountingExportExecutionResult extends AccountingExportDeliveryResult {
+  deliveredEntityIds: string[];
+  failedEntities: AccountingExportFailedEntity[];
+}
+
+const MAX_REPORTED_VALIDATION_ERRORS = 5;
+
+/**
+ * Build the human-readable reason for a validation failure from the per-line
+ * messages. Format: "Export validation failed: <m1> | <m2> | ..." with unique
+ * messages in the order the validator reported them (deterministic), capped at
+ * five with a "(+N more)" suffix. A single error reads as "Export validation
+ * failed: <message>". The full list stays in details.validationErrors.
+ */
+export function formatValidationFailureMessage(errors: Array<{ message: string }>): string {
+  const unique = Array.from(new Set(errors.map((item) => item.message.trim()).filter(Boolean)));
+  if (unique.length === 0) return 'Export validation failed';
+  const shown = unique.slice(0, MAX_REPORTED_VALIDATION_ERRORS).join(' | ');
+  const extra = unique.length - MAX_REPORTED_VALIDATION_ERRORS;
+  return `Export validation failed: ${shown}${extra > 0 ? ` (+${extra} more)` : ''}`;
+}
+
 export interface AppendLinesOptions {
   lines: CreateExportLineInput[];
 }
@@ -212,7 +247,7 @@ export class AccountingExportService {
     return this.repository.updateBatchStatus(batchId, updates);
   }
 
-  async executeBatch(batchId: string): Promise<AccountingExportDeliveryResult> {
+  async executeBatch(batchId: string): Promise<AccountingExportExecutionResult> {
     let initial = await this.getBatchWithDetails(batchId);
     let batch = initial.batch;
     if (!batch) {
@@ -288,7 +323,7 @@ export class AccountingExportService {
     }
     if (this.repository.withExecution) {
       let scopedService: AccountingExportService | undefined;
-      let result: AccountingExportDeliveryResult;
+      let result: AccountingExportExecutionResult;
       try {
         result = await this.repository.withExecution(batchId, executionId, async (repository) => {
           scopedService = new AccountingExportService(repository, this.adapterRegistry, this.taxImporter);
@@ -324,7 +359,7 @@ export class AccountingExportService {
     return this.executeReservedBatch(batchId, adapter, now);
   }
 
-  private async executeReservedBatch(batchId: string, adapter: AccountingExportAdapter, now: string): Promise<AccountingExportDeliveryResult> {
+  private async executeReservedBatch(batchId: string, adapter: AccountingExportAdapter, now: string): Promise<AccountingExportExecutionResult> {
     let refreshed: Awaited<ReturnType<AccountingExportService['getBatchWithDetails']>>;
     let taxDelegationMode: TaxDelegationMode;
     let adapterSettings: Record<string, unknown> | undefined;
@@ -355,7 +390,7 @@ export class AccountingExportService {
         // validation failures apart from transient transport errors.
         throw new AppError(
           'ACCOUNTING_EXPORT_VALIDATION_FAILED',
-          `Export batch ${batchId} is not ready for delivery (status ${refreshed.batch.status})`,
+          formatValidationFailureMessage(openValidationErrors),
           {
             batchId,
             status: 'needs_attention',
@@ -586,7 +621,11 @@ export class AccountingExportService {
         });
       }
 
-      return deliveryResult;
+      // Extend in place so the object handed to adapter.postProcess is the one returned.
+      return Object.assign(
+        deliveryResult,
+        resolveEntityOutcome(context.lines, deliveryResult.deliveredLines, failedDocuments)
+      );
     } catch (error: any) {
       try {
         await this.persistAdapterFailure({
@@ -913,6 +952,47 @@ function sanitizeExportErrorMetadata(metadata: Record<string, unknown>): Record<
     result[key] = value;
   }
   return result;
+}
+
+/**
+ * Map delivery results onto Alga entities via the batch lines. With no failed
+ * documents the whole batch counts as delivered (matches the status logic).
+ * Otherwise an entity is failed when any of its lines (or the failure's
+ * documentId) is rejected, delivered when it has a delivered line and no
+ * rejection, and in neither set when the adapter reported nothing for it.
+ */
+function resolveEntityOutcome(
+  lines: AccountingExportLine[],
+  deliveredLines: Array<{ lineId: string }>,
+  failedDocuments: AccountingExportDeliveryDocumentFailure[]
+): { deliveredEntityIds: string[]; failedEntities: AccountingExportFailedEntity[] } {
+  const entityByLine = new Map(lines.map((line) => [line.line_id, line.document_id]));
+  const knownEntities = new Set(entityByLine.values());
+  if (failedDocuments.length === 0) {
+    return { deliveredEntityIds: Array.from(knownEntities), failedEntities: [] };
+  }
+
+  const failed = new Map<string, AccountingExportFailedEntity>();
+  for (const failure of failedDocuments) {
+    const entityIds = new Set<string>();
+    for (const lineId of failure.lineIds) {
+      const entityId = entityByLine.get(lineId);
+      if (entityId) entityIds.add(entityId);
+    }
+    if (knownEntities.has(failure.documentId)) entityIds.add(failure.documentId);
+    for (const entityId of entityIds) {
+      if (!failed.has(entityId)) {
+        failed.set(entityId, { entityId, code: failure.code, message: sanitizeProviderMessage(failure.message) });
+      }
+    }
+  }
+
+  const delivered = new Set<string>();
+  for (const line of deliveredLines) {
+    const entityId = entityByLine.get(line.lineId);
+    if (entityId && !failed.has(entityId)) delivered.add(entityId);
+  }
+  return { deliveredEntityIds: Array.from(delivered), failedEntities: Array.from(failed.values()) };
 }
 
 function collectTransactionIds(lines: AccountingExportLine[]): string[] {
