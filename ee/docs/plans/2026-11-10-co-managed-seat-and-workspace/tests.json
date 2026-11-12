@@ -46,7 +46,7 @@
   {
     "id": "T006",
     "description": "DB integration: resize refuses a decrease below committed seats; release returns seats once and a replay changes nothing; a purchase reduction below allocated across both kinds is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009",
@@ -56,7 +56,7 @@
   {
     "id": "T007",
     "description": "DB integration: capacity below allocated with only seat allocations starts grace and then read-only on the same deadlines as a workspace pool.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]

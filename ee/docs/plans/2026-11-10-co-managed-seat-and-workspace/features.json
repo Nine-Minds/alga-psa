@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "A seat allocation's seat count can be raised within available capacity and lowered no further than its committed seats.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "Releasing a seat allocation returns its seats to the pool exactly once; a replay is a no-op.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "A pool purchase that would lower capacity below seats allocated across both kinds is refused.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Pool lapse (capacity below allocated) starts grace and then read-only using seats of both kinds, and a seat allocation follows the same deadline as a workspace allocation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
