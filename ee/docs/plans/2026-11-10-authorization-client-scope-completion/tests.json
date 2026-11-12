@@ -179,7 +179,7 @@
   {
     "id": "T021",
     "description": "Contract (AST): a fixture action that reads a covered table without authorization fails the read-coverage test, and a fixture action with no permission check fails the permission-coverage test unless pinned; a pinned action reading a commercial table fails.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F037"

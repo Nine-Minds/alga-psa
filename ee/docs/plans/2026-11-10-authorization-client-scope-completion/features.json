@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "A contract test fails when an exported server action or REST handler reads a table whose ownership declaration maps to a covered resource without calling an authorization entry point; exceptions are pinned with a reason and the list cannot grow.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — Coverage contracts"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "A contract test pins every exported server action that touches tenant data without a permission check; the list cannot grow, and no pinned action may read a commercial table.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — Coverage contracts"
     ]
