@@ -883,7 +883,16 @@
       "emptyDropMessage": "No se recibió ningún archivo. Guarde el adjunto o el correo en su equipo y, a continuación, arrastre el archivo guardado aquí o use «Buscar archivos».",
       "uploadInProgress": "Ya hay una carga en curso. Espere a que finalice antes de añadir más archivos.",
       "refreshFailed": "Sus archivos se subieron, pero la lista de documentos no se pudo actualizar. Recargue la página para verlos.",
-      "clearResults": "Borrar resultados"
+      "clearResults": "Borrar resultados",
+      "typeNotAllowed": "Este tipo de archivo no está permitido. Elija otro archivo.",
+      "permissionDenied": "No tiene permiso para subir documentos aquí.",
+      "networkFailed": "Se interrumpió la conexión y no se pudo reanudar la carga. Compruebe su conexión e inténtelo de nuevo.",
+      "sessionGone": "Esta carga caducó antes de terminar. Vuelva a iniciarla.",
+      "cancelled": "Cancelado",
+      "cancelUpload": "Cancelar carga",
+      "tryAgain": "Reintentar",
+      "progress": "{{committed}} de {{total}}",
+      "progressLabel": "Progreso de la carga de {{name}}"
     },
     "folders": {
       "root": "Raíz",

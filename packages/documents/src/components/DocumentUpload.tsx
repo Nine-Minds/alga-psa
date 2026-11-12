@@ -2,13 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { uploadDocument } from '../actions/documentActions';
 import type { IDocument } from '@alga-psa/types';
-import {
-    isActionPermissionError,
-    isActionMessageError,
-} from '@alga-psa/ui/lib/errorHandling';
-import { Upload, X, FileUp, Check, AlertCircle } from 'lucide-react';
+import { Upload, X, FileUp, Check, AlertCircle, Ban, RotateCcw } from 'lucide-react';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import FolderSelectorModal from './FolderSelectorModal';
@@ -17,7 +12,9 @@ import AssociatedEntityPicker, { type PickerAssociationEntityType } from './Asso
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
 import { formatBytes } from '@alga-psa/core/formatters';
-import { MAX_UPLOAD_BYTES } from '../lib/uploadLimits';
+import { Progress } from '@alga-psa/ui/components/Progress';
+import { useDocumentUploads, type UploadItem, type UploadOutcome } from '../hooks/useDocumentUploads';
+import type { UploadTarget } from '../lib/uploadSessionClient';
 
 /** Terminal counts for one bulk upload batch, passed to `onAllUploadsComplete`. */
 export interface DocumentUploadBatchSummary {
@@ -44,34 +41,6 @@ interface DocumentUploadProps {
     getFoldersFn?: () => Promise<string[]>;
 }
 
-interface UploadOptions {
-    userId: string;
-    clientId?: string;
-    ticketId?: string;
-    contactNameId?: string;
-    assetId?: string;
-    projectTaskId?: string;
-    contractId?: string;
-    opportunityId?: string;
-    folder_path?: string | null;
-}
-
-type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
-
-interface FileUploadStatus {
-    file: File;
-    status: UploadStatus;
-    error?: string;
-    document?: IDocument;
-}
-
-interface FileAttemptResult {
-    file: File;
-    status: 'success' | 'error';
-    error?: string;
-    document?: IDocument;
-}
-
 const UPLOAD_ASSOCIATION_ENTITY_TYPES: PickerAssociationEntityType[] = [
     'client',
     'contact',
@@ -84,7 +53,6 @@ const UPLOAD_ASSOCIATION_ENTITY_TYPES: PickerAssociationEntityType[] = [
 
 export default function DocumentUpload({
     id,
-    userId,
     entityId,
     entityType,
     folderPath,
@@ -120,9 +88,12 @@ export default function DocumentUpload({
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
 
-    // Upload queue state
-    const [uploadQueue, setUploadQueue] = useState<FileUploadStatus[]>([]);
-    const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
+    // Upload queue state: per-file status and committed bytes live in the hook.
+    const { items: uploadQueue, uploadBatch, cancel: cancelUpload, clear: clearUploads } = useDocumentUploads();
+    const currentFileIndex = Math.max(0, uploadQueue.findIndex(item => item.status === 'uploading'));
+    // The destination of the last batch, so "Try again" resends one file to the same folder.
+    const lastFolderRef = useRef<string | null | undefined>(undefined);
+
 
     const resetFileInput = () => {
         if (fileInputRef.current) {
@@ -186,9 +157,7 @@ export default function DocumentUpload({
         setShowEmptyDrop(false);
 
         // If folderPath is already provided (e.g., current folder in folder mode), upload directly.
-        // When every file is over the size limit nothing will be sent, so skip the
-        // folder picker and show the per-file reasons right away.
-        if (folderPath !== undefined || files.every(file => file.size > MAX_UPLOAD_BYTES)) {
+        if (folderPath !== undefined) {
             await startBulkUpload(files, folderPath ?? null);
         } else {
             // Otherwise, always show folder selector to let user choose destination
@@ -208,16 +177,43 @@ export default function DocumentUpload({
         }
     };
 
-    const fileTooLargeMessage = (file: File) => {
-        const limit = formatBytes(MAX_UPLOAD_BYTES);
-        let size = formatBytes(file.size);
-        // Never show a size that rounds to the limit itself.
-        if (size === limit) size = `${file.size.toLocaleString()} bytes`;
-        return t('documents.uploadSection.fileTooLarge', {
-            size,
-            limit,
-            defaultValue: `This file is ${size}. The current limit is ${limit} per file.`
-        });
+    /** One specific message per cause; the generic one is only for failures with no known cause. */
+    const failureMessage = (item: UploadItem): string => {
+        const failure = item.failure;
+        switch (failure?.reason) {
+            case 'tooLarge': {
+                if (failure.maxFileSize === undefined) break;
+                const limit = formatBytes(failure.maxFileSize);
+                let size = formatBytes(item.file.size);
+                // Never show a size that rounds to the limit itself.
+                if (size === limit) size = `${item.file.size.toLocaleString()} bytes`;
+                return t('documents.uploadSection.fileTooLarge', {
+                    size,
+                    limit,
+                    defaultValue: `This file is ${size}. The current limit is ${limit} per file.`
+                });
+            }
+            case 'typeNotAllowed':
+                return t('documents.uploadSection.typeNotAllowed', "This file type isn't allowed. Choose a different file.");
+            case 'permissionDenied':
+                return t('documents.uploadSection.permissionDenied', "You don't have permission to upload documents here.");
+            case 'network':
+                return t('documents.uploadSection.networkFailed', 'The connection was interrupted and the upload could not be resumed. Check your connection and try again.');
+            case 'sessionGone':
+                return t('documents.uploadSection.sessionGone', 'This upload expired before it finished. Start it again.');
+        }
+        return t('documents.uploadSection.fileError', 'Failed to upload file');
+    };
+
+    const currentTarget = (): UploadTarget => {
+        const effectiveEntityType = entityType ?? selectedEntityType;
+        const effectiveEntityId = entityId ?? selectedEntityId;
+        return {
+            ...(effectiveEntityId && effectiveEntityType
+                ? { entityType: effectiveEntityType, entityId: effectiveEntityId }
+                : {}),
+            folderPath: lastFolderRef.current ?? null,
+        };
     };
 
     const startBulkUpload = async (files: File[], targetFolderPath: string | null | undefined) => {
@@ -229,39 +225,28 @@ export default function DocumentUpload({
         }
         // Set the guard before any await so overlapping drops cannot replace it.
         isUploadingRef.current = true;
+        lastFolderRef.current = targetFolderPath;
 
-        // A newly started batch replaces previous outcomes.
-        const queue: FileUploadStatus[] = files.map(file => ({
-            file,
-            status: 'pending' as const
-        }));
-        setUploadQueue(queue);
-        setCurrentFileIndex(0);
         setIsUploading(true);
         setError(null);
         setShowEmptyDrop(false);
         resetFileInput();
 
-        // Accumulate terminal outcomes locally so the summary does not depend
-        // on React state timing. Per-file callback failures are tracked so the
-        // batch can report reload guidance without relabeling a stored file.
-        const outcomes: FileAttemptResult[] = [];
+        // Per-file callback failures are tracked so the batch can report reload
+        // guidance without relabeling a stored file.
         const callbackErrors = { onUploadComplete: false };
+        let outcomes: UploadOutcome[] = [];
         try {
-            for (let i = 0; i < files.length; i++) {
-                setCurrentFileIndex(i);
-                // The single size gate: an oversized file is failed here and never
-                // reaches uploadDocument. All entry paths end up in this loop.
-                if (files[i].size > MAX_UPLOAD_BYTES) {
-                    const error = fileTooLargeMessage(files[i]);
-                    setUploadQueue(prev => prev.map((item, idx) =>
-                        idx === i ? { ...item, status: 'error' as const, error } : item
-                    ));
-                    outcomes.push({ file: files[i], status: 'error', error });
-                    continue;
+            outcomes = await uploadBatch(files, currentTarget(), async (document) => {
+                // Consumer callbacks are isolated from upload failure: a rejected
+                // handler must never relabel an already-stored file as failed.
+                try {
+                    await onUploadComplete({ success: true, document: document as unknown as IDocument });
+                } catch (callbackError) {
+                    console.error('Document uploaded but onUploadComplete handler failed:', callbackError);
+                    callbackErrors.onUploadComplete = true;
                 }
-                outcomes.push(await processFileUpload(i, files[i], targetFolderPath, callbackErrors));
-            }
+            });
         } finally {
             // Processing is done: show outcomes, but stay busy (guard held,
             // controls disabled) until the parent refresh below settles.
@@ -278,14 +263,13 @@ export default function DocumentUpload({
             failed,
         };
 
-        // One failure notification per batch. Per-file permission errors are
-        // recorded inline instead of announcing a toast each, so the summary is
-        // the single announcement.
-        if (failed > 0) {
+        // One failure notification per batch. A file the user cancelled is not a failure to announce.
+        const errored = outcomes.filter(outcome => outcome.status === 'error').length;
+        if (errored > 0) {
             toast.error(t('documents.uploadSection.failureSummary', {
-                failed,
+                failed: errored,
                 total: outcomes.length,
-                defaultValue: `${failed} of ${outcomes.length} files could not be uploaded. Review the errors below.`
+                defaultValue: `${errored} of ${outcomes.length} files could not be uploaded. Review the errors below.`
             }));
         }
 
@@ -317,113 +301,7 @@ export default function DocumentUpload({
         }
     };
 
-    const processFileUpload = async (
-        index: number,
-        file: File,
-        targetFolderPath: string | null | undefined,
-        callbackErrors: { onUploadComplete: boolean }
-    ): Promise<FileAttemptResult> => {
-        // Update status to uploading
-        setUploadQueue(prev => prev.map((item, idx) =>
-            idx === index ? { ...item, status: 'uploading' as const, error: undefined } : item
-        ));
-
-        let outcome: FileAttemptResult;
-
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const options: UploadOptions = {
-                userId,
-                folder_path: targetFolderPath ?? null
-            };
-
-            const effectiveEntityType = entityType ?? selectedEntityType;
-            const effectiveEntityId = entityId ?? selectedEntityId;
-
-            // Add the appropriate entity ID based on type if both are provided
-            if (effectiveEntityId && effectiveEntityType) {
-                switch (effectiveEntityType) {
-                    case 'ticket':
-                        options.ticketId = effectiveEntityId;
-                        break;
-                    case 'client':
-                        options.clientId = effectiveEntityId;
-                        break;
-                    case 'contact':
-                        options.contactNameId = effectiveEntityId;
-                        break;
-                    case 'asset':
-                        options.assetId = effectiveEntityId;
-                        break;
-                    case 'project_task':
-                        options.projectTaskId = effectiveEntityId;
-                        break;
-                    case 'contract':
-                        options.contractId = effectiveEntityId;
-                        break;
-                    case 'opportunity':
-                        options.opportunityId = effectiveEntityId;
-                        break;
-                }
-            }
-
-            const result = await uploadDocument(formData, options);
-
-            if (isActionPermissionError(result)) {
-                outcome = { file, status: 'error', error: result.permissionError };
-            } else if (isActionMessageError(result)) {
-                outcome = { file, status: 'error', error: result.actionError };
-            } else if (result.success) {
-                outcome = { file, status: 'success', document: result.document };
-            } else {
-                const returnedError = (result as { success: false; error?: string }).error;
-                outcome = {
-                    file,
-                    status: 'error',
-                    error: returnedError && returnedError.trim()
-                        ? returnedError
-                        : t('documents.uploadSection.error', 'Failed to upload document')
-                };
-            }
-        } catch (uploadError) {
-            // A thrown or opaque transport error carries no trustworthy cause;
-            // use a safe localized fallback rather than exposing internals.
-            console.error('Error uploading file:', uploadError);
-            outcome = {
-                file,
-                status: 'error',
-                error: t('documents.uploadSection.fileError', 'Failed to upload file')
-            };
-        }
-
-        // Persist the terminal outcome in the queue.
-        setUploadQueue(prev => prev.map((item, idx) =>
-            idx === index ? {
-                ...item,
-                status: outcome.status,
-                error: outcome.error,
-                document: outcome.document
-            } : item
-        ));
-
-        // Consumer callbacks are isolated from upload failure: a rejected
-        // handler must never relabel an already-stored file as failed.
-        if (outcome.status === 'success' && outcome.document) {
-            try {
-                await onUploadComplete({ success: true, document: outcome.document });
-            } catch (callbackError) {
-                console.error('Document uploaded but onUploadComplete handler failed:', callbackError);
-                // The file is stored; only the consumer's post-upload refresh
-                // failed. Surface reload guidance after the batch without
-                // relabeling this file as an upload failure.
-                callbackErrors.onUploadComplete = true;
-            }
-        }
-
-        return outcome;
-    };
+    const retryFile = (file: File) => startBulkUpload([file], lastFolderRef.current);
 
     const succeededCount = uploadQueue.filter(item => item.status === 'success').length;
 
@@ -533,7 +411,7 @@ export default function DocumentUpload({
                                             size="sm"
                                             disabled={isBusy}
                                             onClick={() => {
-                                                setUploadQueue([]);
+                                                clearUploads();
                                                 setShowEmptyDrop(false);
                                             }}
                                         >
@@ -584,12 +462,70 @@ export default function DocumentUpload({
                                                             </span>
                                                         </>
                                                     )}
+                                                    {item.status === 'cancelled' && (
+                                                        <>
+                                                            <Ban className="w-4 h-4 text-[rgb(var(--color-text-500))]" aria-hidden="true" />
+                                                            <span className="text-[rgb(var(--color-text-500))]">
+                                                                {t('documents.uploadSection.cancelled', 'Cancelled')}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    {(item.status === 'pending' || item.status === 'uploading') && (
+                                                        <Button
+                                                            id={`${id}-cancel-upload-${index}`}
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => cancelUpload(index)}
+                                                            aria-label={t('documents.uploadSection.cancelUpload', 'Cancel upload')}
+                                                        >
+                                                            <X className="w-4 h-4" aria-hidden="true" />
+                                                        </Button>
+                                                    )}
                                                 </span>
                                             </div>
-                                            {item.error && (
-                                                <p className="text-xs break-words whitespace-pre-wrap text-[rgb(var(--color-destructive))]">
-                                                    {item.error}
-                                                </p>
+                                            {item.status === 'uploading' && (
+                                                <div className="flex items-center gap-2">
+                                                    {/* LEVERAGE: friction progress-aria-value — Progress consumes `value` for the bar but never forwards it to the Radix root, so the bar exposes no aria-valuenow to assistive tech. */}
+                                                    <Progress
+                                                        value={item.committed}
+                                                        max={item.file.size}
+                                                        size="md"
+                                                        aria-label={t('documents.uploadSection.progressLabel', {
+                                                            name: item.file.name,
+                                                            defaultValue: `Upload progress for ${item.file.name}`
+                                                        })}
+                                                    />
+                                                    <span className="text-xs whitespace-nowrap tabular-nums text-[rgb(var(--color-text-500))]">
+                                                        {t('documents.uploadSection.progress', {
+                                                            committed: formatBytes(item.committed),
+                                                            total: formatBytes(item.file.size),
+                                                            defaultValue: `${formatBytes(item.committed)} of ${formatBytes(item.file.size)}`
+                                                        })}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {item.status === 'error' && (
+                                                <>
+                                                    <p className="text-xs break-words whitespace-pre-wrap text-[rgb(var(--color-destructive))]">
+                                                        {failureMessage(item)}
+                                                    </p>
+                                                    {(item.failure?.reason === 'sessionGone' || item.failure?.reason === 'network') && (
+                                                        <div>
+                                                            <Button
+                                                                id={`${id}-retry-upload-${index}`}
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                disabled={isBusy}
+                                                                onClick={() => retryFile(item.file)}
+                                                            >
+                                                                <RotateCcw className="w-3 h-3 mr-1" aria-hidden="true" />
+                                                                {t('documents.uploadSection.tryAgain', 'Try again')}
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     ))}
