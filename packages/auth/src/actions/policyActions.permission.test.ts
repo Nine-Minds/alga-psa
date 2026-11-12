@@ -10,10 +10,16 @@ const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 const withTransactionMock = vi.fn();
 
+// The role floors have their own suite (packages/db userRoleFloor.test.ts);
+// here they allow everything so the authorization decision stands alone.
+const assertUserRoleFloorMock = vi.fn(async () => ({ ok: true }));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   tenantDb: (conn: any) => ({ table: (table: string) => conn(table) }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
+  isUserRoleFloorRejected: (result: any) => result?.ok === false,
 }));
 
 vi.mock('@alga-psa/core/server', () => ({
