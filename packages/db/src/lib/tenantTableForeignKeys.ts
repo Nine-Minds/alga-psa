@@ -354,6 +354,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'document_template_assignments', parent: 'tenants', column: '', deleteRule: 'CASCADE', name: 'document_template_assignments_tenant_foreign' },
   { child: 'document_template_assignments', parent: 'users', column: 'created_by', deleteRule: 'SET NULL', name: 'document_template_assignments_tenant_created_by_foreign' },
   { child: 'document_templates', parent: 'tenants', column: '', deleteRule: 'CASCADE', name: 'document_templates_tenant_foreign' },
+  { child: 'document_upload_sessions', parent: 'documents', column: 'document_id', deleteRule: 'CASCADE', name: 'document_upload_sessions_document_foreign' },
+  { child: 'document_upload_sessions', parent: 'users', column: 'uploaded_by', deleteRule: 'CASCADE', name: 'document_upload_sessions_uploader_foreign' },
   { child: 'document_types', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'document_types_tenant_foreign' },
   { child: 'document_versions', parent: 'documents', column: 'document_id', deleteRule: 'CASCADE', name: 'document_versions_tenant_document_id_foreign' },
   { child: 'documents', parent: 'document_types', column: 'type_id', deleteRule: 'SET NULL', name: 'documents_tenant_type_id_foreign' },

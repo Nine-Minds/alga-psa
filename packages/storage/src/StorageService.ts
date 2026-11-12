@@ -230,7 +230,8 @@ export class StorageService {
         originalName: string;
         mime: string;
         size: number;
-        sha256: string;
+        /** Null when the bytes were stored in several requests and never passed through one hash stage. */
+        sha256: string | null;
       },
       options: UploadFileOptions,
       isEntityImage: boolean,
@@ -335,6 +336,29 @@ export class StorageService {
       };
       if (!deferFileUploadEvents(fileId, publishUploaded)) await publishUploaded();
       return fileRecord;
+    }
+
+    /**
+     * Record (and publish the upload events for) an object whose bytes were already committed by a
+     * provider write session, e.g. a resumable chunked upload. The caller owns validation: the size
+     * and MIME were checked while the chunks streamed in. No content hash is recorded because the
+     * bytes arrived in separate requests.
+     */
+    static async recordCommittedUpload(
+      tenant: string,
+      stored: { storagePath: string; originalName: string; mime: string; size: number },
+      options: { uploaded_by_id: string; metadata?: Record<string, any> }
+    ): Promise<FileStore> {
+      if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
+      return StorageService.recordUpload(tenant, {
+        fileId: uuidv4(),
+        storagePath: stored.storagePath,
+        uploadedPath: stored.storagePath,
+        originalName: stored.originalName,
+        mime: stored.mime,
+        size: stored.size,
+        sha256: null,
+      }, options, false, Date.now());
     }
 
     static async uploadFile(

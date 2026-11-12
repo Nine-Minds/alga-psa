@@ -72,6 +72,12 @@ export interface PartReceipt {
 export interface WritePartOptions {
     /** Declares this to be the last part of the object. */
     final?: boolean;
+    /**
+     * Cancels the write. A part streamed from a request body that has failed must be abandoned
+     * at once: without this an S3 request waits for the bytes its Content-Length promised until
+     * the socket times out. A part cancelled this way is never stored.
+     */
+    signal?: AbortSignal;
 }
 
 export type StorageOperation = 'upload' | 'download' | 'delete' | 'exists' | 'metadata' | 'list';
@@ -203,7 +209,7 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
                     `Part ${partNumber} is ${size} bytes; parts below ${MIN_NON_FINAL_PART_SIZE} bytes must be written with { final: true }`
                 );
             }
-            const receipt = await this.doWritePart(handle, partNumber, part, size);
+            const receipt = await this.doWritePart(handle, partNumber, part, size, options.signal);
             return { ...receipt, partNumber, size, final };
         } catch (error) {
             return this.handleError('upload', error);
@@ -230,7 +236,7 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
 
     protected abstract doBeginWrite(path: string, options: WriteSessionOptions): Promise<WriteSessionHandle>;
     /** Receives a validated part; returns provider-specific receipt fields (e.g. etag). */
-    protected abstract doWritePart(handle: WriteSessionHandle, partNumber: number, part: Readable | Buffer, size: number): Promise<Partial<PartReceipt>>;
+    protected abstract doWritePart(handle: WriteSessionHandle, partNumber: number, part: Readable | Buffer, size: number, signal?: AbortSignal): Promise<Partial<PartReceipt>>;
     /** Receives receipts already validated and sorted by part number. */
     protected abstract doCompleteWrite(handle: WriteSessionHandle, parts: PartReceipt[]): Promise<UploadResult>;
     protected abstract doAbortWrite(handle: WriteSessionHandle): Promise<void>;
