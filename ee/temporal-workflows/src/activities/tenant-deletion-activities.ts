@@ -533,6 +533,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'document_folder_template_items',
   'document_entity_folder_init',
   'document_folder_templates',
+  'document_upload_sessions',
   'document_associations',
   'credential_associations',
   'credential_access_grants',

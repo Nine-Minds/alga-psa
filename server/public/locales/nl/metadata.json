@@ -366,6 +366,10 @@
       },
       "custody": {
         "title": "Apparatuur in bewaring"
+      },
+      "audits": {
+        "title": "Locatieaudits",
+        "detailTitle": "Locatieaudit"
       }
     },
     "chat": {

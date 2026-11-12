@@ -42,6 +42,14 @@
       "import": "./dist/config/storage.mjs",
       "types": "./src/config/storage.ts"
     },
+    "./ingest/pipeline": {
+      "import": "./dist/ingest/pipeline.mjs",
+      "types": "./src/ingest/pipeline.ts"
+    },
+    "./ingest/mime": {
+      "import": "./dist/ingest/mime.mjs",
+      "types": "./src/ingest/mime.ts"
+    },
     "./ingest/errors": {
       "import": "./dist/ingest/errors.mjs",
       "types": "./src/ingest/errors.ts"

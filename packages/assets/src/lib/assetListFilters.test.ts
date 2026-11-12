@@ -185,6 +185,26 @@ describe('applyAssetListFilters SQL', () => {
 });
 
 describe('AssetListFilterParams shape', () => {
+    it('filters on the last site audit verdict', () => {
+        expect(build({ last_audit_result: 'missing' })).toContain(`"assets"."last_audit_result" = 'missing'`);
+    });
+
+    it('treats "never audited" as a null last_audited_at, not a result value', () => {
+        const sql = build({ last_audit_result: 'never' });
+
+        expect(sql).toContain('"assets"."last_audited_at" is null');
+        expect(sql).not.toContain('"assets"."last_audit_result" =');
+    });
+
+    it('includes never-audited devices in "not audited in N days"', () => {
+        const sql = build({ not_audited_days: 90 });
+
+        // A device no audit has ever looked for is the staler case, not an
+        // exception to it.
+        expect(sql).toContain('"assets"."last_audited_at" is null');
+        expect(sql).toContain('"assets"."last_audited_at" <');
+    });
+
     it('omits paging, sorting and extension flags', () => {
         // Pagination and sorting never affect the filtered result set.
         const allowed = [
@@ -202,10 +222,12 @@ describe('AssetListFilterParams shape', () => {
             'search',
             'agent_status',
             'rmm_managed',
+            'last_audit_result',
+            'not_audited_days',
         ];
         const rejected = ['page', 'pageSize', 'limit', 'offset', 'sort_by', 'sort_direction', 'include_extension_data'];
 
-        expect(allowed).toHaveLength(14);
+        expect(allowed).toHaveLength(16);
         expect(rejected.every((key) => !allowed.includes(key))).toBe(true);
     });
 });

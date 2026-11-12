@@ -94,6 +94,22 @@
       "import": "./src/models/*.ts",
       "types": "./src/models/*.ts"
     },
+    "./lib/documentUploadSessions": {
+      "import": "./src/lib/documentUploadSessions.ts",
+      "types": "./src/lib/documentUploadSessions.ts"
+    },
+    "./lib/documentUploadAuthorization": {
+      "import": "./src/lib/documentUploadAuthorization.ts",
+      "types": "./src/lib/documentUploadAuthorization.ts"
+    },
+    "./lib/createDocumentFromCommittedFile": {
+      "import": "./src/lib/createDocumentFromCommittedFile.ts",
+      "types": "./src/lib/createDocumentFromCommittedFile.ts"
+    },
+    "./lib/documentTypeLookup": {
+      "import": "./src/lib/documentTypeLookup.ts",
+      "types": "./src/lib/documentTypeLookup.ts"
+    },
     "./lib/withPrivateDocumentUploads": {
       "import": "./src/lib/withPrivateDocumentUploads.ts",
       "types": "./src/lib/withPrivateDocumentUploads.ts"

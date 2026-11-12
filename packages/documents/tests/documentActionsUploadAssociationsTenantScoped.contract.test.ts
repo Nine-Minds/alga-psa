@@ -3,10 +3,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const source = readFileSync(resolve(__dirname, '../src/actions/documentActions.ts'), 'utf8');
+// The document-creation half of uploadDocument lives in a shared module (also used by the resumable upload route).
+const createDocumentSource = readFileSync(resolve(__dirname, '../src/lib/createDocumentFromCommittedFile.ts'), 'utf8');
 const uploadAssociationSection = source.slice(
   source.indexOf('// Remove document associations'),
   source.indexOf('export const getDocumentTypeId = withAuth(async')
-);
+) + createDocumentSource;
 
 describe('document upload and association mutation tenant-scoped query contract', () => {
   it('uses structural tenant scoping for association removal and upload helper roots', () => {
