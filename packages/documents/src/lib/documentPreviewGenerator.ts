@@ -22,8 +22,10 @@
  */
 
 import { fromPath } from 'pdf2pic';
+import type { Knex } from 'knex';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { withFileUploadTransaction } from '@alga-psa/storage/fileUploadTransaction';
 import type { IDocument } from '@alga-psa/types';
 import { validateDocumentPreviewProvenance } from './documentPreviewProvenance';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -163,14 +165,26 @@ export async function generatePreviewsForDocument(documentId: string): Promise<P
       throw new Error(`Source file ${document.file_id} not found for document ${documentId}`);
     }
 
-    let produced: { thumbnail_file_id: string | null; preview_file_id: string | null };
+    // Derivative writes are owned by an upload session: whatever this run writes but the document
+    // does not end up referencing (a write that failed after the provider stored it, a superseded
+    // run, a crash before commit) is reclaimed by upload recovery instead of leaking in storage.
+    let outcome: { result: PreviewGenerationResult; superseded: boolean };
     try {
-      produced =
-        kind === 'image'
-          ? await generateImagePreviews(tenant, document)
-          : kind === 'pdf'
-            ? await generatePdfPreviews(tenant, document, Number(file.file_size))
-            : await generateVideoPreviews(tenant, document);
+      outcome = await withFileUploadTransaction(knex, tenant, async (trx) => {
+        const produced =
+          kind === 'image'
+            ? await generateImagePreviews(tenant, document)
+            : kind === 'pdf'
+              ? await generatePdfPreviews(tenant, document, Number(file.file_size))
+              : await generateVideoPreviews(tenant, document);
+        const persisted = await persistPreviewResult(trx, tenant, document, produced);
+        const retained = persisted.superseded
+          ? []
+          : [persisted.result.thumbnail_file_id, persisted.result.preview_file_id].filter(
+              (id): id is string => Boolean(id),
+            );
+        return { value: persisted, fileIds: retained };
+      });
     } catch (error) {
       if (error instanceof PreviewSkipped) {
         console.warn(`[generatePreviewsForDocument] ${error.message} (document ${documentId})`);
@@ -178,8 +192,6 @@ export async function generatePreviewsForDocument(documentId: string): Promise<P
       }
       throw error;
     }
-
-    const outcome = await persistPreviewResult(knex, tenant, document, produced);
     if (!outcome.superseded) {
       await publishProcessingSucceeded({ tenant, document, result: outcome.result, startedAtMs });
     }
@@ -204,74 +216,72 @@ export async function generatePreviewsForDocument(documentId: string): Promise<P
  *   wrong bytes: discard it and let the job enqueued for the new file win.
  */
 async function persistPreviewResult(
-  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  trx: Knex.Transaction,
   tenant: string,
   document: IDocument,
   produced: { thumbnail_file_id: string | null; preview_file_id: string | null },
 ): Promise<{ result: PreviewGenerationResult; superseded: boolean }> {
   const actor = document.created_by ?? document.user_id ?? '';
 
-  return withTransaction(knex, async (trx) => {
-    const db = tenantDb(trx, tenant);
-    const current = await db
-      .table<IDocument>('documents')
-      .where({ document_id: document.document_id })
-      .forUpdate()
-      .first();
+  const db = tenantDb(trx, tenant);
+  const current = await db
+    .table<IDocument>('documents')
+    .where({ document_id: document.document_id })
+    .forUpdate()
+    .first();
 
-    const newIds = [produced.thumbnail_file_id, produced.preview_file_id].filter((id): id is string => Boolean(id));
-    const discard = async (ids: string[]) => {
-      for (const id of ids) {
-        try {
-          await StorageService.deleteFile(id, actor, trx);
-        } catch (error) {
-          console.error(`[persistPreviewResult] Could not delete derivative ${id}:`, error);
-        }
+  const newIds = [produced.thumbnail_file_id, produced.preview_file_id].filter((id): id is string => Boolean(id));
+  const discard = async (ids: string[]) => {
+    for (const id of ids) {
+      try {
+        await StorageService.deleteFile(id, actor, trx);
+      } catch (error) {
+        console.error(`[persistPreviewResult] Could not delete derivative ${id}:`, error);
       }
-    };
-
-    if (!current || current.file_id !== document.file_id) {
-      await discard(newIds);
-      return { result: emptyResult(), superseded: true };
     }
+  };
 
-    // A concurrent run may already have removed a derivative we just uploaded.
-    const live = new Set<string>(
-      newIds.length
-        ? (await db.table('external_files').where({ is_deleted: false }).whereIn('file_id', newIds).select('file_id')).map(
-            (row: { file_id: string }) => row.file_id,
-          )
-        : [],
-    );
-    const liveOrNull = (id: string | null) => (id && live.has(id) ? id : null);
-    const result: PreviewGenerationResult = {
-      thumbnail_file_id: liveOrNull(produced.thumbnail_file_id) ?? current.thumbnail_file_id ?? null,
-      preview_file_id: liveOrNull(produced.preview_file_id) ?? current.preview_file_id ?? null,
-      preview_generated_at: new Date(),
-    };
+  if (!current || current.file_id !== document.file_id) {
+    await discard(newIds);
+    return { result: emptyResult(), superseded: true };
+  }
 
-    await validateDocumentPreviewProvenance(trx, tenant, document.document_id, result);
-    await db
-      .table('documents')
-      .where({ document_id: document.document_id })
-      .update({
-        thumbnail_file_id: result.thumbnail_file_id,
-        preview_file_id: result.preview_file_id,
-        preview_generated_at: result.preview_generated_at,
-        updated_at: new Date(),
-      });
+  // A concurrent run may already have removed a derivative we just uploaded.
+  const live = new Set<string>(
+    newIds.length
+      ? (await db.table('external_files').where({ is_deleted: false }).whereIn('file_id', newIds).select('file_id')).map(
+          (row: { file_id: string }) => row.file_id,
+        )
+      : [],
+  );
+  const liveOrNull = (id: string | null) => (id && live.has(id) ? id : null);
+  const result: PreviewGenerationResult = {
+    thumbnail_file_id: liveOrNull(produced.thumbnail_file_id) ?? current.thumbnail_file_id ?? null,
+    preview_file_id: liveOrNull(produced.preview_file_id) ?? current.preview_file_id ?? null,
+    preview_generated_at: new Date(),
+  };
 
-    const keep = new Set([result.thumbnail_file_id, result.preview_file_id]);
-    const derivatives: Array<{ file_id: string }> = await db
-      .table('external_files')
-      .where({ is_deleted: false })
-      .whereRaw("metadata->>'source_document_id' = ?", [document.document_id])
-      .whereRaw("metadata->>'context' in ('document_thumbnail', 'document_preview')")
-      .select('file_id');
-    await discard(derivatives.map((row) => row.file_id).filter((id) => !keep.has(id)));
+  await validateDocumentPreviewProvenance(trx, tenant, document.document_id, result);
+  await db
+    .table('documents')
+    .where({ document_id: document.document_id })
+    .update({
+      thumbnail_file_id: result.thumbnail_file_id,
+      preview_file_id: result.preview_file_id,
+      preview_generated_at: result.preview_generated_at,
+      updated_at: new Date(),
+    });
 
-    return { result, superseded: false };
-  });
+  const keep = new Set([result.thumbnail_file_id, result.preview_file_id]);
+  const derivatives: Array<{ file_id: string }> = await db
+    .table('external_files')
+    .where({ is_deleted: false })
+    .whereRaw("metadata->>'source_document_id' = ?", [document.document_id])
+    .whereRaw("metadata->>'context' in ('document_thumbnail', 'document_preview')")
+    .select('file_id');
+  await discard(derivatives.map((row) => row.file_id).filter((id) => !keep.has(id)));
+
+  return { result, superseded: false };
 }
 
 /** Background job: there is no acting user. */

@@ -27,6 +27,8 @@ const h = vi.hoisted(() => ({
   published: [] as Array<{ eventType: string }>,
   streamRequests: 0,
   seq: 0,
+  /** Upload sessions opened by the job: the derivative ids each claimed, or null if it rolled back. */
+  uploadSessions: [] as Array<{ claimed: string[] | null }>,
 }));
 
 class FakeQuery {
@@ -93,6 +95,15 @@ vi.mock('@alga-psa/storage/StorageService', () => {
   }
   return { StorageService };
 });
+vi.mock('@alga-psa/storage/fileUploadTransaction', () => ({
+  withFileUploadTransaction: async (_knex: unknown, _tenant: string, run: (trx: unknown) => Promise<{ value: unknown; fileIds: string[] }>) => {
+    const session = { claimed: null as string[] | null };
+    h.uploadSessions.push(session);
+    const { value, fileIds } = await run({});
+    session.claimed = fileIds;
+    return value;
+  },
+}));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: async (event: { eventType: string }) => { h.published.push(event); },
 }));
@@ -129,7 +140,7 @@ const derivatives = () => h.files.filter((f) => f.file_id !== ORIGINAL && !f.is_
 describe('generatePreviewsForDocument', () => {
   beforeEach(() => {
     h.documents.length = 0; h.files.length = 0; h.uploads.length = 0; h.deleted.length = 0;
-    h.published.length = 0; h.streamRequests = 0; h.seq = 0;
+    h.published.length = 0; h.streamRequests = 0; h.seq = 0; h.uploadSessions.length = 0;
   });
 
   it('streams an image from storage and stores distinct JPEG derivatives', async () => {
@@ -154,6 +165,8 @@ describe('generatePreviewsForDocument', () => {
       preview_file_id: r.preview_file_id,
     });
     expect(h.published.map((e) => e.eventType)).toEqual(['MEDIA_PROCESSING_SUCCEEDED']);
+    // Derivatives are written inside an upload session that claims exactly the ids the document kept.
+    expect(h.uploadSessions).toEqual([{ claimed: [r.thumbnail_file_id, r.preview_file_id] }]);
   });
 
   it('an SVG original is never aliased: the preview is a re-encoded JPEG derivative', async () => {
@@ -217,6 +230,8 @@ describe('generatePreviewsForDocument', () => {
     expect(derivatives()).toHaveLength(0);
     expect(h.documents[0].thumbnail_file_id).toBeNull();
     expect(h.published).toHaveLength(0);
+    // Nothing is claimed, so upload recovery reclaims every object this run wrote.
+    expect(h.uploadSessions).toEqual([{ claimed: [] }]);
   });
 
   it('publishes MEDIA_PROCESSING_FAILED and rethrows when the source is unreadable', async () => {
@@ -227,6 +242,8 @@ describe('generatePreviewsForDocument', () => {
     await expect(generatePreviewsForDocument(DOC)).rejects.toThrow();
 
     expect(h.published.map((e) => e.eventType)).toEqual(['MEDIA_PROCESSING_FAILED']);
+    // The session rolled back without claiming anything: recovery owns every write of this run.
+    expect(h.uploadSessions).toEqual([{ claimed: null }]);
     expect(derivatives()).toHaveLength(0);
   });
 
