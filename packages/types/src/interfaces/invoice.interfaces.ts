@@ -101,7 +101,7 @@ export interface NetAmountItem {
  */
 export type ManualInvoiceSourceLink =
   | { kind: 'time_entry'; entryId: string }
-  | { kind: 'ticket_material'; materialId: string; updatedAt?: string }
+  | { kind: 'ticket_material'; materialId: string; updatedAt: string }
   | { kind: 'ticket_fixed_fee'; entryId: string; updatedAt: string };
 
 export interface IInvoiceChargeRecurringDetailPeriod {

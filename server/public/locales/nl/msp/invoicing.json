@@ -496,7 +496,8 @@
   },
   "quickInvoice": {
     "fixedFeeServices": "Services",
-    "excludedFixedFees": "Vaste-vergoedingsserviceregels uitgesloten wegens een afwijkende factuurvaluta: {{count}}.",
+    "excludedFixedFees_one": "1 regel voor een dienst met vast tarief is uitgesloten omdat de valuta afwijkt van de factuurvaluta.",
+    "excludedFixedFees_other": "{{count}} regels voor diensten met een vast tarief zijn uitgesloten omdat hun valuta afwijkt van de factuurvaluta.",
     "currencyExcluded": "{{count}} product(en) uitgesloten omdat hun valuta afwijkt van {{currency}}.",
     "action": "Snelfactuur",
     "title": "Dit ticket snel factureren",

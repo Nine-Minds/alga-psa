@@ -516,7 +516,10 @@
   },
   "quickInvoice": {
     "fixedFeeServices": "Usługi",
-    "excludedFixedFees": "Liczba pozycji usług wykluczonych z powodu waluty innej niż waluta faktury: {{count}}.",
+    "excludedFixedFees_one": "Wykluczono 1 pozycję usługi ze stałą opłatą, ponieważ jej waluta różni się od waluty faktury.",
+    "excludedFixedFees_few": "Wykluczono {{count}} pozycje usług ze stałą opłatą, ponieważ ich waluta różni się od waluty faktury.",
+    "excludedFixedFees_many": "Wykluczono {{count}} pozycji usług ze stałą opłatą, ponieważ ich waluta różni się od waluty faktury.",
+    "excludedFixedFees_other": "Wykluczono {{count}} pozycji usług ze stałą opłatą, ponieważ ich waluta różni się od waluty faktury.",
     "currencyExcluded": "Wykluczono {{count}} produkt(y), ponieważ ich waluta różni się od {{currency}}.",
     "action": "Szybka faktura",
     "title": "Szybka faktura dla tego zgłoszenia",

@@ -31,6 +31,7 @@ export default defineConfig({
       'src/lib/currency/rateInput.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
+      'src/lib/billing/ticketFixedFeeWindow.test.ts',
       // Preview/generation consistency for scheduled recurring quantity/price
       // revisions — listed explicitly so this package's own `npm test` target
       // covers the stale-source comparison, not only the server-wide glob.
