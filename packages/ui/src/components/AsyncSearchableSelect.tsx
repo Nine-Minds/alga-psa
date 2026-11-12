@@ -296,6 +296,16 @@ export function AsyncSearchableSelect({
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      // A select list or popover opened from headerContent (the client picker's status,
+      // type and tag filters) is the layer above this panel: let Radix dismiss just that
+      // one, the same exemption the outside-click handler makes.
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest('[data-radix-select-content], [data-radix-popper-content-wrapper]')
+      ) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
