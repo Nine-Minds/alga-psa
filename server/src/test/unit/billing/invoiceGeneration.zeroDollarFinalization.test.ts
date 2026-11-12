@@ -190,10 +190,45 @@ const mocks = vi.hoisted(() => {
     project_materials: [],
   };
 
+  const updateErrors = {} as Record<string, Error>;
   const knex = vi.fn((tableName: string) =>
     createQueryBuilder(rowsByTable[normalizeTableName(tableName)] ?? [], normalizeTableName(tableName)),
   ) as any;
-  knex.raw = vi.fn((sql: string) => sql);
+  knex.raw = vi.fn((sql: string, bindings: unknown[] = []) => {
+    if (!sql.startsWith('UPDATE ticket_materials AS source')) return sql;
+    if (updateErrors.ticket_materials) throw updateErrors.ticket_materials;
+
+    const [invoiceId, claimedAt, updatedAt] = bindings;
+    const tenant = bindings.at(-1);
+    const claimBindings = bindings.slice(3, -1);
+    const claimedRows: Array<{ source_id: string }> = [];
+    for (let index = 0; index < claimBindings.length; index += 7) {
+      const [sourceId, sourceUpdatedAt, clientId, serviceId, quantity, rate, currencyCode] =
+        claimBindings.slice(index, index + 7);
+      const row = rowsByTable.ticket_materials.find((candidate) =>
+        candidate.ticket_material_id === sourceId &&
+        candidate.tenant === tenant &&
+        candidate.updated_at === sourceUpdatedAt &&
+        candidate.is_billed === false &&
+        (clientId == null || candidate.client_id === clientId) &&
+        (serviceId == null || candidate.service_id === serviceId) &&
+        (quantity == null || candidate.quantity === quantity) &&
+        (rate == null || candidate.rate === rate) &&
+        (currencyCode == null || candidate.currency_code === currencyCode),
+      );
+      if (!row) continue;
+
+      Object.assign(row, {
+        is_billed: true,
+        billed_invoice_id: invoiceId,
+        billed_at: claimedAt,
+        updated_at: updatedAt,
+      });
+      claimedRows.push({ source_id: String(sourceId) });
+    }
+
+    return { rows: claimedRows };
+  });
   const calculateBilling = vi.fn(async () => ({
     charges: [
       {
@@ -219,7 +254,7 @@ const mocks = vi.hoisted(() => {
   return {
     committedTransactions,
     insertErrors: {} as Record<string, Error[]>,
-    updateErrors: {} as Record<string, Error>,
+    updateErrors,
     rowsByTable,
     knex,
     createTenantKnex: vi.fn(async () => ({ knex })),
@@ -444,7 +479,7 @@ describe('invoice generation zero-dollar recurring handling', () => {
     mocks.rowsByTable.project_materials.length = 0;
     mocks.committedTransactions.length = 0;
     mocks.insertErrors = {};
-    mocks.updateErrors = {};
+    for (const key of Object.keys(mocks.updateErrors)) delete mocks.updateErrors[key];
     Object.assign(mocks.rowsByTable.client_billing_profiles[0], {
       tenant: 'tenant-1', client_id: 'client-1',
     });
@@ -564,7 +599,7 @@ describe('invoice generation zero-dollar recurring handling', () => {
     const sourceVersion = '2026-10-30T12:00:00.123456Z';
     const row = {
       tenant: 'tenant-1', is_billed: false, updated_at: sourceVersion,
-      ticket_material_id: 'ticket-material-a',
+      ticket_material_id: 'ticket-material-a', quantity: 1, rate: 0,
     };
     mocks.rowsByTable.ticket_materials.push(
       { ...row },

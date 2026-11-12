@@ -1,9 +1,9 @@
 {
   "fixedFeeServices": {
-    "title": "Dienstleistungen",
-    "add": "Service hinzufügen",
-    "service": "Dienstleistung",
-    "selectService": "Services suchen",
+    "title": "Dienste",
+    "add": "Dienst hinzufügen",
+    "service": "Dienst",
+    "selectService": "Dienste suchen",
     "currency": "Währung",
     "quantity": "Menge",
     "decreaseQuantity": "Menge verringern",
@@ -11,22 +11,22 @@
     "rate": "Stückpreis",
     "total": "Gesamt",
     "description": "Beschreibung",
-    "loading": "Services werden geladen…",
-    "empty": "Keine Services hinzugefügt.",
+    "loading": "Dienste werden geladen…",
+    "empty": "Keine Dienste hinzugefügt.",
     "billed": "Abgerechnet",
     "unbilled": "Nicht abgerechnet",
-    "remove": "Service entfernen",
-    "confirmRemove": "Diesen nicht abgerechneten Service vom Ticket entfernen?",
+    "remove": "Dienst entfernen",
+    "confirmRemove": "Diesen nicht abgerechneten Dienst vom Ticket entfernen?",
     "errors": {
-      "load": "Services konnten nicht geladen werden. Bitte erneut versuchen.",
+      "load": "Dienste konnten nicht geladen werden. Bitte erneut versuchen.",
       "prices": "Katalogpreise konnten nicht geladen werden. Bitte erneut versuchen.",
-      "add": "Dieser Service konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
-      "remove": "Dieser Service konnte nicht entfernt werden. Bitte erneut versuchen.",
-      "invalidInput": "Wählen Sie einen Service, eine Währung und eine positive ganzzahlige Menge.",
+      "add": "Dieser Dienst konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
+      "remove": "Dieser Dienst konnte nicht entfernt werden. Bitte erneut versuchen.",
+      "invalidInput": "Wählen Sie einen Dienst, eine Währung und eine positive ganzzahlige Menge.",
       "ticketMissing": "Das Ticket existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "serviceInvalid": "Wählen Sie einen aktiven Festgebühren-Service.",
+      "serviceInvalid": "Wählen Sie einen aktiven Dienst mit Festpreis.",
       "priceInvalid": "Für diese Währung und Menge ist ein gültiger Katalogpreis erforderlich.",
-      "cannotDelete": "Dieser Serviceeintrag wurde bereits abgerechnet oder entfernt. Aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "cannotDelete": "Dieser Diensteintrag wurde bereits abgerechnet oder entfernt. Aktualisieren Sie die Seite und versuchen Sie es erneut."
     }
   },
   "chargeEdit": {

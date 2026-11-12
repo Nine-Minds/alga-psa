@@ -172,7 +172,31 @@ export async function listMaterials(
         })
         .select('psl.staging_line_id as from_staging_line_id');
     }
-    return (await query) as MaterialRow[];
+    const materials = (await query) as MaterialRow[];
+    if (parentType !== 'ticket' || materials.length === 0) return materials;
+
+    const ticketMaterials = materials.map((material) => {
+      if (!('ticket_material_id' in material)) {
+        throw new Error('Ticket material query returned a project material row');
+      }
+      return material;
+    });
+    const serviceIds = [...new Set(materials.map((material) => material.service_id))];
+    const serializedServices = await trx('product_inventory_settings')
+      .where({ tenant, is_serialized: true })
+      .whereIn('service_id', serviceIds)
+      .select('service_id');
+    const linkedUnits = await trx('stock_movements')
+      .where({ tenant, source_doc_type: cfg.sourceDocType, movement_type: 'consume' })
+      .whereIn('source_doc_id', ticketMaterials.map((material) => material.ticket_material_id))
+      .whereNotNull('unit_id')
+      .select('source_doc_id');
+    const lockedServiceIds = new Set(serializedServices.map((row: { service_id: string }) => row.service_id));
+    const lockedMaterialIds = new Set(linkedUnits.map((row: { source_doc_id: string }) => row.source_doc_id));
+    return ticketMaterials.map((material) => ({
+      ...material,
+      quantity_locked: lockedServiceIds.has(material.service_id) || lockedMaterialIds.has(material.ticket_material_id),
+    }));
   });
 }
 

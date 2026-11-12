@@ -24,7 +24,7 @@
       "remove": "Impossible de retirer ce service. Réessayez.",
       "invalidInput": "Sélectionnez un service, une devise et une quantité entière positive.",
       "ticketMissing": "Le ticket n’existe plus. Actualisez la page et réessayez.",
-      "serviceInvalid": "Sélectionnez un service à frais fixes actif.",
+      "serviceInvalid": "Sélectionnez un service à tarif fixe actif.",
       "priceInvalid": "Un prix de catalogue valide est requis pour cette devise et cette quantité.",
       "cannotDelete": "Cette entrée de service a déjà été facturée ou retirée. Actualisez la page et réessayez."
     }

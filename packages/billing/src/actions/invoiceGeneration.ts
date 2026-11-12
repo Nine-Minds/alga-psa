@@ -22,6 +22,7 @@ import {
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
+import { claimTicketChargeSources } from '../lib/billing/ticketChargeClaims';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -4235,22 +4236,27 @@ export async function createInvoiceFromBillingResultImpl(
         }
       }
       if (ticketMaterialIds.length > 0) {
-        // Claim the priced source version so an edit or another invoice cannot bill stale quantities.
-        for (const charge of materialCharges.filter((charge) => charge.material_source_type === 'ticket')
-          .sort((a, b) => a.material_source_id!.localeCompare(b.material_source_id!))) {
-          if (!charge.material_source_updated_at) throw new Error('Ticket material source version is required.');
-          const updatedCount = await tenantDb(trx, tenant).table('ticket_materials')
-            .where({
-              ticket_material_id: charge.material_source_id, is_billed: false,
-              updated_at: charge.material_source_updated_at,
-            })
-            .update({
-              is_billed: true, billed_invoice_id: invoice.invoice_id,
-              billed_at: billedAt, updated_at: billedAt,
-            });
-          if (updatedCount !== 1) {
-            throw new ManualInvoiceError('SOURCE_CHANGED', 'A ticket product changed before the invoice could be committed. Refresh and try again.');
-          }
+        const claims = materialCharges
+          .filter((charge) => charge.material_source_type === 'ticket')
+          .map((charge) => {
+            if (!charge.material_source_updated_at) {
+              throw new Error('Ticket material source version is required.');
+            }
+            return {
+              sourceId: charge.material_source_id!,
+              sourceUpdatedAt: charge.material_source_updated_at,
+              expected: {
+                serviceId: charge.service_id,
+                quantity: charge.quantity,
+                rate: charge.rate,
+              },
+            };
+          });
+        const claimedIds = await claimTicketChargeSources(
+          trx, tenant, 'ticket_material', claims, invoice.invoice_id, billedAt,
+        );
+        if (claimedIds.size !== claims.length) {
+          throw new ManualInvoiceError('SOURCE_CHANGED', 'A ticket product changed before the invoice could be committed. Refresh and try again.');
         }
       }
     }

@@ -496,7 +496,8 @@
   },
   "quickInvoice": {
     "fixedFeeServices": "Servicios",
-    "excludedFixedFees": "Entradas de servicios excluidas por tener una moneda distinta a la de la factura: {{count}}.",
+    "excludedFixedFees_one": "Se excluyó 1 servicio de tarifa fija porque su moneda difiere de la moneda de la factura.",
+    "excludedFixedFees_other": "Se excluyeron {{count}} servicios de tarifa fija porque su moneda difiere de la moneda de la factura.",
     "currencyExcluded": "Se excluyeron {{count}} producto(s) porque su moneda difiere de {{currency}}.",
     "action": "Factura rápida",
     "title": "Facturar rápidamente este ticket",
