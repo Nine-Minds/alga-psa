@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Seat arrangement, board scope, seat assignment and project grant tables exist in the sponsor tenant with tenant-first keys, no triggers, and are registered in the tenant table manifest for deletion and export.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Creating a seat arrangement for a client reserves and activates its allocation and writes the arrangement in one transaction; a repeated request returns the same arrangement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Arrangement creation is refused for an inactive client and for a client that already has a live workspace relationship or seat arrangement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "An MSP administrator sets which boards are in an arrangement's scope and whether technicians may create tickets on each; an empty scope gives technicians no ticket access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
