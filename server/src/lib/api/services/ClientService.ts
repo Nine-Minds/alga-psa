@@ -448,14 +448,11 @@ export class ClientService extends BaseService<IClient> {
         clientData as unknown as CreateClientWithDefaultsData
       ).catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
-      // Handle tags if provided
+      // Tags are written in the client's transaction, so a tag failure fails the create. It cannot be caught and
+      // skipped here: after a failed statement PostgreSQL aborts the transaction and the commit becomes a rollback,
+      // so the caller would get a 201 for a client that was never saved.
       if ((data as any).tags && (data as any).tags.length > 0) {
-        try {
-          await this.handleTags(client.client_id, (data as any).tags, context, trx);
-        } catch (tagError) {
-          console.warn('Failed to handle tags:', tagError);
-          // Continue without tags - they can be added later
-        }
+        await this.handleTags(client.client_id, (data as any).tags, context, trx);
       }
 
       return client;
@@ -768,14 +765,9 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
-      // Handle tags if provided
+      // In the update's transaction, so a tag failure fails the update (see create: it cannot be skipped).
       if (data.tags !== undefined) {
-        try {
-          await this.handleTags(id, data.tags, context, trx);
-        } catch (tagError) {
-          console.warn('Failed to handle tags:', tagError);
-          // Continue without tags - they can be added later
-        }
+        await this.handleTags(id, data.tags, context, trx);
       }
 
       return { before, after: client, updatedFieldKeys, newlyDeactivatedContactIds };
@@ -1431,9 +1423,11 @@ export class ClientService extends BaseService<IClient> {
         .delete();
     }
 
-    // Add new tags
-    if (tags.length > 0) {
-      for (const tagText of tags) {
+    // One mapping per distinct tag: a repeated text ("vip", " vip") names the same tag, and a second mapping
+    // for it would violate tag_mappings (tenant, tag_id, tagged_id).
+    const tagTexts = [...new Set(tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0))];
+    if (tagTexts.length > 0) {
+      for (const tagText of tagTexts) {
         // First, ensure the tag definition exists
         let tagDef = await db.table('tag_definitions')
           .where({
