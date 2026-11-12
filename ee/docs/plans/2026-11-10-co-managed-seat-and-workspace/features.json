@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Reserving and activating a seat-kind allocation for a client is one idempotent command (operation id and request fingerprint) under the entitlement lock; a replay returns the original result.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "A seat-kind reservation is refused with a specific reason when available capacity is insufficient, when the sponsor is not eligible, or while the pool is in lapse grace or read-only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "A client holds at most one live allocation of either kind; a second request for the same client is refused and names the existing arrangement's shape.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]

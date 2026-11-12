@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "DB integration: seat reservation happy path and replay by operation id; refused for insufficient capacity, ineligible sponsor and lapse grace.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006"
@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "DB integration, concurrent: with one seat available, a seat reservation and a workspace reservation race and exactly one succeeds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F007",
