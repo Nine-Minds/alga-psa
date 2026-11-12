@@ -55,6 +55,12 @@ The edition is controlled by the `EDITION` environment variable:
   - Role claims embedded in JWTs during authentication
   - Middleware enforces role-based permissions
   - 401/403 responses for authentication/authorization failures
+- **Client scope for API keys:**
+  - `buildAuthenticatedApiContext` (`apiMiddleware.ts`) stamps the key's `apiKeyId` on `context.user`, so authorization bundles assigned to the API key (target type `api_key`) are folded into every kernel check alongside the bundles of the key's user, roles, and teams.
+  - A key narrowed to a set of clients sees, lists, counts, and attaches to only those clients' records. `ClientService`, `ContactService`, `InteractionService`, `TicketService`, `TimeEntryService`, and `TimeSheetService` narrow list and get queries by the caller's client scope in SQL, and pages are built with the shared `projectNarrowedPage` helper (`packages/authorization/src/pagination/narrowedPage.ts`), so totals and pagination come from the narrowed set. A rule that denies every row fails closed.
+  - Out-of-scope targets behave as missing: get-by-id returns `404`, and `POST /api/v1/documents` returns `404 <Label> not found` when the target client or contact is out of scope (checked after RBAC and existence checks).
+  - Refused creates have no side effects: `TimeEntryService.create` runs the create-scope gate before resolving the time sheet, so an out-of-scope create returns `403` without creating a sheet.
+  - MCP tools that call these services with the key's identity are narrowed the same way. Narrowing adds no schema change, so the OpenAPI spec is unaffected.
 
 ## 5. Standard Conventions
 ### API Structure
