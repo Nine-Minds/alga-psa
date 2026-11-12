@@ -28,6 +28,7 @@ vi.mock('../../lib/i18n/client', () => ({
       return s;
     },
   }),
+  useFormatters: () => ({ formatNumber: (value: number) => String(value) }),
 }));
 vi.mock('./useLabelPrint', () => ({
   useLabelPrint: () => ({ ...hook, isPrinting: false }),
@@ -68,6 +69,7 @@ beforeEach(() => {
   hook.print.mockReset();
   hook.loadTemplates.mockResolvedValue({ defaultTemplateId: 'standard-ticket-work-tag', templates: [{ id: 'standard-ticket-work-tag', name: 'Ticket', source: 'standard' }] });
   hook.loadLinkedAssets.mockResolvedValue([]);
+  window.localStorage.removeItem('alga.labels.layout');
 });
 
 describe('LabelPrintDialog', () => {
@@ -107,6 +109,24 @@ describe('LabelPrintDialog', () => {
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A]} />);
     fireEvent.click(screen.getByText('Print'));
     await waitFor(() => expect(screen.getByText('Open PDF')).toBeTruthy());
+  });
+
+  it('uses the tenant default template for the paper mismatch warning and formats custom paper sizes', async () => {
+    window.localStorage.setItem('alga.labels.layout', 'letter-full');
+    hook.loadTemplates.mockResolvedValue({
+      defaultTemplateId: 'tenant-default',
+      templates: [{
+        id: 'tenant-default',
+        name: 'Tenant worksheet',
+        source: 'custom',
+        prefersPaperPage: true,
+        paperSizeMm: { width: 300, height: 400 },
+      }],
+    });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    await waitFor(() => expect(document.body.textContent).toContain(
+      'This template is designed for 300 × 400 mm paper, but the selected layout prints on Letter.',
+    ));
   });
 
   it('lists 422 failures, and "Skip these" reprints without the failing records', async () => {

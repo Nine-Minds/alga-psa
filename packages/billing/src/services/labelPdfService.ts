@@ -145,7 +145,8 @@ export async function renderLabelBatchPdf(
   const { items: printItems, missingImages } = await inlineWorksheetDescriptionImages(
     items,
     resolveImage,
-    options.missingImageText ?? ((name) => (name ? `[Image not included: ${name}]` : '[Image not included]'))
+    options.missingImageText ?? ((name) => (name ? `[Image not included: ${name}]` : '[Image not included]')),
+    { tenant, itemCount: items.length }
   );
 
   const { html, geometry, printOptions } = await renderLabelBatchHtml(printItems, layout, {
@@ -166,8 +167,14 @@ export async function renderLabelBatchPdf(
   let sheets = geometry.sheets;
   try {
     sheets = (await PDFDocument.load(pdf)).getPageCount();
-  } catch {
-    // The plan stays the answer for a buffer pdf-lib cannot parse.
+  } catch (error) {
+    // The plan stays the answer for a buffer pdf-lib cannot parse — but that is unexpected, so say so.
+    logger.warn('[LabelPdfService] Could not re-read the produced PDF; reporting the planned sheet count', {
+      tenant,
+      itemCount: items.length,
+      plannedSheets: geometry.sheets,
+      error,
+    });
   }
   return { pdf, sheets, labels: items.length, missingImages };
 }

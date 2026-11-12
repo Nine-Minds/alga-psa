@@ -1,4 +1,11 @@
-import type { LabelClass, TemplateAst, TemplateI18nRef } from '@alga-psa/types';
+import type {
+  LabelClass,
+  TemplateAst,
+  TemplateFieldNode,
+  TemplateI18nRef,
+  TemplateNode,
+  TemplateStyleDeclaration,
+} from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 import { buildLabelTemplateBindings } from './bindings';
@@ -47,14 +54,15 @@ export const LABEL_FALLBACK_TEMPLATE_BY_CODE: Record<string, string> = {
 
 const cloneAst = (ast: TemplateAst): TemplateAst => JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
-type Node = Record<string, unknown>;
+type Node = TemplateNode;
+type InlineStyle = TemplateStyleDeclaration;
 
 /**
  * A label is a fixed-size cell, so no text may run past its column: every line wraps at any character
  * (an RMM asset tag such as `levelio:Z2lkOi8v...` has no break opportunities), and a block capped with
  * `maxHeight` clips at the cap instead of spilling into the next line or off the label.
  */
-const text = (id: string, bindingId: string, inline: Record<string, unknown>): Node => ({
+const text = (id: string, bindingId: string, inline: InlineStyle): Node => ({
   id,
   type: 'text',
   content: { type: 'binding', bindingId },
@@ -89,7 +97,7 @@ const code128 = (id: string): Node => ({
  * The issuer logo (inlined as a `data:` URL by the PDF service). It renders nothing when the tenant has no
  * logo or the logo could not be read, and it collapses the text brand line (`tenantBrandText`).
  */
-const logo = (id: string, heightMm: number, extra: Record<string, unknown> = {}): Node => ({
+const logo = (id: string, heightMm: number, extra: InlineStyle = {}): Node => ({
   id,
   type: 'image',
   src: { type: 'binding', bindingId: 'tenantLogo' },
@@ -150,7 +158,7 @@ const label = (name: string, left: Node[], right: Node[], footer: Node[] = [], t
     },
     bindings: buildLabelTemplateBindings(),
     layout: { id: 'root', type: 'document', children: [content] },
-  } as unknown as TemplateAst;
+  };
 };
 
 /**
@@ -176,7 +184,7 @@ const identifier = (id: string, fontPx: number): Node =>
  * storage. Field labels remain visible when values are missing, so a technician can fill in the blanks.
  * The line-budget trims that shrink fields to a 4 x 2 in tag do not apply on a worksheet.
  */
-const WORKSHEET_FIELD_STYLE: Record<string, unknown> = {
+const WORKSHEET_FIELD_STYLE: InlineStyle = {
   width: 'auto',
   height: 'auto',
   fontSize: '14px',
@@ -186,7 +194,7 @@ const WORKSHEET_FIELD_STYLE: Record<string, unknown> = {
   justifyContent: 'flex-start',
 };
 
-const worksheetField = (id: string, bindingId: string, labelText: TemplateI18nRef): Node => ({
+const worksheetField = (id: string, bindingId: string, labelText: TemplateI18nRef): TemplateFieldNode => ({
   id,
   type: 'field',
   binding: { bindingId },
@@ -339,7 +347,7 @@ const buildTicketCustomerWorksheet = (paper: 'letter' | 'a4'): TemplateAst => ({
       },
     ],
   },
-} as unknown as TemplateAst);
+});
 
 const buildTicketWorkTag = (): TemplateAst =>
   label(

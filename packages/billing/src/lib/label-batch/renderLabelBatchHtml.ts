@@ -4,6 +4,7 @@ import {
   matchRecordPath,
   recordUrl,
   type LabelHideableField,
+  type LabelLinkedAssetInfo,
   type LabelPrintFailure,
   type LabelTenantClient,
   type LabelViewModel,
@@ -100,6 +101,40 @@ export function assertCanonicalLabelUrl(viewModel: LabelViewModel): void {
   }
 }
 
+/** Which `linkedAsset` line each worksheet spec hideable field carries. */
+const SPEC_FIELD_TO_ASSET_LINE: Record<
+  'assetName' | 'assetManufacturer' | 'assetModel' | 'assetOs' | 'assetCpu' | 'assetRam' | 'assetStorage',
+  keyof Omit<LabelLinkedAssetInfo, 'assetId'>
+> = {
+  assetName: 'name',
+  assetManufacturer: 'manufacturer',
+  assetModel: 'model',
+  assetOs: 'osLine',
+  assetCpu: 'cpuLine',
+  assetRam: 'ramLine',
+  assetStorage: 'storageLine',
+};
+
+/**
+ * Applies the worksheet spec hideable fields to the linked-asset block: each hidden field nulls its own
+ * spec line, and when every spec line is hidden the whole block goes null (an empty "Asset Specifications"
+ * section must not print). `assetId` never renders, so it never keeps the block alive on its own.
+ */
+function applySpecVisibility(
+  linkedAsset: LabelLinkedAssetInfo | null,
+  hidden: ReadonlySet<LabelHideableField>
+): LabelLinkedAssetInfo | null {
+  if (!linkedAsset) return null;
+  const fields = Object.keys(SPEC_FIELD_TO_ASSET_LINE) as (keyof typeof SPEC_FIELD_TO_ASSET_LINE)[];
+  if (fields.every((field) => hidden.has(field))) return null;
+  if (!fields.some((field) => hidden.has(field))) return linkedAsset;
+  const visible = { ...linkedAsset };
+  for (const field of fields) {
+    if (hidden.has(field)) visible[SPEC_FIELD_TO_ASSET_LINE[field]] = null;
+  }
+  return visible;
+}
+
 /**
  * The model a label template evaluates. Fields the template hides (`metadata.labelSettings.hiddenFields`)
  * are NULLED here, before evaluation, so a hidden value cannot reach the HTML even when a custom text node
@@ -147,7 +182,7 @@ export function buildLabelModel(
       worksheet && !hidden.has('ticketDescription') && !hidden.has('detail')
         ? viewModel.ticketDescriptionRichText ?? viewModel.ticketDescription ?? null
         : null,
-    linkedAsset: worksheet ? viewModel.linkedAsset ?? null : null,
+    linkedAsset: worksheet ? applySpecVisibility(viewModel.linkedAsset ?? null, hidden) : null,
     custodyLocation,
     nextAction,
     tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,

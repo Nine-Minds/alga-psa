@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { recordUrl, type LabelViewModel } from '@alga-psa/types';
 
+const loggerWarn = vi.fn();
+vi.mock('@alga-psa/core/logger', () => ({ default: { warn: (...args: any[]) => loggerWarn(...args) } }));
+
 import { inlineWorksheetDescriptionImages } from './inlineWorksheetImages';
 import { renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtml';
 import { STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE } from '../label-template-ast/standardTemplates';
@@ -48,9 +51,27 @@ describe('inlineWorksheetDescriptionImages', () => {
     expect(out[0].props.url).toBe(PNG);
     expect(out[1].props.url).toBe(PNG);
     expect(out[2].children[0].props.url).toBe(PNG);
-    // The storage read is given the path only, never an origin a description could choose.
-    expect(resolve).toHaveBeenCalledWith(`/api/documents/view/${FILE_A}?t=1`);
+    // Repeated URLs (including query-string variants) for one document are resolved once, path only.
+    expect(resolve).toHaveBeenCalledOnce();
+    expect(resolve).toHaveBeenCalledWith(`/api/documents/view/${FILE_A}`);
     expect(resolve.mock.calls.every(([url]) => url.startsWith('/api/documents/view/'))).toBe(true);
+  });
+
+  it('resolves one document id once across ticket descriptions in the same print batch', async () => {
+    const resolve = vi.fn(async () => PNG);
+    const { items, missingImages } = await inlineWorksheetDescriptionImages([
+      ticket([image(`/api/documents/view/${FILE_A}?t=1`)]),
+      {
+        ...ticket([image(`/api/documents/view/${FILE_A}?t=2`)]),
+        viewModel: { ...ticket([image(`/api/documents/view/${FILE_A}?t=2`)]).viewModel, recordId: 'other-ticket' },
+      },
+    ], resolve, marker);
+
+    expect(missingImages).toBe(0);
+    expect(resolve).toHaveBeenCalledOnce();
+    for (const item of items) {
+      expect((item.viewModel.ticketDescriptionRichText as Array<Record<string, any>>)[0].props.url).toBe(PNG);
+    }
   });
 
   it('replaces an image it cannot inline with a visible, counted marker instead of dropping it', async () => {
@@ -90,6 +111,48 @@ describe('inlineWorksheetDescriptionImages', () => {
     expect(items[0].viewModel.ticketDescriptionRichText).toEqual(blocks);
     expect(items[1]).toBe(plain);
     expect(items[2].viewModel.ticketDescriptionRichText).toBeNull();
+  });
+
+  it('inlines images inside ProseMirror doc content (attrs.src) and table rows', async () => {
+    const resolve = vi.fn(async (url: string) => (url.includes(FILE_A) ? PNG : null));
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'image', attrs: { src: `/api/documents/view/${FILE_A}`, alt: 'screenshot.png' } }] },
+        { type: 'table', content: { type: 'tableRow', content: [
+          { type: 'tableCell', content: [{ type: 'image', attrs: { src: `/api/documents/view/${FILE_B}`, alt: 'other.png' } }] },
+        ] } },
+      ],
+    };
+    const { items, missingImages } = await inlineWorksheetDescriptionImages([ticket(JSON.stringify(doc))], resolve, marker);
+
+    expect(missingImages).toBe(1);
+    const out = items[0].viewModel.ticketDescriptionRichText as Record<string, any>;
+    expect(out.type).toBe('doc');
+    expect(out.content[0].content[0].attrs.src).toBe(PNG);
+    const cellImage = out.content[1].content.content[0].content[0];
+    expect(cellImage.type).toBe('paragraph');
+    expect(cellImage.content[0].text).toBe('[Image not included: other.png]');
+  });
+
+  it('logs a resolver failure with the tenant context instead of silently treating it as missing', async () => {
+    const resolve = vi.fn(async () => { throw new Error('S3 unreachable'); });
+    const { items, missingImages } = await inlineWorksheetDescriptionImages(
+      [ticket([image(`/api/documents/view/${FILE_A}`, 'screenshot.png')])],
+      resolve,
+      marker,
+      { tenant: 'tenant-1' }
+    );
+
+    expect(missingImages).toBe(1);
+    expect(loggerWarn).toHaveBeenCalledTimes(1);
+    const [message, meta] = loggerWarn.mock.calls[0] as [string, Record<string, any>];
+    expect(message).toContain('resolver failed');
+    expect(meta.tenant).toBe('tenant-1');
+    expect(meta.url).toBe(`/api/documents/view/${FILE_A}`);
+    expect(meta.error).toBeInstanceOf(Error);
+    const out = items[0].viewModel.ticketDescriptionRichText as Array<Record<string, any>>;
+    expect(out[0].content[0].text).toBe('[Image not included: screenshot.png]');
   });
 
   it('prints the inlined image and the marker on the worksheet', async () => {

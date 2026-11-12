@@ -30,7 +30,7 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   nextAction: null,
   // Shown only by the full-page customer worksheet; the 4 x 2 in tag templates bind none of these.
   linkedAsset: {
-    assetId: 'b2d4e6f6-8a0c-4c1e-9e2g-4h6i8j8k0l2m',
+    assetId: 'b2d4e6f6-8a0c-4c1e-9e2f-4a6a8b8c0d2d',
     name: 'Dell Latitude 5540',
     manufacturer: 'Dell',
     model: 'Latitude 5540',

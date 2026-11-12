@@ -19,6 +19,8 @@ export function isLabelClass(value: unknown): value is LabelClass {
 /**
  * Fields a tenant label template may hide (`metadata.labelSettings.hiddenFields`). Never includes
  * `url` or `identifier`: a label must always carry its QR and its human-readable identifier.
+ * The `asset*` entries hide one line of the full-page worksheet's Asset Specifications block each;
+ * they only take effect behind the worksheet gate (the 4 x 2 in tag never prints those lines).
  */
 export const LABEL_HIDEABLE_FIELDS = [
   'clientName',
@@ -32,13 +34,20 @@ export const LABEL_HIDEABLE_FIELDS = [
   'nextAction',
   'tenantLogo',
   'tenantName',
+  'assetName',
+  'assetManufacturer',
+  'assetModel',
+  'assetOs',
+  'assetCpu',
+  'assetRam',
+  'assetStorage',
 ] as const;
 export type LabelHideableField = (typeof LABEL_HIDEABLE_FIELDS)[number];
 
 export interface TemplateLabelSettings {
   hiddenFields?: LabelHideableField[];
   // A `ticket-work-tag` template whose declared page (printSettings.paperPreset / customPageSize)
-  // is Letter- or A4-sized portrait paper prints as a full-page customer worksheet: the label
+  // is portrait and at least 210 mm wide prints as a full-page customer worksheet: the label
   // line-budget rules that trim fields to a 4 x 2 in tag do not apply, and the print dialog
   // defaults to the paper the template asks for. The page size is the only gate.
 }
@@ -86,7 +95,7 @@ export interface LabelTenantClient {
 /**
  * One uniform shape for every label class (decision: one generic `work-tag` document type).
  * Fields a class has no use for are null. Ordinary tags exclude comments, credentials and full
- * serial numbers; the explicitly selected Letter worksheet may include the ticket description and
+ * serial numbers; a full-page ticket worksheet may include the ticket description and
  * full serial of its authorized linked asset.
  */
 export interface LabelViewModel {
@@ -107,11 +116,11 @@ export interface LabelViewModel {
   secondaryIdentifier: string | null;
   /** Last characters of the serial number, never the whole serial. */
   serialSuffix: string | null;
-  /** Full serial of the authorized linked asset, supplied only for a Letter ticket worksheet. */
+  /** Full serial of the authorized linked asset, supplied only for a full-page ticket worksheet. */
   assetSerialNumber?: string | null;
-  /** Plain-text ticket description, supplied only for a Letter ticket worksheet. */
+  /** Plain-text ticket description, supplied only for a full-page ticket worksheet. */
   ticketDescription?: string | null;
-  /** Structured ticket description for rich rendering on a Letter worksheet. */
+  /** Structured ticket description for rich rendering on a full-page ticket worksheet. */
   ticketDescriptionRichText?: unknown;
   /**
    * Ticket work tag only: where held client equipment is ("Main Office / Shelf B3", "With vendor"). Filled by the
@@ -156,7 +165,7 @@ export interface LabelRequestContext {
   user: IUserWithRoles;
   /** Absolute http(s) origin used to build `url` through `recordUrl`. */
   baseUrl: string;
-  /** Set by the print composition root only when the resolved ticket template is a Letter worksheet. */
+  /** Set by the print composition root only when the resolved ticket template has portrait paper at least 210 mm wide. */
   includeWorksheetDetails?: boolean;
 }
 

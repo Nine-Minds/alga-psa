@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Tillgångens fullständiga serienummer",
-        "description": "Fullständigt serienummer för vald tillgång, endast tillgängligt på kundblad i Letter-format."
+        "description": "Fullständigt serienummer för vald tillgång, endast tillgängligt på kundarbetsblad med stående sida som är minst 210 mm bred."
       },
       "label_ticketDescription": {
         "label": "Ärendebeskrivning",
-        "description": "Ärendebeskrivning som ren text, endast tillgängligt på kundblad i Letter-format."
+        "description": "Ärendebeskrivning som ren text, endast tillgängligt på kundarbetsblad med stående sida som är minst 210 mm bred."
       },
       "label_custodyLocation": {
         "label": "Förvaringsplats",
@@ -2882,7 +2882,7 @@
         "labelClass": "Etikettklass",
         "labelFields": "Fält som visas på etiketten",
         "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid.",
-        "worksheetPageHint": "En ticketetikett med fullstor stående sida (A4 eller Letter) skrivs ut som ett kundarbetsblad på full sida, vilket lägger till fälten fullt serienummer och ticketbeskrivning. Mindre sidor skrivs ut som etiketter.",
+        "worksheetPageHint": "En ärendeetikett med stående sida som är minst 210 mm bred (A4, Letter, Legal eller ett godkänt anpassat papper) skrivs ut som ett kundarbetsblad på en hel sida, med fälten för fullständigt serienummer och ärendebeskrivning. Mindre sidor skrivs ut som etiketter.",
         "worksheetFieldsHint": "Om serienumrets slut döljs döljs även hela serienumret; om detaljen döljs döljs även ärendebeskrivningen."
       },
       "placeholders": {
@@ -2946,8 +2946,8 @@
       "tenantName": "Företagsnamn"
     },
     "standardNames": {
-      "standard-ticket-customer-worksheet-a4": "Standard kundarbetsblad (A4)",
-      "standard-ticket-customer-worksheet": "Standardkundblad"
+      "standard-ticket-customer-worksheet-a4": "Standardkundarbetsblad (A4)",
+      "standard-ticket-customer-worksheet": "Standardkundarbetsblad"
     }
   },
   "errors": {

@@ -16,7 +16,7 @@ import { Input } from '../Input';
 import { Checkbox } from '../Checkbox';
 import CustomSelect from '../CustomSelect';
 import { Alert, AlertDescription } from '../Alert';
-import { useTranslation } from '../../lib/i18n/client';
+import { useFormatters, useTranslation } from '../../lib/i18n/client';
 import {
   DEFAULT_LABEL_LAYOUT_PRESET,
   LABEL_LAYOUT_PRESETS,
@@ -88,6 +88,7 @@ export function LabelPrintDialog({
   idPrefix = 'label-print',
 }: LabelPrintDialogProps) {
   const { t } = useTranslation('common');
+  const { formatNumber } = useFormatters();
   const { print, loadTemplates, loadLinkedAssets, isPrinting } = useLabelPrint();
 
   const isSingleTicket = labelClass === 'ticket-work-tag' && ids.length === 1;
@@ -168,7 +169,11 @@ export function LabelPrintDialog({
       (candidate) => Math.abs(size.width - candidate.widthMm) < 1 && Math.abs(size.height - candidate.heightMm) < 1
     );
     if (preset) return t(`labels.paper.${preset.id.toLowerCase()}`, { defaultValue: preset.label });
-    return `${Math.round(size.width)} × ${Math.round(size.height)} mm`;
+    return t('labels.paper.custom', {
+      defaultValue: '{{width}} × {{height}} mm',
+      width: formatNumber(Math.round(size.width)),
+      height: formatNumber(Math.round(size.height)),
+    });
   };
   const mmFromLayout = (layout: unknown): { width: number; height: number } | null => {
     if (!layout || typeof layout !== 'object') return null;
@@ -189,7 +194,8 @@ export function LabelPrintDialog({
   // template sent through the Letter layout), which the server rejects with a paper-size error.
   const paperMismatch = (() => {
     if (preset === 'template-preferred') return null;
-    const tpl = (templates?.templates ?? []).find((candidate) => candidate.id === templateId);
+    const resolvedTemplateId = templateId || templates?.defaultTemplateId || templates?.templates[0]?.id;
+    const tpl = (templates?.templates ?? []).find((candidate) => candidate.id === resolvedTemplateId);
     if (!tpl?.prefersPaperPage) return null;
     const templatePaper = tpl.paperSizeMm ?? null;
     const layoutPaper = mmFromLayout(LABEL_LAYOUT_PRESETS[preset].layout);

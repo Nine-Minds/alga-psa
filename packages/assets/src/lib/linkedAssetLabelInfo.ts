@@ -45,11 +45,29 @@ function wholeNumber(value: unknown): number | null {
 }
 
 /**
+ * Hardware-spec keys that may print from a `storage_config` object. The column is free-form JSON, so
+ * its keys carry whatever an operator typed or an RMM sync wrote; anything not listed here (notes,
+ * serials, IP addresses, credentials) stays off the customer-facing worksheet. Compared lower-cased.
+ */
+const PRINTABLE_STORAGE_KEYS: ReadonlySet<string> = new Set([
+  'name', 'device', 'device_name', 'drive', 'drive_letter',
+  'type', 'storage_type', 'media_type', 'interface', 'interface_type', 'raid', 'raid_level',
+  'capacity', 'capacity_gb', 'total_capacity_gb', 'size', 'size_gb',
+  'file_system', 'filesystem', 'format',
+  'model', 'manufacturer', 'vendor',
+]);
+
+function isPrintableStorageKey(key: string): boolean {
+  return PRINTABLE_STORAGE_KEYS.has(key.trim().toLowerCase());
+}
+
+/**
  * One `server_assets.storage_config` entry is free-form JSON (the form stores whatever the operator
  * typed, `z.array(z.unknown())`; RMM syncs write flat `{ name, capacity_gb, free_gb, file_system }`).
  * Flatten strings as-is and objects by their printable scalar values, suffixing `*_gb` sizes with
- * "GB" and skipping `free*` usage fields (runtime state, not hardware spec). Nested values and
- * entries with nothing printable print nothing.
+ * "GB". Object keys must be on {@link PRINTABLE_STORAGE_KEYS}, which structurally drops usage fields
+ * (`free*`), nested values and unrecognized operator keys; entries with nothing printable print
+ * nothing.
  */
 export function summarizeServerStorage(value: unknown): string | null {
   if (!Array.isArray(value)) return null;
@@ -62,7 +80,7 @@ export function summarizeServerStorage(value: unknown): string | null {
     }
     if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
       const s = Object.entries(entry as Record<string, unknown>)
-        .filter(([key]) => !key.toLowerCase().startsWith('free'))
+        .filter(([key]) => isPrintableStorageKey(key))
         .map(([key, v]) => {
           if (typeof v === 'number' && Number.isFinite(v)) return key.toLowerCase().endsWith('_gb') ? `${v} GB` : String(v);
           return typeof v === 'string' ? v.trim() : '';

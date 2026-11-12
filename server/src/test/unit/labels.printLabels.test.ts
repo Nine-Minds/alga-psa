@@ -97,7 +97,7 @@ describe('printLabels', () => {
     expect(vms[0]).toMatchObject({ secondaryIdentifier: 'WL-1', serialSuffix: '9876' });
   });
 
-  it('requests worksheet details only for the resolved Letter template, including custom templates', async () => {
+  it('requests worksheet details only for resolved portrait ticket templates at least 210 mm wide', async () => {
     const s = setup([A]);
     const parts = s.deps.getLinkedAssetParts as ReturnType<typeof vi.fn>;
     parts.mockResolvedValue([{ assetId: C, assetTag: 'WL-1', serialSuffix: null, assetSerialNumber: '1234567' }]);

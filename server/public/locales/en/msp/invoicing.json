@@ -2882,7 +2882,7 @@
         "labelClass": "Label class",
         "labelFields": "Fields shown on the label",
         "labelFieldsHint": "The record link (QR code) and the identifier are always shown.",
-        "worksheetPageHint": "A ticket tag whose page is full-size portrait paper (A4 or Letter) prints as a full-page customer worksheet, which adds the full asset serial and ticket description fields. Smaller pages print as tags.",
+        "worksheetPageHint": "A ticket work tag with portrait paper at least 210 mm wide (A4, Letter, Legal or qualifying custom paper) prints as a full-page customer worksheet, adding the full asset serial and ticket description fields. Smaller pages print as tags.",
         "worksheetFieldsHint": "Hiding the serial suffix also hides the full serial; hiding detail also hides the ticket description."
       },
       "placeholders": {

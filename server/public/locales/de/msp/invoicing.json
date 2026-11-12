@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Vollständige Asset-Seriennummer",
-        "description": "Vollständige Seriennummer des ausgewählten Assets, nur auf Kunden-Arbeitsblättern im Letter-Format verfügbar."
+        "description": "Vollständige Seriennummer des ausgewählten Assets, nur auf Kunden-Arbeitsblättern mit Hochformatseiten von mindestens 210 mm Breite verfügbar."
       },
       "label_ticketDescription": {
         "label": "Ticketbeschreibung",
-        "description": "Ticketbeschreibung als Klartext, nur auf Kunden-Arbeitsblättern im Letter-Format verfügbar."
+        "description": "Ticketbeschreibung als Klartext, nur auf Kunden-Arbeitsblättern mit Hochformatseiten von mindestens 210 mm Breite verfügbar."
       },
       "label_custodyLocation": {
         "label": "Aufbewahrungsort",
@@ -2882,7 +2882,7 @@
         "labelClass": "Etikettenklasse",
         "labelFields": "Auf dem Etikett angezeigte Felder",
         "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt.",
-        "worksheetPageHint": "Ein Ticket-Etikett mit Hochformat-Seite in voller Größe (A4 oder Letter) wird als kundenbezogenes Arbeitsblatt auf vollem Blatt gedruckt; dadurch kommen die Felder für vollständige Seriennummer und Ticketbeschreibung hinzu. Kleinere Seiten werden als Etiketten gedruckt.",
+        "worksheetPageHint": "Ein Ticket-Etikett mit einer Hochformatseite von mindestens 210 mm Breite (A4, Letter, Legal oder geeignetes benutzerdefiniertes Papier) wird als kundenbezogenes Arbeitsblatt auf einem ganzen Blatt gedruckt; dadurch kommen die Felder für vollständige Seriennummer und Ticketbeschreibung hinzu. Kleinere Seiten werden als Etiketten gedruckt.",
         "worksheetFieldsHint": "Das Ausblenden der Seriennummern-Endung blendet auch die vollständige Nummer aus; das Ausblenden des Details auch die Ticketbeschreibung."
       },
       "placeholders": {

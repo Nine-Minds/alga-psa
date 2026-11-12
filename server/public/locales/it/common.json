@@ -1688,11 +1688,9 @@
       "copiesPerAsset": "Copie per asset",
       "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme.",
       "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli \"Carta del modello\" (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
-      "worksheetPageSizeError": "Il foglio deve usare carta Letter o più grande in verticale, sia nel designer sia nel layout di stampa.",
-      "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli „Carta del modello“ o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
-      "worksheetTextOverflowError": "Il foglio {{numbers}} contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare.",
-      "worksheetPageSizeError": "Il foglio di lavoro non corrisponde al layout di stampa selezionato. Usa „Carta del modello“ o un layout con la stessa carta del modello.",
-      "worksheetTextOverflowError": "Questo foglio contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
+      "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli «Carta del modello» o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
+      "worksheetPageSizeError": "Il foglio di lavoro non corrisponde al layout di stampa selezionato. Usa «Carta del modello» o un layout con la stessa carta del modello.",
+      "worksheetTextOverflowError": "Questo foglio di lavoro contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
     },
     "layout": {
       "template-preferred": "Carta del modello (predefinita)",
@@ -1705,11 +1703,18 @@
     "paper": {
       "a4": "Foglio A4",
       "letter": "Foglio Letter",
-      "legal": "Foglio Legal"
+      "legal": "Foglio Legal",
+      "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {
+      "standard-ticket-work-tag": "Etichetta standard attività ticket",
+      "standard-asset-label": "Etichetta standard asset",
+      "standard-asset-label-code128": "Etichetta standard asset con Code 128",
+      "standard-stock-unit-label": "Etichetta standard unità di magazzino",
+      "standard-staging-container-label": "Etichetta standard contenitore di staging",
+      "standard-rma-label": "Etichetta standard reso RMA",
       "standard-ticket-customer-worksheet-a4": "Foglio di lavoro cliente standard (A4)",
-      "standard-ticket-customer-worksheet": "Foglio cliente standard"
+      "standard-ticket-customer-worksheet": "Foglio di lavoro cliente standard"
     }
   },
   "deleteEntity": {

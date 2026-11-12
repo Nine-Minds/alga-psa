@@ -9,7 +9,7 @@ import { getLinkedAssetInfoForAssets, type FormatCpuCoreCount, type LinkedAssetI
 
 /**
  * The asset half of a ticket work tag: the linked asset's tag and a serial suffix. Read-only.
- * A Letter worksheet may also receive the full serial of the same authorized asset.
+ * A full-page ticket worksheet may also receive the full serial of the same authorized asset.
  *
  * Lives in the assets package because the asset kernel check must run here (tickets never import
  * assets; the composition root merges this into the ticket view models). An asset the caller cannot
@@ -20,7 +20,7 @@ export interface TicketLinkedAssetLabelParts {
   assetId: string;
   assetTag: string | null;
   serialSuffix: string | null;
-  /** Present only when the resolved template explicitly requests Letter worksheet details. */
+  /** Present only when the resolved ticket template declares portrait worksheet paper at least 210 mm wide. */
   assetSerialNumber?: string | null;
   /** Held-equipment line ("Main Office / Shelf B3", "With vendor", "2 items held"), or null. Never the note. */
   custodyLocation: string | null;

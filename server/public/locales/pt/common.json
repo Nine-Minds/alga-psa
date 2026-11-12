@@ -1688,9 +1688,7 @@
       "copiesPerAsset": "Cópias por ativo",
       "adjacentCopies": "As cópias de cada ativo são impressas juntas.",
       "templatePaperWarning": "Este modelo é impresso em uma folha inteira. Escolha \"Papel do modelo\" (ou um layout de folha inteira), caso contrário o conteúdo não caberá na etiqueta.",
-      "worksheetPageSizeError": "A folha tem de usar papel Letter ou maior na vertical, tanto no editor como na disposição de impressão.",
-      "paperMismatchWarning": "Este modelo foi projetado para papel {{template}}, mas o layout selecionado imprime em {{layout}}. Escolha „Papel do modelo“ ou o layout de página inteira correspondente, ou o conteúdo não caberá.",
-      "worksheetTextOverflowError": "A folha {{numbers}} contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir.",
+      "paperMismatchWarning": "Este modelo foi concebido para {{template}}, mas o layout selecionado imprime em {{layout}}. Escolha „Papel do modelo“ ou o layout de página inteira correspondente, ou o conteúdo não caberá.",
       "worksheetPageSizeError": "A folha de trabalho não corresponde ao layout de impressão selecionado. Use „Papel do modelo“ ou um layout com o mesmo papel do modelo.",
       "worksheetTextOverflowError": "Esta folha contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir."
     },
@@ -1705,11 +1703,18 @@
     "paper": {
       "a4": "Folha A4",
       "letter": "Folha Letter",
-      "legal": "Folha Legal"
+      "legal": "Folha Legal",
+      "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {
+      "standard-ticket-work-tag": "Etiqueta padrão de atividade do chamado",
+      "standard-asset-label": "Etiqueta padrão de ativo",
+      "standard-asset-label-code128": "Etiqueta padrão de ativo com código 128",
+      "standard-stock-unit-label": "Etiqueta padrão de unidade de estoque",
+      "standard-staging-container-label": "Etiqueta padrão de contêiner de preparação",
+      "standard-rma-label": "Etiqueta padrão de devolução RMA",
       "standard-ticket-customer-worksheet-a4": "Folha de trabalho padrão do cliente (A4)",
-      "standard-ticket-customer-worksheet": "Folha de cliente padrão"
+      "standard-ticket-customer-worksheet": "Folha de trabalho padrão do cliente"
     }
   },
   "deleteEntity": {

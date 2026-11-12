@@ -1688,9 +1688,7 @@
       "copiesPerAsset": "Exemplaren per asset",
       "adjacentCopies": "De exemplaren van elke asset worden samen afgedrukt.",
       "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies \"Sjabloonpapier\" (of een lay-out voor een volledig vel), anders past de inhoud niet op het etiket.",
-      "worksheetPageSizeError": "Het werkblad moet zowel in de ontwerper als in de afdrukindeling staand Letter-papier of groter gebruiken.",
-      "paperMismatchWarning": "Deze sjabloon is ontworpen voor {{template}}-papier, maar de geselecteerde indeling print op {{layout}}. Kies „Sjabloonpapier“ of de passende indeling voor volle vellen, anders past de inhoud niet.",
-      "worksheetTextOverflowError": "Werkblad {{numbers}} bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt.",
+      "paperMismatchWarning": "Deze sjabloon is ontworpen voor {{template}}, maar de geselecteerde indeling print op {{layout}}. Kies „Sjabloonpapier“ of de passende indeling voor volle vellen, anders past de inhoud niet.",
       "worksheetPageSizeError": "Het werkvel past niet bij de geselecteerde printindeling. Gebruik „Sjabloonpapier“ of een indeling met hetzelfde papier als de sjabloon.",
       "worksheetTextOverflowError": "Dit werkblad bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt."
     },
@@ -1705,11 +1703,18 @@
     "paper": {
       "a4": "A4-vel",
       "letter": "Letter-vel",
-      "legal": "Legal-vel"
+      "legal": "Legal-vel",
+      "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {
-      "standard-ticket-customer-worksheet-a4": "Standaard klantenwerkvel (A4)",
-      "standard-ticket-customer-worksheet": "Standaard klantwerkblad"
+      "standard-ticket-work-tag": "Standaard ticketwerklabel",
+      "standard-asset-label": "Standaard assetlabel",
+      "standard-asset-label-code128": "Standaard assetlabel met Code 128",
+      "standard-stock-unit-label": "Standaard voorraadunitlabel",
+      "standard-staging-container-label": "Standaard stagingcontainerlabel",
+      "standard-rma-label": "Standaard RMA-retourlabel",
+      "standard-ticket-customer-worksheet-a4": "Standaard klantenwerkblad (A4)",
+      "standard-ticket-customer-worksheet": "Standaard klantenwerkblad"
     }
   },
   "deleteEntity": {

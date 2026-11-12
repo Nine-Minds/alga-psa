@@ -564,10 +564,16 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         break;
 
       case 'quote':
-        return extractStyledTextFromContent(block.content as unknown[]).split('\n').map(line => `> ${line}`).join('\n');
+        if (block.content && Array.isArray(block.content)) {
+          return extractStyledTextFromContent(block.content as unknown[]).split('\n').map(line => `> ${line}`).join('\n');
+        }
+        return unsupportedBlock(block.type);
 
       case 'toggleListItem':
-        return `- ${extractStyledTextFromContent(block.content as unknown[])}`;
+        if (block.content && Array.isArray(block.content)) {
+          return `- ${extractStyledTextFromContent(block.content as unknown[])}`;
+        }
+        return unsupportedBlock(block.type);
 
       case 'divider':
         return '---';
@@ -955,7 +961,10 @@ export function convertBlockNoteToHTML(blocks: any): string {
         case 'toggleListItem': {
           flushListBuffer();
           const tag = block.type === 'quote' ? 'blockquote' : 'div';
-          output.push(`<${tag}${styleAttribute}>${extractStyledTextToHTML(block.content as unknown[])}`);
+          const inner = block.content && Array.isArray(block.content)
+            ? extractStyledTextToHTML(block.content as unknown[])
+            : escapeHtml(unsupportedBlock(block.type));
+          output.push(`<${tag}${styleAttribute}>${inner}`);
           if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
           output.push(`</${tag}>`);
           break;

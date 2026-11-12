@@ -143,6 +143,28 @@ describe('rich-text export structures', () => {
     warn.mockRestore();
   });
 
+  it.each(['quote', 'toggleListItem'] as const)('falls back per-block when %s has no array content, leaving siblings intact', (type) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const blocks = [
+      { type: 'paragraph', content: text('Before') },
+      { type, content: 'not an array' },
+      { type: 'paragraph', content: text('After') },
+    ];
+    for (const content of [blocks, JSON.stringify(blocks)]) {
+      const { html, text: plainText } = formatBlockNoteContent(content);
+      const markdown = convertBlockContentToMarkdown(content);
+      for (const output of [html, plainText, markdown]) {
+        expect(output).toContain('Before');
+        expect(output).toContain('After');
+        expect(output).toContain(UNSUPPORTED_RICH_TEXT_PLACEHOLDER);
+      }
+      // The malformed block is replaced, not the whole document.
+      expect(markdown.match(new RegExp(UNSUPPORTED_RICH_TEXT_PLACEHOLDER.replace(/[$.*+?^=:{}|\\[\]()/]/g, '\\$&'), 'g'))).toHaveLength(1);
+    }
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('formats ProseMirror table cells, hard breaks, images and task states in notifications', () => {
     const content = {
       type: 'doc',

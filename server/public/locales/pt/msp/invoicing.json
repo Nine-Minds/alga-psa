@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Número de série completo do ativo",
-        "description": "Número de série completo do ativo selecionado, disponível apenas em folhas de cliente no formato Letter."
+        "description": "Número de série completo do ativo selecionado, disponível apenas em folhas de trabalho do cliente com página vertical de pelo menos 210 mm de largura."
       },
       "label_ticketDescription": {
         "label": "Descrição do ticket",
-        "description": "Descrição do ticket como texto simples, disponível apenas em folhas de cliente no formato Letter."
+        "description": "Descrição do ticket como texto simples, disponível apenas em folhas de trabalho do cliente com página vertical de pelo menos 210 mm de largura."
       },
       "label_custodyLocation": {
         "label": "Local de custódia",
@@ -2882,7 +2882,7 @@
         "labelClass": "Classe da etiqueta",
         "labelFields": "Campos exibidos na etiqueta",
         "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos.",
-        "worksheetPageHint": "Uma etiqueta de ticket cuja página é de tamanho inteiro em retrato (A4 ou Letter) é impressa como uma folha de trabalho do cliente em página inteira, o que adiciona os campos de número de série completo e descrição do ticket. Páginas menores são impressas como etiquetas.",
+        "worksheetPageHint": "Uma etiqueta de trabalho do ticket com uma página vertical de pelo menos 210 mm de largura (A4, Letter, Legal ou papel personalizado adequado) é impressa como uma folha de trabalho do cliente em página inteira, com os campos de número de série completo do ativo e descrição do ticket. Páginas menores são impressas como etiquetas.",
         "worksheetFieldsHint": "Ocultar o final do número de série também oculta o número completo; ocultar o detalhe também oculta a descrição do ticket."
       },
       "placeholders": {
@@ -2947,7 +2947,7 @@
     },
     "standardNames": {
       "standard-ticket-customer-worksheet-a4": "Folha de trabalho padrão do cliente (A4)",
-      "standard-ticket-customer-worksheet": "Folha de cliente padrão"
+      "standard-ticket-customer-worksheet": "Folha de trabalho padrão do cliente"
     }
   },
   "errors": {

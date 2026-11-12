@@ -83,4 +83,12 @@ describe('composeLinkedAssetInfo', () => {
     expect(info.storageLine).toBe('SSD 960 GB');
     expect(info.ramLine).toBe('64 GB');
   });
+
+  it('prints only allowlisted storage keys, dropping operator-entered extras', () => {
+    expect(summarizeServerStorage([{ name: 'Disk 0', capacity_gb: 960, ip_address: '10.0.0.7', note: 'Finance box' }]))
+      .toBe('Disk 0 960 GB');
+    expect(summarizeServerStorage([{ serial_number: 'ABC123', passphrASE: 'hunter2' }])).toBeNull();
+    // Key matching is case-insensitive, and free_gb stays off even when it is the only key.
+    expect(summarizeServerStorage([{ Name: 'Disk 1', RAID_Level: 'RAID1', free_gb: 100 }])).toBe('Disk 1 RAID1');
+  });
 });

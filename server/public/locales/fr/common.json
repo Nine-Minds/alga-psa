@@ -1688,11 +1688,9 @@
       "copiesPerAsset": "Exemplaires par actif",
       "adjacentCopies": "Les exemplaires de chaque actif sont imprimés ensemble.",
       "templatePaperWarning": "Ce modèle s'imprime sur une feuille entière. Choisissez « Papier du modèle » (ou une mise en page pleine feuille), sinon le contenu ne tiendra pas sur l'étiquette.",
-      "worksheetPageSizeError": "La fiche doit utiliser du papier Letter ou plus grand en orientation portrait, dans le concepteur comme à l'impression.",
       "paperMismatchWarning": "Ce modèle est conçu pour du papier {{template}}, mais la mise en page sélectionnée imprime sur {{layout}}. Choisissez « Papier du modèle » ou la mise en page plein format correspondante, sinon le contenu ne tiendra pas.",
-      "worksheetTextOverflowError": "La fiche {{numbers}} contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression.",
       "worksheetPageSizeError": "La feuille de travail ne correspond pas à la mise en page d’impression sélectionnée. Utilisez « Papier du modèle » ou une mise en page utilisant le même papier que le modèle.",
-      "worksheetTextOverflowError": "Cette fiche contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression."
+      "worksheetTextOverflowError": "Cette feuille de travail contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression."
     },
     "layout": {
       "template-preferred": "Papier du modèle (par défaut)",
@@ -1705,11 +1703,18 @@
     "paper": {
       "a4": "Feuille A4",
       "letter": "Feuille Letter",
-      "legal": "Feuille Legal"
+      "legal": "Feuille Legal",
+      "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {
+      "standard-ticket-work-tag": "Étiquette de tâche de ticket standard",
+      "standard-asset-label": "Étiquette d’actif standard",
+      "standard-asset-label-code128": "Étiquette d’actif standard avec Code 128",
+      "standard-stock-unit-label": "Étiquette d’unité de stock standard",
+      "standard-staging-container-label": "Étiquette de conteneur de préparation standard",
+      "standard-rma-label": "Étiquette de retour RMA standard",
       "standard-ticket-customer-worksheet-a4": "Feuille de travail client standard (A4)",
-      "standard-ticket-customer-worksheet": "Fiche client standard"
+      "standard-ticket-customer-worksheet": "Feuille de travail client standard"
     }
   },
   "deleteEntity": {

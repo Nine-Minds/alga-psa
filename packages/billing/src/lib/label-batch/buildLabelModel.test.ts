@@ -85,6 +85,23 @@ describe('buildLabelModel', () => {
       .toMatchObject({ assetSerialNumber: null, ticketDescription: null, ticketDescriptionRichText: null, linkedAsset: null });
   });
 
+  it('hides individual worksheet spec lines and drops the whole asset block when every spec line is hidden', () => {
+    const linkedAsset = {
+      assetId: 'asset-1', name: 'Desktop', manufacturer: 'Make', model: 'Model',
+      osLine: 'OS', cpuLine: 'CPU', ramLine: '16 GB', storageLine: '512 GB',
+    };
+    const withAsset = { ...vm, assetSerialNumber: '1234567', linkedAsset };
+    expect(buildLabelModel(withAsset, tenant, ['assetCpu', 'assetRam'], { worksheet: true })).toMatchObject({
+      linkedAsset: { assetId: 'asset-1', name: 'Desktop', manufacturer: 'Make', model: 'Model', osLine: 'OS', cpuLine: null, ramLine: null, storageLine: '512 GB' },
+    });
+    // The source view model is never mutated.
+    expect(withAsset.linkedAsset).toEqual(linkedAsset);
+    const specFields = ['assetName', 'assetManufacturer', 'assetModel', 'assetOs', 'assetCpu', 'assetRam', 'assetStorage'] as const;
+    expect(buildLabelModel(withAsset, tenant, [...specFields], { worksheet: true }).linkedAsset).toBeNull();
+    // A hideable spec field is a no-op on an ordinary tag, which never carries the block.
+    expect(buildLabelModel(withAsset, tenant, [...specFields]).linkedAsset).toBeNull();
+  });
+
   it.each([
     [['assetSerialNumber'], null, 'Description'],
     [['serialSuffix'], null, 'Description'],

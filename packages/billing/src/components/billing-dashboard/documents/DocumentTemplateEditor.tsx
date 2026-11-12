@@ -101,7 +101,41 @@ const LABEL_FIELD_DEFAULT_LABELS: Record<LabelHideableField, string> = {
   nextAction: 'Next action',
   tenantLogo: 'Company logo',
   tenantName: 'Company name',
+  assetName: 'Asset name',
+  assetManufacturer: 'Asset manufacturer',
+  assetModel: 'Asset model',
+  assetOs: 'Operating system',
+  assetCpu: 'CPU',
+  assetRam: 'RAM',
+  assetStorage: 'Storage',
 };
+
+// Kebab-case DOM ids for checkbox fields whose names are camelCase multi-word (reflection-UI id rules).
+// Pre-existing single-word ids stay as-is so automation harnesses keep working.
+const LABEL_FIELD_DOM_IDS: Partial<Record<LabelHideableField, string>> = {
+  assetSerialNumber: 'asset-serial-number',
+  ticketDescription: 'ticket-description',
+  assetName: 'asset-name',
+  assetManufacturer: 'asset-manufacturer',
+  assetModel: 'asset-model',
+  assetOs: 'asset-os',
+  assetCpu: 'asset-cpu',
+  assetRam: 'asset-ram',
+  assetStorage: 'asset-storage',
+};
+
+// Spec lines only exist on the full-page worksheet, like the full serial and the ticket description.
+const WORKSHEET_ONLY_LABEL_FIELDS: readonly LabelHideableField[] = [
+  'assetSerialNumber',
+  'ticketDescription',
+  'assetName',
+  'assetManufacturer',
+  'assetModel',
+  'assetOs',
+  'assetCpu',
+  'assetRam',
+  'assetStorage',
+];
 type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
 
 const isDocumentTemplateActionError = (value: unknown) =>
@@ -179,9 +213,8 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const designerTransforms = useInvoiceDesignerStore((state) => state.transforms);
   const [designerHydrated, setDesignerHydrated] = useState(false);
 
-  // A ticket-work-tag template is a full-page customer worksheet when the page the author has set in
-  // the designer is worksheet paper (portrait, at least A4 wide). The page size is the only gate;
-  // worksheets print on whatever paper the template declares (A4, Letter, ...).
+  // A ticket-work-tag template is a full-page customer worksheet when its declared page is portrait
+  // and at least 210 mm wide. The page size is the only gate; worksheets print on their declared paper.
   const isWorksheetPage = useMemo(() => {
     if (!isLabelTemplate) return false;
     const printSettings = resolveCurrentWorkspacePrintSettings(designerNodes);
@@ -495,7 +528,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 <p className="text-xs text-muted-foreground md:col-span-2">
                   {t('documentTemplates.editor.fields.worksheetPageHint', {
                     defaultValue:
-                      'A ticket tag whose page is full-size portrait paper (A4 or Letter) prints as a full-page customer worksheet, which adds the full asset serial and ticket description fields. Smaller pages print as tags.',
+                      'A ticket work tag with portrait paper at least 210 mm wide (A4, Letter, Legal or qualifying custom paper) prints as a full-page customer worksheet, adding the full asset serial and ticket description fields. Smaller pages print as tags.',
                   })}
                 </p>
               )}
@@ -518,15 +551,12 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
                   {LABEL_HIDEABLE_FIELDS.filter(
                     (field) =>
-                      (field !== 'assetSerialNumber' && field !== 'ticketDescription') ||
+                      !WORKSHEET_ONLY_LABEL_FIELDS.includes(field) ||
                       (labelClass === 'ticket-work-tag' && isWorksheetPage),
                   ).map((field) => (
                     <label key={field} className="flex items-center gap-2">
                       <input
-                        id={`document-template-label-field-${
-                          field === 'assetSerialNumber' ? 'asset-serial-number' :
-                          field === 'ticketDescription' ? 'ticket-description' : field
-                        }`}
+                        id={`document-template-label-field-${LABEL_FIELD_DOM_IDS[field] ?? field}`}
                         type="checkbox"
                         checked={
                           !hiddenFields.includes(field) &&

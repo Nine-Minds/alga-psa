@@ -105,6 +105,20 @@ describe('planLabelBatch', () => {
         printSettings: { customPageSize: { width: 148, height: 210, unit: 'mm' } },
       })).toBeNull();
     });
+
+    it('a custom ticket-work-tag template on tag-sized paper never claims the page: the caller keeps its default layout', () => {
+      // Regression guard for the template-preferred default in printLabels: a 2 x 1 in custom template
+      // must yield null so the batch falls back to the 4 x 2 in roll exactly as before the page-size rule.
+      const tagSized = { printSettings: { customPageSize: { width: 2, height: 1, unit: 'in' as const } } };
+      expect(isWorksheetLabelTemplate('ticket-work-tag', tagSized)).toBe(false);
+      expect(labelMetadataPrefersPaperPage(tagSized)).toBe(false);
+      expect(resolveTemplatePreferredPageSizes([{ labelClass: 'ticket-work-tag' as const, metadata: tagSized }])).toBeNull();
+      // Mixed batches are just as strict: one tag-sized template vetoes the whole preference.
+      expect(resolveTemplatePreferredPageSizes([
+        { labelClass: 'ticket-work-tag' as const, metadata: letter },
+        { labelClass: 'ticket-work-tag' as const, metadata: tagSized },
+      ])).toBeNull();
+    });
   });
 
   it('grid: row-major order, spilling onto further sheets', () => {

@@ -1688,9 +1688,7 @@
       "copiesPerAsset": "Copies per asset",
       "adjacentCopies": "Copies print together for each asset.",
       "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label.",
-      "worksheetPageSizeError": "The worksheet must use Letter or larger portrait paper, both in the designer and the print layout.",
       "paperMismatchWarning": "This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose \"Template paper\" or the matching full-sheet layout, or the content will not fit.",
-      "worksheetTextOverflowError": "Worksheet {{numbers}} contains text that will not fit. Adjust the layout or shorten the content before printing.",
       "worksheetPageSizeError": "The worksheet does not fit the selected print layout. Use \"Template paper\" or a layout on the same paper as the template.",
       "worksheetTextOverflowError": "This worksheet contains text that will not fit. Adjust the layout or shorten the content before printing."
     },
@@ -1705,9 +1703,16 @@
     "paper": {
       "a4": "A4",
       "letter": "Letter",
-      "legal": "Legal"
+      "legal": "Legal",
+      "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {
+      "standard-ticket-work-tag": "Standard Ticket Work Tag",
+      "standard-asset-label": "Standard Asset Label",
+      "standard-asset-label-code128": "Standard Asset Label with Code 128",
+      "standard-stock-unit-label": "Standard Stock Unit Label",
+      "standard-staging-container-label": "Standard Staging Container Label",
+      "standard-rma-label": "Standard RMA Return Label",
       "standard-ticket-customer-worksheet": "Standard Customer Worksheet",
       "standard-ticket-customer-worksheet-a4": "Standard Customer Worksheet (A4)"
     }

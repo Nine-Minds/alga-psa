@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Volledig serienummer van asset",
-        "description": "Volledig serienummer van het geselecteerde actief, alleen beschikbaar op klantworksheets in Letter-formaat."
+        "description": "Volledig serienummer van het geselecteerde asset, alleen beschikbaar op klantenwerkbladen met een staande pagina van minstens 210 mm breed."
       },
       "label_ticketDescription": {
         "label": "Ticketbeschrijving",
-        "description": "Ticketbeschrijving als platte tekst, alleen beschikbaar op klantworksheets in Letter-formaat."
+        "description": "Ticketbeschrijving als platte tekst, alleen beschikbaar op klantenwerkbladen met een staande pagina van minstens 210 mm breed."
       },
       "label_custodyLocation": {
         "label": "Bewaarlocatie",
@@ -2882,7 +2882,7 @@
         "labelClass": "Labelklasse",
         "labelFields": "Velden die op het label worden getoond",
         "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond.",
-        "worksheetPageHint": "Een ticketlabel waarvan de pagina volledig formaat staand is (A4 of Letter) wordt als klantenwerkvel op een.vol vel gedrukt; er komen dan velden voor volledig serienummer en ticketbeschrijving bij. Kleinere pagina’s worden als label gedrukt.",
+        "worksheetPageHint": "Een ticketlabel met een staande pagina van minstens 210 mm breed (A4, Letter, Legal of geschikt aangepast papier) wordt als klantenwerkblad op een volledig vel afgedrukt, met velden voor het volledige serienummer van het asset en de ticketbeschrijving. Kleinere pagina’s worden als labels afgedrukt.",
         "worksheetFieldsHint": "Als u het einde van het serienummer verbergt, wordt ook het volledige serienummer verborgen; als u het detail verbergt, ook de ticketbeschrijving."
       },
       "placeholders": {
@@ -2946,8 +2946,8 @@
       "tenantName": "Bedrijfsnaam"
     },
     "standardNames": {
-      "standard-ticket-customer-worksheet-a4": "Standaard klantenwerkvel (A4)",
-      "standard-ticket-customer-worksheet": "Standaard klantwerkblad"
+      "standard-ticket-customer-worksheet-a4": "Standaard klantenwerkblad (A4)",
+      "standard-ticket-customer-worksheet": "Standaard klantenwerkblad"
     }
   },
   "errors": {

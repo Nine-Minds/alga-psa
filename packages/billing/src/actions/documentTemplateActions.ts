@@ -361,12 +361,18 @@ export const runAuthoritativeTemplatePreview = withAuth(
       // The preview shows what the printed label shows: hidden fields nulled, display lines derived,
       // and the same worksheet line-budget rules as the print path (`renderLabelBatchHtml`), keyed
       // on the page size the template declares.
-      const sampleLabel = previewModel as unknown as LabelViewModel;
+      // The template decides what the preview shows: its own label class (the editor always records
+      // it in `metadata.labelClass`; a custom without it keeps the read-time default) and its declared
+      // page size — never the sample's hard-coded class. An asset, RMA or staging template therefore
+      // previews with the same field gates the print path applies to those labels, even when it is
+      // authored on worksheet-sized paper.
+      const templateLabelClass = labelClassOfCustomTemplate(templateAst);
+      const sampleLabel = { ...previewModel, labelClass: templateLabelClass } as unknown as LabelViewModel;
       previewModel = buildLabelModel(
         sampleLabel,
         sampleLabel.tenantClient,
         templateAst.metadata?.labelSettings?.hiddenFields,
-        { worksheet: isWorksheetLabelTemplate(sampleLabel.labelClass, templateAst.metadata) }
+        { worksheet: isWorksheetLabelTemplate(templateLabelClass, templateAst.metadata) }
       ) as unknown as Record<string, unknown>;
     }
 

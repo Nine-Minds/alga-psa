@@ -1,3 +1,5 @@
+import logger from '@alga-psa/core/logger';
+
 import type { LabelPrintItem } from './renderLabelBatchHtml';
 
 /**
@@ -22,53 +24,91 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isBlockList = (value: unknown): value is Record<string, unknown>[] =>
   Array.isArray(value) && value.length > 0 && value.every((block) => isRecord(block) && typeof block.type === 'string');
 
-function parseBlocks(content: unknown): Record<string, unknown>[] | null {
-  if (isBlockList(content)) return content;
-  if (typeof content !== 'string' || !content.trim().startsWith('[')) return null;
-  try {
-    const parsed: unknown = JSON.parse(content);
-    return isBlockList(parsed) ? parsed : null;
-  } catch {
-    return null;
+/** Parsed rich content: a BlockNote block array or a ProseMirror `{type:'doc'}` document. */
+type ParsedRichContent = { kind: 'blocks'; blocks: Record<string, unknown>[] } | { kind: 'doc'; doc: Record<string, unknown> };
+
+function parseRichContent(content: unknown): ParsedRichContent | null {
+  let parsed: unknown = content;
+  if (typeof parsed === 'string') {
+    const trimmed = parsed.trim();
+    if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) return null;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
   }
+  if (isBlockList(parsed)) return { kind: 'blocks', blocks: parsed };
+  // The renderer (`convertBlockContentToHTML`) also renders ProseMirror docs; descriptions saved from
+  // the rich editor arrive in that shape, so the inliner must walk them too or their images vanish.
+  if (isRecord(parsed) && parsed.type === 'doc') return { kind: 'doc', doc: parsed };
+  return null;
 }
 
-async function inlineBlocks(
-  blocks: Record<string, unknown>[],
+/** The printed stand-in for an image that could not be inlined, in the shape the surrounding content uses. */
+function missingImageNode(kind: ParsedRichContent['kind'], name: string | null, text: string, children: unknown): Record<string, unknown> {
+  return kind === 'doc'
+    ? { type: 'paragraph', content: [{ type: 'text', text }] }
+    : { type: 'paragraph', props: {}, content: [{ type: 'text', text, styles: { italic: true } }], children };
+}
+
+/**
+ * Deep-walks one value of parsed rich content and rewrites image nodes in either shape. BlockNote
+ * images carry `props.url`; ProseMirror images carry `attrs.src` / `attrs.url` (the renderer maps
+ * them to the same props). Walking every array/record generically covers `children` (BlockNote),
+ * `content` (ProseMirror) and table `rows` / `cells` containers in both shapes. Unchanged nodes are
+ * returned by identity so items without images stay byte-identical.
+ */
+async function inlineValue(
+  value: unknown,
+  kind: ParsedRichContent['kind'],
   resolve: WorksheetImageResolver,
   missingImageText: MissingImageText,
-  counter: { missing: number }
-): Promise<Record<string, unknown>[]> {
-  return Promise.all(
-    blocks.map(async (block) => {
-      const children = isBlockList(block.children)
-        ? await inlineBlocks(block.children, resolve, missingImageText, counter)
-        : block.children;
-      const next = children === block.children ? block : { ...block, children };
-      if (block.type !== 'image') return next;
+  counter: { missing: number },
+  logContext: Record<string, unknown>
+): Promise<unknown> {
+  if (Array.isArray(value)) {
+    return Promise.all(value.map((entry) => inlineValue(entry, kind, resolve, missingImageText, counter, logContext)));
+  }
+  if (!isRecord(value)) return value;
 
-      const props = isRecord(block.props) ? block.props : {};
-      const url = typeof props.url === 'string' ? props.url.trim() : '';
-      if (!url || DATA_IMAGE_URL_RE.test(url)) return next;
+  if (value.type === 'image') {
+    const props = isRecord(value.props) ? value.props : {};
+    const attrs = isRecord(value.attrs) ? value.attrs : {};
+    const rawUrl = [props.url, attrs.src, attrs.url].find((v) => typeof v === 'string')?.trim() ?? '';
+    const documentPath = rawUrl ? DOCUMENT_IMAGE_URL_RE.exec(rawUrl)?.[1] : undefined;
+    // Embedded data: URIs print as is; remote URLs are the isolated renderer's job (alt text if refused).
+    if (!rawUrl || DATA_IMAGE_URL_RE.test(rawUrl) || (!documentPath && REMOTE_URL_RE.test(rawUrl))) return value;
 
-      const documentPath = DOCUMENT_IMAGE_URL_RE.exec(url)?.[1];
-      if (!documentPath && REMOTE_URL_RE.test(url)) return next;
-
-      const inlined = documentPath ? await resolve(documentPath).catch(() => null) : null;
-      if (inlined && DATA_IMAGE_URL_RE.test(inlined)) {
-        return { ...next, props: { ...props, url: inlined } };
+    let inlined: string | null = null;
+    if (documentPath) {
+      try {
+        inlined = await resolve(documentPath);
+      } catch (error) {
+        // A storage failure must not masquerade as a missing file: log it, then print the marker.
+        logger.warn('[inlineWorksheetDescriptionImages] Description image resolver failed', { ...logContext, url: documentPath, error });
       }
+    }
+    if (inlined && DATA_IMAGE_URL_RE.test(inlined)) {
+      if (isRecord(value.props)) return { ...value, props: { ...props, url: inlined } };
+      return { ...value, attrs: { ...attrs, src: inlined } };
+    }
+    counter.missing += 1;
+    const named = [props.name, attrs.alt].find((v): v is string => typeof v === 'string' && v.trim().length > 0);
+    const name = named?.trim() ?? null;
+    return missingImageNode(kind, name, missingImageText(name), Array.isArray(value.children) ? value.children : []);
+  }
 
-      counter.missing += 1;
-      const name = typeof props.name === 'string' && props.name.trim() ? props.name.trim() : null;
-      return {
-        type: 'paragraph',
-        props: {},
-        content: [{ type: 'text', text: missingImageText(name), styles: { italic: true } }],
-        children: Array.isArray(children) ? children : [],
-      };
-    })
-  );
+  const next: Record<string, unknown> = { ...value };
+  let changed = false;
+  for (const key of Object.keys(value)) {
+    const walked = await inlineValue(value[key], kind, resolve, missingImageText, counter, logContext);
+    if (walked !== value[key]) {
+      next[key] = walked;
+      changed = true;
+    }
+  }
+  return changed ? next : value;
 }
 
 /**
@@ -81,14 +121,31 @@ async function inlineBlocks(
 export async function inlineWorksheetDescriptionImages(
   items: readonly LabelPrintItem[],
   resolve: WorksheetImageResolver,
-  missingImageText: MissingImageText
+  missingImageText: MissingImageText,
+  logContext: Record<string, unknown> = {}
 ): Promise<{ items: LabelPrintItem[]; missingImages: number }> {
   const counter = { missing: 0 };
+  const resolvedByDocumentId = new Map<string, Promise<string | null>>();
+  const resolveOncePerDocument: WorksheetImageResolver = (url) => {
+    const documentId = /\/api\/documents\/view\/([a-f0-9-]+)/i.exec(url)?.[1];
+    if (!documentId) return resolve(url);
+    let pending = resolvedByDocumentId.get(documentId);
+    if (!pending) {
+      pending = resolve(url);
+      resolvedByDocumentId.set(documentId, pending);
+    }
+    return pending;
+  };
   const next = await Promise.all(
     items.map(async (item) => {
-      const blocks = parseBlocks(item.viewModel.ticketDescriptionRichText);
-      if (!blocks) return item;
-      const inlined = await inlineBlocks(blocks, resolve, missingImageText, counter);
+      const content = parseRichContent(item.viewModel.ticketDescriptionRichText);
+      if (!content) return item;
+      const source = content.kind === 'blocks' ? content.blocks : content.doc;
+      const inlined = await inlineValue(source, content.kind, resolveOncePerDocument, missingImageText, counter, {
+        ...logContext,
+        recordId: item.viewModel.recordId,
+      });
+      if (inlined === source) return item;
       return { ...item, viewModel: { ...item.viewModel, ticketDescriptionRichText: inlined } };
     })
   );
