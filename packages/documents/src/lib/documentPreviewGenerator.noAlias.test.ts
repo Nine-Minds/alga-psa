@@ -290,13 +290,44 @@ describe('generatePreviewsForDocument', () => {
     expect(fs.existsSync(path.dirname(renderedFrom))).toBe(false);
   });
 
-  const ffmpegAvailable = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0;
-  it.skipIf(!ffmpegAvailable)('video: ffmpeg seeks a file whose moov atom is at the end', async () => {
+  /** The ffmpeg the generator itself will run; video tests never skip — CI fails on skipped tests. */
+  async function ffmpegForTest(): Promise<string> {
+    const { resolveFfmpegPath } = await import('./documentPreviewGenerator');
+    const ffmpeg = resolveFfmpegPath();
+    if (!ffmpeg) throw new Error('No ffmpeg: set FFMPEG_PATH, put ffmpeg on PATH, or install ffmpeg-static');
+    return ffmpeg;
+  }
+
+  it('video: resolves the bundled ffmpeg-static binary when ffmpeg is not on PATH', async () => {
+    const savedPath = process.env.PATH;
+    const savedFfmpegPath = process.env.FFMPEG_PATH;
+    const emptyDir = mkdtempSync(path.join(os.tmpdir(), 'no-ffmpeg-'));
+    vi.resetModules();
+    try {
+      process.env.PATH = emptyDir;
+      delete process.env.FFMPEG_PATH;
+      const { resolveFfmpegPath } = await import('./documentPreviewGenerator');
+
+      const resolved = resolveFfmpegPath();
+
+      expect(resolved).not.toBeNull();
+      expect(resolved).not.toBe('ffmpeg');
+      expect(spawnSync(resolved!, ['-version'], { stdio: 'ignore' }).status).toBe(0);
+    } finally {
+      process.env.PATH = savedPath;
+      if (savedFfmpegPath === undefined) delete process.env.FFMPEG_PATH;
+      else process.env.FFMPEG_PATH = savedFfmpegPath;
+      rmSync(emptyDir, { recursive: true, force: true });
+      vi.resetModules();
+    }
+  });
+
+  it('video: ffmpeg seeks a file whose moov atom is at the end', async () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'preview-test-'));
     try {
       const video = path.join(dir, 'moov-at-end.mp4');
       // No +faststart: the muxer writes the moov atom after mdat.
-      const made = spawnSync('ffmpeg', [
+      const made = spawnSync(await ffmpegForTest(), [
         '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=duration=3:size=320x240:rate=10',
         '-c:v', 'mpeg4', '-movflags', '-faststart', '-y', video,
       ]);
@@ -316,11 +347,11 @@ describe('generatePreviewsForDocument', () => {
     }
   });
 
-  it.skipIf(!ffmpegAvailable)('video: a clip shorter than one second falls back to the first frame', async () => {
+  it('video: a clip shorter than one second falls back to the first frame', async () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'preview-test-'));
     try {
       const video = path.join(dir, 'short.mp4');
-      const made = spawnSync('ffmpeg', [
+      const made = spawnSync(await ffmpegForTest(), [
         '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=duration=0.4:size=320x240:rate=10',
         '-c:v', 'mpeg4', '-y', video,
       ]);

@@ -494,8 +494,11 @@ async function generatePdfPreviews(tenant: string, document: IDocument, declared
 
 let cachedFfmpegPath: string | null | undefined;
 
-/** FFMPEG_PATH, then ffmpeg on PATH (production images), then the ffmpeg-static binary (dev). */
-function resolveFfmpegPath(): string | null {
+/**
+ * FFMPEG_PATH, then ffmpeg on PATH (production images), then the ffmpeg-static binary (dev, CI).
+ * The first candidate that runs wins; the result is cached for the process.
+ */
+export function resolveFfmpegPath(): string | null {
   if (cachedFfmpegPath !== undefined) return cachedFfmpegPath;
   const candidates: string[] = [];
   if (process.env.FFMPEG_PATH) candidates.push(process.env.FFMPEG_PATH);
