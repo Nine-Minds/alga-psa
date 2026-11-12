@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import Invoice from './invoice';
 import QuoteDocumentTemplate from './quoteDocumentTemplate';
-import { recordingKnex, type CapturedKnexQuery } from '../../../../server/src/test/helpers/recordingKnex';
+import { recordingKnex, type CapturedKnexQuery } from '@alga-psa/db/testing';
 
 // invoice_templates and quote_document_templates are distributed on Citus, which
 // rejects any non-IMMUTABLE function (now(), CURRENT_TIMESTAMP) in the DO UPDATE

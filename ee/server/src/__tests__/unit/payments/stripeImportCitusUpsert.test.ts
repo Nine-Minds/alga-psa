@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
-import { recordingKnex, type CapturedKnexQuery } from '../../../../../../server/src/test/helpers/recordingKnex';
+import { recordingKnex, type CapturedKnexQuery } from '@alga-psa/db/testing';
 import { StripeCustomerImportService, type StripeImportGateway } from '../../../lib/payments/StripeCustomerImportService';
 import { classifyImport, type StripeCustomerSnapshot } from '../../../lib/payments/stripeImportClassifier';
 
