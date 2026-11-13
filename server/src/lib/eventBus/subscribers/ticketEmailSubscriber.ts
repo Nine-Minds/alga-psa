@@ -62,9 +62,10 @@ import {
   TICKET_FACTS_AUDIENCE,
   lazyAudience,
   readTicketCommentAudience,
-  resolveTicketNotificationRecipient,
+  planTicketEnvelope,
   selectAudienceContent,
   type AudienceContent,
+  type TicketNotificationRecipient,
 } from '@shared/lib/notificationAudience';
 import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
 import type { EmailAddress } from '../../../types/email.types';
@@ -603,38 +604,81 @@ function selectOneOffEmailRecipients(
  *          or an invalid address silently skipped the send. Callers that need
  *          to know whether a recipient was reached — the per-comment Cc/Bcc
  *          fallback — depend on this being truthful.
+ *
+ * Recipient boundary (S33): the whole envelope is authorized, To, Cc and Bcc alike
+ * (`planTicketEnvelope`). With no seat technician on it, it is sent as built. Otherwise every
+ * seat technician is taken off the shared message and decided alone by `sendTicketEmailMessage`;
+ * a refused one drops out without holding back anyone else.
  */
 async function sendNotificationIfEnabled(
   audiencedParams: AudiencedSendEmailParams,
   subtypeName: string,
   recipientUserId?: string
 ): Promise<boolean> {
+  if (!isValidEmail(audiencedParams.to)) {
+    logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
+      recipient: audiencedParams.to,
+      subtypeName,
+      tenantId: audiencedParams.tenantId
+    });
+    return false;
+  }
+
+  const { knex } = await createTenantKnex();
+  const { cc, bcc, ...unaddressed } = audiencedParams;
+  const messages = await planTicketEnvelope(
+    knex,
+    audiencedParams.tenantId,
+    { ticketId: audiencedParams.entityType === 'ticket' ? audiencedParams.entityId : audiencedParams.replyContext?.ticketId },
+    { to: { userId: recipientUserId, email: audiencedParams.to }, cc, bcc },
+  );
+
+  let handedOff = false;
+  for (const message of messages) {
+    const copies = {
+      ...(message.cc.length > 0 ? { cc: message.cc } : {}),
+      ...(message.bcc.length > 0 ? { bcc: message.bcc } : {}),
+    };
+    let sent: boolean;
+    if (message.original) {
+      sent = await sendTicketEmailMessage(knex, { ...unaddressed, ...copies }, subtypeName, message.recipient, recipientUserId);
+    } else {
+      // A different person than the caller addressed: nothing that names the original `To`
+      // (their contact, their delivery claim, their sponsor identity) travels with it.
+      const { contactId: _contactId, delivery: _delivery, coManagedRecipient: _coManagedRecipient, ...shared } = unaddressed;
+      sent = await sendTicketEmailMessage(
+        knex,
+        { ...shared, to: message.to, ...copies },
+        subtypeName,
+        message.recipient,
+        message.recipient.seat ? message.recipient.userId : undefined,
+      );
+    }
+    handedOff = sent || handedOff;
+  }
+  return handedOff;
+}
+
+/**
+ * One message of an authorized envelope: admits its `To` (`recipient`, already resolved), then
+ * applies the notification gates and sends. Everyone but a seat technician is untouched. A seat
+ * technician gets the first rendering their audience admits, with the audience recorded on the
+ * reply token so their reply is stored with it, or gets nothing: ticket out of scope, private
+ * content, or a message that does not declare what it quotes.
+ */
+async function sendTicketEmailMessage(
+  knex: Knex,
+  audiencedParams: AudiencedSendEmailParams,
+  subtypeName: string,
+  recipient: TicketNotificationRecipient,
+  recipientUserId?: string
+): Promise<boolean> {
   // `audienceContent` is read here and never travels further (email service, retry queue).
   const { audienceContent, ...unaudienced } = audiencedParams;
   let params: SendEmailParams = unaudienced;
   try {
-    if (!isValidEmail(params.to)) {
-      logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
-        recipient: params.to,
-        subtypeName,
-        tenantId: params.tenantId
-      });
-      return false;
-    }
-
-    const { knex } = await createTenantKnex();
     const scopedDb = tenantDb(knex, params.tenantId);
 
-    // Recipient boundary (S33): who is this address on this ticket? Everyone but a seat technician
-    // is untouched. A seat technician gets the first rendering their audience admits, with the
-    // audience recorded on the reply token so their reply is stored with it, or gets nothing:
-    // ticket out of scope, private content, or a message that does not declare what it quotes.
-    const recipient = await resolveTicketNotificationRecipient(
-      knex,
-      params.tenantId,
-      { ticketId: params.entityType === 'ticket' ? params.entityId : params.replyContext?.ticketId },
-      { userId: recipientUserId, email: params.to },
-    );
     const admission = await selectAudienceContent(recipient, audienceContent);
     if (!admission.admitted) {
       logger.info('[TicketEmailSubscriber] Skipping email outside the recipient audience:', {
@@ -791,7 +835,7 @@ async function sendNotificationIfEnabled(
       }
     }
 
-    logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {
+    logger.error('[TicketEmailSubscriber] Error in sendTicketEmailMessage:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       subtypeName,
       recipient: params.to,

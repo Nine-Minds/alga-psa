@@ -20,7 +20,8 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
  * real rows; only the mail transport is replaced, and it records the template context it is
  * handed, which is everything the rendered message can contain.
  */
-type Sent = { to: string; template: string; context: unknown; replyContext?: { tokenMetadata?: Record<string, unknown> } };
+type Copied = Array<{ email: string }>;
+type Sent = { to: string; cc?: Copied; bcc?: Copied; template: string; context: unknown; replyContext?: { tokenMetadata?: Record<string, unknown> } };
 const sent: Sent[] = [];
 let testDb: Knex;
 
@@ -37,13 +38,15 @@ vi.mock('../../lib/db', async (importOriginal) => ({
 vi.mock('../../lib/notifications/sendEventEmail', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/notifications/sendEventEmail')>()),
   sendEventEmail: vi.fn(async (params: Sent) => {
-    sent.push({ to: params.to, template: params.template, context: params.context, replyContext: params.replyContext });
+    sent.push({ to: params.to, cc: params.cc, bcc: params.bcc, template: params.template, context: params.context, replyContext: params.replyContext });
   }),
 }));
 
 const SEAT_EMAIL = 'seat.tech@client-a.example.com';
 const MSP_EMAIL = 'msp.agent@msp.example.com';
 const AUTHOR_EMAIL = 'msp.author@msp.example.com';
+const OUTSIDER_EMAIL = 'vendor@elsewhere.example.com';
+const CLIENT_EMAIL = 'billing@test-client.test';
 
 /** A BlockNote body, optionally @-mentioning users. */
 const note = (text: string, mentions: string[] = []) => JSON.stringify([{
@@ -171,6 +174,140 @@ describe('audience-safe notifications for a seat technician (integration)', () =
 
   const mailTo = (address: string) => sent.filter((mail) => mail.to.toLowerCase() === address);
   const inAppFor = async (userId: string) => scoped.table('internal_notifications').where({ user_id: userId });
+  /** Every address a captured message was handed to, in any position. */
+  const addressesOf = (mail: Sent) => [mail.to, ...(mail.cc ?? []).map(a => a.email), ...(mail.bcc ?? []).map(a => a.email)].map(a => a.toLowerCase());
+  const everyAddress = () => sent.flatMap(addressesOf);
+  /** The one-off Cc/Bcc an agent put on a comment. */
+  const copyTo = (event: any, recipients: { cc?: string[]; bcc?: string[] }, extra: Record<string, unknown> = {}) =>
+    scoped.table('comments').where({ comment_id: event.payload.comment.id }).update({ metadata: { ...extra, email_recipients: {
+      cc: (recipients.cc ?? []).map(email => ({ email })), bcc: (recipients.bcc ?? []).map(email => ({ email })),
+    } } });
+  /** A second seat technician, of Client B, live and in scope there: out of scope on Client A's tickets. */
+  async function withClientBSeat<T>(run: (seatB: { userId: string; email: string }) => Promise<T>): Promise<T> {
+    const email = `seat.b.${uuidv4().slice(0, 6)}@client-b.example.com`;
+    const userId = await createUser(testDb, tenant, { email });
+    const arrangementB = uuidv4();
+    await scoped.table('co_managed_seat_arrangements').insert({ tenant, arrangement_id: arrangementB, client_id: clientB, allocation_id: uuidv4(), state: 'active' });
+    await scoped.table('co_managed_seat_board_scopes').insert({ tenant, arrangement_id: arrangementB, board_id: boardIn, can_create: false });
+    await scoped.table('co_managed_seat_assignments').insert({ tenant, assignment_id: uuidv4(), arrangement_id: arrangementB, user_id: userId, state: 'active' });
+    try {
+      return await run({ userId, email });
+    } finally {
+      await scoped.table('co_managed_seat_assignments').where({ arrangement_id: arrangementB }).delete();
+      await scoped.table('co_managed_seat_board_scopes').where({ arrangement_id: arrangementB }).delete();
+      await scoped.table('co_managed_seat_arrangements').where({ arrangement_id: arrangementB }).delete();
+    }
+  }
+
+  // Review reproduction (PR #4339): a Client A technician copied on another client's comment.
+  it.each(['cc', 'bcc'] as const)('an out-of-scope technician in %s is on no envelope, and everyone else is still mailed (F080)', async (kind) => {
+    const ticketId = await createTicket({ client_id: clientB, assigned_to: msp });
+    const event = await requesterNote(ticketId, 'S33-OTHER-CLIENT-CONTENT');
+    await copyTo(event, { [kind]: [OUTSIDER_EMAIL, SEAT_EMAIL] });
+    await deliver(event);
+
+    expect(everyAddress()).not.toContain(SEAT_EMAIL);
+    expect(await inAppFor(seat)).toEqual([]);
+    // The requester's message is the one that went out, with the permitted copy still on it.
+    const requesterMail = mailTo(CLIENT_EMAIL);
+    expect(requesterMail).toHaveLength(1);
+    expect((requesterMail[0][kind] ?? []).map(a => a.email)).toEqual([OUTSIDER_EMAIL]);
+    expect(JSON.stringify(requesterMail[0].context)).toContain('S33-OTHER-CLIENT-CONTENT');
+  });
+
+  it('a mixed envelope: the shared message keeps permitted addresses, the in-scope technician gets their own, the out-of-scope one nothing', async () => {
+    await withClientBSeat(async (seatB) => {
+      const ticketId = await createTicket({ assigned_to: msp });
+      const event = await requesterNote(ticketId, 'PUBLIC-COPIED-UPDATE');
+      await copyTo(event, { cc: [OUTSIDER_EMAIL, SEAT_EMAIL], bcc: [seatB.email, 'auditor@elsewhere.example.com'] });
+      await deliver(event);
+
+      // Client B's technician is refused everywhere.
+      expect(everyAddress()).not.toContain(seatB.email);
+      // The shared message: the requester, with the non-technician Cc and Bcc and nobody else.
+      const requesterMail = mailTo(CLIENT_EMAIL);
+      expect(requesterMail).toHaveLength(1);
+      expect(requesterMail[0].cc?.map(a => a.email)).toEqual([OUTSIDER_EMAIL]);
+      expect(requesterMail[0].bcc?.map(a => a.email)).toEqual(['auditor@elsewhere.example.com']);
+      expect(requesterMail[0].replyContext?.tokenMetadata).toBeUndefined();
+      // Client A's technician is on exactly one message, alone, rendered and tokened for them.
+      const withSeat = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
+      expect(withSeat).toHaveLength(1);
+      expect(addressesOf(withSeat[0])).toEqual([SEAT_EMAIL]);
+      expect(JSON.stringify(withSeat[0].context)).toContain('PUBLIC-COPIED-UPDATE');
+      expect(withSeat[0].replyContext?.tokenMetadata).toMatchObject({ notificationAudience: 'requester' });
+    });
+  });
+
+  it('an envelope with no technician on it is sent exactly as built', async () => {
+    const ticketId = await createTicket({ assigned_to: msp });
+    const event = await requesterNote(ticketId, 'PUBLIC-NO-SEAT');
+    await copyTo(event, { cc: [OUTSIDER_EMAIL], bcc: ['auditor@elsewhere.example.com'] });
+    await deliver(event, emailCommentAdded, null);
+
+    // The requester's message with its copies, then the assignee's own: nothing split, nothing tokened.
+    expect(sent.map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL, 'auditor@elsewhere.example.com'], [MSP_EMAIL]]);
+    for (const mail of sent) expect(mail.replyContext?.tokenMetadata).toBeUndefined();
+  });
+
+  it('the Cc/Bcc fallback: a refused technician carrying the To does not hold back the other copied addresses', async () => {
+    await withClientBSeat(async (seatB) => {
+      // No requester address, so the copied addresses are mailed directly and the first Cc carries the To.
+      const locations = () => scoped.table('client_locations').where({ client_id: clientA });
+      await locations().update({ email: null });
+      try {
+        const ticketId = await createTicket({ assigned_to: msp });
+        const event = await requesterNote(ticketId, 'PUBLIC-FALLBACK');
+        await copyTo(event, { cc: [seatB.email, OUTSIDER_EMAIL, SEAT_EMAIL], bcc: ['auditor@elsewhere.example.com'] });
+        await deliver(event, emailCommentAdded, null);
+
+        expect(everyAddress()).not.toContain(seatB.email);
+        // The next permitted Cc takes the To; the Bcc stays with it.
+        const shared = mailTo(OUTSIDER_EMAIL);
+        expect(shared).toHaveLength(1);
+        expect(addressesOf(shared[0])).toEqual([OUTSIDER_EMAIL, 'auditor@elsewhere.example.com']);
+        const withSeat = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
+        expect(withSeat).toHaveLength(1);
+        expect(addressesOf(withSeat[0])).toEqual([SEAT_EMAIL]);
+        expect(withSeat[0].replyContext?.tokenMetadata).toMatchObject({ notificationAudience: 'requester' });
+
+        // Bcc only, and the only address is a refused technician: nobody is mailed.
+        sent.length = 0;
+        const bccOnly = await requesterNote(ticketId, 'PUBLIC-FALLBACK-BCC');
+        await copyTo(bccOnly, { bcc: [seatB.email] });
+        await deliver(bccOnly, emailCommentAdded, null);
+        expect(everyAddress()).not.toContain(seatB.email);
+      } finally {
+        await locations().update({ email: CLIENT_EMAIL });
+      }
+    });
+  });
+
+  it('the close email authorizes the resolution comment\'s Cc and Bcc too', async () => {
+    const close = async (clientId: string) => {
+      const ticketId = await createTicket({ client_id: clientId, assigned_to: msp });
+      const resolution = await comment(ticketId, 'CLOSING-RESOLUTION', { is_internal: false, is_resolution: true });
+      await copyTo(resolution, { cc: [OUTSIDER_EMAIL], bcc: [SEAT_EMAIL] }, { closes_ticket: true });
+      await scoped.table('tickets').where({ ticket_id: ticketId }).update({ status_id: closedStatusId, closed_at: new Date(), closed_by: author });
+      sent.length = 0;
+      await runWithTenant(tenant, () => emailClosed({
+        id: uuidv4(), eventType: 'TICKET_CLOSED', timestamp: new Date().toISOString(),
+        payload: { tenantId: tenant, ticketId, userId: author, actorUserId: author, actorType: 'USER', changes: {} },
+      }));
+    };
+
+    // Another client's ticket: the technician is on nothing, the requester and the Cc are mailed.
+    await close(clientB);
+    expect(everyAddress()).not.toContain(SEAT_EMAIL);
+    expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
+
+    // Their own client's ticket: one message of their own.
+    await close(clientA);
+    expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
+    const withSeat = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
+    expect(withSeat.map(addressesOf)).toEqual([[SEAT_EMAIL]]);
+    expect(withSeat[0].template).toBe('ticket-closed');
+  });
 
   it('resolves a seat technician only while the ticket is in their scope', async () => {
     const inScope = await createTicket();

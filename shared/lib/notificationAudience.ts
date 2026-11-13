@@ -130,6 +130,72 @@ export async function resolveTicketNotificationRecipient(
   return (await resolveTicketNotificationRecipients(trx, tenant, ticket, [recipient]))[0];
 }
 
+/** One message of a planned envelope: who it is addressed to and who that primary recipient is. */
+export interface TicketEnvelopeMessage<A extends { email: string }> {
+  to: string;
+  /** True when `to` is the envelope's own `To`, so the caller's recipient-specific fields still apply. */
+  original: boolean;
+  recipient: TicketNotificationRecipient;
+  cc: A[];
+  bcc: A[];
+}
+
+/**
+ * Splits one ticket envelope (To, Cc, Bcc) into the messages that may carry it.
+ *
+ * A message is rendered once, for its `To`, so an address in Cc or Bcc reads whatever the `To`
+ * was shown. A seat technician therefore never shares a message: each one found anywhere on the
+ * envelope gets a message of their own, with no Cc or Bcc, which the caller admits or refuses
+ * with `selectAudienceContent` exactly as it would a `To`. Everyone else stays together on what
+ * is left of the envelope. If the `To` was the technician, the first remaining Cc is promoted to
+ * `To`; a Bcc-only remainder becomes one message per address, because a message with no `To` is
+ * rejected by some providers.
+ *
+ * With no seat technician on the envelope the result is the envelope itself, unchanged: one
+ * message, the same lists. All addresses are resolved in one read.
+ */
+export async function planTicketEnvelope<A extends { email: string }>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  ticket: NotificationTicket,
+  envelope: { to: NotificationRecipientKey & { email: string }; cc?: readonly A[]; bcc?: readonly A[] },
+): Promise<TicketEnvelopeMessage<A>[]> {
+  const cc = [...(envelope.cc ?? [])];
+  const bcc = [...(envelope.bcc ?? [])];
+  const [toRecipient, ...copied] = await resolveTicketNotificationRecipients(
+    trx, tenant, ticket, [envelope.to, ...cc.map(a => ({ email: a.email })), ...bcc.map(a => ({ email: a.email }))],
+  );
+  const ccRecipients = copied.slice(0, cc.length);
+  const bccRecipients = copied.slice(cc.length);
+  if (!toRecipient.seat && copied.every(recipient => !recipient.seat)) {
+    return [{ to: envelope.to.email, original: true, recipient: toRecipient, cc, bcc }];
+  }
+
+  const sharedCc = cc.filter((_, index) => !ccRecipients[index].seat);
+  const sharedBcc = bcc.filter((_, index) => !bccRecipients[index].seat);
+  const messages: TicketEnvelopeMessage<A>[] = [];
+  const seatsPlanned = new Set<string>();
+  if (!toRecipient.seat) {
+    messages.push({ to: envelope.to.email, original: true, recipient: toRecipient, cc: sharedCc, bcc: sharedBcc });
+  } else {
+    seatsPlanned.add(toRecipient.userId);
+    messages.push({ to: envelope.to.email, original: true, recipient: toRecipient, cc: [], bcc: [] });
+    if (sharedCc.length > 0) {
+      const [promoted, ...remainingCc] = sharedCc;
+      messages.push({ to: promoted.email, original: false, recipient: NOT_SEAT, cc: remainingCc, bcc: sharedBcc });
+    } else {
+      for (const address of sharedBcc) messages.push({ to: address.email, original: false, recipient: NOT_SEAT, cc: [], bcc: [] });
+    }
+  }
+  [...cc, ...bcc].forEach((address, index) => {
+    const recipient = copied[index];
+    if (!recipient.seat || seatsPlanned.has(recipient.userId)) return;
+    seatsPlanned.add(recipient.userId);
+    messages.push({ to: address.email, original: false, recipient, cc: [], bcc: [] });
+  });
+  return messages;
+}
+
 async function readTicketOrganization(
   db: ReturnType<typeof tenantDb>,
   ticket: NotificationTicket,
