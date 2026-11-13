@@ -496,7 +496,7 @@
   },
   "quickInvoice": {
     "fixedFeeServices": "Services",
-    "excludedFixedFees_one": "1 entrée de service à tarif fixe a été exclue car sa devise diffère de celle de la facture.",
+    "excludedFixedFees_one": "{{count}} entrée de service à tarif fixe a été exclue car sa devise diffère de celle de la facture.",
     "excludedFixedFees_other": "{{count}} entrées de services à tarif fixe ont été exclues car leur devise diffère de celle de la facture.",
     "currencyExcluded": "{{count}} produit(s) exclus car leur devise diffère de {{currency}}.",
     "action": "Facture rapide",
