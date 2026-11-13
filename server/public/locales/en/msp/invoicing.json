@@ -2839,6 +2839,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Permission denied: invoice update required",
+      "invoiceFinalize": "Permission denied: invoice finalize required",
       "invoiceDelete": "Permission denied: invoice delete required",
       "invoiceAccess": "Permission denied: invoice access denied",
       "otherClientInvoices": "Permission denied: cannot access invoices for another client",

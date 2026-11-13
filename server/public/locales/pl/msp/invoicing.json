@@ -2891,6 +2891,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
+      "invoiceFinalize": "Odmowa uprawnień: wymagane uprawnienie finalizowania faktur",
       "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
       "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
       "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta",

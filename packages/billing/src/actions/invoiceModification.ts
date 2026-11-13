@@ -77,6 +77,7 @@ import {
   type ManualInvoiceErrorCode,
   type ManualInvoiceFailure,
 } from '../errors/manualInvoiceErrors';
+import { INVOICE_ACTION_CAPABILITY } from './invoiceActionCapabilities';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -1090,8 +1091,8 @@ export const finalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<FinalizeInvoiceActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'update')) {
-    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.finalizeInvoice)) {
+    return permissionError('Permission denied: invoice finalize required', 'msp/invoicing:errors.permissions.invoiceFinalize');
   }
   const { knex } = await createTenantKnex();
   let warnings: FinalizeWarning[] = [];
@@ -1611,7 +1612,7 @@ export const unfinalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'update')) {
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.unfinalizeInvoice)) {
     return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
   }
   const { knex } = await createTenantKnex();
@@ -3033,7 +3034,7 @@ export const hardDeleteInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'delete')) {
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.hardDeleteInvoice)) {
     return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
   }
   const { knex } = await createTenantKnex();
@@ -3063,7 +3064,7 @@ export const deleteDraftInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'delete')) {
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.deleteDraftInvoice)) {
     return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
   }
   const { knex } = await createTenantKnex();
