@@ -7,6 +7,7 @@
  * project grant, revoking the assignment or ending the arrangement decides the very next one.
  */
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { createCoManagedSeatArrangement, setCoManagedSeatBoardScope } from '@alga-psa/co-managed';
@@ -18,7 +19,7 @@ import {
   RequestLocalAuthorizationCache, createAuthorizationKernel, registerBuiltinRuleResolver, unregisterBuiltinRuleResolver,
   type AuthorizationDecision, type AuthorizationRecord,
 } from '@alga-psa/authorization/kernel';
-import { probeTenantAuthorizationScope, resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { probeTenantAuthorizationScope, resolveAuthorizationSubject, retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { createTicketAuthorizationContext } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -26,6 +27,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
 
 const DAY = 86_400_000;
 const describeDb = await describeWithDb();
+const membershipMigration = createRequire(import.meta.url)('../../../migrations/20261113100000_index_authorization_resolver_subjects.cjs');
 
 describeDb('co-managed seat authority is resolved from rows on every request', { shuffle: false }, () => {
   let db: Knex;
@@ -50,8 +52,11 @@ describeDb('co-managed seat authority is resolved from rows on every request', {
   /** A technician holding a seat, the way accepting an invitation will leave the rows. */
   const seatTechnician = async (tenant: string, arrangementId: string) => {
     const userId = await createUser(db, tenant, { user_type: 'internal' });
-    await db('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId,
-      user_id: userId, state: 'active' });
+    await db.transaction(async (trx) => {
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await trx('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId,
+        user_id: userId, state: 'active' });
+    });
     return userId;
   };
   /** One request: the subject is resolved from the database, nothing is carried over. */
@@ -238,6 +243,78 @@ describeDb('co-managed seat authority is resolved from rows on every request', {
     expect(registered.count).toBe(unregistered.count);
     expect(registered.subject).toEqual(unregistered.subject);
     expect(registered.subject.resolverFacts).toBeUndefined();
+  });
+
+  it('requires durable membership for seat creation and retains it through revocation', async () => {
+    const tenant = await sponsorWithPool();
+    const userId = await createUser(db, tenant, { user_type: 'internal' });
+    const row = { tenant, assignment_id: randomUUID(), arrangement_id: randomUUID(), user_id: userId, state: 'active' };
+    await expect(db('co_managed_seat_assignments').insert(row))
+      .rejects.toMatchObject({ code: '23503', constraint: 'co_managed_seat_assignment_resolver_subject_fk' });
+    expect(await probeTenantAuthorizationScope(db, tenant)).toMatchObject({ resolverSubjects: false });
+
+    // Membership in another tenant or resolver cannot satisfy the seat's FK.
+    const otherTenant = await sponsorWithPool();
+    await db.transaction(async (trx) => {
+      await retainBuiltinResolverSubject(trx, { tenant: otherTenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, 'another-resolver');
+    });
+    await expect(db('co_managed_seat_assignments').insert(row)).rejects.toMatchObject({ code: '23503' });
+    await expect(db('co_managed_seat_assignments').insert({ ...row, authority_resolver_id: 'another-resolver' }))
+      .rejects.toMatchObject({ code: '23514' });
+    await db('authorization_resolver_subjects').where({ tenant, resolver_id: 'another-resolver' }).delete();
+
+    await db.transaction(async (trx) => {
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID); // idempotent
+      await trx('co_managed_seat_assignments').insert(row);
+    });
+    expect(await probeTenantAuthorizationScope(db, tenant)).toMatchObject({ resolverSubjects: true });
+    await db('co_managed_seat_assignments').where({ tenant, assignment_id: row.assignment_id })
+      .update({ state: 'revoked', revoked_at: new Date() });
+    await expect(db('authorization_resolver_subjects').where({ tenant, resolver_id: CO_MANAGED_SEAT_RESOLVER_ID }).delete())
+      .rejects.toMatchObject({ code: '23503' });
+    expect(await probeTenantAuthorizationScope(db, tenant)).toMatchObject({ resolverSubjects: true });
+    const revoked = await request(tenant, userId);
+    expect(coManagedSeatAuthority(revoked.subject)).toEqual({ scope: null });
+    expect(closed(await revoked.decide('billing', 'read', { id: randomUUID() }))).toBe(true);
+  });
+
+  it('rolls membership back with an unsuccessful seat assignment', async () => {
+    const tenant = await sponsorWithPool();
+    const userId = await createUser(db, tenant, { user_type: 'internal' });
+    await expect(db.transaction(async (trx) => {
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await trx('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(),
+        arrangement_id: randomUUID(), user_id: userId, state: 'invalid' });
+    })).rejects.toMatchObject({ code: '23514' });
+    expect(await probeTenantAuthorizationScope(db, tenant)).toMatchObject({ resolverSubjects: false });
+    expect(await db('authorization_resolver_subjects').where({ tenant })).toEqual([]);
+  });
+
+  it('backfills existing active and revoked subjects, is idempotent, and leaves invitations unclassified', async () => {
+    const s = await seatArrangement();
+    const trx = await db.transaction();
+    try {
+      // Restore the pre-migration schema inside this transaction, then exercise an upgrade.
+      await membershipMigration.down(trx);
+      const revokedUser = await createUser(trx, s.tenant, { user_type: 'internal' });
+      await trx('co_managed_seat_assignments').insert([
+        { tenant: s.tenant, assignment_id: randomUUID(), arrangement_id: s.arrangementId,
+          user_id: revokedUser, state: 'revoked', revoked_at: new Date() },
+        { tenant: s.tenant, assignment_id: randomUUID(), arrangement_id: s.arrangementId,
+          user_id: null, state: 'invited', revoked_at: null },
+      ]);
+      await membershipMigration.up(trx);
+      await membershipMigration.up(trx);
+      const members = await trx('authorization_resolver_subjects').where({ tenant: s.tenant, resolver_id: CO_MANAGED_SEAT_RESOLVER_ID });
+      expect(members.map((row) => row.user_id).sort()).toEqual([s.userId, revokedUser].sort());
+      const subject = await resolveAuthorizationSubject(trx, { tenant: s.tenant, user: { user_id: revokedUser, user_type: 'internal' } });
+      expect(coManagedSeatAuthority(subject)).toEqual({ scope: null });
+      expect(closed(await kernel.authorizeResource({ subject, resource: { type: 'billing', action: 'read' } }))).toBe(true);
+    } finally {
+      await trx.rollback();
+    }
   });
 
   // T016 (database half): nothing the policy service lists or edits was written.
