@@ -22,6 +22,8 @@ export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
+export { advanceSeatTicketWork, liveSeatArrangement, prepareTicketAssigneeChange, recordTicketAssigneeChange, seatTicketWork } from './lib/seatTicketWork';
+export type { SeatArrangementRow, SeatTicketResponsibility, SeatTicketWork, SeatTicketWorkRow } from './lib/seatTicketWork';
 export { getTenantTableScope, parseTableExpression, registerTenantTables, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
 export {

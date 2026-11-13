@@ -265,7 +265,7 @@
   {
     "id": "T030",
     "description": "DB integration: hand to MSP and hand to client IT change responsibility, store a receipt, replay to the original receipt, and fail on a stale revision or an out-of-scope board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F055",
