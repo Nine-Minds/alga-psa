@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { encodeState, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
+import { encodeImapOAuthState, type ImapOAuthState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { assertProviderMutationAuthority, ProviderMutationForbiddenError } from '@/lib/email/providerMutationAuthority';
+import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,13 +20,16 @@ export async function POST(request: NextRequest) {
       allowedProducts: ['psa', 'algadesk'],
     });
 
+    const { knex, tenant } = await createTenantKnex(user.tenant);
+    if (!tenant || tenant !== user.tenant) return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    await assertProviderMutationAuthority(user, knex);
+
     const body = await request.json();
     const { providerId, redirectUri } = body;
     if (!providerId) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 });
     }
 
-    const { knex, tenant } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const provider = await db.table('email_providers')
       .where({ id: providerId, provider_type: 'imap' })
@@ -50,14 +55,32 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
     const effectiveRedirectUri = redirectUri || `${baseUrl}/api/email/oauth/imap/callback`;
 
-    const state: OAuthState = {
+    const signingKey = await secretProvider.getAppSecret('OAUTH_STATE_SIGNING_KEY');
+    if (!signingKey) throw new Error('OAUTH_STATE_SIGNING_KEY is not configured');
+    const nonce = randomUUID();
+    const state: ImapOAuthState = {
       tenant: user.tenant,
       userId: user.user_id,
       providerId,
       redirectUri: effectiveRedirectUri,
       timestamp: Date.now(),
-      nonce: generateNonce(),
+      nonce,
+      purpose: 'reconnect',
     };
+
+    const expiresAt = new Date(state.timestamp + 10 * 60 * 1000);
+    await db.table('email_oauth_grants').insert({
+      id: nonce,
+      tenant,
+      provider_id: providerId,
+      initiated_by_user_id: user.user_id,
+      redirect_uri: effectiveRedirectUri,
+      purpose: state.purpose,
+      created_at: knex.fn.now(),
+      expires_at: expiresAt,
+      consumed_at: null,
+    });
+    const signedState = encodeImapOAuthState(state, signingKey);
 
     const scopes = imapConfig.oauth_scopes ? imapConfig.oauth_scopes : '';
 
@@ -66,7 +89,7 @@ export async function POST(request: NextRequest) {
       response_type: 'code',
       redirect_uri: effectiveRedirectUri,
       scope: scopes,
-      state: encodeState(state),
+      state: signedState,
       access_type: 'offline',
       prompt: 'consent',
     });
@@ -77,9 +100,12 @@ export async function POST(request: NextRequest) {
       success: true,
       authUrl,
       provider: 'imap',
-      state: Buffer.from(JSON.stringify(state)).toString('base64')
+      state: signedState,
     });
   } catch (error: any) {
+    if (error instanceof ProviderMutationForbiddenError) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     if (isProductAccessError(error)) {
       return toProductAccessDeniedResponse(error);
     }
