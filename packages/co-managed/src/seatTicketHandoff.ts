@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import {
+  advanceSeatTicketWork, liveSeatArrangement, recordTicketAssigneeChange, seatTicketWork, tenantDb,
+  type SeatArrangementRow, type SeatTicketWorkRow,
+} from '@alga-psa/db';
 import { coManagedSeatBoardAccess, readCoManagedSeatBoardScope } from './seatArrangement';
 
 /**
@@ -101,27 +104,6 @@ export function coManagedSeatHandoffDefaults(stored: unknown): CoManagedSeatHand
 }
 
 type Sponsor = ReturnType<typeof tenantDb>;
-interface ArrangementRow { arrangement_id: string; handoff_defaults: unknown }
-interface WorkRow { arrangement_id: string; responsibility: CoManagedSeatResponsibility; revision: number }
-
-/** The client's live arrangement. `lock` holds it to commit, so it cannot end under a handoff. */
-async function liveArrangement(sponsor: Sponsor, clientId: string | null, lock = false): Promise<ArrangementRow | undefined> {
-  if (!clientId) return undefined;
-  const query = sponsor.table('co_managed_seat_arrangements').where({ client_id: clientId, state: 'active' });
-  return (lock ? query.forShare() : query).first('arrangement_id', 'handoff_defaults');
-}
-
-/**
- * A work row written under an earlier arrangement keeps the ticket's revision, so receipts stay
- * ordered, but not its responsibility: under a new arrangement the ticket starts with the MSP.
- */
-function workResult(arrangement: ArrangementRow, row: WorkRow | undefined): CoManagedSeatTicketWork {
-  return {
-    arrangementId: arrangement.arrangement_id,
-    responsibility: row && row.arrangement_id === arrangement.arrangement_id ? row.responsibility : 'msp',
-    revision: row?.revision ?? 0,
-  };
-}
 
 /**
  * Who is responsible for a ticket. Null when the ticket's client has no live seat arrangement:
@@ -135,50 +117,23 @@ export async function readCoManagedSeatTicketWork(
   if (![input.sponsorTenant, input.ticketId].every((id) => uuid.test(id))) return null;
   const sponsor = tenantDb(db, input.sponsorTenant);
   const ticket = await sponsor.table('tickets').where('ticket_id', input.ticketId).first('client_id');
-  const arrangement = ticket && await liveArrangement(sponsor, ticket.client_id);
+  const arrangement = ticket && await liveSeatArrangement(sponsor, ticket.client_id);
   if (!arrangement) return null;
-  return workResult(arrangement, await sponsor.table('co_managed_seat_ticket_work').where('ticket_id', input.ticketId).first());
-}
-
-/** Moves a ticket's work revision on, keeping who is responsible. Caller holds the ticket row lock. */
-async function writeWork(
-  sponsor: Sponsor,
-  key: { tenant: string; ticket_id: string },
-  arrangementId: string,
-  responsibility: CoManagedSeatResponsibility,
-  previous: WorkRow | undefined,
-  transition: boolean,
-): Promise<number> {
-  const revision = (previous?.revision ?? 0) + 1;
-  const now = new Date();
-  // write-admission: exempt — seat responsibility state, written by its owning command under the ticket lock
-  if (!previous) await sponsor.table('co_managed_seat_ticket_work').insert({ ...key, arrangement_id: arrangementId,
-    responsibility, revision, last_transition_at: now });
-  // write-admission: exempt — seat responsibility state, written by its owning command under the ticket lock
-  else await sponsor.table('co_managed_seat_ticket_work').where('ticket_id', key.ticket_id).update({
-    arrangement_id: arrangementId, responsibility, revision, updated_at: now, ...(transition ? { last_transition_at: now } : {}) });
-  return revision;
+  return seatTicketWork(arrangement, await sponsor.table('co_managed_seat_ticket_work').where('ticket_id', input.ticketId).first());
 }
 
 /**
- * The seam a ticket reassignment registers into: moves the ticket's work revision on, so a
- * handoff prepared before the reassignment is refused as stale. Runs in the caller's transaction,
- * after it has locked the ticket row. Returns the new revision, or null (writing nothing) when
- * the ticket's client has no live seat arrangement.
+ * Moves a ticket's work revision on, keeping who is responsible, so a handoff prepared before a
+ * reassignment is refused as stale. The native assignee writers call the underlying
+ * `recordTicketAssigneeChange` in `@alga-psa/db` directly; this is the same thing by its
+ * co-managed name. Returns the new revision, or null (writing nothing) when the ticket's client
+ * has no live seat arrangement.
  */
-export async function recordCoManagedSeatTicketReassignment(
+export function recordCoManagedSeatTicketReassignment(
   trx: Knex.Transaction,
   input: { sponsorTenant: string; ticketId: string },
 ): Promise<number | null> {
-  if (![input.sponsorTenant, input.ticketId].every((id) => uuid.test(id))) return null;
-  const sponsor = tenantDb(trx, input.sponsorTenant);
-  const ticket = await sponsor.table('tickets').where('ticket_id', input.ticketId).forUpdate().first('client_id');
-  const arrangement = ticket && await liveArrangement(sponsor, ticket.client_id, true);
-  if (!arrangement) return null;
-  const previous: WorkRow | undefined = await sponsor.table('co_managed_seat_ticket_work')
-    .where('ticket_id', input.ticketId).forUpdate().first();
-  return writeWork(sponsor, { tenant: input.sponsorTenant, ticket_id: input.ticketId }, arrangement.arrangement_id,
-    workResult(arrangement, previous).responsibility, previous, false);
+  return recordTicketAssigneeChange(trx, input.sponsorTenant, input.ticketId);
 }
 
 interface HandoffContext {
@@ -186,7 +141,7 @@ interface HandoffContext {
   trx: Knex.Transaction;
   request: CoManagedSeatHandToClientItRequest;
   ticket: { board_id: string | null; assigned_to: string | null };
-  arrangement: ArrangementRow;
+  arrangement: SeatArrangementRow;
 }
 
 /** What differs between the two handoffs: who may ask, and who the ticket is left assigned to. */
@@ -312,12 +267,12 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
       return receipt(prior);
     }
     if (!ticket) throw new CoManagedSeatHandoffError('TICKET_NOT_FOUND');
-    const arrangement = await liveArrangement(sponsor, ticket.client_id, true);
+    const arrangement = await liveSeatArrangement(sponsor, ticket.client_id, true);
     if (!arrangement) throw new CoManagedSeatHandoffError('NO_SEAT_ARRANGEMENT');
 
-    const previous: WorkRow | undefined = await sponsor.table('co_managed_seat_ticket_work')
+    const previous: SeatTicketWorkRow | undefined = await sponsor.table('co_managed_seat_ticket_work')
       .where('ticket_id', request.ticketId).forUpdate().first();
-    const work = workResult(arrangement, previous);
+    const work = seatTicketWork(arrangement, previous);
     if (work.revision !== request.expectedRevision) throw new CoManagedSeatHandoffError('HANDOFF_CHANGED');
     if (work.responsibility === to) throw new CoManagedSeatHandoffError('ALREADY_RESPONSIBLE');
 
@@ -331,7 +286,7 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
         .update({ assigned_to: assignedTo, updated_by: request.actorUserId, updated_at: new Date() });
     }
     const key = { tenant: request.sponsorTenant, ticket_id: request.ticketId };
-    const revision = await writeWork(sponsor, key, arrangement.arrangement_id, to, previous, true);
+    const revision = await advanceSeatTicketWork(sponsor, key, arrangement.arrangement_id, to, previous, true);
     // write-admission: exempt — append-only receipt of the handoff, written by its owning command under the ticket lock
     const [row] = await sponsor.table('co_managed_seat_ticket_handoffs').insert({ ...key, operation_id: request.operationId,
       arrangement_id: arrangement.arrangement_id, revision, from_responsibility: work.responsibility, to_responsibility: to,

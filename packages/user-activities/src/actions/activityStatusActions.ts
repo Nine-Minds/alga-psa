@@ -8,6 +8,7 @@ import { createTenantKnex, tenantDb } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
+import { prepareTicketAssigneeChange } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
@@ -604,14 +605,18 @@ export const reassignActivity = withAuth(async (
             });
           break;
           
-        case ActivityType.TICKET:
+        case ActivityType.TICKET: {
+          // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+          const recordAssigneeChange = await prepareTicketAssigneeChange(trx, tenant, activityId);
           await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
             .update({ 
               assigned_to: newAssigneeId,
               ...ticketUpdateStamp(trx, user.user_id),
             });
+          await recordAssigneeChange(newAssigneeId);
           break;
+        }
           
         case ActivityType.WORKFLOW_TASK:
           // For workflow tasks, we need to update the assigned_users array

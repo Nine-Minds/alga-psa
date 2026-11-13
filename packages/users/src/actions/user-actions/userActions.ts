@@ -11,7 +11,7 @@ import {
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorError, isUserRoleFloorRejected, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
+import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -1500,6 +1500,8 @@ export const deactivateUserWithDisposition = withAuth(
               .where({ ticket_id: ticket.ticket_id })
               .update(update);
             await finalizeResources();
+            // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+            await recordTicketAssigneeChange(trx, tenant, ticket.ticket_id);
           }
 
           for (const task of openTasks) {

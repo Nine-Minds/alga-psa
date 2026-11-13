@@ -67,6 +67,8 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
+  // Seat work revisions are covered against a real database in coManagedSeatTicketNativeReassignment.db.test.ts.
+  recordTicketAssigneeChange: vi.fn(async () => null),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
     unscoped: (table: string) => conn(table),
