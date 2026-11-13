@@ -31,6 +31,7 @@ export const TICKET_ID_KEYED_GROUPS = [
   'activity',
   'email',
   'materials',
+  'fixedFees',
   'tiles',
   'tags',
   // Not ticket-id keyed, but keyed by the caller-supplied `ticket.tenant`:

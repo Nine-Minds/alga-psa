@@ -430,6 +430,7 @@
       "FIXED_LINE_RATE_UNRESOLVED": "La línea de tarifa fija {{lines}} no tiene tarifa. Defina una tarifa en la línea del contrato (o un precio para sus servicios en la moneda del contrato) e inténtelo de nuevo.",
       "FIXED_LINE_NO_SERVICES": "La línea de tarifa fija {{lines}} tiene una tarifa pero ningún servicio en el que facturarla. Agregue un servicio a la línea del contrato e inténtelo de nuevo.",
       "SOURCE_ALREADY_BILLED": "Algunos elementos seleccionados ya no son facturables (ya facturados, no aprobados o eliminados). Actualiza e inténtalo de nuevo.",
+      "SOURCE_CHANGED": "Un producto o servicio de tarifa fija cambió o ya se facturó. Actualice los cargos e inténtelo de nuevo.",
       "SOURCE_NOT_ELIGIBLE": "Uno de los elementos seleccionados no pertenece a este ticket o ya no es elegible. Actualiza e inténtalo de nuevo.",
       "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda.",
       "SERVICE_REQUIRED": "Asigne un servicio a este cargo antes de guardar.",
@@ -494,6 +495,9 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Servicios",
+    "excludedFixedFees_one": "Se excluyó {{count}} servicio de tarifa fija porque su moneda difiere de la moneda de la factura.",
+    "excludedFixedFees_other": "Se excluyeron {{count}} servicios de tarifa fija porque su moneda difiere de la moneda de la factura.",
     "currencyExcluded": "Se excluyeron {{count}} producto(s) porque su moneda difiere de {{currency}}.",
     "action": "Factura rápida",
     "title": "Facturar rápidamente este ticket",

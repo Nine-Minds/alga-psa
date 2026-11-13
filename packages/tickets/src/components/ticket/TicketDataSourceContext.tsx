@@ -46,7 +46,7 @@ export function useTicketCapabilities(): TicketCapabilities {
 
 /** True when the data source backs the capability. */
 export function useTicketCapability(key: TicketCapabilityKey): boolean {
-  return useContext(TicketDataSourceContext).capabilities[key];
+  return useContext(TicketDataSourceContext).capabilities[key] === true;
 }
 
 /**

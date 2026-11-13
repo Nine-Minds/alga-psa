@@ -760,14 +760,19 @@ async function fetchMaterialFacts(
       -- tenant default currency (movements carry no exchange rate) — any
       -- foreign-currency movement drops the material back to the estimate.
       SELECT
-        SUM(sm.cogs_cost) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) = ?) AS cogs_cents,
+        SUM(
+          CASE
+            WHEN sm.movement_type = 'return_restock' THEN -ABS(sm.cogs_cost)
+            ELSE sm.cogs_cost
+          END
+        ) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) = ?) AS cogs_cents,
         COUNT(*) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS mismatched_count
       FROM stock_movements sm
       LEFT JOIN product_inventory_settings pis
         ON pis.tenant = sm.tenant
        AND pis.service_id = sm.service_id
       WHERE sm.tenant = ?
-        AND sm.movement_type = 'consume'
+        AND sm.movement_type IN ('consume', 'return_restock')
         AND sm.source_doc_type = mr.material_type || '_material'
         AND sm.source_doc_id = mr.material_id
         AND sm.cogs_cost IS NOT NULL
@@ -1388,13 +1393,7 @@ async function getFactBundleForAction(user: Parameters<typeof hasPermission>[0],
   return fetchFacts(knex, tenantId, startDate, endDate);
 }
 
-export const getProfitabilitySummary = withAuth(async (
-  user,
-  { tenant },
-  input: ProfitabilityDateInput
-): Promise<ProfitabilitySummary | ProfitabilityActionError> => {
-  const facts = await getFactBundleForAction(user, tenant, input);
-  if (isProfitabilityActionError(facts)) return facts;
+function summarizeProfitabilityFacts(facts: FactBundle): ProfitabilitySummary {
   const acc = new MetricAccumulator();
   applyAllFactsToAccumulator(acc, facts);
   return {
@@ -1402,6 +1401,16 @@ export const getProfitabilitySummary = withAuth(async (
     costRatesConfigured: facts.costRatesConfigured,
     currencyCode: facts.defaultCurrency,
   };
+}
+
+export const getProfitabilitySummary = withAuth(async (
+  user,
+  { tenant },
+  input: ProfitabilityDateInput
+): Promise<ProfitabilitySummary | ProfitabilityActionError> => {
+  const facts = await getFactBundleForAction(user, tenant, input);
+  if (isProfitabilityActionError(facts)) return facts;
+  return summarizeProfitabilityFacts(facts);
 });
 
 export const getClientProfitability = withAuth(async (

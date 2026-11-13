@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { recordStockConsumption, InsufficientStockError } from './consume';
-import { addMaterial, deleteMaterial, isProjectMaterialEligible, MaterialValidationError, queryCatalogPickerItems } from './materials';
+import { addMaterial, deleteMaterial, isProjectMaterialEligible, listMaterials, MaterialValidationError, queryCatalogPickerItems, type MaterialRow } from './materials';
 import { queryProductAvailability } from './availability';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
@@ -127,7 +127,55 @@ describe('F014/F015 negative-stock guard (T003)', () => {
   });
 });
 
+// Only ticket rows carry quantity_locked; project rows never do.
+async function listTicketMaterials(trx: Knex.Transaction) {
+  return (await listMaterials(trx, TENANT, 'ticket', TICKET)) as Array<MaterialRow & { quantity_locked?: boolean }>;
+}
+
 describe('F048 canonical materials service (T005)', () => {
+  it('marks serialized ticket materials as quantity-locked for the edit UI', async () => {
+    await inTx(async (trx) => {
+      const serialized = await makeTrackedProduct(trx, `vitest-lock-${randomUUID().slice(0, 8)}`, 0, { is_serialized: true });
+      const ordinary = await makeTrackedProduct(trx, `vitest-unlocked-${randomUUID().slice(0, 8)}`, 0);
+      await trx('ticket_materials').insert([
+        {
+          tenant: TENANT, ticket_id: TICKET, client_id: CLIENT, service_id: serialized,
+          quantity: 1, rate: 100, currency_code: 'USD', is_billed: false,
+        },
+        {
+          tenant: TENANT, ticket_id: TICKET, client_id: CLIENT, service_id: ordinary,
+          quantity: 2, rate: 100, currency_code: 'USD', is_billed: false,
+        },
+      ]);
+
+      const materials = await listTicketMaterials(trx);
+      expect(materials.find((row) => row.service_id === serialized)?.quantity_locked).toBe(true);
+      expect(materials.find((row) => row.service_id === ordinary)?.quantity_locked).toBe(false);
+    });
+  });
+
+  it('marks a non-serialized ticket material linked to a stock unit as quantity-locked', async () => {
+    await inTx(async (trx) => {
+      const product = await makeTrackedProduct(trx, `vitest-unitlink-${randomUUID().slice(0, 8)}`, 0);
+      const [material] = await trx('ticket_materials').insert({
+        tenant: TENANT, ticket_id: TICKET, client_id: CLIENT, service_id: product,
+        quantity: 1, rate: 100, currency_code: 'USD', is_billed: false,
+      }).returning('ticket_material_id');
+      const [unit] = await trx('stock_units').insert({
+        tenant: TENANT, service_id: product, serial_number: `SN-LINK-${randomUUID().slice(0, 8)}`,
+        status: 'delivered', client_id: CLIENT, location_id: null,
+      }).returning('unit_id');
+      await recordStockMovement(trx, TENANT, {
+        movement_type: 'consume', service_id: product, quantity: 1, unit_id: unit.unit_id,
+        from_location_id: LOCATION, source_doc_type: 'ticket_material', source_doc_id: material.ticket_material_id,
+      });
+
+      const materials = await listTicketMaterials(trx);
+      const linked = materials.find((row) => 'ticket_material_id' in row && row.ticket_material_id === material.ticket_material_id);
+      expect(linked?.quantity_locked).toBe(true);
+    });
+  });
+
   it('addMaterial writes the row, consumes stock, derives client from the ticket; deleteMaterial reverses', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t005-${randomUUID().slice(0, 8)}`, 3);

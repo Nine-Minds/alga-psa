@@ -1,8 +1,12 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import {
+  authorizeTicketRecordAccess,
+  TicketRecordAccessDeniedError,
+} from '@alga-psa/authorization/ticketRecordAuthorization';
 import type { ManualInvoiceSourceLink } from '@alga-psa/types';
 import {
   actionError,
@@ -65,6 +69,12 @@ export interface TicketBillableMaterialItem {
   rate: number;
   amount: number;
   description: string | null;
+  /** `updated_at::text` as loaded; echoed back so generation bills only the reviewed version. */
+  version: string;
+}
+
+export interface TicketBillableFixedFeeItem extends Omit<TicketBillableMaterialItem, 'kind'> {
+  kind: 'ticket_fixed_fee';
 }
 
 export interface TicketBillableItems {
@@ -75,6 +85,8 @@ export interface TicketBillableItems {
   ticketTitle: string | null;
   timeItems: TicketBillableTimeItem[];
   materialItems: TicketBillableMaterialItem[];
+  fixedFeeItems: TicketBillableFixedFeeItem[];
+  excludedFixedFeeCount: number;
   excludedMaterialCount: number;
 }
 
@@ -91,6 +103,12 @@ export interface GenerateTicketInvoiceInput {
   ticketId: string;
   timeEntryIds: string[];
   materialIds: string[];
+  fixedFeeIds?: string[];
+  /**
+   * Loaded `version` of every selected product and fixed-fee entry, keyed by
+   * id. A missing or different version rejects the invoice as SOURCE_CHANGED.
+   */
+  sourceVersions?: Record<string, string>;
 }
 
 export type GenerateTicketInvoiceResult = ManualInvoiceResult;
@@ -153,6 +171,33 @@ async function loadQuickInvoiceWork(knex: Knex, tenant: string, ticketId: string
   };
 }
 
+async function authorizeNativeQuickInvoiceTicket(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: Parameters<typeof authorizeTicketRecordAccess>[0]['user'],
+  work: NonNullable<Awaited<ReturnType<typeof loadQuickInvoiceWork>>>,
+  action: 'read' | 'update',
+): Promise<void> {
+  if (work.workItemType === 'ticket') {
+    await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user,
+      ticketId: work.ticket.ticket_id,
+      action,
+    });
+  }
+}
+
+function ticketRecordPermissionError(): GenerateTicketInvoiceResult {
+  return {
+    success: false,
+    code: 'PERMISSION_DENIED',
+    message: 'Permission denied: Cannot access ticket',
+    error: 'Permission denied: Cannot access ticket',
+  };
+}
+
 /**
  * Unbilled, billable ticket items for the quick-invoice dialog.
  *
@@ -174,6 +219,7 @@ export const getTicketBillableItems = withAuth(async (
     if (!work || !ticket) {
       return actionError('That ticket no longer exists.', 'msp/invoicing:quickInvoice.errors.ticketNotFound');
     }
+    await withTransaction(knex, (trx) => authorizeNativeQuickInvoiceTicket(trx, tenant, user, work, 'read'));
 
     const db = tenantDb(knex, tenant);
 
@@ -201,7 +247,7 @@ export const getTicketBillableItems = withAuth(async (
     const materialQuery = db.table('ticket_materials as tm');
     db.tenantJoin(materialQuery, 'service_catalog as sc', 'sc.service_id', 'tm.service_id', { type: 'left' });
     const materialRows = await materialQuery
-      .where({ 'tm.ticket_id': ticketId, 'tm.is_billed': false })
+      .where({ 'tm.ticket_id': ticketId, 'tm.client_id': ticket.client_id, 'tm.is_billed': false })
       .orderBy('tm.created_at', 'asc')
       .select(
         'tm.ticket_material_id',
@@ -211,6 +257,7 @@ export const getTicketBillableItems = withAuth(async (
         'tm.description',
         'tm.currency_code',
         'sc.service_name',
+        knex.raw('tm.updated_at::text as source_updated_at'),
       );
 
     const timeItems: TicketBillableTimeItem[] = timeRows.map((row: any) => {
@@ -231,6 +278,21 @@ export const getTicketBillableItems = withAuth(async (
     });
 
     const currencyCode = await resolveClientCurrency(knex, tenant, ticket.client_id);
+    const fixedFeeQuery = db.table('ticket_fixed_fee_services as f');
+    db.tenantJoin(fixedFeeQuery, 'service_catalog as sc', 'sc.service_id', 'f.service_id');
+    const fixedFeeRows = await fixedFeeQuery
+      .where({ 'f.ticket_id': ticketId, 'f.client_id': ticket.client_id, 'f.is_billed': false })
+      .orderBy('f.created_at', 'asc')
+      .select('f.entry_id', 'f.service_id', 'f.quantity', 'f.rate', 'f.description', 'f.currency_code', 'sc.service_name',
+        knex.raw('f.updated_at::text as source_updated_at'));
+    const fixedFeeItems: TicketBillableFixedFeeItem[] = fixedFeeRows
+      .filter((row) => row.currency_code === currencyCode)
+      .map((row) => ({
+        kind: 'ticket_fixed_fee', id: row.entry_id, serviceId: row.service_id,
+        serviceName: row.service_name, quantity: Number(row.quantity), rate: Number(row.rate),
+        amount: Number(row.quantity) * Number(row.rate), description: row.description,
+        version: row.source_updated_at,
+      }));
     const eligibleMaterials = materialRows.filter((row: any) => row.currency_code === currencyCode);
     const materialItems: TicketBillableMaterialItem[] = eligibleMaterials.map((row: any) => {
       const quantity = Number(row.quantity) || 0;
@@ -244,6 +306,7 @@ export const getTicketBillableItems = withAuth(async (
         rate,
         amount: Math.round(quantity * rate),
         description: row.description ?? null,
+        version: row.source_updated_at,
       };
     });
 
@@ -256,9 +319,11 @@ export const getTicketBillableItems = withAuth(async (
       ticketTitle: ticket.title ?? null,
       timeItems,
       materialItems,
+      fixedFeeItems,
+      excludedFixedFeeCount: fixedFeeRows.length - fixedFeeItems.length,
     };
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Permission denied')) {
+    if (error instanceof TicketRecordAccessDeniedError) {
       return permissionError(error.message);
     }
     throw error;
@@ -299,10 +364,17 @@ export const generateTicketInvoice = withAuth(async (
       error: 'That ticket no longer exists.',
     };
   }
+  try {
+    await withTransaction(knex, (trx) => authorizeNativeQuickInvoiceTicket(trx, tenant, user, work, 'update'));
+  } catch (error) {
+    if (error instanceof TicketRecordAccessDeniedError) return ticketRecordPermissionError();
+    throw error;
+  }
 
   const timeEntryIds = dedupe(input.timeEntryIds);
   const materialIds = dedupe(input.materialIds);
-  if (timeEntryIds.length === 0 && materialIds.length === 0) {
+  const fixedFeeIds = dedupe(input.fixedFeeIds);
+  if (timeEntryIds.length === 0 && materialIds.length === 0 && fixedFeeIds.length === 0) {
     return {
       success: false,
       code: 'INVALID_QUANTITY',
@@ -341,20 +413,41 @@ export const generateTicketInvoice = withAuth(async (
     : await db
         .table('ticket_materials as tm')
         .whereIn('tm.ticket_material_id', materialIds)
-        .where({ 'tm.ticket_id': input.ticketId, 'tm.is_billed': false })
-        .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description', 'tm.currency_code');
+        .where({ 'tm.ticket_id': input.ticketId, 'tm.client_id': ticket.client_id, 'tm.is_billed': false })
+        .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description', 'tm.currency_code',
+          knex.raw('tm.updated_at::text as source_updated_at'));
 
-  if (timeRows.length !== timeEntryIds.length || materialRows.length !== materialIds.length) {
+  const fixedFeeQuery = db.table('ticket_fixed_fee_services as f');
+  db.tenantJoin(fixedFeeQuery, 'service_catalog as sc', 'sc.service_id', 'f.service_id');
+  const fixedFeeRows = fixedFeeIds.length === 0 ? [] : await fixedFeeQuery
+    .whereIn('f.entry_id', fixedFeeIds)
+    .where({ 'f.ticket_id': input.ticketId, 'f.client_id': ticket.client_id, 'f.is_billed': false })
+    .select('f.entry_id', 'f.service_id', 'f.quantity', 'f.rate', 'f.description', 'f.currency_code', 'sc.service_name',
+      knex.raw('f.updated_at::text as source_updated_at'));
+
+  if (timeRows.length !== timeEntryIds.length || materialRows.length !== materialIds.length || fixedFeeRows.length !== fixedFeeIds.length) {
     return {
       success: false,
       code: 'SOURCE_ALREADY_BILLED',
       params: {
-        recordId: `${timeEntryIds.length - timeRows.length} time item(s), ${materialIds.length - materialRows.length} product item(s)`,
+        recordId: `${timeEntryIds.length - timeRows.length} time item(s), ${materialIds.length - materialRows.length} product item(s), ${fixedFeeIds.length - fixedFeeRows.length} fixed-fee item(s)`,
       },
       message:
         'Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.',
       error:
         'Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.',
+    };
+  }
+
+  const versions = input.sourceVersions ?? {};
+  const changedSource = [
+    ...materialRows.map((row) => ({ id: row.ticket_material_id, version: row.source_updated_at })),
+    ...fixedFeeRows.map((row) => ({ id: row.entry_id, version: row.source_updated_at })),
+  ].find(({ id, version }) => !versions[id] || versions[id] !== version);
+  if (changedSource) {
+    const message = 'A product or fixed-fee service changed or was already billed. Refresh the charges and try again.';
+    return {
+      success: false, code: 'SOURCE_CHANGED', params: { recordId: changedSource.id }, message, error: message,
     };
   }
 
@@ -364,6 +457,13 @@ export const generateTicketInvoice = withAuth(async (
       success: false, code: 'SOURCE_CURRENCY_MISMATCH',
       message: 'The selected product currency does not match the invoice.',
       error: 'The selected product currency does not match the invoice.',
+    };
+  }
+  if (fixedFeeRows.some(row => row.currency_code !== currencyCode)) {
+    return {
+      success: false, code: 'SOURCE_CURRENCY_MISMATCH',
+      message: 'The selected fixed-fee service currency does not match the invoice.',
+      error: 'The selected fixed-fee service currency does not match the invoice.',
     };
   }
 
@@ -389,6 +489,7 @@ export const generateTicketInvoice = withAuth(async (
     const sourceLink: ManualInvoiceSourceLink = {
       kind: 'ticket_material',
       materialId: row.ticket_material_id,
+      updatedAt: row.source_updated_at,
     };
     items.push({
       service_id: row.service_id,
@@ -396,6 +497,14 @@ export const generateTicketInvoice = withAuth(async (
       rate: Math.max(0, Math.round(Number(row.rate) || 0)),
       description: row.description || 'Product',
       source_link: sourceLink,
+    });
+  }
+
+  for (const row of fixedFeeRows) {
+    items.push({
+      service_id: row.service_id, quantity: Number(row.quantity), rate: Number(row.rate),
+      description: row.description || row.service_name,
+      source_link: { kind: 'ticket_fixed_fee', entryId: row.entry_id, updatedAt: row.source_updated_at },
     });
   }
 
@@ -418,6 +527,11 @@ export const getTicketInvoices = withAuth(async (
       return permissionError('Permission denied: Cannot read ticket invoices');
     }
     const { knex } = await createTenantKnex();
+    const work = await loadQuickInvoiceWork(knex, tenant, ticketId);
+    if (!work) {
+      return actionError('That ticket no longer exists.', 'msp/invoicing:quickInvoice.errors.ticketNotFound');
+    }
+    await withTransaction(knex, (trx) => authorizeNativeQuickInvoiceTicket(trx, tenant, user, work, 'read'));
     const rows = await tenantDb(knex, tenant)
       .table('invoices')
       .where({ ticket_id: ticketId })
@@ -433,7 +547,7 @@ export const getTicketInvoices = withAuth(async (
       invoiceDate: toIsoDate(row.invoice_date) ?? '',
     }));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Permission denied')) {
+    if (error instanceof TicketRecordAccessDeniedError) {
       return permissionError(error.message);
     }
     throw error;

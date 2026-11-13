@@ -41,9 +41,9 @@ vi.mock('@alga-psa/ui/components', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/bento/BentoBoard', () => ({
-  BentoBoard: ({ tiles, main }: { tiles: Array<{ key: string; node: React.ReactNode }>; main?: React.ReactNode }) => (
+  BentoBoard: ({ tiles, main }: { tiles: Array<{ key: string; node: React.ReactNode; zone: string; group: string; rank: number }>; main?: React.ReactNode }) => (
     <div>
-      {tiles.map((tile) => <div key={tile.key}>{tile.node}</div>)}
+      {tiles.map((tile) => <div key={tile.key} data-zone={tile.zone} data-group={tile.group} data-rank={tile.rank}>{tile.node}</div>)}
       {main}
     </div>
   ),
@@ -105,6 +105,7 @@ vi.mock('../TicketStopwatchControls', () => ({
 }));
 vi.mock('../TicketTimeEntries', () => ({ __esModule: true, default: () => null }));
 vi.mock('../TicketMaterialsCard', () => ({ __esModule: true, default: () => <div data-testid="s-materials" /> }));
+vi.mock('../TicketFixedFeeServicesCard', () => ({ __esModule: true, default: () => <div data-testid="s-fixed-fees" /> }));
 vi.mock('../TicketWatchListCard', () => ({ __esModule: true, default: () => <div data-testid="s-watch-list" /> }));
 
 function baseProps(overrides: Partial<TicketBentoLayoutProps> = {}): TicketBentoLayoutProps {
@@ -166,6 +167,7 @@ const SECTIONS: Array<[TicketCapabilityKey, string]> = [
   ['credentials', 's-credentials'],
   ['externalLinks', 's-externalLinks'],
   ['materials', 's-materials'],
+  ['fixedFeeServices', 's-fixed-fees'],
   ['billing', 's-billing'],
   ['scheduling', 's-scheduling'],
   ['survey', 's-survey'],
@@ -188,6 +190,18 @@ function renderWith(ds: typeof nativeTicketDataSource, overrides: Partial<Ticket
 }
 
 describe('T002 bento layout capability gating', () => {
+  it('places Services immediately before Materials in the same rail', () => {
+    render(<TicketBentoLayout {...baseProps()} />);
+    const services = screen.getByTestId('s-fixed-fees').parentElement;
+    const materials = screen.getByTestId('s-materials').parentElement;
+    expect(services?.parentElement).toBe(materials?.parentElement);
+    expect(services?.getAttribute('data-zone')).toBe('start');
+    expect(services?.getAttribute('data-group')).toBe('linked');
+    expect(materials?.getAttribute('data-zone')).toBe('start');
+    expect(materials?.getAttribute('data-group')).toBe('linked');
+    expect(Number(services?.getAttribute('data-rank'))).toBe(Number(materials?.getAttribute('data-rank')) - 1);
+  });
+
   it('renders every gated section under the native default', () => {
     render(<TicketBentoLayout {...baseProps()} />);
     for (const [, testId] of SECTIONS) expect(screen.getByTestId(testId)).toBeTruthy();
@@ -196,6 +210,11 @@ describe('T002 bento layout capability gating', () => {
   it('renders none of the gated sections, and no placeholders, when all capabilities are off', () => {
     renderWith(withCaps({}));
     for (const [, testId] of SECTIONS) expect(screen.queryByTestId(testId)).toBeNull();
+  });
+
+  it('hides fixed-fee services when an alternate source does not implement that method group', () => {
+    renderWith(composeTicketDataSource(nativeTicketDataSource, { kind: 'alternate' }));
+    expect(screen.queryByTestId('s-fixed-fees')).toBeNull();
   });
 
   // Mutation check: each capability alone must bring back exactly its own section.
