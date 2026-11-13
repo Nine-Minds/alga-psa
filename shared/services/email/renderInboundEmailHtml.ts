@@ -23,13 +23,16 @@ import { simpleParser } from 'mailparser';
 import { tenantDb } from '@alga-psa/db';
 import { sanitizeEmailHtml } from '../../lib/email/sanitizeEmailHtml';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
-import { ORIGINAL_EMAIL_ATTACHMENT_ID } from './inboundEmailArtifactHelpers';
+import { ORIGINAL_EMAIL_ATTACHMENT_ID, embeddedCidAttachmentId } from './inboundEmailArtifactHelpers';
 import { normalizeRfc822MessageId, rfcMessageIdLookupForms } from './inboundEmailIdentity';
 // The pure sibling, not `inboundEmbeddedImageUrlRewrite`: that module also
 // converts bodies to BlockNote, and importing `@blocknote/server-util` into a
 // route handler pulls React's `createContext` into a server graph, which makes
 // the route fail to instantiate.
-import { rewriteEmbeddedImageSourcesInContent } from './embeddedImageSourceRewrite';
+import {
+  normalizeEmbeddedContentId,
+  rewriteEmbeddedImageSourcesInContent,
+} from './embeddedImageSourceRewrite';
 import { getStorageProvider } from './inboundEmailSourceStager';
 import type { EmbeddedImageUrlMapping } from './processInboundEmailArtifacts';
 
@@ -84,34 +87,71 @@ export async function buildInboundEmailHtmlFromMime(
   return sanitized;
 }
 
+export interface ProcessedAttachmentRow {
+  attachment_id: string;
+  content_id: string | null;
+  file_id: string | null;
+  document_id: string | null;
+  processing_status: string;
+}
+
 /**
- * Rebuild the `cid:`/data-url → served-document mappings the attachment
- * pipeline reported at ingest from the rows it wrote. Only `content_id` rows
- * can be matched back to a body reference; a data-url image was replaced in the
- * stored body but its original reference is not recoverable from the row, and
- * the archived MIME still carries the inline bytes, so it needs no mapping.
+ * Rebuild the `cid:` → served-document mappings the attachment pipeline
+ * reported at ingest from the rows it wrote. A data-url image needs no
+ * mapping: the archived MIME still carries its inline bytes.
+ *
+ * A body-referenced `cid:` image is stored under a synthetic row, while the
+ * Content-ID lives on the provider attachment's own row (marked skipped).
+ * Rows written before the synthetic row recorded its Content-ID are matched
+ * through the deterministic attachment id the two rows share.
  */
+export function embeddedImageMappingsFromRows(
+  emailId: string,
+  rows: ProcessedAttachmentRow[]
+): EmbeddedImageUrlMapping[] {
+  const stored = rows.filter((row) => row.processing_status === 'success' && row.file_id);
+  const storedByAttachmentId = new Map(stored.map((row) => [row.attachment_id, row]));
+  const byReference = new Map<string, EmbeddedImageUrlMapping>();
+
+  const add = (contentId: string, row: ProcessedAttachmentRow) => {
+    const reference = normalizeEmbeddedContentId(contentId);
+    if (!reference || byReference.has(reference)) return;
+    byReference.set(reference, {
+      source: 'cid',
+      reference,
+      fileId: String(row.file_id),
+      documentId: String(row.document_id ?? ''),
+      url: `/api/documents/view/${row.file_id}`,
+    });
+  };
+
+  for (const row of stored) {
+    if (row.content_id) add(row.content_id, row);
+  }
+  for (const row of rows) {
+    if (!row.content_id) continue;
+    const embedded = storedByAttachmentId.get(
+      embeddedCidAttachmentId(emailId, row.content_id, row.attachment_id)
+    );
+    if (embedded) add(row.content_id, embedded);
+  }
+
+  return [...byReference.values()];
+}
+
 async function loadEmbeddedImageMappings(
   lookup: InboundEmailHtmlLookup,
   emailId: string
 ): Promise<EmbeddedImageUrlMapping[]> {
-  const rows: Array<{ content_id: string | null; file_id: string | null; document_id: string | null }> =
-    await tenantDb(lookup.db, lookup.tenantId)
-      .table('email_processed_attachments')
-      .where({ provider_id: lookup.providerId, email_id: emailId, processing_status: 'success' })
-      .whereNotNull('content_id')
-      .whereNotNull('file_id')
-      .select('content_id', 'file_id', 'document_id');
+  const rows: ProcessedAttachmentRow[] = await tenantDb(lookup.db, lookup.tenantId)
+    .table('email_processed_attachments')
+    .where({ provider_id: lookup.providerId, email_id: emailId })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNotNull('content_id').orWhereNotNull('file_id');
+    })
+    .select('attachment_id', 'content_id', 'file_id', 'document_id', 'processing_status');
 
-  return rows
-    .filter((row) => row.content_id && row.file_id)
-    .map((row) => ({
-      source: 'cid' as const,
-      reference: String(row.content_id),
-      fileId: String(row.file_id),
-      documentId: String(row.document_id ?? ''),
-      url: `/api/documents/view/${row.file_id}`,
-    }));
+  return embeddedImageMappingsFromRows(emailId, rows);
 }
 
 /**

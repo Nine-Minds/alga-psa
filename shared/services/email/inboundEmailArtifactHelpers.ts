@@ -20,6 +20,8 @@ export interface SyntheticEmbeddedAttachment {
   name: string;
   contentType: string;
   size: number;
+  /** Normalized Content-ID the body referenced; only set for `cid` sources. */
+  contentId?: string;
   content?: string;
   providerAttachmentId?: string;
   source: ImageAttachmentSource;
@@ -42,6 +44,20 @@ function normalizeContentId(input: string | undefined | null): string {
     .replace(/^cid:/i, '')
     .replace(/^<|>$/g, '')
     .toLowerCase();
+}
+
+/**
+ * Attachment id of the row that stores a `cid:` image referenced by the body.
+ * Deterministic, so a reader can find that row again from the provider
+ * attachment's own row (which keeps the Content-ID but not the file).
+ */
+export function embeddedCidAttachmentId(
+  emailId: string,
+  contentId: string,
+  providerAttachmentId: string
+): string {
+  const hash = sha256(`${emailId}:cid:${normalizeContentId(contentId)}:${providerAttachmentId}`);
+  return `embedded-cid-${hash.slice(0, 24)}`;
 }
 
 function estimateBase64DecodedSize(base64: string): number {
@@ -218,19 +234,16 @@ export function extractEmbeddedImageAttachments(input: {
       }
 
       const ext = extensionFromMime(contentType);
-      const deterministicHash = sha256(`${input.emailId}:cid:${cid}:${providerAttachmentId}`).slice(
-        0,
-        24
-      );
       const preferredName = matched.name ? sanitizeGeneratedFileName(String(matched.name)) : '';
       const name =
         preferredName || sanitizeGeneratedFileName(`embedded-image-cid-${index + 1}.${ext}`);
 
       result.push({
-        id: `embedded-cid-${deterministicHash}`,
+        id: embeddedCidAttachmentId(input.emailId, cid, providerAttachmentId),
         name,
         contentType,
         size: effectiveSize,
+        contentId: cid,
         content: inlineContent,
         providerAttachmentId,
         source: 'cid',
