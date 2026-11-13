@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { withWorkflowPicker } from '../../jsonSchemaMetadata';
-import { dateOnlySchema } from './commonEventPayloadSchemas';
+import { dateOnlySchema, ticketRecurrenceSchema } from './commonEventPayloadSchemas';
 import { dateTriggerSourceDefinitions, type DateTriggerPayloadSchemaRefs } from './dateTriggerSourceDefinitions';
 
 const date = dateOnlySchema('Calendar date (YYYY-MM-DD)');
@@ -31,6 +31,32 @@ export const dateTriggerPayloadSchemas = {
     assetName: z.string().optional(),
     maintenanceType: z.string().optional(),
     dueDate: dateOnlySchema('Maintenance due date (YYYY-MM-DD)'),
+  }).passthrough(),
+  // `ticket.due_date` carries everything a reminder step needs, like `ticket.status_age`. A recurring
+  // schedule's occurrence is reported from its schedule before the generator creates the ticket (so an
+  // early reminder does not depend on lead_days); then `ticketExists` is false and the ticket fields are
+  // absent. Once the ticket exists the same occurrence keeps its fire key, so it never fires twice.
+  'payload.TicketDueDate.v1': z.object({
+    ...common,
+    ticketExists: z.boolean().describe('False when the reminder fires for a scheduled recurring ticket that has not been created yet'),
+    ticketId: ticketId.optional(),
+    ticketNumber: z.string().optional(),
+    title: z.string().optional(),
+    dueDate: dateOnlySchema('Due date in the tenant timezone (YYYY-MM-DD)'),
+    dueAt: z.string().describe('Due date and time (ISO 8601 timestamp)'),
+    statusId: ticketStatusId.optional(),
+    statusName: z.string().optional(),
+    boardId: boardId.optional(),
+    boardName: z.string().optional(),
+    priorityId: withWorkflowPicker(z.string(), 'Priority', 'ticket-priority').optional(),
+    contactId: contactId.optional(),
+    assignedUserId: assignedUserId.optional(),
+    ticketOrigin: z.string().describe('Where the ticket came from (recurring for schedule-generated tickets)'),
+    recurrence: ticketRecurrenceSchema.extend({
+      occurrenceId: z.string().optional().describe('Recurring occurrence ID; absent until the schedule first tries to create the ticket'),
+      definitionClientId: z.string().describe('The schedule\'s row for this client'),
+      definitionName: z.string().optional().describe('Recurring schedule name'),
+    }).optional(),
   }).passthrough(),
   // `ticket.status_age` carries everything a follow-up step needs (contact, assignee, board, status),
   // so a workflow never has to look the ticket up again.

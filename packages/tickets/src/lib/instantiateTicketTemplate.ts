@@ -137,7 +137,12 @@ export interface InstantiateTicketTemplateInput {
   actor: CreateTicketActor;
   suppression?: { suppressContactNotifications?: boolean; suppressInternalNotifications?: boolean };
   titleContext: TitleTokenContext;
-  origin: { ticket_origin: TicketOrigin; source: string };
+  origin: {
+    ticket_origin: TicketOrigin;
+    source: string;
+    /** The recurring schedule occurrence generating the ticket; carried on TICKET_CREATED. */
+    recurrence?: { definitionId: string; occurrenceId: string; occurrenceDate?: string };
+  };
   dueDate?: Date | null;
 }
 
@@ -203,6 +208,7 @@ export async function instantiateTicketTemplate(
     tags: template.tags,
     assetIds,
     notificationSuppression: input.suppression,
+    ...(input.origin.recurrence ? { eventPayload: { recurrence: input.origin.recurrence } } : {}),
     // R6: the template's items are a snapshot the ticket owns; the create layer applies the replacement rule.
     checklistItems: template.checklist.map((item) => ({
       item_name: item.item_name,

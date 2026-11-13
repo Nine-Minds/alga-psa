@@ -1226,6 +1226,8 @@ export class TicketModel {
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
             client_id: cleanedInput.client_id,
+            dueDate: cleanedInput.due_date ? new Date(cleanedInput.due_date).toISOString() : null,
+            ticketOrigin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
             ...(requester.clientName ? { clientName: requester.clientName } : {}),
             ...(requester.contactName ? { contactName: requester.contactName } : {}),
             ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),

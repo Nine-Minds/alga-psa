@@ -2123,6 +2123,8 @@ export class TicketService extends BaseService<ITicket> {
           boardId: fullTicket.board_id,
           priorityId: fullTicket.priority_id,
           clientId: fullTicket.client_id,
+          dueDate: fullTicket.due_date ?? null,
+          ticketOrigin: fullTicket.ticket_origin,
           externalLinks,
           suppressContactNotifications,
           suppressInternalNotifications,

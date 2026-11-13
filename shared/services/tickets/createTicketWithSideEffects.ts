@@ -176,6 +176,11 @@ export interface CreateTicketWithSideEffectsInput {
     suppressContactNotifications?: boolean;
     suppressInternalNotifications?: boolean;
   };
+  /**
+   * Extra fields merged into the TICKET_CREATED payload only (not the other ticket events). Used to
+   * hand facts known before the ticket exists, like the recurring schedule that is generating it.
+   */
+  eventPayload?: { recurrence?: { definitionId: string; occurrenceId: string; occurrenceDate?: string } };
   /** Records `ticket_created` analytics. Omit for callers that do not track it (e.g. the scheduler). */
   analyticsTracker?: IAnalyticsTracker;
 }
@@ -214,9 +219,10 @@ export async function createTicketWithSideEffects(
     suppressInternalNotifications: input.notificationSuppression?.suppressInternalNotifications === true,
   };
   const eventExtras = { ...suppressionPayload, ...provenance };
+  const createdEventExtras = { ...eventExtras, ...(input.eventPayload?.recurrence ? { recurrence: input.eventPayload.recurrence } : {}) };
 
   const eventPublisher = new TicketModelEventPublisher(trx, {
-    ticketCreatedPayload: eventExtras,
+    ticketCreatedPayload: createdEventExtras,
   });
 
   const created = await TicketModel.createTicketWithRetry(

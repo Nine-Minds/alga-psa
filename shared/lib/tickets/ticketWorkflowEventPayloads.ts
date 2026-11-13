@@ -100,6 +100,16 @@ export type TicketCreatedExternalLink = {
 };
 
 /** REST API creation (TicketService.create / createFromAsset). */
+/** `dueDate` / `ticketOrigin` for TICKET_CREATED; each key is only present when the caller supplied it. */
+function ticketDueDateAndOriginFields(input: { dueDate?: Date | string | null; ticketOrigin?: string | null }) {
+  return {
+    ...(input.dueDate !== undefined
+      ? { dueDate: input.dueDate ? new Date(input.dueDate).toISOString() : null }
+      : {}),
+    ...(input.ticketOrigin ? { ticketOrigin: input.ticketOrigin } : {}),
+  };
+}
+
 export function buildApiTicketCreatedPayload(
   input: TicketNotificationSuppression & {
     ticketId: string;
@@ -108,6 +118,9 @@ export function buildApiTicketCreatedPayload(
     boardId: string;
     priorityId?: string | null;
     clientId?: string | null;
+    /** `tickets.due_date` as stored (Date or ISO string); null/absent when none. */
+    dueDate?: Date | string | null;
+    ticketOrigin?: string | null;
     externalLinks?: readonly TicketCreatedExternalLink[];
   }
 ) {
@@ -120,6 +133,7 @@ export function buildApiTicketCreatedPayload(
     board_id: input.boardId,
     priority_id: input.priorityId,
     client_id: input.clientId,
+    ...ticketDueDateAndOriginFields(input),
     ...(input.externalLinks && input.externalLinks.length > 0
       ? {
           externalLinks: input.externalLinks.map((link) => ({
@@ -139,9 +153,21 @@ export function buildApiTicketCreatedPayload(
   });
 }
 
-/** RMM alert ticket creation (shared/rmm/alerts/ticketCreatedEvent.ts). */
-export function buildRmmTicketCreatedPayload(input: { ticketId: string; source: string }) {
-  return builtWorkflowPayload('TICKET_CREATED', { ticketId: input.ticketId, source: input.source });
+/**
+ * RMM alert ticket creation (shared/rmm/alerts/ticketCreatedEvent.ts). RMM inserts set neither column, so
+ * the stored values are the column defaults: origin internal, no due date. Those are the defaults here too.
+ */
+export function buildRmmTicketCreatedPayload(input: {
+  ticketId: string;
+  source: string;
+  dueDate?: Date | string | null;
+  ticketOrigin?: string | null;
+}) {
+  return builtWorkflowPayload('TICKET_CREATED', {
+    ticketId: input.ticketId,
+    source: input.source,
+    ...ticketDueDateAndOriginFields({ dueDate: input.dueDate ?? null, ticketOrigin: input.ticketOrigin ?? 'internal' }),
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -536,6 +536,7 @@
         "contractEnd": "la fecha de finalización del contrato",
         "warrantyEnd": "la fecha de fin de garantía del activo",
         "maintenanceDue": "la fecha de vencimiento del mantenimiento del activo",
+        "ticketDueDate": "la fecha de vencimiento del ticket",
         "ticketStatusAge": "el día en que el ticket alcanza el número de días en el estado"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Zona horaria del inquilino (predeterminada)",
       "searchTimezones": "Buscar zonas horarias",
       "inputDataEventPending": "Elija el evento de arriba; sus pasos leerán los datos que ese evento envía.",
+      "dateSourceTicketDueDate": "Fecha de vencimiento del ticket",
       "dateSourceTicketStatusAge": "Ticket en estado durante N días",
       "statusAgeStatus": "Estado",
       "statusAgeStatusPlaceholder": "Seleccionar un estado",

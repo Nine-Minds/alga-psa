@@ -536,6 +536,7 @@
         "contractEnd": "das Vertragsende",
         "warrantyEnd": "das Ende der Garantie des Assets",
         "maintenanceDue": "das Fälligkeitsdatum der Asset-Wartung",
+        "ticketDueDate": "das Fälligkeitsdatum des Tickets",
         "ticketStatusAge": "der Tag, an dem das Ticket die festgelegte Anzahl von Tagen im Status erreicht"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Mandanten-Zeitzone (Standard)",
       "searchTimezones": "Zeitzonen durchsuchen",
       "inputDataEventPending": "Wählen Sie oben das Ereignis; Ihre Schritte lesen die Daten, die dieses Ereignis sendet.",
+      "dateSourceTicketDueDate": "Ticket-Fälligkeitsdatum",
       "dateSourceTicketStatusAge": "Ticket seit N Tagen in Status",
       "statusAgeStatus": "Status",
       "statusAgeStatusPlaceholder": "Status auswählen",

@@ -85,6 +85,7 @@ const SOURCE_DATE_NAMES: Record<WorkflowDateTriggerSourceId, { key: string; defa
   'contract.end': { key: 'runDialog.dateTrigger.dateNames.contractEnd', defaultValue: "the contract's end date" },
   'asset.warranty_end': { key: 'runDialog.dateTrigger.dateNames.warrantyEnd', defaultValue: "the asset's warranty end date" },
   'asset.maintenance_due': { key: 'runDialog.dateTrigger.dateNames.maintenanceDue', defaultValue: "the asset maintenance due date" },
+  'ticket.due_date': { key: 'runDialog.dateTrigger.dateNames.ticketDueDate', defaultValue: "the ticket's due date" },
   'ticket.status_age': { key: 'runDialog.dateTrigger.dateNames.ticketStatusAge', defaultValue: 'the day the ticket reaches the number of days in status' },
 };
 
