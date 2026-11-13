@@ -71,8 +71,8 @@ vi.mock('../../lib/net/safeFetch', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/net/safeFetch')>();
   return {
     ...actual,
-    safeFetch: (url: string, init: any) =>
-      actual.safeFetch(url, init, {
+    safeFetchStream: (url: string, init: any) =>
+      actual.safeFetchStream(url, init, {
         lookup: async () => [{ address: '93.184.216.34', family: 4 }],
         fetch: async (u: string) => {
           state.fetchCalls.push(u);
