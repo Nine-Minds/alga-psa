@@ -284,5 +284,5 @@ export const compilePredicate = (
   options: CompileOptions,
 ): Knex.Raw => {
   const fragment = compilePredicateFragment(schema, predicate, options);
-  return knex.raw(fragment.sql, fragment.bindings as Knex.RawBinding[]);
+  return knex.raw(fragment.sql, fragment.bindings);
 };

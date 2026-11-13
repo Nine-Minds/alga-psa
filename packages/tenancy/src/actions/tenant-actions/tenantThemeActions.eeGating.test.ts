@@ -19,14 +19,15 @@ function mockDeps() {
   }));
   vi.doMock('next/cache', () => ({ revalidateTag: vi.fn() }));
   vi.doMock('@alga-psa/auth', () => ({
+    hasPermission: async () => true,
     withAuth:
       (fn: (...args: unknown[]) => unknown) =>
       (...args: unknown[]) =>
-        fn({ user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+        fn({ user_type: 'internal', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
     withOptionalAuth:
       (fn: (...args: unknown[]) => unknown) =>
       (...args: unknown[]) =>
-        fn({ user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+        fn({ user_type: 'internal', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
   }));
 }
 
