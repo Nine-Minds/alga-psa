@@ -84,7 +84,7 @@ describe('rich-text export structures', () => {
     expect(html).toContain('<h2>Setup Requirements</h2>');
     expect(html).toContain('<ul><li>Parent<ol><li>Nested step</li></ol></li></ul>');
     expect(html).toContain('&#9745;');
-    expect(html).toContain('<s>Wi-Fi</s>');
+    expect(html).toMatch(/<div[^>]*><span[^>]*>&#9745;<\/span> <s>Wi-Fi<\/s><\/div>/);
     expect(html).toContain('&#9744;');
     expect(html).not.toContain('<s>Ethernet</s>');
     expect(html).toContain('<blockquote>Quoted details');
@@ -290,7 +290,8 @@ describe('rich-text export structures', () => {
       const { html, text: plainText } = formatBlockNoteContent(value);
       expect(html).toMatch(/<th\b[^>]*><p[^>]*>Requirement/);
       expect(html).toContain('<strong>50gb</strong><br>backup');
-      expect(html).toMatch(/<s><p[^>]*>Done<\/p><\/s>/);
+      expect(html).toMatch(/<p[^>]*><s>Done<\/s><\/p>/);
+      expect(html).not.toMatch(/<s>\s*<(?:p|div|h[1-6])\b/);
       expect(html).toContain('<img src="https://example.com/image.png"');
       expect(plainText).toContain('Requirement');
       expect(plainText).toContain('**50gb**');
