@@ -69,20 +69,82 @@ function buildTicketTitle(
   return `Service Request ${definitionId.slice(0, 8)}`;
 }
 
-function buildTicketDescription(
+interface FormFieldSnapshot {
+  key?: unknown;
+  type?: unknown;
+  label?: unknown;
+  options?: Array<{ label?: unknown; value?: unknown }>;
+}
+
+const textCell = (text: string, bold = false) => [
+  { type: 'text', text, styles: bold ? { bold: true } : {} },
+];
+
+const paragraph = (text: string) => ({ type: 'paragraph', content: textCell(text) });
+
+// LEVERAGE: pattern service-request-answer-display — the portal submission page (submissionFieldPresentation.ts) resolves the same label/option/checkbox display values.
+function describeAnswer(field: FormFieldSnapshot | undefined, value: unknown): string {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  if (field?.type === 'checkbox') {
+    return value === true || value === 'true' || value === 'on' || value === '1' ? 'Yes' : 'No';
+  }
+  if (field?.type === 'select' && Array.isArray(field.options)) {
+    const selected = field.options.find((option) => option?.value === String(value));
+    if (typeof selected?.label === 'string' && selected.label.trim()) {
+      return selected.label;
+    }
+  }
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+}
+
+/**
+ * The ticket description as serialized rich-text blocks: the configured prefix,
+ * then one row per answer with the field's label, in form order. Cells use the
+ * inline-array form, which the ticket editor and the notification email
+ * renderer both read.
+ */
+export function buildTicketDescription(
   payload: Record<string, unknown>,
-  config: Record<string, unknown>
+  config: Record<string, unknown>,
+  formSchema?: Record<string, unknown>
 ): string {
   const descriptionPrefix = getStringConfig(config, 'descriptionPrefix');
   const includeFormResponses = config.includeFormResponsesInDescription !== false;
-  const payloadLines = Object.entries(payload).map(([key, value]) => `${key}: ${String(value)}`);
-  const payloadSummary = payloadLines.length > 0 ? payloadLines.join('\n') : 'No structured payload captured.';
+  const emptySummary = 'No structured payload captured.';
+  const blocks: unknown[] = descriptionPrefix ? [paragraph(descriptionPrefix)] : [];
 
   if (!includeFormResponses) {
-    return descriptionPrefix ?? 'No structured payload captured.';
+    return JSON.stringify(blocks.length > 0 ? blocks : [paragraph(emptySummary)]);
   }
 
-  return descriptionPrefix ? `${descriptionPrefix}\n\n${payloadSummary}` : payloadSummary;
+  const fields: FormFieldSnapshot[] = Array.isArray(formSchema?.fields)
+    ? (formSchema.fields as FormFieldSnapshot[]).filter((field) => typeof field?.key === 'string')
+    : [];
+  const fieldByKey = new Map(fields.map((field) => [field.key as string, field]));
+  const orderedKeys = [
+    ...fields.map((field) => field.key as string).filter((key) => key in payload),
+    ...Object.keys(payload).filter((key) => !fieldByKey.has(key)),
+  ];
+
+  if (orderedKeys.length === 0) {
+    blocks.push(paragraph(emptySummary));
+    return JSON.stringify(blocks);
+  }
+
+  blocks.push({
+    type: 'table',
+    content: {
+      type: 'tableContent',
+      rows: orderedKeys.map((key) => {
+        const field = fieldByKey.get(key);
+        const label = typeof field?.label === 'string' && field.label.trim() ? field.label.trim() : key;
+        return { cells: [textCell(label, true), textCell(describeAnswer(field, payload[key]))] };
+      }),
+    },
+  });
+  return JSON.stringify(blocks);
 }
 
 function validateTicketOnlyExecutionConfig(config: Record<string, unknown>) {
@@ -205,7 +267,7 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
         }
 
         const title = buildTicketTitle(context.payload, context.definitionId, context.config);
-        const description = buildTicketDescription(context.payload, context.config);
+        const description = buildTicketDescription(context.payload, context.config, context.formSchema);
 
         const ticket = await TicketModel.createTicketWithRetry(
           {
