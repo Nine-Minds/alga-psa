@@ -8,7 +8,7 @@
  * The MIME returned is only the *declared* type: the ingest pipeline sniffs the bytes and decides.
  */
 import type { Readable } from 'node:stream';
-import { getStorageConfig } from '@alga-psa/storage/config/storage';
+import { getMaxUploadBytes } from './uploadLimits';
 import { effectiveBufferedCap } from '@alga-psa/storage/ingest/bufferedCap';
 import { LengthRequiredError, PayloadTooLargeError, ValidationError } from '../../middleware/apiMiddleware';
 import type { Knex } from 'knex';
@@ -168,10 +168,7 @@ function fail(source: string, message: string, extra?: Record<string, unknown>):
   throw new ValidationError('Validation failed', [{ path: [source], message, ...extra }]);
 }
 
-export async function getMaxUploadBytes(): Promise<number> {
-  const config = await getStorageConfig();
-  return config.providers[config.defaultProvider].maxFileSize;
-}
+export { getMaxUploadBytes };
 
 function formatLimit(bytes: number): string {
   const mb = bytes / (1024 * 1024);

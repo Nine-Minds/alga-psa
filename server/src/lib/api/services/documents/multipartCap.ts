@@ -12,7 +12,7 @@
  */
 import { effectiveBufferedCap } from '@alga-psa/storage/ingest/bufferedCap';
 import { LengthRequiredError, PayloadTooLargeError } from '../../middleware/apiErrors';
-import { getMaxUploadBytes } from './resolveSource';
+import { getMaxUploadBytes } from './uploadLimits';
 
 /** Whole multipart request (file plus framing), equal to Next's proxyClientMaxBodySize. */
 export const MAX_MULTIPART_REQUEST_BYTES = 100 * 1024 * 1024;
