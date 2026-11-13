@@ -106,6 +106,16 @@ function activityVisuals(type: RecentActivity['type']): {
 }
 
 /**
+ * Optional translated description for an activity row
+ * (`descriptions.<type>.<status>`), used when the server sends none. Only
+ * `service_request.failed` defines one; other rows resolve to '' and render
+ * no description line.
+ */
+function activityDescriptionKey(activity: RecentActivity): string {
+  return `dashboard.activity.descriptions.${activity.type}.${activity.status}`;
+}
+
+/**
  * Resolve the i18n key for an activity row. Some types have status-specific
  * variants (`quote.accepted`, `appointment.declined`); fall back to the
  * type-only key when the status doesn't have a dedicated translation.
@@ -607,11 +617,16 @@ export function ClientDashboard({
                             {timeAgo(activity.timestamp, t, formatDate)}
                           </div>
                         </div>
-                        {activity.description && (
-                          <div className="mt-0.5 text-xs text-[rgb(var(--color-text-600))] line-clamp-2">
-                            {activity.description}
-                          </div>
-                        )}
+                        {(() => {
+                          const description =
+                            activity.description ||
+                            t(activityDescriptionKey(activity), { defaultValue: '' });
+                          return description ? (
+                            <div className="mt-0.5 text-xs text-[rgb(var(--color-text-600))] line-clamp-2">
+                              {description}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     </li>
                   );

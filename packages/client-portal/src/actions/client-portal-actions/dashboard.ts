@@ -100,7 +100,6 @@ type RecentProjectActivityRow = {
 type RecentServiceRequestActivityRow = {
   name: string;
   status: string;
-  execution_error_summary: string | null;
   timestamp: string | Date;
 };
 
@@ -445,7 +444,6 @@ export const getRecentActivity = withAuth(async (
         .select([
           'request_name as name',
           'execution_status as status',
-          'execution_error_summary',
           'created_at as timestamp',
         ])
         .orderBy('created_at', 'desc')
@@ -529,7 +527,9 @@ export const getRecentActivity = withAuth(async (
         title: `Service request: ${s.name}`,
         status: s.status,
         timestamp: s.timestamp instanceof Date ? s.timestamp.toISOString() : s.timestamp,
-        description: s.execution_error_summary || '',
+        // Raw execution error text is internal; the dashboard shows a translated
+        // generic description instead (see ClientDashboard).
+        description: '',
       })),
       ...result.appointments.map((a): RecentActivity => ({
         type: 'appointment',

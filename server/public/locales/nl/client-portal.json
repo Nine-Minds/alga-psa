@@ -134,6 +134,11 @@
           "cancelled": "Afspraak geannuleerd: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Deze aanvraag kon niet worden verwerkt. Neem contact op met uw serviceprovider voor hulp."
+        }
+      },
       "algadeskEmptyHint": "Wanneer tickets worden bijgewerkt, ziet u ze hier."
     },
     "devices": {

@@ -5,8 +5,10 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   getClientServiceRequestSubmissionDetail,
+  getServiceRequestSubmissionDetailForDefinition,
   listClientServiceRequestSubmissions,
 } from '../../lib/service-requests/submissionHistory';
+import { recordServiceRequestSubmissionAudit } from '../../lib/service-requests/submissionAudit';
 
 describe('service request portal history', () => {
   let db: Knex;
@@ -201,11 +203,125 @@ describe('service request portal history', () => {
     const detail = await getClientServiceRequestSubmissionDetail(db, tenant, clientId, submissionId);
     expect(detail).toBeTruthy();
     expect(detail?.attachments).toEqual([
-      expect.objectContaining({
-        file_id: attachmentFileId,
+      {
+        submission_attachment_id: expect.any(String),
+        field_key: null,
         file_name: 'quote.pdf',
         mime_type: 'application/pdf',
-      }),
+      },
     ]);
+    expect(detail?.attachments[0]).not.toHaveProperty('file_id');
+    expect(JSON.stringify(detail)).not.toContain(attachmentFileId);
+  });
+
+  it('client detail allow-lists client audit events and carries no internal fields; admin detail keeps everything', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const clientId = uuidv4();
+    const submissionId = uuidv4();
+
+    await tenantRows().insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+    await tenantTable(tenant, 'service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Hardware Request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+    });
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
+      tenant,
+      version_id: versionId,
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Hardware Request',
+      form_schema_snapshot: { fields: [{ key: 'purchase_quote', label: 'Purchase Quote', type: 'file-upload' }] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    });
+    await tenantTable(tenant, 'service_request_submissions').insert({
+      tenant,
+      submission_id: submissionId,
+      definition_id: definitionId,
+      definition_version_id: versionId,
+      requester_user_id: uuidv4(),
+      client_id: clientId,
+      contact_id: uuidv4(),
+      request_name: 'Hardware Request',
+      submitted_payload: {},
+      execution_status: 'failed',
+      execution_error_summary: 'raw exception text',
+      workflow_execution_id: 'wf_internal_123',
+    });
+    await tenantTable(tenant, 'service_request_submission_attachments').insert({
+      tenant,
+      submission_id: submissionId,
+      file_id: uuidv4(),
+      file_name: 'quote.pdf',
+      mime_type: 'application/pdf',
+      file_size: 1024,
+    });
+
+    const seeded = [
+      ['service_request_submission_created', {}],
+      ['service_request_submission_execution_failed', { error_summary: 'raw exception text' }],
+      ['service_request_submission_mapping_applied', { mapping_version_id: 'm1' }],
+      ['service_request_submission_mapping_field_applied', { resolved_target_ref: 'ticket-1' }],
+      ['service_request_submission_mapping_field_failed', { error_code: 'x' }],
+      ['legacy_unknown_operation', {}],
+    ] as const;
+    for (const [operation, details] of seeded) {
+      await recordServiceRequestSubmissionAudit(db, tenant, operation as never, {
+        submissionId,
+        details: details as Record<string, unknown>,
+      });
+    }
+
+    const detail = await getClientServiceRequestSubmissionDetail(db, tenant, clientId, submissionId);
+    expect(detail?.audit_events.map((event) => event.operation).sort()).toEqual([
+      'service_request_submission_created',
+      'service_request_submission_execution_failed',
+    ]);
+    for (const event of detail?.audit_events ?? []) {
+      expect(Object.keys(event).sort()).toEqual(['actor_name', 'audit_id', 'operation', 'timestamp']);
+    }
+    for (const key of [
+      'workflow_execution_id',
+      'execution_error_summary',
+      'definition_id',
+      'definition_version_id',
+      'definition_version_number',
+    ]) {
+      expect(detail).not.toHaveProperty(key);
+    }
+    expect(detail?.form_schema_snapshot).toBeTruthy();
+    expect(detail?.attachments[0]).not.toHaveProperty('file_id');
+    expect(JSON.stringify(detail)).not.toContain('raw exception text');
+
+    const adminDetail = await getServiceRequestSubmissionDetailForDefinition(
+      db,
+      tenant,
+      definitionId,
+      submissionId
+    );
+    expect(adminDetail?.audit_events).toHaveLength(6);
+    expect(
+      adminDetail?.audit_events.find((event) => event.operation === 'service_request_submission_execution_failed')
+        ?.details
+    ).toMatchObject({ error_summary: 'raw exception text' });
   });
 });

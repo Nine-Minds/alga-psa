@@ -19,13 +19,35 @@
 import type { Knex } from 'knex';
 import { auditLog } from '@alga-psa/db';
 
+/**
+ * Catalog of submission audit operations. Every operation must declare who may
+ * see it: `client` events are shown in the client portal history, `internal`
+ * events (MSP-only, e.g. answer mapping) never reach the portal. Adding an
+ * operation without declaring its audience does not compile.
+ */
+export const SERVICE_REQUEST_SUBMISSION_AUDIT_CATALOG = {
+  service_request_submission_created: { audience: 'client' },
+  service_request_submission_execution_succeeded: { audience: 'client' },
+  service_request_submission_execution_failed: { audience: 'client' },
+  service_request_submission_mapping_applied: { audience: 'internal' },
+  service_request_submission_mapping_field_applied: { audience: 'internal' },
+  service_request_submission_mapping_field_failed: { audience: 'internal' },
+} as const satisfies Record<string, { audience: 'client' | 'internal' }>;
+
 export type ServiceRequestSubmissionAuditOperation =
-  | 'service_request_submission_created'
-  | 'service_request_submission_execution_succeeded'
-  | 'service_request_submission_execution_failed'
-  | 'service_request_submission_mapping_applied'
-  | 'service_request_submission_mapping_field_applied'
-  | 'service_request_submission_mapping_field_failed';
+  keyof typeof SERVICE_REQUEST_SUBMISSION_AUDIT_CATALOG;
+
+export type ClientVisibleSubmissionAuditOperation = {
+  [K in ServiceRequestSubmissionAuditOperation]:
+    (typeof SERVICE_REQUEST_SUBMISSION_AUDIT_CATALOG)[K]['audience'] extends 'client' ? K : never;
+}[ServiceRequestSubmissionAuditOperation];
+
+export const CLIENT_VISIBLE_SUBMISSION_AUDIT_OPERATIONS = (
+  Object.keys(SERVICE_REQUEST_SUBMISSION_AUDIT_CATALOG) as ServiceRequestSubmissionAuditOperation[]
+).filter(
+  (operation): operation is ClientVisibleSubmissionAuditOperation =>
+    SERVICE_REQUEST_SUBMISSION_AUDIT_CATALOG[operation].audience === 'client'
+) as readonly ClientVisibleSubmissionAuditOperation[];
 
 export interface ServiceRequestSubmissionAuditParams {
   submissionId: string;
