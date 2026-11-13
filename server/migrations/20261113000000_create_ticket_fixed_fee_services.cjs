@@ -51,5 +51,11 @@ exports.up = async function up(knex) {
 exports.config = { transaction: false };
 
 exports.down = async function down(knex) {
-  await knex.schema.dropTable('ticket_fixed_fee_services');
+  // The original migration name was deployed on rolling and still owns the table.
+  const original = await knex('knex_migrations')
+    .where({ name: '20261028193400_create_ticket_fixed_fee_services.cjs' })
+    .first('id');
+  if (!original) {
+    await knex.schema.dropTable('ticket_fixed_fee_services');
+  }
 };
