@@ -1,0 +1,361 @@
+import { createHash } from 'node:crypto';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import { coManagedSeatBoardAccess, readCoManagedSeatBoardScope } from './seatArrangement';
+
+/**
+ * Who is responsible for a ticket of a client in a seat arrangement, and the handoff in each
+ * direction.
+ *
+ *   msp --hand to client IT--> client_it --hand to MSP--> msp
+ *
+ * Responsibility is separate from the assignee: a ticket can be with client IT and unassigned.
+ * A ticket with no work row is the MSP's at revision 0, so existing and MSP-created tickets carry
+ * no row. Every handoff names the revision it saw, carries a shared note and an operation id, and
+ * leaves an immutable receipt that a replay of the operation returns.
+ *
+ * Internal commands with no entry point of their own; a caller must authorize the actor's access
+ * to the ticket before using them.
+ */
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_NOTE_LENGTH = 10000;
+const MAX_REVISION = 2147483647;
+
+export type CoManagedSeatResponsibility = 'client_it' | 'msp';
+
+export type CoManagedSeatHandoffErrorCode = 'INVALID_HANDOFF' | 'TICKET_NOT_FOUND' | 'NO_SEAT_ARRANGEMENT' |
+  'OPERATION_CONFLICT' | 'HANDOFF_CHANGED' | 'ALREADY_RESPONSIBLE' | 'ACTOR_NOT_ALLOWED' | 'BOARD_OUT_OF_SCOPE' |
+  'TECHNICIAN_NOT_AVAILABLE';
+
+export class CoManagedSeatHandoffError extends Error {
+  constructor(public readonly code: CoManagedSeatHandoffErrorCode) {
+    super(({
+      INVALID_HANDOFF: 'Provide a valid handoff with a shared IT note.',
+      TICKET_NOT_FOUND: 'This ticket is no longer available.',
+      NO_SEAT_ARRANGEMENT: 'This ticket\'s client has no co-managed seat arrangement.',
+      OPERATION_CONFLICT: 'This handoff was started with different details.',
+      HANDOFF_CHANGED: 'This ticket was handed off or reassigned. Refresh the ticket before trying again.',
+      ALREADY_RESPONSIBLE: 'Responsibility for this ticket is already as requested. Refresh the ticket to see who is responsible now.',
+      ACTOR_NOT_ALLOWED: 'You cannot hand this ticket off.',
+      BOARD_OUT_OF_SCOPE: 'This ticket\'s board is not shared with client IT.',
+      TECHNICIAN_NOT_AVAILABLE: 'The selected technician is no longer available for this client.',
+    } satisfies Record<CoManagedSeatHandoffErrorCode, string>)[code]);
+    this.name = 'CoManagedSeatHandoffError';
+  }
+}
+
+/** A ticket's responsibility as it now stands. `revision` is what the next handoff must name. */
+export interface CoManagedSeatTicketWork {
+  arrangementId: string;
+  responsibility: CoManagedSeatResponsibility;
+  /** Zero until the ticket's first handoff or recorded reassignment. */
+  revision: number;
+}
+
+export interface CoManagedSeatHandoffRequest {
+  sponsorTenant: string;
+  ticketId: string;
+  actorUserId: string;
+  /** Idempotency key: a replay of the same request returns the original receipt. */
+  operationId: string;
+  /** The work revision the actor saw. Zero before the ticket's first handoff. */
+  expectedRevision: number;
+  /** Plain text, shared with MSP staff and the client's technicians. */
+  note: string;
+}
+
+export interface CoManagedSeatHandToClientItRequest extends CoManagedSeatHandoffRequest {
+  /** A technician of the ticket's client to assign the ticket to. Omitted: the assignee is left as it is. */
+  technicianUserId?: string | null;
+}
+
+export interface CoManagedSeatHandoffReceipt {
+  operationId: string;
+  ticketId: string;
+  arrangementId: string;
+  from: CoManagedSeatResponsibility;
+  to: CoManagedSeatResponsibility;
+  /** The work revision this handoff produced. */
+  revision: number;
+  note: string;
+  actorUserId: string;
+  /** Who the handoff left the ticket assigned to, if anyone. */
+  assignedTo: string | null;
+  occurredAt: string;
+}
+
+/**
+ * What an arrangement applies to a ticket handed to the MSP. Stored in
+ * `co_managed_seat_arrangements.handoff_defaults`; `{}` applies nothing.
+ */
+export interface CoManagedSeatHandoffDefaults {
+  /** The MSP user who receives a handed-over ticket that would otherwise be unassigned. */
+  assigned_to?: string;
+}
+
+/** Reads stored handoff defaults, dropping anything that is not a known, well-formed key. */
+export function coManagedSeatHandoffDefaults(stored: unknown): CoManagedSeatHandoffDefaults {
+  const assignedTo = (stored as { assigned_to?: unknown } | null)?.assigned_to;
+  return typeof assignedTo === 'string' && uuid.test(assignedTo) ? { assigned_to: assignedTo.toLowerCase() } : {};
+}
+
+type Sponsor = ReturnType<typeof tenantDb>;
+interface ArrangementRow { arrangement_id: string; handoff_defaults: unknown }
+interface WorkRow { arrangement_id: string; responsibility: CoManagedSeatResponsibility; revision: number }
+
+/** The client's live arrangement. `lock` holds it to commit, so it cannot end under a handoff. */
+async function liveArrangement(sponsor: Sponsor, clientId: string | null, lock = false): Promise<ArrangementRow | undefined> {
+  if (!clientId) return undefined;
+  const query = sponsor.table('co_managed_seat_arrangements').where({ client_id: clientId, state: 'active' });
+  return (lock ? query.forShare() : query).first('arrangement_id', 'handoff_defaults');
+}
+
+/**
+ * A work row written under an earlier arrangement keeps the ticket's revision, so receipts stay
+ * ordered, but not its responsibility: under a new arrangement the ticket starts with the MSP.
+ */
+function workResult(arrangement: ArrangementRow, row: WorkRow | undefined): CoManagedSeatTicketWork {
+  return {
+    arrangementId: arrangement.arrangement_id,
+    responsibility: row && row.arrangement_id === arrangement.arrangement_id ? row.responsibility : 'msp',
+    revision: row?.revision ?? 0,
+  };
+}
+
+/**
+ * Who is responsible for a ticket. Null when the ticket's client has no live seat arrangement:
+ * such a ticket has no responsibility at all. `msp` at revision 0 when nothing has been handed
+ * off yet.
+ */
+export async function readCoManagedSeatTicketWork(
+  db: Knex | Knex.Transaction,
+  input: { sponsorTenant: string; ticketId: string },
+): Promise<CoManagedSeatTicketWork | null> {
+  if (![input.sponsorTenant, input.ticketId].every((id) => uuid.test(id))) return null;
+  const sponsor = tenantDb(db, input.sponsorTenant);
+  const ticket = await sponsor.table('tickets').where('ticket_id', input.ticketId).first('client_id');
+  const arrangement = ticket && await liveArrangement(sponsor, ticket.client_id);
+  if (!arrangement) return null;
+  return workResult(arrangement, await sponsor.table('co_managed_seat_ticket_work').where('ticket_id', input.ticketId).first());
+}
+
+/** Moves a ticket's work revision on, keeping who is responsible. Caller holds the ticket row lock. */
+async function writeWork(
+  sponsor: Sponsor,
+  key: { tenant: string; ticket_id: string },
+  arrangementId: string,
+  responsibility: CoManagedSeatResponsibility,
+  previous: WorkRow | undefined,
+  transition: boolean,
+): Promise<number> {
+  const revision = (previous?.revision ?? 0) + 1;
+  const now = new Date();
+  // write-admission: exempt — seat responsibility state, written by its owning command under the ticket lock
+  if (!previous) await sponsor.table('co_managed_seat_ticket_work').insert({ ...key, arrangement_id: arrangementId,
+    responsibility, revision, last_transition_at: now });
+  // write-admission: exempt — seat responsibility state, written by its owning command under the ticket lock
+  else await sponsor.table('co_managed_seat_ticket_work').where('ticket_id', key.ticket_id).update({
+    arrangement_id: arrangementId, responsibility, revision, updated_at: now, ...(transition ? { last_transition_at: now } : {}) });
+  return revision;
+}
+
+/**
+ * The seam a ticket reassignment registers into: moves the ticket's work revision on, so a
+ * handoff prepared before the reassignment is refused as stale. Runs in the caller's transaction,
+ * after it has locked the ticket row. Returns the new revision, or null (writing nothing) when
+ * the ticket's client has no live seat arrangement.
+ */
+export async function recordCoManagedSeatTicketReassignment(
+  trx: Knex.Transaction,
+  input: { sponsorTenant: string; ticketId: string },
+): Promise<number | null> {
+  if (![input.sponsorTenant, input.ticketId].every((id) => uuid.test(id))) return null;
+  const sponsor = tenantDb(trx, input.sponsorTenant);
+  const ticket = await sponsor.table('tickets').where('ticket_id', input.ticketId).forUpdate().first('client_id');
+  const arrangement = ticket && await liveArrangement(sponsor, ticket.client_id, true);
+  if (!arrangement) return null;
+  const previous: WorkRow | undefined = await sponsor.table('co_managed_seat_ticket_work')
+    .where('ticket_id', input.ticketId).forUpdate().first();
+  return writeWork(sponsor, { tenant: input.sponsorTenant, ticket_id: input.ticketId }, arrangement.arrangement_id,
+    workResult(arrangement, previous).responsibility, previous, false);
+}
+
+interface HandoffContext {
+  sponsor: Sponsor;
+  trx: Knex.Transaction;
+  request: CoManagedSeatHandToClientItRequest;
+  ticket: { board_id: string | null; assigned_to: string | null };
+  arrangement: ArrangementRow;
+}
+
+/** What differs between the two handoffs: who may ask, and who the ticket is left assigned to. */
+interface HandoffDirection {
+  /** Throws unless this actor may hand this ticket this way. */
+  admit(context: HandoffContext): Promise<void>;
+  /** The ticket's assignee after the handoff. */
+  assignee(context: HandoffContext): Promise<string | null>;
+}
+
+/** The live seat a user holds, if any. A user holds at most one. */
+const liveSeat = (sponsor: Sponsor, userId: string): Promise<{ arrangement_id: string; state: string } | undefined> =>
+  sponsor.table('co_managed_seat_assignments').where('user_id', userId).whereNot('state', 'revoked').first('arrangement_id', 'state');
+
+const activeInternalUser = async (sponsor: Sponsor, userId: string): Promise<boolean> =>
+  Boolean(await sponsor.table('users').where({ user_id: userId, user_type: 'internal', is_inactive: false }).first('user_id'));
+
+/** An active technician of this arrangement: the seat is accepted and the user can sign in. */
+const isTechnicianOf = async (sponsor: Sponsor, arrangementId: string, userId: string): Promise<boolean> => {
+  const seat = await liveSeat(sponsor, userId);
+  return seat?.arrangement_id === arrangementId && seat.state === 'active' && await activeInternalUser(sponsor, userId);
+};
+
+/** MSP staff: an active internal user who is not anyone's seat technician. */
+const isMspStaff = async (sponsor: Sponsor, userId: string): Promise<boolean> =>
+  await activeInternalUser(sponsor, userId) && !await liveSeat(sponsor, userId);
+
+const DIRECTIONS: Record<CoManagedSeatResponsibility, HandoffDirection> = {
+  // Hand to MSP: asked by a technician of the ticket's client.
+  msp: {
+    async admit({ sponsor, arrangement, request }) {
+      if (!await isTechnicianOf(sponsor, arrangement.arrangement_id, request.actorUserId)) {
+        throw new CoManagedSeatHandoffError('ACTOR_NOT_ALLOWED');
+      }
+    },
+    async assignee({ sponsor, arrangement, ticket }) {
+      // A technician assignee does not follow the ticket to the MSP; an MSP assignee stays.
+      const kept = ticket.assigned_to && !await liveSeat(sponsor, ticket.assigned_to) ? ticket.assigned_to : null;
+      if (kept) return kept;
+      // A default that no longer names MSP staff is skipped: the technician cannot repair the
+      // MSP's settings, and the ticket arrives unassigned on its board like any other.
+      const fallback = coManagedSeatHandoffDefaults(arrangement.handoff_defaults).assigned_to;
+      return fallback && await isMspStaff(sponsor, fallback) ? fallback : null;
+    },
+  },
+  // Hand to client IT: asked by MSP staff, only on a board the arrangement shares.
+  client_it: {
+    async admit({ sponsor, trx, arrangement, ticket, request }) {
+      if (!await isMspStaff(sponsor, request.actorUserId)) throw new CoManagedSeatHandoffError('ACTOR_NOT_ALLOWED');
+      const scope = await readCoManagedSeatBoardScope(trx, { sponsorTenant: request.sponsorTenant, arrangementId: arrangement.arrangement_id });
+      if (!ticket.board_id || coManagedSeatBoardAccess(scope, ticket.board_id) === 'none') {
+        throw new CoManagedSeatHandoffError('BOARD_OUT_OF_SCOPE');
+      }
+      if (request.technicianUserId && !await isTechnicianOf(sponsor, arrangement.arrangement_id, request.technicianUserId)) {
+        throw new CoManagedSeatHandoffError('TECHNICIAN_NOT_AVAILABLE');
+      }
+    },
+    async assignee({ ticket, request }) {
+      return request.technicianUserId ?? ticket.assigned_to;
+    },
+  },
+};
+
+function snapshotRequest(input: CoManagedSeatHandToClientItRequest): CoManagedSeatHandToClientItRequest {
+  const technician = input?.technicianUserId ?? null;
+  if (!input || ![input.sponsorTenant, input.ticketId, input.actorUserId, input.operationId].every((id) => typeof id === 'string' && uuid.test(id)) ||
+      (technician !== null && (typeof technician !== 'string' || !uuid.test(technician))) ||
+      !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0 || input.expectedRevision >= MAX_REVISION ||
+      typeof input.note !== 'string' || !input.note.trim() || input.note.trim().length > MAX_NOTE_LENGTH || input.note.includes('\0')) {
+    throw new CoManagedSeatHandoffError('INVALID_HANDOFF');
+  }
+  return {
+    sponsorTenant: input.sponsorTenant.toLowerCase(), ticketId: input.ticketId.toLowerCase(),
+    actorUserId: input.actorUserId.toLowerCase(), operationId: input.operationId.toLowerCase(),
+    expectedRevision: input.expectedRevision, note: input.note.trim(), technicianUserId: technician?.toLowerCase() ?? null,
+  };
+}
+
+/**
+ * Who asked, for which ticket, to do what, with which payload. Mutable state is left out, so a
+ * retry after later handoffs still finds its original receipt.
+ */
+function fingerprint(to: CoManagedSeatResponsibility, request: CoManagedSeatHandToClientItRequest): string {
+  return createHash('sha256').update(JSON.stringify([request.sponsorTenant, request.ticketId, request.actorUserId, to,
+    request.operationId, request.expectedRevision, request.note, request.technicianUserId])).digest('hex');
+}
+
+function receipt(row: any): CoManagedSeatHandoffReceipt {
+  return {
+    operationId: row.operation_id, ticketId: row.ticket_id, arrangementId: row.arrangement_id,
+    from: row.from_responsibility, to: row.to_responsibility, revision: row.revision, note: row.note,
+    actorUserId: row.actor_user_id, assignedTo: row.assigned_to ?? null, occurredAt: new Date(row.occurred_at).toISOString(),
+  };
+}
+
+/**
+ * The one transition both handoffs are. Locks the ticket row first, so commands on one ticket
+ * serialise: of two handoffs naming the same revision exactly one wins and the other is
+ * `HANDOFF_CHANGED`. Refusals are not recorded, so a refused request may be retried under the
+ * same operation id.
+ */
+async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManagedSeatHandToClientItRequest): Promise<CoManagedSeatHandoffReceipt> {
+  const request = snapshotRequest(input);
+  const requestFingerprint = fingerprint(to, request);
+
+  return db.transaction(async (trx) => {
+    const sponsor = tenantDb(trx, request.sponsorTenant);
+    const ticket = await sponsor.table('tickets').where('ticket_id', request.ticketId).forUpdate()
+      .first('client_id', 'board_id', 'assigned_to');
+
+    // Looked up under the ticket lock when the ticket exists, so a concurrent replay waits for the first attempt.
+    const prior = await sponsor.table('co_managed_seat_ticket_handoffs').where('operation_id', request.operationId).first();
+    if (prior) {
+      if (prior.request_fingerprint !== requestFingerprint) throw new CoManagedSeatHandoffError('OPERATION_CONFLICT');
+      // The original receipt, whatever has happened to the ticket since.
+      return receipt(prior);
+    }
+    if (!ticket) throw new CoManagedSeatHandoffError('TICKET_NOT_FOUND');
+    const arrangement = await liveArrangement(sponsor, ticket.client_id, true);
+    if (!arrangement) throw new CoManagedSeatHandoffError('NO_SEAT_ARRANGEMENT');
+
+    const previous: WorkRow | undefined = await sponsor.table('co_managed_seat_ticket_work')
+      .where('ticket_id', request.ticketId).forUpdate().first();
+    const work = workResult(arrangement, previous);
+    if (work.revision !== request.expectedRevision) throw new CoManagedSeatHandoffError('HANDOFF_CHANGED');
+    if (work.responsibility === to) throw new CoManagedSeatHandoffError('ALREADY_RESPONSIBLE');
+
+    const context: HandoffContext = { sponsor, trx, request, ticket, arrangement };
+    await DIRECTIONS[to].admit(context);
+    const assignedTo = await DIRECTIONS[to].assignee(context);
+
+    if (assignedTo !== ticket.assigned_to) {
+      // LEVERAGE: friction seat-handoff-assignee — the assignee is set on the ticket row directly; the native assignment writer's side effects (events, notifications) are not reachable from a seat command
+      await sponsor.table('tickets').where('ticket_id', request.ticketId)
+        .update({ assigned_to: assignedTo, updated_by: request.actorUserId, updated_at: new Date() });
+    }
+    const key = { tenant: request.sponsorTenant, ticket_id: request.ticketId };
+    const revision = await writeWork(sponsor, key, arrangement.arrangement_id, to, previous, true);
+    // write-admission: exempt — append-only receipt of the handoff, written by its owning command under the ticket lock
+    const [row] = await sponsor.table('co_managed_seat_ticket_handoffs').insert({ ...key, operation_id: request.operationId,
+      arrangement_id: arrangement.arrangement_id, revision, from_responsibility: work.responsibility, to_responsibility: to,
+      request_fingerprint: requestFingerprint, note: request.note, actor_user_id: request.actorUserId,
+      assigned_to: assignedTo }).returning('*');
+    return receipt(row);
+  });
+}
+
+/**
+ * A seat technician hands a ticket to the MSP. Responsibility becomes `msp`, a technician
+ * assignee is cleared, and the arrangement's handoff defaults apply to a ticket left unassigned.
+ *
+ * Refuses with `ACTOR_NOT_ALLOWED` unless the actor is an active technician of the ticket's
+ * client, and with every reason a handoff refuses for: `INVALID_HANDOFF` (no shared note),
+ * `TICKET_NOT_FOUND`, `NO_SEAT_ARRANGEMENT`, `HANDOFF_CHANGED` (stale revision),
+ * `ALREADY_RESPONSIBLE` and `OPERATION_CONFLICT` (the operation id reused with other details).
+ */
+export function handCoManagedSeatTicketToMsp(db: Knex, input: CoManagedSeatHandoffRequest): Promise<CoManagedSeatHandoffReceipt> {
+  // Naming a technician is not part of this direction; it is dropped, not refused.
+  return handOff(db, 'msp', { ...input, technicianUserId: null });
+}
+
+/**
+ * MSP staff hand a ticket to client IT, optionally to a named technician of the ticket's client.
+ * Responsibility becomes `client_it`; without a named technician the assignee is left as it is.
+ *
+ * Refuses with `BOARD_OUT_OF_SCOPE` when the arrangement does not share the ticket's board, with
+ * `TECHNICIAN_NOT_AVAILABLE` when the named user is not an active technician of this client, with
+ * `ACTOR_NOT_ALLOWED` unless the actor is MSP staff, and with every reason a handoff refuses for.
+ */
+export function handCoManagedSeatTicketToClientIt(db: Knex, input: CoManagedSeatHandToClientItRequest): Promise<CoManagedSeatHandoffReceipt> {
+  return handOff(db, 'client_it', input);
+}
