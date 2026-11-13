@@ -2,6 +2,64 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-09 — Inbound webhook receiver: `429 evaluator_busy` and mapping limits
+
+**Affected endpoint:** `POST /api/inbound/{tenantSlug}/{webhookSlug}`
+
+The workflow expression engine evaluates inbound webhook idempotency expressions and field mappings. It now has hard resource limits and a shared admission queue, so a flood of requests or one runaway expression can no longer exhaust the server. Senders can see two new receiver responses.
+
+**Changes:**
+
+- **`429` with `Retry-After`.** When every expression slot is busy and the request cannot get one in time, the receiver returns `429` with body `{"error": "evaluator_busy"}`, plus `delivery_id` once the delivery has been recorded. This error is retryable. Senders should wait the number of seconds in `Retry-After` and resend the same payload. A `429` delivery is recorded as failed, so the duplicate check does not block the retry, even when it carries the same idempotency key.
+- **Per-delivery mapping budget.** All expression work for one delivery, including idempotency-key extraction and every field mapping, is capped at about 3 seconds of CPU time and 15 seconds of elapsed time. Each single evaluation is also capped (250 ms CPU, 2 s elapsed). A delivery that exceeds a cap returns `400` with `{"error": "mapping_failed"}` and is recorded as a failed delivery. Retrying it does not help; simplify the mapping instead.
+- **Expression size limits.** Workflow and mapping expressions are now limited to 8 KB of source, 1,024 syntax nodes, nesting depth 64, 4,096 evaluation steps, 4,096 items for range expressions, 4 MB of intermediate data and 256 KB of output. Expressions over these limits are rejected when a workflow is validated or published. At runtime they fail like any other expression error. The old configurable wall-clock timeout for expressions was removed.
+
+Self-hosted operators can tune the shared admission queue with `WORKFLOW_EVAL_MAX_CONCURRENCY` (default 6, range 1–64) and `WORKFLOW_EVAL_QUEUE_TIMEOUT_MS` (default 2000).
+
+## 2026-11-09 — Quote status can no longer be set with PUT; new cancel command
+
+**Affected endpoints:** `PUT /api/v1/quotes/{id}`, new `POST /api/v1/quotes/{id}/cancel`
+
+`PUT /api/v1/quotes/{id}` used to accept a `status` field. A caller with only `billing:update` could therefore move a quote from `pending_approval` to `approved` or `sent` and skip the `/approve` route, which requires `quotes:approve` and applies the self-approval policy. Quote status is now changed only through the named lifecycle commands, each with its own permission check and activity row.
+
+**Changes:**
+
+- `PUT /quotes/{id}` no longer accepts `status`, and the request body is now strict. A body that contains `status`, or any other unknown field, returns `400 VALIDATION_ERROR` (`unrecognized_keys`) and nothing is written, including the other fields in the same request. This applies to every role. Editable fields such as `title` or `po_number` behave as before.
+- To change status, use the command for that transition: `/submit-for-approval`, `/approve`, `/send`, or the new `/cancel`.
+- `POST /quotes/{id}/cancel` cancels a quote. It takes an optional `reason` (up to 2000 characters) and requires `billing:update`. A quote can be cancelled from `draft`, `pending_approval`, `approved`, `sent`, `accepted`, `rejected` or `expired`. Cancelling an already-cancelled quote returns `200` and changes nothing. Cancelling a `converted`, `superseded` or `archived` quote returns `409`. A successful cancel records `status_changed` and `cancelled` entries in `GET /quotes/{id}/activities`.
+
+**Migration note:** If an integration cancels quotes with `PUT {"status": "cancelled"}`, switch it to `POST /quotes/{id}/cancel`. Any integration that sends `status` on `PUT` now gets `400`.
+
+## 2026-11-09 — Bulk invoice operations limited to finalize and cancel
+
+**Affected endpoint:** `POST /api/v1/financial/bulk/invoices`
+
+The bulk invoice endpoint now runs each invoice through the same service operation and permission checks as the single-invoice endpoints. Before this change, the bulk path wrote invoice status directly and bypassed those checks.
+
+**Changes:**
+
+- `operation` accepts only `finalize` and `cancel`. Any other value returns `400` before an invoice is processed.
+  - `finalize` runs the normal finalize operation and requires `invoice:finalize`.
+  - `cancel` voids each invoice through the normal void operation. When an accounting integration is connected, the void also requires `accounting_integrations:remote_mutate`.
+- The caller also needs `invoice:update`. Permissions are checked once, before any invoice in the batch is processed.
+- `send` was removed. Requests with `operation: "send"`, including those that pass `email_addresses`, now fail validation. Bulk invoice email will return once it uses the same recipient delivery as single invoices. Until then, send invoices one at a time.
+- `apply_credit` is still unsupported, because the earlier bulk command reported success without applying credit. Apply credit per invoice with `POST /api/v1/financial/invoices/{id}/credit`.
+- `invoice_ids` must contain 1 to 50 IDs. Each invoice is processed independently. Each entry in `results` reports `success` and `error`, plus an `outcome` of `finalized` or `voided` when the operation succeeds.
+
+## 2026-11-09 — Time-sheet status changes through PUT follow the approval rules
+
+**Affected endpoint:** `PUT /api/v1/time-sheets/{id}`
+
+`PUT /time-sheets/{id}` used to write `approval_status` like an ordinary field, so a technician could approve their own time sheet through the API. `approval_status` is now derived state. When a `PUT` carries a different `approval_status`, the change goes through the same transition rules as `/submit`, `/approve` and `/request-changes`, in the same transaction as the other fields.
+
+**Changes:**
+
+- `SUBMITTED` is allowed from `DRAFT` or `CHANGES_REQUESTED`, only by the sheet's owner, and only when the sheet has at least one time entry.
+- `APPROVED` is allowed from `SUBMITTED` and requires `time_sheet:approve`. It sets `approved_at` and `approved_by` and approves the sheet's entries.
+- `CHANGES_REQUESTED` is allowed from `SUBMITTED` and requires a non-blank `change_reason`. Without one, the request returns `400` before anything is written.
+- Any other target status returns `409`. A refused transition returns `403`, `400` or `409` and rolls back every field in the request, not just the status.
+- Acting on another user's time sheet requires `time_sheet:manage`, and so does any change to an `APPROVED` sheet. `time_sheet:update` covers only the caller's own sheets. Holding `time_sheet:approve` alone does not allow a status change through `PUT` on someone else's sheet; use `/approve` or `/request-changes` instead.
+
 ## 2026-11-03 — Ticket templates over REST (and MCP)
 
 **New endpoints:** `GET|POST /api/v1/tickets/templates`, `GET|PUT|DELETE /api/v1/tickets/templates/{templateId}`, `POST /api/v1/tickets/templates/{templateId}/instantiate`
