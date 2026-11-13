@@ -353,7 +353,7 @@ export class TenantEmailService extends BaseEmailService {
     }
 
     try {
-      const result = await rateLimiter.tryConsume('email', tenantId, userId);
+      const result = await rateLimiter.tryConsumeAtomic('email', tenantId, userId);
 
       if (!result.allowed) {
         return {
