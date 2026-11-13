@@ -78,6 +78,8 @@ describe('ticket fixed-fee billing window', () => {
     ]);
     expect(feeFilters).toContainEqual(['f.created_at', '<', period.endDate]);
     expect(feeFilters).not.toContainEqual(['f.created_at', '>=', period.startDate]);
+    // Without a lower date bound, only the unbilled predicate keeps billed fees out of later invoices.
+    expect(feeFilters).toContainEqual([expect.objectContaining({ 'f.is_billed': false, 'f.currency_code': 'USD' })]);
   });
 
   it('includes older unbilled ticket materials before the period end without a lower date bound', async () => {
@@ -151,5 +153,6 @@ describe('ticket fixed-fee billing window', () => {
     ]);
     expect(materialFilters).toContainEqual(['tm.created_at', '<', period.endDate]);
     expect(materialFilters).not.toContainEqual(['tm.created_at', '>=', period.startDate]);
+    expect(materialFilters).toContainEqual([expect.objectContaining({ 'tm.is_billed': false, 'tm.currency_code': 'USD' })]);
   });
 });
