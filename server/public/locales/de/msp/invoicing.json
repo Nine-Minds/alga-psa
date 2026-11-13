@@ -909,21 +909,21 @@
       "none": "keine"
     },
     "syncFeedback": {
-      "synced": "Invoice synced to {{provider}}.",
-      "failed": "{{provider}} sync failed: {{reason}}",
-      "failedNoReason": "{{provider}} sync failed. Check the Errored ops list on the accounting integration page.",
-      "skipped": "Invoice was skipped and not sent to {{provider}}: {{reason}}",
-      "skippedNoReason": "Invoice was skipped and not sent to {{provider}}.",
-      "pending": "Invoice is queued for {{provider}} sync; it has not been processed yet.",
-      "unknown": "Could not determine whether the invoice was synced to {{provider}}.",
-      "notRun": "{{provider}} sync did not run: {{reason}}",
-      "notRunNoReason": "{{provider}} sync did not run.",
-      "error": "Sync failed: {{error}}",
-      "refusedNotFound": "Invoice not found.",
-      "refusedPaid": "Paid invoices are not synced to {{provider}}.",
-      "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}.",
-      "cycleFailed": "{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.",
-      "cycleFailedNoReason": "{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync."
+      "synced": "Rechnung mit {{provider}} synchronisiert.",
+      "failed": "{{provider}}-Synchronisierung fehlgeschlagen: {{reason}}",
+      "failedNoReason": "{{provider}}-Synchronisierung fehlgeschlagen. Prüfen Sie die Liste der fehlgeschlagenen Vorgänge auf der Seite der Buchhaltungsintegration.",
+      "skipped": "Die Rechnung wurde übersprungen und nicht an {{provider}} gesendet: {{reason}}",
+      "skippedNoReason": "Die Rechnung wurde übersprungen und nicht an {{provider}} gesendet.",
+      "pending": "Die Rechnung steht zur Synchronisierung mit {{provider}} an; sie wurde noch nicht verarbeitet.",
+      "unknown": "Es konnte nicht ermittelt werden, ob die Rechnung mit {{provider}} synchronisiert wurde.",
+      "notRun": "{{provider}}-Synchronisierung wurde nicht ausgeführt: {{reason}}",
+      "notRunNoReason": "{{provider}}-Synchronisierung wurde nicht ausgeführt.",
+      "error": "Synchronisierung fehlgeschlagen: {{error}}",
+      "refusedNotFound": "Rechnung nicht gefunden.",
+      "refusedPaid": "Bezahlte Rechnungen werden nicht mit {{provider}} synchronisiert.",
+      "refusedCancelled": "Stornierte Rechnungen werden nicht mit {{provider}} synchronisiert.",
+      "cycleFailed": "{{provider}}-Synchronisierung fehlgeschlagen: {{reason}} Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht.",
+      "cycleFailedNoReason": "{{provider}}-Synchronisierung fehlgeschlagen. Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht."
     }
   },
   "templateEditor": {

@@ -909,21 +909,21 @@
       "none": "nessuno"
     },
     "syncFeedback": {
-      "synced": "Invoice synced to {{provider}}.",
-      "failed": "{{provider}} sync failed: {{reason}}",
-      "failedNoReason": "{{provider}} sync failed. Check the Errored ops list on the accounting integration page.",
-      "skipped": "Invoice was skipped and not sent to {{provider}}: {{reason}}",
-      "skippedNoReason": "Invoice was skipped and not sent to {{provider}}.",
-      "pending": "Invoice is queued for {{provider}} sync; it has not been processed yet.",
-      "unknown": "Could not determine whether the invoice was synced to {{provider}}.",
-      "notRun": "{{provider}} sync did not run: {{reason}}",
-      "notRunNoReason": "{{provider}} sync did not run.",
-      "error": "Sync failed: {{error}}",
-      "refusedNotFound": "Invoice not found.",
-      "refusedPaid": "Paid invoices are not synced to {{provider}}.",
-      "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}.",
-      "cycleFailed": "{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.",
-      "cycleFailedNoReason": "{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync."
+      "synced": "Fattura sincronizzata con {{provider}}.",
+      "failed": "Sincronizzazione con {{provider}} non riuscita: {{reason}}",
+      "failedNoReason": "Sincronizzazione con {{provider}} non riuscita. Controlla l’elenco delle operazioni in errore nella pagina dell’integrazione contabile.",
+      "skipped": "La fattura è stata ignorata e non è stata inviata a {{provider}}: {{reason}}",
+      "skippedNoReason": "La fattura è stata ignorata e non è stata inviata a {{provider}}.",
+      "pending": "La fattura è in coda per la sincronizzazione con {{provider}}; non è ancora stata elaborata.",
+      "unknown": "Impossibile determinare se la fattura è stata sincronizzata con {{provider}}.",
+      "notRun": "La sincronizzazione con {{provider}} non è stata eseguita: {{reason}}",
+      "notRunNoReason": "La sincronizzazione con {{provider}} non è stata eseguita.",
+      "error": "Sincronizzazione non riuscita: {{error}}",
+      "refusedNotFound": "Fattura non trovata.",
+      "refusedPaid": "Le fatture pagate non vengono sincronizzate con {{provider}}.",
+      "refusedCancelled": "Le fatture annullate non vengono sincronizzate con {{provider}}.",
+      "cycleFailed": "Sincronizzazione con {{provider}} non riuscita: {{reason}} La fattura non è stata inviata; resta in coda e verrà ritentata alla prossima sincronizzazione.",
+      "cycleFailedNoReason": "Sincronizzazione con {{provider}} non riuscita. La fattura non è stata inviata; resta in coda e verrà ritentata alla prossima sincronizzazione."
     }
   },
   "templateEditor": {
