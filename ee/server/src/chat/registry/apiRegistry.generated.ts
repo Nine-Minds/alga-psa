@@ -3831,13 +3831,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -4072,13 +4074,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -4183,7 +4187,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       }
     },
@@ -4561,7 +4566,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       }
     },
@@ -5776,13 +5782,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
