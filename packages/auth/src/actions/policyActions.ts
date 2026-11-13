@@ -9,7 +9,7 @@ import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttr
 import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorRejected, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
-import { filterPermissionsByServedCapabilities } from '../lib/permissionCapabilities';
+import { filterPermissionsByServedCapabilities, filterRolesByServedCapabilities } from '../lib/permissionCapabilities';
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -358,10 +358,12 @@ export const deleteRole = withAuth(async (
 
 export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const roles = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await tenantScopedTable(trx, 'roles', tenant)
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
+    // A role that exists only for a capability is never listed for a tenant not served for it.
+    return filterRolesByServedCapabilities(tenant, roles);
 });
 
 // Role-Permission actions
