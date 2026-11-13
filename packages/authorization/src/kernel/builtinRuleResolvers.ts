@@ -137,7 +137,7 @@ export async function loadBuiltinResolverFacts(
 ): Promise<Record<string, unknown> | undefined> {
   const expression = builtinResolverFactsExpression(knex, subject);
   if (!expression) return undefined;
-  const row = await knex.queryBuilder().select({ facts: expression }).first<{ facts: Record<string, unknown> | null }>();
+  const row = await knex.queryBuilder().select(knex.raw('? as facts', [expression])).first<{ facts: Record<string, unknown> | null }>();
   if (!row?.facts || typeof row.facts !== 'object') throw new Error('Built-in resolver facts unavailable');
   return row.facts;
 }

@@ -5,7 +5,6 @@ import type { BundleNarrowingRule } from '../kernel/providers/bundleProvider';
 import { assertBundleRuleCatalogInput } from './catalog';
 import { publishedAssignmentsQuery } from './publishedAssignments';
 import { peekTenantAuthorizationScope } from '../subject/tenantScope';
-import { builtinResolverFactsExpression } from '../kernel/builtinRuleResolvers';
 
 export type AuthorizationBundleTargetType = 'role' | 'team' | 'user' | 'api_key';
 
@@ -1218,8 +1217,6 @@ export interface AuthorizationEvaluationSnapshot {
   managedUserIds: string[];
   portfolioClientIds: string[];
   rules: BundleRuleRow[];
-  /** Facts of registered built-in rule resolvers, keyed by resolver id. Absent when none declares a fact source. */
-  resolverFacts?: Record<string, unknown>;
 }
 
 /**
@@ -1257,21 +1254,17 @@ export function authorizationEvaluationSnapshotQuery(
   const aggregate = (query: Knex.QueryBuilder, value: string) =>
     knex.select(knex.raw("coalesce(jsonb_agg(??), '[]'::jsonb)", [value])).from(query.as('facts'));
 
-  // Resolver facts ride in the same statement; with no fact source registered the statement is unchanged.
-  const resolverFacts = builtinResolverFactsExpression(knex, subject);
-
   return knex.queryBuilder()
     .with('evaluation_roles', roles)
     .with('evaluation_teams', teams)
     .select(knex.raw(`jsonb_build_object(
       'roleIds', (?), 'teamIds', (?), 'managedUserIds', (?), 'portfolioClientIds', (?), 'rules', (?)
-    )${resolverFacts ? " || jsonb_build_object('resolverFacts', ?)" : ''}`, [
+    )`, [
       aggregate(knex.select('role_id').from('evaluation_roles'), 'role_id'),
       aggregate(knex.select('team_id').from('evaluation_teams'), 'team_id'),
       aggregate(managed, 'user_id'),
       aggregate(portfolio, 'client_id'),
       aggregate(rules, 'facts'),
-      ...(resolverFacts ? [resolverFacts] : []),
     ]));
 }
 
