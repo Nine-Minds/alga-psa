@@ -4,7 +4,9 @@ import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import {
+  audiencesVisibleTo, commentAudienceVisibleSql, resolveCommentAudienceReader, type CommentAudienceReader,
+} from '@alga-psa/shared/lib/commentAudience';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
 
@@ -68,6 +70,13 @@ export interface SearchAclPrincipal {
   roles?: string[];
   isInternal?: boolean;
   clientAccess: ClientAccess;
+  /**
+   * The organization an internal principal reads comments as (`resolveCommentAudienceReader`).
+   * `staff` sees every audience stored in its tenant; a `seat` technician sees the audiences the
+   * shared predicate admits on its own client's tickets; `null` is a seat user with no live
+   * assignment and sees no comment. Unset means owning-tenant staff, as before the seat shape.
+   */
+  audienceReader?: CommentAudienceReader | null;
 }
 
 export interface SqlFragment {
@@ -166,9 +175,32 @@ function clientScopeSql(access: ClientAccess): SqlFragment {
   return clauses.length === 0 ? { sql: 'TRUE', bindings: [] } : { sql: clauses.join(' AND '), bindings };
 }
 
+/** The internal principal's organization when it is not owning-tenant staff; undefined when no audience restriction applies. */
+function restrictedAudienceReader(user: SearchAclPrincipal): CommentAudienceReader | null | undefined {
+  if (!user.isInternal || user.audienceReader === undefined || user.audienceReader?.kind === 'staff') return undefined;
+  return user.audienceReader;
+}
+
+/**
+ * Comment-audience predicate over the index. The indexer stores each comment's audience
+ * (`metadata.audience`) and its ticket's client (`client_scope_id`); a seat technician reads the
+ * audiences the shared predicate admits, on their own client only. A row with no stored audience
+ * fails closed. Non-staff client readers are already bounded by `is_internal_only`.
+ */
+function commentAudienceIndexSql(user: SearchAclPrincipal): SqlFragment {
+  const reader = restrictedAudienceReader(user);
+  if (reader === undefined) return { sql: 'TRUE', bindings: [] };
+  if (reader?.kind !== 'seat') return { sql: `(object_type <> 'ticket_comment')`, bindings: [] };
+  return {
+    sql: `(object_type <> 'ticket_comment' OR (metadata->>'audience' = ANY(?::text[]) AND client_scope_id = ?::uuid))`,
+    bindings: [audiencesVisibleTo('seat'), reader.clientId],
+  };
+}
+
 export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
   const clientAccess = user.clientAccess ?? { mode: 'all' };
   const clientScope = clientScopeSql(clientAccess);
+  const commentAudience = commentAudienceIndexSql(user);
 
   const boardIds = clientAccess.boardIds;
   // `s` is the search index alias every query in query.ts uses. The correlated reads are tenant-joined.
@@ -207,6 +239,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
         AND (is_internal_only = false OR ?::boolean = true)
         AND (is_private = false OR visible_to_user_ids && ARRAY[?]::uuid[])
         AND ${clientScope.sql}
+        AND ${commentAudience.sql}
         AND ${boardClause}
       )
     `,
@@ -217,6 +250,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
       user.isInternal ?? false,
       user.userId,
       ...clientScope.bindings,
+      ...commentAudience.bindings,
       ...boardBindings,
     ],
   };
@@ -253,6 +287,10 @@ export async function resolveSearchAclPrincipal(
     roles: [...roles],
     isInternal: !isClientPortal,
     clientAccess,
+    // One read for an internal user; a client user is the requester with no SQL.
+    audienceReader: user.tenant
+      ? await resolveCommentAudienceReader(knex, user.tenant, { userId: user.user_id, userType: isClientPortal ? 'client' : 'internal' })
+      : undefined,
   };
 }
 
@@ -326,16 +364,19 @@ function tenantScopedRoot<Row extends object>(
   return tenantDb(knex, user.tenant).table<Row>(tableExpression);
 }
 
-async function commentIsRequesterAudience(knex: Knex, user: SearchAclPrincipal, commentId: string): Promise<boolean> {
-  const query = tenantScopedRoot<{ audience: string | null }>(knex, user, 'comments as c');
+/** The live audience check: the shared predicate for `reader`, over the comment as stored now. */
+async function commentVisibleToReader(knex: Knex, user: SearchAclPrincipal, commentId: string, reader: CommentAudienceReader | null): Promise<boolean> {
+  const query = tenantScopedRoot<{ comment_id: string }>(knex, user, 'comments as c');
   const scoped = tenantDb(knex, user.tenant ?? SEARCH_ACL_MISSING_TENANT);
   scoped.tenantJoin(query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
   scoped.tenantJoin(query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
+  scoped.tenantJoin(query, 'tickets as t', 't.ticket_id', 'c.ticket_id', { type: 'left' });
   const found = await query
-    .select(knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
+    .select('c.comment_id')
     .where('c.comment_id', commentId)
+    .whereRaw('?', [commentAudienceVisibleSql(knex, reader, { thread: 'ct', root: 'rc', comment: 'c', ownerTenant: 'c.tenant', ownerClient: 't.client_id' })])
     .first();
-  return found?.audience === 'requester';
+  return Boolean(found);
 }
 
 /**
@@ -404,7 +445,10 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   // Audience is an additional restriction on non-staff readers (staff of the owning tenant see
   // every audience stored there). It uses the same predicate as the indexer and portal reads, so
   // a public-flagged comment on a private thread cannot be reached through search.
-  if (!user.isInternal && !(await commentIsRequesterAudience(knex, user, row.id))) return false;
+  // A seat technician is an internal user and still not that staff: the same predicate, read as
+  // their organization, keeps private notes (legacy internal notes included) out of their search.
+  const reader = user.isInternal ? restrictedAudienceReader(user) : user.tenant ? { kind: 'requester' as const, tenant: user.tenant } : null;
+  if (reader !== undefined && !(await commentVisibleToReader(knex, user, row.id, reader))) return false;
   return ticketVisibleToPrincipal(knex, user, 'ticket_comment', comment.ticket_id);
 });
 

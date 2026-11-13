@@ -561,7 +561,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     ] = await Promise.all([
       // Comments, with read-time bundle provenance owned by the shared read
       // layer so this load and every refresh path return identical shapes.
-      Comment.getAllbyTicketId(trx, tenant, ticketId),
+      // An internal reader sees only the audiences their organization may (a seat technician never a private note).
+      Comment.getAllbyTicketId(trx, tenant, ticketId, user.user_type === 'internal' ? user.user_id : undefined),
       
       // Documents
       tenantLeftJoin(

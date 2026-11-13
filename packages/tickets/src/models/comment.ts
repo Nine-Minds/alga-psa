@@ -5,7 +5,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import {
-  CommentAudienceError, isCommentAudience, nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader,
+  CommentAudienceError, internalReaderAudienceSql, isCommentAudience, nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
@@ -74,7 +74,12 @@ function collaborationThreadAudience(isInternal: boolean, audience: string | und
 }
 
 const Comment = {
-  getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string): Promise<IComment[]> => {
+  /**
+   * `internalReaderId` is the internal user the comments are read for. Named, the read keeps only
+   * the audiences that user's organization may see (MSP staff: all of them; a seat technician:
+   * never a private note), in the same statement. Omitted, the read is unfiltered (system callers).
+   */
+  getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string, internalReaderId?: string): Promise<IComment[]> => {
     try {
       // Read-time bundle provenance lives here, in the shared read layer, so
       // every MSP path that lists a ticket's comments — the initial
@@ -94,6 +99,9 @@ const Comment = {
       scopedConn.tenantJoin(commentsQuery, 'comments as src', 'bm.source_comment_id', 'src.comment_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
       scopedConn.tenantJoin(commentsQuery, 'tickets as mt', 'src.ticket_id', 'mt.ticket_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
 
+      if (internalReaderId) {
+        commentsQuery.whereRaw('?', [internalReaderAudienceSql(knexOrTrx, tenant, internalReaderId).commentVisible('comments.comment_id')]);
+      }
       const comments = await commentsQuery
         .where('comments.ticket_id', ticket_id)
         .orderBy('comments.created_at', 'asc');
@@ -120,12 +128,16 @@ const Comment = {
     }
   },
 
-  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<IComment | undefined> => {
+  /** `internalReaderId`: as in `getAllbyTicketId`; a comment that reader may not see is not found. */
+  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, internalReaderId?: string): Promise<IComment | undefined> => {
     try {
-      const comment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      const query = tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
-        .where('comments.comment_id', id)
-        .first();
+        .where('comments.comment_id', id);
+      if (internalReaderId) {
+        query.whereRaw('?', [internalReaderAudienceSql(knexOrTrx, tenant, internalReaderId).commentVisible('comments.comment_id')]);
+      }
+      const comment = await query.first();
       return comment;
     } catch (error) {
       console.error(`Error getting comment with id ${id}:`, error);

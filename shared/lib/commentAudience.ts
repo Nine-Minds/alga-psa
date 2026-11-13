@@ -472,3 +472,47 @@ export function commentAudienceVisibleSql(
       return db.raw('FALSE');
   }
 }
+
+/** The audiences a reader of this kind reads on a ticket of their own organization, by the one predicate. */
+export function audiencesVisibleTo(kind: CommentAudienceReader['kind']): CommentAudience[] {
+  const tenant = 'owner', clientId = 'client';
+  const reader: CommentAudienceReader = kind === 'seat' ? { kind, tenant, clientId } : { kind, tenant };
+  return COMMENT_AUDIENCES.filter(audience => isCommentAudienceVisible(audience, { tenant, clientId }, reader));
+}
+
+/**
+ * Audience visibility for one INTERNAL user of the owning tenant, decided inside the statement
+ * that reads the rows: the SQL composition of `resolveCommentAudienceReader` and
+ * `commentAudienceVisibleSql`. Read paths that cannot name the reader's organization before they
+ * query (the ticket screen, the activity list, the attachment gate) add these expressions to the
+ * statement they already run, so a tenant with no seat technician pays no extra statement.
+ *
+ *   staff           no seat assignment binds the user: every audience stored in their tenant
+ *   commentVisible  staff, or a live seat technician of the comment's ticket's client reading an
+ *                   audience `audiencesVisibleTo('seat')` admits
+ *
+ * A bound user whose assignment is not live sees nothing, as in `resolveCommentAudienceReader`.
+ * A missing comment, thread, root or ticket fails closed for everyone but staff.
+ */
+export function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: string, userId: string) {
+  const staff = db.raw(
+    `NOT EXISTS (SELECT 1 FROM co_managed_seat_assignments aud_bound
+      WHERE aud_bound.tenant = ? AND aud_bound.user_id = ? AND aud_bound.state <> 'revoked')`, [tenant, userId]);
+  return {
+    staff,
+    /** `commentId` is a uuid column (bound as an identifier) or a uuid-typed expression. */
+    commentVisible(commentId: string | Knex.Raw): Knex.Raw {
+      const id = typeof commentId === 'string' ? db.raw('??', [commentId]) : commentId;
+      return db.raw(`((?) OR EXISTS (SELECT 1 FROM comments aud_c
+        JOIN comment_threads aud_ct ON aud_ct.tenant = aud_c.tenant AND aud_ct.thread_id = aud_c.thread_id
+        JOIN comments aud_rc ON aud_rc.tenant = aud_ct.tenant AND aud_rc.comment_id = aud_ct.root_comment_id
+        JOIN tickets aud_t ON aud_t.tenant = aud_c.tenant AND aud_t.ticket_id = aud_c.ticket_id
+        JOIN co_managed_seat_arrangements aud_ar ON aud_ar.tenant = aud_c.tenant AND aud_ar.client_id = aud_t.client_id
+          AND aud_ar.state = 'active'
+        JOIN co_managed_seat_assignments aud_sa ON aud_sa.tenant = aud_c.tenant AND aud_sa.arrangement_id = aud_ar.arrangement_id
+          AND aud_sa.user_id = ? AND aud_sa.state = 'active'
+        WHERE aud_c.tenant = ? AND aud_c.comment_id = (?) AND (?) = ANY(?::text[])))`,
+      [staff, userId, tenant, id, commentAudienceSql(db, 'aud_ct', 'aud_rc', 'aud_c'), audiencesVisibleTo('seat')]);
+    },
+  };
+}

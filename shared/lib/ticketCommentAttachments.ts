@@ -3,6 +3,7 @@ import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { canReadTicket, canWriteTicket } from '@alga-psa/authorization/portal/ticketAccess.server';
+import { internalReaderAudienceSql } from './commentAudience';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -182,9 +183,13 @@ export async function canReadCommentAttachment(conn: Connection, tenant: string,
   const user = await db.table('users').where({ user_id: userId }).first();
   if (row.state === 'draft') return row.created_by === userId && new Date(row.expires_at).getTime() > Date.now();
   if (row.state !== 'attached' || !row.comment_id) return false;
-  const comment = await db.table('comments').where({ comment_id: row.comment_id, ticket_id: row.ticket_id }).first();
+  // An internal reader also needs the parent comment's audience: MSP staff read every audience, a
+  // seat technician only what their organization may. Decided in the comment read itself.
+  const audience = user?.user_type === 'internal' ? internalReaderAudienceSql(conn, tenant, userId) : null;
+  const comment = await db.table('comments').where({ comment_id: row.comment_id, ticket_id: row.ticket_id })
+    .first('comments.*', ...(audience ? [conn.raw('(?) as audience_visible', [audience.commentVisible('comments.comment_id')])] : []));
   if (!comment || comment.deleted_at || comment.publish_state === 'canceled') return false;
-  return user?.user_type === 'internal' || await isPublicAttachmentComment(conn, tenant, row.comment_id, row.ticket_id);
+  return audience ? comment.audience_visible === true : await isPublicAttachmentComment(conn, tenant, row.comment_id, row.ticket_id);
 }
 
 export async function listPublishedCommentAttachments(conn: Connection, tenant: string, ticketId: string, commentId: string) {
