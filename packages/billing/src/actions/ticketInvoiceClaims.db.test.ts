@@ -51,13 +51,12 @@ interface SeededContext {
 async function insertTimeEntry(params: {
   ownerTenant?: string;
   ownerUserId?: string;
-  entryId?: string;
   ticket?: string;
   service?: string | null;
   invoiced?: boolean;
   approvalStatus?: string;
 } = {}): Promise<string> {
-  const entryId = params.entryId ?? uuidv4();
+  const entryId = uuidv4();
   await db('time_entries').insert({
     tenant: params.ownerTenant ?? tenant,
     entry_id: entryId,
@@ -220,7 +219,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
         service_id: serviceId, quantity: 2, rate: 2500, description: 'Setup',
         source_link: { kind: 'ticket_fixed_fee', ...source },
       }],
-    })).rejects.toMatchObject({ code: 'SOURCE_NOT_ELIGIBLE' });
+    })).rejects.toMatchObject({ code: 'SOURCE_CHANGED' });
     expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
     expect(await db('ticket_fixed_fee_services').where({ tenant, entry_id: source.entryId }).first())
       .toMatchObject({ is_billed: false });
@@ -388,7 +387,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
     expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
   });
 
-  it('claims only the same-id time entry owned by the invoice tenant', async () => {
+  it('rejects a foreign time entry and claims only the invoice tenant entry', async () => {
     const otherUser = uuidv4();
     await db('users').insert({
       tenant: OTHER_TENANT,
@@ -397,23 +396,34 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
       hashed_password: 'x',
       email: `other-${otherUser.slice(0, 8)}@example.com`,
     });
-    const sharedEntryId = await insertTimeEntry();
-    await insertTimeEntry({
+    const otherServiceType = uuidv4();
+    await db('service_types').insert({
+      tenant: OTHER_TENANT, id: otherServiceType, name: 'Other tenant time service',
+    });
+    await db('service_catalog').insert({
+      tenant: OTHER_TENANT, service_id: serviceId, service_name: 'Other tenant time service',
+      custom_service_type_id: otherServiceType, billing_method: 'hourly', default_rate: 12000,
+    });
+    const tenantEntryId = await insertTimeEntry();
+    const foreignEntryId = await insertTimeEntry({
       ownerTenant: OTHER_TENANT,
       ownerUserId: otherUser,
-      entryId: sharedEntryId,
-      ticket: uuidv4(),
-      service: null,
+      ticket: ticketId,
+      service: serviceId,
     });
-    const invoiceId = uuidv4();
+    const foreignInvoiceId = uuidv4();
+    await expect(runPersist({ invoiceId: foreignInvoiceId, items: [timeItem(foreignEntryId)] }))
+      .rejects.toMatchObject({ code: 'SOURCE_ALREADY_BILLED' });
+    await expectNoInvoice(foreignInvoiceId);
 
-    await runPersist({ invoiceId, items: [timeItem(sharedEntryId)] });
+    const invoiceId = uuidv4();
+    await runPersist({ invoiceId, items: [timeItem(tenantEntryId)] });
 
     const tenantEntry = await db('time_entries')
-      .where({ tenant, entry_id: sharedEntryId })
+      .where({ tenant, entry_id: tenantEntryId })
       .first('invoiced');
     const foreignEntry = await db('time_entries')
-      .where({ tenant: OTHER_TENANT, entry_id: sharedEntryId })
+      .where({ tenant: OTHER_TENANT, entry_id: foreignEntryId })
       .first('invoiced');
     expect(tenantEntry.invoiced).toBe(true);
     expect(foreignEntry.invoiced).toBe(false);
