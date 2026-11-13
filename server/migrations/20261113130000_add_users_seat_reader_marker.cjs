@@ -71,16 +71,19 @@ exports.up = async function up(knex) {
   if (index.rows[0] && !index.rows[0].indisvalid) await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${TARGET_INDEX}`);
   await knex.raw(`CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ${TARGET_INDEX} ON users (tenant, user_id, seat_reader)`);
 
+  // migration-lint: allow 5 - one-shot backfill of the new constant-default column; only users bound by a non-revoked seat assignment are visited, and that set is small because seat technicians are the paid exception, not the tenant population
   await knex.raw(`UPDATE users SET seat_reader = true
     WHERE seat_reader = false AND EXISTS (SELECT 1 FROM ${ASSIGNMENTS} sa
       WHERE sa.tenant = users.tenant AND sa.user_id = users.user_id AND sa.state <> 'revoked')`);
 
   if (await supportsTriggers(knex, ASSIGNMENTS)) {
     await knex.raw(`DROP TRIGGER IF EXISTS co_managed_seat_assignment_marks_reader ON ${ASSIGNMENTS}`);
+    // migration-lint: allow 4 - created only when the table supports triggers (plain Postgres); Citus skips triggers by design and the foreign key plus the binding command carry the invariant there
     await knex.raw(`CREATE TRIGGER co_managed_seat_assignment_marks_reader
       BEFORE INSERT OR UPDATE OF user_id, state ON ${ASSIGNMENTS}
       FOR EACH ROW EXECUTE FUNCTION co_managed_seat_assignment_marks_reader()`);
     await knex.raw(`DROP TRIGGER IF EXISTS co_managed_seat_assignment_unmarks_reader ON ${ASSIGNMENTS}`);
+    // migration-lint: allow 4 - created only when the table supports triggers (plain Postgres); Citus skips triggers by design and the foreign key plus the binding command carry the invariant there
     await knex.raw(`CREATE TRIGGER co_managed_seat_assignment_unmarks_reader
       AFTER DELETE OR UPDATE OF user_id, state ON ${ASSIGNMENTS}
       FOR EACH ROW EXECUTE FUNCTION co_managed_seat_assignment_unmarks_reader()`);
