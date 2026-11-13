@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import { tenantDb, withTransaction, admitOperationalWrite } from '@alga-psa/db';
 import { IStockUnit, CreateAssetRequest } from '@alga-psa/types';
 import { createAsset } from '@alga-psa/assets/actions';
-import { buildDefaultAssetExtension } from './assetDefaultMetadata';
+import { buildDefaultAssetSeeds } from './assetDefaultMetadata';
 
 /** A delivered serialized unit awaiting post-commit asset creation (F029). */
 export interface PendingAssetLink {
@@ -10,6 +10,11 @@ export interface PendingAssetLink {
   serviceId: string;
   serviceName: string;
   clientId: string;
+  /**
+   * Product make (service_catalog.manufacturer). Seeds the created asset's
+   * `manufacturer` column so the delivery preserves the product's make.
+   */
+  manufacturer?: string | null;
   /**
    * Ticket/project the delivery was installed on. When set, the created asset is also
    * associated with that entity (asset_associations) so it shows up in its asset section.
@@ -69,10 +74,11 @@ export async function createAndLinkDeliveredAsset(
     .select('default_asset_type', 'default_asset_metadata')
     .first();
   const assetType = (settings?.default_asset_type as string | null | undefined)?.trim() || 'unknown';
-  const extension = buildDefaultAssetExtension(
+  const { base: specBase, extension } = buildDefaultAssetSeeds(
     assetType,
     (settings?.default_asset_metadata as Record<string, unknown> | null | undefined) ?? null,
   );
+  const manufacturer = p.manufacturer?.trim();
   const req: CreateAssetRequest & Record<string, unknown> = {
     asset_type: assetType,
     client_id: p.clientId,
@@ -81,6 +87,7 @@ export async function createAndLinkDeliveredAsset(
     name: p.serviceName ? `${p.serviceName} ${serial}`.trim() : serial,
     status: 'active',
     serial_number: p.unit.serial_number || undefined,
+    ...(manufacturer ? { manufacturer } : {}),
     ...(typeof p.unit.mac_address === 'string' && p.unit.mac_address.trim()
       ? { attributes: { mac_address: p.unit.mac_address } }
       : {}),
@@ -91,6 +98,11 @@ export async function createAndLinkDeliveredAsset(
   // Seed the built-in type's extension row (workstation/server/...) from the product defaults.
   if (extension) {
     req[assetType] = extension;
+  }
+  // Spec values that target base asset columns (e.g. Model on assets.model for
+  // types whose extension table has no model column).
+  for (const [column, value] of Object.entries(specBase)) {
+    req[column] = value;
   }
   // createAsset is an ABAC-respecting server action; it runs in its own transaction.
   const asset = await createAsset(req);

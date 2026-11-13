@@ -125,6 +125,50 @@ describe('delivered inventory asset identity', () => {
       installed_software: [],
     });
   });
+
+  it('carries the product manufacturer onto the created asset', async () => {
+    await createAndLinkDeliveredAsset(database(), 'tenant-1', {
+      unit: { unit_id: 'unit-1', serial_number: 'SERIAL-99' } as any,
+      serviceId: 'service-1', serviceName: 'Laptop', clientId: 'client-1',
+      manufacturer: ' Dell ',
+    });
+    expect(h.createAsset.mock.calls[0][0].manufacturer).toBe('Dell');
+  });
+
+  it('omits manufacturer when the product has none', async () => {
+    await createAndLinkDeliveredAsset(database(), 'tenant-1', {
+      unit: { unit_id: 'unit-1', serial_number: 'SERIAL-99' } as any,
+      serviceId: 'service-1', serviceName: 'Laptop', clientId: 'client-1',
+      manufacturer: null,
+    });
+    expect(h.createAsset.mock.calls[0][0].manufacturer).toBeUndefined();
+  });
+
+  it('routes the product Model default to the base row or the extension by asset type', async () => {
+    h.firsts.product_inventory_settings = {
+      default_asset_type: 'workstation',
+      default_asset_metadata: { model: 'OptiPlex 7020' },
+    };
+    await createAndLinkDeliveredAsset(database(), 'tenant-1', {
+      unit: { unit_id: 'unit-1', serial_number: 'SERIAL-99' } as any,
+      serviceId: 'service-1', serviceName: 'Laptop', clientId: 'client-1',
+    });
+    // Workstation extensions have no model column, so it lands on the base request.
+    expect(h.createAsset.mock.calls[0][0].model).toBe('OptiPlex 7020');
+    expect(h.createAsset.mock.calls[0][0].workstation).not.toHaveProperty('model');
+
+    h.firsts.product_inventory_settings = {
+      default_asset_type: 'mobile_device',
+      default_asset_metadata: { model: 'iPhone 17' },
+    };
+    await createAndLinkDeliveredAsset(database(), 'tenant-1', {
+      unit: { unit_id: 'unit-2', serial_number: 'SERIAL-100' } as any,
+      serviceId: 'service-1', serviceName: 'Phone', clientId: 'client-1',
+    });
+    const mobileReq = h.createAsset.mock.calls[1][0];
+    expect(mobileReq.model).toBeUndefined();
+    expect(mobileReq.mobile_device).toMatchObject({ model: 'iPhone 17' });
+  });
 });
 
 describe('detachDeliveredAssetAssociation', () => {
