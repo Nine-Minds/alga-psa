@@ -75,7 +75,7 @@
   {
     "id": "T009",
     "description": "DB integration, concurrent: eight invitations against one remaining seat produce one success; an invitation for an email claimed by another tenant's internal user is refused with that reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -85,7 +85,7 @@
   {
     "id": "T010",
     "description": "DB integration, concurrent: seat admission running against reservation, purchase intent and hosted reconcile completes without deadlock.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
