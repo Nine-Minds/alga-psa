@@ -41,7 +41,7 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, lockTenantSeatState } from '../lib/internalUserLicenseGuard';
 import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
@@ -437,10 +437,17 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Every update that can change seat occupancy joins the shared tenant
+      // seat lock before taking the target user's row lock. This makes partial
+      // updates compose against the latest committed state.
+      const patchesSeatState = data.user_type !== undefined || data.is_inactive !== undefined;
+      if (patchesSeatState) await lockTenantSeatState(trx, context.tenant);
+
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
         .select('user_id', 'email', 'user_type', 'is_inactive')
+        .forUpdate()
         .first();
 
       // Non-interactive principals are not managed through user management;

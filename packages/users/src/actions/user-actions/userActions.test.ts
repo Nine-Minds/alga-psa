@@ -160,8 +160,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
   // getSafeUserWithRoles lookup (where().select(FIELDS).first()) can return it.
   let insertedUser: Record<string, any> | null = null;
 
-  // The seat guard requires a transaction and takes the advisory xact lock
-  // through trx.raw.
+  // The seat guard requires a transaction and locks the tenant seat row.
   const trx: any = (table: string) => {
     if (table === 'roles') {
       return {
@@ -181,6 +180,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
       return {
         first: async (..._fields: any[]) => tenantRow,
         where: (_criteria: Record<string, any>) => ({
+          forUpdate: () => ({ first: async () => ({ tenant: 'tenant-1' }) }),
           first: async () => tenantRow,
         }),
       };
