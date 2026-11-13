@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDrawer } from '@alga-psa/ui';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from 'lucide-react';
 import {
   addServiceRequestFormFieldAction,
@@ -27,6 +27,7 @@ import {
   updateServiceRequestVisibilityProviderAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
+import { DeleteServiceRequestDefinitionDialog } from './DeleteServiceRequestDefinitionDialog';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Card } from '@alga-psa/ui/components/Card';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -686,6 +687,8 @@ function FormFieldPreview({
 export default function ServiceRequestDefinitionEditorPage() {
   const { t } = useTranslation('msp/service-requests');
   const { formatDate } = useFormatters();
+  const router = useRouter();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const params = useParams();
   const definitionId = String(params?.definitionId ?? '');
   const formFieldTypeOptions = useMemo(() => buildFormFieldTypeOptions(t), [t]);
@@ -1260,6 +1263,15 @@ export default function ServiceRequestDefinitionEditorPage() {
             }}
           >
             {isPublishing ? t('editor.publishing') : t('editor.publish')}
+          </Button>
+          <Button
+            id="service-request-editor-delete"
+            variant="outline"
+            className="text-[rgb(var(--color-destructive))]"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t('editor.delete')}
           </Button>
         </div>
       </div>
@@ -2142,6 +2154,20 @@ export default function ServiceRequestDefinitionEditorPage() {
           </Card>
         </aside>
       </div>
+      <DeleteServiceRequestDefinitionDialog
+        definition={
+          isDeleteDialogOpen
+            ? {
+                definition_id: data.definitionId,
+                name: data.basics.name,
+                lifecycle_state: data.lifecycleState,
+              }
+            : null
+        }
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onDeleted={() => router.push('/msp/service-requests')}
+        onArchived={() => reloadDefinitionEditorState(data.definitionId)}
+      />
     </div>
   );
 }

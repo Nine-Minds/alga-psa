@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Dupliquer",
       "archive": "Archiver",
-      "unarchive": "Désarchiver"
+      "unarchive": "Désarchiver",
+      "delete": "Supprimer"
     },
     "lifecycleLabels": {
       "published": "Publié",
@@ -418,7 +419,8 @@
         "applyFailed": "Impossible d’appliquer la correspondance",
         "applied": "Correspondance des réponses appliquée"
       }
-    }
+    },
+    "delete": "Supprimer"
   },
   "icons": {
     "file-text": "Demande générale",
@@ -461,7 +463,8 @@
       "workflowConfigurationUpdated": "Configuration du workflow mise à jour",
       "formBehaviorConfigUpdated": "Configuration du comportement du formulaire mise à jour",
       "visibilityConfigUpdated": "Configuration de la visibilité mise à jour",
-      "audienceUpdated": "Audience mise à jour"
+      "audienceUpdated": "Audience mise à jour",
+      "definitionDeleted": "Formulaire de demande de service supprimé"
     },
     "error": {
       "loadFailed": "Échec du chargement des demandes de service",
@@ -485,7 +488,11 @@
       "visibilityNotObject": "La configuration de la visibilité doit être un objet JSON",
       "visibilityInvalid": "JSON de visibilité non valide",
       "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}",
-      "audienceSaveFailed": "Échec de la mise à jour de l'audience"
+      "audienceSaveFailed": "Échec de la mise à jour de l'audience",
+      "deleteFailed": "Échec de la suppression du formulaire de demande de service"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "« {{name}} » et toutes ses versions seront supprimés définitivement. Cette action est irréversible."
   }
 }

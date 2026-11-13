@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplikuj",
       "archive": "Archiwizuj",
-      "unarchive": "Przywróć z archiwum"
+      "unarchive": "Przywróć z archiwum",
+      "delete": "Usuń"
     },
     "lifecycleLabels": {
       "published": "Opublikowano",
@@ -420,7 +421,8 @@
         "applyFailed": "Nie udało się zastosować mapowania odpowiedzi",
         "applied": "Zastosowano mapowanie odpowiedzi"
       }
-    }
+    },
+    "delete": "Usuń"
   },
   "icons": {
     "file-text": "Zgłoszenie ogólne",
@@ -463,7 +465,8 @@
       "workflowConfigurationUpdated": "Zaktualizowano konfigurację workflow",
       "formBehaviorConfigUpdated": "Zaktualizowano konfigurację zachowania formularza",
       "visibilityConfigUpdated": "Zaktualizowano konfigurację widoczności",
-      "audienceUpdated": "Odbiorcy zaktualizowani"
+      "audienceUpdated": "Odbiorcy zaktualizowani",
+      "definitionDeleted": "Formularz zgłoszenia usługi został usunięty"
     },
     "error": {
       "loadFailed": "Nie udało się wczytać zgłoszeń serwisowych",
@@ -487,7 +490,11 @@
       "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
       "visibilityInvalid": "Nieprawidłowy JSON widoczności",
       "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
-      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
+      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców",
+      "deleteFailed": "Nie udało się usunąć formularza zgłoszenia usługi"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "„{{name}}” i wszystkie jego wersje zostaną trwale usunięte. Tej operacji nie można cofnąć."
   }
 }

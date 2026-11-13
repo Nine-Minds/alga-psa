@@ -35,6 +35,9 @@ function permissionEntityFor(entityType: string): string {
   if (entityType === 'interaction_type') return 'settings';
   // Quote deletion is a billing operation (deleteQuote requires billing:delete).
   if (entityType === 'quote') return 'billing';
+  // Service request definitions are gated by requireServiceRequestPermission,
+  // which checks the 'service' resource.
+  if (entityType === 'service_request_definition') return 'service';
   return entityType;
 }
 

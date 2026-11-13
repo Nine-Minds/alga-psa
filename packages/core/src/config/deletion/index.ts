@@ -17,6 +17,7 @@ const countPredicateReferences = (table: string, column: string, path: string) =
   };
 
 export const countBoardChecklistApplyRules = countPredicateReferences('checklist_template_apply_rules', 'where', 'board_id');
+export const countServiceRequestDefinitionChecklistApplyRules = countPredicateReferences('checklist_template_apply_rules', 'where', 'service_request_definition_id');
 
 const countProjectTaskWorkItems = (table: 'schedule_entries' | 'time_entries') => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
@@ -764,6 +765,20 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'co_managed_provisioning_operations',
         label: 'co-managed escalation queue',
         countQuery: countLiveCoManagedEscalationsForBoard
+      }
+    ]
+  },
+  service_request_definition: {
+    entityType: 'service_request_definition',
+    supportsInactive: false,
+    supportsArchive: true,
+    dependencies: [
+      { type: 'submission', table: 'service_request_submissions', foreignKey: 'definition_id', label: 'submission' },
+      {
+        type: 'checklist_apply_rule',
+        table: 'checklist_template_apply_rules',
+        countQuery: countServiceRequestDefinitionChecklistApplyRules,
+        label: 'checklist apply rule'
       }
     ]
   },

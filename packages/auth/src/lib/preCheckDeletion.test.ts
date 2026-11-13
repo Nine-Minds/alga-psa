@@ -134,6 +134,20 @@ describe('preCheckDeletion permission mapping', () => {
     expect(action).toBe('delete');
   });
 
+  it('checks service:delete (not service_request_definition:delete) for service_request_definition and denies without it', async () => {
+    getDeletionConfigMock.mockReturnValue({ entityType: 'service_request_definition', dependencies: [] });
+    hasPermissionMock.mockResolvedValueOnce(false);
+
+    const result = await preCheckDeletion('service_request_definition', 'def-1');
+
+    const [, resource, action] = hasPermissionMock.mock.calls[0];
+    expect(resource).toBe('service');
+    expect(action).toBe('delete');
+    expect(result.canDelete).toBe(false);
+    expect(result.code).toBe('PERMISSION_DENIED');
+    expect(validateDeletionMock).not.toHaveBeenCalled();
+  });
+
   it('checks billing:delete (not quote:delete) when validating quote deletion', async () => {
     getDeletionConfigMock.mockReturnValueOnce({ entityType: 'quote', dependencies: [] });
 

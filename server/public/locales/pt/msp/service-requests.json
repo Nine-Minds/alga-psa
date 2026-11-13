@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplicar",
       "archive": "Arquivar",
-      "unarchive": "Desarquivar"
+      "unarchive": "Desarquivar",
+      "delete": "Excluir"
     },
     "lifecycleLabels": {
       "published": "Publicado",
@@ -418,7 +419,8 @@
         "applyFailed": "Não foi possível aplicar o mapeamento",
         "applied": "Mapeamento de respostas aplicado"
       }
-    }
+    },
+    "delete": "Excluir"
   },
   "icons": {
     "file-text": "Solicitação Geral",
@@ -461,7 +463,8 @@
       "workflowConfigurationUpdated": "Configuração do fluxo de trabalho atualizada",
       "formBehaviorConfigUpdated": "Configuração de comportamento do formulário atualizada",
       "visibilityConfigUpdated": "Configuração de visibilidade atualizada",
-      "audienceUpdated": "Público-alvo atualizado"
+      "audienceUpdated": "Público-alvo atualizado",
+      "definitionDeleted": "Formulário de solicitação de serviço excluído"
     },
     "error": {
       "loadFailed": "Falha ao carregar solicitações de serviço",
@@ -485,7 +488,11 @@
       "visibilityNotObject": "A configuração de visibilidade precisa ser um objeto JSON",
       "visibilityInvalid": "Visibilidade JSON inválida",
       "saveAllPartial": "Algumas seções não puderam ser salvas: {{sections}}",
-      "audienceSaveFailed": "Falha ao atualizar o público-alvo"
+      "audienceSaveFailed": "Falha ao atualizar o público-alvo",
+      "deleteFailed": "Falha ao excluir o formulário de solicitação de serviço"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "“{{name}}” e todas as suas versões serão removidos permanentemente. Esta ação não pode ser desfeita."
   }
 }
