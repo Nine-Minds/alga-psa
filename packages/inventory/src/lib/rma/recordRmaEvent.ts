@@ -1,20 +1,9 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { IRmaEvent, RmaEventType, RmaStatus } from '@alga-psa/types';
+import type { IRmaEvent } from '@alga-psa/types';
+import { recordRmaEvent as appendRmaEvent, type RecordRmaEventInput } from '@alga-psa/shared/lib/rma/recordRmaEvent';
 
-export interface RecordRmaEventInput {
-  rmaId: string;
-  eventType: RmaEventType;
-  fromStatus: RmaStatus | null;
-  toStatus: RmaStatus | null;
-  actorUserId: string | null;
-  occurredAt?: string;
-  carrier?: string | null;
-  trackingNumber?: string | null;
-  note?: string | null;
-  payload?: Record<string, unknown>;
-  documentIds?: string[];
-}
+export type { RecordRmaEventInput };
 
 function iso(value: unknown): string {
   return value instanceof Date ? value.toISOString() : String(value);
@@ -43,27 +32,7 @@ export function mapRmaEventRow(row: any): IRmaEvent {
  * Runs in the caller's transaction so the event and the status change commit together.
  */
 export async function recordRmaEvent(trx: Knex.Transaction, tenant: string, input: RecordRmaEventInput): Promise<IRmaEvent> {
-  const now = new Date().toISOString();
-  const occurredAt = input.occurredAt ?? now;
-  const [row] = await tenantDb(trx, tenant)
-    .table('rma_events')
-    .insert({
-      tenant,
-      rma_id: input.rmaId,
-      event_type: input.eventType,
-      from_status: input.fromStatus,
-      to_status: input.toStatus,
-      occurred_at: occurredAt,
-      recorded_at: now,
-      actor_user_id: input.actorUserId,
-      carrier: input.carrier ?? null,
-      tracking_number: input.trackingNumber ?? null,
-      note: input.note ?? null,
-      payload: JSON.stringify(input.payload ?? {}),
-      document_ids: JSON.stringify(input.documentIds ?? []),
-    })
-    .returning('*');
-  return mapRmaEventRow(row);
+  return appendRmaEvent(trx, tenant, input);
 }
 
 export async function listRmaEvents(trx: Knex | Knex.Transaction, tenant: string, rmaId: string): Promise<IRmaEvent[]> {

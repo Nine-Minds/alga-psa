@@ -189,7 +189,7 @@
   {
     "id": "T022",
     "description": "Unit: audience truth table over audience, reader organization and requester flag, with inconsistent legacy rows resolving private; the SQL form agrees with the TypeScript form on the same rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F036",
@@ -211,7 +211,7 @@
   {
     "id": "T024",
     "description": "DB integration: MSP staff post shared IT on an arrangement client's ticket and are refused on another client's ticket; a seat technician is refused a private note and a legacy internal note.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F040"
@@ -220,7 +220,7 @@
   {
     "id": "T025",
     "description": "DB integration: a reply inherits its thread's audience; a seat technician cannot change audience; an MSP widening without confirmation is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F042"
@@ -265,7 +265,7 @@
   {
     "id": "T030",
     "description": "DB integration: hand to MSP and hand to client IT change responsibility, store a receipt, replay to the original receipt, and fail on a stale revision or an out-of-scope board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F055",

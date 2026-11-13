@@ -49,8 +49,9 @@ export interface UploadSession {
   tenant: string;
   session_id: string;
   uploaded_by: string;
-  entity_type: string;
-  entity_id: string;
+  /** Null for a document uploaded without a target (it can be associated afterwards). */
+  entity_type: string | null;
+  entity_id: string | null;
   target_options: UploadSessionTargetOptions;
   file_name: string;
   mime_type: string;
@@ -83,6 +84,8 @@ export class UploadSessionError extends Error {
     readonly code: string,
     message: string,
     readonly headers: Record<string, string> = {},
+    /** Machine-readable extras the response carries beside `code` and `message`, e.g. `maxFileSize`. */
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
     this.name = 'UploadSessionError';
@@ -110,8 +113,8 @@ export function isUploadTargetEntityType(value: unknown): value is UploadTargetE
 export function uploadOptionsForSession(
   session: Pick<UploadSession, 'entity_type' | 'entity_id' | 'target_options'>,
 ): DocumentUploadOptions {
-  const key = TARGET_OPTION_BY_ENTITY_TYPE[session.entity_type as UploadTargetEntityType];
-  return { ...session.target_options, ...(key ? { [key]: session.entity_id } : {}) };
+  const key = session.entity_type ? TARGET_OPTION_BY_ENTITY_TYPE[session.entity_type as UploadTargetEntityType] : undefined;
+  return { ...session.target_options, ...(key && session.entity_id ? { [key]: session.entity_id } : {}) };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -268,12 +271,20 @@ export async function createUploadSession(input: CreateUploadSessionInput): Prom
   if (typeof input.size !== 'number' || !Number.isSafeInteger(input.size) || input.size <= 0) {
     throw badRequest('size must be a positive integer number of bytes');
   }
-  if (!isUploadTargetEntityType(input.entityType)) {
-    throw badRequest(`entityType must be one of: ${Object.keys(TARGET_OPTION_BY_ENTITY_TYPE).join(', ')}`);
+  // The target is optional as a pair: neither means an unattached document (the document library,
+  // or a task that is not saved yet), exactly what `uploadDocument` accepts with no target option.
+  const hasTarget = input.entityType !== undefined && input.entityType !== null
+    || input.entityId !== undefined && input.entityId !== null;
+  if (hasTarget) {
+    if (!isUploadTargetEntityType(input.entityType)) {
+      throw badRequest(`entityType must be one of: ${Object.keys(TARGET_OPTION_BY_ENTITY_TYPE).join(', ')}`);
+    }
+    if (typeof input.entityId !== 'string' || !UUID_RE.test(input.entityId)) {
+      throw badRequest('entityId must be a UUID');
+    }
   }
-  if (typeof input.entityId !== 'string' || !UUID_RE.test(input.entityId)) {
-    throw badRequest('entityId must be a UUID');
-  }
+  const entityType = hasTarget ? (input.entityType as UploadTargetEntityType) : null;
+  const entityId = hasTarget ? (input.entityId as string) : null;
   const size = input.size;
   const targetOptions: UploadSessionTargetOptions = {
     ...(input.options?.commentAttachmentDraft === true ? { commentAttachmentDraft: true } : {}),
@@ -282,8 +293,8 @@ export async function createUploadSession(input: CreateUploadSessionInput): Prom
   };
 
   await authorizeTarget(user, tenant, knex, uploadOptionsForSession({
-    entity_type: input.entityType,
-    entity_id: input.entityId,
+    entity_type: entityType,
+    entity_id: entityId,
     target_options: targetOptions,
   }));
 
@@ -293,7 +304,10 @@ export async function createUploadSession(input: CreateUploadSessionInput): Prom
     await StorageService.validateFileUpload(tenant, mimeType, size);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.startsWith('File size exceeds limit')) throw new UploadSessionError(413, 'UPLOAD_TOO_LARGE', message);
+    // The limit travels with the refusal so the browser can name it before it sends any bytes.
+    if (message.startsWith('File size exceeds limit')) {
+      throw new UploadSessionError(413, 'UPLOAD_TOO_LARGE', message, {}, { maxFileSize: policy.maxFileSize });
+    }
     if (message === 'File type not allowed') throw new UploadSessionError(415, 'UPLOAD_TYPE_NOT_ALLOWED', message);
     throw error;
   }
@@ -309,8 +323,8 @@ export async function createUploadSession(input: CreateUploadSessionInput): Prom
       tenant,
       session_id: sessionId,
       uploaded_by: user.user_id,
-      entity_type: input.entityType,
-      entity_id: input.entityId,
+      entity_type: entityType,
+      entity_id: entityId,
       target_options: jsonb(targetOptions),
       file_name: fileName,
       mime_type: mimeType,
@@ -546,6 +560,8 @@ export interface CompleteUploadInput {
  */
 export interface UploadedDocumentSummary {
   document_id: string;
+  /** The stored file behind the document, for callers that list or link it straight away. */
+  file_id: string | null;
   document_name: string;
   mime_type: string;
   file_size: number;
@@ -561,12 +577,16 @@ export async function completeUploadSession(input: CompleteUploadInput): Promise
   const { knex, tenant, user, sessionId } = input;
   const session = await requireSession(knex, tenant, user.user_id, sessionId);
 
-  const summarize = (current: UploadSession, documentId: string | null): UploadedDocumentSummary => {
+  const summarize = (current: UploadSession, documentId: string | null, fileId: string | null): UploadedDocumentSummary => {
     if (!documentId) throw new UploadSessionError(409, 'UPLOAD_COMPLETED', 'Upload was completed but its document is no longer available');
-    return { document_id: documentId, document_name: current.file_name, mime_type: current.mime_type, file_size: current.declared_size };
+    return { document_id: documentId, file_id: fileId, document_name: current.file_name, mime_type: current.mime_type, file_size: current.declared_size };
   };
-  const existing = async (current: UploadSession): Promise<CompletedUpload> =>
-    ({ document: summarize(current, current.document_id), alreadyCompleted: true });
+  const existing = async (current: UploadSession): Promise<CompletedUpload> => {
+    const row = current.document_id
+      ? await tenantDb(knex, tenant).table('documents').where({ document_id: current.document_id }).first('file_id')
+      : null;
+    return { document: summarize(current, current.document_id, row?.file_id ?? null), alreadyCompleted: true };
+  };
   if (session.status === 'completed') return existing(session);
   if (session.status !== 'active' || session.expires_at.getTime() < Date.now()) throw unavailable(session);
 
@@ -643,7 +663,7 @@ export async function completeUploadSession(input: CompleteUploadInput): Promise
     if (isActionPermissionErrorResult(created)) {
       throw new UploadSessionError(403, 'FORBIDDEN', (created as ActionPermissionErrorShape).permissionError);
     }
-    return { document: summarize(session, created.document.document_id), alreadyCompleted: false };
+    return { document: summarize(session, created.document.document_id, fileId ?? null), alreadyCompleted: false };
   } catch (error) {
     // If the document did commit (a failure after it), the upload succeeded: never delete its bytes.
     const current = await findUploadSession(knex, tenant, user.user_id, sessionId).catch(() => null);

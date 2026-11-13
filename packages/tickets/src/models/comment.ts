@@ -5,7 +5,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import {
-  CommentAudienceError, assertReplyAudience, isCommentAudience, lockLabelledThreadAudience, nativeThreadAudience,
+  CommentAudienceError, isCommentAudience, nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
@@ -134,11 +134,17 @@ const Comment = {
   },
 
   /** Owns a transaction when given a plain connection: attachment claims take row locks with the insert. */
-  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext): Promise<string> =>
-    (await Comment.insertRecord(knexOrTrx, tenant, comment, collaboration)).comment_id!,
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
+    audienceAuthor?: CommentAudienceReader | null): Promise<string> =>
+    (await Comment.insertRecord(knexOrTrx, tenant, comment, collaboration, audienceAuthor)).comment_id!,
 
   /** Return the stored, normalized row for callers that publish it in the same transaction. */
-  insertRecord: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
+  /**
+   * `audienceAuthor` is the author's organization when the entry point admits seat principals
+   * (see `NativeCommentAuthor`); omitted, the author is whoever `author_type` has always implied.
+   */
+  insertRecord: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
+    audienceAuthor?: CommentAudienceReader | null): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
     try {
       logger.info('Inserting comment:', comment);
 
@@ -247,14 +253,10 @@ const Comment = {
             throw new Error('Reply visibility must match the thread root visibility');
           }
           threadId = parent.thread_id;
-          // Replies inherit a labelled thread's audience; legacy threads cost nothing extra.
-          if (parent.thread_audience != null) {
-            await lockLabelledThreadAudience(trx, tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
-            assertReplyAudience(
-              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-              { isInternal: comment.is_internal, audience: requestedAudience },
-            );
-          }
+          // Replies inherit the thread's audience; legacy threads cost nothing extra.
+          await nativeReplyAudience(trx, tenant,
+            { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+            { isInternal: comment.is_internal, audience: requestedAudience, author: audienceAuthor, ticketId: comment.ticket_id });
         }
       }
 
@@ -274,6 +276,7 @@ const Comment = {
           ? collaborationThreadAudience(Boolean(comment.is_internal), requestedAudience, collaboration, tenant)
           : await nativeThreadAudience(trx, tenant, {
               isInternal: Boolean(comment.is_internal), authorType: comment.author_type, audience: requestedAudience,
+              author: audienceAuthor, ticketId: comment.ticket_id,
             });
         await tenantScopedTable(trx, 'comment_threads', tenant).insert({
           tenant,

@@ -1169,6 +1169,10 @@
       "recordInvalid": "Jeden z wybranych rekordów grupy widoczności nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "invalidData": "Nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice."
+    },
+    "roles": {
+      "lastMspAdmin": "Organizacja musi zachować co najmniej jednego aktywnego użytkownika z rolą MSP Admin.",
+      "lastRole": "Użytkownik musi zachować co najmniej jedną rolę. Najpierw przypisz inną rolę, a potem usuń tę."
     }
   }
 }

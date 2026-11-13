@@ -859,6 +859,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'service_request_definitions', deletion: 'ordered' },
   { table: 'co_management_board_scopes', deletion: 'ordered' },
   // Seat arrangements: dependents first, then the arrangement, then the allocation that pays for it.
+  { table: 'co_managed_seat_ticket_handoffs', deletion: 'ordered' },
+  { table: 'co_managed_seat_ticket_work', deletion: 'ordered' },
   { table: 'co_managed_seat_board_scopes', deletion: 'ordered' },
   { table: 'co_managed_seat_project_grants', deletion: 'ordered' },
   { table: 'co_managed_seat_assignments', deletion: 'ordered' },

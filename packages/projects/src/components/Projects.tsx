@@ -1119,7 +1119,7 @@ export default function Projects({ initialProjects, initialFilters, initialProje
       </div>
 
       {/* Filter section */}
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
           {/* Search bar */}
           <div className="relative p-0.5 shrink-0">
             <Input
