@@ -640,7 +640,11 @@ describe('Profitability Reporting Integration', () => {
     expect(summary.revenue).toBe(EXPECTED_REVENUE);
   });
 
-  it('nets consumption and restock-return COGS without changing material revenue', async () => {
+  // Restock returns reduce COGS whichever sign the movement stored for cogs_cost.
+  it.each([
+    ['negative', -3000],
+    ['positive', 3000],
+  ])('nets consumption and a %s-signed restock-return cost without changing material revenue', async (_sign, returnCost) => {
     const material = await table('ticket_materials')
       .where({ ticket_id: ticketId, billed_invoice_id: invoiceId })
       .first('ticket_material_id', 'service_id');
@@ -660,7 +664,7 @@ describe('Profitability Reporting Integration', () => {
         },
         {
           tenant: tenantId, movement_id: uuidv4(), movement_type: 'return_restock',
-          service_id: material.service_id, quantity: 1, cogs_cost: -3000,
+          service_id: material.service_id, quantity: 1, cogs_cost: returnCost,
           cost_currency: before.currencyCode, source_doc_type: 'ticket_material',
           source_doc_id: material.ticket_material_id, performed_by: userId,
         },

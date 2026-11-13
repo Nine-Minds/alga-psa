@@ -184,14 +184,79 @@ afterAll(async () => {
 });
 
 describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
-  async function insertFixedFee() {
+  async function insertFixedFee(params: { ticket?: string; client?: string; isBilled?: boolean } = {}) {
     const entryId = uuidv4();
     const [entry] = await db('ticket_fixed_fee_services').insert({
-      tenant, entry_id: entryId, ticket_id: ticketId, client_id: clientId,
-      service_id: serviceId, quantity: 2, rate: 2500, currency_code: 'USD',
+      tenant, entry_id: entryId, ticket_id: params.ticket ?? ticketId, client_id: params.client ?? clientId,
+      service_id: serviceId, quantity: 2, rate: 2500, currency_code: 'USD', is_billed: params.isBilled ?? false,
     }).returning(['entry_id', db.raw('updated_at::text as source_version')]);
     return { entryId, updatedAt: entry.source_version as string };
   }
+
+  async function insertForeignTenantFixedFee() {
+    const foreignClient = uuidv4();
+    const foreignTicket = uuidv4();
+    const foreignServiceType = uuidv4();
+    const foreignService = uuidv4();
+    await db('clients').insert({ tenant: OTHER_TENANT, client_id: foreignClient, client_name: `Foreign ${foreignClient.slice(0, 8)}` });
+    await db('tickets').insert({
+      tenant: OTHER_TENANT, ticket_id: foreignTicket, client_id: foreignClient,
+      title: 'Foreign fixed-fee ticket', ticket_number: `FF-${foreignTicket.slice(0, 8)}`,
+    });
+    await db('service_types').insert({ tenant: OTHER_TENANT, id: foreignServiceType, name: `Foreign fixed ${foreignServiceType.slice(0, 8)}` });
+    await db('service_catalog').insert({
+      tenant: OTHER_TENANT, service_id: foreignService, service_name: 'Foreign fixed-fee service',
+      custom_service_type_id: foreignServiceType, billing_method: 'fixed', default_rate: 2500,
+    });
+    const [entry] = await db('ticket_fixed_fee_services').insert({
+      tenant: OTHER_TENANT, entry_id: uuidv4(), ticket_id: foreignTicket, client_id: foreignClient,
+      service_id: foreignService, quantity: 2, rate: 2500, currency_code: 'USD',
+    }).returning(['entry_id', db.raw('updated_at::text as source_version')]);
+    return { entryId: entry.entry_id as string, updatedAt: entry.source_version as string };
+  }
+
+  const fixedFeeItem = (source: { entryId: string; updatedAt: string }) => ({
+    service_id: serviceId, quantity: 2, rate: 2500, description: 'Setup',
+    source_link: { kind: 'ticket_fixed_fee' as const, ...source },
+  });
+
+  async function expectFixedFeeUnclaimed(invoiceId: string, ownerTenant: string, entryId: string) {
+    expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
+    expect(await db('invoice_charges').where({ tenant, invoice_id: invoiceId })).toHaveLength(0);
+    expect(await db('ticket_fixed_fee_services').where({ tenant: ownerTenant, entry_id: entryId }).first())
+      .toMatchObject({ billed_invoice_id: null, billed_at: null });
+  }
+
+  it('does not claim a fixed-fee entry owned by another tenant', async () => {
+    const source = await insertForeignTenantFixedFee();
+    const invoiceId = uuidv4();
+    await expect(runPersist({ invoiceId, items: [fixedFeeItem(source)] }))
+      .rejects.toMatchObject({ code: 'SOURCE_ALREADY_BILLED' });
+    await expectFixedFeeUnclaimed(invoiceId, OTHER_TENANT, source.entryId);
+    expect((await db('ticket_fixed_fee_services').where({ tenant: OTHER_TENANT, entry_id: source.entryId }).first()).is_billed)
+      .toBe(false);
+  });
+
+  it.each(['wrong ticket', 'wrong client'])('rejects a fixed-fee entry on a %s without claiming it', async (scenario) => {
+    const otherClient = await db('clients').where({ tenant }).whereNot('client_id', clientId).first();
+    const otherTicket = await db('tickets').where({ tenant }).whereNot('ticket_id', ticketId).first();
+    const source = await insertFixedFee(scenario === 'wrong ticket'
+      ? { ticket: otherTicket.ticket_id }
+      : { client: otherClient.client_id });
+    const invoiceId = uuidv4();
+    await expect(runPersist({ invoiceId, items: [fixedFeeItem(source)] }))
+      .rejects.toMatchObject({ code: 'SOURCE_NOT_ELIGIBLE' });
+    await expectFixedFeeUnclaimed(invoiceId, tenant, source.entryId);
+    expect((await db('ticket_fixed_fee_services').where({ tenant, entry_id: source.entryId }).first()).is_billed).toBe(false);
+  });
+
+  it('rejects an already-billed fixed-fee entry and rolls back the invoice', async () => {
+    const source = await insertFixedFee({ isBilled: true });
+    const invoiceId = uuidv4();
+    await expect(runPersist({ invoiceId, items: [fixedFeeItem(source)] }))
+      .rejects.toMatchObject({ code: 'SOURCE_ALREADY_BILLED' });
+    await expectFixedFeeUnclaimed(invoiceId, tenant, source.entryId);
+  });
 
   it('claims a fixed-fee entry using its full PostgreSQL timestamp precision', async () => {
     const source = await insertFixedFee();
