@@ -430,6 +430,7 @@
       "FIXED_LINE_RATE_UNRESOLVED": "Für die Festpreis-Vertragsposition {{lines}} ist kein Preis hinterlegt. Lege einen Preis für die Vertragsposition fest (oder einen Preis für ihre Dienste in der Vertragswährung) und versuche es erneut.",
       "FIXED_LINE_NO_SERVICES": "Die Festpreis-Position {{lines}} hat einen Preis, aber keine Leistung, auf die er abgerechnet werden kann. Fügen Sie der Vertragsposition eine Leistung hinzu und versuchen Sie es erneut.",
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
+      "SOURCE_CHANGED": "Ein Produkt oder eine Festpreisleistung wurde geändert oder bereits abgerechnet. Aktualisieren Sie die Positionen und versuchen Sie es erneut.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
       "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
       "SERVICE_REQUIRED": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu.",
@@ -494,6 +495,9 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Dienste",
+    "excludedFixedFees_one": "1 Eintrag für einen Dienst mit Festpreis wurde ausgeschlossen, weil seine Währung von der Rechnungswährung abweicht.",
+    "excludedFixedFees_other": "{{count}} Einträge für Dienste mit Festpreis wurden ausgeschlossen, weil ihre Währung von der Rechnungswährung abweicht.",
     "currencyExcluded": "{{count}} Produkt(e) ausgeschlossen, da ihre Währung von {{currency}} abweicht.",
     "action": "Schnellrechnung",
     "title": "Dieses Ticket schnell abrechnen",

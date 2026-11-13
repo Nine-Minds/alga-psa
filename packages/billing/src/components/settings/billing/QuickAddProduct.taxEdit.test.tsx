@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 /**
  * QuickAddProduct edit-mode coverage for the tenant default tax rate
@@ -106,8 +106,9 @@ vi.mock('@alga-psa/ui/components/EditableServiceTypeSelect', () => ({
   ),
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ value, onValueChange, options }: any) => (
-    <select value={value} onChange={(e) => onValueChange(e.target.value)}>
+  default: ({ id, value, onValueChange, options }: any) => (
+    <select id={id} value={value} onChange={(e) => onValueChange(e.target.value)}>
+      <option value="">Select</option>
       {options.map((option: { value: string; label: string }) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -192,5 +193,29 @@ describe('QuickAddProduct edit-mode tax selection', () => {
   it('retains a saved tax rate UUID on update', async () => {
     const payload = await submitAndGetUpdatePayload(productFixture('22222222-2222-4222-8222-222222222222'));
     expect(payload.tax_rate_id).toBe('22222222-2222-4222-8222-222222222222');
+  });
+
+  it('loads legacy defaults into shared dropdowns and persists numeric asset specs without stringifying them', async () => {
+    mocks.getProductInventorySettings.mockResolvedValue({
+      track_stock: true, is_serialized: true, creates_asset_on_delivery: true,
+      default_asset_type: 'workstation',
+      default_asset_metadata: { os_type: 'Windows', storage_type: 'SSD', cpu_cores: 8, ram_gb: 32 },
+    });
+    mocks.updateInventorySettings.mockResolvedValue({});
+    await renderEdit(productFixture(null));
+    fireEvent.click(document.getElementById('quick-add-product-inventory-toggle-section')!);
+    await waitFor(() => expect(screen.getByLabelText('OS Type')).toHaveValue('windows'));
+    expect(screen.getByLabelText('Storage Type')).toHaveValue('ssd');
+    expect(screen.getByLabelText('CPU Cores')).toHaveValue(8);
+    fireEvent.change(screen.getByLabelText('RAM (GB)'), { target: { value: '64' } });
+    fireEvent.blur(screen.getByLabelText('RAM (GB)'));
+    await waitFor(() => expect(mocks.updateInventorySettings).toHaveBeenCalledWith('prod-1', {
+      default_asset_metadata: { os_type: 'windows', storage_type: 'ssd', cpu_cores: 8, ram_gb: 64 },
+    }));
+    fireEvent.change(document.getElementById('quick-add-product-default-asset-type')!, { target: { value: 'server' } });
+    await waitFor(() => expect(mocks.updateInventorySettings).toHaveBeenCalledWith('prod-1', {
+      default_asset_type: 'server', default_asset_metadata: null,
+    }));
+    expect(screen.getByLabelText('RAM (GB)')).toHaveValue(null);
   });
 });

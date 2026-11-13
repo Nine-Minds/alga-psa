@@ -430,6 +430,7 @@
       "FIXED_LINE_RATE_UNRESOLVED": "Avtalsraden med fast avgift {{lines}} saknar avgift. Ange en avgift på avtalsraden (eller ett pris för dess tjänster i avtalsvalutan) och försök igen.",
       "FIXED_LINE_NO_SERVICES": "Avtalsraden med fast avgift {{lines}} har en avgift men ingen tjänst att debitera den på. Lägg till en tjänst på avtalsraden och försök igen.",
       "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om sidan och försök igen.",
+      "SOURCE_CHANGED": "En produkt eller tjänst med fast pris har ändrats eller redan fakturerats. Uppdatera debiteringarna och försök igen.",
       "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om sidan och försök igen.",
       "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta.",
       "SERVICE_REQUIRED": "Tilldela en tjänst till avgiften innan du sparar.",
@@ -494,6 +495,9 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Tjänster",
+    "excludedFixedFees_one": "1 post för en tjänst med fast pris uteslöts eftersom valutan skiljer sig från fakturans valuta.",
+    "excludedFixedFees_other": "{{count}} poster för tjänster med fast pris uteslöts eftersom valutan skiljer sig från fakturans valuta.",
     "currencyExcluded": "Produkter som undantas eftersom deras valuta skiljer sig från {{currency}}: {{count}}.",
     "action": "Snabbfakturering",
     "title": "Snabbfakturera det här ärendet",

@@ -30,4 +30,5 @@ export { default as TicketChecklistSection, summarizeChecklist } from './ticket/
 export { default as TicketDocumentsSection } from './ticket/TicketDocumentsSection';
 export { default as TicketInfo } from './ticket/TicketInfo';
 export { default as TicketMaterialsCard } from './ticket/TicketMaterialsCard';
+export { default as TicketFixedFeeServicesCard } from './ticket/TicketFixedFeeServicesCard';
 export { default as TicketProperties } from './ticket/TicketProperties';

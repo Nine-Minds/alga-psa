@@ -1194,6 +1194,8 @@
         "kit": "Kit",
         "createsAsset": "Crée un actif à la livraison",
         "defaultAssetType": "Type d'actif par défaut",
+        "specDefaults": "Caractéristiques par défaut des actifs livrés",
+        "specDefaultsHint": "Appliqué lorsqu'une unité sérialisée livrée crée automatiquement son actif.",
         "reorderPoint": "Seuil de réapprovisionnement",
         "reorderQuantity": "Quantité de réapprovisionnement",
         "kitPricingMode": "Mode de tarification du kit",

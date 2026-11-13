@@ -49,6 +49,7 @@ describe('tenantDb facade', () => {
       'time_period_types',
       'email_rate_limits',
       'email_templates',
+      'project_staging_lines',
     ]) {
       expect(tenantTableMetadata[table], table).toEqual({ scope: 'tenant' });
     }

@@ -430,6 +430,7 @@
       "FIXED_LINE_RATE_UNRESOLVED": "Fixed fee line {{lines}} has no rate. Set a rate on the contract line (or a price for its services in the contract currency), then try again.",
       "FIXED_LINE_NO_SERVICES": "Fixed fee line {{lines}} has a rate but no service to bill it on. Add a service to the contract line, then try again.",
       "SOURCE_ALREADY_BILLED": "Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.",
+      "SOURCE_CHANGED": "A product or fixed-fee service changed or was already billed. Refresh the charges and try again.",
       "SOURCE_NOT_ELIGIBLE": "A selected item is not one of this ticket's billable items, or it is no longer eligible. Refresh and try again.",
       "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency.",
       "SERVICE_REQUIRED": "Assign a service to this charge before saving.",
@@ -494,6 +495,9 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Services",
+    "excludedFixedFees_one": "1 fixed-fee service entry was excluded because its currency differs from the invoice currency.",
+    "excludedFixedFees_other": "{{count}} fixed-fee service entries were excluded because their currency differs from the invoice currency.",
     "currencyExcluded": "{{count}} product(s) excluded because their currency differs from {{currency}}.",
     "action": "Quick invoice",
     "title": "Quick invoice this ticket",

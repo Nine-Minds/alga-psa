@@ -65,6 +65,7 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "date-fns": "^3.6.0",
+    "swr": "^2.3.0",
     "zod": "^4.6.7"
   },
   "peerDependencies": {

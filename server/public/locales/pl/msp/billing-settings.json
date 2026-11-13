@@ -1196,6 +1196,8 @@
         "kit": "Zestaw",
         "createsAsset": "Tworzy zasób przy dostawie",
         "defaultAssetType": "Domyślny typ zasobu",
+        "specDefaults": "Domyślne specyfikacje dostarczonych zasobów",
+        "specDefaultsHint": "Stosowane, gdy dostarczona jednostka seryjna automatycznie tworzy swój zasób.",
         "reorderPoint": "Punkt ponownego zamówienia",
         "reorderQuantity": "Ilość ponownego zamówienia",
         "kitPricingMode": "Tryb wyceny zestawu",

@@ -76,10 +76,14 @@ describe('ticket close/checklist/material facade contract', () => {
   });
 
   it('uses facade joins for the migrated tenant-table joins', () => {
-    // The canonical inventory service deliberately stays importable without the
-    // server-action stack, so pin its equivalent explicit tenant predicates.
-    expect(sources.inventoryMaterials).toContain("this.on('m.service_id', '=', 'sc.service_id').andOn('m.tenant', '=', 'sc.tenant')");
-    expect(sources.inventoryMaterials).toContain(".where({ 'm.tenant': tenant, [`m.${cfg.parentCol}`]: parentId })");
+    // The shared inventory list uses facade-scoped roots and joins; its other
+    // paths retain their explicit tenant predicates.
+    expect(sources.inventoryMaterials).toContain('const scoped = tenantDb(trx, tenant);');
+    expect(sources.inventoryMaterials).toContain('scoped.table(`${cfg.table} as m`)');
+    expect(sources.inventoryMaterials).toContain('.where({ [`m.${cfg.parentCol}`]: parentId })');
+    expect(sources.inventoryMaterials).toContain("scoped.tenantJoin(query, 'service_catalog as sc', 'm.service_id', 'sc.service_id', { type: 'left' })");
+    expect(sources.inventoryMaterials).toContain("scoped.tenantJoin(query, 'product_inventory_settings as pis', 'm.service_id', 'pis.service_id', { type: 'left' })");
+    expect(sources.inventoryMaterials).toContain('WHERE sm.tenant = m.tenant AND sm.source_doc_type = ?');
     expect(sources.inventoryMaterials).toContain(".where({ tenant, [cfg.parentPk]: input.parent_id })");
     expect(sources.inventoryMaterials).toContain(".where({ tenant, service_id: input.service_id, item_kind: 'product' })");
 

@@ -1194,6 +1194,8 @@
         "kit": "Kit",
         "createsAsset": "Creates asset on delivery",
         "defaultAssetType": "Default asset type",
+        "specDefaults": "Default specs for delivered assets",
+        "specDefaultsHint": "Applied when a delivered serialized unit automatically creates its asset.",
         "reorderPoint": "Reorder Point",
         "reorderQuantity": "Reorder Quantity",
         "kitPricingMode": "Kit Pricing Mode",

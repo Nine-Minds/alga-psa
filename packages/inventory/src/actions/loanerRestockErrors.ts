@@ -143,6 +143,11 @@ export function restockReturnActionErrorFrom(error: unknown): InventoryActionErr
         return actionError('Restock quantity must be greater than zero.', 'features/inventory:errors.restock.quantityPositive');
       case 'This product is serialized; provide unit_id to restock a specific unit':
         return actionError('This product is serialized. Choose the specific unit to restock.', 'features/inventory:errors.restock.serializedUnitRequired');
+      case 'The unit is installed on a billed material line; credit or unbilled the invoice before restocking it':
+        return actionError(
+          "This unit is on a material line that's already been billed. Credit or unbill the invoice before restocking it.",
+          'features/inventory:errors.restock.billedMaterialLine',
+        );
     }
 
     if (error.message.startsWith('Unit must be delivered or returned ')) {

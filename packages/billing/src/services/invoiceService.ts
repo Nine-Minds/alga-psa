@@ -28,6 +28,7 @@ import { discountPoolFromInvoiceRow } from '../lib/billing/invoiceDiscountPools'
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 import { buildBundleSnapshot, loadPreviousBundlePeriods, type BundleSnapshotDetailInput, type PreviousPeriodRequest } from '../lib/invoiceBundleComponents';
 import { distributeExternalTaxToFixedDetails, zeroFixedDetailTaxForInvoice } from './delegatedFixedDetailTax';
+import { claimTicketChargeSources, type TicketChargeSourceClaim, type TicketChargeSourceKind } from '../lib/billing/ticketChargeClaims';
 
 
 // Helper interface for tax calculation
@@ -859,7 +860,9 @@ async function validateManualTicketSources(
   // Stable lock order prevents overlapping selections from deadlocking.
   const key = (item: ManualInvoiceItemInput) => {
     const link = item.source_link!;
-    return link.kind === 'time_entry' ? `time:${link.entryId}` : `material:${'materialId' in link ? link.materialId : ''}`;
+    if (link.kind === 'time_entry') return `time:${link.entryId}`;
+    if (link.kind === 'ticket_fixed_fee') return `fixed:${link.entryId}`;
+    return `material:${link.materialId}`;
   };
   const seen = new Set<string>();
   for (const item of [...sourceItems].sort((a, b) => key(a).localeCompare(key(b)))) {
@@ -904,6 +907,29 @@ async function validateManualTicketSources(
       }
       if (item.service_id !== material.service_id || item.quantity !== Number(material.quantity) ||
           item.rate !== Math.max(0, Math.round(Number(material.rate) || 0))) throw reject();
+      if (!link.updatedAt || !await tenantScopedTable(tx, tenant, 'ticket_materials')
+        .where({ ticket_material_id: link.materialId, updated_at: link.updatedAt }).first('ticket_material_id')) {
+        throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected product changed after selection. Refresh and try again.');
+      }
+    } else if (link.kind === 'ticket_fixed_fee') {
+      const entry = await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
+        .where({ entry_id: link.entryId }).forUpdate().first();
+      if (!entry || entry.is_billed) {
+        throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected fixed-fee service is already billed or removed.');
+      }
+      if (entry.ticket_id !== ticket.ticket_id || entry.client_id !== invoice.client_id ||
+          Number(entry.quantity) <= 0 || item.service_id !== entry.service_id ||
+          item.quantity !== Number(entry.quantity) || item.rate !== Number(entry.rate)) throw reject();
+      if (!link.updatedAt) {
+        throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected fixed-fee service changed after selection. Refresh and try again.');
+      }
+      if (!await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
+        .where({ entry_id: link.entryId, updated_at: link.updatedAt }).first('entry_id')) {
+        throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected fixed-fee service changed after selection. Refresh and try again.');
+      }
+      if (entry.currency_code !== invoice.currency_code) {
+        throw new ManualInvoiceError('SOURCE_CURRENCY_MISMATCH', 'The fixed-fee service currency does not match the invoice.');
+      }
     } else {
       throw reject();
     }
@@ -922,7 +948,7 @@ async function claimManualChargeSource(
   tenant: string,
   invoiceId: string,
   invoiceItemId: string,
-  sourceLink: ManualInvoiceSourceLink,
+  sourceLink: Extract<ManualInvoiceSourceLink, { kind: 'time_entry' }>,
   claimedAt: string,
   snapshot?: InvoiceTimeEntrySnapshot,
 ): Promise<void> {
@@ -950,23 +976,6 @@ async function claimManualChargeSource(
     return;
   }
 
-  if (sourceLink.kind === 'ticket_material') {
-    const updated = await tenantScopedTable(tx, tenant, 'ticket_materials')
-      .where({ ticket_material_id: sourceLink.materialId, is_billed: false })
-      .update({
-        is_billed: true,
-        billed_invoice_id: invoiceId,
-        billed_at: claimedAt,
-        updated_at: claimedAt,
-      });
-    if (updated !== 1) {
-      throw new ManualInvoiceError(
-        'SOURCE_ALREADY_BILLED',
-        `Ticket product ${sourceLink.materialId} is no longer billable (already invoiced or removed).`,
-        { recordId: sourceLink.materialId },
-      );
-    }
-  }
 }
 
 /**
@@ -1110,6 +1119,10 @@ export async function persistManualInvoiceCharges(
   let subtotal = 0;
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();
+  const ticketSourceClaims: Array<{
+    sourceKind: TicketChargeSourceKind;
+    claim: TicketChargeSourceClaim;
+  }> = [];
 
   // A manual item has no contract line and no work item behind it, so the
   // resolution chain collapses to "explicit assignment, else client default"
@@ -1268,15 +1281,33 @@ export async function persistManualInvoiceCharges(
 
     await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
     if (requestItem.source_link) {
-      await claimManualChargeSource(
-        tx,
-        tenant,
-        invoiceId,
-        invoiceItem.item_id,
-        requestItem.source_link,
-        now,
-        sourceSnapshots.get(requestItem),
-      );
+      if (requestItem.source_link.kind === 'time_entry') {
+        await claimManualChargeSource(
+          tx,
+          tenant,
+          invoiceId,
+          invoiceItem.item_id,
+          requestItem.source_link,
+          now,
+          sourceSnapshots.get(requestItem),
+        );
+      } else {
+        const sourceLink = requestItem.source_link;
+        const sourceId = sourceLink.kind === 'ticket_material' ? sourceLink.materialId : sourceLink.entryId;
+        ticketSourceClaims.push({
+          sourceKind: sourceLink.kind,
+          claim: {
+            sourceId,
+            sourceUpdatedAt: sourceLink.updatedAt,
+            expected: {
+              clientId: client.client_id,
+              serviceId: requestItem.service_id ?? undefined,
+              quantity: requestItem.quantity,
+              rate: requestItem.rate,
+            },
+          },
+        });
+      }
     }
     // A manual credit carries the service of the line it refunds but is not a
     // target a discount can apply to: pointing a discount at it would leave
@@ -1285,6 +1316,29 @@ export async function persistManualInvoiceCharges(
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
     subtotal += netAmount;
+  }
+
+  for (const sourceKind of ['ticket_material', 'ticket_fixed_fee'] as const) {
+    const claims = ticketSourceClaims
+      .filter(({ sourceKind: kind }) => kind === sourceKind)
+      .map(({ claim }) => claim);
+    if (claims.length === 0) continue;
+
+    const claimedIds = await claimTicketChargeSources(tx, tenant, sourceKind, claims, invoiceId, now);
+    const failedClaim = claims.find(({ sourceId }) => !claimedIds.has(sourceId));
+    if (failedClaim) {
+      const isMaterial = sourceKind === 'ticket_material';
+      throw new ManualInvoiceError(
+        'SOURCE_ALREADY_BILLED',
+        isMaterial
+          ? `Ticket product ${failedClaim.sourceId} is no longer billable (already invoiced or removed).`
+          : 'The fixed-fee service was already invoiced or removed.',
+        { recordId: failedClaim.sourceId },
+      );
+    }
+    if (claimedIds.size !== claims.length) {
+      throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', `A ${sourceKind.replace('_', ' ')} source was selected more than once.`);
+    }
   }
 
   // --- Second Pass: Process manual discount items ---
@@ -1462,6 +1516,17 @@ async function persistFixedInvoiceCharges(
     consolidatedItem: any;
     details: IFixedPriceCharge[];
   }>();
+  const ticketFixedFeeClaims: TicketChargeSourceClaim[] = [];
+  let invoiceCurrencyCode: string | null = null;
+  if (fixedCharges.some((charge) => charge.ticket_fixed_fee_id)) {
+    const invoice = await tenantScopedTable(tx, tenant, 'invoices')
+      .where('invoice_id', invoiceId)
+      .first('currency_code');
+    if (!invoice) {
+      throw new Error(`Cannot persist fixed-fee sources: invoice ${invoiceId} was not found.`);
+    }
+    invoiceCurrencyCode = invoice.currency_code;
+  }
 
   for (const charge of fixedCharges) {
     // --- Handle Detailed Fixed Price Charges (V1 Scope) ---
@@ -1570,7 +1635,7 @@ async function persistFixedInvoiceCharges(
         unit_price: charge.rate, // The custom rate
         net_amount: netAmount,
         tax_amount: charge.tax_amount || 0, // Use tax from charge if available
-        tax_region: client.tax_region, // Use client default
+        tax_region: charge.ticket_fixed_fee_id ? charge.tax_region : client.tax_region,
         tax_rate: charge.tax_rate || 0, // Use rate from charge if available
         total_price: netAmount + (charge.tax_amount || 0),
         is_manual: false,
@@ -1589,7 +1654,30 @@ async function persistFixedInvoiceCharges(
         tenant
       };
       await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
+      if (charge.ticket_fixed_fee_id) {
+        if (!charge.ticket_fixed_fee_updated_at) throw new Error('Ticket fixed-fee source version is required.');
+        ticketFixedFeeClaims.push({
+          sourceId: charge.ticket_fixed_fee_id,
+          sourceUpdatedAt: charge.ticket_fixed_fee_updated_at,
+          expected: {
+            clientId: client.client_id,
+            serviceId: charge.serviceId ?? undefined,
+            quantity: charge.quantity,
+            rate: charge.rate,
+            currencyCode: invoiceCurrencyCode ?? undefined,
+          },
+        });
+      }
       fixedSubtotal += netAmount;
+    }
+  }
+
+  if (ticketFixedFeeClaims.length > 0) {
+    const claimedIds = await claimTicketChargeSources(
+      tx, tenant, 'ticket_fixed_fee', ticketFixedFeeClaims, invoiceId, now,
+    );
+    if (claimedIds.size !== ticketFixedFeeClaims.length) {
+      throw new ManualInvoiceError('SOURCE_CHANGED', 'A ticket fixed-fee service changed or was already billed. Refresh and try again.');
     }
   }
 

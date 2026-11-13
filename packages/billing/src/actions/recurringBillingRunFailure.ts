@@ -9,6 +9,7 @@ import {
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
   RECURRING_PRICING_STALE_MESSAGE_KEY,
+  SOURCE_CHANGED_MESSAGE_KEY,
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
   FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
   FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
@@ -82,6 +83,9 @@ export function handledRecurringFailureFromActionError(error: RecurringBillingRu
       code: 'RECURRING_PRICING_STALE',
       params: error.messageParams as Record<string, string> | undefined,
     };
+  }
+  if (error.messageKey === SOURCE_CHANGED_MESSAGE_KEY) {
+    return { code: 'SOURCE_CHANGED' };
   }
   // Recorded usage the engine could not price keeps its structured
   // per-service diagnostics across the run boundary.

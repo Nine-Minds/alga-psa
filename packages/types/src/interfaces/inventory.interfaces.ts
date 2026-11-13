@@ -164,6 +164,12 @@ export interface IProductInventorySettings extends TenantEntity {
   preferred_vendor_id?: string | null;
   /** asset_type applied when a delivered serialized unit becomes a managed asset (F026); fallback 'unknown'. */
   default_asset_type?: string | null;
+  /**
+   * Partial spec info (flat field map, e.g. { os_type: 'Windows', os_version: '11' }) for the
+   * configured default_asset_type; merged into the extension payload of assets auto-created
+   * on delivery for this product. Keys not valid for the asset type are ignored.
+   */
+  default_asset_metadata?: Record<string, unknown> | null;
   created_at?: string | Date;
   updated_at?: string | Date;
 }

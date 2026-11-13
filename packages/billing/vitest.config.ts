@@ -31,6 +31,7 @@ export default defineConfig({
       'src/lib/currency/rateInput.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
+      'src/lib/billing/ticketFixedFeeWindow.test.ts',
       // Preview/generation consistency for scheduled recurring quantity/price
       // revisions — listed explicitly so this package's own `npm test` target
       // covers the stale-source comparison, not only the server-wide glob.
@@ -236,6 +237,7 @@ export default defineConfig({
         find: /^@alga-psa\/workflows\/(.*)$/,
         replacement: `${path.resolve(__dirname, '../../ee/packages/workflows/src')}/$1`,
       },
+      ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
       {
         find: /^@alga-psa\/core\/fileNames$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
@@ -287,6 +289,10 @@ export default defineConfig({
       {
         find: /^@alga-psa\/product-extension-actions$/,
         replacement: path.resolve(__dirname, '../product-extension-actions/oss/entry.ts'),
+      },
+      {
+        find: /^@product\/service-principals\/entry$/,
+        replacement: path.resolve(__dirname, '../product-service-principals/oss/entry.ts'),
       },
       {
         find: /^@enterprise$/,

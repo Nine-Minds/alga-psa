@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { configure, render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
+import ProjectMaterialsDrawer from '../src/components/ProjectMaterialsDrawer';
 
 // Several assertions here await an async data load — most notably the
 // getServicePrices() fetch that fires from a useEffect after a product is
@@ -132,6 +133,10 @@ vi.mock('../src/actions/materialCatalogActions', () => ({
   updateProjectMaterial: vi.fn(async () => undefined),
 }));
 
+vi.mock('@alga-psa/inventory/actions/availabilityActions', () => ({
+  getProductAvailability: vi.fn(async () => []),
+}));
+
 describe('ProjectMaterialsDrawer', () => {
   beforeEach(async () => {
     cleanup();
@@ -148,10 +153,43 @@ describe('ProjectMaterialsDrawer', () => {
     vi.mocked(actions.getServicePrices).mockImplementation(async () => mockPrices);
     vi.mocked(actions.addProjectMaterial).mockClear();
     vi.mocked(actions.deleteProjectMaterial).mockClear();
+    vi.mocked(actions.listAvailableStockUnitsForMaterial).mockResolvedValue([]);
+    const availability = await import('@alga-psa/inventory/actions/availabilityActions');
+    vi.mocked(availability.getProductAvailability).mockResolvedValue([]);
 
     const toast = await import('react-hot-toast');
     vi.mocked(toast.toast.error).mockClear();
     vi.mocked(toast.toast.success).mockClear();
+  });
+
+  it('locks serialized product quantity to one and submits the selected unit', async () => {
+    mockProducts = [{ service_id: 'service-1', service_name: 'Laptop', sku: 'LAPTOP' } as CatalogPickerItem];
+    mockPrices = [{ service_id: 'service-1', currency_code: 'USD', rate: 1000 } as IServicePrice];
+    const actions = await import('../src/actions/materialCatalogActions');
+    const availability = await import('@alga-psa/inventory/actions/availabilityActions');
+    vi.mocked(actions.listAvailableStockUnitsForMaterial).mockResolvedValue([{
+      unit_id: 'unit-1', serial_number: 'SERIAL-1',
+    } as import('@alga-psa/types').IStockUnit]);
+    vi.mocked(availability.getProductAvailability).mockResolvedValue([{
+      service_id: 'service-1', is_serialized: true, track_stock: true,
+      on_hand_total: 1, available_total: 1, reorder_point: null, locations: [],
+    }]);
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add', exact: true }));
+    fireEvent.change(await screen.findByLabelText('Quantity'), { target: { value: '5' } });
+    await screen.findByRole('option', { name: /Laptop/ });
+    fireEvent.change(await screen.findByTestId('async-searchable-select'), { target: { value: 'service-1' } });
+    await waitFor(() => {
+      expect(screen.getByLabelText('Quantity')).toBeDisabled();
+      expect(screen.getByLabelText('Quantity')).toHaveValue(1);
+    });
+    fireEvent.change(await screen.findByTestId('project-materials-drawer-unit-select'), { target: { value: 'unit-1' } });
+    const submit = screen.getAllByRole('button', { name: 'Add Material' });
+    await waitFor(() => expect(submit[submit.length - 1]).not.toBeDisabled());
+    fireEvent.click(submit[submit.length - 1]);
+    await waitFor(() => expect(actions.addProjectMaterial).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: 1, unit_id: 'unit-1' }),
+    ));
   });
 
   it('shows loading state while materials are fetched (T003)', async () => {

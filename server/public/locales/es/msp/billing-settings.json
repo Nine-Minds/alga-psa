@@ -1194,6 +1194,8 @@
         "kit": "Kit",
         "createsAsset": "Crea un activo al entregar",
         "defaultAssetType": "Tipo de activo predeterminado",
+        "specDefaults": "Especificaciones predeterminadas de los activos entregados",
+        "specDefaultsHint": "Se aplica cuando una unidad serializada entregada crea automáticamente su activo.",
         "reorderPoint": "Punto de reorden",
         "reorderQuantity": "Cantidad de reorden",
         "kitPricingMode": "Modo de precio del kit",

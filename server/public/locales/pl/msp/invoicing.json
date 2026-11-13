@@ -450,6 +450,7 @@
       "FIXED_LINE_RATE_UNRESOLVED": "Pozycja umowy ze stałą opłatą {{lines}} nie ma stawki. Ustaw stawkę dla pozycji umowy (lub cenę jej usług w walucie umowy) i spróbuj ponownie.",
       "FIXED_LINE_NO_SERVICES": "Pozycja o stałej opłacie {{lines}} ma stawkę, ale brak usługi, na której można ją rozliczyć. Dodaj usługę do pozycji umowy i spróbuj ponownie.",
       "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
+      "SOURCE_CHANGED": "Produkt lub usługa o stałej opłacie zostały zmienione lub już zafakturowane. Odśwież pozycje i spróbuj ponownie.",
       "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
       "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie.",
       "SERVICE_REQUIRED": "Przypisz usługę do tej pozycji przed zapisaniem.",
@@ -514,6 +515,11 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Usługi",
+    "excludedFixedFees_one": "Wykluczono 1 pozycję usługi ze stałą opłatą, ponieważ jej waluta różni się od waluty faktury.",
+    "excludedFixedFees_few": "Wykluczono {{count}} pozycje usług ze stałą opłatą, ponieważ ich waluta różni się od waluty faktury.",
+    "excludedFixedFees_many": "Wykluczono {{count}} pozycji usług ze stałą opłatą, ponieważ ich waluta różni się od waluty faktury.",
+    "excludedFixedFees_other": "Wykluczono {{count}} pozycji usług ze stałą opłatą, ponieważ ich waluta różni się od waluty faktury.",
     "currencyExcluded": "Wykluczono {{count}} produkt(y), ponieważ ich waluta różni się od {{currency}}.",
     "action": "Szybka faktura",
     "title": "Szybka faktura dla tego zgłoszenia",

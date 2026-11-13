@@ -1194,6 +1194,8 @@
         "kit": "Kit",
         "createsAsset": "Maakt asset aan bij levering",
         "defaultAssetType": "Standaard assettype",
+        "specDefaults": "Standaardspecificaties voor geleverde assets",
+        "specDefaultsHint": "Wordt toegepast wanneer een geleverde serialized eenheid automatisch zijn asset aanmaakt.",
         "reorderPoint": "Bestelpunt",
         "reorderQuantity": "Bestelhoeveelheid",
         "kitPricingMode": "Kitprijsmodus",

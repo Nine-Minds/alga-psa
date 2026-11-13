@@ -151,7 +151,7 @@ describe('CustomSelect', () => {
       expect(content.className.split(/\s+/)).not.toContain('max-w-full');
       // Non-conflicting base classes survive the merge.
       expect(content.className).toContain('min-w-[var(--radix-select-trigger-width)]');
-      expect(content.className).toContain('z-[10001]');
+      expect(content.className).toContain('z-[100000]');
     });
 
     it('keeps the base content classes when no customStyles are passed', async () => {
@@ -160,7 +160,7 @@ describe('CustomSelect', () => {
       expect(classes).toContain('max-w-full');
       expect(classes).toContain('min-w-[var(--radix-select-trigger-width)]');
       expect(classes).toContain('mt-1');
-      expect(classes).toContain('z-[10001]');
+      expect(classes).toContain('z-[100000]');
       expect(classes).toContain('[&[data-side=top]]:mb-2');
       expect(classes).toContain('[&[data-side=bottom]]:mt-2');
     });
