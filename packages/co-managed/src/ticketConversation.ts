@@ -55,7 +55,10 @@ export function shapeConversationAuthor(row: Record<string, any>, viewerTenant: 
   const base = { tenant: row.actor_tenant, kind: row.actor_kind, displayName: row.actor_display_name, organizationName: row.actor_organization_name };
   if (row.actor_tenant === viewerTenant) return { ...base, id: row.actor_id, referenceId: row.actor_reference_id };
   const storeLocal = (row.actor_kind === 'user' || row.actor_kind === 'contact') && row.actor_id != null;
-  return { ...base, id: null,
+  // Older journals may have copied actor_id into displayName as a fallback.
+  // The ID is only safe to display when the author belongs to the viewer.
+  const displayName = row.actor_display_name === row.actor_id ? null : row.actor_display_name;
+  return { ...base, displayName, id: null,
     referenceId: row.actor_reference_id ?? (storeLocal ? localAuthorReference(row.store_tenant, row.actor_kind, row.actor_id) : null) };
 }
 async function readConversation(context: CoManagedSharedWorkContext, cursor?: CoManagedConversationCursor): Promise<CoManagedTicketConversation> {
