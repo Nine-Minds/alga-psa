@@ -8,6 +8,14 @@ export const fetchTimeEntriesParamsSchema = z.object({
 
 export type FetchTimeEntriesParams = z.infer<typeof fetchTimeEntriesParamsSchema>;
 
+export const deleteWorkItemParamsSchema = z.object({
+  workItemId: z.string().min(1, 'Work item ID is required'),
+  timeSheetId: z.string().min(1, 'Time sheet ID is required'),
+  workItemType: z.string().min(1, 'Work item type is required'),
+});
+
+export type DeleteWorkItemParams = z.infer<typeof deleteWorkItemParamsSchema>;
+
 export const saveTimeEntryParamsSchema = timeEntrySchema.extend({
   // When present, the save also logs this stopwatch session in the same transaction (plan D4/D6).
   stopwatch_session_id: z.string().guid().nullable().optional(),
