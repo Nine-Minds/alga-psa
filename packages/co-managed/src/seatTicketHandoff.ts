@@ -5,6 +5,7 @@ import {
   type SeatArrangementRow, type SeatTicketWorkRow,
 } from '@alga-psa/db';
 import { coManagedSeatBoardAccess, readCoManagedSeatBoardScope } from './seatArrangement';
+import { announceCoManagedSeatHandoff } from './seatNotifications';
 
 /**
  * Who is responsible for a ticket of a client in a seat arrangement, and the handoff in each
@@ -16,6 +17,9 @@ import { coManagedSeatBoardAccess, readCoManagedSeatBoardScope } from './seatArr
  * A ticket with no work row is the MSP's at revision 0, so existing and MSP-created tickets carry
  * no row. Every handoff names the revision it saw, carries a shared note and an operation id, and
  * leaves an immutable receipt that a replay of the operation returns.
+ *
+ * A newly recorded handoff is announced after it commits (`announceCoManagedSeatHandoff`), which
+ * is how the receiving organization is notified; a replay announces nothing.
  *
  * Internal commands with no entry point of their own; a caller must authorize the actor's access
  * to the ticket before using them.
@@ -253,7 +257,7 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
   const request = snapshotRequest(input);
   const requestFingerprint = fingerprint(to, request);
 
-  return db.transaction(async (trx) => {
+  const outcome = await db.transaction(async (trx) => {
     const sponsor = tenantDb(trx, request.sponsorTenant);
     const ticket = await sponsor.table('tickets').where('ticket_id', request.ticketId).forUpdate()
       .first('client_id', 'board_id', 'assigned_to');
@@ -264,7 +268,7 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
     if (prior) {
       if (prior.request_fingerprint !== requestFingerprint) throw new CoManagedSeatHandoffError('OPERATION_CONFLICT');
       // The original receipt, whatever has happened to the ticket since.
-      return receipt(prior);
+      return { receipt: receipt(prior), recorded: false };
     }
     if (!ticket) throw new CoManagedSeatHandoffError('TICKET_NOT_FOUND');
     const arrangement = await liveSeatArrangement(sponsor, ticket.client_id, true);
@@ -281,7 +285,7 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
     const assignedTo = await DIRECTIONS[to].assignee(context);
 
     if (assignedTo !== ticket.assigned_to) {
-      // LEVERAGE: friction seat-handoff-assignee — the assignee is set on the ticket row directly; the native assignment writer's side effects (events, notifications) are not reachable from a seat command
+      // LEVERAGE: friction seat-handoff-assignee — the assignee is set on the ticket row directly; the native assignment writer's side effects (events, workflow triggers) are not reachable from a seat command. Notifications are: the handoff is announced after commit and seatNotifications resolves who is told by the assignment and board rules.
       await sponsor.table('tickets').where('ticket_id', request.ticketId)
         .update({ assigned_to: assignedTo, updated_by: request.actorUserId, updated_at: new Date() });
     }
@@ -292,8 +296,11 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
       arrangement_id: arrangement.arrangement_id, revision, from_responsibility: work.responsibility, to_responsibility: to,
       request_fingerprint: requestFingerprint, note: request.note, actor_user_id: request.actorUserId,
       assigned_to: assignedTo }).returning('*');
-    return receipt(row);
+    return { receipt: receipt(row), recorded: true };
   });
+  // After commit and once per handoff: a replay returned the original receipt above.
+  if (outcome.recorded) await announceCoManagedSeatHandoff(request.sponsorTenant, outcome.receipt);
+  return outcome.receipt;
 }
 
 /**
