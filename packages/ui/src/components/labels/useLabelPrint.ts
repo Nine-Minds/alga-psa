@@ -49,6 +49,8 @@ export type LabelPrintOutcome =
       printed: number;
       skipped: number;
       missingImages: number;
+      /** Description images that could not be read from storage (counted apart from missing files). */
+      unavailableImages: number;
       blobUrl: string;
       popupBlocked: boolean;
     }
@@ -120,6 +122,7 @@ export function useLabelPrint() {
       }
       const skipped = Number(response.headers.get('X-Label-Skipped') ?? '0') || 0;
       const missingImages = Number(response.headers.get('X-Label-Missing-Images') ?? '0') || 0;
+      const unavailableImages = Number(response.headers.get('X-Label-Unavailable-Images') ?? '0') || 0;
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       const opened = window.open(blobUrl, '_blank');
@@ -128,6 +131,7 @@ export function useLabelPrint() {
         printed: body.labels.length - skipped,
         skipped,
         missingImages,
+        unavailableImages,
         blobUrl,
         popupBlocked: !opened,
       };

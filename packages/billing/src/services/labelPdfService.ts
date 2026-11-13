@@ -24,7 +24,7 @@ import {
 } from '../lib/label-template-ast/standardTemplates';
 import { inlineLogoDataUrl } from '../lib/label-batch/labelLogo';
 import { inlineWorksheetDescriptionImages, type MissingImageText } from '../lib/label-batch/inlineWorksheetImages';
-import { inlineDocumentImageUrl } from '../lib/invoice-template-ast/server-render';
+import { resolveDocumentImageDataUrl } from '../lib/invoice-template-ast/server-render';
 import { resolveLabelTemplate, type ResolvedLabelTemplate } from '../lib/label-batch/resolveLabelTemplate';
 import type { LabelClass } from '@alga-psa/types';
 import { browserPoolService } from './browserPoolService';
@@ -118,9 +118,16 @@ export async function renderLabelBatchPdf(
   options: {
     locale?: string;
     /** Printed where a description image could not be included (see inlineWorksheetDescriptionImages). */
-    missingImageText?: MissingImageText;
-  } = {}
-): Promise<{ pdf: Buffer; sheets: number; labels: number; missingImages: number }> {
+    missingImageText: MissingImageText;
+    /** Printed where a rich-text description block cannot be rendered. */
+    unsupportedContentText: string;
+    /**
+     * The application's base URL: absolute document image URLs on this origin are read from storage;
+     * on any other origin they are remote images.
+     */
+    baseUrl?: string | null;
+  }
+): Promise<{ pdf: Buffer; sheets: number; labels: number; missingImages: number; unavailableImages: number }> {
   const { knex } = await createTenantKnex();
   const party = await fetchTenantParty(knex, tenant);
   // The logo is inlined as a data: URL because Puppeteer has no session; an unreadable logo is omitted.
@@ -131,28 +138,31 @@ export async function renderLabelBatchPdf(
 
   // Description images are read for THIS tenant only: a description can come from the client portal
   // or an inbound email, so a document URL naming another tenant's file must not resolve.
-  const resolved = new Map<string, Promise<string | null>>();
-  const resolveImage = (url: string): Promise<string | null> => {
-    let pending = resolved.get(url);
-    if (!pending) {
-      pending = inlineDocumentImageUrl(url, { knex, tenant, unresolved: 'drop' }).then((value) =>
-        typeof value === 'string' && value.startsWith('data:') ? value : null
-      );
-      resolved.set(url, pending);
-    }
-    return pending;
-  };
-  const { items: printItems, missingImages } = await inlineWorksheetDescriptionImages(
+  // A storage failure throws out of the resolver and is counted apart from a missing file.
+  const { items: printItems, missingImages, unavailableImages } = await inlineWorksheetDescriptionImages(
     items,
-    resolveImage,
-    options.missingImageText ?? ((name) => (name ? `[Image not included: ${name}]` : '[Image not included]')),
-    { tenant, itemCount: items.length }
+    (url) => resolveDocumentImageDataUrl(url, { knex, tenant }),
+    options.missingImageText,
+    { baseUrl: options.baseUrl, logContext: { tenant, itemCount: items.length } }
   );
 
+  const unsupportedBlockTypes = new Set<string>();
   const { html, geometry, printOptions } = await renderLabelBatchHtml(printItems, layout, {
     tenantClient,
     locale: options.locale,
+    richText: {
+      unsupportedContentPlaceholder: options.unsupportedContentText,
+      missingImagePlaceholder: options.missingImageText(null),
+      onUnsupportedContent: (blockType) => unsupportedBlockTypes.add(blockType),
+    },
   });
+  if (unsupportedBlockTypes.size > 0) {
+    logger.warn('[LabelPdfService] Rich-text description blocks printed as a placeholder', {
+      tenant,
+      itemCount: items.length,
+      blockTypes: Array.from(unsupportedBlockTypes),
+    });
+  }
   let pdf: Buffer;
   try {
     pdf = await renderHtmlToPdf(html, printOptions);
@@ -176,7 +186,7 @@ export async function renderLabelBatchPdf(
       error,
     });
   }
-  return { pdf, sheets, labels: items.length, missingImages };
+  return { pdf, sheets, labels: items.length, missingImages, unavailableImages };
 }
 
 /** Resolve the template for a print (explicit id -> class default -> standard). Read-only. */

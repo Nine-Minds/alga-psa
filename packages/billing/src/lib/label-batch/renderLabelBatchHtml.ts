@@ -14,6 +14,7 @@ import {
 import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
 import { resolveTemplatePrintSettingsFromAst } from '../invoice-template-ast/printSettings';
 import { renderTemplateAstFragment } from '../invoice-template-ast/server-render';
+import type { RichTextRenderOptions } from '@alga-psa/formatting/blocknoteUtils';
 import { BarcodeError } from '../invoice-template-ast/barcode/constraints';
 import {
   LABEL_CLASS_BY_STANDARD_CODE,
@@ -66,19 +67,24 @@ export function labelTextOverflowError(
   items: readonly LabelPrintItem[],
   labelIndexes: readonly number[]
 ): LabelRenderError {
-  const failures: LabelPrintFailure[] = labelIndexes
-    .filter((index) => items[index] !== undefined)
-    .map((index) => {
-      const item = items[index];
-      return {
-        index,
-        recordId: item.viewModel.recordId,
-        identifier: item.viewModel.identifier,
-        templateCode: item.templateCode ?? LABEL_STANDARD_CODE_BY_CLASS[item.viewModel.labelClass],
-        errorCode: 'worksheetTextOverflow' as const,
-        message: 'Contains text that does not fit. Adjust the layout or shorten the content before printing.',
-      };
-    });
+  const failures: LabelPrintFailure[] = labelIndexes.map((index) => {
+    const item = items[index];
+    if (!Number.isInteger(index) || item === undefined) {
+      // The text-fit check reports positions in this batch; one outside it means the cells and items disagree.
+      throw new Error(
+        `Text-fit check reported label index ${index}, but the batch has ${items.length} label(s); ` +
+        'the rendered cells and the print items are out of sync.'
+      );
+    }
+    return {
+      index,
+      recordId: item.viewModel.recordId,
+      identifier: item.viewModel.identifier,
+      templateCode: item.templateCode ?? LABEL_STANDARD_CODE_BY_CLASS[item.viewModel.labelClass],
+      errorCode: 'worksheetTextOverflow' as const,
+      message: 'Contains text that does not fit. Adjust the layout or shorten the content before printing.',
+    };
+  });
   return new LabelRenderError(batchFailureMessage(failures, items.length), failures);
 }
 
@@ -223,7 +229,12 @@ function resolveTemplateAst(item: LabelPrintItem): { ast: TemplateAst; code: str
 export async function renderLabelBatchHtml(
   items: readonly LabelPrintItem[],
   layout: LabelBatchLayout,
-  options: { tenantClient?: LabelTenantClient | null; locale?: string } = {}
+  options: {
+    tenantClient?: LabelTenantClient | null;
+    locale?: string;
+    /** Placeholders and diagnostics for rich-text content (a worksheet description) the converter cannot render. */
+    richText?: RichTextRenderOptions;
+  } = {}
 ): Promise<ComposedLabelDocument> {
   const cells: RenderedLabelCell[] = [];
   const failures: LabelPrintFailure[] = [];
@@ -261,7 +272,10 @@ export async function renderLabelBatchHtml(
             metadata: { ...ast.metadata, printSettings: { ...DEFAULT_INVOICE_PRINT_SETTINGS, ...ast.metadata?.printSettings, marginMm: 0 } },
           }
         : ast;
-      const { html, css } = await renderTemplateAstFragment(renderAst, evaluation, { locale: options.locale });
+      const { html, css } = await renderTemplateAstFragment(renderAst, evaluation, {
+        locale: options.locale,
+        richText: options.richText,
+      });
       const printSettings = ast.metadata?.printSettings;
       cells.push({
         html,

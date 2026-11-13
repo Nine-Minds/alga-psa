@@ -44,7 +44,7 @@ describe('inlineWorksheetDescriptionImages', () => {
       image(`${BASE}/api/documents/view/${FILE_A}?t=1`),
       { type: 'bulletListItem', content: [], children: [image(`/api/documents/view/${FILE_A}`)] },
     ];
-    const { items, missingImages } = await inlineWorksheetDescriptionImages([ticket(blocks)], resolve, marker);
+    const { items, missingImages } = await inlineWorksheetDescriptionImages([ticket(blocks)], resolve, marker, { baseUrl: BASE });
 
     expect(missingImages).toBe(0);
     const out = items[0].viewModel.ticketDescriptionRichText as Array<Record<string, any>>;
@@ -113,15 +113,54 @@ describe('inlineWorksheetDescriptionImages', () => {
     expect(items[2].viewModel.ticketDescriptionRichText).toBeNull();
   });
 
+  it('reads a document URL from storage only on the application origin; another host keeps it as a remote image', async () => {
+    const resolve = vi.fn(async () => PNG);
+    const foreign = `https://other.example/api/documents/view/${FILE_A}`;
+    const blocks = [image(foreign)];
+
+    const withBase = await inlineWorksheetDescriptionImages([ticket(blocks)], resolve, marker, { baseUrl: BASE });
+    expect(withBase.items[0].viewModel.ticketDescriptionRichText).toEqual(blocks);
+    expect(withBase.missingImages).toBe(0);
+
+    // Without a base URL no absolute URL is trusted as this tenant's document, not even the own origin.
+    const own = [image(`${BASE}/api/documents/view/${FILE_A}`)];
+    const withoutBase = await inlineWorksheetDescriptionImages([ticket(own)], resolve, marker);
+    expect(withoutBase.items[0].viewModel.ticketDescriptionRichText).toEqual(own);
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('reads at most four distinct documents from storage at once', async () => {
+    let active = 0;
+    let peak = 0;
+    const resolve = vi.fn(async () => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise((r) => setTimeout(r, 5));
+      active -= 1;
+      return PNG;
+    });
+    const ids = Array.from({ length: 10 }, (_, n) => `0b6f6a2e-3333-4333-8333-0000000000${String(n).padStart(2, '0')}`);
+    const { missingImages } = await inlineWorksheetDescriptionImages(
+      [ticket(ids.map((id) => image(`/api/documents/view/${id}`)))],
+      resolve,
+      marker
+    );
+
+    expect(missingImages).toBe(0);
+    expect(resolve).toHaveBeenCalledTimes(10);
+    expect(peak).toBe(4);
+  });
+
   it('inlines images inside ProseMirror doc content (attrs.src) and table rows', async () => {
     const resolve = vi.fn(async (url: string) => (url.includes(FILE_A) ? PNG : null));
     const doc = {
       type: 'doc',
       content: [
         { type: 'paragraph', content: [{ type: 'image', attrs: { src: `/api/documents/view/${FILE_A}`, alt: 'screenshot.png' } }] },
-        { type: 'table', content: { type: 'tableRow', content: [
+        { type: 'table', content: [{ type: 'tableRow', content: [
           { type: 'tableCell', content: [{ type: 'image', attrs: { src: `/api/documents/view/${FILE_B}`, alt: 'other.png' } }] },
-        ] } },
+        ] }] },
+        { type: 'image', attrs: { src: `/api/documents/view/${FILE_A}`, url: `/api/documents/view/${FILE_A}` } },
       ],
     };
     const { items, missingImages } = await inlineWorksheetDescriptionImages([ticket(JSON.stringify(doc))], resolve, marker);
@@ -130,24 +169,31 @@ describe('inlineWorksheetDescriptionImages', () => {
     const out = items[0].viewModel.ticketDescriptionRichText as Record<string, any>;
     expect(out.type).toBe('doc');
     expect(out.content[0].content[0].attrs.src).toBe(PNG);
-    const cellImage = out.content[1].content.content[0].content[0];
+    const cellImage = out.content[1].content[0].content[0].content[0];
     expect(cellImage.type).toBe('paragraph');
     expect(cellImage.content[0].text).toBe('[Image not included: other.png]');
+    // Every attribute that carried the document URL is overwritten.
+    expect(out.content[2].attrs).toEqual({ src: PNG, url: PNG });
+    expect(JSON.stringify(out)).not.toContain(`/api/documents/view/${FILE_A}`);
   });
 
-  it('logs a resolver failure with the tenant context instead of silently treating it as missing', async () => {
-    const resolve = vi.fn(async () => { throw new Error('S3 unreachable'); });
-    const { items, missingImages } = await inlineWorksheetDescriptionImages(
-      [ticket([image(`/api/documents/view/${FILE_A}`, 'screenshot.png')])],
+  it('counts a storage failure apart from a missing image and logs it with the tenant context', async () => {
+    const resolve = vi.fn(async (url: string) => {
+      if (url.includes(FILE_A)) throw new Error('S3 unreachable');
+      return null;
+    });
+    const { items, missingImages, unavailableImages } = await inlineWorksheetDescriptionImages(
+      [ticket([image(`/api/documents/view/${FILE_A}`, 'screenshot.png'), image(`/api/documents/view/${FILE_B}`, 'gone.png')])],
       resolve,
       marker,
-      { tenant: 'tenant-1' }
+      { logContext: { tenant: 'tenant-1' } }
     );
 
+    expect(unavailableImages).toBe(1);
     expect(missingImages).toBe(1);
     expect(loggerWarn).toHaveBeenCalledTimes(1);
     const [message, meta] = loggerWarn.mock.calls[0] as [string, Record<string, any>];
-    expect(message).toContain('resolver failed');
+    expect(message).toContain('could not be read from storage');
     expect(meta.tenant).toBe('tenant-1');
     expect(meta.url).toBe(`/api/documents/view/${FILE_A}`);
     expect(meta.error).toBeInstanceOf(Error);

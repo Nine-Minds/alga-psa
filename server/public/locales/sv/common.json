@@ -1680,6 +1680,8 @@
       "skipped_other": "{{count}} poster hoppades över eftersom de inte kunde öppnas.",
       "missingImages_one": "{{count}} bild i ärendebeskrivningarna kunde inte tas med. Den är markerad på bladet.",
       "missingImages_other": "{{count}} bilder i ärendebeskrivningarna kunde inte tas med. De är markerade på bladen.",
+      "unavailableImages_one": "{{count}} bild i ärendebeskrivningarna kunde inte läsas från lagringen. Den är markerad på bladet; försök skriva ut igen senare.",
+      "unavailableImages_other": "{{count}} bilder i ärendebeskrivningarna kunde inte läsas från lagringen. De är markerade på bladen; försök skriva ut igen senare.",
       "template": "Mall",
       "ticketTitle": "Skriv ut arbetsetiketter",
       "tooMany": "Du kan skriva ut högst {{max}} etiketter åt gången.",

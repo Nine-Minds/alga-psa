@@ -1680,6 +1680,8 @@
       "skipped_other": "{{count}} records zijn overgeslagen omdat ze niet konden worden geopend.",
       "missingImages_one": "{{count}} afbeelding in de ticketbeschrijvingen kon niet worden opgenomen. Deze is gemarkeerd op het werkblad.",
       "missingImages_other": "{{count}} afbeeldingen in de ticketbeschrijvingen konden niet worden opgenomen. Ze zijn gemarkeerd op de werkbladen.",
+      "unavailableImages_one": "{{count}} afbeelding in de ticketbeschrijvingen kon niet uit de opslag worden gelezen. Deze is gemarkeerd op het werkblad; probeer later opnieuw af te drukken.",
+      "unavailableImages_other": "{{count}} afbeeldingen in de ticketbeschrijvingen konden niet uit de opslag worden gelezen. Ze zijn gemarkeerd op de werkbladen; probeer later opnieuw af te drukken.",
       "template": "Sjabloon",
       "ticketTitle": "Werklabels afdrukken",
       "tooMany": "U kunt maximaal {{max}} labels tegelijk afdrukken.",

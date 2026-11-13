@@ -152,6 +152,7 @@
       "ticketDetails": "Dettagli del ticket",
       "imageNotIncluded": "[Immagine non inclusa]",
       "imageNotIncludedNamed": "[Immagine non inclusa: {{name}}]",
+      "unsupportedContent": "[Contenuto non incluso in questa stampa]",
       "assetName": "Nome",
       "make": "Marca",
       "model": "Modello",

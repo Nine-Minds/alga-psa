@@ -1680,6 +1680,8 @@
       "skipped_other": "{{count}} registros foram ignorados porque não puderam ser abertos.",
       "missingImages_one": "Não foi possível incluir {{count}} imagem das descrições dos tickets. Ela está marcada na folha.",
       "missingImages_other": "Não foi possível incluir {{count}} imagens das descrições dos tickets. Elas estão marcadas nas folhas.",
+      "unavailableImages_one": "Não foi possível ler do armazenamento {{count}} imagem das descrições dos tickets. Ela está marcada na folha; tente imprimir novamente mais tarde.",
+      "unavailableImages_other": "Não foi possível ler do armazenamento {{count}} imagens das descrições dos tickets. Elas estão marcadas nas folhas; tente imprimir novamente mais tarde.",
       "template": "Modelo",
       "ticketTitle": "Imprimir etiquetas de trabalho",
       "tooMany": "Você pode imprimir no máximo {{max}} etiquetas por vez.",

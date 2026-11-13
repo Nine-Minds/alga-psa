@@ -91,7 +91,17 @@ export function sanitizeLabelOverride(value: string): string | null {
 }
 
 export type PrintLabelsResult =
-  | { ok: true; pdf: Buffer; labels: number; sheets: number; skipped: number; missingImages: number }
+  | {
+      ok: true;
+      pdf: Buffer;
+      labels: number;
+      sheets: number;
+      skipped: number;
+      /** Description images printed as a marker because the file is missing or not an inlinable image. */
+      missingImages: number;
+      /** Description images printed as a marker because reading them from storage failed. */
+      unavailableImages: number;
+    }
   | {
       ok: false;
       status: 400 | 404 | 422 | 500;
@@ -105,8 +115,9 @@ export interface PrintLabelsDeps {
   renderPdf: (
     tenant: string,
     items: readonly LabelPrintItem[],
-    layout: LabelBatchLayout
-  ) => Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number }>;
+    layout: LabelBatchLayout,
+    options: { baseUrl: string }
+  ) => Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number; unavailableImages?: number }>;
   /**
    * Describes a layout / render error that is the caller's fault (422) rather than ours (500), with the
    * records that could not print when the renderer names them; null for anything else (rethrown).
@@ -254,8 +265,10 @@ export async function printLabels(
     templates.set(cls, template);
   }
 
-  const ticketTemplate = templates.get('ticket-work-tag');
-  const ticketAst = ticketTemplate ? resolveLabelTemplateAst(ticketTemplate) : null;
+  // Each template's AST is resolved once and reused for the worksheet check and the default layout.
+  const templateAsts = new Map<LabelClass, ReturnType<typeof resolveLabelTemplateAst>>();
+  for (const [cls, template] of templates) templateAsts.set(cls, resolveLabelTemplateAst(template));
+  const ticketAst = templateAsts.get('ticket-work-tag') ?? null;
   const context: LabelRequestContext = {
     tenant: caller.tenant,
     user: caller.user,
@@ -303,7 +316,7 @@ export async function printLabels(
             ...(context.includeWorksheetDetails ? { assetSerialNumber: linked.assetSerialNumber ?? null } : {}),
             custodyLocation: linked.custodyLocation ?? null,
             nextAction: linked.nextAction ?? null,
-            linkedAsset: linked.linkedAssetInfo ?? null,
+            ...(context.includeWorksheetDetails ? { linkedAsset: linked.linkedAssetInfo ?? null } : {}),
           }
         : vm;
     });
@@ -332,14 +345,19 @@ export async function printLabels(
     // on it. Otherwise fall back to the 4 x 2 in roll, as before.
     const preferredPage = request.layout === undefined || request.layout === null
       ? resolveTemplatePreferredPageSizes(
-          classes.map((cls) => ({ labelClass: cls, metadata: resolveLabelTemplateAst(templates.get(cls)!)?.metadata }))
+          classes.map((cls) => ({ labelClass: cls, metadata: templateAsts.get(cls)?.metadata }))
         )
       : null;
     const layout: LabelBatchLayout =
       (request.layout as LabelBatchLayout | undefined) ??
       (preferredPage ? { kind: 'one-per-page', pageSize: preferredPage } : DEFAULT_LAYOUT);
-    const { pdf, labels, sheets, missingImages = 0 } = await deps.renderPdf(caller.tenant, items, layout);
-    return { ok: true, pdf, labels, sheets, skipped, missingImages };
+    const { pdf, labels, sheets, missingImages = 0, unavailableImages = 0 } = await deps.renderPdf(
+      caller.tenant,
+      items,
+      layout,
+      { baseUrl: caller.baseUrl }
+    );
+    return { ok: true, pdf, labels, sheets, skipped, missingImages, unavailableImages };
   } catch (error) {
     const clientError = deps.describeClientError(error);
     if (clientError) {

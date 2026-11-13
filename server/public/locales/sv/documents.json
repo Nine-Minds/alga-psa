@@ -152,6 +152,7 @@
       "ticketDetails": "Ärendedetaljer",
       "imageNotIncluded": "[Bild inte medtagen]",
       "imageNotIncludedNamed": "[Bild inte medtagen: {{name}}]",
+      "unsupportedContent": "[Innehållet ingår inte i den här utskriften]",
       "assetName": "Namn",
       "make": "Tillverkare",
       "model": "Modell",

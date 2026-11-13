@@ -56,7 +56,7 @@ const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
 
 const deps: PrintLabelsDeps = {
   providers: PROVIDERS,
-  renderPdf: async (tenant, items, layout) => {
+  renderPdf: async (tenant, items, layout, { baseUrl }) => {
     const locale = await getServerLocale();
     const { t } = await getServerTranslation(locale, 'documents');
     return renderLabelBatchPdf(tenant, items, layout, {
@@ -65,6 +65,10 @@ const deps: PrintLabelsDeps = {
         name
           ? String(t('labels.worksheet.imageNotIncludedNamed', { defaultValue: '[Image not included: {{name}}]', name }))
           : String(t('labels.worksheet.imageNotIncluded', { defaultValue: '[Image not included]' })),
+      unsupportedContentText: String(
+        t('labels.worksheet.unsupportedContent', { defaultValue: '[Content not included in this printout]' })
+      ),
+      baseUrl,
     });
   },
   resolveTemplate: (tenant, labelClass, templateId) => resolveLabelTemplateForTenant(tenant, labelClass, templateId),
@@ -143,6 +147,8 @@ export async function POST(request: Request) {
         'X-Label-Sheets': String(result.sheets),
         // Description images that could not be embedded; each one is marked on the printed worksheet.
         'X-Label-Missing-Images': String(result.missingImages),
+        // Description images that could not be read from storage; each one is marked on the printed worksheet.
+        'X-Label-Unavailable-Images': String(result.unavailableImages),
       },
     });
   } catch (error) {

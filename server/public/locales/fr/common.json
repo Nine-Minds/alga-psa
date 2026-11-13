@@ -1680,6 +1680,8 @@
       "skipped_other": "{{count}} enregistrements ont été ignorés car ils n'ont pas pu être ouverts.",
       "missingImages_one": "{{count}} image des descriptions de tickets n'a pas pu être incluse. Elle est signalée sur la fiche.",
       "missingImages_other": "{{count}} images des descriptions de tickets n'ont pas pu être incluses. Elles sont signalées sur les fiches.",
+      "unavailableImages_one": "{{count}} image des descriptions de tickets n'a pas pu être lue depuis le stockage. Elle est signalée sur la fiche ; réessayez l'impression plus tard.",
+      "unavailableImages_other": "{{count}} images des descriptions de tickets n'ont pas pu être lues depuis le stockage. Elles sont signalées sur les fiches ; réessayez l'impression plus tard.",
       "template": "Modèle",
       "ticketTitle": "Imprimer les étiquettes de travail",
       "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",

@@ -467,6 +467,15 @@ export function LabelPrintDialog({
                       })}
                     </>
                   )}
+                  {outcome.unavailableImages > 0 && (
+                    <>
+                      {' '}
+                      {t('labels.dialog.unavailableImages', {
+                        defaultValue: '{{count}} images in the ticket descriptions could not be read from storage. They are marked on the worksheets; try printing again later.',
+                        count: outcome.unavailableImages,
+                      })}
+                    </>
+                  )}
                   {outcome.popupBlocked && (
                     <>
                       {' '}

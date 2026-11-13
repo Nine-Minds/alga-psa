@@ -398,7 +398,7 @@ describe('renderLabelBatchHtml failures', () => {
         code128Value: null,
       },
     });
-    const error = labelTextOverflowError([ticket(1), ticket(2), ticket(3)], [1, 7]);
+    const error = labelTextOverflowError([ticket(1), ticket(2), ticket(3)], [1]);
     expect(error).toBeInstanceOf(LabelRenderError);
     expect(error.failures).toEqual([{
       index: 1,
@@ -410,5 +410,6 @@ describe('renderLabelBatchHtml failures', () => {
     }]);
     expect(error.message).toContain('TIC-2');
     expect(error.message).not.toContain('TIC-1');
+    expect(() => labelTextOverflowError([ticket(1), ticket(2), ticket(3)], [1, 7])).toThrow(/label index 7.*3 label/);
   });
 });

@@ -183,6 +183,16 @@ describe('composeLabelSheets', () => {
       /designed for/,
     );
   });
+
+  it('refuses a flow page margin that is not a number from 0 to a quarter of the page', () => {
+    const a4 = { kind: 'one-per-page' as const, pageSize: { width: 210, height: 297, unit: 'mm' as const } };
+    const flow = (flowMarginMm: number) => ({ ...cell(0), flow: true, flowMarginMm });
+    expect(composeLabelSheets([flow(10)], a4).html).toContain('margin: 10mm');
+    expect(composeLabelSheets([flow(52.5)], a4).html).toContain('label-cell-flow');
+    for (const bad of [-1, Number.NaN, Number.POSITIVE_INFINITY, 52.6]) {
+      expect(() => composeLabelSheets([flow(bad)], a4)).toThrow(LabelLayoutError);
+    }
+  });
 });
 
 describe('assertCanonicalLabelUrl', () => {

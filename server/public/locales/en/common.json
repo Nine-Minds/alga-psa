@@ -1680,6 +1680,8 @@
       "skipped_other": "{{count}} records were skipped because they could not be opened.",
       "missingImages_one": "{{count}} image in the ticket descriptions could not be included. It is marked on the worksheet.",
       "missingImages_other": "{{count}} images in the ticket descriptions could not be included. They are marked on the worksheets.",
+      "unavailableImages_one": "{{count}} image in the ticket descriptions could not be read from storage. It is marked on the worksheet; try printing again later.",
+      "unavailableImages_other": "{{count}} images in the ticket descriptions could not be read from storage. They are marked on the worksheets; try printing again later.",
       "template": "Template",
       "ticketTitle": "Print work tags",
       "tooMany": "You can print at most {{max}} labels at a time.",

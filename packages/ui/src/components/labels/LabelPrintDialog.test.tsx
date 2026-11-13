@@ -104,6 +104,14 @@ describe('LabelPrintDialog', () => {
     expect(screen.queryByText(/could not be included/)).toBeNull();
   });
 
+  it('reports images that could not be read from storage separately from missing ones', async () => {
+    hook.print.mockResolvedValueOnce({ status: 'printed', printed: 1, skipped: 0, missingImages: 0, unavailableImages: 2, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(/2 images in the ticket descriptions could not be read from storage\./)).toBeTruthy());
+    expect(screen.queryByText(/could not be included/)).toBeNull();
+  });
+
   it('offers an Open PDF link when the popup was blocked', async () => {
     hook.print.mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: true });
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A]} />);

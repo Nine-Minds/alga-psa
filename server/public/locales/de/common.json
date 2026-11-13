@@ -1680,6 +1680,8 @@
       "skipped_other": "{{count}} Datensätze wurden übersprungen, weil sie nicht geöffnet werden konnten.",
       "missingImages_one": "{{count}} Bild in den Ticketbeschreibungen konnte nicht eingefügt werden. Es ist auf dem Arbeitsblatt markiert.",
       "missingImages_other": "{{count}} Bilder in den Ticketbeschreibungen konnten nicht eingefügt werden. Sie sind auf den Arbeitsblättern markiert.",
+      "unavailableImages_one": "{{count}} Bild in den Ticketbeschreibungen konnte nicht aus dem Speicher gelesen werden. Es ist auf dem Arbeitsblatt markiert; versuchen Sie den Druck später erneut.",
+      "unavailableImages_other": "{{count}} Bilder in den Ticketbeschreibungen konnten nicht aus dem Speicher gelesen werden. Sie sind auf den Arbeitsblättern markiert; versuchen Sie den Druck später erneut.",
       "template": "Vorlage",
       "ticketTitle": "Arbeitsetiketten drucken",
       "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",

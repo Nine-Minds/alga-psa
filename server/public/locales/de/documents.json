@@ -152,6 +152,7 @@
       "ticketDetails": "Ticketdetails",
       "imageNotIncluded": "[Bild nicht eingefügt]",
       "imageNotIncludedNamed": "[Bild nicht eingefügt: {{name}}]",
+      "unsupportedContent": "[Inhalt in diesem Ausdruck nicht enthalten]",
       "assetName": "Name",
       "make": "Hersteller",
       "model": "Modell",

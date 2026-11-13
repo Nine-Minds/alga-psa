@@ -86,7 +86,14 @@ export function composeLabelSheets(
     const p = geometry.placements[index];
     const attrs = `data-label-index="${index}"${cell.validateTextFits ? ' data-validate-text-fits="true"' : ''}${cell.flow ? ' data-flow="true"' : ''}`;
     if (cell.flow) {
-      const marginMm = Math.max(0, Math.min(cell.flowMarginMm ?? 0, p.widthMm / 4, p.heightMm / 4));
+      const marginMm = cell.flowMarginMm ?? 0;
+      if (!Number.isFinite(marginMm) || marginMm < 0 || marginMm > p.widthMm / 4 || marginMm > p.heightMm / 4) {
+        throw new LabelLayoutError(
+          `${cell.description ?? `Label ${index + 1}`} has a page margin of ${marginMm} mm; it must be a number ` +
+            `from 0 to a quarter of the ${p.widthMm.toFixed(1)} x ${p.heightMm.toFixed(1)} mm page ` +
+            `(${(Math.min(p.widthMm, p.heightMm) / 4).toFixed(1)} mm). Reduce the template's print margin.`
+        );
+      }
       const key = mmCss(marginMm);
       let page = flowPages.get(key);
       if (!page) {

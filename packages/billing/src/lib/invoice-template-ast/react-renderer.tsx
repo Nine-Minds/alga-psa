@@ -27,7 +27,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
-import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
+import { convertBlockContentToHTML, type RichTextRenderOptions } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -58,6 +58,8 @@ type RenderContext = {
    * without an entry is a bug and throws.
    */
   barcodes?: Record<string, string>;
+  /** Placeholders and diagnostics for rich-text content the converter cannot render. */
+  richText?: RichTextRenderOptions;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -755,7 +757,7 @@ const nodeHasVisibleContent = (
     case 'richText': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
       if (!isStructuredBlockContent(content)) return !isBlankText(content);
-      const html = convertBlockContentToHTML(content);
+      const html = convertBlockContentToHTML(content, ctx.richText);
       return !isBlankText(html.replace(/<[^>]*>/g, '')) || /<(?:img|table|hr)\b/.test(html);
     }
     case 'image':
@@ -872,7 +874,7 @@ const renderNode = (
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
 
       if (isStructuredBlockContent(content)) {
-        const html = convertBlockContentToHTML(content);
+        const html = convertBlockContentToHTML(content, ctx.richText);
         return (
           <div
             key={node.id}
@@ -1161,6 +1163,8 @@ export interface TemplateReactRendererProps {
    */
   dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
+  /** Placeholders and diagnostics for rich-text content the converter cannot render. */
+  richText?: RichTextRenderOptions;
 }
 
 export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
@@ -1169,6 +1173,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
   locale: localeOverride,
   dateFormat,
   barcodes,
+  richText,
 }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
@@ -1184,7 +1189,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
         ast.layout,
         evaluation,
         {},
-        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes },
+        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes, richText },
         rootDocumentStyleOverride
       )}
     </div>
@@ -1204,6 +1209,8 @@ export interface TemplateRenderOptions {
   t?: TemplateLabelTranslator;
   /** Output of renderBarcodeSvgs (barcode/prepass.server.ts). */
   barcodes?: Record<string, string>;
+  /** Placeholders and diagnostics for rich-text content the converter cannot render. */
+  richText?: RichTextRenderOptions;
 }
 
 /** Resolve a value expression outside a render (used by the barcode prepass). */
@@ -1241,6 +1248,7 @@ export const renderEvaluatedTemplateAst = async (
         locale={options.locale}
         dateFormat={options.dateFormat}
         barcodes={options.barcodes}
+        richText={options.richText}
       />
     ),
     css: buildAstCss(normalizedAst),

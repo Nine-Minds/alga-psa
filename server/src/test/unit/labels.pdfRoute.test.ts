@@ -24,8 +24,13 @@ const mocks = vi.hoisted(() => ({
     tenant: string,
     items: readonly LabelPrintItem[],
     layout: LabelBatchLayout,
-    options: { locale?: string; missingImageText?: (name: string | null) => string }
-  ) => Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number }>>(),
+    options: {
+      locale?: string;
+      missingImageText: (name: string | null) => string;
+      unsupportedContentText: string;
+      baseUrl?: string | null;
+    }
+  ) => Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number; unavailableImages?: number }>>(),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -166,7 +171,12 @@ describe('worksheet PDF route', () => {
         }),
       })],
       expect.objectContaining({ kind: 'one-per-page' }),
-      expect.objectContaining({ locale, missingImageText: expect.any(Function) }),
+      expect.objectContaining({
+        locale,
+        missingImageText: expect.any(Function),
+        unsupportedContentText: expect.any(String),
+        baseUrl: 'https://psa.example.com',
+      }),
     );
   });
 
@@ -182,9 +192,21 @@ describe('worksheet PDF route', () => {
     expect(missingImageText?.(null)).toBe('[Image not included]');
   });
 
+  it('reports images that could not be read from storage in their own header, apart from missing ones', async () => {
+    mocks.locale = 'en';
+    mocks.renderPdf.mockResolvedValueOnce({ pdf: Buffer.from('%PDF-test'), labels: 1, sheets: 1, missingImages: 1, unavailableImages: 3 });
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(response.headers.get('X-Label-Missing-Images')).toBe('1');
+    expect(response.headers.get('X-Label-Unavailable-Images')).toBe('3');
+    expect(mocks.renderPdf.mock.calls[0][3].unsupportedContentText).toBe('[Content not included in this printout]');
+  });
+
   it('reports zero missing images when every image was inlined', async () => {
     const response = await POST(request());
     expect(response.headers.get('X-Label-Missing-Images')).toBe('0');
+    expect(response.headers.get('X-Label-Unavailable-Images')).toBe('0');
   });
 
   it('returns worksheet clipping as per-record failures the print dialog can name and skip', async () => {

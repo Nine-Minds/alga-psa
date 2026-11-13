@@ -152,6 +152,7 @@
       "ticketDetails": "Szczegóły zgłoszenia",
       "imageNotIncluded": "[Obraz nie został dołączony]",
       "imageNotIncludedNamed": "[Obraz nie został dołączony: {{name}}]",
+      "unsupportedContent": "[Treść nie została dołączona do tego wydruku]",
       "assetName": "Nazwa",
       "make": "Producent",
       "model": "Model",

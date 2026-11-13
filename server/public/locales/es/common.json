@@ -1678,6 +1678,8 @@
       "skipped_other": "Se omitieron {{count}} registros porque no se pudieron abrir.",
       "missingImages_one": "No se pudo incluir {{count}} imagen de las descripciones de los tickets. Está señalada en la hoja.",
       "missingImages_other": "No se pudieron incluir {{count}} imágenes de las descripciones de los tickets. Están señaladas en las hojas.",
+      "unavailableImages_one": "No se pudo leer del almacenamiento {{count}} imagen de las descripciones de los tickets. Está señalada en la hoja; vuelva a imprimir más tarde.",
+      "unavailableImages_other": "No se pudieron leer del almacenamiento {{count}} imágenes de las descripciones de los tickets. Están señaladas en las hojas; vuelva a imprimir más tarde.",
       "template": "Plantilla",
       "ticketTitle": "Imprimir etiquetas de trabajo",
       "tooMany": "Puede imprimir como máximo {{max}} etiquetas a la vez.",
