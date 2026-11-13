@@ -32,9 +32,9 @@ Fixed-fee service entries also follow the existing scheduled billing path. Quick
 
 Unbilled ticket materials and fixed-fee entries from earlier billing periods remain eligible for a later invoice; entries already billed are excluded.
 
-Scheduled ticket-material billing claims the exact source version used to calculate the invoice. If another user edits a material or another invoice bills it first, generation fails rather than invoicing stale quantities. Refresh the charges and retry. The invoice header, charges, and source claims commit together, so a failed claim rolls back the entire draft. Database errors, including a missing required table, are surfaced instead of silently completing the invoice. Apply the required migrations before retrying a missing-table failure.
+Both scheduled billing and Quick invoice claim the exact source version of every ticket material and fixed-fee service entry they bill. Quick invoice sends the versions shown in the dialog; scheduled billing uses the versions read while calculating the invoice. If another user edits an entry or another invoice bills it first, generation fails with a message to refresh the charges rather than invoicing stale quantities or billing an entry twice. Refresh the charges and retry. The invoice header, charges, and source claims commit together, so a failed claim rolls back the entire draft. Database errors, including a missing required table, are surfaced instead of silently completing the invoice. Apply the required migrations before retrying a missing-table failure.
 
-For stock-tracked materials, invoice COGS and profitability use consumption costs less restock-return costs. When a return movement is linked to the material and has a recorded cost, that cost is subtracted whether it is positive or negative.
+For stock-tracked materials, invoice COGS and profitability use consumption costs less restock-return costs. When a return movement is linked to the material and has a recorded cost, that cost always reduces COGS: a stored return cost is accepted with either sign and normalized to a reduction of its absolute value, so a positive and a negative stored cost of the same amount produce the same result.
 
 ## Deployment and testing
 
