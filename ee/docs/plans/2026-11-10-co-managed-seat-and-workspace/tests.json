@@ -370,7 +370,7 @@
   {
     "id": "T041",
     "description": "DB integration: handoff with and without a named technician, handoff to the MSP and a shared IT note each notify the expected recipients and no one else.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079",
       "F081"

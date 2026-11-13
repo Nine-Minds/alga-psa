@@ -32,6 +32,7 @@ import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEma
 import { resolveBoardNotificationAudience } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
+import { deliverCoManagedSeatSharedNoteNotifications } from '../../notifications/coManagedSeatNotifications';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
@@ -1953,6 +1954,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
         if (!isSponsor) notifiedUserIds.add(recipient.principalId);
       }
       return;
+    }
+
+    // Co-managed seat: a shared IT note tells the other organization's participants on the ticket
+    // (MSP staff and the client's technicians share this tenant). Internal comments only, so a
+    // public comment costs nothing here; for a tenant the seat gate does not serve, a client with
+    // no seat arrangement, or a private note, this resolves no one.
+    if (comment?.id && comment.isInternal && shouldCreateTicketCommentNotification(suppression, 'internal')) {
+      const told = await deliverCoManagedSeatSharedNoteNotifications(db, {
+        tenantId, ticketId, commentId: comment.id, authorUserId: userId, ticketNumber: ticket.ticket_number,
+        authorName, commentPreview, link: ticketUrl, alreadyNotified: notifiedUserIds,
+      });
+      told.forEach((id) => notifiedUserIds.add(id));
     }
 
     // Notify all assigned agents (if not internal comment)

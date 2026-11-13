@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "A handoff to client IT notifies the named technician, or every active technician of that client when none is named; a handoff to the MSP notifies MSP staff by the existing assignment and board rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]
@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "A shared IT note notifies the other organization's participants on the ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]
