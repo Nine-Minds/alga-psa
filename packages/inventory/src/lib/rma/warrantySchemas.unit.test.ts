@@ -82,4 +82,21 @@ describe('warranty schemas', () => {
     expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '10.01', currency_code: 'JPY' }).success).toBe(false);
     expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '10', currency_code: 'JPY' }).success).toBe(true);
   });
+  it.each([
+    ['USD', '125.50', '125.501', 2],
+    ['EUR', '125.50', '125.501', 2],
+    ['JPY', '125', '125.1', 0],
+  ])('validates %s charges using the currency precision', (currency, valid, invalid, digits) => {
+    expect(recordVendorNonReturnChargeSchema.parse({
+      amount: ` ${valid} `, currency_code: ` ${currency.toLowerCase()} `,
+    })).toMatchObject({ amount: valid, currency_code: currency });
+
+    const result = recordVendorNonReturnChargeSchema.safeParse({ amount: invalid, currency_code: currency });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual([expect.objectContaining({
+        path: ['amount'], message: `Amount supports at most ${digits} decimal places for ${currency}`,
+      })]);
+    }
+  });
 });

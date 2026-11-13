@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
-import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { currencyFractionDigits, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import type { IAssetCustody, IRmaCase, IRmaEvent } from '@alga-psa/types';
 import {
@@ -541,7 +541,7 @@ export async function recordVendorNonReturnChargeCore(
   if (physicalMovement || custodyRows.some((row: any) => row.state === 'with_vendor' || row.close_reason === 'returned_to_vendor' || row.close_reason === 'returned_to_client')) {
     throw new WarrantyError('invalid_transition', 'A non-return charge cannot be recorded after the unit was shipped or returned.');
   }
-  const digits = new Intl.NumberFormat('en', { style: 'currency', currency: input.currency_code }).resolvedOptions().maximumFractionDigits ?? 2;
+  const digits = currencyFractionDigits(input.currency_code);
   const amount = Number(input.amount).toFixed(digits);
   return conclude(trx, tenant, actor, rma, 'charge_vendor_non_return', { closed_reason: 'resolved' }, {
     occurredAt: input.occurred_at,

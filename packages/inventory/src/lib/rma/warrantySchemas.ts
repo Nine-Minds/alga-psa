@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { CURRENCY_OPTIONS, currencyFractionDigits } from '@alga-psa/core';
 import { CANCEL_REASONS, CALLER_CLOSE_REASONS } from './stateMachine';
 
 /** Zod input schemas for the warranty actions (C5). Free text is trimmed; empty becomes null. */
@@ -158,7 +158,7 @@ export const recordVendorNonReturnChargeSchema = z.object({
     ctx.addIssue({ code: 'custom', path: ['currency_code'], message: 'Unsupported currency' });
     return;
   }
-  const digits = new Intl.NumberFormat('en', { style: 'currency', currency: value.currency_code }).resolvedOptions().maximumFractionDigits ?? 2;
+  const digits = currencyFractionDigits(value.currency_code);
   const fraction = value.amount.split('.')[1] ?? '';
   if (fraction.length > digits) ctx.addIssue({ code: 'custom', path: ['amount'], message: `Amount supports at most ${digits} decimal places for ${value.currency_code}` });
 });
