@@ -16,7 +16,8 @@ import { projectResponseUsers } from '../lib/responseUsers';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
-import { nativeThreadAudience, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { commentThreadPayloadLabel, insertCommentThread, resolveThreadAudience } from '@alga-psa/shared/lib/commentThreadInsert';
 import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -3553,21 +3554,16 @@ export async function addTicketCommentInTransaction(
   });
 
   // Native: `{}` with zero SQL (psa tenants, internal notes, plain authors). Co-managed: fails closed.
-  // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
-  const threadAudience = await nativeThreadAudience(trx, tenant, { isInternal: effectiveIsInternal, authorType, audience: audienceId });
+  const threadAudience = await resolveThreadAudience(trx, tenant, { kind: 'native', isInternal: effectiveIsInternal, authorType, requested: audienceId });
 
-  await tenantDb(trx, tenant).table('comment_threads').insert({
-    tenant,
-    thread_id: threadId,
-    ticket_id: ticketId,
-    project_task_id: null,
-    root_comment_id: newCommentId,
-    is_internal: effectiveIsInternal,
-    ...threadAudience,
-    reply_count: 0,
-    last_activity_at: nowIso,
-    created_at: nowIso,
-    created_by: user.user_id || null,
+  await insertCommentThread(trx, tenant, {
+    threadId,
+    ticketId,
+    rootCommentId: newCommentId,
+    isInternal: effectiveIsInternal,
+    createdBy: user.user_id || null,
+    at: nowIso,
+    audience: { kind: 'resolved', audience: threadAudience },
   });
 
   const [newComment] = await tenantDb(trx, tenant).table<IComment>('comments').insert({
@@ -3690,9 +3686,7 @@ export async function addTicketCommentInTransaction(
         },
         suppressContactNotifications,
         suppressInternalNotifications,
-        ...(threadAudience.collaboration_audience
-          ? { collaboration_audience: threadAudience.collaboration_audience, thread_id: threadId }
-          : {}),
+        ...commentThreadPayloadLabel(threadAudience, threadId),
       }),
     }, publishStoredWorkflowEvent);
 

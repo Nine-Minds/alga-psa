@@ -5,8 +5,9 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import {
-  CommentAudienceError, assertReplyAudience, isCommentAudience, lockLabelledThreadAudience, nativeThreadAudience,
+  CommentAudienceError, assertReplyAudience, isCommentAudience, lockLabelledThreadAudience,
 } from '@alga-psa/shared/lib/commentAudience';
+import { insertCommentThread } from '@alga-psa/shared/lib/commentThreadInsert';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
@@ -269,24 +270,16 @@ const Comment = {
 
         // {} with zero SQL for internal notes, plain authors and PSA tenants; fails closed in a
         // co-managed workspace when staff post a requester-visible comment without an audience.
-        // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
-        const threadAudience = collaboration
-          ? collaborationThreadAudience(Boolean(comment.is_internal), requestedAudience, collaboration, tenant)
-          : await nativeThreadAudience(trx, tenant, {
-              isInternal: Boolean(comment.is_internal), authorType: comment.author_type, audience: requestedAudience,
-            });
-        await tenantScopedTable(trx, 'comment_threads', tenant).insert({
-          tenant,
-          thread_id: threadId,
-          ticket_id: comment.ticket_id,
-          project_task_id: null,
-          root_comment_id: commentId,
-          is_internal: Boolean(comment.is_internal),
-          ...threadAudience,
-          reply_count: 0,
-          last_activity_at: now,
-          created_at: now,
-          created_by: comment.user_id || null,
+        await insertCommentThread(trx, tenant, {
+          threadId: threadId as string,
+          ticketId: comment.ticket_id as string,
+          rootCommentId: commentId as string,
+          isInternal: Boolean(comment.is_internal),
+          createdBy: comment.user_id || null,
+          at: now,
+          audience: collaboration
+            ? { kind: 'resolved', audience: collaborationThreadAudience(Boolean(comment.is_internal), requestedAudience, collaboration, tenant) }
+            : { kind: 'native', isInternal: Boolean(comment.is_internal), authorType: comment.author_type, requested: requestedAudience },
         });
       }
 

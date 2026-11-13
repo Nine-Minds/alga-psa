@@ -25,7 +25,9 @@
  *   `{...base, ...overrides}` also works but replaces whole groups.
  */
 import type React from 'react';
-import type { CommentAudience, ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
+import type { CommentThreadGroup } from '@alga-psa/ui/components';
+import type { TicketThreadTabDefinition } from '../components/ticket/ticketConversationThreadTabs';
+import type { CommentAudience, IComment, ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
 
 // Types only: `typeof` on a type-only import erases at runtime, so this
 // module never loads an action. The native implementation owns the runtime
@@ -368,6 +370,11 @@ export interface TicketConversationConfig {
    * resolution flow never offers it.
    */
   audiences?: readonly CommentAudience[];
+  /**
+   * The thread tabs the conversation shows, in order. Absent (native default): `NATIVE_THREAD_TABS`
+   * (All Comments, Client, Internal, Resolution). The client portal shows only `portal` tabs.
+   */
+  threadTabs?: readonly TicketThreadTabDefinition[];
 }
 
 // ---------------------------------------------------------------------------
@@ -397,6 +404,28 @@ export interface TicketScreenSlots {
   appSection?: (args: TicketSlotArgs) => React.ReactNode;
   /** Rendered next to the time summary (for example an effort split). */
   timeSummary?: (args: TicketTimeSlotArgs) => React.ReactNode;
+  /**
+   * Rendered inside a comment's bubble, after its body and before its reactions (for example files that
+   * belong to the comment). Absent (native default): nothing is rendered, not even a wrapper.
+   */
+  commentInline?: (args: TicketCommentInlineSlotArgs) => React.ReactNode;
+  /** Rendered above a thread (classic: before the thread node; Bento: before the root card). Absent: nothing. */
+  threadHeader?: (args: TicketThreadHeaderSlotArgs) => React.ReactNode;
+}
+
+/** `compact` is the Bento timeline's card; `default` is the classic conversation. */
+export type TicketConversationSlotVariant = 'default' | 'compact';
+
+export interface TicketCommentInlineSlotArgs {
+  comment: IComment;
+  /** The root of the thread `comment` belongs to; null when the comment sits in no known thread. */
+  threadRoot: IComment | null;
+  variant: TicketConversationSlotVariant;
+}
+
+export interface TicketThreadHeaderSlotArgs {
+  group: CommentThreadGroup<IComment>;
+  variant: TicketConversationSlotVariant;
 }
 
 /** The work item a stopwatch / time entry for this ticket is booked against. */

@@ -170,6 +170,7 @@ export async function createTaskCommentWithDb(
       taskCommentId = generatedIds?.task_comment_id;
       threadId = generatedIds?.thread_id;
 
+      // LEVERAGE: pattern thread-audience-insert — a root comment_threads insert with no audience; insertCommentThread (shared/lib/commentThreadInsert.ts) would own it, left as-is (NULL audience maps to the default container)
       await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: threadId,

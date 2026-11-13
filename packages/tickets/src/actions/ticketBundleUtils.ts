@@ -377,6 +377,7 @@ export async function mirrorCommentToChild(
     throw new Error('Database UUID generation did not return mirrored comment/thread identifiers.');
   }
 
+  // LEVERAGE: pattern thread-audience-insert — a root comment_threads insert with no audience; insertCommentThread (shared/lib/commentThreadInsert.ts) would own it, left as-is (NULL audience maps to the default container)
   await tenantDb(trx, tenant).table('comment_threads').insert({
     tenant,
     thread_id: childGenerated.thread_id,

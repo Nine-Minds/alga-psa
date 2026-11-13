@@ -80,6 +80,7 @@ export async function createRequesterTaskComment(db: Knex, actor: CoManagedSessi
     if (parent && !await requesterComments(context).where({ 'c.thread_id': parent.threadId, 'c.task_comment_id': parent.commentId })
       .whereNull('c.deleted_at').whereNull('root.deleted_at').forShare('c', 't', 'root').first('c.task_comment_id')) deny();
     const threadId = parent?.threadId ?? operationId;
+    // LEVERAGE: pattern thread-audience-insert — a root comment_threads insert with no audience; insertCommentThread (shared/lib/commentThreadInsert.ts) would own it, left as-is (NULL audience maps to the default container)
     if (!parent) await own.table('comment_threads').insert({ tenant: actor.tenant, thread_id: threadId, ticket_id: null, project_task_id: target.taskId,
       root_comment_id: operationId, is_internal: false, collaboration_audience: 'requester', created_by: actor.userId,
       created_at: trx.raw('clock_timestamp()'), last_activity_at: trx.raw('clock_timestamp()'), reply_count: 0 });

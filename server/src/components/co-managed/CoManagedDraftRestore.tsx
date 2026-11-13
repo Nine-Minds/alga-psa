@@ -20,8 +20,8 @@ const ERROR_KEYS: Record<string, string> = { abandoned: 'coManaged.conversation.
  * the text, audience and file manifest; this lists them with what is already uploaded, asks only for the files that are not,
  * and sends or discards them. It never invents a draft: with nothing open it renders nothing.
  */
-// LEVERAGE: friction base-composer-prefill — the base ticket composer has no initial-content seam for a host, so restored text is shown
-// and re-sent from this panel rather than placed back in the editor.
+// Note: the base composer now exposes a prefill handle (`composerHandleRef` on TicketConversation / BentoTimelineTile, see
+// useComposerPrefill in packages/tickets). Restored text is still shown and re-sent from this panel; placing it back in the editor is a later card.
 export default function CoManagedDraftRestore({ resource, version, refreshKey, onPublished }: {
   resource: CoManagedSharedResource; version: number; onPublished: () => void;
   /** Any change re-lists the drafts (e.g. a send just failed and left one on the server). Not a load and not a comments change. */

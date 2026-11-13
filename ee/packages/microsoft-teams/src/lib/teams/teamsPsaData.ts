@@ -316,6 +316,7 @@ export async function addTeamsTicketComment(params: {
     const teamsThreadId = randomUUID();
     const teamsNowIso = new Date().toISOString();
 
+    // LEVERAGE: pattern thread-audience-insert — a root comment_threads insert with no audience; insertCommentThread (shared/lib/commentThreadInsert.ts) would own it, left as-is (NULL audience maps to the default container)
     await db.table('comment_threads').insert({
       tenant: params.tenantId,
       thread_id: teamsThreadId,

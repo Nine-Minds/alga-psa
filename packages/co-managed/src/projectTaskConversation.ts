@@ -100,6 +100,7 @@ export async function mutateCoManagedProjectTaskComment(db: Knex, inputActor: Co
       const user = await tenantDb(write.trx, actor.tenant).table('users').where('user_id', actor.userId).forShare().first('first_name', 'last_name', 'email');
       const organization = await tenantDb(write.trx, actor.tenant).table('tenants').forShare().first('client_name');
       await current(write, true);
+      // LEVERAGE: pattern thread-audience-insert — a root comment_threads insert with no audience; insertCommentThread (shared/lib/commentThreadInsert.ts) would own it, left as-is (NULL audience maps to the default container)
       if (!target) await owner.table('comment_threads').insert({ tenant: resource.tenant, thread_id: threadId, project_task_id: resource.id, ticket_id: null,
         root_comment_id: commentId, is_internal: audience !== 'requester', collaboration_audience: audience, created_by: foreign ? null : actor.userId,
         reply_count: 0, created_at: write.trx.raw('clock_timestamp()'), last_activity_at: write.trx.raw('clock_timestamp()') });
