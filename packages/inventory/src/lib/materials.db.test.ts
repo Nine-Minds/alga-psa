@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { recordStockConsumption, InsufficientStockError } from './consume';
-import { addMaterial, deleteMaterial, isProjectMaterialEligible, listMaterials, MaterialValidationError, queryCatalogPickerItems } from './materials';
+import { addMaterial, deleteMaterial, isProjectMaterialEligible, listMaterials, MaterialValidationError, queryCatalogPickerItems, type MaterialRow } from './materials';
 import { queryProductAvailability } from './availability';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
@@ -127,6 +127,11 @@ describe('F014/F015 negative-stock guard (T003)', () => {
   });
 });
 
+// Only ticket rows carry quantity_locked; project rows never do.
+async function listTicketMaterials(trx: Knex.Transaction) {
+  return (await listMaterials(trx, TENANT, 'ticket', TICKET)) as Array<MaterialRow & { quantity_locked?: boolean }>;
+}
+
 describe('F048 canonical materials service (T005)', () => {
   it('marks serialized ticket materials as quantity-locked for the edit UI', async () => {
     await inTx(async (trx) => {
@@ -143,7 +148,7 @@ describe('F048 canonical materials service (T005)', () => {
         },
       ]);
 
-      const materials = await listMaterials(trx, TENANT, 'ticket', TICKET);
+      const materials = await listTicketMaterials(trx);
       expect(materials.find((row) => row.service_id === serialized)?.quantity_locked).toBe(true);
       expect(materials.find((row) => row.service_id === ordinary)?.quantity_locked).toBe(false);
     });
@@ -165,7 +170,7 @@ describe('F048 canonical materials service (T005)', () => {
         from_location_id: LOCATION, source_doc_type: 'ticket_material', source_doc_id: material.ticket_material_id,
       });
 
-      const materials = await listMaterials(trx, TENANT, 'ticket', TICKET);
+      const materials = await listTicketMaterials(trx);
       const linked = materials.find((row) => 'ticket_material_id' in row && row.ticket_material_id === material.ticket_material_id);
       expect(linked?.quantity_locked).toBe(true);
     });
