@@ -69,25 +69,30 @@ export default function ErroredSyncOpsDialog({ isOpen, onClose, adapterType, rea
   };
 
   const columns = [
-    { title: t('integrations.qbo.sync.erroredOpsColItem', { defaultValue: 'Item' }), dataIndex: 'displayName', render: (_: unknown, row: ErroredSyncOperationRow) => itemName(row) },
+    { title: t('integrations.qbo.sync.erroredOpsColItem', { defaultValue: 'Item' }), dataIndex: 'displayName', width: '20%', render: (_: unknown, row: ErroredSyncOperationRow) => itemName(row) },
     {
       title: t('integrations.qbo.sync.erroredOpsColOperation', { defaultValue: 'Operation' }),
       dataIndex: 'operation',
+      width: '13%',
       render: (value: string) => t(`integrations.qbo.sync.erroredOpsOperation.${value}`, { defaultValue: value })
     },
     {
       title: t('integrations.qbo.sync.erroredOpsColError', { defaultValue: 'Error' }),
       dataIndex: 'lastError',
+      // The error is what the user opened this list for: give it the room.
+      width: '39%',
       render: (value: string | null) => value || t('integrations.qbo.sync.erroredOpsNoError', { defaultValue: 'No error details were recorded.' })
     },
     {
       title: t('integrations.qbo.sync.erroredOpsColWhen', { defaultValue: 'When' }),
       dataIndex: 'timestamp',
+      width: '15%',
       render: (value: string) => formatDate(value, { dateStyle: 'medium', timeStyle: 'short' })
     },
     {
       title: t('integrations.qbo.sync.erroredOpsColBatch', { defaultValue: 'Export batch' }),
       dataIndex: 'batchId',
+      width: '13%',
       render: (_: unknown, row: ErroredSyncOperationRow) =>
         row.batchId ? (
           <Link id={`errored-sync-op-batch-link-${row.opId}`} href={batchHref(row.batchId)} className="underline">
@@ -103,7 +108,7 @@ export default function ErroredSyncOpsDialog({ isOpen, onClose, adapterType, rea
       isOpen={isOpen}
       onClose={onClose}
       title={t('integrations.qbo.sync.erroredOpsDialogTitle', { provider: providerLabel, defaultValue: 'Errored {{provider}} sync operations' })}
-      className="max-w-4xl"
+      className="max-w-6xl"
     >
       <DialogContent>
         <p className="text-sm text-muted-foreground mb-3">
