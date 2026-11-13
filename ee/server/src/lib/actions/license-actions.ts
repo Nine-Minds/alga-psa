@@ -11,6 +11,7 @@ import {
 import { getStripeService, AppleIapBillingError } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
+import { countLicensedInternalUsers } from '@alga-psa/licensing';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -1048,18 +1049,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
  * Used for validating license reductions
  */
 async function getActiveUserCount(tenantId: string): Promise<number> {
-  const knex = await getConnection(tenantId);
-  const db = tenantDb(knex, tenantId);
-
-  const result = await db.table('users')
-    .where({
-      user_type: 'internal',
-      is_inactive: false
-    })
-    .count('user_id as count')
-    .first();
-
-  return parseInt(result?.count as string || '0', 10);
+  return countLicensedInternalUsers(await getConnection(tenantId), tenantId);
 }
 
 /**

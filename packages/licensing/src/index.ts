@@ -9,6 +9,7 @@
  */
 
 export * from './lib/get-license-usage';
+export * from './lib/licensed-internal-users';
 export * from './lib/license-types';
 export * from './lib/co-managed-license';
 export * from './lib/co-managed-capacity';

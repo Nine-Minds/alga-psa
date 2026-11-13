@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers.js';
 import { getLicenseUsage, type LicenseUsage } from '../lib/get-license-usage';
+import { countLicensedInternalUsers } from '../lib/licensed-internal-users';
 import { isSelfHostLicensing } from '../lib/license-state';
 import { getConnection, getTenantContext, tenantDb } from '@alga-psa/db';
 
@@ -64,15 +65,7 @@ export async function getLicenseUsageAction(): Promise<{
 export async function getActiveUserCount(tenantId: string): Promise<number> {
   const knex = await getConnection(tenantId);
 
-  const result = await tenantDb(knex, tenantId).table('users')
-    .where({
-      user_type: 'internal',
-      is_inactive: false
-    })
-    .count('user_id as count')
-    .first();
-
-  return parseInt(result?.count as string || '0', 10);
+  return countLicensedInternalUsers(knex, tenantId);
 }
 
 /**
