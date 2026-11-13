@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { AssetSpecSelect, BuiltinAssetSpecFields, useBuiltinAssetTypeOptions } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
 import { BUILTIN_ASSET_SPEC_FIELDS, type AssetSpecValues } from '@alga-psa/core/builtinAssetSpecs';
-import { buildDefaultAssetExtension } from '@alga-psa/inventory/lib/assetDefaultMetadata';
+import { buildDefaultAssetExtension, buildDefaultAssetSeeds } from '@alga-psa/inventory/lib/assetDefaultMetadata';
 import type CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -39,6 +39,7 @@ function ProductSpecs({ assetType }: { assetType: string }) {
     <BuiltinAssetSpecFields assetType={assetType} values={values} idPrefix="product-spec"
       onChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))} />
     <output data-testid="extension">{JSON.stringify(buildDefaultAssetExtension(assetType, values))}</output>
+    <output data-testid="seeds">{JSON.stringify(buildDefaultAssetSeeds(assetType, values))}</output>
   </>;
 }
 
@@ -87,5 +88,30 @@ describe.each(['light', 'dark'])('shared builtin asset specs (%s theme)', (theme
     fireEvent.click(screen.getByLabelText('Virtual Machine'));
     fireEvent.change(screen.getByLabelText('Hypervisor'), { target: { value: 'Hyper-V' } });
     expect(JSON.parse(screen.getByTestId('extension').textContent!)).toMatchObject({ is_virtual: true, hypervisor: 'Hyper-V' });
+  });
+
+  it('renders Model first and routes it to the base row for workstation', () => {
+    render(<ProductSpecs assetType="workstation" />);
+    const labels = BUILTIN_ASSET_SPEC_FIELDS.workstation.map((field) => field.label);
+    expect(labels[0]).toBe('Model');
+    expect(labels.indexOf('Model')).toBeLessThan(labels.indexOf('OS Type'));
+    fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'OptiPlex 7020' } });
+    const seeds = JSON.parse(screen.getByTestId('seeds').textContent!);
+    expect(seeds.base).toEqual({ model: 'OptiPlex 7020' });
+    expect(seeds.extension).not.toHaveProperty('model');
+  });
+
+  it('routes Model into the extension for mobile devices and printers', () => {
+    render(<ProductSpecs assetType="mobile_device" />);
+    fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'iPhone 17' } });
+    const seeds = JSON.parse(screen.getByTestId('seeds').textContent!);
+    expect(seeds.base).toEqual({});
+    expect(seeds.extension).toMatchObject({ model: 'iPhone 17' });
+    cleanup();
+    render(<ProductSpecs assetType="printer" />);
+    fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'M479' } });
+    const printerSeeds = JSON.parse(screen.getByTestId('seeds').textContent!);
+    expect(printerSeeds.base).toEqual({});
+    expect(printerSeeds.extension).toMatchObject({ model: 'M479' });
   });
 });

@@ -54,6 +54,13 @@ describe('persisted product asset defaults', () => {
     expect(JSON.parse(mocks.update.mock.calls[1][0].default_asset_metadata)).toEqual({ supports_color: false });
   });
 
+  it('persists the Model default for every built-in asset type', async () => {
+    await updateInventorySettings('product-a', { default_asset_metadata: { model: ' OptiPlex 7020 ' } });
+    expect(JSON.parse(mocks.update.mock.calls[0][0].default_asset_metadata)).toEqual({ model: 'OptiPlex 7020' });
+    await updateInventorySettings('product-a', { default_asset_type: 'printer', default_asset_metadata: { model: 'M479' } });
+    expect(JSON.parse(mocks.update.mock.calls[1][0].default_asset_metadata)).toEqual({ model: 'M479' });
+  });
+
   it('clears incompatible defaults when the asset type changes without new metadata', async () => {
     await updateInventorySettings('product-a', { default_asset_type: 'network_device' });
     expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ default_asset_metadata: null }));
