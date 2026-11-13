@@ -37,7 +37,7 @@ export interface CoManagedReservation {
   state: 'reserved' | 'active' | 'released';
 }
 
-export interface CoManagedSeatAllocation {
+export interface CoManagedSeatAllocationRecord {
   allocation_id: string;
   operation_id: string;
   sponsor_client_id: string;
@@ -205,7 +205,7 @@ interface SeatAllocationInput {
 export async function reserveAndActivateCoManagedSeatAllocation(
   db: Knex,
   input: SeatAllocationInput,
-): Promise<CoManagedSeatAllocation> {
+): Promise<CoManagedSeatAllocationRecord> {
   if (![input.sponsorTenant, input.clientId, input.operationId].every((id) => uuid.test(id)) ||
       !Number.isSafeInteger(input.seats) || input.seats < 1 || input.seats > 2147483647) {
     throw new CoManagedReservationError('INVALID_RESERVATION');
@@ -258,7 +258,7 @@ export async function reserveAndActivateCoManagedSeatAllocation(
   });
 }
 
-function seatAllocationResult(row: CoManagedSeatAllocation): CoManagedSeatAllocation {
+function seatAllocationResult(row: CoManagedSeatAllocationRecord): CoManagedSeatAllocationRecord {
   return {
     allocation_id: row.allocation_id, operation_id: row.operation_id,
     sponsor_client_id: row.sponsor_client_id, seats: row.seats, state: row.state,
