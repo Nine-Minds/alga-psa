@@ -597,20 +597,21 @@ export default function TicketMaterialsCard({
           </div>
         ) : (
           <TicketChargeTable itemLabel={t('materials.product', 'Product')} money={money}
-            rows={materials.map((material, index) => ({
+            rows={materials.map((material) => ({
               id: material.ticket_material_id,
               name: `${material.service_name || t('materials.unknownProduct', 'Unknown Product')}${material.sku ? ` (${material.sku})` : ''}`,
               description: material.description, quantity: material.quantity, rate: material.rate,
               currency: material.currency_code || currencyCode, billed: material.is_billed,
               actions: !material.is_billed && !readOnly ? <>
                         {updateTicketMaterial && (
-                          <Button id={`${id}-edit-${index}-button`} variant="ghost" size="sm"
+                          <Button {...withDataAutomationId({ id: `ticket-material-${material.ticket_material_id}-edit-button` })}
+                            variant="ghost" size="sm"
                             className="h-8 w-8 shrink-0 p-0" disabled={deletingId === material.ticket_material_id}
                             data-material-id={material.ticket_material_id} aria-label={t('chargeEdit.edit')}
                             onClick={() => setEditingMaterial(material)}><Pencil className="h-4 w-4" /></Button>
                         )}
                           <Button
-                            id={`${id}-delete-${index}-button`}
+                            {...withDataAutomationId({ id: `ticket-material-${material.ticket_material_id}-delete-button` })}
                             data-material-id={material.ticket_material_id}
                             aria-label={t('common:actions.remove', 'Remove')}
                             variant="ghost"
@@ -641,7 +642,7 @@ export default function TicketMaterialsCard({
       {editingMaterial && !readOnly && updateTicketMaterial && (
         <TicketChargeEditDialog key={editingMaterial.ticket_material_id} id={`${id}-edit-dialog`}
           quantity={editingMaterial.quantity} description={editingMaterial.description}
-          quantityLocked={editingMaterial.is_serialized === true}
+          quantityLocked={editingMaterial.quantity_locked || editingMaterial.is_serialized === true}
           onClose={() => setEditingMaterial(null)}
           onSave={async (input) => {
             const result = await updateTicketMaterial(editingMaterial.ticket_material_id, input);

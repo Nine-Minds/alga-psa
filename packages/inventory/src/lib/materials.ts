@@ -175,7 +175,15 @@ export async function listMaterials(
       scoped.tenantJoin(query, 'project_staging_lines as psl', 'm.project_material_id', 'psl.project_material_id', { type: 'left' });
       query.select('psl.staging_line_id as from_staging_line_id');
     }
-    return (await query) as MaterialRow[];
+    const materials = (await query) as MaterialRow[];
+    if (parentType !== 'ticket' || materials.length === 0) return materials;
+
+    return materials.map((material) => {
+      if (!('ticket_material_id' in material)) {
+        throw new Error('Ticket material query returned a project material row');
+      }
+      return { ...material, quantity_locked: material.is_serialized === true };
+    });
   });
 }
 

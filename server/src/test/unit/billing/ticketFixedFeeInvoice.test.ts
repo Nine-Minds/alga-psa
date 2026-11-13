@@ -1,19 +1,35 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IFixedPriceCharge, ManualInvoiceSourceLink } from '@alga-psa/types';
+import type { Knex } from 'knex';
 
 const mocks = vi.hoisted(() => ({
   permission: vi.fn(),
   connect: vi.fn(),
   facade: vi.fn(),
+  recordAccess: vi.fn(),
   generate: vi.fn(),
   tax: vi.fn(),
+  TicketRecordAccessDeniedError: class extends Error {
+    constructor() {
+      super('Permission denied: Cannot access ticket');
+      this.name = 'TicketRecordAccessDeniedError';
+    }
+  },
 }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: unknown[]) => unknown) =>
     (...args: unknown[]) => action({ user_id: 'user-a' }, { tenant: 'tenant-a' }, ...args),
   hasPermission: mocks.permission,
 }));
-vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.connect, tenantDb: mocks.facade }));
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: mocks.connect,
+  tenantDb: mocks.facade,
+  withTransaction: (_db: unknown, callback: (trx: object) => unknown) => callback({}),
+}));
+vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccess: mocks.recordAccess,
+  TicketRecordAccessDeniedError: mocks.TicketRecordAccessDeniedError,
+}));
 vi.mock('@alga-psa/billing/actions/manualInvoiceActions', () => ({ generateManualInvoice: mocks.generate }));
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({ generateInvoiceNumber: vi.fn() }));
 vi.mock('@alga-psa/billing/services/taxService', () => ({ TaxService: class { calculateTax = mocks.tax; } }));
@@ -25,6 +41,7 @@ vi.mock('@alga-psa/billing/lib/billing/billingProfileLookup', () => ({
 }));
 
 import { generateTicketInvoice, getTicketBillableItems } from '@alga-psa/billing/actions/ticketInvoiceActions';
+import { TicketRecordAccessDeniedError } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { persistInvoiceCharges, persistManualInvoiceCharges } from '@alga-psa/billing/services/invoiceService';
 import { BillingEngine } from '@alga-psa/billing/lib/billing/billingEngine';
 
@@ -58,10 +75,15 @@ function query(row?: Record<string, unknown>, rows: Record<string, unknown>[] = 
   return builder;
 }
 let tables: Record<string, ReturnType<typeof query>>;
+const transaction = (rows: Array<{ source_id: string }> = [{ source_id: 'fee-a' }]) => {
+  const raw = vi.fn(async () => ({ rows }));
+  return { trx: { raw } as unknown as Knex.Transaction, raw };
+};
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.permission.mockResolvedValue(true);
   mocks.connect.mockResolvedValue({ knex: { raw: vi.fn((sql: string) => sql) } });
+  mocks.recordAccess.mockResolvedValue({});
   mocks.generate.mockResolvedValue({ success: true });
   mocks.tax.mockResolvedValue({ taxAmount: 250, taxRate: 5 });
   tables = {
@@ -101,6 +123,9 @@ describe('ticket fixed-fee quick invoice selection', () => {
     expect(tables['ticket_fixed_fee_services as f'].where).toHaveBeenCalledWith({
       'f.ticket_id': 'ticket-a', 'f.client_id': 'client-a', 'f.is_billed': false,
     });
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-a', ticketId: 'ticket-a', action: 'update',
+    }));
   });
 
   it('lists same-currency fees and reports exclusions', async () => {
@@ -109,6 +134,17 @@ describe('ticket fixed-fee quick invoice selection', () => {
       fixedFeeItems: [{ id: 'fee-a', quantity: 2, rate: 2500, amount: 5000 }],
       excludedFixedFeeCount: 1,
     });
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-a', ticketId: 'ticket-a', action: 'read',
+    }));
+  });
+
+  it('requires record-level ticket access before listing billable sources', async () => {
+    mocks.recordAccess.mockRejectedValueOnce(new TicketRecordAccessDeniedError());
+    const result = await getTicketBillableItems('ticket-a');
+    expect(result).toHaveProperty('permissionError');
+    expect(tables['time_entries as te'].where).not.toHaveBeenCalled();
+    expect(tables['ticket_fixed_fee_services as f'].where).not.toHaveBeenCalled();
   });
 
   it('rejects foreign/missing/already-billed selections rather than generating a partial invoice', async () => {
@@ -133,12 +169,21 @@ describe('ticket fixed-fee quick invoice selection', () => {
     })).toMatchObject({ success: false, code: 'PERMISSION_DENIED' });
     expect(mocks.connect).not.toHaveBeenCalled();
   });
+
+  it('requires record-level ticket access before generating a quick invoice', async () => {
+    mocks.recordAccess.mockRejectedValueOnce(new TicketRecordAccessDeniedError());
+    expect(await generateTicketInvoice({
+      ticketId: 'ticket-a', timeEntryIds: [], materialIds: [], fixedFeeIds: ['fee-a'],
+    })).toMatchObject({ success: false, code: 'PERMISSION_DENIED' });
+    expect(tables['ticket_fixed_fee_services as f'].where).not.toHaveBeenCalled();
+    expect(mocks.generate).not.toHaveBeenCalled();
+  });
 });
 
 describe('manual invoice fixed-fee and edited material source lifecycle', () => {
   const persist = (source_link: ManualInvoiceSourceLink, overrides: Record<string, unknown> = {}) =>
     persistManualInvoiceCharges(
-      {} as never, 'invoice-a',
+      transaction(source_link.kind === 'ticket_material' ? [{ source_id: 'material-a' }] : [{ source_id: 'fee-a' }]).trx, 'invoice-a',
       [{ service_id: 'service-a', quantity: 2, rate: 2500, description: 'Setup', source_link, ...overrides }],
       { client_id: 'client-a', region_code: null },
       { user: { id: 'user-a' } } as never, 'tenant-a',
@@ -150,11 +195,9 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
     expect(tables.invoice_charges.insert).toHaveBeenCalledWith(expect.objectContaining({
       service_id: 'service-a', quantity: 2, unit_price: 2500, net_amount: 5000, description: 'Setup',
     }));
-    expect(tables.ticket_fixed_fee_services.update).toHaveBeenCalledWith(expect.objectContaining({
-      is_billed: true, billed_invoice_id: 'invoice-a',
-    }));
+    expect(tables.ticket_fixed_fee_services.update).not.toHaveBeenCalled();
     expect(tables.ticket_fixed_fee_services.forUpdate).toHaveBeenCalled();
-    expect(mocks.facade).toHaveBeenCalledWith({}, 'tenant-a');
+    expect(mocks.facade).toHaveBeenCalledWith(expect.objectContaining({ raw: expect.any(Function) }), 'tenant-a');
   });
 
   describe('scheduled fixed-fee source claims', () => {
@@ -164,8 +207,9 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
       ticket_fixed_fee_id: 'fee-a', ticket_fixed_fee_updated_at: version,
       is_taxable: true, tax_region: 'service-region', tax_amount: 250, tax_rate: 5,
     };
+    const tx = transaction([{ source_id: 'fee-a' }]);
     const persist = () => persistInvoiceCharges(
-      {} as never, 'invoice-a', [{ ...charge }],
+      tx.trx, 'invoice-a', [{ ...charge }],
       { client_id: 'client-a', tax_region: 'client-region' },
       { user: { id: 'user-a' } } as never, 'tenant-a',
     );
@@ -175,18 +219,17 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
       expect(tables.invoice_charges.insert).toHaveBeenCalledWith(expect.objectContaining({
         quantity: 2, unit_price: 2500, net_amount: 5000, tax_region: 'service-region', is_manual: false,
       }));
-      expect(tables.ticket_fixed_fee_services.where).toHaveBeenCalledWith({
-        entry_id: 'fee-a', client_id: 'client-a', is_billed: false, service_id: 'service-a',
-        quantity: 2, rate: 2500, currency_code: 'USD', updated_at: version,
-      });
-
-      expect(tables.ticket_fixed_fee_services.update).toHaveBeenCalledWith(expect.objectContaining({
-        is_billed: true, billed_invoice_id: 'invoice-a',
-      }));
+      const [claimSql, claimBindings] = tx.raw.mock.calls[0];
+      expect(claimSql).toContain('UPDATE ticket_fixed_fee_services AS source');
+      expect(claimSql).toContain('source.tenant = ?');
+      expect(claimSql).toContain('source.currency_code = requested.currency_code');
+      expect(claimBindings).toContain('tenant-a');
+      expect(claimBindings).toContain('USD');
+      expect(tx.raw).toHaveBeenCalledTimes(1);
     });
 
     it('aborts persistence when an edit or another invoice changed the source', async () => {
-      tables.ticket_fixed_fee_services.update.mockResolvedValue(0);
+      tx.raw.mockResolvedValueOnce({ rows: [] });
       await expect(persist()).rejects.toMatchObject({
         code: 'SOURCE_CHANGED',
         message: expect.stringContaining('changed or was already billed'),
@@ -196,7 +239,7 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
 
   it('rejects stale microsecond versions, including description-only edits', async () => {
     await expect(persist({ ...link, updatedAt: '2026-10-27 12:00:00.123455+00' })).rejects.toMatchObject({
-      code: 'SOURCE_NOT_ELIGIBLE',
+      code: 'SOURCE_CHANGED',
     });
     expect(tables.invoice_charges.insert).not.toHaveBeenCalled();
   });
@@ -204,7 +247,7 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
   it('rejects stale edited material versions before persisting a charge', async () => {
     await expect(persist({
       kind: 'ticket_material', materialId: 'material-a', updatedAt: '2026-10-27 12:00:00.123455+00',
-    })).rejects.toMatchObject({ code: 'SOURCE_NOT_ELIGIBLE' });
+    })).rejects.toMatchObject({ code: 'SOURCE_CHANGED' });
     expect(tables.invoice_charges.insert).not.toHaveBeenCalled();
   });
 
@@ -220,8 +263,15 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
     tables.ticket_fixed_fee_services = query({ ...fee, is_billed: true });
     await expect(persist(link)).rejects.toMatchObject({ code: 'SOURCE_ALREADY_BILLED' });
     tables.ticket_fixed_fee_services = query({ ...fee });
-    tables.ticket_fixed_fee_services.update.mockResolvedValue(0);
-    await expect(persist(link)).rejects.toMatchObject({ code: 'SOURCE_ALREADY_BILLED' });
+    const concurrentClaim = transaction([]);
+    await expect(persistManualInvoiceCharges(
+      concurrentClaim.trx,
+      'invoice-a',
+      [{ service_id: 'service-a', quantity: 2, rate: 2500, description: 'Setup', source_link: link }],
+      { client_id: 'client-a', region_code: null },
+      { user: { id: 'user-a' } } as never,
+      'tenant-a',
+    )).rejects.toMatchObject({ code: 'SOURCE_ALREADY_BILLED' });
   });
 });
 
@@ -234,7 +284,7 @@ describe('scheduled ticket fixed-fee calculation', () => {
     return method.call(engine, 'client-a', { startDate: '2026-10-01', endDate: '2026-11-01' }, 'USD');
   };
 
-  it('calculates quantity times catalog price, taxes, and exact provenance within an end-exclusive window', async () => {
+  it('calculates quantity times catalog price, taxes, and exact provenance before the end-exclusive boundary', async () => {
     expect(await calculate()).toEqual([expect.objectContaining({
       type: 'fixed', serviceId: 'service-a', serviceName: 'Setup',
       quantity: 2, rate: 2500, total: 5000, tax_amount: 250, tax_rate: 5,
@@ -242,7 +292,7 @@ describe('scheduled ticket fixed-fee calculation', () => {
     })]);
     const where = tables['ticket_fixed_fee_services as f'].where;
     expect(where).toHaveBeenCalledWith({ 'f.client_id': 'client-a', 'f.is_billed': false, 'f.currency_code': 'USD' });
-    expect(where).toHaveBeenCalledWith('f.created_at', '>=', '2026-10-01');
+    expect(where).not.toHaveBeenCalledWith('f.created_at', '>=', '2026-10-01');
     expect(where).toHaveBeenCalledWith('f.created_at', '<', '2026-11-01');
     expect(mocks.tax).toHaveBeenCalledWith('client-a', 5000, '2026-11-01', 'service-region', true, 'USD');
   });

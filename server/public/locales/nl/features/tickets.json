@@ -24,7 +24,7 @@
       "remove": "Deze service kon niet worden verwijderd. Probeer het opnieuw.",
       "invalidInput": "Selecteer een service, een valuta en een positief geheel aantal.",
       "ticketMissing": "Het ticket bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
-      "serviceInvalid": "Selecteer een actieve vaste-vergoedingsservice.",
+      "serviceInvalid": "Selecteer een actieve dienst met een vast tarief.",
       "priceInvalid": "Voor deze valuta en dit aantal is een geldige catalogusprijs vereist.",
       "cannotDelete": "Deze serviceregel is al gefactureerd of verwijderd. Vernieuw de pagina en probeer het opnieuw."
     }

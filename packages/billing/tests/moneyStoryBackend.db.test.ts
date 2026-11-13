@@ -65,6 +65,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 import { getInvoiceLineCogsForTenant } from '../src/actions/invoiceCogsActions';
+import { getProfitabilitySummary } from '../src/actions/profitabilityReportActions';
 import { AccountingExportService } from '../src/services/accountingExportService';
 import { AccountingExportRepository } from '../src/repositories/accountingExportRepository';
 import { AccountingAdapterRegistry } from '../src/adapters/accounting/registry';
@@ -360,6 +361,12 @@ describe('S5 money story backend', () => {
       margin_ratio: null,
     });
 
+    const getReportSummary = () => Reflect.apply(getProfitabilitySummary, null, [
+      null,
+      { tenant: TENANT },
+      { startDate: '2036-02-03', endDate: '2036-02-03' },
+    ]);
+    const reportBeforeReturn = await getReportSummary();
     await insertFiltered('stock_movements', {
       tenant: TENANT,
       movement_id: randomUUID(),
@@ -379,6 +386,8 @@ describe('S5 money story backend', () => {
       margin_ratio: 0.55,
     });
     expect(afterReturn.find((row) => row.item_id === soItemId)?.cogs_total).toBe(7_000);
+    const reportAfterReturn = await getReportSummary();
+    expect(reportAfterReturn.materialCost).toBe(reportBeforeReturn.materialCost - 1_500);
 
     await insertFiltered('stock_movements', {
       tenant: TENANT,
@@ -394,6 +403,8 @@ describe('S5 money story backend', () => {
     });
     const afterPositiveReturn = await getInvoiceLineCogsForTenant(trx, TENANT, invoiceId);
     expect(afterPositiveReturn.find((row) => row.item_id === materialItemId)?.cogs_total).toBe(3_500);
+    const reportAfterPositiveReturn = await getReportSummary();
+    expect(reportAfterPositiveReturn.materialCost).toBe(reportAfterReturn.materialCost - 1_000);
   });
 
   it('T017: vendor_bill export builds a QBO Bill payload, records line status, and is mapping-idempotent', async () => {

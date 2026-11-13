@@ -11,7 +11,7 @@
     "rate": "Preço unitário",
     "total": "Total",
     "description": "Descrição",
-    "loading": "A carregar serviços…",
+    "loading": "Carregando serviços…",
     "empty": "Nenhum serviço adicionado.",
     "billed": "Faturado",
     "unbilled": "Não faturado",
@@ -31,17 +31,17 @@
   },
   "chargeEdit": {
     "title": "Editar cobrança do ticket",
-    "save": "Guardar alterações",
+    "save": "Salvar alterações",
     "edit": "Editar cobrança",
     "errors": {
       "save": "Não foi possível guardar esta cobrança. Tente novamente.",
-      "invalidInput": "Introduza uma quantidade inteira positiva e uma descrição com até 2.000 caracteres.",
+      "invalidInput": "Insira uma quantidade inteira positiva e uma descrição com até 2.000 caracteres.",
       "notEditable": "Não é possível editar entradas faturadas ou removidas. Atualize a página e tente novamente.",
       "amountTooLarge": "Esta quantidade excederia o montante total suportado.",
       "serialized": "Os materiais com número de série devem manter a quantidade 1. Adicione ou remova unidades individuais.",
-      "trackingChanged": "O controlo de inventário mudou após a adição deste material. Reconcilie o stock antes de alterar a quantidade.",
-      "locationInvalid": "A localização de stock original está em falta ou é inconsistente. Reconcilie este material antes de alterar a quantidade.",
-      "costCurrency": "Os custos de stock utilizam moedas diferentes. Reconcilie este material antes de reduzir a quantidade."
+      "trackingChanged": "O controle de inventário mudou após a adição deste material. Reconcilie o estoque antes de alterar a quantidade.",
+      "locationInvalid": "A localização de estoque original está em falta ou é inconsistente. Reconcilie este material antes de alterar a quantidade.",
+      "costCurrency": "Os custos de estoque utilizam moedas diferentes. Reconcilie este material antes de reduzir a quantidade."
     }
   },
   "importDialog": {

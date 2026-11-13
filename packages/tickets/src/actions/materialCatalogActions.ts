@@ -22,7 +22,10 @@ import {
 import { z } from 'zod';
 import { InsufficientStockError, stockConflictResultFrom } from '@alga-psa/inventory/lib/consume';
 import type { StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
-import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
+import {
+  authorizeTicketRecordAccess,
+  TicketRecordAccessDeniedError,
+} from '@alga-psa/authorization/ticketRecordAuthorization';
 import {
   actionError,
   CodedError,
@@ -34,12 +37,12 @@ import {
 type TicketMaterialActionError = ActionMessageError | ActionPermissionError;
 
 function ticketMaterialActionErrorFrom(error: unknown): TicketMaterialActionError | null {
+  if (error instanceof TicketRecordAccessDeniedError) {
+    return permissionError(error.message);
+  }
   if (error instanceof Error) {
     if (error instanceof CodedError && error.code === 'TICKET_MATERIAL_EDIT') {
       return actionError(error.message, error.messageKey);
-    }
-    if (error.message.includes('Permission denied')) {
-      return permissionError(error.message);
     }
     if (
       error instanceof MaterialValidationError ||
@@ -126,22 +129,26 @@ export const getTicketCatalogCategories = withAuth(async (
   { tenant },
   scope: TicketCatalogCategoryScope = {},
 ): Promise<Array<{ category_id: string; category_name: string }>> => {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: ticket read required to load catalog categories');
-  }
+  if (!isMspPrincipalUserType(user.user_type)) return [];
   const { item_kinds: itemKinds, billing_methods: billingMethods } = ticketCatalogCategoryScopeSchema.parse(scope);
   const { knex } = await createTenantKnex();
-  const db = tenantDb(knex, tenant);
-  const query = db.table('service_categories as c')
-    .distinct('c.category_id', 'c.category_name', 'c.display_order');
-  db.tenantJoin(query, 'service_catalog as sc', 'sc.category_id', 'c.category_id');
-  query.where('sc.is_active', true);
-  if (itemKinds) query.whereIn('sc.item_kind', itemKinds);
-  if (billingMethods) query.whereIn('sc.billing_method', billingMethods);
-  const rows: Array<{ category_id: string; category_name: string }> = await query
-    .orderBy('c.display_order', 'asc')
-    .orderBy('c.category_name', 'asc');
-  return rows.map(({ category_id, category_name }) => ({ category_id, category_name }));
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'service', 'read', trx)
+      || !await hasPermission(user, 'inventory', 'read', trx)) {
+      return [];
+    }
+    const db = tenantDb(trx, tenant);
+    const query = db.table('service_categories as c')
+      .distinct('c.category_id', 'c.category_name', 'c.display_order');
+    db.tenantJoin(query, 'service_catalog as sc', 'sc.category_id', 'c.category_id');
+    query.where('sc.is_active', true);
+    if (itemKinds) query.whereIn('sc.item_kind', itemKinds);
+    if (billingMethods) query.whereIn('sc.billing_method', billingMethods);
+    const rows: Array<{ category_id: string; category_name: string }> = await query
+      .orderBy('c.display_order', 'asc')
+      .orderBy('c.category_name', 'asc');
+    return rows.map(({ category_id, category_name }) => ({ category_id, category_name }));
+  });
 });
 
 export const getServicePrices = withAuth(async (
@@ -165,13 +172,13 @@ export const listTicketMaterials = withAuth(async (
   { tenant },
   ticketId: string
 ): Promise<ITicketMaterial[] | TicketMaterialActionError> => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return permissionError('Permission denied: MSP ticket access required');
+  }
+  if (!await hasPermission(user, 'ticket', 'read')) {
+    return permissionError('Permission denied: ticket read required');
+  }
   try {
-    if (!isMspPrincipalUserType(user.user_type)) {
-      throw new Error('Permission denied: MSP ticket access required');
-    }
-    if (!await hasPermission(user, 'ticket', 'read')) {
-      throw new Error('Permission denied: ticket read required');
-    }
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action: 'read' });
@@ -202,13 +209,13 @@ export const addTicketMaterial = withAuth(async (
     allow_reserved_override?: boolean;
   }
 ): Promise<ITicketMaterial | TicketMaterialActionError | StockConflictResult> => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return permissionError('Permission denied: MSP ticket access required');
+  }
+  if (!await hasPermission(user, 'ticket', 'update')) {
+    return permissionError('Permission denied: ticket update required');
+  }
   try {
-    if (!isMspPrincipalUserType(user.user_type)) {
-      throw new Error('Permission denied: MSP ticket access required');
-    }
-    if (!await hasPermission(user, 'ticket', 'update')) {
-      throw new Error('Permission denied: ticket update required');
-    }
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await authorizeTicketRecordAccess({ trx, tenant, user, ticketId: input.ticket_id, action: 'update' });
@@ -251,13 +258,13 @@ export const deleteTicketMaterial = withAuth(async (
   { tenant },
   ticketMaterialId: string
 ): Promise<void | TicketMaterialActionError> => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return permissionError('Permission denied: MSP ticket access required');
+  }
+  if (!await hasPermission(user, 'ticket', 'update')) {
+    return permissionError('Permission denied: ticket update required');
+  }
   try {
-    if (!isMspPrincipalUserType(user.user_type)) {
-      throw new Error('Permission denied: MSP ticket access required');
-    }
-    if (!await hasPermission(user, 'ticket', 'update')) {
-      throw new Error('Permission denied: ticket update required');
-    }
     const { knex: db } = await createTenantKnex();
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const material = await tenantDb(trx, tenant)

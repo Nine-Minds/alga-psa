@@ -29,6 +29,7 @@ vi.mock('../lib/authHelpers', () => ({
 }));
 
 const { persistManualInvoiceCharges } = await import('../services/invoiceService');
+const MATERIAL_SOURCE_VERSION = '2026-10-28T12:00:00.123456Z';
 
 let db: Knex;
 let tenant: string;
@@ -92,6 +93,7 @@ async function insertTicketMaterial(params: {
     currency_code: params.currency ?? 'USD',
     description: 'Replacement widget',
     is_billed: params.isBilled ?? false,
+    updated_at: MATERIAL_SOURCE_VERSION,
   });
   return materialId;
 }
@@ -217,7 +219,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
         service_id: serviceId, quantity: 2, rate: 2500, description: 'Setup',
         source_link: { kind: 'ticket_fixed_fee', ...source },
       }],
-    })).rejects.toMatchObject({ code: 'SOURCE_NOT_ELIGIBLE' });
+    })).rejects.toMatchObject({ code: 'SOURCE_CHANGED' });
     expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
     expect(await db('ticket_fixed_fee_services').where({ tenant, entry_id: source.entryId }).first())
       .toMatchObject({ is_billed: false });
@@ -319,7 +321,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
           quantity: 2,
           rate: 2500,
           description: 'Replacement widget',
-          source_link: { kind: 'ticket_material', materialId },
+          source_link: { kind: 'ticket_material', materialId, updatedAt: MATERIAL_SOURCE_VERSION },
         },
       ],
     });
@@ -374,7 +376,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
             quantity: 2,
             rate: 2500,
             description: 'Replacement widget',
-            source_link: { kind: 'ticket_material', materialId },
+            source_link: { kind: 'ticket_material', materialId, updatedAt: MATERIAL_SOURCE_VERSION },
           },
         ],
       }),
@@ -385,7 +387,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
     expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
   });
 
-  it('does not claim a time entry owned by another tenant', async () => {
+  it('rejects a foreign time entry and claims only the invoice tenant entry', async () => {
     const otherUser = uuidv4();
     await db('users').insert({
       tenant: OTHER_TENANT,
@@ -394,36 +396,39 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
       hashed_password: 'x',
       email: `other-${otherUser.slice(0, 8)}@example.com`,
     });
+    const otherServiceType = uuidv4();
+    await db('service_types').insert({
+      tenant: OTHER_TENANT, id: otherServiceType, name: 'Other tenant time service',
+    });
+    await db('service_catalog').insert({
+      tenant: OTHER_TENANT, service_id: serviceId, service_name: 'Other tenant time service',
+      custom_service_type_id: otherServiceType, billing_method: 'hourly', default_rate: 12000,
+    });
+    const tenantEntryId = await insertTimeEntry();
     const foreignEntryId = await insertTimeEntry({
       ownerTenant: OTHER_TENANT,
       ownerUserId: otherUser,
-      ticket: uuidv4(),
-      service: null,
+      ticket: ticketId,
+      service: serviceId,
     });
+    const foreignInvoiceId = uuidv4();
+    await expect(runPersist({ invoiceId: foreignInvoiceId, items: [timeItem(foreignEntryId)] }))
+      .rejects.toMatchObject({ code: 'SOURCE_ALREADY_BILLED' });
+    await expectNoInvoice(foreignInvoiceId);
+
     const invoiceId = uuidv4();
+    await runPersist({ invoiceId, items: [timeItem(tenantEntryId)] });
 
-    await expect(
-      runPersist({
-        invoiceId,
-        items: [
-          {
-            service_id: serviceId,
-            quantity: 2,
-            rate: 12000,
-            description: 'Remote Support',
-            source_link: { kind: 'time_entry', entryId: foreignEntryId },
-          },
-        ],
-      }),
-    ).rejects.toBeInstanceOf(ManualInvoiceError);
-
+    const tenantEntry = await db('time_entries')
+      .where({ tenant, entry_id: tenantEntryId })
+      .first('invoiced');
     const foreignEntry = await db('time_entries')
       .where({ tenant: OTHER_TENANT, entry_id: foreignEntryId })
       .first('invoiced');
+    expect(tenantEntry.invoiced).toBe(true);
     expect(foreignEntry.invoiced).toBe(false);
     const charges = await db('invoice_charges').where({ tenant, invoice_id: invoiceId });
-    expect(charges).toHaveLength(0);
-    expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
+    expect(charges).toHaveLength(1);
   });
 
   const timeItem = (entryId: string) => ({
@@ -432,7 +437,7 @@ describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
   });
   const materialItem = (materialId: string) => ({
     service_id: serviceId, quantity: 2, rate: 2500, description: 'Replacement widget',
-    source_link: { kind: 'ticket_material' as const, materialId },
+    source_link: { kind: 'ticket_material' as const, materialId, updatedAt: MATERIAL_SOURCE_VERSION },
   });
 
   async function expectNoInvoice(invoiceId: string) {

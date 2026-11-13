@@ -13,6 +13,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import TicketChargeEditDialog from './TicketChargeEditDialog';
 import TicketChargeTable from './TicketChargeTable';
@@ -230,14 +231,16 @@ export default function TicketFixedFeeServicesCard({
         <p className="py-8 text-center text-sm text-[rgb(var(--color-text-500))]">{t('fixedFeeServices.empty')}</p>
       ) : (
         <TicketChargeTable itemLabel={t('fixedFeeServices.service')} money={money}
-          rows={entries.map((entry, index) => ({
+          rows={entries.map((entry) => ({
             id: entry.entry_id, name: entry.service_name || t('fixedFeeServices.service'), description: entry.description,
             quantity: entry.quantity, rate: Number(entry.rate), currency: entry.currency_code, billed: entry.is_billed,
             actions: !readOnly && !entry.is_billed ? <>
-                <Button id={`${id}-edit-${index}-button`} variant="ghost" size="sm" className="h-8 w-8 shrink-0 p-0" disabled={saving}
+                <Button {...withDataAutomationId({ id: `ticket-fixed-fee-${entry.entry_id}-edit-button` })}
+                  variant="ghost" size="sm" className="h-8 w-8 shrink-0 p-0" disabled={saving}
                   aria-label={t('chargeEdit.edit')} data-entry-id={entry.entry_id}
                   onClick={() => setEditingEntry(entry)}><Pencil className="h-4 w-4" /></Button>
-                <Button id={`${id}-remove-${index}-button`} variant="ghost" size="sm"
+                <Button {...withDataAutomationId({ id: `ticket-fixed-fee-${entry.entry_id}-remove-button` })}
+                  variant="ghost" size="sm"
                   className="h-8 w-8 shrink-0 p-0 text-[rgb(var(--badge-error-text))] hover:bg-[rgb(var(--badge-error-bg))] hover:text-[rgb(var(--badge-error-text))]"
                   disabled={saving} data-entry-id={entry.entry_id} aria-label={t('fixedFeeServices.remove')}
                   onClick={() => setDeleteEntry(entry)}><Trash2 className="h-4 w-4" /></Button>

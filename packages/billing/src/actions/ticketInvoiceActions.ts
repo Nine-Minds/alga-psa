@@ -1,8 +1,12 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import {
+  authorizeTicketRecordAccess,
+  TicketRecordAccessDeniedError,
+} from '@alga-psa/authorization/ticketRecordAuthorization';
 import type { ManualInvoiceSourceLink } from '@alga-psa/types';
 import {
   actionError,
@@ -160,6 +164,33 @@ async function loadQuickInvoiceWork(knex: Knex, tenant: string, ticketId: string
   };
 }
 
+async function authorizeNativeQuickInvoiceTicket(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: Parameters<typeof authorizeTicketRecordAccess>[0]['user'],
+  work: NonNullable<Awaited<ReturnType<typeof loadQuickInvoiceWork>>>,
+  action: 'read' | 'update',
+): Promise<void> {
+  if (work.workItemType === 'ticket') {
+    await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user,
+      ticketId: work.ticket.ticket_id,
+      action,
+    });
+  }
+}
+
+function ticketRecordPermissionError(): GenerateTicketInvoiceResult {
+  return {
+    success: false,
+    code: 'PERMISSION_DENIED',
+    message: 'Permission denied: Cannot access ticket',
+    error: 'Permission denied: Cannot access ticket',
+  };
+}
+
 /**
  * Unbilled, billable ticket items for the quick-invoice dialog.
  *
@@ -181,6 +212,7 @@ export const getTicketBillableItems = withAuth(async (
     if (!work || !ticket) {
       return actionError('That ticket no longer exists.', 'msp/invoicing:quickInvoice.errors.ticketNotFound');
     }
+    await withTransaction(knex, (trx) => authorizeNativeQuickInvoiceTicket(trx, tenant, user, work, 'read'));
 
     const db = tenantDb(knex, tenant);
 
@@ -280,7 +312,7 @@ export const getTicketBillableItems = withAuth(async (
       excludedFixedFeeCount: fixedFeeRows.length - fixedFeeItems.length,
     };
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Permission denied')) {
+    if (error instanceof TicketRecordAccessDeniedError) {
       return permissionError(error.message);
     }
     throw error;
@@ -320,6 +352,12 @@ export const generateTicketInvoice = withAuth(async (
       message: 'That ticket no longer exists.',
       error: 'That ticket no longer exists.',
     };
+  }
+  try {
+    await withTransaction(knex, (trx) => authorizeNativeQuickInvoiceTicket(trx, tenant, user, work, 'update'));
+  } catch (error) {
+    if (error instanceof TicketRecordAccessDeniedError) return ticketRecordPermissionError();
+    throw error;
   }
 
   const timeEntryIds = dedupe(input.timeEntryIds);
@@ -466,6 +504,11 @@ export const getTicketInvoices = withAuth(async (
       return permissionError('Permission denied: Cannot read ticket invoices');
     }
     const { knex } = await createTenantKnex();
+    const work = await loadQuickInvoiceWork(knex, tenant, ticketId);
+    if (!work) {
+      return actionError('That ticket no longer exists.', 'msp/invoicing:quickInvoice.errors.ticketNotFound');
+    }
+    await withTransaction(knex, (trx) => authorizeNativeQuickInvoiceTicket(trx, tenant, user, work, 'read'));
     const rows = await tenantDb(knex, tenant)
       .table('invoices')
       .where({ ticket_id: ticketId })
@@ -481,7 +524,7 @@ export const getTicketInvoices = withAuth(async (
       invoiceDate: toIsoDate(row.invoice_date) ?? '',
     }));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Permission denied')) {
+    if (error instanceof TicketRecordAccessDeniedError) {
       return permissionError(error.message);
     }
     throw error;

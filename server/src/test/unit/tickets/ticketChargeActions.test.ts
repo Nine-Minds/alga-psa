@@ -115,10 +115,18 @@ beforeEach(() => {
 });
 
 describe('ticket fixed-fee actions', () => {
-  it('requires ticket read permission for catalog categories', async () => {
+  it('omits catalog categories when service read permission is missing', async () => {
     mocks.permission.mockResolvedValue(false);
-    await expect(getTicketCatalogCategories()).rejects.toThrow('ticket read required');
-    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(await getTicketCatalogCategories()).toEqual([]);
+    expect(mocks.permission).toHaveBeenCalledWith(expect.anything(), 'service', 'read', {});
+    expect(mocks.facade).not.toHaveBeenCalled();
+  });
+
+  it('omits catalog categories when inventory read permission is missing', async () => {
+    mocks.permission.mockImplementation(async (_user: unknown, resource: string) => resource === 'service');
+    expect(await getTicketCatalogCategories()).toEqual([]);
+    expect(mocks.permission).toHaveBeenCalledWith(expect.anything(), 'inventory', 'read', {});
+    expect(mocks.facade).not.toHaveBeenCalled();
   });
 
   it('loads only categories holding active items in the picker scope through the tenant facade', async () => {
@@ -270,7 +278,7 @@ describe('ticket fixed-fee actions', () => {
 
 describe('ticket material editing', () => {
   it('requires record-level ticket authorization before editing a material', async () => {
-    mocks.recordAccess.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+    mocks.recordAccess.mockRejectedValue(new TicketRecordAccessDeniedError());
     expect(await updateTicketMaterial(entryId, { quantity: 4, description: ' Changed ' })).toHaveProperty('permissionError');
     expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
       tenant: 'tenant-a',
@@ -296,6 +304,7 @@ describe('ticket material editing', () => {
     const signal = { service_id: serviceId };
     mocks.signal.mockResolvedValue(signal);
     await updateTicketMaterial(entryId, { quantity: 6, description: '' });
+    expect(tables.ticket_materials.forUpdate).toHaveBeenCalled();
     expect(mocks.consume).toHaveBeenCalledWith({}, 'tenant-a', expect.objectContaining({
       quantity: 2, location_id: 'original-location', source_doc_id: entryId,
     }));
