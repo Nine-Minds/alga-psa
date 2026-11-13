@@ -474,6 +474,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_submission_attachments', 'service_request_submissions',
   'service_request_definition_versions', 'service_request_definitions',
   'co_management_board_scopes',
+  'co_managed_seat_ticket_handoffs',
+  'co_managed_seat_ticket_work',
   'co_managed_seat_board_scopes',
   'co_managed_seat_project_grants',
   'co_managed_seat_assignments',
