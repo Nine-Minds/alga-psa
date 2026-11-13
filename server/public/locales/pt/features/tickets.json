@@ -573,6 +573,7 @@
     "deleteCommentOnly": "Excluir apenas o comentário",
     "cancelScheduledComment": "Cancelar comentário agendado",
     "cancelScheduledCommentConfirm": "Cancelar este comentário agendado?",
+    "scheduledCommentChangeFailed": "Não foi possível alterar este comentário agendado. Atualize a página e tente novamente.",
     "invalidScheduleTime": "Escolha um horário futuro sem ambiguidade neste fuso horário.",
     "publishAt": "Publicar em",
     "publishes": "Publica",

@@ -573,6 +573,7 @@
     "deleteCommentOnly": "Supprimer le commentaire uniquement",
     "cancelScheduledComment": "Annuler le commentaire planifié",
     "cancelScheduledCommentConfirm": "Annuler ce commentaire planifié ?",
+    "scheduledCommentChangeFailed": "Impossible de modifier ce commentaire programmé. Actualisez la page et réessayez.",
     "invalidScheduleTime": "Choisissez une heure future sans ambiguïté dans ce fuseau horaire.",
     "publishAt": "Publier le",
     "publishes": "Publie",
