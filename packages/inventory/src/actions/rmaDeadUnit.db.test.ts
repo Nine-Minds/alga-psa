@@ -35,23 +35,12 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async (e: any) => { published.events.push({ eventType: e.eventType, payload: e.payload }); }),
   publishUnregisteredEventType: vi.fn(async () => undefined), reviveStoredWorkflowPayload: () => null,
 }));
-const denied = vi.hoisted(() => ({ assetIds: new Set<string>() }));
-vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
-  const actual = await orig<typeof import('@alga-psa/assets/lib/assetReadAuthorization')>();
-  return {
-    ...actual,
-    isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
-      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
-    filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
-      (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
-  };
-});
 import {
   approveWarrantyClaim, closeWarrantyRma, confirmVendorReceipt, openWarrantyClaim, receiveVendorReplacement,
   returnDeviceToClient, shipDeadUnitToVendor, shipToVendor, markDeviceReceived, recordVendorNonReturnCharge, listRmaCaseEvents,
 } from './rmaWarrantyActions';
 import {
-  chargeForUnreturned, closeRma, deadUnitsOwedReport, markDeadUnitOwed, openRma, recordDeadUnitReturned, receiveReturn,
+  chargeForUnreturned, closeRma, deadUnitsOwedReport, getRmaCase, markDeadUnitOwed, openRma, recordDeadUnitReturned, receiveReturn,
 } from './rmaActions';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
 import { recordCustodyEventInTransaction } from '@alga-psa/assets/lib/custody/service';
@@ -598,9 +587,15 @@ describe('shared dead_unit_owed status: stock track vs warranty track', () => {
     expect(byId.has(outsideWindow.rmaId)).toBe(false);
     const otherTenant = await createInventoryTestTenant(knex);
     expect(await queryOverdueAdvanceVendorReturns(knex, otherTenant, localToday)).toEqual([]);
-    denied.assetIds.add(approaching.assetId);
-    const scope = await resolveRmaReadScope({ user_id: holder.userId });
-    const visible = new Set((await filterReadableRmaCases(knex as any, holder.tenant, { user_id: holder.userId }, rows, scope)).map((row) => row.rma_id));
+    const otherClientId = randomUUID();
+    await knex('clients').insert({ tenant: holder.tenant, client_id: otherClientId, client_name: 'Restricted customer', billing_cycle: 'monthly' });
+    await knex('assets').where({ tenant: holder.tenant, asset_id: approaching.assetId }).update({ client_id: otherClientId });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: approaching.rmaId }).update({ client_id: otherClientId });
+    holder.readScope = { user_type: 'client', clientId: CLIENT };
+    const user = { user_id: holder.userId, ...holder.readScope };
+    const scope = await resolveRmaReadScope(user);
+    const scopedRows = await queryOverdueAdvanceVendorReturns(knex, holder.tenant, localToday);
+    const visible = new Set((await filterReadableRmaCases(knex as any, holder.tenant, user, scopedRows, scope)).map((row) => row.rma_id));
     expect(visible.has(approaching.rmaId)).toBe(false);
     expect(visible.has(overdue.rmaId)).toBe(true);
   });
@@ -664,10 +659,54 @@ describe('shared dead_unit_owed status: stock track vs warranty track', () => {
       { amount: '0', currency_code: 'USD' }, { amount: '1.001', currency_code: 'USD' },
       { amount: 'Infinity', currency_code: 'USD' }, { amount: '1', currency_code: 'XXX' },
     ]) expect(await recordVendorNonReturnCharge(c.rmaId, input)).toHaveProperty('actionError');
-    denied.assetIds.add(c.assetId);
+    holder.readScope = { user_type: 'client', clientId: randomUUID() };
     expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
     expect((await rmaRow(c.rmaId)).status).toBe('replaced');
     expect(await events(c.rmaId)).toHaveLength(3);
+  });
+
+  it('refuses a non-return charge on a readable asset excluded by the update policy without side effects', async () => {
+    const c = await replacedAdvanceCase();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: '2020-01-01' });
+    const before = await rmaRow(c.rmaId);
+    const history = await events(c.rmaId);
+    const custody = await custodyRow(c.custody.custody_id);
+    const stockAndBilling = await counts();
+    const bundleId = randomUUID();
+    const revisionId = randomUUID();
+    await knex.transaction(async (trx) => {
+      await trx('authorization_bundles').insert({
+        tenant: holder.tenant, bundle_id: bundleId, name: 'Warranty read-only operator', status: 'active', is_system: false,
+      });
+      await trx('authorization_bundle_revisions').insert({
+        tenant: holder.tenant, bundle_id: bundleId, revision_id: revisionId, revision_number: 1, lifecycle_state: 'published',
+      });
+      await trx('authorization_bundles').where({ tenant: holder.tenant, bundle_id: bundleId }).update({ published_revision_id: revisionId });
+      await trx('authorization_bundle_rules').insert({
+        tenant: holder.tenant, bundle_id: bundleId, revision_id: revisionId,
+        resource_type: 'asset', action: 'update', template_key: 'same_team', effect: 'narrow', config: '{}', position: 0,
+      });
+      await trx('authorization_bundle_assignments').insert({
+        tenant: holder.tenant, bundle_id: bundleId, target_type: 'user', target_id: holder.userId, status: 'active',
+      });
+    });
+    published.events.length = 0;
+    try {
+      // Read visibility alone cannot authorize a mutation. This asset has no team association.
+      expect(ok(await getRmaCase(c.rmaId))).toMatchObject({ rma_id: c.rmaId, status: 'replaced' });
+      expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' }))
+        .toMatchObject({ messageKey: 'features/inventory:errors.rma.caseNotFound' });
+      expect(await rmaRow(c.rmaId)).toEqual(before);
+      expect(await events(c.rmaId)).toEqual(history);
+      expect(await custodyRow(c.custody.custody_id)).toEqual(custody);
+      expect(await counts()).toEqual(stockAndBilling);
+      expect(published.events).toHaveLength(0);
+    } finally {
+      await knex('authorization_bundle_assignments').where({ tenant: holder.tenant, bundle_id: bundleId }).delete();
+    }
+    // The same eligible charge succeeds once the per-record restriction is removed.
+    expect(ok(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' }))).toMatchObject({ status: 'closed' });
+    expect(await events(c.rmaId)).toHaveLength(history.length + 1);
   });
 
   it('every stock-track entry point refuses a warranty case in dead_unit_owed and changes nothing', async () => {
