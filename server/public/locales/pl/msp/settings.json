@@ -3037,7 +3037,8 @@
         "preparingPreview": "Przygotowywanie podglądu…",
         "linking": "Powiązywanie kont…",
         "unlinking": "Odłączanie kont…",
-        "bulkLabel": "Masowe akcje SSO {{location}}"
+        "bulkLabel": "Masowe akcje SSO {{location}}",
+        "disabledSelectUsers": "Najpierw wybierz co najmniej jednego użytkownika."
       },
       "table": {
         "email": "E-mail",
