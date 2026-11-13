@@ -185,7 +185,20 @@ class EditionBuildDiagnosticsPlugin {
   }
 }
 
-const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+// Next's server-action body cap (one global value, not per action). Default 26mb, from two measurements:
+//  - Non-file actions (measured 2026-11, JSON-serialised worst cases): the largest legitimate body is a
+//    BlockNote document at the 1,000,000-char co-managed description cap = 3.65 MB (7.1 MB if every
+//    character were a quote, double-encoded); a 500-id bulk action is 19.5 KB; workflow definitions
+//    are under 60 KB. 8mb would cover all of them.
+//  - Actions that still carry file bytes and buffer by transport (no streaming path): co-managed
+//    attachments at their 25 MiB cap (+64 KiB envelope) set the floor. 26mb is that, rounded up; the
+//    KB import batch (10 MiB raw, 20 MiB worst case escaped) fits under it too. The pinning test
+//    server/src/test/unit/serverActionsBodyLimit.test.ts fails if any of these outgrow the default.
+//  This is not a file-size limit (that is the storage provider's maxFileSize); anything bigger goes
+//  through the chunked upload session API. A body past the cap gets Next's own 413
+//  ("Body exceeded 26mb limit", action-handler.js), never a truncated read. helm/values.yaml
+//  (server.serverActionsBodyLimit) and helm/templates/deployment.yaml carry the same default.
+const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '26mb';
 // Round 2 (memory campaign 2026-06-04): cap the static-gen / page-data worker
 // pool. The default (== host CPU count) spawns one worker per core (e.g. 31 on a
 // 32-core box), each loading the full app bundle (~290 MB) — the dominant build

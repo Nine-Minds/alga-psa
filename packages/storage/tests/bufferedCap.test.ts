@@ -43,9 +43,9 @@ describe('buffered upload caps', () => {
     expect(parseByteSize('lots')).toBeNull();
   });
 
-  it('the server-action file limit defaults to 20mb when the env var is unset, and throws on a bad one', () => {
+  it('the server-action file limit defaults to 26mb (DEFAULT_SERVER_ACTIONS_BODY_LIMIT) when the env var is unset, and throws on a bad one', () => {
     vi.stubEnv('SERVER_ACTIONS_BODY_LIMIT', '');
-    expect(serverActionFileLimitBytes()).toBe(20 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
+    expect(serverActionFileLimitBytes()).toBe(26 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
     vi.stubEnv('SERVER_ACTIONS_BODY_LIMIT', '20 megs');
     expect(() => serverActionFileLimitBytes()).toThrow(/SERVER_ACTIONS_BODY_LIMIT must be a size/);
     vi.unstubAllEnvs();

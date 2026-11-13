@@ -44,6 +44,9 @@ export function parseByteSize(value: string): number | null {
   return Number.isFinite(bytes) ? Math.floor(bytes) : null;
 }
 
+/** Next's server-action body cap when SERVER_ACTIONS_BODY_LIMIT is unset; equals next.config.mjs (pinned by test). */
+export const DEFAULT_SERVER_ACTIONS_BODY_LIMIT = '26mb';
+
 /** Room reserved for multipart framing and the action's other (serialized) arguments. */
 export const SERVER_ACTION_ENVELOPE_BYTES = 64 * 1024;
 
@@ -58,16 +61,16 @@ export const NEXT_PROXY_MAX_BODY_BYTES = 100 * 1024 * 1024;
 
 /**
  * The largest file a server action can receive: the smaller of Next's `bodySizeLimit`
- * (SERVER_ACTIONS_BODY_LIMIT, default 20mb, see next.config.mjs) and the proxy's body limit
+ * (SERVER_ACTIONS_BODY_LIMIT, default 26mb, see next.config.mjs) and the proxy's body limit
  * (NEXT_PROXY_MAX_BODY_BYTES), less the envelope. Next rejects or truncates an oversized action
  * before its handler runs, so a larger cap would be advertised but never reachable. An unparseable
- * limit throws: Next itself would not start with it, and silently assuming 20mb could advertise
+ * limit throws: Next itself would not start with it, and silently assuming the default could advertise
  * more than the deployment accepts.
  */
-export function serverActionFileLimitBytes(bodyLimit: string = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb'): number {
+export function serverActionFileLimitBytes(bodyLimit: string = process.env.SERVER_ACTIONS_BODY_LIMIT || DEFAULT_SERVER_ACTIONS_BODY_LIMIT): number {
   const bytes = parseByteSize(bodyLimit);
   if (bytes === null) {
-    throw new Error(`SERVER_ACTIONS_BODY_LIMIT must be a size such as "20mb" or "4096" (got "${bodyLimit}")`);
+    throw new Error(`SERVER_ACTIONS_BODY_LIMIT must be a size such as "26mb" or "4096" (got "${bodyLimit}")`);
   }
   return Math.max(0, Math.min(bytes, NEXT_PROXY_MAX_BODY_BYTES) - SERVER_ACTION_ENVELOPE_BYTES);
 }

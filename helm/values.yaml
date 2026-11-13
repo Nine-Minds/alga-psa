@@ -82,8 +82,12 @@ server:
     tag: "4023e8f"
   hostNetwork: false
   verify_email: true
-  # Maximum body size for Next.js server actions (e.g., extension uploads)
-  serverActionsBodyLimit: "200mb"
+  # Maximum body size for Next.js server actions. NOT a file-size limit (that is
+  # config.storage.providers.*.max_file_size, reached via the chunked upload session API).
+  # 26mb = measured largest non-file action body (3.7 MB) plus the 25 MiB co-managed attachment
+  # action; see the comment in server/next.config.mjs. Extension bundle installs (EE) still ride a
+  # server action: a bundle over this limit is refused with a 413 and needs this raised.
+  serverActionsBodyLimit: "26mb"
   # App-wide search live indexing gate. Keep false during migration/backfill;
   # set true after search:backfill completes so event subscribers write updates.
   searchIndexLive: false

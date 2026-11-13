@@ -42,7 +42,7 @@ it('returns current attachment write hints and transport limits with the actual 
   mocks.hint.mockResolvedValue(false); mocks.list.mockResolvedValue([]);
   const result = await getCoManagedAttachmentsScreenAction(resource, comment);
   expect(result).toMatchObject({ canUpload: false, attachments: [], actor: { tenant: 'home-tenant', userId: 'home-user' } });
-  expect(result.maxBytes).toBeGreaterThan(0); expect(result.maxBytes).toBeLessThan(20 * 1048576);
+  expect(result.maxBytes).toBeGreaterThan(0); expect(result.maxBytes).toBeLessThanOrEqual(25 * 1048576); // the default body cap (26mb) leaves the 25 MiB attachment ceiling the binding limit
 });
 
 it('removes the immutable qualified attachment under the actual browser identity without a release-flag dependency', async () => {
