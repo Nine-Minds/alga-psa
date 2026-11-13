@@ -14,24 +14,14 @@ import { tenantDb } from '@alga-psa/db';
 import { CoManagedAdmissionError } from './co-managed-admission';
 import { materializeState, type CoManagedEntitlementState } from './co-managed-entitlements';
 import type { CoManagedOperationalState } from './co-managed-lifecycle-error';
+import type { CoManagedSeatAllocation } from './co-managed-reservation';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const validSeats = (seats: number) => Number.isSafeInteger(seats) && seats >= 1 && seats <= 2147483647;
 
-/**
- * A seat-kind row of `co_managed_allocations`, as the commands here read it.
- *
- * Named distinctly from the reservation module's `CoManagedSeatAllocation` (which also carries
- * `operation_id`, for its create-time idempotency check): both are re-exported from the package
- * root via `export *`, and two same-named exports there is an ambiguity TypeScript refuses to
- * resolve on its own.
- */
-export interface CoManagedSeatAllocationRow {
-  allocation_id: string;
-  sponsor_client_id: string;
-  seats: number;
-  state: 'reserved' | 'active' | 'released';
-}
+/** A seat-kind row of `co_managed_allocations`, as the commands here read it. */
+export type CoManagedSeatAllocationSnapshot = Pick<CoManagedSeatAllocation,
+  'allocation_id' | 'sponsor_client_id' | 'seats' | 'state'>;
 
 /**
  * Counts the seats in use inside one seat allocation: active technicians plus pending
@@ -41,14 +31,14 @@ export interface CoManagedSeatAllocationRow {
  * entitlement lock.
  */
 export type CountCoManagedSeatCommitments = (
-  trx: Knex.Transaction, allocation: CoManagedSeatAllocationRow,
+  trx: Knex.Transaction, allocation: CoManagedSeatAllocationSnapshot,
 ) => Promise<number>;
 
 /** Locks the pool, then the live seat allocation. Entitlement first: the order every capacity writer uses. */
 async function lockSeatAllocation(trx: Knex.Transaction, sponsorTenant: string, allocationId: string) {
   const sponsor = tenantDb(trx, sponsorTenant);
   const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
-  const allocation: CoManagedSeatAllocationRow | undefined = await sponsor.table('co_managed_allocations')
+  const allocation: CoManagedSeatAllocationSnapshot | undefined = await sponsor.table('co_managed_allocations')
     .where({ allocation_id: allocationId, allocation_kind: 'seat' }).forUpdate()
     .first('allocation_id', 'sponsor_client_id', 'seats', 'state');
   return { sponsor, entitlement, allocation };
