@@ -6,7 +6,9 @@ import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import {
   addTicketWatcher, addTicketWatcherRecipients, setTicketWatcherActive, TicketWatcherError,
 } from '@alga-psa/shared/services/tickets/ticketWatcherService';
-import { resolveTicketNotificationRecipient } from '@alga-psa/shared/lib/notificationAudience';
+import { resolveInboundReplyAudience, resolveTicketNotificationRecipient } from '@alga-psa/shared/lib/notificationAudience';
+import { registerCapabilityParticipation, serves } from '@alga-psa/core/capability';
+import { clearCapabilityCache } from '@alga-psa/core/capability/testing';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -117,11 +119,18 @@ describe('audience-safe notifications for a seat technician (integration)', () =
   }, 900_000);
 
   afterAll(async () => {
+    vi.unstubAllEnvs();
+    registerCapabilityParticipation('co-managed-seat', null);
     vi.restoreAllMocks();
     await testDb?.destroy();
   });
 
   beforeEach(async () => {
+    // Each case starts with the capability undecided-or-open for this tenant, never forced.
+    vi.unstubAllEnvs();
+    vi.stubEnv('FORCE_CAPABILITIES', '');
+    registerCapabilityParticipation('co-managed-seat', async ({ tenantIds }) => tenantIds);
+    clearCapabilityCache();
     sent.length = 0;
     await scoped.table('internal_notifications').delete();
     // Every case starts with the arrangement's scope being exactly the shared board.
@@ -495,5 +504,95 @@ describe('audience-safe notifications for a seat technician (integration)', () =
       testDb, request(seat, { ticketAudience: { ticketId, audience: 'requester' } })))).not.toBeNull();
     // MSP staff need no declaration.
     expect(await runWithTenant(tenant, () => createNotificationFromTemplateInternal(testDb, request(msp)))).not.toBeNull();
+  });
+
+  /**
+   * Release posture: the boundary exists only while the tenant is served `co-managed-seat`.
+   * Closed, by the kill switch or because the tenant has no seat arrangement, a user holding a
+   * seat row is an ordinary internal user at every enforcement point, exactly as before S33.
+   */
+  describe('behind the co-managed-seat capability', () => {
+    const closedBy = {
+      'FORCE_CAPABILITIES=co-managed-seat:off': () => vi.stubEnv('FORCE_CAPABILITIES', 'co-managed-seat:off'),
+      'a malformed kill switch value': () => vi.stubEnv('FORCE_CAPABILITIES', 'co-managed-seat:maybe'),
+      'a tenant the capability does not serve': () => registerCapabilityParticipation('co-managed-seat', async () => []),
+    };
+
+    it.each(Object.keys(closedBy) as Array<keyof typeof closedBy>)('closed by %s: every enforcement point is neutral', async (how) => {
+      closedBy[how]();
+      clearCapabilityCache();
+      expect((await serves('co-managed-seat', tenant)).served).toBe(false);
+
+      const otherClient = await createTicket({ client_id: clientB, assigned_to: seat });
+      // Resolution: nobody is a seat technician, on any ticket.
+      expect(await resolveTicketNotificationRecipient(testDb, tenant, { ticketId: otherClient }, { userId: seat })).toEqual({ seat: false });
+
+      // Email and in-app: an internal note on another client's ticket reaches them like any assignee,
+      // text included, with no audience written on the reply token.
+      await deliver(await privateNote(otherClient, 'PRIVATE-WHEN-CLOSED', [seat]));
+      const seatMail = mailTo(SEAT_EMAIL);
+      expect(seatMail).toHaveLength(1);
+      expect(JSON.stringify(seatMail[0].context)).toContain('PRIVATE-WHEN-CLOSED');
+      expect(seatMail[0].replyContext?.tokenMetadata).toBeUndefined();
+      expect(await inAppFor(seat)).toHaveLength(1);
+
+      // The envelope is not split: a copied technician stays on the requester's message.
+      sent.length = 0;
+      const copied = await createTicket({ client_id: clientB, assigned_to: msp });
+      const event = await requesterNote(copied, 'PUBLIC-WHEN-CLOSED');
+      await copyTo(event, { cc: [SEAT_EMAIL], bcc: [OUTSIDER_EMAIL] });
+      await deliver(event, emailCommentAdded, null);
+      expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, SEAT_EMAIL, OUTSIDER_EMAIL]]);
+      expect(mailTo(SEAT_EMAIL)).toEqual([]);
+
+      // In-app: no audience declaration is needed.
+      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
+      expect(await runWithTenant(tenant, () => createNotificationFromTemplateInternal(testDb, {
+        tenant, user_id: seat, template_name: 'ticket-assigned', type: 'info' as const, category: 'tickets',
+        data: { ticketId: 'T-1', ticketNumber: 'T-1', ticketTitle: 'Printer on fire', priority: 'Medium', performedByName: 'MSP Author' },
+      }))).not.toBeNull();
+
+      // Watchers: an out-of-scope ticket is not refused.
+      expect((await watch(otherClient, { user_id: seat })).watchers.map((watcher) => watcher.email)).toEqual([SEAT_EMAIL]);
+
+      // Inbound replies: the native reply rules stand.
+      expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: otherClient, userId: seat })).toEqual({ seat: false });
+    });
+
+    const openBy = {
+      'FORCE_CAPABILITIES=co-managed-seat:on': () => vi.stubEnv('FORCE_CAPABILITIES', 'co-managed-seat:on'),
+      'a served tenant': () => registerCapabilityParticipation('co-managed-seat', async ({ tenantIds }) => tenantIds),
+      // The gate could not decide. It reports "not served"; the boundary must not read that as closed.
+      'a failing participation read': () => registerCapabilityParticipation('co-managed-seat', async () => { throw new Error('database unavailable'); }),
+      'a process that registered no resolver': () => registerCapabilityParticipation('co-managed-seat', null),
+    };
+
+    it.each(Object.keys(openBy) as Array<keyof typeof openBy>)('open or undecided by %s: every enforcement point holds', async (how) => {
+      openBy[how]();
+      clearCapabilityCache();
+
+      const otherClient = await createTicket({ client_id: clientB, assigned_to: seat });
+      const inScope = await createTicket({ assigned_to: seat });
+      expect(await resolveTicketNotificationRecipient(testDb, tenant, { ticketId: otherClient }, { userId: seat })).toEqual({ seat: true, userId: seat, reader: null });
+
+      // Email and in-app: nothing about another client's ticket, and no private note in scope.
+      await deliver(await requesterNote(otherClient, 'OTHER-CLIENT-PUBLIC'));
+      await deliver(await privateNote(inScope, 'PRIVATE-IN-SCOPE', [seat]));
+      expect(everyAddress()).not.toContain(SEAT_EMAIL);
+      expect(await inAppFor(seat)).toEqual([]);
+
+      // The envelope: a copied technician is taken off another client's message.
+      const copied = await createTicket({ client_id: clientB, assigned_to: msp });
+      const event = await requesterNote(copied, 'OTHER-CLIENT-COPIED');
+      await copyTo(event, { cc: [SEAT_EMAIL], bcc: [OUTSIDER_EMAIL] });
+      await deliver(event, emailCommentAdded, null);
+      expect(everyAddress()).not.toContain(SEAT_EMAIL);
+
+      // Watchers and inbound replies.
+      expect(await watch(otherClient, { user_id: seat }).catch((error) => error)).toMatchObject({ kind: 'watcher_out_of_scope' });
+      expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: otherClient, userId: seat })).toEqual({ seat: true, admitted: false });
+      expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: inScope, userId: seat, notificationAudience: 'shared_it' }))
+        .toMatchObject({ seat: true, admitted: true, audience: 'shared_it' });
+    });
   });
 });

@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { serves, type CapabilityReason } from '@alga-psa/core/capability';
 import {
   isCommentAudience, isCommentAudienceVisible, resolveCommentAudienceForRead,
   type CommentAudience, type CommentAudienceReader,
@@ -26,8 +27,12 @@ import {
  * therefore stops delivering the moment the ticket leaves it; nothing has to be cleaned up.
  *
  * Every other recipient resolves `{ seat: false }` and keeps exactly the behaviour they had.
- * The cost for them is one indexed read on `co_managed_seat_assignments` per batch, which is
- * empty for a tenant without seat technicians.
+ *
+ * Release gate: all of this applies only while the tenant is served the `co-managed-seat`
+ * capability (`seatBoundaryApplies`). Closed, every recipient resolves `{ seat: false }` before
+ * any seat row is read, so email, in-app notifications, watchers and inbound replies behave as
+ * if this boundary did not exist. Open, the cost for a recipient who is not a seat technician is
+ * one indexed read on `co_managed_seat_assignments` per batch.
  */
 export type TicketNotificationRecipient =
   | { seat: false }
@@ -44,6 +49,27 @@ export type NotificationTicket =
 export interface NotificationRecipientKey {
   userId?: string | null;
   email?: string | null;
+}
+
+/** Served decisions that positively close the seat shape for a tenant. */
+const SEAT_CAPABILITY_CLOSED: ReadonlySet<CapabilityReason> = new Set<CapabilityReason>([
+  'forced-off', 'forced-malformed', 'not-participating',
+]);
+
+/**
+ * Does the recipient boundary apply to this tenant? It follows `serves('co-managed-seat')`:
+ * delivering to, and hearing back from, technicians who already hold a seat is existing state,
+ * so it never depends on the rollout flag evaluator.
+ *
+ * The gate reports "not served" both when it decided so (`FORCE_CAPABILITIES=co-managed-seat:off`,
+ * or a tenant with no seat arrangement) and when it could not decide (the participation read
+ * failed, or this process never registered the resolver). Only a decision switches the boundary
+ * off. Undecided, the seat rows are read as usual: the boundary's failure mode is to withhold
+ * from a seat technician, never to hand them what MSP staff are sent.
+ */
+async function seatBoundaryApplies(tenant: string): Promise<boolean> {
+  const decision = await serves('co-managed-seat', tenant);
+  return decision.served || !SEAT_CAPABILITY_CLOSED.has(decision.reasons.served);
 }
 
 const normalizeEmail = (email: string | null | undefined): string | null => {
@@ -66,6 +92,7 @@ interface SeatRow {
  * A recipient matches a seat technician by user id or, because watchers are stored as bare
  * addresses, by the email of an internal user. One read finds the seat technicians among them;
  * only when there is at least one are the ticket's organization and the board scope read.
+ * Nothing is read, and nobody is a seat technician, while the capability is closed.
  */
 export async function resolveTicketNotificationRecipients(
   trx: Knex | Knex.Transaction,
@@ -76,6 +103,7 @@ export async function resolveTicketNotificationRecipients(
   const userIds = [...new Set(recipients.map(r => r.userId).filter((id): id is string => !!id))];
   const emails = [...new Set(recipients.map(r => normalizeEmail(r.email)).filter((e): e is string => !!e))];
   if (!tenant || (userIds.length === 0 && emails.length === 0)) return recipients.map(() => NOT_SEAT);
+  if (!(await seatBoundaryApplies(tenant))) return recipients.map(() => NOT_SEAT);
 
   const db = tenantDb(trx, tenant);
   const query = db.table('co_managed_seat_assignments as sa').whereNot('sa.state', 'revoked');
