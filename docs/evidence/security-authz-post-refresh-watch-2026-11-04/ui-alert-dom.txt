@@ -1,0 +1,6 @@
+Captured from the real browser pane after clicking the Settings > Email > Inbound Email provider's “Refresh Pub/Sub & Watch” button twice for the isolated UI fixture:
+
+browser-eval result:
+{"rate":true,"matches":["Gmail provider refresh rate limit exceeded"]}
+
+The browser's POST network record for this UI action was 409 on the first attempt and 429 on the immediate repeat. The subsequent actual UI click after the 60-second throttle window returned 409 at the expected HTTP-origin validation. See browser-refresh-responses.json. Screenshots show the actual settings/provider UI; the transient rate-limit alert was captured from the DOM because it disappeared before the screenshot was saved.

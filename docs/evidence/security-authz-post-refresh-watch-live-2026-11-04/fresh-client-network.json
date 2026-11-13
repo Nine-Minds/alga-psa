@@ -1,0 +1,1013 @@
+{
+  "paneId": "d6216791-1c10-4b22-8fdc-13e7afe08a00",
+  "success": true,
+  "result": {
+    "events": [
+      {
+        "timestamp": 1793817764706,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1413,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 89
+      },
+      {
+        "timestamp": 1793817765101,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1414,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 101
+      },
+      {
+        "timestamp": 1793817779797,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1415,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 83
+      },
+      {
+        "timestamp": 1793817780203,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1416,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 90
+      },
+      {
+        "timestamp": 1793817790174,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1417,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 97
+      },
+      {
+        "timestamp": 1793817792021,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1420,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 89
+      },
+      {
+        "timestamp": 1793817794883,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1421,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 85
+      },
+      {
+        "timestamp": 1793817795295,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1422,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 86
+      },
+      {
+        "timestamp": 1793817809971,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1423,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 84
+      },
+      {
+        "timestamp": 1793817810382,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1424,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 91
+      },
+      {
+        "timestamp": 1793817822111,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1425,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 94
+      },
+      {
+        "timestamp": 1793817825057,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1426,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 90
+      },
+      {
+        "timestamp": 1793817825474,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1427,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 89
+      },
+      {
+        "timestamp": 1793817840149,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1428,
+        "status": 200,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 91,
+        "errorText": "net::ERR_ABORTED"
+      },
+      {
+        "timestamp": 1793817840565,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1429,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 92
+      },
+      {
+        "timestamp": 1793817852207,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1432,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 98
+      },
+      {
+        "timestamp": 1793817855242,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1433,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 91
+      },
+      {
+        "timestamp": 1793817855658,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1434,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 89
+      },
+      {
+        "timestamp": 1793817870337,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1435,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 128
+      },
+      {
+        "timestamp": 1793817870750,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1436,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 114
+      },
+      {
+        "timestamp": 1793817882307,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1437,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 162
+      },
+      {
+        "timestamp": 1793817885468,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1438,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 151
+      },
+      {
+        "timestamp": 1793817885865,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1439,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 114
+      },
+      {
+        "timestamp": 1793817900622,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1440,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 131
+      },
+      {
+        "timestamp": 1793817900981,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1441,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 112
+      },
+      {
+        "timestamp": 1793817912471,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1444,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 160
+      },
+      {
+        "timestamp": 1793817915755,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1445,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 130
+      },
+      {
+        "timestamp": 1793817916095,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1446,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 106
+      },
+      {
+        "timestamp": 1793817930888,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1447,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 110
+      },
+      {
+        "timestamp": 1793817931203,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1448,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 104
+      },
+      {
+        "timestamp": 1793817942633,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1449,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 90
+      },
+      {
+        "timestamp": 1793817946000,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1450,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 88
+      },
+      {
+        "timestamp": 1793817946309,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1451,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 92
+      },
+      {
+        "timestamp": 1793817961295,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1452,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 1575
+      },
+      {
+        "timestamp": 1793817962869,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1453,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 1
+      },
+      {
+        "timestamp": 1793817972726,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1456,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 110
+      },
+      {
+        "timestamp": 1793817977393,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1457,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 93
+      },
+      {
+        "timestamp": 1793817977538,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1458,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 102
+      },
+      {
+        "timestamp": 1793817992492,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1459,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 108
+      },
+      {
+        "timestamp": 1793817992641,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1460,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 98
+      },
+      {
+        "timestamp": 1793818002838,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1461,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 104
+      },
+      {
+        "timestamp": 1793818007603,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1462,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 94
+      },
+      {
+        "timestamp": 1793818007741,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/settings/email",
+        "method": "POST",
+        "id": 1463,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 92
+      },
+      {
+        "timestamp": 1793818015388,
+        "url": "https://us.i.posthog.com/flags/?v=2&config=true&ip=0&_=1793818015384&ver=1.310.2&compression=base64",
+        "method": "POST",
+        "id": 1571,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 74
+      },
+      {
+        "timestamp": 1793818035878,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/auth/signout",
+        "method": "POST",
+        "id": 1575,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 37
+      },
+      {
+        "timestamp": 1793818036414,
+        "url": "https://us.i.posthog.com/flags/?v=2&config=true&ip=0&_=1793818036412&ver=1.310.2&compression=base64",
+        "method": "POST",
+        "id": 1684,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 75
+      },
+      {
+        "timestamp": 1793818046050,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/auth/client-portal/sso/discover",
+        "method": "POST",
+        "id": 1691,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 1267
+      },
+      {
+        "timestamp": 1793818046728,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/auth/callback/credentials?",
+        "method": "POST",
+        "id": 1694,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 638
+      },
+      {
+        "timestamp": 1793818051977,
+        "url": "https://us.i.posthog.com/flags/?v=2&config=true&ip=0&_=1793818051975&ver=1.310.2&compression=base64",
+        "method": "POST",
+        "id": 1810,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 113
+      },
+      {
+        "timestamp": 1793818052055,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1814,
+        "status": 200,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 316,
+        "errorText": "net::ERR_ABORTED"
+      },
+      {
+        "timestamp": 1793818052091,
+        "url": "https://us.i.posthog.com/flags/?v=2&config=true&ip=0&_=1793818052090&ver=1.310.2&compression=base64",
+        "method": "POST",
+        "id": 1817,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 138
+      },
+      {
+        "timestamp": 1793818052369,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1818,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 81
+      },
+      {
+        "timestamp": 1793818052450,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1819,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 71
+      },
+      {
+        "timestamp": 1793818052521,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1820,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 83
+      },
+      {
+        "timestamp": 1793818052604,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1821,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 75
+      },
+      {
+        "timestamp": 1793818052679,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1822,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 109
+      },
+      {
+        "timestamp": 1793818052788,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1823,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 150
+      },
+      {
+        "timestamp": 1793818052938,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1824,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 88
+      },
+      {
+        "timestamp": 1793818053026,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1825,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 99
+      },
+      {
+        "timestamp": 1793818053124,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1830,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 80
+      },
+      {
+        "timestamp": 1793818053204,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1831,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 89
+      },
+      {
+        "timestamp": 1793818053293,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1832,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 84
+      },
+      {
+        "timestamp": 1793818053377,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1833,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 83
+      },
+      {
+        "timestamp": 1793818070783,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 1836,
+        "status": 403,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 55
+      },
+      {
+        "timestamp": 1793818070838,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 1837,
+        "status": 403,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 28
+      },
+      {
+        "timestamp": 1793818070867,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 1838,
+        "status": 403,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 23
+      },
+      {
+        "timestamp": 1793818082046,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/client-portal/dashboard",
+        "method": "POST",
+        "id": 1839,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 76
+      },
+      {
+        "timestamp": 1793818087152,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/auth/msp/sso/discover",
+        "method": "POST",
+        "id": 1885,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 96
+      },
+      {
+        "timestamp": 1793818087172,
+        "url": "https://us.i.posthog.com/flags/?v=2&config=true&ip=0&_=1793818087165&ver=1.310.2&compression=base64",
+        "method": "POST",
+        "id": 1888,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 93
+      },
+      {
+        "timestamp": 1793818087314,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/auth/callback/credentials?",
+        "method": "POST",
+        "id": 1893,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 65
+      },
+      {
+        "timestamp": 1793818087379,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/auth/msp/remember-email",
+        "method": "POST",
+        "id": 1894,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 89
+      },
+      {
+        "timestamp": 1793818088185,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 2005,
+        "status": 409,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 71
+      },
+      {
+        "timestamp": 1793818088258,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 2006,
+        "status": 429,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 142
+      },
+      {
+        "timestamp": 1793818088412,
+        "url": "https://us.i.posthog.com/flags/?v=2&config=true&ip=0&_=1793818088410&ver=1.310.2&compression=base64",
+        "method": "POST",
+        "id": 2009,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 192
+      },
+      {
+        "timestamp": 1793818088542,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2021,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 121
+      },
+      {
+        "timestamp": 1793818088615,
+        "url": "https://us.i.posthog.com/flags/?v=2&config=true&ip=0&_=1793818088613&ver=1.310.2&compression=base64",
+        "method": "POST",
+        "id": 2028,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 131
+      },
+      {
+        "timestamp": 1793818088662,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2029,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 88
+      },
+      {
+        "timestamp": 1793818088750,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2030,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 67
+      },
+      {
+        "timestamp": 1793818088817,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2031,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 54
+      },
+      {
+        "timestamp": 1793818088870,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2032,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 56
+      },
+      {
+        "timestamp": 1793818088926,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2033,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 52
+      },
+      {
+        "timestamp": 1793818088978,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2034,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 51
+      },
+      {
+        "timestamp": 1793818089029,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2035,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 57
+      },
+      {
+        "timestamp": 1793818089086,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2036,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 41
+      },
+      {
+        "timestamp": 1793818089127,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2037,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 67
+      },
+      {
+        "timestamp": 1793818089194,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2038,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 47
+      },
+      {
+        "timestamp": 1793818089240,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2039,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 57
+      },
+      {
+        "timestamp": 1793818089297,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2040,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 161
+      },
+      {
+        "timestamp": 1793818089458,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2041,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 52
+      },
+      {
+        "timestamp": 1793818089509,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2042,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 50
+      },
+      {
+        "timestamp": 1793818089559,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2043,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 52
+      },
+      {
+        "timestamp": 1793818089611,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2044,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 56
+      },
+      {
+        "timestamp": 1793818089667,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2045,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 56
+      },
+      {
+        "timestamp": 1793818089723,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2046,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 47
+      },
+      {
+        "timestamp": 1793818089770,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2047,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 52
+      },
+      {
+        "timestamp": 1793818104032,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2048,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 52
+      },
+      {
+        "timestamp": 1793818104298,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2049,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 56
+      },
+      {
+        "timestamp": 1793818118473,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2050,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 54
+      },
+      {
+        "timestamp": 1793818119086,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2051,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 60
+      },
+      {
+        "timestamp": 1793818119356,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/msp/dashboard",
+        "method": "POST",
+        "id": 2052,
+        "status": 200,
+        "ok": true,
+        "resourceType": "Fetch",
+        "durationMs": 62
+      }
+    ],
+    "total": 198,
+    "returned": 100,
+    "nextSince": 2052
+  }
+}

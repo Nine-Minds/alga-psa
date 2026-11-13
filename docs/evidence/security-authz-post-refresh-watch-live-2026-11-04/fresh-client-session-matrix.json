@@ -1,0 +1,44 @@
+{
+  "capturedAt": "2026-11-04T18:48Z",
+  "runtime": "http://feature-security-authz-in-post-3.localhost:3594",
+  "loginFlow": {
+    "path": "/auth/client-portal/signin?tenant=6d178745f8f9",
+    "form": "ClientLoginForm credentials form (email, password, userType=client, tenant slug)",
+    "sessionVerifiedAt": "/api/auth/session",
+    "identity": {
+      "id": "31000000-0000-4000-8000-000000000012",
+      "email": "refresh-client-3100@example.test",
+      "userType": "client",
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9"
+    },
+    "roleWasGranted": "ticket_settings:update",
+    "passwordValueRecorded": false
+  },
+  "refreshWatch": {
+    "endpoint": "POST /api/email/refresh-watch",
+    "providerId": "31000000-0000-4000-8000-000000000001",
+    "responses": [
+      {
+        "case": "valid JSON",
+        "status": 403,
+        "body": "Permission denied"
+      },
+      {
+        "case": "malformed JSON",
+        "status": 403,
+        "body": "Permission denied"
+      },
+      {
+        "case": "empty body",
+        "status": 403,
+        "body": "Permission denied"
+      }
+    ]
+  },
+  "throttlePreservation": {
+    "sameProvider": true,
+    "firstAdministratorRequestAfterClientDenials": 409,
+    "immediateAdministratorRepeat": 429,
+    "meaning": "The client denials did not consume tenant/provider throttle capacity; the authorized request reached HTTP-origin Google configuration before the repeat was throttled."
+  }
+}

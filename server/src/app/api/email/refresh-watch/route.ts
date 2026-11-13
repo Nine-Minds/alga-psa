@@ -3,6 +3,14 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+
+const refreshWatchRateLimiter = new RateLimiterMemory({
+  points: 1,
+  duration: 60,
+  blockDuration: 60,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +20,17 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // This endpoint is exempt from API-key middleware, so authorize the
+    // authenticated session before parsing input or looking up a provider.
+    const knex = await getAdminConnection();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      const error = access.reason === 'missing_permission'
+        ? `${access.message}. Required permission: ticket_settings:update`
+        : access.message;
+      return NextResponse.json({ error }, { status: 403 });
     }
     
     console.log(`👤 User requesting refresh: ${user.email || 'unknown'}`);
@@ -32,8 +51,6 @@ export async function POST(request: NextRequest) {
     
     console.log(`🔍 Refreshing Gmail watch for provider: ${providerId}`);
     
-    // Get database connection
-    const knex = await getAdminConnection();
     const db = tenantDb(knex, user.tenant);
     
     // Get the email provider and its Google config
@@ -60,12 +77,18 @@ export async function POST(request: NextRequest) {
     if (!googleConfig.project_id) {
       return NextResponse.json({ error: 'Gmail provider missing project_id configuration' }, { status: 400 });
     }
+
+    try {
+      await refreshWatchRateLimiter.consume(`${user.tenant}:${providerId}`);
+    } catch {
+      return NextResponse.json({ error: 'Gmail provider refresh rate limit exceeded' }, { status: 429 });
+    }
     
     // Use the new configureGmailProvider orchestrator with force=true
     // This will refresh both Pub/Sub setup and Gmail watch subscription
     console.log('🔄 Starting complete Gmail provider refresh (Pub/Sub + Watch)...');
     const result = await configureGmailProvider({
-      tenant: provider.tenant,
+      tenant: user.tenant,
       providerId: providerId,
       projectId: googleConfig.project_id,
       force: true // Force refresh even if recently initialized

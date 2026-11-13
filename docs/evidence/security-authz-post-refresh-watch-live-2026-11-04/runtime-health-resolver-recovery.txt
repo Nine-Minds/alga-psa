@@ -1,0 +1,17 @@
+Command: alga-dev workflow-ensure-service --projectId=bc0ab06c-5ada-5c35-95a7-37f75d01a131 --name=dev-server
+{"service":{"projectId":"bc0ab06c-5ada-5c35-95a7-37f75d01a131","name":"dev-server","sessionId":"card-service:bc0ab06c-5ada-5c35-95a7-37f75d01a131:dev-server:6","hostId":"ts:robert-X670E-Pro-RS","hostname":"robert-X670E-Pro-RS","cwd":"/home/robert/alga-copies/feature-security-authz-in-post-3/server","command":"PORT=3594 npm run dev","status":"live","createdAt":"2026-11-02T03:55:27.226Z","createdBy":"agent:wire-up","restartedAt":"2026-11-04T20:15:54.045Z","restartedBy":"human","lastHealth":{"status":"running","checkedAt":"2026-11-04T20:21:29.006Z"}},"created":false}
+Command: curl -sS -i --max-time 10 http://127.0.0.1:3594/api/health
+HTTP/1.1 200 OK
+access-control-allow-credentials: true
+access-control-allow-origin: *
+set-cookie: authjs.csrf-token=feb70c81a366d12a7b973d4b0ee4d41634ff668ab287b798c4499657c084b65b%7C54a901108f3d6ad7b0fcff78197ca3a809807d141125e31480d4754fa6c6015f; Path=/; HttpOnly; SameSite=Lax
+set-cookie: authjs.callback-url=http%3A%2F%2Ffeature-security-authz-in-post-3.localhost%3A3594; Path=/; HttpOnly; SameSite=Lax
+x-pathname: /api/health
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+content-type: application/json
+Date: Wed, 04 Nov 2026 20:24:35 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
+{"status":"ok","version":"1.0.0"}

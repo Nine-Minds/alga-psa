@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-11-04T19:15:57.940076+00:00",
+  "sourceRevision": "43744d340070657bd8dc540011eb84b4f570f5c5",
+  "focusedTests": {
+    "result": "41 passed",
+    "transcript": "takeover-focused-tests.log"
+  },
+  "servicePrincipalsBoundary": "passed",
+  "health": {
+    "exitCode": 7,
+    "stdout": "000",
+    "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 3594 after 0 ms: Could not connect to server\n"
+  },
+  "recovery": "workflow-ensure-service requested for existing registration; scheduler admission remains authoritative",
+  "productionBuild": "Not repeated on pressured host; no post-repair build pass established",
+  "canonicalSecurityAcceptance": "Unavailable; external Security Review owner still must provide/run canonical check",
+  "publication": "local only; package-lock.json pre-existing edit untouched"
+}

@@ -1,0 +1,4 @@
+Command: npm run build
+Result: interrupted by operator with SIGINT (exit 130) after AssemblyScript skip and Nx build-deps passed (63 cached tasks), while Next.js 16.4.2 was compiling production output.
+Observed process: next-build RSS peaked at approximately 9,521,196 KiB; host available memory fell from ~16 GiB to ~8.3 GiB and swap was essentially exhausted. This was stopped to protect scheduler-managed services. No compile error and no successful production build result were observed.
+After interruption: available memory recovered; scheduler dev-server:6 remained live; curl http://127.0.0.1:3594/api/health returned {"status":"ok","version":"1.0.0"}.
