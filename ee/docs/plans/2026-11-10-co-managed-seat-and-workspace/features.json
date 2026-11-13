@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "Email and in-app notifications sent to a seat technician contain only content their audience can see, and no notification about a private note is sent to them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]
@@ -650,7 +650,7 @@
   {
     "id": "F082",
     "description": "A seat technician's email reply to a shared IT notification is stored as shared IT, and a reply to a requester-audience notification is stored as requester.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]
@@ -658,7 +658,7 @@
   {
     "id": "F083",
     "description": "A seat technician cannot subscribe to or be added as a watcher on a ticket outside their scope, and existing subscriptions stop delivering when a ticket leaves their scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]

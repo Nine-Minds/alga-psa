@@ -379,7 +379,7 @@
   {
     "id": "T042",
     "description": "DB integration: the rendered email to a seat technician for a ticket with private notes contains no private text, a private note produces no technician notification, and a technician cannot watch an out-of-scope ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080",
       "F083"

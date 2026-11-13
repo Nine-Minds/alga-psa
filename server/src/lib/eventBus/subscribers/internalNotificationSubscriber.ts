@@ -189,6 +189,7 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
         tenant: tenantId,
         user_id: userId,
         template_name: 'ticket-created',
+        // LEVERAGE: pattern ticket-notification-audience — every ticket notification in this file repeats tenant + ticketAudience + link; a per-handler ticket notifier would declare the audience once.
         ticketAudience: { ticketId, audience: 'requester' },
         type: 'info',
         category: 'tickets',
