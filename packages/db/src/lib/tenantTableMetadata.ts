@@ -17,6 +17,10 @@ export interface ParsedTableExpression {
 
 export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_management_board_scopes: { scope: 'tenant' },
+  co_managed_seat_board_scopes: { scope: 'tenant' },
+  co_managed_seat_project_grants: { scope: 'tenant' },
+  co_managed_seat_assignments: { scope: 'tenant' },
+  co_managed_seat_arrangements: { scope: 'tenant' },
   co_managed_allocations: { scope: 'tenant' },
   co_managed_relationship_closures: { scope: 'tenant' },
   co_managed_archive_manifests: { scope: 'tenant' },
@@ -237,6 +241,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   default_billing_settings: { scope: 'tenant' },
   discounts: { scope: 'tenant' },
   document_associations: { scope: 'tenant' },
+  document_upload_sessions: { scope: 'tenant' },
   document_block_content: { scope: 'tenant' },
   document_content: { scope: 'tenant' },
   document_default_folders: { scope: 'tenant' },

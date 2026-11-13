@@ -1098,6 +1098,40 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
       .toEqual(before);
   }, HOOK_TIMEOUT);
 
+  it.each(['active', 'ended'] as const)('handles a %s seat arrangement without transferring its client identity', async (state) => {
+    const target = await seedClient(`Seat Group ${state}`);
+    const source = await seedClient(`Seat North ${state}`);
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    // Both clients have their own arrangement. A merge must neither transfer
+    // seat access nor collide with the target's one-live-arrangement index.
+    const arrangementId = uuidv4();
+    await table('co_managed_seat_arrangements').insert([
+      { tenant: tenantId, arrangement_id: arrangementId, client_id: source,
+        allocation_id: uuidv4(), state, ended_at: state === 'ended' ? new Date() : null },
+      { tenant: tenantId, arrangement_id: uuidv4(), client_id: target,
+        allocation_id: uuidv4(), state: 'active', ended_at: null },
+    ]);
+    const before = await table('co_managed_seat_arrangements').orderBy('arrangement_id');
+    const input = { sourceClientId: source, targetClientId: target };
+    const preview = await db.transaction((trx) => previewClientMerge(trx, tenantId, input));
+
+    if (state === 'active') {
+      expect(preview.blockers).toEqual([expect.objectContaining({ code: 'SOURCE_HAS_CO_MANAGEMENT' })]);
+      await expect(db.transaction((trx) => executeClientMerge(trx, tenantId, userId, input)))
+        .rejects.toMatchObject({ blockers: [expect.objectContaining({ code: 'SOURCE_HAS_CO_MANAGEMENT' })] });
+      expect(await table('clients').where({ client_id: source }).first())
+        .toMatchObject({ merged_into_client_id: null, is_inactive: false });
+    } else {
+      expect(preview.blockers).toEqual([]);
+      await db.transaction((trx) => executeClientMerge(trx, tenantId, userId, input));
+      expect(await table('clients').where({ client_id: source }).first())
+        .toMatchObject({ merged_into_client_id: target, is_inactive: true });
+    }
+    expect(await table('co_managed_seat_arrangements').orderBy('arrangement_id')).toEqual(before);
+  }, HOOK_TIMEOUT);
+
   it('TM019: accounts for every client-keyed table in the schema', async () => {
     // A table nobody thought about does not fail loudly — its rows just stay on
     // the archived client, keeping a live write path aimed at a tombstone. The

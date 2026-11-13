@@ -4,7 +4,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Documents from './Documents.tsx';
-import { uploadDocument, getDocumentsByEntity } from '../actions/documentActions';
+import { getDocumentsByEntity } from '../actions/documentActions';
+import { UploadSessionClientError, uploadFileInSession } from '../lib/uploadSessionClient';
 
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
@@ -47,8 +48,13 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
 }));
 
+// The protocol client has its own tests; here it is the seam between the uploader and the server.
+vi.mock('../lib/uploadSessionClient', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/uploadSessionClient')>()),
+  uploadFileInSession: vi.fn(),
+}));
+
 vi.mock('../actions/documentActions', () => ({
-  uploadDocument: vi.fn(),
   getDocumentsByEntity: vi.fn(),
   getDocumentsByFolder: vi.fn(),
   moveDocumentsToFolder: vi.fn(),
@@ -171,10 +177,13 @@ const openUploaderAndSelect = async (
   fireEvent.change(input, { target: { files } });
 };
 
-const mockUpload = uploadDocument as unknown as {
+const mockUpload = uploadFileInSession as unknown as {
   mockReset: () => void;
-  mockResolvedValueOnce: (v: unknown) => void;
+  mockResolvedValueOnce: (v: unknown) => { mockRejectedValueOnce: (e: unknown) => unknown };
+  mockRejectedValueOnce: (e: unknown) => { mockResolvedValueOnce: (v: unknown) => unknown; mockRejectedValueOnce: (e: unknown) => unknown };
 };
+const refuse = (reason: ConstructorParameters<typeof UploadSessionClientError>[0], message: string) =>
+  new UploadSessionClientError(reason, message);
 
 const mockEntityRefresh = getDocumentsByEntity as unknown as {
   mockReset: () => void;
@@ -192,13 +201,13 @@ describe('Documents parent integration with batch uploads', () => {
 
   it('keeps a mixed batch mounted, retains the failure, and refreshes once for the success', async () => {
     mockUpload
-      .mockResolvedValueOnce({ success: true, document: makeDocument('good.pdf') })
-      .mockResolvedValueOnce({ success: false, error: 'Blocked MIME type' });
+      .mockResolvedValueOnce(makeDocument('good.pdf'))
+      .mockRejectedValueOnce(refuse('typeNotAllowed', 'Blocked'));
     const { container } = renderEntityDocuments();
 
     await openUploaderAndSelect(container, [makeFile('good.pdf'), makeFile('bad.eml')]);
 
-    await waitFor(() => expect(screen.getByText('Blocked MIME type')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/file type isn't allowed/)).toBeInTheDocument());
     // Uploader is still mounted with both rows.
     expect(screen.getByText('good.pdf')).toBeInTheDocument();
     expect(screen.getByText('bad.eml')).toBeInTheDocument();
@@ -211,8 +220,8 @@ describe('Documents parent integration with batch uploads', () => {
 
   it('refreshes once and closes after an all-success batch', async () => {
     mockUpload
-      .mockResolvedValueOnce({ success: true, document: makeDocument('a.pdf') })
-      .mockResolvedValueOnce({ success: true, document: makeDocument('b.pdf') });
+      .mockResolvedValueOnce(makeDocument('a.pdf'))
+      .mockResolvedValueOnce(makeDocument('b.pdf'));
     const { container } = renderEntityDocuments();
 
     await openUploaderAndSelect(container, [makeFile('a.pdf'), makeFile('b.pdf')]);
@@ -227,14 +236,14 @@ describe('Documents parent integration with batch uploads', () => {
 
   it('keeps an all-failure batch mounted and does not refresh', async () => {
     mockUpload
-      .mockResolvedValueOnce({ success: false, error: 'First failed' })
-      .mockResolvedValueOnce({ success: false, error: 'Second failed' });
+      .mockRejectedValueOnce(refuse('permissionDenied', 'denied'))
+      .mockRejectedValueOnce(refuse('network', 'dropped'));
     const { container } = renderEntityDocuments();
 
     await openUploaderAndSelect(container, [makeFile('one.eml'), makeFile('two.xls')]);
 
-    await waitFor(() => expect(screen.getByText('Second failed')).toBeInTheDocument());
-    expect(screen.getByText('First failed')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/connection was interrupted/)).toBeInTheDocument());
+    expect(screen.getByText(/don't have permission/)).toBeInTheDocument();
     expect(mockUpload).toHaveBeenCalledTimes(2);
     expect(mockEntityRefresh).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: /Browse Files/i })).toBeInTheDocument();
@@ -243,8 +252,8 @@ describe('Documents parent integration with batch uploads', () => {
   it('holds the batch guard until a deferred parent refresh settles', async () => {
     let resolveRefresh: (value: unknown) => void = () => {};
     mockUpload
-      .mockResolvedValueOnce({ success: true, document: makeDocument('good.pdf') })
-      .mockResolvedValueOnce({ success: false, error: 'Blocked MIME type' });
+      .mockResolvedValueOnce(makeDocument('good.pdf'))
+      .mockRejectedValueOnce(refuse('typeNotAllowed', 'Blocked'));
     mockEntityRefresh.mockImplementationOnce(
       () => new Promise((resolve) => { resolveRefresh = resolve; }),
     );
@@ -278,12 +287,12 @@ describe('Documents parent integration with batch uploads', () => {
     expect(mockUpload).toHaveBeenCalledTimes(2);
     expect(screen.getByText('good.pdf')).toBeInTheDocument();
     expect(screen.getByText('bad.eml')).toBeInTheDocument();
-    expect(screen.getByText('Blocked MIME type')).toBeInTheDocument();
+    expect(screen.getByText(/file type isn't allowed/)).toBeInTheDocument();
     expect(screen.queryByText('second.pdf')).not.toBeInTheDocument();
   });
 
   it('reports a parent refresh failure with reload guidance without relabeling the file', async () => {
-    mockUpload.mockResolvedValueOnce({ success: true, document: makeDocument('good.pdf') });
+    mockUpload.mockResolvedValueOnce(makeDocument('good.pdf'));
     mockEntityRefresh.mockRejectedValueOnce(new Error('network down'));
     const { container } = renderEntityDocuments();
 

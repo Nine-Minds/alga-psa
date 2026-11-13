@@ -82,6 +82,7 @@ export class S3StorageProvider extends BaseStorageProvider {
     partNumber: number,
     part: Readable | Buffer,
     size: number,
+    signal?: AbortSignal,
   ): Promise<Partial<PartReceipt>> {
     const { key, uploadId } = this.s3Handle(handle);
     const send = () =>
@@ -95,6 +96,7 @@ export class S3StorageProvider extends BaseStorageProvider {
           // The SDK cannot measure a stream; without ContentLength the request fails.
           ContentLength: size,
         }),
+        signal ? { abortSignal: signal } : undefined,
       );
     // A Readable can be consumed only once, so only Buffer parts are retried.
     const response = await (Buffer.isBuffer(part) ? this.withRetry(send) : send());

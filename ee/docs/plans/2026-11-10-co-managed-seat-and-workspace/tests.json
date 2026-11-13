@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "DB integration: seat reservation happy path and replay by operation id; refused for insufficient capacity, ineligible sponsor and lapse grace.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006"
@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "DB integration, concurrent: with one seat available, a seat reservation and a workspace reservation race and exactly one succeeds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F007",
@@ -46,7 +46,7 @@
   {
     "id": "T006",
     "description": "DB integration: resize refuses a decrease below committed seats; release returns seats once and a replay changes nothing; a purchase reduction below allocated across both kinds is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009",
@@ -56,7 +56,7 @@
   {
     "id": "T007",
     "description": "DB integration: capacity below allocated with only seat allocations starts grace and then read-only on the same deadlines as a workspace pool.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
@@ -64,7 +64,7 @@
   {
     "id": "T008",
     "description": "DB integration: arrangement creation is atomic with its allocation, replays to the same arrangement, and is refused for an inactive client and for a client with a live workspace relationship.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F013",
@@ -121,7 +121,7 @@
   {
     "id": "T014",
     "description": "DB integration: an empty board scope yields no ticket access and a board marked no-create refuses ticket creation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
