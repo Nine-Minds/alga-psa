@@ -4131,7 +4131,9 @@
       "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}.",
       "nameRequired": "Nazwa roli jest wymagana.",
       "builtInRename": "Nie można zmieniać nazw wbudowanych ról.",
-      "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu."
+      "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu.",
+      "lastMspAdmin": "Organizacja musi zachować co najmniej jednego aktywnego użytkownika z rolą MSP Admin.",
+      "lastRole": "Użytkownik musi zachować co najmniej jedną rolę. Najpierw przypisz inną rolę, a potem usuń tę."
     },
     "secrets": {
       "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",

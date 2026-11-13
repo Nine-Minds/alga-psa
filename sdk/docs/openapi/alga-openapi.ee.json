@@ -2066,13 +2066,15 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "minItems": 1
           }
         },
         "required": [
           "username",
           "email",
-          "password"
+          "password",
+          "role_ids"
         ]
       },
       "AccessUpdateUserBodyV1": {
@@ -2125,7 +2127,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "minItems": 1
           }
         }
       },

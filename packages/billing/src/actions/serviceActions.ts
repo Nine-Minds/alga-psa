@@ -30,6 +30,7 @@ import {
   isServiceCatalogPricingError,
   writeServiceCatalogPricing,
 } from '../lib/catalog/serviceCatalogPricing';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 
 type ServiceCatalogSearchEventType =
   | 'SERVICE_CATALOG_CREATED'
@@ -1059,6 +1060,7 @@ export const deleteProductPermanently = withAuth(async (
 
     try {
         return await withTransaction(db, async (trx: Knex.Transaction): Promise<void | ActionMessageError> => {
+            await lockTenantBilling(trx, tenant);
             // Re-check associations within the transaction to prevent race conditions
             const check = await checkProductCanBeDeleted(serviceId);
             if (isServiceActionError(check)) {
@@ -1591,6 +1593,7 @@ export const removeServicePrice = withAuth(async (user, { tenant }, serviceId: s
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await lockTenantBilling(trx, tenant);
       const result = await Service.removePrice(trx, serviceId, currencyCode);
       safeRevalidate('/msp/billing');
       return result;

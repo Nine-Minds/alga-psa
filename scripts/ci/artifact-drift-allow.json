@@ -993,5 +993,15 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/FinancialBulkInvoiceOperationBody/properties/options",
     "reason": "PR #4076 repair: align the generated OpenAPI body with runtime validation, which accepts optional parameters rather than options."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AccessCreateUserBodyV1/required",
+    "reason": "alga-2026-0003292: a user is never created without a role, so createUserSchema now requires role_ids and POST /api/v1/users rejects a body without it. Deliberately breaking for callers that relied on creating a role-less user; the alternative is the zero-role state that left a tenant unable to administer itself."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AccessCreateUserBodyV1/required",
+    "reason": "alga-2026-0003292: a user is never created without a role, so createUserSchema now requires role_ids and POST /api/v1/users rejects a body without it. Deliberately breaking for callers that relied on creating a role-less user; the alternative is the zero-role state that left a tenant unable to administer itself."
   }
 ]

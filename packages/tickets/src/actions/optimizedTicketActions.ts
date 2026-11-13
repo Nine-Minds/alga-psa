@@ -49,6 +49,7 @@ import {
   registerAfterCommit,
   createTenantKnex,
   getConnection,
+  recordTicketAssigneeChange,
   tenantDb,
   resolveUserTimeZone,
   normalizeIanaTimeZone,
@@ -2963,6 +2964,9 @@ export async function updateTicketInTransaction(
           });
         }
         
+        // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+        await recordTicketAssigneeChange(trx, tenant, id);
+
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment

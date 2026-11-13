@@ -1163,6 +1163,10 @@
       "recordInvalid": "Een van de geselecteerde zichtbaarheidsgroeprecords is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een zichtbaarheidsgroep met deze gegevens voor deze klant.",
       "invalidData": "Ongeldige gegevens voor de zichtbaarheidsgroep. Controleer de groepsgegevens en de geselecteerde borden."
+    },
+    "roles": {
+      "lastMspAdmin": "Een tenant moet ten minste één actieve MSP-Admin-gebruiker houden.",
+      "lastRole": "Een gebruiker moet ten minste één rol houden. Wijs eerst een andere rol toe en verwijder daarna deze."
     }
   },
   "tabs": {

@@ -64,7 +64,7 @@
   {
     "id": "T008",
     "description": "DB integration: arrangement creation is atomic with its allocation, replays to the same arrangement, and is refused for an inactive client and for a client with a live workspace relationship.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F013",
@@ -121,7 +121,7 @@
   {
     "id": "T014",
     "description": "DB integration: an empty board scope yields no ticket access and a board marked no-create refuses ticket creation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -189,7 +189,7 @@
   {
     "id": "T022",
     "description": "Unit: audience truth table over audience, reader organization and requester flag, with inconsistent legacy rows resolving private; the SQL form agrees with the TypeScript form on the same rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F036",
@@ -265,7 +265,7 @@
   {
     "id": "T030",
     "description": "DB integration: hand to MSP and hand to client IT change responsibility, store a receipt, replay to the original receipt, and fail on a stale revision or an out-of-scope board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F055",

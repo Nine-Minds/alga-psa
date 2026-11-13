@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Seat arrangement, board scope, seat assignment and project grant tables exist in the sponsor tenant with tenant-first keys, no triggers, and are registered in the tenant table manifest for deletion and export.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Creating a seat arrangement for a client reserves and activates its allocation and writes the arrangement in one transaction; a repeated request returns the same arrangement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Arrangement creation is refused for an inactive client and for a client that already has a live workspace relationship or seat arrangement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "An MSP administrator sets which boards are in an arrangement's scope and whether technicians may create tickets on each; an empty scope gives technicians no ticket access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "Comment audience visibility is decided by the reader's organization (MSP staff, the ticket client's seat technicians, or requester) through one predicate with a matching SQL form, used by every reader; a seat technician's organization comes from the seat assignment.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "A `shared_it` thread on a ticket of a client with a live seat arrangement is visible to MSP staff and that client's seat technicians and to no requester.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "An `organization_private` thread is visible to MSP staff only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "A legacy internal thread with no stored audience is never visible to a seat technician and is never treated as shared.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "A ticket of a client with a live seat arrangement has a responsibility of `client_it` or `msp`; it defaults to `msp` for existing and MSP-created tickets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "A seat technician hands a ticket to the MSP with a required shared note; responsibility becomes `msp`, the technician assignee is cleared, the arrangement's handoff defaults apply, and a receipt is stored; a replay returns the original receipt.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "MSP staff hand a ticket to client IT with a required shared note and an optional named technician; responsibility becomes `client_it` and a receipt is stored; the request is refused when the ticket's board is out of scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "A handoff carries the expected revision and is refused when another handoff or reassignment has intervened.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]

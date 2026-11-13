@@ -96,6 +96,10 @@ class FakeBuilder {
     return this;
   }
 
+  forUpdate() {
+    return this;
+  }
+
   distinct(column: string) {
     this.projection = [column];
     return this;

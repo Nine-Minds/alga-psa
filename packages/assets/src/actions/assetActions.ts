@@ -75,6 +75,7 @@ import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAss
 import { applyAssetListFilters, applyAssetTypeFilter, joinAssetListRelations, selectedAssetTypes } from '../lib/assetListFilters';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { prepareTicketAssigneeChange } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
@@ -3000,7 +3001,10 @@ export const setOccurrenceTicketAssignee = withAuth(async (user, { tenant }, occ
             if (!occurrence) throw new Error('Maintenance occurrence not found');
             await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, occurrence.asset_id);
             if (!occurrence.ticket_id) throw new Error('Occurrence has no linked ticket to assign');
+            // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+            const recordAssigneeChange = await prepareTicketAssigneeChange(trx, tenant, occurrence.ticket_id);
             await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: occurrence.ticket_id }).update({ assigned_to: assignee_user_id, updated_at: trx.fn.now(), updated_by: user.user_id });
+            await recordAssigneeChange(assignee_user_id);
         });
         revalidatePath('/msp/assets/maintenance');
     } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }

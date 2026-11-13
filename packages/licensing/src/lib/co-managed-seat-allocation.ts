@@ -14,17 +14,14 @@ import { tenantDb } from '@alga-psa/db';
 import { CoManagedAdmissionError } from './co-managed-admission';
 import { materializeState, type CoManagedEntitlementState } from './co-managed-entitlements';
 import type { CoManagedOperationalState } from './co-managed-lifecycle-error';
+import type { CoManagedSeatAllocationRecord } from './co-managed-reservation';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const validSeats = (seats: number) => Number.isSafeInteger(seats) && seats >= 1 && seats <= 2147483647;
 
 /** A seat-kind row of `co_managed_allocations`, as the commands here read it. */
-export interface CoManagedSeatAllocation {
-  allocation_id: string;
-  sponsor_client_id: string;
-  seats: number;
-  state: 'reserved' | 'active' | 'released';
-}
+export type CoManagedSeatAllocationSnapshot = Pick<CoManagedSeatAllocationRecord,
+  'allocation_id' | 'sponsor_client_id' | 'seats' | 'state'>;
 
 /**
  * Counts the seats in use inside one seat allocation: active technicians plus pending
@@ -34,14 +31,14 @@ export interface CoManagedSeatAllocation {
  * entitlement lock.
  */
 export type CountCoManagedSeatCommitments = (
-  trx: Knex.Transaction, allocation: CoManagedSeatAllocation,
+  trx: Knex.Transaction, allocation: CoManagedSeatAllocationSnapshot,
 ) => Promise<number>;
 
 /** Locks the pool, then the live seat allocation. Entitlement first: the order every capacity writer uses. */
 async function lockSeatAllocation(trx: Knex.Transaction, sponsorTenant: string, allocationId: string) {
   const sponsor = tenantDb(trx, sponsorTenant);
   const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
-  const allocation: CoManagedSeatAllocation | undefined = await sponsor.table('co_managed_allocations')
+  const allocation: CoManagedSeatAllocationSnapshot | undefined = await sponsor.table('co_managed_allocations')
     .where({ allocation_id: allocationId, allocation_kind: 'seat' }).forUpdate()
     .first('allocation_id', 'sponsor_client_id', 'seats', 'state');
   return { sponsor, entitlement, allocation };
