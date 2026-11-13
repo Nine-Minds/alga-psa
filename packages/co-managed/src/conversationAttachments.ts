@@ -269,7 +269,10 @@ export async function listPublishedCoManagedAttachmentSources(context: CoManaged
  * rule (an unpublished draft's files never resolve), the storage-path assertion,
  * then — after transport, in `readPublishedCoManagedAttachment` — size and hash. */
 function audienceReadable(context: CoManagedAttachmentReadContext): boolean {
-  return isCommentAudienceVisible(context.audience, context.comment.storeTenant, context.reader.tenant, context.reader.requester);
+  // LEVERAGE: friction audience-reader-from-tenant — this context carries a reader tenant + requester flag, so a seat
+  // technician arriving here would read as staff; S18 passes the resolved CommentAudienceReader through instead.
+  return isCommentAudienceVisible(context.audience, { tenant: context.comment.storeTenant },
+    { kind: context.reader.requester ? 'requester' : 'staff', tenant: context.reader.tenant });
 }
 export async function resolveAttachmentAccess(context: CoManagedAttachmentReadContext, attachmentId: string) {
   if (!context.trx.isTransaction || !isCoManagedUuid(attachmentId) || !audienceReadable(context)) deny();

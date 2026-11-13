@@ -1396,10 +1396,12 @@ components:
           items:
             type: string
             format: uuid
+          minItems: 1
       required:
         - username
         - email
         - password
+        - role_ids
     AccessUpdateUserBodyV1:
       type: object
       properties:
@@ -1438,6 +1440,7 @@ components:
           items:
             type: string
             format: uuid
+          minItems: 1
     AccessChangePasswordBodyV1:
       type: object
       properties:

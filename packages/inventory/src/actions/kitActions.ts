@@ -26,6 +26,22 @@ import { unitOfMeasureVocabulary } from '@alga-psa/core/unitOfMeasure';
 const KIT_UNIT = unitOfMeasureVocabulary.find((unit) => unit.key === 'kit')!;
 
 /**
+ * The lock every billing mutation takes
+ * (`packages/billing/src/lib/billing/billingMutationLock.ts`): a kit's catalog
+ * price must not change under an invoice run that already read it. Re-expressed
+ * because `packages/billing` depends on this package; the statements must stay
+ * identical to the original.
+ */
+// LEVERAGE: pattern tenant-billing-lock — third copy (billing, clients/clientMergeEngine, here); belongs in a layer every feature package can reach.
+async function lockTenantBilling(trx: Knex.Transaction, tenant: string): Promise<void> {
+  await trx.raw("select pg_advisory_xact_lock(hashtextextended(? || ':billing-semantics', 0))", [tenant]);
+  await trx.raw(
+    'insert into billing_semantics_locks (tenant) values (?) on conflict (tenant) do update set tenant = excluded.tenant',
+    [tenant],
+  );
+}
+
+/**
  * Kit (bundle) management — single-level bill of materials (F102).
  *
  * A kit is a `service_catalog` product flagged `product_inventory_settings.is_kit = true`
@@ -606,6 +622,7 @@ export const createKitProduct = withAuth(
 
       const { knex: db } = await createTenantKnex();
       const serviceId = await withTransaction(db, async (trx: Knex.Transaction) => {
+        await lockTenantBilling(trx, tenant);
         const type = await trx('service_types')
           .where({ tenant, id: input.custom_service_type_id })
           .first();
@@ -689,6 +706,7 @@ export const updateKitProduct = withAuth(
 
       const { knex: db } = await createTenantKnex();
       await withTransaction(db, async (trx: Knex.Transaction) => {
+        await lockTenantBilling(trx, tenant);
         await assertIsKit(trx, tenant, kitServiceId);
         const current = await trx('service_catalog as sc')
           .join('product_inventory_settings as pis', function () {

@@ -66,7 +66,11 @@
     "fallbackTitle": "Rapport",
     "dateRange": {
       "lastDays": "{{count}} derniers jours",
-      "allActiveProjects": "Tous les projets actifs, depuis le début"
+      "allActiveProjects": "Tous les projets actifs, depuis le début",
+      "customRange": "Du {{start}} au {{end}}",
+      "customFrom": "Du",
+      "customTo": "Au",
+      "agingSnapshotNote": "Les totaux et tranches d’ancienneté montrent les tickets ouverts en ce moment. La période ne filtre que la liste des tickets ouverts les plus anciens."
     },
     "units": {
       "daysWithCount": "{{count}} jours"
@@ -564,7 +568,13 @@
         "not_client_attributable": "Ce rapport n'est pas disponible pour vous car il ne peut pas être limité à vos clients : il lit {{table}}, qui n'est pas attribuable à un client.",
         "unnarrowable_report": "Ce rapport n'est pas disponible pour vous car il ne peut pas être limité à vos clients : il totalise les comptes de tous les clients."
       },
-      "clientOutOfScope": "Vous n'avez pas accès à ce client."
+      "clientOutOfScope": "Vous n'avez pas accès à ce client.",
+      "range": {
+        "malformed": "La période personnalisée n’a pas pu être lue. Choisissez à nouveau les deux dates.",
+        "backwards": "La date de fin est antérieure à la date de début.",
+        "tooLong": "Une période personnalisée peut couvrir au maximum {{maxDays}} jours.",
+        "startsInFuture": "La période personnalisée commence après aujourd’hui, il n’y a donc encore rien à afficher."
+      }
     }
   }
 }

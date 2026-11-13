@@ -38,6 +38,7 @@ import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -1724,6 +1725,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+        // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+        await recordTicketAssigneeChange(trx, tenant, id);
       }
 
     if (!updatedTicket) {

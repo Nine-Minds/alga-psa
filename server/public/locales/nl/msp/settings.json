@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}.",
       "nameRequired": "Rolnaam is verplicht.",
       "builtInRename": "Ingebouwde rollen kunnen niet worden hernoemd.",
-      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal."
+      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal.",
+      "lastMspAdmin": "Een tenant moet ten minste één actieve MSP-Admin-gebruiker houden.",
+      "lastRole": "Een gebruiker moet ten minste één rol houden. Wijs eerst een andere rol toe en verwijder daarna deze."
     },
     "secrets": {
       "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",

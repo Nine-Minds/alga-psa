@@ -1,7 +1,7 @@
 'use server';
 
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, localDateForInstant, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { clientScopedTenantDb } from '../lib/reports/clientScope';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -15,18 +15,31 @@ import {
   type EmployeeUtilizationInputRow,
   type EmployeeUtilizationReport,
 } from './employeeUtilization';
+import {
+  clampReportRangeToToday,
+  dayRangeConditionSql,
+  rangeConditionSql,
+  resolveReportRange,
+  type ReportDateRange,
+  type ReportRangeInput,
+  type ResolvedReportRange,
+} from './reportRange';
 
 export type { EmployeeUtilizationReport } from './employeeUtilization';
-
-export type ReportRangeDays = 7 | 30 | 90;
+export type { ReportDateRange, ReportRangeDays, ReportRangeInput } from './reportRange';
 
 export interface ReportBucket {
   label: string;
   count: number;
 }
 
-export interface TicketWorkloadReport {
-  rangeDays: ReportRangeDays;
+/** Window a report covered: a preset day count, plus the custom bounds when one was picked. */
+export interface ReportRangeEcho {
+  rangeDays: number;
+  range: ReportDateRange | null;
+}
+
+export interface TicketWorkloadReport extends ReportRangeEcho {
   summary: {
     created: number;
     closed: number;
@@ -39,8 +52,7 @@ export interface TicketWorkloadReport {
   byAssignee: ReportBucket[];
 }
 
-export interface TicketAgingReport {
-  rangeDays: ReportRangeDays;
+export interface TicketAgingReport extends ReportRangeEcho {
   summary: {
     open: number;
     under2Days: number;
@@ -60,8 +72,7 @@ export interface TicketAgingReport {
   }>;
 }
 
-export interface EmailChannelHealthReport {
-  rangeDays: ReportRangeDays;
+export interface EmailChannelHealthReport extends ReportRangeEcho {
   summary: {
     totalChannels: number;
     activeChannels: number;
@@ -89,8 +100,7 @@ export interface EmailChannelHealthReport {
   }>;
 }
 
-export interface TimeUtilizationReport {
-  rangeDays: ReportRangeDays;
+export interface TimeUtilizationReport extends ReportRangeEcho {
   summary: {
     totalHours: number;
     billableHours: number;
@@ -109,8 +119,7 @@ export interface TimeUtilizationReport {
   byWorkType: ReportBucket[];
 }
 
-export interface TeamPerformanceReport {
-  rangeDays: ReportRangeDays;
+export interface TeamPerformanceReport extends ReportRangeEcho {
   summary: {
     createdTickets: number;
     closedTickets: number;
@@ -130,8 +139,49 @@ export interface TeamPerformanceReport {
   closedByAssignee: ReportBucket[];
 }
 
-function normalizeRangeDays(value?: number): ReportRangeDays {
-  return value === 7 || value === 90 ? value : 30;
+/** Narrow a query to the resolved window: a rolling preset, or both custom bounds. */
+function withinRange(
+  query: Knex.QueryBuilder,
+  column: string,
+  reportWindow: ResolvedReportRange,
+  timeZone: string,
+): Knex.QueryBuilder {
+  const { sql, bindings } = rangeConditionSql(column, reportWindow, timeZone);
+  return query.whereRaw(sql, bindings);
+}
+
+/**
+ * Narrow time entries by their own calendar day (`work_date`) for a custom
+ * window, so Time Utilization counts the same entries as Employee Utilization
+ * over the same dates. Presets keep the rolling `start_time` window.
+ */
+function withinWorkDays(
+  query: Knex.QueryBuilder,
+  alias: string,
+  reportWindow: ResolvedReportRange,
+): Knex.QueryBuilder {
+  const prefix = alias ? `${alias}.` : '';
+  const { sql, bindings } = dayRangeConditionSql(`${prefix}work_date`, `${prefix}start_time`, reportWindow);
+  return query.whereRaw(sql, bindings);
+}
+
+/**
+ * Pin a custom window to the viewer's calendar: its days are days in the
+ * viewer's effective timezone (user, then tenant, then UTC), and it ends no
+ * later than today there, so the window the report echoes is the one its data
+ * covers. A window that starts after today is refused. Presets stay rolling
+ * windows and need neither.
+ */
+async function windowForViewer(
+  knex: Knex,
+  tenant: string,
+  user: IUserWithRoles,
+  requested: ResolvedReportRange,
+): Promise<{ reportWindow: ResolvedReportRange; timeZone: string }> {
+  if (!requested.range) return { reportWindow: requested, timeZone: 'UTC' };
+  const timeZone = await resolveEffectiveTimeZone(knex, tenant, user.user_id);
+  const today = localDateForInstant(new Date(), timeZone).toString();
+  return { reportWindow: clampReportRangeToToday(requested, today), timeZone };
 }
 
 function toCount(value: unknown): number {
@@ -162,11 +212,12 @@ async function assertCanReadReports(
 }
 
 export const getTicketWorkloadReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TicketWorkloadReport | ReportingActionError> => {
+  async (user, { tenant }, rangeInput?: ReportRangeInput): Promise<TicketWorkloadReport | ReportingActionError> => {
     try {
-      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const requestedWindow = resolveReportRange(rangeInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
+      const { reportWindow, timeZone } = await windowForViewer(knex, tenant, user, requestedWindow);
       const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.ticket_workload', passthrough: [] });
       const withStatus = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
@@ -185,13 +236,10 @@ export const getTicketWorkloadReport = withAuth(
       priorityRows,
       assigneeRows,
     ] = await Promise.all([
-      scopedDb.table('tickets')
-        .where('entered_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinRange(scopedDb.table('tickets'), 'entered_at', reportWindow, timeZone)
         .count<{ count: string }[]>('* as count')
         .first(),
-      scopedDb.table('tickets')
-        .whereNotNull('closed_at')
-        .where('closed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinRange(scopedDb.table('tickets').whereNotNull('closed_at'), 'closed_at', reportWindow, timeZone)
         .count<{ count: string }[]>('* as count')
         .first(),
       withStatus(scopedDb.table('tickets as t'))
@@ -238,7 +286,8 @@ export const getTicketWorkloadReport = withAuth(
       }));
 
       return {
-        rangeDays,
+        rangeDays: reportWindow.rangeDays,
+        range: reportWindow.range,
         summary: {
           created: toCount(createdRow?.count),
           closed: toCount(closedRow?.count),
@@ -259,11 +308,12 @@ export const getTicketWorkloadReport = withAuth(
 );
 
 export const getTimeUtilizationReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TimeUtilizationReport | ReportingActionError> => {
+  async (user, { tenant }, rangeInput?: ReportRangeInput): Promise<TimeUtilizationReport | ReportingActionError> => {
     try {
-      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const requestedWindow = resolveReportRange(rangeInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
+      const { reportWindow } = await windowForViewer(knex, tenant, user, requestedWindow);
       const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.time_utilization', passthrough: [] });
       const withUser = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
@@ -271,16 +321,14 @@ export const getTimeUtilizationReport = withAuth(
         scopedDb.tenantJoin(query, 'service_catalog as sc', 'te.service_id', 'sc.service_id', { type: 'left' });
 
     const [summaryRow, userRows, serviceRows, workTypeRows] = await Promise.all([
-      scopedDb.table('time_entries')
-        .where('start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinWorkDays(scopedDb.table('time_entries'), '', reportWindow)
         .select(
           knex.raw('COUNT(*)::int as entries'),
           knex.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (end_time - start_time)) / 60), 0) as total_minutes'),
           knex.raw('COALESCE(SUM(billable_duration), 0) as billable_minutes'),
         )
         .first(),
-      withUser(scopedDb.table('time_entries as te'))
-        .where('te.start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinWorkDays(withUser(scopedDb.table('time_entries as te')), 'te', reportWindow)
         .select(
           'te.user_id',
           knex.raw("COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown user') as name"),
@@ -291,15 +339,13 @@ export const getTimeUtilizationReport = withAuth(
         .groupBy('te.user_id', 'u.first_name', 'u.last_name')
         .orderBy('total_minutes', 'desc')
         .limit(10),
-      withService(scopedDb.table('time_entries as te'))
-        .where('te.start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinWorkDays(withService(scopedDb.table('time_entries as te')), 'te', reportWindow)
         .select(knex.raw("COALESCE(sc.service_name, 'No service') as label"))
         .sum<{ label: string | null; count: string }[]>({ count: 'te.billable_duration' })
         .groupBy('sc.service_name')
         .orderBy('count', 'desc')
         .limit(8),
-      scopedDb.table('time_entries')
-        .where('start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinWorkDays(scopedDb.table('time_entries'), '', reportWindow)
         .select(knex.raw("COALESCE(NULLIF(work_item_type, ''), 'No work type') as label"))
         .count<{ label: string | null; count: string }[]>('* as count')
         .groupBy('work_item_type')
@@ -312,7 +358,8 @@ export const getTimeUtilizationReport = withAuth(
     const nonBillableHours = Math.max(0, Math.round((totalHours - billableHours) * 10) / 10);
 
       return {
-        rangeDays,
+        rangeDays: reportWindow.rangeDays,
+        range: reportWindow.range,
         summary: {
           totalHours,
           billableHours,
@@ -345,21 +392,25 @@ export const getTimeUtilizationReport = withAuth(
 );
 
 export const getTeamPerformanceReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TeamPerformanceReport | ReportingActionError> => {
+  async (user, { tenant }, rangeInput?: ReportRangeInput): Promise<TeamPerformanceReport | ReportingActionError> => {
     try {
-      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const requestedWindow = resolveReportRange(rangeInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
+      const { reportWindow, timeZone } = await windowForViewer(knex, tenant, user, requestedWindow);
       const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.team_performance', passthrough: [] });
       const withAssignee = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
       const withStatus = (query: Knex.QueryBuilder, type: 'inner' | 'left' = 'inner') =>
         scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', type === 'left' ? { type: 'left' } : undefined);
       const userNameExpression = knex.raw("COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unassigned') as name");
+      // The summary row counts both windows inside one aggregate, so it needs
+      // the window as a fragment rather than a where clause.
+      const enteredInRange = rangeConditionSql('t.entered_at', reportWindow, timeZone);
+      const closedInRange = rangeConditionSql('t.closed_at', reportWindow, timeZone);
 
     const [createdRows, closedRows, openRows, summaryRow] = await Promise.all([
-      withAssignee(scopedDb.table('tickets as t'))
-        .where('t.entered_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinRange(withAssignee(scopedDb.table('tickets as t')), 't.entered_at', reportWindow, timeZone)
         .select(
           knex.raw("COALESCE(t.assigned_to::text, 'unassigned') as user_id"),
           userNameExpression,
@@ -368,9 +419,7 @@ export const getTeamPerformanceReport = withAuth(
         .groupBy('t.assigned_to', 'u.first_name', 'u.last_name')
         .orderBy('count', 'desc')
         .limit(10),
-      withAssignee(scopedDb.table('tickets as t'))
-        .whereNotNull('t.closed_at')
-        .where('t.closed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinRange(withAssignee(scopedDb.table('tickets as t')).whereNotNull('t.closed_at'), 't.closed_at', reportWindow, timeZone)
         .select(
           knex.raw("COALESCE(t.assigned_to::text, 'unassigned') as user_id"),
           userNameExpression,
@@ -392,11 +441,17 @@ export const getTeamPerformanceReport = withAuth(
         .limit(10),
       withStatus(scopedDb.table('tickets as t'), 'left')
         .select(
-          knex.raw(`SUM(CASE WHEN t.entered_at >= NOW() - INTERVAL '${rangeDays} days' THEN 1 ELSE 0 END)::int as created_tickets`),
-          knex.raw(`SUM(CASE WHEN t.closed_at IS NOT NULL AND t.closed_at >= NOW() - INTERVAL '${rangeDays} days' THEN 1 ELSE 0 END)::int as closed_tickets`),
+          knex.raw(`SUM(CASE WHEN ${enteredInRange.sql} THEN 1 ELSE 0 END)::int as created_tickets`, enteredInRange.bindings),
+          knex.raw(`SUM(CASE WHEN t.closed_at IS NOT NULL AND ${closedInRange.sql} THEN 1 ELSE 0 END)::int as closed_tickets`, closedInRange.bindings),
           knex.raw('SUM(CASE WHEN s.is_closed = false AND t.assigned_to IS NOT NULL THEN 1 ELSE 0 END)::int as open_assigned_tickets'),
-          knex.raw(`COUNT(DISTINCT CASE WHEN t.entered_at >= NOW() - INTERVAL '${rangeDays} days' OR (t.closed_at IS NOT NULL AND t.closed_at >= NOW() - INTERVAL '${rangeDays} days') OR s.is_closed = false THEN t.assigned_to END)::int as active_assignees`),
-          knex.raw(`AVG(CASE WHEN t.closed_at IS NOT NULL AND t.closed_at >= NOW() - INTERVAL '${rangeDays} days' THEN EXTRACT(EPOCH FROM (t.closed_at - t.entered_at)) / 3600 END) as avg_resolution_hours`),
+          knex.raw(
+            `COUNT(DISTINCT CASE WHEN ${enteredInRange.sql} OR (t.closed_at IS NOT NULL AND ${closedInRange.sql}) OR s.is_closed = false THEN t.assigned_to END)::int as active_assignees`,
+            [...enteredInRange.bindings, ...closedInRange.bindings],
+          ),
+          knex.raw(
+            `AVG(CASE WHEN t.closed_at IS NOT NULL AND ${closedInRange.sql} THEN EXTRACT(EPOCH FROM (t.closed_at - t.entered_at)) / 3600 END) as avg_resolution_hours`,
+            closedInRange.bindings,
+          ),
         )
         .first(),
     ]);
@@ -434,7 +489,8 @@ export const getTeamPerformanceReport = withAuth(
       .slice(0, 10);
 
       return {
-        rangeDays,
+        rangeDays: reportWindow.rangeDays,
+        range: reportWindow.range,
         summary: {
           createdTickets: toCount((summaryRow as any)?.created_tickets),
           closedTickets: toCount((summaryRow as any)?.closed_tickets),
@@ -461,27 +517,30 @@ export const getTeamPerformanceReport = withAuth(
 );
 
 export const getEmailChannelHealthReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<EmailChannelHealthReport | ReportingActionError> => {
+  async (user, { tenant }, rangeInput?: ReportRangeInput): Promise<EmailChannelHealthReport | ReportingActionError> => {
     try {
-      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const requestedWindow = resolveReportRange(rangeInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
+      const { reportWindow, timeZone } = await windowForViewer(knex, tenant, user, requestedWindow);
       const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.email_channel_health', passthrough: ['email_providers'] });
       const withTicketFromProcessedMessage = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'tickets as t', 'epm.ticket_id', 't.ticket_id', { type: 'left' });
+      // A left join keeps channels with no traffic, so the window has to ride
+      // along as a join condition instead of a where clause.
+      const processedInRange = rangeConditionSql('epm.processed_at', reportWindow, timeZone);
       const withRecentProcessedMessages = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'email_processed_messages as epm', 'ep.id', 'epm.provider_id', {
           type: 'left',
           on: (join) => {
-            join.andOn('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`));
+            join.andOn(knex.raw(processedInRange.sql, processedInRange.bindings));
           },
         });
 
     const [providerRows, summaryRow, statusRows, channelRows] = await Promise.all([
       scopedDb.table('email_providers')
         .select('id', 'is_active', 'status'),
-      withTicketFromProcessedMessage(scopedDb.table('email_processed_messages as epm'))
-        .where('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinRange(withTicketFromProcessedMessage(scopedDb.table('email_processed_messages as epm')), 'epm.processed_at', reportWindow, timeZone)
         .select(
           knex.raw('COUNT(*)::int as processed_emails'),
           knex.raw('COUNT(epm.ticket_id)::int as tickets_created'),
@@ -494,8 +553,7 @@ export const getEmailChannelHealthReport = withAuth(
           ),
         )
         .first(),
-      scopedDb.table('email_processed_messages')
-        .where('processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinRange(scopedDb.table('email_processed_messages'), 'processed_at', reportWindow, timeZone)
         .select('processing_status as label')
         .count<{ label: string | null; count: string }[]>('* as count')
         .groupBy('processing_status')
@@ -536,7 +594,8 @@ export const getEmailChannelHealthReport = withAuth(
     const problemChannels = providerRows.filter((row) => row.is_active && row.status !== 'connected').length;
 
       return {
-        rangeDays,
+        rangeDays: reportWindow.rangeDays,
+        range: reportWindow.range,
         summary: {
           totalChannels,
           activeChannels,
@@ -575,11 +634,12 @@ export const getEmailChannelHealthReport = withAuth(
 );
 
 export const getTicketAgingReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TicketAgingReport | ReportingActionError> => {
+  async (user, { tenant }, rangeInput?: ReportRangeInput): Promise<TicketAgingReport | ReportingActionError> => {
     try {
-      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const requestedWindow = resolveReportRange(rangeInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
+      const { reportWindow, timeZone } = await windowForViewer(knex, tenant, user, requestedWindow);
       const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.ticket_aging', passthrough: [] });
       const withStatus = (query: Knex.QueryBuilder) =>
         scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
@@ -607,9 +667,7 @@ export const getTicketAgingReport = withAuth(
         .count<{ label: string; count: string }[]>('* as count')
         .groupBy('t.response_state')
         .orderBy('count', 'desc'),
-      withClient(withStatus(scopedDb.table('tickets as t')))
-        .where('s.is_closed', false)
-        .where('t.entered_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+      withinRange(withClient(withStatus(scopedDb.table('tickets as t'))).where('s.is_closed', false), 't.entered_at', reportWindow, timeZone)
         .select(
           't.ticket_id',
           't.ticket_number',
@@ -646,7 +704,8 @@ export const getTicketAgingReport = withAuth(
     }>;
 
       return {
-        rangeDays,
+        rangeDays: reportWindow.rangeDays,
+        range: reportWindow.range,
         summary: {
           open: toCount(aging?.open_count),
           under2Days: toCount(aging?.under_2_days),
@@ -690,12 +749,26 @@ export const getTicketAgingReport = withAuth(
  * says when a client may book someone, not when they are working.
  */
 export const getEmployeeUtilizationReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<EmployeeUtilizationReport | ReportingActionError> => {
+  async (user, { tenant }, rangeInput?: ReportRangeInput): Promise<EmployeeUtilizationReport | ReportingActionError> => {
     try {
-      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const requestedWindow = resolveReportRange(rangeInput);
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
+      const { reportWindow } = await windowForViewer(knex, tenant, user, requestedWindow);
       const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'helpdesk.employee_utilization', passthrough: ['users', 'resources', 'user_work_schedules'] });
+
+      // work_date is the canonical calendar day of the entry (NOT NULL since the
+      // work_date migration), so the window matches the whole-day capacity
+      // denominator instead of a rolling timestamp window. A custom window has
+      // already been cut off at the viewer's today, so the worked-hours
+      // numerator covers exactly the days capacity is counted over.
+      const timeEntryWindow = reportWindow.range
+        ? scopedDb.table('time_entries')
+            .whereRaw('work_date >= ?::date', [reportWindow.range.from])
+            .whereRaw('work_date <= ?::date', [reportWindow.range.to])
+        : scopedDb.table('time_entries')
+            .where('work_date', '>=', knex.raw('CURRENT_DATE - ?::int', [reportWindow.rangeDays - 1]))
+            .where('work_date', '<=', knex.raw('CURRENT_DATE'));
 
       const [userRows, timeRows, capacityRows, scheduleRows, todayRow] = await Promise.all([
         scopedDb.table('users')
@@ -705,12 +778,7 @@ export const getEmployeeUtilizationReport = withAuth(
             'user_id',
             knex.raw("COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email, 'Unknown user') as name"),
           ),
-        // work_date is the canonical calendar day of the entry (NOT NULL since the
-        // work_date migration), so the window matches the whole-day capacity
-        // denominator instead of a rolling timestamp window.
-        scopedDb.table('time_entries')
-          .where('work_date', '>=', knex.raw(`CURRENT_DATE - INTERVAL '${rangeDays - 1} days'`))
-          .where('work_date', '<=', knex.raw('CURRENT_DATE'))
+        timeEntryWindow
           .select(
             'user_id',
             knex.raw('COUNT(*)::int as entries'),
@@ -760,8 +828,12 @@ export const getEmployeeUtilizationReport = withAuth(
         };
       });
 
-      const rangeEndDate = String((todayRow as any)?.today ?? '').slice(0, 10);
-      return buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate);
+      // Capacity is counted back from the last day the numerator covers: the
+      // (already clamped) end of a custom window, or the database's today.
+      const rangeEndDate = reportWindow.range
+        ? reportWindow.range.to
+        : String((todayRow as any)?.today ?? '').slice(0, 10);
+      return buildEmployeeUtilizationReport(inputRows, reportWindow.rangeDays, rangeEndDate, reportWindow.range);
     } catch (error) {
       const expected = reportingActionErrorFrom(error);
       if (expected) return expected;

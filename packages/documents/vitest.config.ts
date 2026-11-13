@@ -128,6 +128,7 @@ export default defineConfig({
           include: [
             'tests/**/*.test.ts',
             'src/lib/renderHtmlToPng.test.ts',
+            'src/lib/uploadSessionClient.test.ts',
             'src/lib/documentPreviewProvenance.test.ts',
             'src/lib/documentPreviewPending.test.ts',
             'src/lib/renderHtmlToPng.failure.test.ts',

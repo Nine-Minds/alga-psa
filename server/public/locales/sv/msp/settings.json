@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Ett obligatoriskt fält för användarroll saknas: {{field}}.",
       "nameRequired": "Rollnamn krävs.",
       "builtInRename": "Inbyggda roller kan inte byta namn.",
-      "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen."
+      "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen.",
+      "lastMspAdmin": "En organisation måste behålla minst en aktiv användare med rollen MSP Admin.",
+      "lastRole": "En användare måste behålla minst en roll. Tilldela en annan roll först och ta sedan bort den här."
     },
     "secrets": {
       "tenantContextMissing": "Organisationskontext saknas. Ladda om sidan och försök igen.",

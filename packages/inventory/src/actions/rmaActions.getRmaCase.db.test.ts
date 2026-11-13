@@ -22,6 +22,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => holder.allowe
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: holder.knex, tenant: holder.tenant }),
   withTransaction: (db: Knex, fn: (trx: Knex.Transaction) => Promise<unknown>) => db.transaction(fn),
+  resolveEffectiveTimeZone: async () => 'UTC',
 }));
 
 import { getRmaCase, listRmaCases } from './rmaActions';
@@ -70,10 +71,12 @@ describe('getRmaCase', () => {
     const list = (await listRmaCases()) as any[];
     const fromList = list.find((r) => r.rma_id === rmaId);
     expect(one).toBeTruthy();
-    const { age_days: a1, ...restOne } = one as any;
+    const { age_days: a1, calendar_today, calendar_time_zone, ...restOne } = one as any;
     const { age_days: a2, ...restList } = fromList;
     expect(restOne).toEqual(restList);
-    expect(Object.keys(one as object).sort()).toEqual(Object.keys(fromList).sort());
+    expect(Object.keys(one as object).filter((key) => key !== 'calendar_today' && key !== 'calendar_time_zone').sort()).toEqual(Object.keys(fromList).sort());
+    expect(calendar_today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(calendar_time_zone).toBe('UTC');
     expect((one as any).client_name).toBeTruthy();
     expect((one as any).returned_serial_number).toMatch(/^SN-/);
     expect(a1).toBe(a2);
