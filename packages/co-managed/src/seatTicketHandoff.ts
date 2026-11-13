@@ -274,11 +274,17 @@ function fingerprint(to: CoManagedSeatResponsibility, request: CoManagedSeatHand
     request.operationId, request.expectedRevision, request.note, request.technicianUserId])).digest('hex');
 }
 
-function receipt(row: any): CoManagedSeatHandoffReceipt {
+interface ReceiptRow {
+  operation_id: string; ticket_id: string; arrangement_id: string; revision: number; note: string;
+  from_responsibility: CoManagedSeatResponsibility; to_responsibility: CoManagedSeatResponsibility;
+  actor_user_id: string; assigned_to: string | null; occurred_at: Date | string; request_fingerprint: string;
+}
+
+function receipt(row: ReceiptRow): CoManagedSeatHandoffReceipt {
   return {
     operationId: row.operation_id, ticketId: row.ticket_id, arrangementId: row.arrangement_id,
     from: row.from_responsibility, to: row.to_responsibility, revision: row.revision, note: row.note,
-    actorUserId: row.actor_user_id, assignedTo: row.assigned_to ?? null, occurredAt: new Date(row.occurred_at).toISOString(),
+    actorUserId: row.actor_user_id, assignedTo: row.assigned_to, occurredAt: new Date(row.occurred_at).toISOString(),
   };
 }
 
@@ -298,7 +304,8 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
       .first('client_id', 'board_id', 'assigned_to');
 
     // Looked up under the ticket lock when the ticket exists, so a concurrent replay waits for the first attempt.
-    const prior = await sponsor.table('co_managed_seat_ticket_handoffs').where('operation_id', request.operationId).first();
+    const prior: ReceiptRow | undefined = await sponsor.table('co_managed_seat_ticket_handoffs')
+      .where('operation_id', request.operationId).first();
     if (prior) {
       if (prior.request_fingerprint !== requestFingerprint) throw new CoManagedSeatHandoffError('OPERATION_CONFLICT');
       // The original receipt, whatever has happened to the ticket since.
