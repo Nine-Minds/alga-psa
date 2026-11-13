@@ -561,7 +561,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     ] = await Promise.all([
       // Comments, with read-time bundle provenance owned by the shared read
       // layer so this load and every refresh path return identical shapes.
-      Comment.getAllbyTicketId(trx, tenant, ticketId),
+      // An internal reader sees only the audiences their organization may (a seat technician never a private note).
+      // LEVERAGE: pattern internal-audience-reader — 'internal user → reader id' is derived per entry point (here, commentActions, ticketActivityActions, TicketService); a request principal that carried its audience reader would own it
+      Comment.getAllbyTicketId(trx, tenant, ticketId, user.user_type === 'internal' ? user : undefined),
       
       // Documents
       tenantLeftJoin(
