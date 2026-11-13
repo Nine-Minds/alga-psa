@@ -34,6 +34,12 @@ export async function claimTicketChargeSources(
   if (orderedClaims.some(({ sourceUpdatedAt }) => !sourceUpdatedAt)) {
     throw new Error(`${sourceKind} source versions are required.`);
   }
+  // Each source may back exactly one invoice line; a repeated id would make
+  // the claimed-count check pass for the wrong reason.
+  const duplicate = orderedClaims.find((claim, index) => index > 0 && orderedClaims[index - 1].sourceId === claim.sourceId);
+  if (duplicate) {
+    throw new Error(`${sourceKind} source ${duplicate.sourceId} appears on more than one invoice line; each source can be billed only once.`);
+  }
 
   const values = orderedClaims.map(() => (
     '(?::uuid, ?::timestamptz, ?::uuid, ?::uuid, ?::integer, ?::bigint, ?::text)'

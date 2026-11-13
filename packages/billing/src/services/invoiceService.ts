@@ -894,8 +894,13 @@ async function validateManualTicketSources(
         serviceId: entry.service_id, serviceName: service.service_name,
       });
     } else if (link.kind === 'ticket_material') {
+      if (!link.updatedAt) {
+        throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected product has no loaded version. Refresh and try again.');
+      }
+      // Compare the version in SQL against the locked row: a JS Date drops microseconds.
       const material = await tenantScopedTable(tx, tenant, 'ticket_materials')
-        .where({ ticket_material_id: link.materialId }).forUpdate().first();
+        .where({ ticket_material_id: link.materialId }).forUpdate()
+        .first('*', tx.raw('(updated_at = ?::timestamptz) AS version_matches', [link.updatedAt]));
       if (!material || material.is_billed) {
         throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected product is already billed or removed.');
       }
@@ -905,26 +910,28 @@ async function validateManualTicketSources(
       if (material.currency_code !== invoice.currency_code) {
         throw new ManualInvoiceError('SOURCE_CURRENCY_MISMATCH', 'The selected product currency does not match the invoice.');
       }
+      // The claim matches the stored rate exactly, so validation applies the same rule.
+      const materialRate = Number(material.rate);
+      if (!Number.isSafeInteger(materialRate) || materialRate < 0) throw reject();
       if (item.service_id !== material.service_id || item.quantity !== Number(material.quantity) ||
-          item.rate !== Math.max(0, Math.round(Number(material.rate) || 0))) throw reject();
-      if (!link.updatedAt || !await tenantScopedTable(tx, tenant, 'ticket_materials')
-        .where({ ticket_material_id: link.materialId, updated_at: link.updatedAt }).first('ticket_material_id')) {
+          item.rate !== materialRate) throw reject();
+      if (material.version_matches !== true) {
         throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected product changed after selection. Refresh and try again.');
       }
     } else if (link.kind === 'ticket_fixed_fee') {
+      if (!link.updatedAt) {
+        throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected fixed-fee service has no loaded version. Refresh and try again.');
+      }
       const entry = await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
-        .where({ entry_id: link.entryId }).forUpdate().first();
+        .where({ entry_id: link.entryId }).forUpdate()
+        .first('*', tx.raw('(updated_at = ?::timestamptz) AS version_matches', [link.updatedAt]));
       if (!entry || entry.is_billed) {
         throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected fixed-fee service is already billed or removed.');
       }
       if (entry.ticket_id !== ticket.ticket_id || entry.client_id !== invoice.client_id ||
           Number(entry.quantity) <= 0 || item.service_id !== entry.service_id ||
           item.quantity !== Number(entry.quantity) || item.rate !== Number(entry.rate)) throw reject();
-      if (!link.updatedAt) {
-        throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected fixed-fee service changed after selection. Refresh and try again.');
-      }
-      if (!await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
-        .where({ entry_id: link.entryId, updated_at: link.updatedAt }).first('entry_id')) {
+      if (entry.version_matches !== true) {
         throw new ManualInvoiceError('SOURCE_CHANGED', 'The selected fixed-fee service changed after selection. Refresh and try again.');
       }
       if (entry.currency_code !== invoice.currency_code) {
@@ -1335,9 +1342,6 @@ export async function persistManualInvoiceCharges(
           : 'The fixed-fee service was already invoiced or removed.',
         { recordId: failedClaim.sourceId },
       );
-    }
-    if (claimedIds.size !== claims.length) {
-      throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', `A ${sourceKind.replace('_', ' ')} source was selected more than once.`);
     }
   }
 

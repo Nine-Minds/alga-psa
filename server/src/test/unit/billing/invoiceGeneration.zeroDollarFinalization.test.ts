@@ -197,6 +197,8 @@ const mocks = vi.hoisted(() => {
   knex.raw = vi.fn((sql: string, bindings: unknown[] = []) => {
     if (!sql.startsWith('UPDATE ticket_materials AS source')) return sql;
     if (updateErrors.ticket_materials) throw updateErrors.ticket_materials;
+    // The tenant filter below only mirrors production if the SQL carries it.
+    if (!/WHERE source\.tenant = \?/.test(sql)) throw new Error('Ticket material claim SQL is missing its tenant predicate.');
 
     const [invoiceId, claimedAt, updatedAt] = bindings;
     const tenant = bindings.at(-1);
@@ -654,7 +656,8 @@ describe('invoice generation zero-dollar recurring handling', () => {
     expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
   });
 
-  it('rolls back the invoice and returns localized guidance when a fixed-fee source changed', async () => {
+  // The real fixed-fee claim mismatch is covered in ticketFixedFeeInvoice.test.ts; this checks the orchestration only.
+  it('maps a fixed-fee SOURCE_CHANGED from persistence to localized guidance and rolls back the invoice', async () => {
     mocks.persistInvoiceCharges.mockRejectedValueOnce(new ManualInvoiceError(
       'SOURCE_CHANGED',
       'A ticket fixed-fee service changed or was already billed. Refresh and try again.',
