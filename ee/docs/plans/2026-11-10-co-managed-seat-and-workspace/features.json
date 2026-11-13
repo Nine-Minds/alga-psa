@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Capability `co-managed-seat` is registered on `release-v2-0-feature`: admission requires the flag and a pool entitlement row for a `psa` tenant; service requires any seat arrangement row; it is included in the server capability bootstrap.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "`FORCE_CAPABILITIES=co-managed-seat:off` closes seat admission and service for every tenant without changing `co-managed`; `co-managed-seat:on` admits without PostHog.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment A — Seat pool: allocation kinds and capability"
     ]
