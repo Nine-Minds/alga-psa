@@ -217,7 +217,7 @@ export async function addMaterial(
 
     const product = await trx('service_catalog')
       .where({ tenant, service_id: input.service_id, item_kind: 'product' })
-      .select('service_id')
+      .select('service_id', 'manufacturer')
       .first();
     if (!product) {
       throw new MaterialValidationError('service_id must reference an existing product', 'service_id');
@@ -378,6 +378,7 @@ export async function addMaterial(
       // asset section (asset_associations) once created.
       const assetLink = {
         ...pendingAsset,
+        manufacturer: (product as { manufacturer?: string | null }).manufacturer ?? null,
         parentType: input.parent_type,
         parentId: input.parent_id,
         createdBy: performedBy,
