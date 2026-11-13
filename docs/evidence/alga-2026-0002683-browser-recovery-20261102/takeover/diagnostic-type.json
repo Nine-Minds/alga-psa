@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-11-02T17:34:34.141036+00:00",
+  "command": [
+    "browser-type",
+    "--selector=#probe-input",
+    "--text=card-owned-input-verified",
+    "--clear"
+  ],
+  "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+  "exitStatus": 0,
+  "stdout": "{\"paneId\":\"c8403826-ff91-488f-aa28-8447b4f96c06\",\"success\":true,\"result\":{\"typed\":true,\"target\":\"#probe-input\",\"value\":\"card-owned-input-verified\"}}\n",
+  "stderr": ""
+}
