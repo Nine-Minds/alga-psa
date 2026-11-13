@@ -862,7 +862,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'co_managed_seat_board_scopes', deletion: 'ordered' },
   { table: 'co_managed_seat_project_grants', deletion: 'ordered' },
   { table: 'co_managed_seat_assignments', deletion: 'ordered' },
-  { table: 'co_managed_seat_arrangements', deletion: 'ordered' },
+  { table: 'co_managed_seat_arrangements', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'co_managed_allocations', deletion: 'ordered' },
   { table: 'co_managed_relationship_closures', deletion: 'ordered' },
   { table: 'co_managed_archive_manifests', deletion: 'ordered' },
