@@ -2249,6 +2249,7 @@
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
+      "{{width}} × {{height}} mm",
       "API",
       "CSV",
       "Datto RMM",

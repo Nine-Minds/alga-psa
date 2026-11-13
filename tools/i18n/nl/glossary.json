@@ -2226,6 +2226,7 @@
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
+      "{{width}} × {{height}} mm",
       "({{count}} ticket)",
       "({{count}} tickets)",
       ",",

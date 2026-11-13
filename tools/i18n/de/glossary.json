@@ -2350,6 +2350,7 @@
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
+      "{{width}} × {{height}} mm",
       " (Standard)",
       "(optional)",
       "(Standard)",
