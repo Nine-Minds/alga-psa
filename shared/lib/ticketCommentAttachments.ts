@@ -3,7 +3,7 @@ import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { canReadTicket, canWriteTicket } from '@alga-psa/authorization/portal/ticketAccess.server';
-import { internalReaderAudienceSql } from './commentAudience';
+import { COMMENT_UPLOAD_URL_PATTERN, internalReaderAudienceSql } from './commentAudience';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -117,7 +117,7 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 /** Only server upload URLs are claim candidates; ordinary links never adopt documents. */
 export function commentAttachmentFileIds(note: unknown): string[] {
   if (typeof note !== 'string') return [];
-  const matches = note.matchAll(new RegExp(`/api/documents/(?:view|download)/(${UUID})(?=[^0-9a-f-]|$)`, 'gi'));
+  const matches = note.matchAll(new RegExp(`${COMMENT_UPLOAD_URL_PATTERN.prefix}(${UUID})${COMMENT_UPLOAD_URL_PATTERN.suffix}`, 'gi'));
   return [...new Set(Array.from(matches, match => match[1].toLowerCase()))];
 }
 
@@ -172,7 +172,14 @@ export async function reconcileCommentAttachments(trx: Connection, tenant: strin
 export async function canReadCommentAttachment(conn: Connection, tenant: string, userId: string, documentId: string, ticketAccess?: Map<string, Promise<boolean>>): Promise<boolean> {
   const db = tenantDb(conn, tenant);
   const row = await db.table('ticket_comment_attachments').where({ document_id: documentId }).first();
-  if (!row) return true; // Existing Documents uploads retain their original policy.
+  if (!row) {
+    // No attachment row: an ordinary Documents upload keeps its original policy, except that an
+    // internal reader also needs every comment that names the file in its note (a legacy inline
+    // image) to be visible to them. Other readers are not decided here.
+    const reader = await db.table('users').where({ user_id: userId, user_type: 'internal' })
+      .first(conn.raw('(?) as document_visible', [internalReaderAudienceSql(conn, tenant, userId).documentVisible(conn.raw('?::uuid', [documentId]))]));
+    return !reader || reader.document_visible === true;
+  }
   // Callers filtering many attachments share one decision per ticket.
   let access = ticketAccess?.get(row.ticket_id);
   if (!access) {
@@ -187,9 +194,14 @@ export async function canReadCommentAttachment(conn: Connection, tenant: string,
   // seat technician only what their organization may. Decided in the comment read itself.
   const audience = user?.user_type === 'internal' ? internalReaderAudienceSql(conn, tenant, userId) : null;
   const comment = await db.table('comments').where({ comment_id: row.comment_id, ticket_id: row.ticket_id })
-    .first('comments.*', ...(audience ? [conn.raw('(?) as audience_visible', [audience.commentVisible('comments.comment_id')])] : []));
+    .first('comments.*', ...(audience ? [
+      conn.raw('(?) as audience_visible', [audience.commentVisible('comments.comment_id')]),
+      // Every owner, not only this row's comment: the same rule the activity list applies.
+      conn.raw('(?) as document_visible', [audience.documentVisible(conn.raw('?::uuid', [documentId]))]),
+    ] : []));
   if (!comment || comment.deleted_at || comment.publish_state === 'canceled') return false;
-  return audience ? comment.audience_visible === true : await isPublicAttachmentComment(conn, tenant, row.comment_id, row.ticket_id);
+  return audience ? comment.audience_visible === true && comment.document_visible === true
+    : await isPublicAttachmentComment(conn, tenant, row.comment_id, row.ticket_id);
 }
 
 export async function listPublishedCommentAttachments(conn: Connection, tenant: string, ticketId: string, commentId: string) {

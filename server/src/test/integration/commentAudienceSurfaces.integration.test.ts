@@ -65,12 +65,12 @@ describe('comment audience in attachments, activity and search (integration)', (
     return documentId;
   }
 
-  async function activity(eventType: string, entityType: 'comment' | 'document' | 'ticket', entityId: string) {
+  async function activity(eventType: string, entityType: 'comment' | 'document' | 'ticket', entityId: string, sink: string[] = auditIds) {
     const before = new Set((await t('ticket_audit_logs').where({ ticket_id: ticketId }).select('audit_id')).map(row => row.audit_id));
     await writeTicketActivity(knex, { tenant, ticketId, eventType, entityType, entityId,
       actor: { actorType: 'user', userId: mspUser }, source: 'ui', details: { marker: TERM } } as any);
     const added = (await t('ticket_audit_logs').where({ ticket_id: ticketId }).select('audit_id')).map(row => row.audit_id).filter(id => !before.has(id));
-    auditIds.push(...added);
+    sink.push(...added);
   }
 
   async function searchPrincipal(userId: string): Promise<SearchAclPrincipal> {
@@ -263,6 +263,123 @@ describe('comment audience in attachments, activity and search (integration)', (
       expect(sorted((await searchHits(acl)).map(h => h.id))).toEqual(sorted(mine()));
       const verified = await verifyResultVisibility(knex, acl, mine().map(id => ({ type: 'ticket_comment' as const, id })));
       expect(verified).toHaveLength(mine().length);
+    });
+  });
+
+  /**
+   * A comment saved before attachment rows existed owns its inline image only through the upload
+   * URL in its note: the document is associated with the ticket and has no
+   * `ticket_comment_attachments` row. The parent's audience still decides the file bytes gate, the
+   * document list and the document's activity event for a seat technician.
+   */
+  describe('documents owned only by the upload URL in a comment note', () => {
+    const legacyAudit: string[] = [];
+    const legacyComments: string[] = [];
+    const documents: Record<'private' | 'shared' | 'both' | 'standalone', string> = {
+      private: randomUUID(), shared: randomUUID(), both: randomUUID(), standalone: randomUUID(),
+    };
+    const files = new Map<string, string>();
+    const all = () => Object.values(documents);
+    const inlineImage = (text: string, ...fileIds: string[]) => JSON.stringify([
+      { id: randomUUID(), type: 'paragraph', props: {}, content: [{ type: 'text', text, styles: {} }], children: [] },
+      ...fileIds.map(fileId => ({ id: randomUUID(), type: 'image', props: { url: `/api/documents/view/${fileId}`, name: 'legacy.png' }, children: [] })),
+    ]);
+
+    beforeAll(async () => {
+      for (const documentId of all()) {
+        const fileId = randomUUID();
+        files.set(documentId, fileId);
+        await t('external_files').insert({ tenant, file_id: fileId, file_name: `${TERM}.png`, original_name: `${TERM}.png`,
+          mime_type: 'image/png', file_size: 1, storage_path: `${TERM}/${fileId}`, uploaded_by_id: mspUser });
+        await t('documents').insert({ tenant, document_id: documentId, document_name: `${TERM}-legacy.png`, file_id: fileId, user_id: mspUser, created_by: mspUser });
+        await t('document_associations').insert({ tenant, document_id: documentId, entity_id: ticketId, entity_type: 'ticket' });
+      }
+      const file = (key: keyof typeof documents) => files.get(documents[key])!;
+      legacyComments.push(await comment({ is_internal: true, note: inlineImage(`${TERM} legacy private image`, file('private'), file('both')) }));
+      legacyComments.push(await comment({ is_internal: true, collaboration_audience: 'shared_it', note: inlineImage(`${TERM} legacy shared image`, file('shared'), file('both')) }));
+      // Saving a comment today claims its uploads; the legacy state is the same rows without the claim.
+      await t('ticket_comment_attachments').whereIn('document_id', all()).delete();
+      for (const documentId of all()) await activity('TICKET_DOCUMENT_ATTACHED', 'document', documentId, legacyAudit);
+    }, 120_000);
+
+    afterAll(async () => {
+      if (!tenant) return;
+      await t('ticket_audit_logs').whereIn('audit_id', legacyAudit).delete().catch(() => undefined);
+      await t('ticket_comment_attachments').whereIn('document_id', all()).delete().catch(() => undefined);
+      await t('document_associations').whereIn('document_id', all()).delete().catch(() => undefined);
+      await t('documents').whereIn('document_id', all()).delete().catch(() => undefined);
+      await t('external_files').whereIn('file_id', [...files.values()]).delete().catch(() => undefined);
+      for (const id of legacyComments) {
+        const c = await t('comments').where({ comment_id: id }).first('thread_id');
+        if (!c) continue;
+        await t('comment_threads').where({ thread_id: c.thread_id }).delete().catch(() => undefined);
+        await t('comments').where({ comment_id: id }).delete().catch(() => undefined);
+        await t('comment_threads').where({ thread_id: c.thread_id }).delete().catch(() => undefined);
+      }
+    });
+
+    /** What one reader gets of the four documents on each surface. */
+    async function surfaces(userId: string) {
+      const bytes: string[] = [];
+      for (const documentId of all()) if (await canReadCommentAttachment(knex, tenant, userId, documentId)) bytes.push(documentId);
+      const listed = await filterReadableCommentAttachments(knex, tenant, userId, all().map(document_id => ({ document_id })));
+      const events = (await readTicketActivity(knex, tenant, ticketId, { internalReaderId: userId })).filter(row => legacyAudit.includes(row.audit_id));
+      const timeline = (await buildUnifiedTicketTimeline(knex, tenant, ticketId, { internalReaderId: userId }))
+        .filter(e => e.type === 'activity' && all().includes(e.activity?.entity_id ?? ''));
+      return {
+        bytes: sorted(bytes), listed: sorted(listed.map(d => d.document_id)),
+        events: sorted(events.map(row => row.entity_id as string)), timeline: sorted(timeline.map(e => e.activity?.entity_id as string)),
+      };
+    }
+
+    it('the fixture is the legacy state: associated with the ticket, named in a note, no attachment row', async () => {
+      expect(await t('ticket_comment_attachments').whereIn('document_id', all())).toHaveLength(0);
+      expect(await t('document_associations').whereIn('document_id', all()).where({ entity_type: 'ticket', entity_id: ticketId })).toHaveLength(4);
+      const [privateNote] = legacyComments;
+      expect((await t('comments').where({ comment_id: privateNote }).first('note')).note).toContain(`/api/documents/view/${files.get(documents.private)}`);
+      expect(await Comment.get(knex, tenant, privateNote, seatUser)).toBeUndefined();
+    });
+
+    it('a seat technician gets the shared image and the standalone document, never the private image', async () => {
+      const visible = sorted([documents.shared, documents.standalone]);
+      // `both` is named by the private note too: every owner must be visible.
+      expect(await surfaces(seatUser)).toEqual({ bytes: visible, listed: visible, events: visible, timeline: visible });
+    });
+
+    it('MSP staff get all four on every surface', async () => {
+      const everything = sorted(all());
+      expect(await surfaces(mspUser)).toEqual({ bytes: everything, listed: everything, events: everything, timeline: everything });
+    });
+
+    it('a private note that only mentions another file id leaves the standalone document alone', async () => {
+      // The owner is found by the upload URL, not by any text that happens to contain the id.
+      const mention = await comment({ is_internal: true, note: inlineImage(`${TERM} see file ${files.get(documents.standalone)} and https://example.test/view/${files.get(documents.standalone)}`) });
+      legacyComments.push(mention);
+      expect(await canReadCommentAttachment(knex, tenant, seatUser, documents.standalone)).toBe(true);
+    });
+
+    it('a mapped attachment of a shared note is still hidden when a private note also names its file', async () => {
+      const documentId = attachments.get(sharedNote)!;
+      const fileId = randomUUID();
+      await t('external_files').insert({ tenant, file_id: fileId, file_name: `${TERM}.png`, original_name: `${TERM}.png`,
+        mime_type: 'image/png', file_size: 1, storage_path: `${TERM}/${fileId}`, uploaded_by_id: mspUser });
+      files.set(`mapped:${documentId}`, fileId);
+      await t('documents').where({ document_id: documentId }).update({ file_id: fileId });
+      await t('document_associations').insert({ tenant, document_id: documentId, entity_id: ticketId, entity_type: 'ticket' });
+      try {
+        expect(await canReadCommentAttachment(knex, tenant, seatUser, documentId)).toBe(true);
+        // Written straight to the row: saving such a note today is refused, a legacy row just has it.
+        const note = await comment({ is_internal: true, note: inlineImage(`${TERM} legacy private reuse`) });
+        legacyComments.push(note);
+        await t('comments').where({ comment_id: note }).update({ note: inlineImage(`${TERM} legacy private reuse`, fileId) });
+        expect(await canReadCommentAttachment(knex, tenant, seatUser, documentId)).toBe(false);
+        expect(await canReadCommentAttachment(knex, tenant, mspUser, documentId)).toBe(true);
+        await t('comments').where({ comment_id: note }).update({ note: inlineImage(`${TERM} legacy private reuse`) });
+        expect(await canReadCommentAttachment(knex, tenant, seatUser, documentId)).toBe(true);
+      } finally {
+        await t('document_associations').where({ document_id: documentId }).delete();
+        await t('documents').where({ document_id: documentId }).update({ file_id: null });
+      }
     });
   });
 

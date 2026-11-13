@@ -93,10 +93,9 @@ function activityVisibleToInternalReaderSql(knex: Knex | Knex.Transaction, tenan
   const entityUuid = () => knex.raw('CASE WHEN ticket_audit_logs.entity_id ~ ? THEN ticket_audit_logs.entity_id::uuid END', [UUID_PATTERN]);
   return knex.raw(`((?) OR CASE ticket_audit_logs.entity_type
       WHEN 'comment' THEN (?)
-      WHEN 'document' THEN NOT EXISTS (SELECT 1 FROM ticket_comment_attachments aud_ca
-        WHERE aud_ca.tenant = ? AND aud_ca.document_id = (?) AND NOT (?))
+      WHEN 'document' THEN (?)
       ELSE TRUE END)`,
-  [audience.staff, audience.commentVisible(entityUuid()), tenant, entityUuid(), audience.commentVisible('aud_ca.comment_id')]);
+  [audience.staff, audience.commentVisible(entityUuid()), audience.documentVisible(entityUuid())]);
 }
 
 function tenantScopedTable(
