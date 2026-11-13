@@ -85,10 +85,104 @@ async function supportsTriggers(knex, tableName) {
   return !(await isDistributed(knex, tableName));
 }
 
+const LOCK_ATTEMPTS = 3;
+
+// Run DDL that takes ACCESS EXCLUSIVE on a hot table in its own transaction,
+// giving up after 2s rather than queueing every reader behind a long
+// transaction, and retrying a few times before failing the migration. Needs
+// `exports.config = { transaction: false }` in the calling migration.
+// LEVERAGE: pattern migration-lock-retry — 20261029140400 and 20261106090000 carry a savepoint variant of this retry that could move here.
+async function inLockBoundedTransaction(knex, work) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await knex.transaction(async (trx) => {
+        await trx.raw("SET LOCAL lock_timeout = '2s'");
+        return work(trx);
+      });
+    } catch (error) {
+      if (error.code !== '55P03' || attempt >= LOCK_ATTEMPTS) throw error;
+    }
+  }
+}
+
+// Local tables that FK to `tableName` would lose all their rows to the
+// cascading TRUNCATE in distributeLocalTenantTables (see 20260513100800's header).
+async function localReferrers(knex, tableName) {
+  const r = await knex.raw(
+    `SELECT DISTINCT con.conrelid::regclass::text AS tbl
+       FROM pg_constraint con
+      WHERE con.contype = 'f'
+        AND con.confrelid = ?::regclass
+        AND con.conrelid <> con.confrelid
+        AND NOT EXISTS (SELECT 1 FROM pg_dist_partition p WHERE p.logicalrelid = con.conrelid)`,
+    [tableName],
+  );
+  return (r.rows ?? []).map((row) => row.tbl);
+}
+
+// Move tenant tables that were left coordinator-local onto the shards, next to
+// an already-distributed table they join. A local table joined to distributed
+// ones is recursively planned into a subplan shipped over a loopback
+// connection, which fails whenever the coordinator is near max_connections.
+//
+// - `tables`: referenced tables before the tables that FK to them. Every
+//   unique key must already lead with `tenant`.
+// - `dropTriggers`: { table: [trigger, ...] }. Citus refuses to distribute a
+//   table that has triggers; whatever a trigger did becomes the application's
+//   job once the table is distributed, so audit the writers first.
+//
+// All pending tables move in one transaction, so a failed attempt leaves every
+// table local with its triggers in place. No-op on plain Postgres, when
+// `colocateWith` is not distributed, and for tables already distributed.
+async function distributeLocalTenantTables(knex, { tables, colocateWith, dropTriggers = {} }) {
+  if (!(await hasCitus(knex))) return;
+  if (!(await isDistributed(knex, colocateWith))) return;
+
+  const present = [];
+  for (const table of tables) {
+    if (await knex.schema.hasTable(table)) present.push(table);
+  }
+  const pending = [];
+  for (const table of present) {
+    if (!(await isDistributed(knex, table))) pending.push(table);
+  }
+
+  if (pending.length > 0) {
+    await inLockBoundedTransaction(knex, async (trx) => {
+      // The tenant colocation group reaches reference tables through FKs, so
+      // Citus refuses the default parallel DDL (SET LOCAL resets on commit).
+      await trx.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
+      for (const table of pending) {
+        for (const trigger of dropTriggers[table] ?? []) {
+          await trx.raw('DROP TRIGGER IF EXISTS ?? ON ??', [trigger, table]);
+        }
+        await trx.raw("SELECT create_distributed_table(?, 'tenant', colocate_with => ?)", [table, colocateWith]);
+      }
+    });
+  }
+
+  // Rows that existed before distribution stay in the coordinator parent heap,
+  // invisible to routed queries but in the way of later DDL. Referrers first;
+  // a table something local still references keeps its heap rather than
+  // cascade into that table.
+  for (const table of [...present].reverse()) {
+    const heap = await knex.raw('SELECT pg_relation_size(?::regclass) AS bytes', [table]);
+    if (Number(heap.rows?.[0]?.bytes ?? 0) === 0) continue;
+    const blockers = await localReferrers(knex, table);
+    if (blockers.length > 0) {
+      console.log(`${table}: skipping local-heap truncate; local referrers: ${blockers.join(', ')}`);
+      continue;
+    }
+    await knex.raw('SELECT truncate_local_data_after_distributing_table(?::regclass)', [table]);
+  }
+}
+
 module.exports = {
   canCreateDistributedTable,
   isDistributed,
   ensureTenantDistribution,
+  inLockBoundedTransaction,
+  distributeLocalTenantTables,
   hasCitus,
   hasConstraint,
   isFkCompatible,
