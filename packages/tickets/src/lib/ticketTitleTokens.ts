@@ -15,7 +15,7 @@
  * Client-safe: no server imports. The Quick Add dialog uses it directly.
  */
 
-import { findUnknownTokens, hasTokens, substituteTokens } from './titleTokens';
+import { findUnknownTokens, formatCalendarDate, isCalendarDate, hasTokens, substituteTokens } from './titleTokens';
 
 export const TICKET_TITLE_TOKENS = ['client', 'contact', 'due_date', 'month', 'year'] as const;
 export type TicketTitleToken = (typeof TICKET_TITLE_TOKENS)[number];
@@ -39,32 +39,19 @@ export function titleHasTokens(template: string): boolean {
   return hasTokens(template);
 }
 
-function resolveLocale(locale: string | null | undefined): string {
-  if (!locale) return 'en';
-  try {
-    return Intl.DateTimeFormat.supportedLocalesOf([locale])[0] ?? 'en';
-  } catch {
-    return 'en';
-  }
-}
-
-/** The due date is a calendar date, so it is formatted as floating UTC midnight: no server TZ involved. */
-function dueDateAsUtc(dueDate: string): Date {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dueDate);
-  if (!match) throw new Error(`Invalid due date "${dueDate}" (expected YYYY-MM-DD)`);
-  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-}
-
 export function renderTitleTemplate(template: string, context: TitleTokenContext): string {
   const unknown = findUnknownTitleTokens(template);
   if (unknown.length > 0) {
     throw new Error(`Unknown title token${unknown.length > 1 ? 's' : ''}: ${unknown.map((t) => `{{${t}}}`).join(', ')}`);
   }
 
-  const locale = resolveLocale(context.locale);
-  const due = context.dueDate ? dueDateAsUtc(context.dueDate) : null;
+  if (context.dueDate && !isCalendarDate(context.dueDate)) {
+    throw new Error(`Invalid due date "${context.dueDate}" (expected YYYY-MM-DD)`);
+  }
+
+  // The due date is a calendar date, so it is formatted as floating UTC midnight: no server TZ involved.
   const format = (options: Intl.DateTimeFormatOptions) =>
-    due ? new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(due) : '';
+    context.dueDate ? formatCalendarDate(context.dueDate, context.locale, options) : '';
 
   const values: Record<TicketTitleToken, () => string> = {
     client: () => context.clientName ?? '',

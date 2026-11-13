@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildTicketRoutingExecutionConfig,
   getServiceRequestDraftLifecycleLabel,
+  resolveTicketSubjectTemplate,
   type TicketRoutingConfigInput,
 } from '../../lib/service-requests/editorHelpers';
 
@@ -15,7 +16,7 @@ function createRoutingInput(overrides: Partial<TicketRoutingConfigInput> = {}): 
     assignedToUserId: '',
     itilImpact: '',
     itilUrgency: '',
-    titleFieldKey: 'request_title',
+    titleTemplate: '{{request_title}}',
     descriptionPrefix: 'Portal Service Request',
     ...overrides,
   };
@@ -49,12 +50,12 @@ describe('service request editor helpers', () => {
     });
 
     expect(nextConfig).toEqual({
-      titleTemplate: 'New Hire Setup: {{employee_name}}',
+      // The editor owns the subject template, so the saved input replaces the existing one.
+      titleTemplate: '{{request_title}}',
       includeFormResponsesInDescription: true,
       boardId: 'board-456',
       statusId: 'status-456',
       priorityId: 'priority-456',
-      titleFieldKey: 'request_title',
       descriptionPrefix: 'Portal Service Request',
     });
   });
@@ -82,10 +83,40 @@ describe('service request editor helpers', () => {
       statusId: 'status-123',
       categoryId: 'category-123',
       subcategoryId: 'subcategory-123',
-      titleFieldKey: 'request_title',
+      titleTemplate: '{{request_title}}',
       descriptionPrefix: 'Portal Service Request',
       itilImpact: 2,
       itilUrgency: 4,
     });
+  });
+
+  it('writes titleTemplate and removes a legacy titleFieldKey', () => {
+    const nextConfig = buildTicketRoutingExecutionConfig({
+      existingExecutionConfig: { titleFieldKey: 'request_title', titleTemplate: 'Old: {{a}}' },
+      ticketRoutingConfigInput: createRoutingInput({ titleTemplate: '  New Hire: {{employee_name}}  ' }),
+      boardPriorityType: 'custom',
+    });
+
+    expect(nextConfig.titleTemplate).toBe('New Hire: {{employee_name}}');
+    expect(nextConfig).not.toHaveProperty('titleFieldKey');
+  });
+
+  it('removes both title keys when the subject template is blank', () => {
+    const nextConfig = buildTicketRoutingExecutionConfig({
+      existingExecutionConfig: { titleFieldKey: 'request_title', titleTemplate: 'Old: {{a}}' },
+      ticketRoutingConfigInput: createRoutingInput({ titleTemplate: '   ' }),
+      boardPriorityType: 'custom',
+    });
+
+    expect(nextConfig).not.toHaveProperty('titleTemplate');
+    expect(nextConfig).not.toHaveProperty('titleFieldKey');
+  });
+
+  it('resolves the subject template from titleTemplate, a legacy titleFieldKey, or nothing', () => {
+    expect(resolveTicketSubjectTemplate({ titleTemplate: 'A {{b}}', titleFieldKey: 'c' })).toBe('A {{b}}');
+    expect(resolveTicketSubjectTemplate({ titleFieldKey: 'request_title' })).toBe('{{request_title}}');
+    expect(resolveTicketSubjectTemplate({ titleTemplate: '  ', titleFieldKey: 'request_title' })).toBe('{{request_title}}');
+    expect(resolveTicketSubjectTemplate({})).toBe('');
+    expect(resolveTicketSubjectTemplate(null)).toBe('');
   });
 });

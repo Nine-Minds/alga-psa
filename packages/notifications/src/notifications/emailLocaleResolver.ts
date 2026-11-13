@@ -129,12 +129,17 @@ export async function resolveEmailLocale(
   }
 }
 
+/**
+ * `knex` is optional: callers already inside a transaction pass it so the read uses that connection
+ * instead of taking a second one from the pool.
+ */
 export async function getTenantDefaultLocale(
   tenantId: string,
-  userType?: 'client' | 'internal'
+  userType?: 'client' | 'internal',
+  existingKnex?: Knex | Knex.Transaction
 ): Promise<SupportedLocale> {
   try {
-    const knex = await getConnection(tenantId);
+    const knex = existingKnex ?? await getConnection(tenantId);
     const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
       .first();
 

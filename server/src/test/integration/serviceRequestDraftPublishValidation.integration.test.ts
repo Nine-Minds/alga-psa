@@ -149,6 +149,59 @@ describe('service request draft save and publish validation', () => {
     });
   });
 
+  it('rejects ticket subject and description prefix placeholders that are not insertable form fields', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+
+    await tenantRows().insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    const routing = { boardId: 'board-123', statusId: 'status-123', priorityId: 'priority-123' };
+    await tenantTable(tenant, 'service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Placeholder Request',
+      description: 'Uses placeholders',
+      form_schema: {
+        fields: [
+          { key: 'request_title', type: 'short-text', label: 'Request Title' },
+          { key: 'attachment', type: 'file-upload', label: 'Attachment' },
+        ],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: { ...routing, titleTemplate: 'Ticket: {{request_title}} {{missing_field}}' },
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'draft',
+    });
+
+    const unknownSubject = await validateServiceRequestDefinitionForPublish(db, tenant, definitionId);
+    expect(unknownSubject.isValid).toBe(false);
+    expect(unknownSubject.errors).toContain('Execution: Ticket subject uses unknown field(s): {{missing_field}}');
+
+    await tenantTable(tenant, 'service_request_definitions')
+      .where({ tenant, definition_id: definitionId })
+      .update({
+        execution_config: { ...routing, titleTemplate: 'Ticket: {{request_title}}', descriptionPrefix: 'See {{attachment}}' },
+      });
+    const fileUploadPrefix = await validateServiceRequestDefinitionForPublish(db, tenant, definitionId);
+    expect(fileUploadPrefix.isValid).toBe(false);
+    expect(fileUploadPrefix.errors).toContain('Execution: Description prefix uses unknown field(s): {{attachment}}');
+
+    await tenantTable(tenant, 'service_request_definitions')
+      .where({ tenant, definition_id: definitionId })
+      .update({
+        execution_config: { ...routing, titleTemplate: 'Ticket: {{ request_title }}', descriptionPrefix: 'For {{request_title}}' },
+      });
+    const valid = await validateServiceRequestDefinitionForPublish(db, tenant, definitionId);
+    expect(valid).toMatchObject({ isValid: true, errors: [] });
+  });
+
   it('keeps an already-published definition live while draft edits are saved', async () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();

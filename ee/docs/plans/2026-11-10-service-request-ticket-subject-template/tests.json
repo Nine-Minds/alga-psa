@@ -1,0 +1,70 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit (server/src/test/unit/serviceRequestTicketTextTemplate.unit.test.ts): one form schema with short-text, long-text, select (editor-style value 'laptop' / label 'Laptop'), date, checkbox and file-upload fields renders each placeholder correctly: trimmed text, select label, select raw value when option missing, '2026-03-02' -> 'March 2, 2026' in en and '2. März 2026' in de, checkbox -> supplied yes/no, missing/hidden key -> '', unknown token -> '', file-upload token -> '', no throw",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: unknown-token detection and insertable-field list: unknown key and file-upload key are reported, known keys (including '{{ key }}' with spaces) are not; getServiceRequestTemplateFields excludes file-upload and keeps form order",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: subject chain and normalization: template wins; template rendering empty falls back to titleFieldKey, then first string answer, then 'Service Request <id8>'; long-text newlines collapse to single spaces; a 400-char result (template branch and first-answer branch) is capped to 255 chars ending in an ellipsis without splitting a surrogate pair",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F013"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit (extend serviceRequestEditorHelpers.unit.test.ts): buildTicketRoutingExecutionConfig writes titleTemplate and removes an existing titleFieldKey; blank template removes both; resolveTicketSubjectTemplate returns titleTemplate, else '{{request_title}}' for a legacy titleFieldKey config, else ''",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration (extend serviceRequestTicketExecution.integration.test.ts): published definition with employee_name (text), start_date (date) and hardware (select value/label differ) plus titleTemplate 'New Hire for Employee: {{employee_name}}, {{start_date}} ({{hardware}})' and descriptionPrefix 'Requested for {{employee_name}}' -> submitPortalServiceRequest creates a ticket titled 'New Hire for Employee: Jane Doe, March 2, 2026 (Laptop)' and a description starting 'Requested for Jane Doe'; existing titleFieldKey test still yields 'New Hire Laptop'",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration (extend serviceRequestDraftPublishValidation.integration.test.ts): publish validation fails with an 'Execution:' error naming {{missing_field}} when titleTemplate references a field not on the form, and when descriptionPrefix references a file-upload field; a template using only real fields validates",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Component (packages/ui TemplateTokenInput.test.tsx): Insert field menu lists labels; choosing an item inserts '{{key}}' at the caret replacing the selection, completes a started '{{emp' instead of duplicating, and appends when the input never had a caret; error text renders",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  }
+]
