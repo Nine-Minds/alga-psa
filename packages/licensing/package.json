@@ -26,6 +26,11 @@
       "import": "./src/co-managed-write-admission.ts",
       "require": "./src/co-managed-write-admission.ts"
     },
+    "./server": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts",
+      "require": "./src/server.ts"
+    },
     "./actions": {
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts",
@@ -42,7 +47,8 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
-    "@alga-psa/validation": "*"
+    "@alga-psa/validation": "*",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

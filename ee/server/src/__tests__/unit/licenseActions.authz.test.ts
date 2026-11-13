@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   emailCalls: vi.fn(),
 }));
 
-vi.mock('../../lib/license/get-license-usage', () => ({ getLicenseUsage: vi.fn() }));
+vi.mock('@alga-psa/licensing/server', () => ({ getLicenseUsage: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({ getSession: mocks.getSession }));
 vi.mock('@alga-psa/auth/actions', () => ({
   checkAccountManagementPermission: mocks.read,

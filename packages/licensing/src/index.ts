@@ -8,7 +8,6 @@
  * temporal worker (ERR_MODULE_NOT_FOUND). Do not re-add actions to the root.
  */
 
-export * from './lib/get-license-usage';
 export * from './lib/license-types';
 export * from './lib/co-managed-license';
 export * from './lib/co-managed-capacity';

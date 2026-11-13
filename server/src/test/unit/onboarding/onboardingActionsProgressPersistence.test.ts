@@ -73,7 +73,7 @@ vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({
   createClientContact: vi.fn(),
 }));
 
-vi.mock('../../../../../packages/licensing/src/lib/get-license-usage', () => ({
+vi.mock('@alga-psa/licensing/server', () => ({
   getLicenseUsage: vi.fn(async () => ({ limit: null, used: 0 })),
 }));
 

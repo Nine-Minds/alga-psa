@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
   tenantRow: { current: undefined as undefined | Record<string, unknown> },
 }));
 
-vi.mock('../../lib/license/get-license-usage', () => ({ getLicenseUsage: vi.fn() }));
+vi.mock('@alga-psa/licensing/server', () => ({ getLicenseUsage: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({ getSession: mocks.getSession }));
 vi.mock('@alga-psa/auth/actions', () => ({
   checkAccountManagementPermission: mocks.checkAccountManagementPermission,
