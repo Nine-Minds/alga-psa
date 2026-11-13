@@ -31,10 +31,10 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder()).toEqual(computed.order);
   });
 
-  it('has 618 unique ordered names', () => {
+  it('has 619 unique ordered names', () => {
     const order = tenantDeletionOrder();
-    expect(order).toHaveLength(618);
-    expect(new Set(order).size).toBe(618);
+    expect(order).toHaveLength(619);
+    expect(new Set(order).size).toBe(619);
   });
 
   it('deletes client-keyed fixed-fee entries before their ordered foreign-key parents', () => {
