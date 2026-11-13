@@ -157,6 +157,8 @@
         "ghost": "zużycie widmo",
         "rmaAging": "starzejące się RMA",
         "rmaClient": "zamiennik",
+        "rmaVendorReturnOverdue": "zaległy zwrot do dostawcy",
+        "rmaVendorReturnApproaching": "zbliża się termin zwrotu do dostawcy",
         "priceCreep": "wzrost kosztu",
         "billCreep": "wzrost rachunku",
         "billsOverdue": "rachunki po terminie",
@@ -165,7 +167,8 @@
         "stockOut": "brak zapasu",
         "poPartial": "częściowe PO",
         "warranty": "gwarancja",
-        "deadStock": "zapas martwy"
+        "deadStock": "zapas martwy",
+        "rmaVendorReturn": "Zaległy zwrot do dostawcy"
       },
       "fact": {
         "unbilledSo": "wysłane, wciąż niezafakturowane",
@@ -177,6 +180,8 @@
         "ghostTech": "zamknięto {{count}} zgłoszeń sprzętowych bez rozliczonych części",
         "rmaVendor": "zaległy zwrot — brak odpowiedzi od {{days}} dni",
         "rmaClient": "wciąż należny zamiennik",
+        "rmaVendorReturnOverdue": "termin zwrotu do dostawcy minął {{date}} — {{days}} dni po terminie",
+        "rmaVendorReturnApproaching": "zwrot do dostawcy do {{date}} — pozostało {{days}} dni",
         "priceCreepSo": "wciąż wyceniane po starym koszcie",
         "priceCreepQuotes": "{{count}} otwartych wycen poniżej bieżącego kosztu",
         "priceCreepBill": "rachunek przekracza dopasowane PO",
@@ -186,7 +191,8 @@
         "stockLow": "{{service}} poniżej progu zamówienia",
         "poPartial": "częściowo przyjęte PO wciąż otwarte",
         "warranty": "{{count}} jednostek z gwarancją wygasającą <30d",
-        "deadStock": "brak ruchu od 90 dni"
+        "deadStock": "brak ruchu od 90 dni",
+        "rmaVendorReturn": "Zwrot do dostawcy do {{date}} — {{days}} dni opóźnienia"
       },
       "meta": {
         "unbilledSo": "{{so}} · {{lines}} pozycji · wysłane {{days}}d temu",
@@ -207,7 +213,8 @@
         "stockLevel": "dostępne {{available}} · próg zamówienia {{reorder}}",
         "poPartial": "{{po}} · przyjęto {{received}} z {{ordered}} · {{vendor}}",
         "warranty": "{{count}} klientów",
-        "deadStock": "{{locations}} lokalizacji wiąże kapitał obrotowy"
+        "deadStock": "{{locations}} lokalizacji wiąże kapitał obrotowy",
+        "rmaVendorReturn": "{{ref}} · termin zwrotu do dostawcy"
       },
       "metric": {
         "ageDays": "{{days}}d",
@@ -1379,6 +1386,7 @@
       "confirmShipDeadUnit": "Odeślij uszkodzoną jednostkę do dostawcy. Urządzenie w depozycie zostanie zapisane jako u dostawcy.",
       "confirmVendorReceipt": "Potwierdź, że dostawca otrzymał uszkodzoną jednostkę. Zgłoszenie zostanie zamknięte jako rozwiązane, a depozyt jako zwrócony dostawcy.",
       "deadUnitNotShipped": "Uszkodzona jednostka jeszcze niewysłana, termin: {{date}}",
+      "deadUnitApproaching": "Zbliża się termin zwrotu uszkodzonego urządzenia: {{date}}",
       "deadUnitShippedLate": "Uszkodzona jednostka wysłana po terminie, termin: {{date}}",
       "returnByHint": "Data, do której dostawca wymaga wysłania uszkodzonej jednostki, liczona od dostawy tego zamiennika. Pozostaw bez zmian, aby zachować datę z zatwierdzenia.",
       "actions": {
@@ -1394,7 +1402,8 @@
         "returnToClient": "Zwróć klientowi",
         "shipDeadUnitToVendor": "Wyślij uszkodzoną jednostkę do dostawcy",
         "confirmVendorReceipt": "Dostawca otrzymał uszkodzoną jednostkę",
-        "close": "Zamknij RMA"
+        "close": "Zamknij RMA",
+        "chargeVendorNonReturn": "Zarejestruj opłatę za brak zwrotu do dostawcy"
       },
       "events": {
         "opened": "Roszczenie otwarte",
@@ -1410,7 +1419,8 @@
         "deadUnitShipped": "Uszkodzona jednostka wysłana do dostawcy",
         "vendorReceiptConfirmed": "Dostawca otrzymał uszkodzoną jednostkę",
         "closed": "Zamknięte",
-        "note": "Notatka"
+        "note": "Notatka",
+        "vendorNonReturnCharge": "Zarejestrowano opłatę za brak zwrotu do dostawcy"
       },
       "outcome": {
         "covered": "Objęte",
@@ -1445,7 +1455,10 @@
         "inboundTracking": "Numer śledzenia przesyłki przychodzącej",
         "counterparty": "Zwrócono do",
         "closeReason": "Powód zamknięcia",
-        "note": "Notatka"
+        "note": "Notatka",
+        "vendorChargeAmount": "Kwota opłaty",
+        "vendorChargeCurrency": "Waluta",
+        "selectCurrency": "Wybierz walutę"
       },
       "claim": {
         "title": "Nowe roszczenie gwarancyjne",
@@ -1461,7 +1474,8 @@
         "track": "Śledź",
         "stockHint": "Urządzeń sprzedanych z magazynu nie można zgłaszać tutaj. Zamiast tego użyj opcji Otwórz RMA z jednostki magazynowej.",
         "submit": "Otwórz roszczenie"
-      }
+      },
+      "vendorChargeHint": "Zarejestrowanie tej opłaty zamyka zaległe zobowiązanie do zwrotu dostawcy. Nie rejestruje wysyłki ani odbioru."
     }
   },
   "salesOrders": {

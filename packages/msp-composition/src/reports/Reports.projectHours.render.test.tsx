@@ -35,8 +35,18 @@ const stubT = (_key: string, options?: Record<string, any>) => {
 };
 const stubTranslation = { t: stubT };
 
+const stubFormatters = { formatCalendarDate: (day: string) => day };
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => stubTranslation,
+  useFormatters: () => stubFormatters,
+}));
+
+// The real range picker reaches for DateTimeField's i18n hooks, which the stub
+// above does not provide; the range selector is not what this suite covers.
+vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
+  DateRangePicker: () => null,
+  formatLocalYMD: (date: Date) => date.toISOString().slice(0, 10),
 }));
 
 vi.mock('@alga-psa/reporting/actions/projectReportActions', () => ({

@@ -157,6 +157,9 @@
         "ghost": "ghost usage",
         "rmaAging": "rma aging",
         "rmaClient": "replacement",
+        "rmaVendorReturnOverdue": "overdue vendor return",
+        "rmaVendorReturnApproaching": "vendor return due soon",
+        "rmaVendorReturn": "overdue vendor return",
         "priceCreep": "price creep",
         "billCreep": "bill creep",
         "billsOverdue": "overdue bills",
@@ -177,6 +180,9 @@
         "ghostTech": "closed {{count}} hardware tickets, no parts billed",
         "rmaVendor": "owes credit — no response {{days}} days",
         "rmaClient": "replacement unit still owed",
+        "rmaVendorReturnOverdue": "vendor return due {{date}} — {{days}}d overdue",
+        "rmaVendorReturnApproaching": "vendor return due {{date}} — {{days}}d remaining",
+        "rmaVendorReturn": "vendor return due {{date}} — {{days}}d overdue",
         "priceCreepSo": "still priced at old cost",
         "priceCreepQuotes": "{{count}} open quote(s) now below current cost",
         "priceCreepBill": "bill exceeds matching PO",
@@ -199,6 +205,7 @@
         "ghostTech": "est. materials exposure from closed hardware tickets",
         "rmaVendor": "{{ref}} · oldest open receivable",
         "rmaClient": "{{ref}} · {{service}} · due in {{days}}d",
+        "rmaVendorReturn": "{{ref}} · vendor return deadline",
         "priceCreepSo": "{{so}} · margin exposure if fulfilled as-is",
         "priceCreepQuotes": "quote(s): {{numbers}}",
         "priceCreepBill": "{{bill}} · flagged vs matching PO",
@@ -1378,7 +1385,9 @@
       "confirmCredit": "Record that the vendor credited this device. The custody episode is closed as disposed.",
       "confirmShipDeadUnit": "Ship the dead unit back to the vendor. The device in custody is recorded as with the vendor.",
       "confirmVendorReceipt": "Confirm the vendor received the dead unit. The case is closed as resolved and the custody episode as returned to the vendor.",
+      "vendorChargeHint": "Recording this charge closes the overdue vendor return obligation. It does not record shipment or receipt.",
       "deadUnitNotShipped": "Dead unit not yet shipped, was due {{date}}",
+      "deadUnitApproaching": "Dead unit return due soon: {{date}}",
       "deadUnitShippedLate": "Dead unit shipped late, was due {{date}}",
       "returnByHint": "The date the vendor needs the dead unit shipped by, counted from delivery of this replacement. Leave it as is to keep the date from approval.",
       "actions": {
@@ -1394,6 +1403,7 @@
         "returnToClient": "Return to client",
         "shipDeadUnitToVendor": "Ship dead unit to vendor",
         "confirmVendorReceipt": "Vendor received dead unit",
+        "chargeVendorNonReturn": "Record vendor non-return charge",
         "close": "Close RMA"
       },
       "events": {
@@ -1409,6 +1419,7 @@
         "returnedToClient": "Returned to client",
         "deadUnitShipped": "Dead unit shipped to vendor",
         "vendorReceiptConfirmed": "Vendor received dead unit",
+        "vendorNonReturnCharge": "Vendor non-return charge recorded",
         "closed": "Closed",
         "note": "Note"
       },
@@ -1445,6 +1456,9 @@
         "inboundTracking": "Inbound tracking number",
         "counterparty": "Returned to",
         "closeReason": "Closed reason",
+        "vendorChargeAmount": "Charge amount",
+        "vendorChargeCurrency": "Currency",
+        "selectCurrency": "Select currency",
         "note": "Note"
       },
       "claim": {

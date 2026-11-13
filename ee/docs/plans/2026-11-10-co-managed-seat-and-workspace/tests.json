@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Unit: capability matrix for `co-managed-seat` across flag, entitlement, product code, participation and both `FORCE_CAPABILITIES` values, with `co-managed` unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
@@ -211,7 +211,7 @@
   {
     "id": "T024",
     "description": "DB integration: MSP staff post shared IT on an arrangement client's ticket and are refused on another client's ticket; a seat technician is refused a private note and a legacy internal note.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F040"
@@ -220,7 +220,7 @@
   {
     "id": "T025",
     "description": "DB integration: a reply inherits its thread's audience; a seat technician cannot change audience; an MSP widening without confirmation is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F042"

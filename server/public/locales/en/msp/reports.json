@@ -66,7 +66,11 @@
     "fallbackTitle": "Report",
     "dateRange": {
       "lastDays": "Last {{count}} days",
-      "allActiveProjects": "All active projects, life-to-date"
+      "allActiveProjects": "All active projects, life-to-date",
+      "customRange": "{{start}} to {{end}}",
+      "customFrom": "From date",
+      "customTo": "To date",
+      "agingSnapshotNote": "Counts and age groups show tickets open right now. The date range only filters the oldest open tickets list."
     },
     "units": {
       "daysWithCount": "{{count}} days"
@@ -564,7 +568,13 @@
         "not_client_attributable": "This report is not available to you because it cannot be limited to your clients: it reads {{table}}, which is not attributable to a client.",
         "unnarrowable_report": "This report is not available to you because it cannot be limited to your clients: it totals the accounts of every client together."
       },
-      "clientOutOfScope": "You do not have access to this client."
+      "clientOutOfScope": "You do not have access to this client.",
+      "range": {
+        "malformed": "The custom date range could not be read. Pick both dates again.",
+        "backwards": "The end date is before the start date.",
+        "tooLong": "A custom date range can cover at most {{maxDays}} days.",
+        "startsInFuture": "The custom date range starts after today, so there is nothing to report yet."
+      }
     }
   }
 }

@@ -1,0 +1,40 @@
+{
+  "capturedAt": "2026-11-02T17:31:43.925Z",
+  "windowId": "window-1-1793580971518",
+  "windowFocused": false,
+  "activeSpaceId": "7bde1750-8419-4b2d-9003-2a7397645a1f",
+  "activeTabId": "f536897d-f1ff-41ce-9106-420e0aafc2c8",
+  "focusedPaneId": "lightweight-review-guide-643ed6e3-de5e-48a4-9239-1255c6bcb257-ts_robert-X670E-Pro-RS",
+  "cardSpaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+  "cardSpaceActive": false,
+  "cardTabs": [
+    {
+      "tabId": "8d252cb3-78cc-4e30-94da-14565106c3cf",
+      "paneId": "c8b5a26d-b238-4df9-87f0-4d0b95e3b67d",
+      "region": "inactive",
+      "visible": false,
+      "paneVisible": false
+    },
+    {
+      "tabId": "d82ffbfc-e0ae-4cf5-908d-b45ced84a2e8",
+      "paneId": "3433cd20-0467-480e-82db-db8263b998f2",
+      "region": "inactive",
+      "visible": false,
+      "paneVisible": false
+    },
+    {
+      "tabId": "4c723e2f-2bff-44d4-9761-c8c9af6c457d",
+      "paneId": "3d19d33a-1fac-4b2f-a917-3f57cc7d7f8b",
+      "region": "inactive",
+      "visible": false,
+      "paneVisible": false
+    },
+    {
+      "tabId": "1d7870ad-c887-49a7-a763-0235776e06ea",
+      "paneId": "376c175b-b142-46db-b907-5be706188acf",
+      "region": "inactive",
+      "visible": false,
+      "paneVisible": false
+    }
+  ]
+}

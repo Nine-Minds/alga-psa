@@ -130,7 +130,7 @@ export function RmaManager({
   const [vendorId, setVendorId] = useState('');
   const [vendorRef, setVendorRef] = useState('');
   const [actioning, setActioning] = useState(false);
-  const [rmaDetail, setRmaDetail] = useState<IRmaCase | null>(null);
+  const [rmaDetail, setRmaDetail] = useState<(IRmaCase & { calendar_today?: string; calendar_time_zone?: string }) | null>(null);
   const [rmaUnavailable, setRmaUnavailable] = useState(false);
   const [mirroredSystem, setMirroredSystem] = useState<string | undefined>(undefined);
 
@@ -743,7 +743,7 @@ export function RmaManager({
               vendorCaseSystems={vendorCaseSystems}
               selectedVendorCaseSystem={mirroredSystem}
               onChanged={async (updated) => {
-                setRmaDetail(updated);
+                setRmaDetail({ ...updated, calendar_today: rmaDetail.calendar_today, calendar_time_zone: rmaDetail.calendar_time_zone });
                 await reload();
               }}
             />

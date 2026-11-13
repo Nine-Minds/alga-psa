@@ -16,7 +16,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -2999,16 +2999,11 @@ export class TicketService extends BaseService<ITicket> {
         apiCommentId = replyGeneratedId;
         apiThreadId = parent.thread_id;
         apiIsInternal = Boolean(parent.thread_is_internal);
-        if (parent.thread_audience != null) {
-          // Labelled thread: serialise against an audience change; the reply inherits it.
-          await lockLabelledThreadAudience(trx, context.tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
-          apiThreadAudience = {
-            collaboration_audience: assertReplyAudience(
-              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-              { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null },
-            ),
-          };
-        }
+        // Labelled thread: serialise against an audience change; the reply inherits it.
+        const apiReplyAudience = await nativeReplyAudience(trx, context.tenant,
+          { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+          { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null, ticketId });
+        if (apiReplyAudience) apiThreadAudience = { collaboration_audience: apiReplyAudience };
       } else {
         // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
         const apiCommentIds = await trx.raw(
@@ -3031,6 +3026,7 @@ export class TicketService extends BaseService<ITicket> {
           isInternal: apiIsInternal,
           authorType: apiAuthor.authorType,
           audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
+          ticketId,
         });
 
         await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
