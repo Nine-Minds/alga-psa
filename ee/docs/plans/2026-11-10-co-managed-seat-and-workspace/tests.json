@@ -388,7 +388,7 @@
   {
     "id": "T043",
     "description": "Integration with the email emulator: a seat technician's reply to a shared IT notification is stored as shared IT and a reply to a requester notification as requester.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]

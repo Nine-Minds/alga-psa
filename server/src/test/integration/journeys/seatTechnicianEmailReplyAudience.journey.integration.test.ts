@@ -3,17 +3,20 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
+import { EmulatorHost } from '@alga-psa/emulator-host';
+import smtpSink, { type CapturedEmail } from '@alga-psa/emulator-smtp-sink';
+import { TenantEmailService } from '@alga-psa/email';
 import { changeThreadAudience, commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 
 // S33 (T043): a seat technician answers a ticket notification by email.
 //
-// The whole loop is real except the wire: an MSP agent's note is written through the comment
-// model, TICKET_COMMENT_ADDED runs through the real subscriber and sendEventEmail (the reply token
-// is minted and persisted), and the technician's reply is a real inbound message handed to
-// processInboundEmailInApp, carrying the token from the notification they received. The SMTP
-// transport is replaced by a recorder, which stands in for the email emulator: the running app
-// and its emulators are not available to this suite.
+// The whole loop is real, the wire included: an MSP agent's note is written through the comment
+// model, TICKET_COMMENT_ADDED runs through the real subscriber, sendEventEmail (the reply token
+// is minted and persisted) and the tenant's real SMTP provider, which delivers to the email
+// emulator (`@alga-psa/emulator-smtp-sink`, started in this process on free ports). The
+// technician's reply is built from the message the emulator received, its Message-ID and the
+// reply token in its body, and handed to processInboundEmailInApp as a real inbound message.
 //
 // A reply is stored with the audience of the notification it answers: shared IT stays shared IT,
 // requester stays requester, and nothing a technician writes is ever stored private or widened.
@@ -21,8 +24,9 @@ import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 let db: Knex;
 let tenantId: string;
 
-// Transport seam: every provider-level send lands here instead of the wire.
-const outboundSends: any[] = [];
+let mailHost: EmulatorHost;
+let mailControlUrl: string;
+let originalEmailSettings: Record<string, unknown> | undefined;
 
 function tenantTable<Row extends object = Record<string, unknown>>(
   connection: Knex,
@@ -108,35 +112,6 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
-// The transport. TenantEmailService builds providers through
-// EmailProviderManager; everything above this seam (thread-header
-// application, Message-ID stamping, email_sending_logs persistence)
-// stays real.
-vi.mock('@alga-psa/email/providers/EmailProviderManager', () => {
-  class MockEmailProviderManager {
-    async initialize(_settings: unknown): Promise<void> {}
-    async getAvailableProviders(_tenantId: string) {
-      return [
-        {
-          providerId: 'seat-reply-transport',
-          providerType: 'smtp',
-          sendEmail: async (message: any, _tenant: string) => {
-            outboundSends.push(message);
-            return {
-              success: true,
-              messageId: `seat-reply-provider-${outboundSends.length}`,
-              providerId: 'seat-reply-transport',
-              providerType: 'smtp',
-              sentAt: new Date(),
-            };
-          },
-        },
-      ];
-    }
-  }
-  return { EmailProviderManager: MockEmailProviderManager };
-});
-
 const HOOK_TIMEOUT = 180_000;
 const FROM_DOMAIN = 'seatreply.example';
 const SEAT_DOMAIN = 'client-it.example';
@@ -210,15 +185,22 @@ describe('journey: a seat technician replies by email to a ticket notification',
       mailbox: providerMailbox, is_active: true, status: 'connected', inbound_ticket_defaults_id: defaultsId,
       created_at: db.fn.now(), updated_at: db.fn.now(),
     });
-    if (!(await t('tenant_email_settings').first('tenant'))) {
-      await t('tenant_email_settings').insert({
-        tenant: tenantId, default_from_domain: FROM_DOMAIN, email_provider: 'smtp',
-        provider_configs: JSON.stringify([
-          { providerType: 'smtp', providerId: 'seat-reply-smtp', isEnabled: true, config: { from: `support@${FROM_DOMAIN}` } },
-        ]),
-        fallback_enabled: true, tracking_enabled: false,
-      });
-    }
+    // The tenant's outbound mail goes to the emulator for the length of this suite.
+    mailHost = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
+    const { controlPort, ports } = await mailHost.start();
+    mailControlUrl = `http://127.0.0.1:${controlPort}`;
+    const emulatorSettings = {
+      default_from_domain: FROM_DOMAIN, email_provider: 'smtp',
+      provider_configs: JSON.stringify([{
+        providerType: 'smtp', providerId: 'seat-reply-smtp-emulator', isEnabled: true,
+        config: { host: '127.0.0.1', port: ports['smtp-sink'], secure: false, rejectUnauthorized: false, requireTLS: false, from: `support@${FROM_DOMAIN}` },
+      }]),
+      fallback_enabled: true, tracking_enabled: false,
+    };
+    originalEmailSettings = await t('tenant_email_settings').first();
+    if (originalEmailSettings) await t('tenant_email_settings').update(emulatorSettings);
+    else await t('tenant_email_settings').insert({ tenant: tenantId, ...emulatorSettings });
+    await TenantEmailService.invalidateTenantSettings(tenantId);
 
     // The client with a live seat arrangement, and its one seat technician.
     clientId = uuidv4();
@@ -235,6 +217,19 @@ describe('journey: a seat technician replies by email to a ticket notification',
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    await mailHost?.stop().catch(() => undefined);
+    if (db && tenantId && mailControlUrl) {
+      if (originalEmailSettings) {
+        const { tenant: _tenant, ...restored } = originalEmailSettings;
+        for (const key of ['provider_configs', 'custom_domains']) {
+          if (restored[key] !== null && typeof restored[key] === 'object') restored[key] = JSON.stringify(restored[key]);
+        }
+        await t('tenant_email_settings').update(restored);
+      } else {
+        await t('tenant_email_settings').delete();
+      }
+      await TenantEmailService.invalidateTenantSettings(tenantId);
+    }
     if (db && arrangementId) {
       await t('co_managed_seat_board_scopes').where({ arrangement_id: arrangementId }).delete();
       await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId }).delete();
@@ -244,7 +239,7 @@ describe('journey: a seat technician replies by email to a ticket notification',
   }, HOOK_TIMEOUT);
 
   beforeEach(async () => {
-    outboundSends.length = 0;
+    await mailHost.reset('smtp-sink');
     await t('co_managed_seat_board_scopes').where({ arrangement_id: arrangementId }).delete();
     await t('co_managed_seat_board_scopes').insert({ tenant: tenantId, arrangement_id: arrangementId, board_id: boardId, can_create: false });
   });
@@ -280,15 +275,33 @@ describe('journey: a seat technician replies by email to a ticket notification',
     return { commentId, threadId: row.thread_id };
   }
 
-  /** The notification the technician received for one comment: the wire message and its reply token. */
+  /** Everything the emulator has received over SMTP since the last reset. */
+  async function deliveredMail(): Promise<CapturedEmail[]> {
+    const response = await fetch(`${mailControlUrl}/control/smtp-sink/state/emails`);
+    return ((await response.json())?.result ?? []) as CapturedEmail[];
+  }
+
+  /**
+   * The notification the technician received for one comment: the message as the emulator
+   * received it, the reply token printed in its body, and the row that token was persisted as.
+   */
   async function notificationTo(commentId: string) {
-    const message = outboundSends.find((send) => send.to?.some((r: any) => String(r.email).toLowerCase() === seatEmail));
-    const token = await t('email_reply_tokens').where({ comment_id: commentId, recipient_email: seatEmail }).first();
-    return { message, token };
+    const message = (await deliveredMail()).find((mail) => mail.to.some((address) => address.toLowerCase() === seatEmail));
+    const replyToken = message?.text.match(/\[ALGA-REPLY-TOKEN (\S+)[^\]]*\]/)?.[1];
+    const token = replyToken
+      ? await t('email_reply_tokens').where({ token: replyToken, comment_id: commentId, recipient_email: seatEmail }).first()
+      : undefined;
+    return { message, replyToken, token };
   }
 
   /** The technician hits reply in their mail client: quoted token footer, threaded on our Message-ID. */
-  function technicianReply(ticket: { ticketId: string; ticketNumber: string; title: string }, notification: { message: any; token: any }, text: string, from = seatEmail) {
+  function technicianReply(
+    ticket: { ticketId: string; ticketNumber: string; title: string },
+    notification: Awaited<ReturnType<typeof notificationTo>>,
+    text: string,
+    from = seatEmail,
+  ) {
+    if (!notification.message?.messageId || !notification.replyToken) throw new Error('The technician received no notification to reply to');
     const domain = from.split('@')[1];
     return processInboundEmailInApp({
       tenantId,
@@ -300,10 +313,11 @@ describe('journey: a seat technician replies by email to a ticket notification',
         to: [{ email: providerMailbox, name: 'Support' }],
         attachments: [],
         headers: { 'Authentication-Results': `mx.google.com; dkim=pass header.d=${domain}; spf=pass smtp.mailfrom=${from}` },
-        inReplyTo: notification.message?.headers?.['Message-ID'],
-        references: [notification.message?.headers?.['Message-ID']].filter(Boolean),
+        inReplyTo: notification.message.messageId,
+        references: [...notification.message.references, notification.message.messageId],
         subject: `Re: [Ticket #${ticket.ticketNumber}] ${ticket.title}`,
-        body: { text: `${text}\n\n[ALGA-REPLY-TOKEN ${notification.token.token} ticketId=${ticket.ticketId} commentId=${notification.token.comment_id}]` },
+        // Their mail client quotes the notification under the reply, token footer and all.
+        body: { text: `${text}\n\n${notification.message.text.split('\n').map((line) => `> ${line}`).join('\n')}` },
       } as any,
     });
   }
@@ -356,7 +370,7 @@ describe('journey: a seat technician replies by email to a ticket notification',
     const note = await agentNote(ticket.ticketId, 'Private: client is behind on the firewall renewal.', { is_internal: true });
     const notification = await notificationTo(note.commentId);
     expect(notification.message).toBeUndefined();
-    expect(notification.token).toBeUndefined();
+    expect(await t('email_reply_tokens').where({ comment_id: note.commentId, recipient_email: seatEmail }).first()).toBeUndefined();
   }, HOOK_TIMEOUT);
 
   it('a reply never follows a thread whose audience was widened after the notification was sent', async () => {
