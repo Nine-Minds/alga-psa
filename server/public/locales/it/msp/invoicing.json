@@ -2882,7 +2882,7 @@
         "labelFields": "Campi mostrati sull'etichetta",
         "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati.",
         "worksheetPageHint": "Un’etichetta di lavoro ticket con una pagina verticale larga almeno 210 mm (A4, Letter, Legal o carta personalizzata idonea) viene stampata come foglio di lavoro cliente a pagina intera, con numero di serie completo dell’asset e descrizione del ticket. Le pagine più piccole vengono stampate come etichette.",
-        "worksheetFieldsHint": "Nascondere la parte finale della serie nasconde anche il numero completo; nascondere il dettaglio nasconde anche la descrizione del ticket."
+        "worksheetFieldsHint": "Nascondere la parte finale del numero di serie nasconde anche il numero completo; nascondere il dettaglio nasconde anche la descrizione del ticket."
       },
       "placeholders": {
         "templateName": "Modello per {{type}}"
@@ -2928,7 +2928,7 @@
       "ticket-work-tag": "Etichetta ticket",
       "asset-identity": "Etichetta asset",
       "stock-unit-identity": "Etichetta unità di magazzino",
-      "staging-container": "Etichetta scatola di preparazione",
+      "staging-container": "Etichetta contenitore di preparazione",
       "rma-work-tag": "Etichetta RMA"
     },
     "labelFields": {

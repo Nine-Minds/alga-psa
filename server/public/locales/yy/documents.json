@@ -162,7 +162,6 @@
       "storage": "〖Şŧȯřȧɠḗ ···〗",
       "cpuCoreCount_one": "〖{{count}} ƈȯřḗ ······〗",
       "cpuCoreCount_other": "〖{{count}} ƈȯřḗş ······〗",
-      "cpuCoreCount_few": "〖{{count}} ƈȯřḗş ······〗",
       "cpuCoreCount_many": "〖{{count}} ƈȯřḗş ······〗"
     }
   },

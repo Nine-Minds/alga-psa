@@ -1689,7 +1689,7 @@
       "useTemplate": "Usa {{template}}",
       "copiesPerAsset": "Copie per asset",
       "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme.",
-      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli \"Carta del modello\" (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
+      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli «Carta del modello» (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
       "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli «Carta del modello» o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
       "worksheetPageSizeError": "Il foglio di lavoro non corrisponde al layout di stampa selezionato. Usa «Carta del modello» o un layout con la stessa carta del modello.",
       "worksheetTextOverflowError": "Questo foglio di lavoro contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
@@ -1713,7 +1713,7 @@
       "standard-asset-label": "Etichetta standard asset",
       "standard-asset-label-code128": "Etichetta standard asset con Code 128",
       "standard-stock-unit-label": "Etichetta standard unità di magazzino",
-      "standard-staging-container-label": "Etichetta standard contenitore di staging",
+      "standard-staging-container-label": "Etichetta standard contenitore di preparazione",
       "standard-rma-label": "Etichetta standard reso RMA",
       "standard-ticket-customer-worksheet-a4": "Foglio di lavoro cliente standard (A4)",
       "standard-ticket-customer-worksheet": "Foglio di lavoro cliente standard"

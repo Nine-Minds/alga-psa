@@ -1723,7 +1723,7 @@
       "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {
-      "standard-ticket-work-tag": "Standardowa etykieta zadania zgłoszenia",
+      "standard-ticket-work-tag": "Standardowa etykieta robocza zgłoszenia",
       "standard-asset-label": "Standardowa etykieta zasobu",
       "standard-asset-label-code128": "Standardowa etykieta zasobu z kodem 128",
       "standard-stock-unit-label": "Standardowa etykieta jednostki magazynowej",

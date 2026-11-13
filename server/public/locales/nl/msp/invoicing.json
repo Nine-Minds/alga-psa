@@ -2928,7 +2928,7 @@
       "ticket-work-tag": "Ticketwerklabel",
       "asset-identity": "Assetlabel",
       "stock-unit-identity": "Voorraadlabel",
-      "staging-container": "Label voor verzameldoos",
+      "staging-container": "Label voor verzamelcontainer",
       "rma-work-tag": "RMA-label"
     },
     "labelFields": {

@@ -2243,6 +2243,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "A4",
+      "Letter",
+      "Legal",
       "{{count}} ticket(s)",
       "{{actor}} • {{eventType}}",
       "Actor",

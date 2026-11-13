@@ -1703,13 +1703,13 @@
       "letter-full": "Feuille Letter, une par page"
     },
     "paper": {
-      "a4": "Feuille A4",
-      "letter": "Feuille Letter",
-      "legal": "Feuille Legal",
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal",
       "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {
-      "standard-ticket-work-tag": "Étiquette de tâche de ticket standard",
+      "standard-ticket-work-tag": "Étiquette de travail de ticket standard",
       "standard-asset-label": "Étiquette d’actif standard",
       "standard-asset-label-code128": "Étiquette d’actif standard avec Code 128",
       "standard-stock-unit-label": "Étiquette d’unité de stock standard",

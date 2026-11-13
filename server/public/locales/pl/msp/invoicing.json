@@ -1430,7 +1430,7 @@
           "invoice": "Faktura",
           "customer": "Klient",
           "tenant": "Organizacja",
-          "work-tag": "Etykieta pracy",
+          "work-tag": "Etykieta robocza",
           "asset": "Zasób"
         }
       },
@@ -2933,7 +2933,7 @@
         "labelClass": "Klasa etykiety",
         "labelFields": "Pola wyświetlane na etykiecie",
         "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane.",
-        "worksheetPageHint": "Etykieta zgłoszenia z pionową stroną o szerokości co najmniej 210 mm (A4, Letter, Legal lub odpowiedni papier niestandardowy) jest drukowana jako pełnostronicowa karta pracy klienta z pełnym numerem seryjnym zasobu i opisem zgłoszenia. Mniejsze strony drukują się jako etykiety.",
+        "worksheetPageHint": "Etykieta robocza zgłoszenia z pionową stroną o szerokości co najmniej 210 mm (A4, Letter, Legal lub odpowiedni papier niestandardowy) jest drukowana jako pełnostronicowa karta pracy klienta z pełnym numerem seryjnym zasobu i opisem zgłoszenia. Mniejsze strony drukują się jako etykiety.",
         "worksheetFieldsHint": "Ukrycie końcówki numeru seryjnego ukrywa też pełny numer; ukrycie szczegółów ukrywa też opis zgłoszenia."
       },
       "placeholders": {
@@ -2977,7 +2977,7 @@
       "rmaReturnSlip": "Dokument zwrotu RMA"
     },
     "labelClasses": {
-      "ticket-work-tag": "Etykieta zgłoszenia",
+      "ticket-work-tag": "Etykieta robocza zgłoszenia",
       "asset-identity": "Etykieta zasobu",
       "stock-unit-identity": "Etykieta jednostki magazynowej",
       "staging-container": "Etykieta pudełka kompletacyjnego",

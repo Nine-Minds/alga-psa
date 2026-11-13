@@ -2925,10 +2925,10 @@
       "rmaReturnSlip": "Comprovante de devolução de RMA"
     },
     "labelClasses": {
-      "ticket-work-tag": "Etiqueta de ticket",
+      "ticket-work-tag": "Etiqueta de trabalho do ticket",
       "asset-identity": "Etiqueta de ativo",
       "stock-unit-identity": "Etiqueta de unidade de estoque",
-      "staging-container": "Etiqueta de caixa de preparação",
+      "staging-container": "Etiqueta de contêiner de preparação",
       "rma-work-tag": "Etiqueta RMA"
     },
     "labelFields": {

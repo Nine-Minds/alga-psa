@@ -1694,16 +1694,16 @@
     },
     "layout": {
       "template-preferred": "Papel de la plantilla (predeterminado)",
-      "roll-4x2": "Una por etiqueta (rollo de 4 × 2 in)",
+      "roll-4x2": "Una por etiqueta (rollo de 4 × 2 pulg.)",
       "letter-2x5": "Hoja Letter, 2 × 5 (estilo Avery 5163)",
       "a4-2x7": "Hoja A4, 2 × 7 (estilo 99,1 × 38,1 mm)",
       "a4-full": "Hoja A4, una por página",
       "letter-full": "Hoja Letter, una por página"
     },
     "paper": {
-      "a4": "Hoja A4",
-      "letter": "Hoja Letter",
-      "legal": "Hoja Legal",
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal",
       "custom": "{{width}} × {{height}} mm"
     },
     "standardTemplates": {

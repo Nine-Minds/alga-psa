@@ -2081,6 +2081,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "A4",
+      "Letter",
+      "Legal",
       "minutes",
       "Urgent",
       "Standard",

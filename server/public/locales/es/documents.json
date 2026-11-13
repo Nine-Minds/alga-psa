@@ -145,7 +145,7 @@
       "ticketNumber": "Ticket n.º",
       "customer": "Cliente",
       "assetTag": "Etiqueta del activo",
-      "serial": "Serie",
+      "serial": "N.º de serie",
       "custodyLocation": "Ubicación de custodia",
       "nextAction": "Próxima acción",
       "assetSpecifications": "Especificaciones del activo",
@@ -162,7 +162,6 @@
       "storage": "Almacenamiento",
       "cpuCoreCount_one": "{{count}} núcleo",
       "cpuCoreCount_other": "{{count}} núcleos",
-      "cpuCoreCount_few": "{{count}} núcleos",
       "cpuCoreCount_many": "{{count}} núcleos"
     }
   },

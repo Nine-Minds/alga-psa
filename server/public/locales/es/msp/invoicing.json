@@ -2328,11 +2328,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Número de serie completo del activo",
-        "description": "Número de serie completo del activo seleccionado, disponible solo en hojas de trabajo de cliente en tamaño carta."
+        "description": "Número de serie completo del activo seleccionado, disponible solo en hojas de trabajo de cliente a página completa."
       },
       "label_ticketDescription": {
         "label": "Descripción del ticket",
-        "description": "Descripción del ticket como texto sin formato, disponible solo en hojas de trabajo de cliente en tamaño carta."
+        "description": "Descripción del ticket como texto sin formato, disponible solo en hojas de trabajo de cliente a página completa."
       },
       "label_custodyLocation": {
         "label": "Ubicación de custodia",

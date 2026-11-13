@@ -162,7 +162,6 @@
       "storage": "Storage",
       "cpuCoreCount_one": "{{count}} core",
       "cpuCoreCount_other": "{{count}} cores",
-      "cpuCoreCount_few": "{{count}} cores",
       "cpuCoreCount_many": "{{count}} cores"
     }
   },

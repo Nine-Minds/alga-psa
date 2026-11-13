@@ -1689,14 +1689,14 @@
       "useTemplate": "{{template}} gebruiken",
       "copiesPerAsset": "Exemplaren per asset",
       "adjacentCopies": "De exemplaren van elke asset worden samen afgedrukt.",
-      "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies \"Sjabloonpapier\" (of een lay-out voor een volledig vel), anders past de inhoud niet op het etiket.",
+      "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies „Sjabloonpapier“ (of een indeling voor een volledig vel), anders past de inhoud niet op het label.",
       "paperMismatchWarning": "Deze sjabloon is ontworpen voor {{template}}, maar de geselecteerde indeling print op {{layout}}. Kies „Sjabloonpapier“ of de passende indeling voor volle vellen, anders past de inhoud niet.",
-      "worksheetPageSizeError": "Het werkvel past niet bij de geselecteerde printindeling. Gebruik „Sjabloonpapier“ of een indeling met hetzelfde papier als de sjabloon.",
+      "worksheetPageSizeError": "Het werkblad past niet bij de geselecteerde printindeling. Gebruik „Sjabloonpapier“ of een indeling met hetzelfde papier als de sjabloon.",
       "worksheetTextOverflowError": "Dit werkblad bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt."
     },
     "layout": {
       "template-preferred": "Sjabloonpapier (standaard)",
-      "roll-4x2": "Eén per etiket (rol van 4 × 2 in)",
+      "roll-4x2": "Eén per label (rol van 4 × 2 in)",
       "letter-2x5": "Letter-vel, 2 × 5 (Avery 5163-stijl)",
       "a4-2x7": "A4-vel, 2 × 7 (99,1 × 38,1 mm-stijl)",
       "a4-full": "A4-vel, één per pagina",
@@ -1713,7 +1713,7 @@
       "standard-asset-label": "Standaard assetlabel",
       "standard-asset-label-code128": "Standaard assetlabel met Code 128",
       "standard-stock-unit-label": "Standaard voorraadunitlabel",
-      "standard-staging-container-label": "Standaard stagingcontainerlabel",
+      "standard-staging-container-label": "Standaard verzamelcontainerlabel",
       "standard-rma-label": "Standaard RMA-retourlabel",
       "standard-ticket-customer-worksheet-a4": "Standaard klantenwerkblad (A4)",
       "standard-ticket-customer-worksheet": "Standaard klantenwerkblad"

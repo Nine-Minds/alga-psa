@@ -1689,9 +1689,9 @@
       "useTemplate": "Använd {{template}}",
       "copiesPerAsset": "Exemplar per tillgång",
       "adjacentCopies": "Exemplaren för varje tillgång skrivs ut tillsammans.",
-      "templatePaperWarning": "Den här mallen skrivs ut på ett helt ark. Välj \"Mallens papper\" (eller en helsideslayout), annars får innehållet inte plats på etiketten.",
-      "paperMismatchWarning": "Den här mallen är utformad för {{template}}, men den valda layouten skriver ut på {{layout}}. Välj „Mallens papper“ eller matchande layout för hela ark, annars får innehållet inte plats.",
-      "worksheetPageSizeError": "Arbetsbladet matchar inte den valda utskriftslayouten. Använd „Mallens papper“ eller en layout med samma papper som mallen.",
+      "templatePaperWarning": "Den här mallen skrivs ut på ett helt ark. Välj ”Mallens papper” (eller en helsideslayout), annars får innehållet inte plats på etiketten.",
+      "paperMismatchWarning": "Den här mallen är utformad för {{template}}, men den valda layouten skriver ut på {{layout}}. Välj ”Mallens papper” eller matchande layout för hela ark, annars får innehållet inte plats.",
+      "worksheetPageSizeError": "Arbetsbladet matchar inte den valda utskriftslayouten. Använd ”Mallens papper” eller en layout med samma papper som mallen.",
       "worksheetTextOverflowError": "Det här bladet innehåller text som inte får plats. Justera layouten eller förkorta innehållet före utskrift."
     },
     "layout": {
@@ -1713,7 +1713,7 @@
       "standard-asset-label": "Standardetikett för tillgång",
       "standard-asset-label-code128": "Standardetikett för tillgång med kod 128",
       "standard-stock-unit-label": "Standardetikett för lagerenhet",
-      "standard-staging-container-label": "Standardetikett för stagingbehållare",
+      "standard-staging-container-label": "Standardetikett för plocklåda",
       "standard-rma-label": "Standardetikett för RMA-retur",
       "standard-ticket-customer-worksheet-a4": "Standardkundarbetsblad (A4)",
       "standard-ticket-customer-worksheet": "Standardkundarbetsblad"
