@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { UploadSizeLimitError } from '../src/ingest/errors';
 import {
+  NEXT_PROXY_MAX_BODY_BYTES,
   SERVER_ACTION_ENVELOPE_BYTES,
   assertWithinBufferedCap,
   effectiveBufferedCap,
@@ -50,12 +51,15 @@ describe('buffered upload caps', () => {
     vi.unstubAllEnvs();
   });
 
-  it('the server-action file limit is the body limit less the envelope, defaulting to 20mb', () => {
+  it('the server-action file limit is the body limit less the envelope, never above the 100 MB proxy limit', () => {
     expect(serverActionFileLimitBytes('20mb')).toBe(20 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
     expect(serverActionFileLimitBytes('1mb')).toBe(1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
     expect(() => serverActionFileLimitBytes('nonsense')).toThrow(/SERVER_ACTIONS_BODY_LIMIT/);
     expect(() => serverActionFileLimitBytes('')).toThrow(/SERVER_ACTIONS_BODY_LIMIT/);
-    expect(serverActionFileLimitBytes('200mb')).toBe(200 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
+    // Every server action passes Next's proxy, which truncates bodies past proxyClientMaxBodySize (100mb).
+    expect(serverActionFileLimitBytes('100mb')).toBe(NEXT_PROXY_MAX_BODY_BYTES - SERVER_ACTION_ENVELOPE_BYTES);
+    expect(serverActionFileLimitBytes('200mb')).toBe(NEXT_PROXY_MAX_BODY_BYTES - SERVER_ACTION_ENVELOPE_BYTES);
+    expect(serverActionFileLimitBytes('1gb')).toBe(NEXT_PROXY_MAX_BODY_BYTES - SERVER_ACTION_ENVELOPE_BYTES);
     expect(serverActionFileLimitBytes('10b')).toBe(0);
   });
 });

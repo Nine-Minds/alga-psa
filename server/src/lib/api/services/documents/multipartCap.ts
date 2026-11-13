@@ -10,12 +10,12 @@
  * (no second copy), and the ingest alone enforces the provider's per-file max and MIME allowlist.
  * Larger files belong on the chunked upload session API.
  */
-import { effectiveBufferedCap } from '@alga-psa/storage/ingest/bufferedCap';
+import { NEXT_PROXY_MAX_BODY_BYTES, effectiveBufferedCap } from '@alga-psa/storage/ingest/bufferedCap';
 import { LengthRequiredError, PayloadTooLargeError } from '../../middleware/apiErrors';
 import { getMaxUploadBytes } from './uploadLimits';
 
-/** Whole multipart request (file plus framing), equal to Next's proxyClientMaxBodySize. */
-export const MAX_MULTIPART_REQUEST_BYTES = 100 * 1024 * 1024;
+/** Whole multipart request (file plus framing): Next's proxyClientMaxBodySize. */
+export const MAX_MULTIPART_REQUEST_BYTES = NEXT_PROXY_MAX_BODY_BYTES;
 
 /** Room for multipart boundaries, part headers and the small non-file form fields. */
 export const MULTIPART_ENVELOPE_BYTES = 64 * 1024;

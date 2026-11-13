@@ -16,7 +16,8 @@ it('is the shared server-action limit, so the two parsers cannot disagree', () =
   }
   // Only the co-managed limit is clamped to 25 MiB; the shared limit follows the body limit.
   expect(coManagedAttachmentUploadLimit('200mb')).toBe(25 * 1048576);
-  expect(serverActionFileLimitBytes('200mb')).toBe(200 * 1048576 - 65536);
+  // The shared server-action limit itself stops at the 100 MB proxy limit (less the envelope).
+  expect(serverActionFileLimitBytes('200mb')).toBe(100 * 1048576 - 65536);
 });
 
 it('throws on an unparseable body limit instead of assuming a default', () => {

@@ -75,3 +75,16 @@ describe('API error mapping', () => {
     expect((await response.json()).error.code).toBe('LENGTH_REQUIRED');
   });
 });
+
+describe('the proxy body limit the caps are derived from', () => {
+  it('NEXT_PROXY_MAX_BODY_BYTES equals proxyClientMaxBodySize in next.config.mjs', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const { NEXT_PROXY_MAX_BODY_BYTES, parseByteSize } = await import('@alga-psa/storage/ingest/bufferedCap');
+    const config = readFileSync(resolve(__dirname, '../../../../../../next.config.mjs'), 'utf8');
+    const declared = /proxyClientMaxBodySize:\s*['"]([^'"]+)['"]/.exec(config)?.[1];
+    expect(declared).toBeDefined();
+    expect(parseByteSize(declared!)).toBe(NEXT_PROXY_MAX_BODY_BYTES);
+    expect(MAX_MULTIPART_REQUEST_BYTES).toBe(NEXT_PROXY_MAX_BODY_BYTES);
+  });
+});
