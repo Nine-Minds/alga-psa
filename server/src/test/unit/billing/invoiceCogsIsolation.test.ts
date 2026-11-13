@@ -12,8 +12,11 @@ afterAll(async () => {
   await knex.destroy();
 });
 
-describe('invoice COGS source isolation', () => {
-  it('scopes matching materials and movements to the invoice tenant and subtracts restocks', async () => {
+// SQL contract test: it pins the tenant, invoice and source predicates in the COGS query text and
+// binding order. It does not execute the query, so it cannot prove isolation between two tenants that
+// share a source_doc_id; that requires a database-backed test.
+describe('invoice COGS query contract', () => {
+  it('pins tenant-scoped material and movement joins and restock netting in the COGS SQL', async () => {
     const result = knex.raw('select 1');
     Object.defineProperty(result, 'then', {
       value: (resolve: (value: { rows: unknown[] }) => unknown, reject: (error: unknown) => unknown) =>

@@ -910,7 +910,9 @@ describe('executeClientMerge', () => {
     expect(result.counts['sales order']).toBe(1);
   });
 
-  it('moves fixed-fee entries with their tickets without changing billing state or other tenants', async () => {
+  // The fake tenantDb facade applies the tenant predicate itself, so the other-tenant row proves the
+  // engine routes this move through tenantDb; it does not exercise a tenant predicate in raw SQL.
+  it('moves fixed-fee entries through the tenant facade without changing billing state', async () => {
     table('ticket_fixed_fee_services').push(
       { tenant: TENANT, entry_id: 'fee-open', ticket_id: 'ticket-null', client_id: 'source', is_billed: false, billed_invoice_id: null },
       { tenant: TENANT, entry_id: 'fee-billed', ticket_id: 'ticket-plant', client_id: 'source', is_billed: true, billed_invoice_id: 'inv-1' },
