@@ -5,7 +5,8 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import {
-  CommentAudienceError, admitInternalReaderAudienceSql, isCommentAudience, nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader,
+  CommentAudienceError, admitInternalReaderAudienceSql, isCommentAudience, nativeReplyAudience, nativeThreadAudience,
+  type CommentAudienceReader, type InternalReaderIdentity,
 } from '@alga-psa/shared/lib/commentAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
@@ -75,12 +76,13 @@ function collaborationThreadAudience(isInternal: boolean, audience: string | und
 
 const Comment = {
   /**
-   * `internalReaderId` is the internal user the comments are read for. Named, the read keeps only
-   * the audiences that user's organization may see (MSP staff: all of them; a seat technician:
-   * never a private note), in the same statement. Omitted, the read is unfiltered (system callers).
-   * A tenant that cannot have a seat technician adds nothing to the statement.
+   * `internalReader` is the internal user the comments are read for: their id, or the user row
+   * the request loaded. Named, the read keeps only the audiences that user's organization may see
+   * (MSP staff: all of them; a seat technician: never a private note), in the same statement.
+   * Omitted, the read is unfiltered (system callers). A loaded row that says no seat assignment
+   * binds the user adds nothing to the statement.
    */
-  getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string, internalReaderId?: string): Promise<IComment[]> => {
+  getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string, internalReader?: InternalReaderIdentity): Promise<IComment[]> => {
     try {
       // Read-time bundle provenance lives here, in the shared read layer, so
       // every MSP path that lists a ticket's comments — the initial
@@ -100,7 +102,7 @@ const Comment = {
       scopedConn.tenantJoin(commentsQuery, 'comments as src', 'bm.source_comment_id', 'src.comment_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
       scopedConn.tenantJoin(commentsQuery, 'tickets as mt', 'src.ticket_id', 'mt.ticket_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
 
-      const audience = internalReaderId ? await admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReaderId) : null;
+      const audience = internalReader ? admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReader) : null;
       if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
       const comments = await commentsQuery
         .where('comments.ticket_id', ticket_id)
@@ -128,13 +130,13 @@ const Comment = {
     }
   },
 
-  /** `internalReaderId`: as in `getAllbyTicketId`; a comment that reader may not see is not found. */
-  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, internalReaderId?: string): Promise<IComment | undefined> => {
+  /** `internalReader`: as in `getAllbyTicketId`; a comment that reader may not see is not found. */
+  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, internalReader?: InternalReaderIdentity): Promise<IComment | undefined> => {
     try {
       const query = tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
         .where('comments.comment_id', id);
-      const audience = internalReaderId ? await admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReaderId) : null;
+      const audience = internalReader ? admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReader) : null;
       if (audience) query.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
       const comment = await query.first();
       return comment;

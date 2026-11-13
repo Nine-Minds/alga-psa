@@ -86,7 +86,7 @@ export async function canAccessDocument(
     throw new Error('Tenant context not found');
   }
 
-  if (!await canReadCommentAttachment(db, effectiveTenant, user.user_id, document.document_id)) return false;
+  if (!await canReadCommentAttachment(db, effectiveTenant, user, document.document_id)) return false;
 
   // 2. Client-portal contacts must satisfy the client-portal visibility
   // model; the entity-type permission checks below are for internal (MSP)

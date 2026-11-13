@@ -259,7 +259,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
 
 export async function resolveSearchAclPrincipal(
   knex: Knex,
-  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'>,
+  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'> & { seat_reader?: boolean | null },
   clientAccess: ClientAccess,
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
@@ -288,10 +288,10 @@ export async function resolveSearchAclPrincipal(
     roles: [...roles],
     isInternal: !isClientPortal,
     clientAccess,
-    // A client user is the requester and an internal user of a tenant that cannot have seat
-    // technicians is staff, both with no SQL; otherwise one read.
+    // A client user is the requester and an internal user whose loaded row says no seat
+    // assignment binds them is staff, both with no SQL; otherwise one read of the seat tables.
     audienceReader: user.tenant
-      ? await admitCommentAudienceReader(knex, user.tenant, { userId: user.user_id, userType: isClientPortal ? 'client' : 'internal' })
+      ? await admitCommentAudienceReader(knex, user.tenant, { userId: user.user_id, userType: isClientPortal ? 'client' : 'internal', seatReader: user.seat_reader })
       : undefined,
   };
 }

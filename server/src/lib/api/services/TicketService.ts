@@ -457,6 +457,15 @@ function isBareServicePrincipal(context: ServiceContext): boolean {
   return (context.user as { user_type?: string } | undefined)?.user_type === 'service' && !context.viaPrincipalUserId;
 }
 
+/**
+ * The reader a comment-audience check is made for: the verified user row when the transport
+ * loaded it for this user, otherwise the bare id (which is always checked against the seat tables).
+ */
+function audienceReader(context: ServiceContext): string | TicketServiceUser {
+  const user = context.user as TicketServiceUser | undefined;
+  return user && user.user_id === context.userId ? user : context.userId;
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -1059,7 +1068,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
+    return filterReadableCommentAttachments(knex, context.tenant, audienceReader(context), documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1592,7 +1601,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1636,7 +1645,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.*')
       .first() as IDocument | undefined;
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -2791,7 +2800,7 @@ export class TicketService extends BaseService<ITicket> {
         });
     } else if (context.userId) {
       // An internal reader sees only the audiences their organization may: MSP staff all of them, a seat technician never a private note.
-      const audience = await admitInternalReaderAudienceSql(knex, context.tenant, context.userId);
+      const audience = admitInternalReaderAudienceSql(knex, context.tenant, audienceReader(context));
       if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('tc.comment_id')]);
     }
 

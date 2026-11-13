@@ -1,7 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { isCoManagedWorkspace } from '@alga-psa/db/writeAdmission';
-import { serves } from '@alga-psa/core/capability';
 
 /**
  * Conversation audiences for shared (co-managed) work.
@@ -186,42 +185,35 @@ export async function resolveCommentAudienceReader(
 }
 
 /**
- * Can `tenant` have a seat technician at all? The admission in front of every seat-table read on
- * an ordinary read path, so a plain PSA tenant never runs seat SQL.
+ * The internal user a read is for, as the caller holds them: the user id alone, or the user row
+ * the request already loaded (`getCurrentUser` reads it from the database on every request).
  *
- * A seat arrangement is paid for by a seat allocation, and an allocation is only ever reserved
- * against the sponsor's `co_managed_entitlements` row, which is kept through lapse. That row is
- * participation in the `co-managed` capability, so a tenant the participation gate has read and
- * found absent (`not-participating`) has no arrangement and therefore no seat technician. The
- * gate's decision is cached per process, which is what makes this free on the hot path.
- *
- * Two answers say no: `not-participating`, and `resolver-unregistered`, a process in which the
- * co-managed capability was never registered (an edition without it), where no co-managed
- * behaviour runs at all. Everything else answers yes: a served tenant, a forced capability (the
- * kill switch included), a failed participation read, or a gate that throws. The caller then
- * reads the seat tables and decides per user, as if ungated. Being wrong toward yes costs a
- * statement; being wrong toward no would show a seat technician private notes.
+ * The row carries `seat_reader`, which a foreign key keeps `true` for every user bound by a seat
+ * assignment that is not revoked (migration 20261113130000). So `seat_reader === false` on a
+ * loaded row is the one thing that says "MSP staff" with no statement. A bare id, a row without
+ * the column, or `true` says nothing either way, and the read then asks the seat tables in the
+ * statement it already runs. Nothing else decides who is staff: not the capability gate, not a
+ * cache, so a process that never registered the co-managed capability and a tenant whose first
+ * seat was bound a moment ago are read the same as any other.
  */
-const NO_SEAT_READERS: ReadonlySet<string> = new Set(['not-participating', 'resolver-unregistered']);
-export async function tenantMayHaveSeatReaders(tenant: string): Promise<boolean> {
-  try {
-    return !NO_SEAT_READERS.has((await serves('co-managed', tenant)).reasons.served);
-  } catch {
-    return true;
-  }
-}
+export type InternalReaderIdentity = string | { user_id: string; seat_reader?: boolean | null };
+
+const internalReaderUserId = (reader: InternalReaderIdentity): string => typeof reader === 'string' ? reader : reader.user_id;
+/** True only for a loaded user row whose marker says no seat assignment binds the user. */
+export const isKnownStaffReader = (reader: InternalReaderIdentity): boolean =>
+  typeof reader !== 'string' && reader.seat_reader === false;
 
 /**
- * `resolveCommentAudienceReader` behind `tenantMayHaveSeatReaders`: an internal user of a tenant
- * that cannot have seat technicians is its staff, with no SQL. Request boundaries that resolve a
- * reader for an ordinary read (search) use this form.
+ * `resolveCommentAudienceReader` for a request boundary that holds the user row (search): an
+ * internal user whose row says no seat assignment binds them is staff, with no SQL. Any other
+ * internal user is resolved from the seat tables.
  */
 export async function admitCommentAudienceReader(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  user: { userId: string; userType: string },
+  user: { userId: string; userType: string; seatReader?: boolean | null },
 ): Promise<CommentAudienceReader | null> {
-  if (tenant && user?.userId && user.userType === 'internal' && !(await tenantMayHaveSeatReaders(tenant))) {
+  if (tenant && user?.userId && user.userType === 'internal' && user.seatReader === false) {
     return { kind: 'staff', tenant };
   }
   return resolveCommentAudienceReader(trx, tenant, user);
@@ -538,7 +530,7 @@ export const COMMENT_UPLOAD_URL_PATTERN = {
  * `commentAudienceVisibleSql`. Read paths that cannot name the reader's organization before they
  * query (the ticket screen, the activity list, the attachment gate) add these expressions to the
  * statement they already run. They reach it only through `admitInternalReaderAudienceSql`, so a
- * tenant that cannot have a seat technician runs none of it.
+ * reader known to be staff runs none of it.
  *
  *   staff           no seat assignment binds the user: every audience stored in their tenant
  *   commentVisible  staff, or a live seat technician of the comment's ticket's client reading an
@@ -594,14 +586,15 @@ function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: string, 
 export type InternalReaderAudienceSql = ReturnType<typeof internalReaderAudienceSql>;
 
 /**
- * The audience expressions for one internal reader, or `null` when the tenant cannot have a seat
- * technician (`tenantMayHaveSeatReaders`): the reader is then MSP staff, who read every audience
- * stored in their tenant, and the caller adds no predicate and no seat table to its statement.
+ * The audience expressions for one internal reader, or `null` when the reader is known to be MSP
+ * staff (`isKnownStaffReader`): staff read every audience stored in their tenant, and the caller
+ * adds no predicate and no seat table to its statement. For every other reader the expressions
+ * decide staff or seat technician inside the caller's statement.
  */
-export async function admitInternalReaderAudienceSql(
+export function admitInternalReaderAudienceSql(
   db: Knex | Knex.Transaction,
   tenant: string,
-  userId: string,
-): Promise<InternalReaderAudienceSql | null> {
-  return (await tenantMayHaveSeatReaders(tenant)) ? internalReaderAudienceSql(db, tenant, userId) : null;
+  reader: InternalReaderIdentity,
+): InternalReaderAudienceSql | null {
+  return isKnownStaffReader(reader) ? null : internalReaderAudienceSql(db, tenant, internalReaderUserId(reader));
 }

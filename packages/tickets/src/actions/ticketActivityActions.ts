@@ -61,7 +61,7 @@ export const getTicketTimelineEntries = withAuth(
         includeTimeEntries: opts?.includeTimeEntries ?? false,
         includeAlerts: opts?.includeAlerts ?? false,
         // Client users are refused above, so the reader is an internal user.
-        internalReaderId: user.user_id,
+        internalReaderId: user,
       });
     });
     } catch (error) {
@@ -99,7 +99,7 @@ export const getTicketActivityRows = withAuth(
       const ticket = await authorizeTicketRecordAccessConcealed({
         trx, tenant, user, ticketId, action: 'read', conceal: 'all',
       });
-      return readTicketActivity(trx, tenant, ticket.ticket_id, { internalReaderId: user.user_id });
+      return readTicketActivity(trx, tenant, ticket.ticket_id, { internalReaderId: user });
     });
     } catch (error) {
       const expected = ticketActionErrorFrom(error);

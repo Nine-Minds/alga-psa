@@ -187,8 +187,8 @@ async function loadThreadVisibility(
 }
 
 /** Internal readers are filtered by comment audience in the read itself; client readers keep their projection. */
-const internalReaderId = (user: { user_id: string; user_type?: string }): string | undefined =>
-  user.user_type === 'internal' ? user.user_id : undefined;
+const internalReader = <U extends { user_id: string; user_type?: string }>(user: U): U | undefined =>
+  user.user_type === 'internal' ? user : undefined;
 
 async function authorizeCommentRead(user: any, trx: Knex.Transaction, tenant: string, ticketId: string): Promise<void> {
   // The kernel's rbacEvaluator is a stub, so ticket:read is checked here for everyone.
@@ -210,7 +210,7 @@ export const findCommentsByTicketId = withAuth(async (user, { tenant }, ticketId
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await authorizeCommentRead(user, trx, tenant!, ticketId);
-      const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId, internalReaderId(user));
+      const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId, internalReader(user));
       const threads = isMspPrincipalUserType(user.user_type)
         ? undefined
         : await loadThreadVisibility(trx, tenant!, comments);
@@ -230,7 +230,7 @@ export const findCommentById = withAuth(async (user, { tenant }, commentId: stri
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const comment = await Comment.get(trx, tenant!, commentId, internalReaderId(user));
+      const comment = await Comment.get(trx, tenant!, commentId, internalReader(user));
       if (!comment?.ticket_id) {
         throw commentReadNotFound();
       }
