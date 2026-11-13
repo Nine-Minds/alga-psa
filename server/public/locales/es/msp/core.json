@@ -113,7 +113,8 @@
     "signOut": "Cerrar sesión",
     "coManaged": "TI cogestionada",
     "coManagedArchive": "Archivo de TI cogestionada",
-    "coManagedAdministration": "Acceso y administración"
+    "coManagedAdministration": "Acceso y administración",
+    "assetsAudits": "Auditorías de sitios"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

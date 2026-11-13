@@ -10164,7 +10164,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/asset-audits",
     "displayName": "List site audits",
     "summary": "List site audits",
-    "description": "Returns the tenant audits newest first, optionally narrowed to one client.",
+    "description": "Returns the tenant audits newest first, optionally narrowed by client, location (or \"no location\"), status and a started_at range.",
     "tags": [
       "Asset audits"
     ],
@@ -10199,6 +10199,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "Only audits of this client."
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Only audits scoped to this client location.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only audits scoped to this client location."
+        }
+      },
+      {
+        "name": "no_location",
+        "in": "query",
+        "required": false,
+        "description": "true returns only audits scoped to the assets that have no location. Wins over location_id.",
+        "schema": {
+          "type": "string",
+          "description": "true returns only audits scoped to the assets that have no location. Wins over location_id."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Only audits in this state.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "in_progress",
+            "completed",
+            "cancelled"
+          ],
+          "description": "Only audits in this state."
+        }
+      },
+      {
+        "name": "started_from",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone."
+        }
+      },
+      {
+        "name": "started_to",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or before it.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or before it."
         }
       },
       {
@@ -10303,6 +10359,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
+              "started_by_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "items": {
                 "type": "array",
                 "items": {
@@ -10364,6 +10426,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "null"
                       ]
                     },
+                    "asset_type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "client_id": {
                       "type": [
                         "string",
@@ -10379,6 +10447,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "format": "uuid"
                     },
                     "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marked_by_name": {
                       "type": [
                         "string",
                         "null"
@@ -10586,6 +10660,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -10647,6 +10727,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -10662,6 +10748,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -10823,6 +10915,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -10884,6 +10982,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -10899,6 +11003,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11090,6 +11200,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11151,6 +11267,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11166,6 +11288,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11338,6 +11466,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11399,6 +11533,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11414,6 +11554,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11575,6 +11721,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11636,6 +11788,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11651,6 +11809,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11812,6 +11976,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11873,6 +12043,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11888,6 +12064,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"

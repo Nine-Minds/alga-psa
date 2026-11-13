@@ -333,6 +333,8 @@ export const assetQuerySchema = z.object({
   search: z.string().optional(),
   agent_status: z.string().optional(),
   rmm_managed: z.boolean().optional(),
+  last_audit_result: z.enum(['present', 'missing', 'never']).optional(),
+  not_audited_days: z.number().int().positive().max(3650).optional(),
   sort_by: z.string().optional(),
   sort_direction: z.enum(['asc', 'desc']).optional(),
   include_extension_data: z.boolean().optional()

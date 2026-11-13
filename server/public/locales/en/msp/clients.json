@@ -329,7 +329,8 @@
       "empty": "No client-specific checklist templates.",
       "loadFailed": "Failed to load checklist templates",
       "retry": "Retry"
-    }
+    },
+    "audits": "Audits"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} out of warranty",
       "warrantyExpiring_one": "1 expiring ≤90d",
       "warrantyExpiring_other": "{{count}} expiring ≤90d",
-      "warrantyTracked": " (of {{count}} tracked)"
+      "warrantyTracked": " (of {{count}} tracked)",
+      "auditsLink": "Site audits",
+      "lastAudit": "Last audit {{date}}",
+      "lastAuditMissing_one": "1 missing",
+      "lastAuditMissing_other": "{{count}} missing",
+      "neverAudited": "Never audited"
     },
     "locations": {
       "billing": "Billing",
@@ -392,7 +398,9 @@
       "manage": "Manage",
       "more": "+{{count}} more",
       "none": "No locations yet.",
-      "shipping": "Shipping"
+      "shipping": "Shipping",
+      "lastAudit": "Audited {{date}}",
+      "neverAudited": "Never audited"
     },
     "money": {
       "activeContracts": "Active contracts",
@@ -1830,7 +1838,8 @@
           "members": "Members",
           "people": "People"
         }
-      }
+      },
+      "startAudit": "Start audit"
     },
     "tickets": {
       "addTicket": "Add Ticket",
@@ -2113,7 +2122,7 @@
       "sourceAlreadyMerged": "This client has already been merged into another client.",
       "targetAlreadyMerged": "The destination client has itself been merged into another client. Merge into that one instead.",
       "sourceIsTenantDefault": "Your own organisation record cannot be merged into a client.",
-      "sourceHasCoManagement": "This client has a co-managed IT workspace. Cancel its setup or end co-management before merging it.",
+      "sourceHasCoManagement": "This client has a co-managed IT arrangement. Cancel its setup or end co-management before merging it.",
       "parentLinkCycle": "That client is recorded as a child of the one you are merging, so merging this way would invert the hierarchy.",
       "invalidContractCutover": "One of the cutover dates falls outside its contract term.",
       "invalidContactLocation": "A chosen location belongs to neither client being merged."

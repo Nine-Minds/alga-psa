@@ -329,7 +329,8 @@
       "empty": "Nenhum modelo de checklist específico do cliente.",
       "loadFailed": "Falha ao carregar os modelos de checklist",
       "retry": "Tentar novamente"
-    }
+    },
+    "audits": "Auditorias"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} fora de garantia",
       "warrantyExpiring_one": "1 a expirar em ≤90 d",
       "warrantyExpiring_other": "{{count}} a expirar em ≤90 d",
-      "warrantyTracked": " (de {{count}} monitorizados)"
+      "warrantyTracked": " (de {{count}} monitorizados)",
+      "auditsLink": "Auditorias no local",
+      "lastAudit": "Última auditoria em {{date}}",
+      "lastAuditMissing_one": "1 ausente",
+      "lastAuditMissing_other": "{{count}} ausentes",
+      "neverAudited": "Nunca auditado"
     },
     "locations": {
       "billing": "Faturação",
@@ -392,7 +398,9 @@
       "manage": "Gerir",
       "more": "+{{count}} mais",
       "none": "Ainda não há localizações.",
-      "shipping": "Envio"
+      "shipping": "Envio",
+      "lastAudit": "Auditado em {{date}}",
+      "neverAudited": "Nunca auditado"
     },
     "money": {
       "activeContracts": "Contratos ativos",
@@ -1803,7 +1811,8 @@
           "members": "Membros",
           "people": "Pessoas"
         }
-      }
+      },
+      "startAudit": "Iniciar auditoria"
     },
     "tickets": {
       "addTicket": "Adicionar ticket",
