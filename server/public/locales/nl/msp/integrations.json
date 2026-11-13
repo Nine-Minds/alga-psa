@@ -2257,7 +2257,41 @@
         "outstandingItemsReconnect": "Voor alle gekoppelde organisaties. Deze items blijven bewaard totdat u Xero opnieuw verbindt.",
         "refreshTokenValidUntilProvider": "{{provider}}-autorisatie geldig tot {{date}}. Tokens worden automatisch vernieuwd.",
         "syncSucceeded": "Synchronisatie voltooid",
-        "syncStopped": "Synchronisatie gestopt"
+        "syncStopped": "Synchronisatie gestopt",
+        "erroredOpsDialogTitle": "Mislukte {{provider}}-synchronisatiebewerkingen",
+        "erroredOpsDialogDescription": "Bewerkingen die na herhaalde pogingen zijn mislukt of overgeslagen.",
+        "erroredOpsOpen": "Mislukte bewerkingen bekijken",
+        "erroredOpsColItem": "Onderdeel",
+        "erroredOpsColOperation": "Bewerking",
+        "erroredOpsColError": "Fout",
+        "erroredOpsColWhen": "Tijdstip",
+        "erroredOpsColBatch": "Exportbatch",
+        "erroredOpsLoading": "Mislukte bewerkingen laden…",
+        "erroredOpsEmpty": "Geen mislukte bewerkingen.",
+        "erroredOpsLoadError": "Kan mislukte bewerkingen niet laden.",
+        "erroredOpsNoError": "Er zijn geen foutdetails vastgelegd.",
+        "erroredOpsBatchLink": "Batch {{batch}} bekijken",
+        "erroredOpsClose": "Sluiten",
+        "erroredOpsDeleted": {
+          "invoice": "Verwijderde factuur",
+          "credit_memo": "Verwijderde creditnota",
+          "vendor_bill": "Verwijderde leveranciersfactuur",
+          "payment": "Verwijderde betaling",
+          "credit_application": "Verwijderde tegoedverrekening",
+          "other": "Niet-beschikbaar onderdeel"
+        },
+        "erroredOpsItem": {
+          "payment": "Betaling op {{invoice}}",
+          "creditApplication": "Tegoed verrekend met {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Factuur exporteren",
+          "export_credit_memo": "Creditnota exporteren",
+          "export_vendor_bill": "Leveranciersfactuur exporteren",
+          "apply_credit": "Tegoed verrekenen",
+          "record_payment": "Betaling registreren",
+          "void_invoice": "Factuur ongeldig maken"
+        }
       },
       "itemImport": {
         "description": "Importeer uw QuickBooks-producten en -services in de Alga-servicecatalogus voor het verbonden QuickBooks-bedrijf. QuickBooks blijft de gezaghebbende bron voor namen, tarieven, SKU’s, beschrijvingen en kosten; de facturatiemethode, maateenheid en het servicetype worden hier ingesteld en daarna door Alga beheerd. Deze stap is optioneel — sla deze over met Volgende.",

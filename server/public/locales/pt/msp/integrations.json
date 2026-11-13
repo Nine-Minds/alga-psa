@@ -2257,7 +2257,41 @@
         "outstandingItemsReconnect": "Em todas as organizações associadas. Estes itens são preservados até reconectar o Xero.",
         "refreshTokenValidUntilProvider": "Autorização {{provider}} válida até {{date}}. Os tokens são renovados automaticamente.",
         "syncSucceeded": "Sincronização concluída",
-        "syncStopped": "Sincronização interrompida"
+        "syncStopped": "Sincronização interrompida",
+        "erroredOpsDialogTitle": "Operações de sincronização com {{provider}} com erro",
+        "erroredOpsDialogDescription": "Operações que falharam ou foram ignoradas após várias tentativas.",
+        "erroredOpsOpen": "Ver operações com erro",
+        "erroredOpsColItem": "Item",
+        "erroredOpsColOperation": "Operação",
+        "erroredOpsColError": "Erro",
+        "erroredOpsColWhen": "Data",
+        "erroredOpsColBatch": "Lote de exportação",
+        "erroredOpsLoading": "Carregando operações com erro…",
+        "erroredOpsEmpty": "Nenhuma operação com erro.",
+        "erroredOpsLoadError": "Não foi possível carregar as operações com erro.",
+        "erroredOpsNoError": "Nenhum detalhe do erro foi registrado.",
+        "erroredOpsBatchLink": "Ver lote {{batch}}",
+        "erroredOpsClose": "Fechar",
+        "erroredOpsDeleted": {
+          "invoice": "Fatura excluída",
+          "credit_memo": "Nota de crédito excluída",
+          "vendor_bill": "Fatura de fornecedor excluída",
+          "payment": "Pagamento excluído",
+          "credit_application": "Aplicação de crédito excluída",
+          "other": "Item indisponível"
+        },
+        "erroredOpsItem": {
+          "payment": "Pagamento da {{invoice}}",
+          "creditApplication": "Crédito aplicado à {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Exportar fatura",
+          "export_credit_memo": "Exportar nota de crédito",
+          "export_vendor_bill": "Exportar fatura de fornecedor",
+          "apply_credit": "Aplicar crédito",
+          "record_payment": "Registrar pagamento",
+          "void_invoice": "Anular fatura"
+        }
       },
       "itemImport": {
         "description": "Importe seus produtos e serviços do QuickBooks para o catálogo de serviços do Alga para a empresa conectada do QuickBooks. O QuickBooks continua sendo a fonte oficial para nomes, preços, SKUs, descrições e custos; o método de faturamento, a unidade de medida e o tipo de serviço são definidos aqui e depois passam a ser gerenciados no Alga. Esta etapa é opcional — pule-a com Avançar.",
