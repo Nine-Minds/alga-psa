@@ -426,7 +426,10 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(String(ticket?.ticket_number).length).toBeGreaterThan(0);
     const ticketDescription = (ticket?.attributes as { description?: string } | null)?.description;
     expect(ticketDescription).toContain('Portal Service Request');
-    expect(ticketDescription).toContain(`request_title: Printer on fire ${suffix}`);
+    // The answers are serialized rich-text rows of label + value, never the raw field key.
+    expect(ticketDescription).toContain('"text":"Request Title"');
+    expect(ticketDescription).toContain(`"text":"Printer on fire ${suffix}"`);
+    expect(ticketDescription).not.toContain('request_title');
 
     // --- step 3: the MSP side sees the submission and its ticket ---
     actAs(mspActor);
