@@ -165,7 +165,8 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
       ticket_id: ticketId, user_id: authorUserId, author_type: 'internal', note: 'n', markdown_content: 'n', is_resolution: false,
       is_internal: isInternal, ...(audience === 'organization_private' ? {} : { collaboration_audience: audience }),
     } as any, undefined, author);
-    const notify = () => commentAdded({ eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: w.sponsor, ticketId, userId: authorUserId,
+    const eventId = randomUUID();
+    const notify = () => commentAdded({ id: eventId, timestamp: new Date().toISOString(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: w.sponsor, ticketId, userId: authorUserId,
       comment: { id: commentId, content: 'A shared note', author: 'Author', isInternal } } });
     await notify();
     return { commentId, notify };
@@ -174,7 +175,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
   beforeAll(async () => {
     db = await createTestDbConnection({ databaseName: 's32_seat_notifications_test' });
     ({ deliverCoManagedSeatHandoffNotifications: deliverHandoff } = await import('../../lib/notifications/coManagedSeatNotifications'));
-    ({ internalNotificationSubscriberTestHarness: { handleTicketCommentAdded: commentAdded } } = await import(
+    ({ internalNotificationSubscriberTestHarness: { handleInternalNotificationEvent: commentAdded } } = await import(
       '../../lib/eventBus/subscribers/internalNotificationSubscriber'));
   }, 900_000);
   afterAll(async () => { await db?.destroy(); });
