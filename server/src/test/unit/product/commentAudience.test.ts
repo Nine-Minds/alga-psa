@@ -3,11 +3,15 @@ import knex from 'knex';
 import {
   CommentAudienceError,
   CoManagedAudienceRequiredError,
+  CommentAudienceConfirmationRequiredError,
+  assertCommentWriteAudience,
   assertNativeEditKeepsAudience,
   assertReplyAudience,
   commentAudienceSql,
   commentAudienceVisibleSql,
   isCommentAudienceVisible,
+  isCommentAudienceWidening,
+  nativeReplyAudience,
   nativeThreadAudience,
   resolveCommentAudience,
   resolveCommentAudienceForRead,
@@ -220,5 +224,88 @@ describe('nativeThreadAudience reducer', () => {
 
   it('exports the required error code', () => {
     expect(new CoManagedAudienceRequiredError().code).toBe('CO_MANAGED_AUDIENCE_REQUIRED');
+  });
+});
+
+describe('comment write audience truth table (S17)', () => {
+  // F039/F040: author organization x audience x seat arrangement. `null` audience is the legacy form.
+  const CLIENT = '33333333-3333-4333-8333-333333333333';
+  const OTHER_CLIENT = '44444444-4444-4444-8444-444444444444';
+  const staff: CommentAudienceReader = { kind: 'staff', tenant: OWNER };
+  const seat: CommentAudienceReader = { kind: 'seat', tenant: OWNER, clientId: CLIENT };
+  const requester: CommentAudienceReader = { kind: 'requester', tenant: OWNER };
+  const arranged = { tenant: OWNER, clientId: CLIENT, seatArrangement: true };
+  const plain = { tenant: OWNER, clientId: CLIENT, seatArrangement: false };
+  const WRITES: Array<{ name: string; audience: CommentAudience | null; isInternal: boolean }> = [
+    { name: 'requester', audience: 'requester', isInternal: false },
+    { name: 'legacy public', audience: null, isInternal: false },
+    { name: 'shared_it', audience: 'shared_it', isInternal: true },
+    { name: 'organization_private', audience: 'organization_private', isInternal: true },
+    { name: 'legacy internal note', audience: null, isInternal: true },
+  ];
+  const allowed = (author: CommentAudienceReader | null, owner: typeof arranged) => WRITES.filter(write => {
+    try { assertCommentWriteAudience(author, owner, write); return true; } catch (error) {
+      expect(error).toBeInstanceOf(CommentAudienceError);
+      return false;
+    }
+  }).map(write => write.name);
+
+  it('MSP staff write every audience where the client has a live arrangement, and never shared_it elsewhere (F039)', () => {
+    expect(allowed(staff, arranged)).toEqual(['requester', 'legacy public', 'shared_it', 'organization_private', 'legacy internal note']);
+    expect(allowed(staff, plain)).toEqual(['requester', 'legacy public', 'organization_private', 'legacy internal note']);
+    expect(allowed(staff, { tenant: OWNER } as any)).toEqual(['requester', 'legacy public', 'organization_private', 'legacy internal note']);
+  });
+
+  it('a seat technician writes requester and shared_it only, on their own client (F040)', () => {
+    expect(allowed(seat, arranged)).toEqual(['requester', 'legacy public', 'shared_it']);
+    expect(allowed({ kind: 'seat', tenant: OWNER, clientId: OTHER_CLIENT }, arranged)).toEqual([]);
+    expect(allowed({ kind: 'seat', tenant: OTHER, clientId: CLIENT }, arranged)).toEqual([]);
+    expect(allowed(seat, { tenant: OWNER } as any)).toEqual([]);
+  });
+
+  it('a requester writes requester only; no organization and another tenant write nothing', () => {
+    expect(allowed(requester, arranged)).toEqual(['requester', 'legacy public']);
+    expect(allowed(null, arranged)).toEqual([]);
+    expect(allowed({ kind: 'staff', tenant: OTHER }, arranged)).toEqual([]);
+  });
+
+  it('nobody writes an audience they could not read back', () => {
+    for (const author of [staff, seat, requester]) {
+      for (const write of WRITES) {
+        let stored: CommentAudience | null = null;
+        try { stored = assertCommentWriteAudience(author, arranged, write); } catch { /* refused */ }
+        if (stored) expect(isCommentAudienceVisible(stored, arranged, author)).toBe(true);
+      }
+    }
+  });
+
+  it('refuses a named audience that disagrees with visibility', () => {
+    expect(() => assertCommentWriteAudience(staff, arranged, { audience: 'shared_it', isInternal: false })).toThrow(CommentAudienceError);
+    expect(() => assertCommentWriteAudience(staff, arranged, { audience: 'requester', isInternal: true })).toThrow(CommentAudienceError);
+  });
+
+  it('orders audiences by reach: private < shared_it < requester', () => {
+    expect(isCommentAudienceWidening('organization_private', 'shared_it')).toBe(true);
+    expect(isCommentAudienceWidening('shared_it', 'requester')).toBe(true);
+    expect(isCommentAudienceWidening('organization_private', 'requester')).toBe(true);
+    expect(isCommentAudienceWidening('requester', 'shared_it')).toBe(false);
+    expect(isCommentAudienceWidening('shared_it', 'organization_private')).toBe(false);
+    expect(isCommentAudienceWidening('shared_it', 'shared_it')).toBe(false);
+    expect(new CommentAudienceConfirmationRequiredError().code).toBe('COMMENT_AUDIENCE_CONFIRMATION_REQUIRED');
+  });
+
+  it('a named seat or absent author is decided with no SQL when nothing needs the ticket', async () => {
+    const trx: any = {};
+    // Staff named explicitly, legacy thread: no read at all.
+    await expect(nativeReplyAudience(trx, OWNER, { thread_id: 't', collaboration_audience: null, is_internal: true },
+      { author: staff })).resolves.toBeNull();
+    // No live organization: refused before any read.
+    await expect(nativeReplyAudience(trx, OWNER, { thread_id: 't', collaboration_audience: null, is_internal: false },
+      { author: null })).rejects.toBeInstanceOf(CommentAudienceError);
+    await expect(nativeThreadAudience(trx, OWNER, { isInternal: true, authorType: 'internal', author: null }))
+      .rejects.toBeInstanceOf(CommentAudienceError);
+    // The edit guard: only staff may flip a legacy comment's visibility.
+    await expect(assertNativeEditKeepsAudience(trx, OWNER, { collaboration_audience: null }, { isInternal: true, author: seat }))
+      .rejects.toBeInstanceOf(CommentAudienceError);
   });
 });

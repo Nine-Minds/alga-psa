@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "MSP staff can post a `shared_it` comment through the native comment writer on a ticket of a client with a live seat arrangement; on any other ticket the request is refused.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "A seat technician can post `requester` and `shared_it` comments; `organization_private` and the legacy internal note are refused for them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "A reply inherits its thread's audience for both organizations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "Only MSP staff can change a thread's audience, and widening it requires an explicit disclosure confirmation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
