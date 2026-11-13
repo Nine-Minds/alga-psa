@@ -1999,7 +1999,8 @@
       "invalidValue": "Ett av de valda kundvärdena är ogiltigt. Ladda om sidan och försök igen.",
       "invalidData": "Ogiltiga kunddata har angetts. Kontrollera alla fält och försök igen.",
       "missingField": "Ett obligatoriskt kundfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt kundfält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt kundfält saknas: {{field}}.",
+      "hasSeatArrangement": "Den här kunden har ett platsavtal för samförvaltad IT. Avsluta avtalet innan du inaktiverar kunden."
     },
     "permissions": {
       "readClients": "Åtkomst nekad: Det går inte att läsa kunder",

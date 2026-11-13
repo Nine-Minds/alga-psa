@@ -9,7 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
-import { recordTicketAssigneeChange } from '@alga-psa/db';
+import { recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
@@ -1477,6 +1477,11 @@ export class TicketModel {
       await recordTicketAssigneeChange(trx, tenant, ticketId);
     }
 
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
+    }
+
     // Publish update event if publisher provided
     if (eventPublisher) {
       try {
@@ -1608,6 +1613,11 @@ export class TicketModel {
 
     // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
     await recordTicketAssigneeChange(trx, tenant, ticketId);
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if (updatedTicket && (await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
+    }
 
     return updatedTicket;
   }

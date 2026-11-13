@@ -2008,7 +2008,8 @@
       "invalidValue": "Een van de geselecteerde klantwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "invalidData": "Ongeldige klantgegevens opgegeven. Controleer alle velden en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht klantveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht klantveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht klantveld: {{field}}.",
+      "hasSeatArrangement": "Deze klant heeft een seatregeling voor co-managed IT. Beëindig de regeling voordat u de klant inactief maakt."
     },
     "permissions": {
       "readClients": "Toestemming geweigerd: klanten kunnen niet worden gelezen",

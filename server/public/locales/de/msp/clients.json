@@ -2008,7 +2008,8 @@
       "invalidValue": "Einer der ausgewählten Kundenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "invalidData": "Ungültige Kundendaten übermittelt. Bitte prüfen Sie alle Felder und versuchen Sie es erneut.",
       "missingField": "Erforderliches Kundenfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Kundenfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Kundenfeld fehlt: {{field}}.",
+      "hasSeatArrangement": "Dieser Kunde hat eine Co-Managed-IT-Platzvereinbarung. Beenden Sie die Vereinbarung, bevor Sie den Kunden deaktivieren."
     },
     "permissions": {
       "readClients": "Berechtigung verweigert: Kunden können nicht gelesen werden",

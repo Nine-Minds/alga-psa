@@ -7,6 +7,7 @@ import type { DeletionValidationResult, IClient, IClientWithLocation, IUserWithR
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError } from '@alga-psa/core/config/deletion';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
@@ -91,6 +92,9 @@ function tenantScopedTable(
 }
 
 function updateClientExpectedErrorFrom(error: unknown, clientName?: string | null): ClientUpdateActionError | null {
+  if (error instanceof ClientSeatArrangementError) {
+    return actionError(error.message, error.i18nKey);
+  }
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
@@ -380,6 +384,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
       console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
+
+      // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+      await assertClientPatchKeepsSeatArrangement(trx, tenant, clientId, updateObject);
 
       const [updatedClient] = await tenantScopedTable(trx, 'clients', tenant)
         .where({ client_id: clientId })
@@ -1138,9 +1145,12 @@ function tailorClientDeleteAlternatives(
   const contactDependency = result.dependencies.find((d) => d.type === 'contact');
   const hasContacts = (contactDependency?.count ?? 0) > 0;
 
+  // A live seat arrangement refuses inactivation too, so it is not offered as the way out.
+  const hasSeatArrangement = result.dependencies.some((d) => d.type === 'co_managed_seat_arrangement' && d.count > 0);
+
   const alternatives = result.alternatives.flatMap((alt) => {
     if (alt.action !== 'deactivate') return [alt];
-    if (clientIsInactive) return [];
+    if (clientIsInactive || hasSeatArrangement) return [];
     if (hasContacts) {
       return [
         {
@@ -1916,6 +1926,8 @@ export const importClientsFromCSV = withAuth(async (
             updateData.client_since = clientSince;
           }
 
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await assertClientPatchKeepsSeatArrangement(trx, tenant, existingClient.client_id, updateData);
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .where({ client_id: existingClient.client_id })
             .update(updateData)
@@ -2320,6 +2332,10 @@ export const markClientInactiveWithContacts = withAuth(async (
       const db = tenantDb(trx, tenant);
       let contactsDeactivated = 0;
       let deactivatedContactIds: string[] = [];
+
+      // Before the contact cascade, so a refusal leaves the client's contacts and their users alone.
+      // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+      await assertClientPatchKeepsSeatArrangement(trx, tenant, clientId, { is_inactive: true });
 
       if (deactivateContacts) {
         // Get all active contact IDs for this client

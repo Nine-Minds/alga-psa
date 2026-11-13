@@ -1981,7 +1981,8 @@
       "invalidValue": "Uno dei valori cliente selezionati non è valido. Aggiornare la pagina e riprovare.",
       "invalidData": "Dati cliente non validi. Controllare tutti i campi e riprovare.",
       "missingField": "Manca un campo obbligatorio del cliente.",
-      "missingFieldNamed": "Manca un campo obbligatorio del cliente: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del cliente: {{field}}.",
+      "hasSeatArrangement": "Questo cliente ha un accordo di postazioni IT in co-gestione. Termina l’accordo prima di disattivare il cliente."
     },
     "permissions": {
       "readClients": "Autorizzazione negata: impossibile leggere i clienti",
