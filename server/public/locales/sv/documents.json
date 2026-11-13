@@ -56,6 +56,20 @@
     "product": "Produkt",
     "projectPhase": "Projektfas",
     "qty": "Antal",
+    "quoteAcceptance": {
+      "title": "Offert godkänd",
+      "signedBy": "Signerad av",
+      "email": "E-post",
+      "jobTitle": "Titel",
+      "acceptedOn": "Godkänd den",
+      "method": "Metod",
+      "ipAddress": "IP-adress",
+      "methods": {
+        "emailLink": "Länk via e-post",
+        "portal": "Kundportal",
+        "msp": "Registrerad av MSP"
+      }
+    },
     "quoteNumber": "Offertnummer",
     "quoteTitle": "OFFERT",
     "rate": "À-pris",
@@ -165,6 +179,7 @@
     "upload": {
       "fileRequired": "Välj en fil innan du laddar upp.",
       "typeNotAllowed": "Denna filtyp är inte tillåten.",
+      "contentMismatch": "Filens innehåll matchar inte dess filtyp, så den laddades inte upp. Kontrollera att du valde rätt fil.",
       "sessionRequired": "Du måste vara inloggad för att ladda upp dokument. Logga in igen."
     }
   },

@@ -1,9 +1,12 @@
+import { clientResolvers } from '@alga-psa/authorization/kernel';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
 import {
   computeWorkDateFields,
   recalculateProjectTaskActualHoursForEntryChange,
+  recordTicketAssigneeChange,
   resolveUserTimeZone,
   tenantDb,
   truncateToMinute,
@@ -67,6 +70,8 @@ export interface PersistTimeEntryInput {
   tenant: string;
   /** The acting user (who is doing the write; may differ from the entry's subject). */
   actor: IUser;
+  /** Optional EE attribution supplied by an authenticated API boundary. */
+  viaPrincipalUserId?: string | null;
   /** Already validated with saveTimeEntryParamsSchema. */
   entry: SaveTimeEntryParams;
   /**
@@ -234,6 +239,31 @@ export async function publishPersistedTimeEntryEvents(persisted: PersistedTimeEn
   }
 }
 
+/**
+ * A new entry is created for the client of its work item (S4 `work_item` resolver), so a client-restricted
+ * subject cannot log time against a client outside their scope. An entry whose work item has no client
+ * (ad hoc, non-billable) is the subject's own to log, exactly as such entries stay readable by their own
+ * user (see timeEntryAuthorizationSql.ts); for anyone else's, the candidate has no client and a narrowed
+ * subject is refused.
+ */
+export async function assertTimeEntryCreateInScope(
+  trx: Knex.Transaction,
+  tenant: string,
+  actor: IUser,
+  entryUserId: string,
+  entry: Pick<SaveTimeEntryParams, 'work_item_type' | 'work_item_id'>,
+): Promise<void> {
+  await assertRecordCreateAllowed(trx, {
+    tenant,
+    user: actor,
+    resourceType: 'time_entry',
+    record: async () => {
+      const clientId = await clientResolvers.resolveClient(trx, tenant, 'work_item', entry.work_item_type, entry.work_item_id);
+      return !clientId && entryUserId === actor.user_id ? null : { clientId, ownerUserId: entryUserId };
+    },
+  }, 'time entries');
+}
+
 export async function persistTimeEntry(
   trx: Knex.Transaction,
   input: PersistTimeEntryInput,
@@ -283,6 +313,7 @@ export async function persistTimeEntry(
     } else {
       await assertHumanWorkOwner(trx, tenant, actorUserId, 'user_id');
     }
+    await assertTimeEntryCreateInScope(trx, tenant, actor, timeEntryUserId, validatedTimeEntry);
   }
 
   // Extract only the fields that exist in the database schema
@@ -614,11 +645,30 @@ export async function persistTimeEntry(
                 updated_at: new Date().toISOString(),
                 updated_by: actorUserId,
               });
+            // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+            await recordTicketAssigneeChange(trx, tenant, work_item_id);
           }
         }
       }
     }
   }
+
+  // Provenance columns belong to EE. The edition seam clears stale update
+  // attribution for human writes and stamps the current principal for delegated
+  // writes; its CE implementation is inert against the CE schema.
+  const entryId = (resultingEntry as { entry_id?: string } | null)?.entry_id;
+  if (entryId && resultingEntry) {
+    const { stampTimeEntryAttribution } = await import('@product/service-principals/entry');
+    const stampedAttribution = await stampTimeEntryAttribution(
+      trx,
+      tenant,
+      entryId,
+      entry_id ? 'update' : 'create',
+      input.viaPrincipalUserId,
+    );
+    Object.assign(resultingEntry, stampedAttribution);
+  }
+
   // Bucket draw + hour-block reconciliation (extracted verbatim; see timeEntryBillingAllocations.ts).
   const { prepaidBlockUsage } = await reconcileTimeEntryBillingAllocations(trx, tenant, {
     entry_id,

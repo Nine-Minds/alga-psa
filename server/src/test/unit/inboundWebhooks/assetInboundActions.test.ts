@@ -34,8 +34,13 @@ async function loadAssetInboundActions() {
 describe('asset inbound webhook actions', () => {
   const tenantKnex = { name: 'tenant-knex' };
   let trx: ReturnType<typeof vi.fn>;
+  let tenantPolicy: { asset_tag_claims_required: boolean };
+  let tagClaim: Record<string, unknown> | undefined;
   let assetsQuery: {
     where: ReturnType<typeof vi.fn>;
+    whereRaw: ReturnType<typeof vi.fn>;
+    whereNot: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     returning: ReturnType<typeof vi.fn>;
@@ -43,8 +48,18 @@ describe('asset inbound webhook actions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    tenantPolicy = { asset_tag_claims_required: false };
+    tagClaim = undefined;
+    const tenantsQuery = {
+      where: vi.fn().mockReturnThis(),
+      forKeyShare: vi.fn().mockReturnThis(),
+      first: vi.fn(async () => tenantPolicy),
+    };
     assetsQuery = {
       where: vi.fn().mockReturnThis(),
+      whereRaw: vi.fn().mockReturnThis(),
+      whereNot: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       returning: vi.fn().mockResolvedValue([
@@ -54,10 +69,20 @@ describe('asset inbound webhook actions', () => {
         },
       ]),
     };
+    const claimsQuery = {
+      where: vi.fn().mockReturnThis(),
+      forUpdate: vi.fn().mockReturnThis(),
+      first: vi.fn(async () => tagClaim),
+      insert: vi.fn((row: Record<string, unknown>) => {
+        return { onConflict: () => ({ ignore: async () => { tagClaim ??= row; } }) };
+      }),
+    };
     trx = vi.fn((table: string) => {
       if (table === 'assets') {
         return assetsQuery;
       }
+      if (table === 'tenants') return tenantsQuery;
+      if (table === 'asset_tag_claims') return claimsQuery;
       throw new Error(`Unexpected table ${table}`);
     });
     mocks.createTenantKnex.mockResolvedValue({ knex: tenantKnex });
@@ -231,7 +256,8 @@ describe('asset inbound webhook actions', () => {
     expect(mocks.ingestNormalizedRmmDeviceSnapshot).not.toHaveBeenCalled();
   });
 
-  it('T1042: upsertAssetByExternalId uses the plain asset upsert path for non-RMM payloads', async () => {
+  it.each([false, true])('T1042: plain asset upsert claims its tag with tenant enforcement=%s', async (claimsRequired) => {
+    tenantPolicy.asset_tag_claims_required = claimsRequired;
     mocks.lookupAlgaEntityByExternalId.mockResolvedValue(null);
     const { getAction } = await loadAssetInboundActions();
     const action = getAction('upsertAssetByExternalId');
@@ -276,12 +302,19 @@ describe('asset inbound webhook actions', () => {
       'switch-42',
       { knex: trx },
     );
+    expect(await trx('asset_tag_claims').first()).toMatchObject({
+      tenant: 'tenant-a', normalized_tag: 'NET-42', owner_kind: 'asset',
+      owner_id: assetsQuery.insert.mock.calls[0][0].asset_id,
+    });
     expect(assetsQuery.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         tenant: 'tenant-a',
         asset_type: 'network_device',
         client_id: 'client-1',
         asset_tag: 'NET-42',
+        asset_tag_normalized: 'NET-42',
+        asset_tag_managed: claimsRequired,
+        asset_tag_legacy_exempt: false,
         serial_number: 'SN-SWITCH',
         name: 'Switch 1',
         status: 'active',
@@ -302,5 +335,35 @@ describe('asset inbound webhook actions', () => {
         },
       },
     );
+  });
+
+  it.each(['asset', 'reservation'] as const)('rejects a plain asset upsert whose tag belongs to another %s', async (ownerKind) => {
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue(null);
+    if (ownerKind === 'asset') {
+      assetsQuery.first.mockResolvedValue({ asset_id: 'existing-asset' });
+    } else {
+      tagClaim = { owner_kind: 'reservation', owner_id: 'existing-reservation' };
+    }
+    const { getAction } = await loadAssetInboundActions();
+
+    await expect(getAction('upsertAssetByExternalId')?.handle(
+      {
+        tenant: 'tenant-a',
+        webhookSlug: 'asset-feed',
+        deliveryId: 'delivery-1',
+        headers: {},
+        rawBody: {},
+        idempotencyKey: 'switch-42',
+      },
+      { external_id: 'switch-42', client_id: 'client-1', asset_tag: ' net-42 ' },
+    )).rejects.toMatchObject({ code: 'ASSET_TAG_CONFLICT', statusCode: 409 });
+
+    expect(assetsQuery.whereRaw).toHaveBeenCalledWith(expect.any(String), ['NET-42']);
+    expect(assetsQuery.insert).not.toHaveBeenCalled();
+    expect(assetsQuery.update).not.toHaveBeenCalled();
+    expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
+    if (ownerKind === 'reservation') {
+      expect(tagClaim).toEqual({ owner_kind: 'reservation', owner_id: 'existing-reservation' });
+    }
   });
 });

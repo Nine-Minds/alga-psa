@@ -6,11 +6,14 @@ const source = readFileSync(resolve(__dirname, '../src/actions/documentActions.t
 const helperSection = source.slice(
   source.indexOf('export const getDocumentTypeId = withAuth(async'),
   source.indexOf('// ============================================================================')
-);
+)
+  // The document-type lookup moved to a shared module (the upload routes use it without withAuth).
+  + readFileSync(resolve(__dirname, '../src/lib/documentTypeLookup.ts'), 'utf8');
 
 describe('document type/file helper tenant-scoped query contract', () => {
   it('uses structural tenant scoping for document type, external file, and entity-type roots', () => {
-    expect(helperSection).toContain("tenantScopedTable(trx, 'document_types', tenant)");
+    expect(helperSection).toContain("scopedDb.table('document_types')");
+    expect(helperSection).toContain("tenantDb(conn, tenant)");
     expect(helperSection).toContain("tenantScopedTable(trx, 'external_files', tenant)");
     expect(helperSection).toContain("tenantScopedTable(knex, 'external_files', tenant)");
     expect(helperSection).toContain("tenantScopedTable(trx, 'document_associations', tenant)");

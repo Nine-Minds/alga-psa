@@ -374,6 +374,10 @@
       "title": "Asset-Inventar",
       "custody": {
         "title": "Equipment in Verwahrung"
+      },
+      "audits": {
+        "title": "Standort-Audits",
+        "detailTitle": "Standort-Audit"
       }
     },
     "chat": {
@@ -521,7 +525,10 @@
       "defaultTitle": "Dashboard | AlgaPSA"
     },
     "coManaged": {
-      "title": "Co-Managed-IT"
+      "title": "Co-Managed-IT",
+      "archive": {
+        "title": "Archiv für gemeinsam verwaltete IT"
+      }
     },
     "coManagement": {
       "title": "Co-Managed-Zugriff",
@@ -542,8 +549,17 @@
         "taskTitle": "Geteilte Aufgabe",
         "projectTitle": "Geteiltes Projekt"
       },
+      "departure": {
+        "title": "Gemeinsam verwaltete IT beenden"
+      },
+      "sla": {
+        "title": "Co-Managed-SLA-Prioritäten"
+      },
       "export": {
         "title": "Arbeitsbereich exportieren"
+      },
+      "upgrade": {
+        "title": "Zu AlgaPSA wechseln"
       }
     }
   },

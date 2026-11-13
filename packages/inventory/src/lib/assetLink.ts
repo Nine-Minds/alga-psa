@@ -36,7 +36,8 @@ export async function createAndLinkDeliveredAsset(
   const req: CreateAssetRequest = {
     asset_type: assetType,
     client_id: p.clientId,
-    asset_tag: serial,
+    // Delivery supplies inventory identity, not a scanned physical asset tag.
+    // Omit asset_tag so the shared tenant sequence assigns the physical label.
     name: p.serviceName ? `${p.serviceName} ${serial}`.trim() : serial,
     status: 'active',
     serial_number: p.unit.serial_number || undefined,

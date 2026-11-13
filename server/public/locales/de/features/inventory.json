@@ -157,6 +157,8 @@
         "ghost": "Ghost-Verbrauch",
         "rmaAging": "RMA überfällig",
         "rmaClient": "Ersatz",
+        "rmaVendorReturnOverdue": "überfällige Rücksendung an den Lieferanten",
+        "rmaVendorReturnApproaching": "Rücksendung an den Lieferanten bald fällig",
         "priceCreep": "Preisdrift",
         "billCreep": "Rechnungsdrift",
         "billsOverdue": "überfällige Rechnungen",
@@ -165,7 +167,8 @@
         "stockOut": "Bestand leer",
         "poPartial": "Teil-PO",
         "warranty": "Garantie",
-        "deadStock": "Ladenhüter"
+        "deadStock": "Ladenhüter",
+        "rmaVendorReturn": "Überfällige Rücksendung an Lieferanten"
       },
       "fact": {
         "unbilledSo": "versendet, noch nicht abgerechnet",
@@ -177,6 +180,8 @@
         "ghostTech": "{{count}} Hardware-Tickets geschlossen, keine Teile abgerechnet",
         "rmaVendor": "Gutschrift ausstehend — keine Antwort seit {{days}} Tagen",
         "rmaClient": "Ersatzgerät noch ausstehend",
+        "rmaVendorReturnOverdue": "Rücksendung an den Lieferanten fällig am {{date}} — {{days}} Tage überfällig",
+        "rmaVendorReturnApproaching": "Rücksendung an den Lieferanten fällig am {{date}} — noch {{days}} Tage",
         "priceCreepSo": "noch zum alten Kostenpreis kalkuliert",
         "priceCreepQuotes": "{{count}} offene(s) Angebot(e) jetzt unter aktuellem Kostenpreis",
         "priceCreepBill": "Rechnung übersteigt zugehörige PO",
@@ -186,7 +191,8 @@
         "stockLow": "{{service}} unter Meldebestand",
         "poPartial": "teilweise erfasste PO noch offen",
         "warranty": "{{count}} Einheiten mit Garantieablauf <30 T",
-        "deadStock": "keine Bewegung seit 90 Tagen"
+        "deadStock": "keine Bewegung seit 90 Tagen",
+        "rmaVendorReturn": "Rücksendung an Lieferanten fällig {{date}} — {{days}} Tage überfällig"
       },
       "meta": {
         "unbilledSo": "{{so}} · {{lines}} Positionen · vor {{days}} T versendet",
@@ -207,7 +213,8 @@
         "stockLevel": "verfügbar {{available}} · Meldebestand {{reorder}}",
         "poPartial": "{{po}} · {{received}} von {{ordered}} erfasst · {{vendor}}",
         "warranty": "{{count}} Kunden",
-        "deadStock": "{{locations}} Standort(e) binden Betriebskapital"
+        "deadStock": "{{locations}} Standort(e) binden Betriebskapital",
+        "rmaVendorReturn": "{{ref}} · Rückgabefrist beim Lieferanten"
       },
       "metric": {
         "ageDays": "{{days}} T",
@@ -598,6 +605,7 @@
       "warrantyLocationRequired": "Wählen Sie, wo sich das Gerät aktuell befindet, damit es zurückgenommen werden kann.",
       "warrantyInvalidTransition": "Dieser Schritt ist im aktuellen Status der RMA nicht verfügbar. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "warrantyReviewClose": "Genehmigen oder lehnen Sie den Anspruch ab, bevor Sie ihn schließen.",
+      "warrantyWrongTrack": "Dieser Schritt gilt nur für Vorabaustausch-Ansprüche.",
       "duplicateReference": "Diese RMA-Referenz oder -Nummer wird bereits verwendet.",
       "checkViolation": "Dieser Wert ist für diese RMA nicht zulässig.",
       "ticketNotFound": "Ticket nicht gefunden.",
@@ -1324,6 +1332,7 @@
       "replacementReceived": "Ersatz erhalten",
       "replacementDeployed": "Ersatz bereitgestellt",
       "deadUnitOwed": "Defektgerät ausstehend",
+      "deadUnitToVendor": "Defekte Einheit an Hersteller",
       "deadUnitReturned": "Defektgerät zurückgegeben",
       "replaced": "Ersetzt",
       "credited": "Gutgeschrieben",
@@ -1373,6 +1382,12 @@
       "noEvents": "Noch kein Verlauf vorhanden.",
       "confirmReceived": "Bestätigen Sie, dass sich das Gerät im Büro befindet. Es muss sich im Büro in Obhut befinden.",
       "confirmCredit": "Erfassen Sie, dass der Lieferant dieses Gerät gutgeschrieben hat. Die Obhutsphase wird als entsorgt abgeschlossen.",
+      "confirmShipDeadUnit": "Senden Sie die defekte Einheit an den Hersteller zurück. Das Gerät in der Obhut wird als beim Hersteller erfasst.",
+      "confirmVendorReceipt": "Bestätigen Sie, dass der Hersteller die defekte Einheit erhalten hat. Der Fall wird als gelöst und die Obhut als an den Hersteller zurückgegeben geschlossen.",
+      "deadUnitNotShipped": "Defekte Einheit noch nicht versandt, fällig am {{date}}",
+      "deadUnitApproaching": "Rücksendung der defekten Einheit bald fällig: {{date}}",
+      "deadUnitShippedLate": "Defekte Einheit verspätet versandt, fällig am {{date}}",
+      "returnByHint": "Das Datum, bis zu dem der Hersteller die defekte Einheit versandt haben muss, ab Lieferung dieses Ersatzes gerechnet. Unverändert lassen, um das Datum aus der Genehmigung zu behalten.",
       "actions": {
         "approveStandard": "Genehmigen (Standard)",
         "approveAdvance": "Genehmigen (Vorabaustausch)",
@@ -1384,7 +1399,10 @@
         "recordRepair": "Reparatur erfassen",
         "recordCredit": "Lieferantengutschrift erfassen",
         "returnToClient": "An Kunden zurückgeben",
-        "close": "RMA schließen"
+        "shipDeadUnitToVendor": "Defekte Einheit an Hersteller senden",
+        "confirmVendorReceipt": "Hersteller hat defekte Einheit erhalten",
+        "close": "RMA schließen",
+        "chargeVendorNonReturn": "Gebühr wegen nicht erfolgter Rücksendung erfassen"
       },
       "events": {
         "opened": "Anspruch eröffnet",
@@ -1397,8 +1415,11 @@
         "repairReceived": "Reparatur erhalten",
         "vendorCredited": "Vom Lieferanten gutgeschrieben",
         "returnedToClient": "An Kunden zurückgegeben",
+        "deadUnitShipped": "Defekte Einheit an Hersteller gesendet",
+        "vendorReceiptConfirmed": "Hersteller hat defekte Einheit erhalten",
         "closed": "Geschlossen",
-        "note": "Notiz"
+        "note": "Notiz",
+        "vendorNonReturnCharge": "Gebühr wegen nicht erfolgter Rücksendung erfasst"
       },
       "outcome": {
         "covered": "Abgedeckt",
@@ -1433,7 +1454,10 @@
         "inboundTracking": "Eingehende Sendungsnummer",
         "counterparty": "Zurückgegeben an",
         "closeReason": "Schließungsgrund",
-        "note": "Notiz"
+        "note": "Notiz",
+        "vendorChargeAmount": "Gebührenbetrag",
+        "vendorChargeCurrency": "Währung",
+        "selectCurrency": "Währung auswählen"
       },
       "claim": {
         "title": "Neuer Garantieanspruch",
@@ -1449,7 +1473,8 @@
         "track": "Verfolgen",
         "stockHint": "Aus dem Bestand verkaufte Geräte können hier nicht beansprucht werden. Verwenden Sie stattdessen RMA eröffnen an der Bestandseinheit.",
         "submit": "Anspruch eröffnen"
-      }
+      },
+      "vendorChargeHint": "Mit dieser Gebühr wird die überfällige Rückgabeverpflichtung gegenüber dem Lieferanten geschlossen. Sie erfasst weder Versand noch Wareneingang."
     }
   },
   "salesOrders": {

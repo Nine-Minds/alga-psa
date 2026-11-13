@@ -1,4 +1,5 @@
 import { localizeActionError } from '@alga-psa/auth/localizeActionError';
+import { isUploadContentTypeError, isUploadSizeLimitError } from '@alga-psa/storage/ingest/errors';
 import {
   actionError,
   isAuthorizationThrow,
@@ -25,6 +26,19 @@ export function documentActionErrorFrom(error: unknown): DocumentActionError | n
     if (typeof candidate.actionError === 'string') {
       return actionError(candidate.actionError);
     }
+  }
+
+  // Ingest-pipeline rejections carry stable codes; map on those rather than on message text.
+  if (isUploadContentTypeError(error)) {
+    return error.message === 'File type not allowed'
+      ? actionError('This file type is not allowed.', 'documents:errors.upload.typeNotAllowed')
+      : actionError(
+          "This file's contents don't match its file type, so it was not uploaded. Check that you picked the right file.",
+          'documents:errors.upload.contentMismatch',
+        );
+  }
+  if (isUploadSizeLimitError(error)) {
+    return actionError(error.message);
   }
 
   if (error instanceof Error) {

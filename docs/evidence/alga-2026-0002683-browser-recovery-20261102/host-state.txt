@@ -1,0 +1,29 @@
+captured_at=2026-11-02T17:27:54Z
+
+-- IDE window --
+{"windows":[{"windowId":"window-1-1793580971518","bounds":{"x":1728,"y":-81,"width":2560,"height":1329},"focused":false}],"scopedTo":"ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"}
+
+-- fresh pane ownership --
+{"paneId":"376c175b-b142-46db-b907-5be706188acf","success":true,"tabs":[{"paneId":"376c175b-b142-46db-b907-5be706188acf","type":"browser","active":true}],"scopedTo":"ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"}
+
+-- old pane ownership --
+{"paneId":"c8b5a26d-b238-4df9-87f0-4d0b95e3b67d","success":true,"tabs":[{"paneId":"c8b5a26d-b238-4df9-87f0-4d0b95e3b67d","type":"browser","active":true}],"scopedTo":"ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"}
+
+-- browser host processes --
+    PID    PPID STAT %CPU %MEM   RSS NLWP     ELAPSED CMD
+3447947    5390 Ssl   0.0  0.0  3500    7    16:06:04 /home/robert/.nvm/versions/node/v22.18.0/bin/node /home/robert/alga-dev/ghostty-pane-ide/scripts/host-supervisor.mjs
+3448033 3447947 Sl   10.6  0.7 927288 118    16:06:04 /home/robert/.nvm/versions/node/v22.18.0/bin/node /home/robert/.alga-dev/releases/202611012317-gd3a4c69e89/service/index.mjs
+3449128 3449126 S     0.0  0.0  6292    1    16:05:57 /home/robert/.alga-dev/browser/.chromium/chrome-headless-shell/linux-150.0.7871.46/chrome-headless-shell-linux64/chrome-headless-shell --type=zygote --no-zygote-sandbox --no-sandbox --headless=new
+3449129 3449126 S     0.0  0.0  8460    1    16:05:57 /home/robert/.alga-dev/browser/.chromium/chrome-headless-shell/linux-150.0.7871.46/chrome-headless-shell-linux64/chrome-headless-shell --type=zygote --no-sandbox --headless=new
+chromium_headless_process_count=51
+renderer_pid=148258 fd_count=2898
+
+-- memory and descriptors --
+               total        used        free      shared  buff/cache   available
+Mem:           125Gi        69Gi        30Gi        15Gi        42Gi        56Gi
+Swap:          8.0Gi       7.8Gi       162Mi
+51729	0	9223372036854775807
+ulimit_open_files=524288
+
+-- required application port --
+no listener on TCP 3536

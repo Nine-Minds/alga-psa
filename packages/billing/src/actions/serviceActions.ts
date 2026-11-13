@@ -30,6 +30,7 @@ import {
   isServiceCatalogPricingError,
   writeServiceCatalogPricing,
 } from '../lib/catalog/serviceCatalogPricing';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 
 type ServiceCatalogSearchEventType =
   | 'SERVICE_CATALOG_CREATED'
@@ -202,7 +203,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category' | 'tax_rate_id'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -275,6 +276,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.sku as sku',
         'sc.description as description',
         'sc.product_category as product_category',
+        'sc.tax_rate_id as tax_rate_id',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
         'sc.cost_currency as cost_currency'
@@ -1058,6 +1060,7 @@ export const deleteProductPermanently = withAuth(async (
 
     try {
         return await withTransaction(db, async (trx: Knex.Transaction): Promise<void | ActionMessageError> => {
+            await lockTenantBilling(trx, tenant);
             // Re-check associations within the transaction to prevent race conditions
             const check = await checkProductCanBeDeleted(serviceId);
             if (isServiceActionError(check)) {
@@ -1590,6 +1593,7 @@ export const removeServicePrice = withAuth(async (user, { tenant }, serviceId: s
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await lockTenantBilling(trx, tenant);
       const result = await Service.removePrice(trx, serviceId, currencyCode);
       safeRevalidate('/msp/billing');
       return result;

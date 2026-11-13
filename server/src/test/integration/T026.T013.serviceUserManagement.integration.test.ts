@@ -88,6 +88,7 @@ interface Fixture {
   clientId: string;
   serviceId: string;
   adminRoleId: string;
+  portalRoleId: string;
 }
 
 async function insertUser(tenant: string, userType: 'internal' | 'client', label: string) {
@@ -117,6 +118,9 @@ async function createFixture(opts: { licensedUserCount?: number | null } = {}): 
   });
   const adminRoleId = uuidv4();
   await tt(tenant, 'roles').insert({ tenant, role_id: adminRoleId, role_name: 'Admin', msp: true, client: false });
+  // Every created user gets a role: there is no zero-role state.
+  const portalRoleId = uuidv4();
+  await tt(tenant, 'roles').insert({ tenant, role_id: portalRoleId, role_name: 'User', msp: false, client: true });
   const adminId = await insertUser(tenant, 'internal', 'admin');
   await tt(tenant, 'user_roles').insert({ tenant, user_id: adminId, role_id: adminRoleId });
   const internalId = await insertUser(tenant, 'internal', 'staff');
@@ -131,7 +135,7 @@ async function createFixture(opts: { licensedUserCount?: number | null } = {}): 
     roles: [{ role_id: adminRoleId, role_name: 'Admin' }],
   };
   mockCurrentUser = admin;
-  return { tenant, admin, internalId, clientId, serviceId, adminRoleId };
+  return { tenant, admin, internalId, clientId, serviceId, adminRoleId, portalRoleId };
 }
 
 const serviceRow = (f: Fixture) => tt(f.tenant, 'users').where({ user_id: f.serviceId }).first();
@@ -364,10 +368,11 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
   });
 
   describe('F086: REST UserService.create', () => {
-    const base = (suffix: string, userType?: string) => ({
+    const base = (f: Fixture, suffix: string, userType?: string) => ({
       username: `new-${suffix}-${uuidv4().slice(0, 6)}`,
       email: `new-${suffix}-${uuidv4().slice(0, 6)}@example.com`,
       password: 'Sup3r-secret-password!',
+      role_ids: [userType === 'client' ? f.portalRoleId : f.adminRoleId],
       ...(userType ? { user_type: userType } : {}),
     });
 
@@ -379,7 +384,7 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
       const count = async () => Number((await tt(f.tenant, 'users').count('* as c').first())?.c);
       const before = await count();
       for (const t of ['service', 'bogus']) {
-        await expect(service.create(base('bad', t) as any, context)).rejects.toMatchObject({ statusCode: 400 });
+        await expect(service.create(base(f, 'bad', t) as any, context)).rejects.toMatchObject({ statusCode: 400 });
       }
       expect(await count()).toBe(before);
     });
@@ -393,16 +398,16 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
       const count = async () => Number((await tt(f.tenant, 'users').count('* as c').first())?.c);
       const before = await count();
 
-      await expect(service.create(base('internal', 'internal') as any, context)).rejects.toMatchObject({
+      await expect(service.create(base(f, 'internal', 'internal') as any, context)).rejects.toMatchObject({
         statusCode: 403,
         code: 'LICENSE_LIMIT_REACHED',
       });
-      await expect(service.create(base('default') as any, context)).rejects.toMatchObject({
+      await expect(service.create(base(f, 'default') as any, context)).rejects.toMatchObject({
         code: 'LICENSE_LIMIT_REACHED',
       });
       expect(await count()).toBe(before);
 
-      const client: any = await service.create(base('client', 'client') as any, context);
+      const client: any = await service.create(base(f, 'client', 'client') as any, context);
       expect(client.user_type).toBe('client');
       expect(await count()).toBe(before + 1);
     });
@@ -412,7 +417,7 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
       const { UserService } = await import('@alga-psa/users/services/UserService');
       const service = new UserService();
       const context: any = { tenant: f.tenant, userId: f.admin.user_id, user: f.admin };
-      const created: any = await service.create(base('ok', 'internal') as any, context);
+      const created: any = await service.create(base(f, 'ok', 'internal') as any, context);
       expect(created.user_type).toBe('internal');
     });
   });

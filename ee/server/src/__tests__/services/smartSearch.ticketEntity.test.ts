@@ -5,7 +5,8 @@ vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   loadTicketListItemsByIds: vi.fn(),
 }));
 vi.mock('@alga-psa/tickets/schemas/ticket.schema', () => ({ ticketListFiltersSchema: { parse: (v: unknown) => v } }));
-vi.mock('@alga-psa/search/acl', () => ({ aclPredicateSql: vi.fn(), resolveSearchAclPrincipal: vi.fn() }));
+vi.mock('@alga-psa/search/acl', () => ({ aclPredicateSql: vi.fn() }));
+vi.mock('@alga-psa/search/runAppSearch', () => ({ resolveSearchPrincipal: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn() }));
 
 import { approxTokens } from '../../services/smartSearch/budgets';

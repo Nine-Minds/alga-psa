@@ -18,6 +18,7 @@ export type MergeBlockerCode =
   | 'SOURCE_IS_TENANT_DEFAULT'
   | 'PARENT_LINK_CYCLE'
   | 'INVALID_CONTRACT_CUTOVER'
+  | 'INVALID_CONTACT_LOCATION'
   | 'SOURCE_HAS_CO_MANAGEMENT';
 
 export interface MergeBlocker {
@@ -33,7 +34,7 @@ export interface MergeClientFacts {
   mergedIntoClientId: string | null;
   /** The tenant's own client record cannot be absorbed into a customer. */
   isTenantDefault: boolean;
-  /** A co-managed workspace provisioned for this client still holds seats. */
+  /** A live co-managed workspace or seat arrangement still belongs to this client. */
   hasLiveCoManagement?: boolean;
 }
 
@@ -53,6 +54,36 @@ const blocker = (code: MergeBlockerCode, message: string, i18nKey: string): Merg
   message,
   i18nKey,
 });
+
+/**
+ * A chosen contact location has to be one of the merged client's own: a source location (which the
+ * merge moves to the target) or a target location. Anything else would leave a link straddling two
+ * clients, which the engine refuses at write time — the dry run runs this same check so the
+ * operator reads it before they commit rather than after.
+ */
+export function evaluateContactLocationChoices(input: {
+  assignments: ReadonlyArray<{ contactNameId: string; locations: ReadonlyArray<{ locationId: string }> }>;
+  /** Contacts the merge moves; an assignment for anyone else is ignored, not refused. */
+  sourceContactIds: ReadonlySet<string>;
+  /** Locations of the source and the target, the two sets that end up on the merged client. */
+  allowedLocationIds: ReadonlySet<string>;
+}): MergeBlocker[] {
+  const blockers: MergeBlocker[] = [];
+  for (const assignment of input.assignments) {
+    if (!input.sourceContactIds.has(assignment.contactNameId)) continue;
+    for (const choice of assignment.locations) {
+      if (input.allowedLocationIds.has(choice.locationId)) continue;
+      blockers.push(blocker(
+        'INVALID_CONTACT_LOCATION',
+        'CLIENT_MERGE_ERROR: contact '
+        + `${assignment.contactNameId} cannot be linked to location ${choice.locationId}: `
+        + 'it belongs to neither the source nor the destination client',
+        'msp/clients:errors.clientMerge.invalidContactLocation',
+      ));
+    }
+  }
+  return blockers;
+}
 
 export function evaluateMergeGuards(input: MergeGuardInput): MergeBlocker[] {
   const blockers: MergeBlocker[] = [];
@@ -108,7 +139,7 @@ export function evaluateMergeGuards(input: MergeGuardInput): MergeBlocker[] {
   if (input.source.hasLiveCoManagement) {
     blockers.push(blocker(
       'SOURCE_HAS_CO_MANAGEMENT',
-      'This client has a co-managed IT workspace. Cancel its setup or end co-management before merging it.',
+      'This client has a co-managed IT arrangement. Cancel its setup or end co-management before merging it.',
       'msp/clients:errors.clientMerge.sourceHasCoManagement',
     ));
   }
@@ -375,9 +406,24 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // moves, so its custody (open or closed) follows; one open record per asset,
   // not per client, so a move cannot collide.
   { table: 'asset_custody', label: 'equipment custody record' },
+  // The destination client changes; the reserved physical label stays fixed.
+  { table: 'asset_number_reservations', label: 'asset number reservation' },
+  // A site audit is a record of walking one client's location. The location and
+  // the audited assets both move, so the audit follows them; audits are keyed by
+  // audit_id alone, so nothing can collide. Its items are keyed by audit, not client.
+  { table: 'asset_audits', label: 'site audit' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
+  // A user's portfolio names the clients they are responsible for. A row left on the tombstone
+  // would silently drop the surviving client from that user's scope. Where the user already
+  // holds the target, that row is the answer and the source's is dropped.
+  {
+    table: 'user_client_portfolios',
+    label: 'client portfolio entry',
+    conflictKeyColumns: ['user_id'],
+    onCollision: 'drop',
+  },
   // Client-scoped checklist and ticket templates keep applying to the surviving client's tickets.
   { table: 'checklist_templates', label: 'checklist template' },
   { table: 'ticket_templates', label: 'ticket template' },
@@ -485,6 +531,13 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
  */
 export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: string }> = [
   {
+    table: 'co_managed_seat_arrangements',
+    reason:
+      'Live seat arrangements block the merge through SOURCE_HAS_CO_MANAGEMENT. Ended arrangements '
+      + 'retain the original client identity, matching their allocation and assignment history; '
+      + 'moving them would misattribute that history to the destination client.',
+  },
+  {
     table: 'tenant_companies',
     reason: "The tenant's own client record. SOURCE_IS_TENANT_DEFAULT refuses the merge instead.",
   },
@@ -507,6 +560,13 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       'A durable audit written once by migration 20260923090000, recording the legacy tax ID that '
       + 'was discarded for this specific client. It has no live write path, and re-stamping it would '
       + 'misattribute the record (and collide with the target\'s own row on the per-client unique key).',
+  },
+  {
+    table: 'co_managed_archive_files',
+    reason:
+      'An immutable copy-on-retain snapshot of a customer attachment owned by the sponsor tenant. '
+      + 'Its client_id records the original relationship provenance, not a live client write target; '
+      + 'archive storage and reads use tenant and archive_file_id. Re-pointing it would rewrite retained history.',
   },
   {
     table: 'co_managed_participation_evidence',

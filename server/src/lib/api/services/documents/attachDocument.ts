@@ -12,7 +12,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { generateDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { scheduleDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewJob';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 import type { IDocument } from 'server/src/interfaces/document.interface';
@@ -23,6 +23,7 @@ export interface AttachDocumentInput {
   knex: Knex;
   tenant: string;
   actorUserId: string;
+  viaPrincipalUserId?: string | null;
   target: { entityType: AttachableEntityType; entityId: string };
   file: { fileName: string; mimeType: string; bytes: Buffer };
   /** Where the bytes came from; used only in log lines. */
@@ -70,30 +71,6 @@ export async function resolveDocumentTypeId(
     throw new ConflictError('Unknown document type not found in shared document types');
   }
   return { typeId: unknownType.type_id, isShared: true };
-}
-
-/** Generate and persist thumbnail/preview files. Never throws: previews are best-effort. */
-export async function persistDocumentPreviews(
-  knex: Knex,
-  document: IDocument,
-  buffer: Buffer,
-  tenant: string,
-) {
-  try {
-    const result = await generateDocumentPreviews(document, buffer);
-    await tenantDb(knex, tenant)
-      .table('documents')
-      .where({ document_id: document.document_id })
-      .update({
-        thumbnail_file_id: result.thumbnail_file_id,
-        preview_file_id: result.preview_file_id,
-        preview_generated_at: result.preview_generated_at,
-      });
-    return result;
-  } catch (error) {
-    console.error(`[documents] Preview generation failed for document ${document.document_id}:`, error);
-    return null;
-  }
 }
 
 async function loadDocument(knex: Knex, tenant: string, documentId: string): Promise<IDocument | null> {
@@ -213,6 +190,7 @@ export async function attachDocumentFromBytes(input: AttachDocumentInput): Promi
         trx,
         tenant,
         actorUserId,
+        viaPrincipalUserId: input.viaPrincipalUserId,
         entityId: target.entityId,
         document,
         options,
@@ -229,7 +207,7 @@ export async function attachDocumentFromBytes(input: AttachDocumentInput): Promi
   }
 
   // Committed from here on: never delete the stored file.
-  await persistDocumentPreviews(knex, document, file.bytes, tenant);
+  await scheduleDocumentPreviews(tenant, documentId, actorUserId);
   await publishAfterCommit(tenant, actorUserId, associationId, document, target);
 
   const created = await (input.loadDocument

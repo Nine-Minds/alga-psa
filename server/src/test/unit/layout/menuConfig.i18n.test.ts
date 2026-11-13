@@ -76,6 +76,7 @@ describe('menuConfig i18n metadata', () => {
 
     expect(keyedSubItems.map((item) => item.translationKey)).toEqual([
       'nav.ticketsAll',
+      'nav.ticketsCustomer',
       'nav.ticketsRecurring',
       'nav.ticketsTemplates',
       'nav.ticketsCannedResponses',
@@ -93,6 +94,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.assetsAll',
       'nav.assetsMaintenance',
       'nav.assetsCustody',
+      'nav.assetsAudits',
       'nav.timeEntry',
       'nav.approvals',
       'nav.controlPanel',

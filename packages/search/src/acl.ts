@@ -4,9 +4,14 @@ import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import {
+  audiencesVisibleTo, commentAudienceSql, isCommentAudience, isCommentAudienceVisible, admitCommentAudienceReader,
+  type CommentAudienceReader,
+} from '@alga-psa/shared/lib/commentAudience';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
+
+import { resolveClientScopes, type ClientScopedObjectType } from './clientScope';
 
 export interface ComposedAclHints {
   visibleToUserIds: string[];
@@ -18,17 +23,46 @@ export interface ComposedAclHints {
 }
 
 /**
- * Client visibility for a search principal. `all` means unrestricted (today:
- * every internal/MSP user). `scoped` means the principal may only see rows
- * whose `client_scope_id` is in `clientIds` (client-portal users now; the seam
- * for future ABAC per-internal-user client restrictions). Keeping this an
- * explicit mode — rather than overloading an empty array — is what lets a
- * future restriction be a single change in the resolver without the SQL
- * predicate and per-row verifier disagreeing.
+ * Client visibility for a search principal. `all` means unrestricted. `scoped` means the principal
+ * may only see rows whose `client_scope_id` is in `clientIds`, on every object type: client-portal
+ * users (their own client). `by_resource` is an internal user whose authorization-bundle rules
+ * restrict clients per resource: each entry of `clientIdsByResource` bounds the search types of that
+ * resource only (see SEARCH_TYPE_RESOURCE); a resource with no entry is unrestricted, and an empty
+ * set means nothing of that resource is readable. The explicit mode, never an empty array standing
+ * for "unrestricted", is what lets the SQL predicate and the per-row verifiers agree;
+ * `resolveClientAccess` is the only place that decides it.
+ *
+ * `boardIds` is a second, independent restriction: when present, ticket rows (and ticket comments)
+ * are limited to those boards, whatever the client mode.
  */
 export type ClientAccess =
-  | { mode: 'all' }
-  | { mode: 'scoped'; clientIds: string[] };
+  | { mode: 'all'; boardIds?: string[] }
+  | { mode: 'scoped'; clientIds: string[]; boardIds?: string[] }
+  | { mode: 'by_resource'; clientIdsByResource: Readonly<Record<string, readonly string[]>>; boardIds?: string[] };
+
+/** The authorization resource whose `read` rules bound the clients of each client-bounded search type. */
+export const SEARCH_TYPE_RESOURCE: Readonly<Record<string, string>> = {
+  ticket: 'ticket',
+  ticket_comment: 'ticket',
+  project: 'project',
+  project_phase: 'project',
+  project_task: 'project',
+  project_task_comment: 'project',
+  asset: 'asset',
+  client: 'client',
+  contact: 'contact',
+  document: 'document',
+  interaction: 'interaction',
+  time_entry: 'time_entry',
+};
+
+/** The clients `access` allows for rows of `objectType`; null when that type is not client-restricted. */
+export function clientIdsForObjectType(access: ClientAccess | undefined, objectType: string): readonly string[] | null {
+  if (!access || access.mode === 'all') return null;
+  if (access.mode === 'scoped') return access.clientIds;
+  const resource = SEARCH_TYPE_RESOURCE[objectType];
+  return resource !== undefined ? access.clientIdsByResource[resource] ?? null : null;
+}
 
 export interface SearchAclPrincipal {
   userId: string;
@@ -37,6 +71,13 @@ export interface SearchAclPrincipal {
   roles?: string[];
   isInternal?: boolean;
   clientAccess: ClientAccess;
+  /**
+   * The organization an internal principal reads comments as (`admitCommentAudienceReader`).
+   * `staff` sees every audience stored in its tenant; a `seat` technician sees the audiences the
+   * shared predicate admits on its own client's tickets; `null` is a seat user with no live
+   * assignment and sees no comment. Unset means owning-tenant staff, as before the seat shape.
+   */
+  audienceReader?: CommentAudienceReader | null;
 }
 
 export interface SqlFragment {
@@ -97,19 +138,98 @@ export function composeAclHints(opts: AclMetadata = {}): ComposedAclHints {
 
 /**
  * Object types whose client scope is strict: for a scoped principal a NULL `client_scope_id` is
- * NOT tenant-wide, it is "unknown owner" and must be hidden. Shared by the SQL predicate (so
- * counts and result pages agree) and the per-row verifier (`hasTicketClientAccess`).
+ * NOT tenant-wide, it is "unknown owner" and must be hidden. These are the types whose records
+ * belong to a client (tickets and their comments, and the five indexed from the table manifest's
+ * client declarations). Unrestricted principals still see them. Shared by the SQL predicate (so
+ * counts and result pages agree) and the per-row verifiers.
  */
-export const STRICT_CLIENT_SCOPE_OBJECT_TYPES: readonly string[] = ['ticket', 'ticket_comment'];
+export const STRICT_CLIENT_SCOPE_OBJECT_TYPES: readonly string[] = [
+  'ticket',
+  'ticket_comment',
+  'client',
+  'contact',
+  'interaction',
+  'document',
+  'time_entry',
+];
+
+/** Object types whose rows belong to a ticket, and so to the ticket's board. */
+const BOARD_SCOPED_OBJECT_TYPES: readonly string[] = ['ticket', 'ticket_comment'];
+
+const NULL_SCOPE_OR_IN_SET =
+  '((client_scope_id IS NULL AND NOT (object_type = ANY(?::text[]))) OR client_scope_id = ANY(?::uuid[]))';
+
+/** Client-scope predicate: one set for every type (`scoped`), or each resource's set for its own types (`by_resource`). */
+function clientScopeSql(access: ClientAccess): SqlFragment {
+  if (access.mode === 'all') return { sql: 'TRUE', bindings: [] };
+  if (access.mode === 'scoped') {
+    return { sql: NULL_SCOPE_OR_IN_SET, bindings: [[...STRICT_CLIENT_SCOPE_OBJECT_TYPES], access.clientIds] };
+  }
+  const clauses: string[] = [];
+  const bindings: unknown[] = [];
+  for (const [resource, clientIds] of Object.entries(access.clientIdsByResource)) {
+    const types = Object.entries(SEARCH_TYPE_RESOURCE).filter(([, r]) => r === resource).map(([type]) => type);
+    if (types.length === 0) continue;
+    clauses.push(`(NOT (object_type = ANY(?::text[])) OR ${NULL_SCOPE_OR_IN_SET})`);
+    bindings.push(types, [...STRICT_CLIENT_SCOPE_OBJECT_TYPES], [...clientIds]);
+  }
+  return clauses.length === 0 ? { sql: 'TRUE', bindings: [] } : { sql: clauses.join(' AND '), bindings };
+}
+
+/** The internal principal's organization when it is not owning-tenant staff; undefined when no audience restriction applies. */
+function restrictedAudienceReader(user: SearchAclPrincipal): CommentAudienceReader | null | undefined {
+  if (!user.isInternal || user.audienceReader === undefined || user.audienceReader?.kind === 'staff') return undefined;
+  return user.audienceReader;
+}
+
+/**
+ * Comment-audience predicate over the index. The indexer stores each comment's audience
+ * (`metadata.audience`) and its ticket's client (`client_scope_id`); a seat technician reads the
+ * audiences the shared predicate admits, on their own client only. A row with no stored audience
+ * fails closed. Non-staff client readers are already bounded by `is_internal_only`.
+ */
+function commentAudienceIndexSql(user: SearchAclPrincipal): SqlFragment {
+  const reader = restrictedAudienceReader(user);
+  if (reader === undefined) return { sql: 'TRUE', bindings: [] };
+  if (reader?.kind !== 'seat') return { sql: `(object_type <> 'ticket_comment')`, bindings: [] };
+  return {
+    sql: `(object_type <> 'ticket_comment' OR (metadata->>'audience' = ANY(?::text[]) AND client_scope_id = ?::uuid))`,
+    bindings: [audiencesVisibleTo('seat'), reader.clientId],
+  };
+}
 
 export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
   const clientAccess = user.clientAccess ?? { mode: 'all' };
-  const clientScopeClause = clientAccess.mode === 'all'
+  const clientScope = clientScopeSql(clientAccess);
+  const commentAudience = commentAudienceIndexSql(user);
+
+  const boardIds = clientAccess.boardIds;
+  // `s` is the search index alias every query in query.ts uses. The correlated reads are tenant-joined.
+  const boardClause = boardIds === undefined
     ? 'TRUE'
-    : '((client_scope_id IS NULL AND NOT (object_type = ANY(?::text[]))) OR client_scope_id = ANY(?::uuid[]))';
-  const clientScopeBindings = clientAccess.mode === 'all'
-    ? []
-    : [[...STRICT_CLIENT_SCOPE_OBJECT_TYPES], clientAccess.clientIds];
+    : `(
+          NOT (s.object_type = ANY(?::text[]))
+          OR EXISTS (
+            SELECT 1
+              FROM tickets board_t
+             WHERE board_t.tenant = s.tenant
+               AND board_t.board_id = ANY(?::uuid[])
+               AND (
+                 (s.object_type = 'ticket' AND board_t.ticket_id::text = s.object_id)
+                 OR (
+                   s.object_type = 'ticket_comment'
+                   AND EXISTS (
+                     SELECT 1
+                       FROM comments board_c
+                      WHERE board_c.tenant = s.tenant
+                        AND board_c.ticket_id = board_t.ticket_id
+                        AND board_c.comment_id::text = s.object_id
+                   )
+                 )
+               )
+          )
+        )`;
+  const boardBindings = boardIds === undefined ? [] : [[...BOARD_SCOPED_OBJECT_TYPES], boardIds];
 
   return {
     sql: `
@@ -119,7 +239,9 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
         AND (cardinality(visible_to_roles) = 0 OR visible_to_roles && ?::text[])
         AND (is_internal_only = false OR ?::boolean = true)
         AND (is_private = false OR visible_to_user_ids && ARRAY[?]::uuid[])
-        AND ${clientScopeClause}
+        AND ${clientScope.sql}
+        AND ${commentAudience.sql}
+        AND ${boardClause}
       )
     `,
     bindings: [
@@ -128,15 +250,17 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
       user.roles ?? [],
       user.isInternal ?? false,
       user.userId,
-      ...clientScopeBindings,
+      ...clientScope.bindings,
+      ...commentAudience.bindings,
+      ...boardBindings,
     ],
   };
 }
 
 export async function resolveSearchAclPrincipal(
   knex: Knex,
-  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'>,
-  clientAccess: ClientAccess = { mode: 'all' },
+  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'> & { seat_reader?: boolean | null },
+  clientAccess: ClientAccess,
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
   const isClientPortal = isClientUserType(user.user_type);
@@ -164,6 +288,11 @@ export async function resolveSearchAclPrincipal(
     roles: [...roles],
     isInternal: !isClientPortal,
     clientAccess,
+    // A client user is the requester and an internal user whose loaded row says no seat
+    // assignment binds them is staff, both with no SQL; otherwise one read of the seat tables.
+    audienceReader: user.tenant
+      ? await admitCommentAudienceReader(knex, user.tenant, { userId: user.user_id, userType: isClientPortal ? 'client' : 'internal', seatReader: user.seat_reader })
+      : undefined,
   };
 }
 
@@ -198,15 +327,11 @@ export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
   return visibleRows;
 }
 
-function hasClientAccess(user: SearchAclPrincipal, clientId: string | null | undefined): boolean {
-  if (!clientId) {
-    return true;
-  }
-  const clientAccess = user.clientAccess ?? { mode: 'all' };
-  if (clientAccess.mode === 'all') {
-    return true;
-  }
-  return clientAccess.clientIds.includes(clientId);
+function hasClientAccess(user: SearchAclPrincipal, objectType: SearchObjectType, clientId: string | null | undefined): boolean {
+  const allowed = clientIdsForObjectType(user.clientAccess, objectType);
+  if (allowed === null) return true;
+  if (!clientId) return !STRICT_CLIENT_SCOPE_OBJECT_TYPES.includes(objectType);
+  return allowed.includes(clientId);
 }
 
 function parseAssignedUsers(value: unknown): string[] {
@@ -241,16 +366,20 @@ function tenantScopedRoot<Row extends object>(
   return tenantDb(knex, user.tenant).table<Row>(tableExpression);
 }
 
-async function commentIsRequesterAudience(knex: Knex, user: SearchAclPrincipal, commentId: string): Promise<boolean> {
-  const query = tenantScopedRoot<{ audience: string | null }>(knex, user, 'comments as c');
-  const scoped = tenantDb(knex, user.tenant ?? SEARCH_ACL_MISSING_TENANT);
+/** The live audience check: the shared predicate for `reader`, over the comment as stored now. */
+async function commentVisibleToReader(knex: Knex, user: SearchAclPrincipal, commentId: string, reader: CommentAudienceReader | null): Promise<boolean> {
+  if (!reader || !user.tenant) return false;
+  const query = tenantScopedRoot<{ audience: string | null; client_id: string | null }>(knex, user, 'comments as c');
+  const scoped = tenantDb(knex, user.tenant);
   scoped.tenantJoin(query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
   scoped.tenantJoin(query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
+  scoped.tenantJoin(query, 'tickets as t', 't.ticket_id', 'c.ticket_id', { type: 'left' });
   const found = await query
-    .select(knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
+    .select('t.client_id', knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
     .where('c.comment_id', commentId)
     .first();
-  return found?.audience === 'requester';
+  return isCommentAudience(found?.audience)
+    && isCommentAudienceVisible(found.audience, { tenant: user.tenant, clientId: found.client_id }, reader);
 }
 
 /**
@@ -264,10 +393,7 @@ function hasTicketClientAccess(
   objectType: 'ticket' | 'ticket_comment',
   clientId: string | null | undefined,
 ): boolean {
-  const clientAccess = user.clientAccess ?? { mode: 'all' };
-  if (clientAccess.mode === 'all') return true;
-  if (!clientId) return !STRICT_CLIENT_SCOPE_OBJECT_TYPES.includes(objectType);
-  return clientAccess.clientIds.includes(clientId);
+  return hasClientAccess(user, objectType, clientId);
 }
 
 // LEVERAGE: friction portal-ticket-policy-in-search — the canonical portal policy (board visibility
@@ -280,11 +406,13 @@ async function ticketVisibleToPrincipal(
   objectType: 'ticket' | 'ticket_comment',
   ticketId: string,
 ): Promise<boolean> {
-  const row = await tenantScopedRoot<{ ticket_id: string; client_id: string | null }>(knex, user, 'tickets')
-    .select('ticket_id', 'client_id')
+  const row = await tenantScopedRoot<{ ticket_id: string; client_id: string | null; board_id: string | null }>(knex, user, 'tickets')
+    .select('ticket_id', 'client_id', 'board_id')
     .where('ticket_id', ticketId)
     .first();
   if (!row) return false;
+  const boardIds = user.clientAccess?.boardIds;
+  if (boardIds !== undefined && !(row.board_id && boardIds.includes(row.board_id))) return false;
   return hasTicketClientAccess(user, objectType, row.client_id);
 }
 
@@ -320,13 +448,16 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   // Audience is an additional restriction on non-staff readers (staff of the owning tenant see
   // every audience stored there). It uses the same predicate as the indexer and portal reads, so
   // a public-flagged comment on a private thread cannot be reached through search.
-  if (!user.isInternal && !(await commentIsRequesterAudience(knex, user, row.id))) return false;
+  // A seat technician is an internal user and still not that staff: the same predicate, read as
+  // their organization, keeps private notes (legacy internal notes included) out of their search.
+  const reader = user.isInternal ? restrictedAudienceReader(user) : user.tenant ? { kind: 'requester' as const, tenant: user.tenant } : null;
+  if (reader !== undefined && !(await commentVisibleToReader(knex, user, row.id, reader))) return false;
   return ticketVisibleToPrincipal(knex, user, 'ticket_comment', comment.ticket_id);
 });
 
 registerSearchVisibilityVerifier('project', async (knex, user, row) => {
   const clientId = await projectClientIdForProject(knex, user, row.id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project', clientId);
 });
 
 registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
@@ -336,7 +467,7 @@ registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
     .first();
   if (!phase) return false;
   const clientId = await projectClientIdForProject(knex, user, phase.project_id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project_phase', clientId);
 });
 
 registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
@@ -352,7 +483,7 @@ registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
   const task = await query;
   if (!task) return false;
   const clientId = await projectClientIdForProject(knex, user, task.project_id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project_task', clientId);
 });
 
 registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row) => {
@@ -370,8 +501,31 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
   const comment = await query;
   if (!comment) return false;
   const clientId = await projectClientIdForProject(knex, user, comment.project_id);
-  return clientId !== undefined && hasClientAccess(user, clientId);
+  return clientId !== undefined && hasClientAccess(user, 'project_task_comment', clientId);
 });
+
+/**
+ * Client-owned types: a narrowed principal must prove the record's client from the source, with the
+ * same manifest-driven resolution the indexers use, so a row whose index scope is stale or missing
+ * cannot be reached. Unrestricted principals skip it (no query).
+ */
+async function clientOwnedRecordVisible(
+  knex: Knex,
+  user: SearchAclPrincipal,
+  objectType: ClientScopedObjectType,
+  objectId: string,
+): Promise<boolean> {
+  const allowed = clientIdsForObjectType(user.clientAccess, objectType);
+  if (allowed === null) return true;
+  if (!user.tenant) return false;
+  const scope = (await resolveClientScopes(knex, user.tenant, objectType, [objectId])).get(objectId) ?? null;
+  return scope !== null && allowed.includes(scope);
+}
+
+for (const objectType of ['client', 'contact', 'interaction', 'time_entry'] as const) {
+  registerSearchVisibilityVerifier(objectType, (knex, user, row) =>
+    clientOwnedRecordVisible(knex, user, objectType, row.id));
+}
 
 registerSearchVisibilityVerifier('document', async (knex, user, row) => {
   const document = await tenantScopedRoot<{ document_id: string }>(knex, user, 'documents')
@@ -379,17 +533,7 @@ registerSearchVisibilityVerifier('document', async (knex, user, row) => {
     .where('document_id', row.id)
     .first();
   if (!document) return false;
-
-  const association = await tenantScopedRoot<{ entity_id: string }>(
-    knex,
-    user,
-    'document_associations',
-  )
-    .select('entity_id')
-    .where('document_id', row.id)
-    .andWhere('entity_type', 'client')
-    .first();
-  return hasClientAccess(user, association?.entity_id ?? null);
+  return clientOwnedRecordVisible(knex, user, 'document', row.id);
 });
 
 registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {

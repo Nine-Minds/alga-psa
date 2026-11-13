@@ -79,6 +79,13 @@ export function unwrapAssetActionResult<T>(value: T | AssetActionError): T {
 
 export function assetActionErrorFrom(error: unknown): AssetActionError | null {
   if (error && typeof error === 'object') {
+    if ((error as { code?: unknown }).code === 'ASSET_TAG_CONFLICT') {
+      return assetValidationError([{
+        code: 'custom', path: ['asset_tag'],
+        message: 'This asset tag is already in use or reserved. Scan it to find the existing asset, or enter a different tag.',
+        params: { messageKey: 'msp/assets:errors.asset.tagAlreadyExists' },
+      }]);
+    }
     const candidate = error as { permissionError?: unknown; actionError?: unknown };
     if (typeof candidate.permissionError === 'string') {
       return permissionError(candidate.permissionError);

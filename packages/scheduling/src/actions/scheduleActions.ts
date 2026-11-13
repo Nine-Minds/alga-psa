@@ -63,6 +63,8 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '../lib/calendarAccess';
+import { createScheduleEntryReadScope } from '@alga-psa/authorization/scheduleEntryReadAuthorization';
+import { delegatedViewAccess, maskEntriesOutsideReadScope } from '../lib/scheduleEntryReadMask';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -169,7 +171,19 @@ export const getScheduleEntries = withAuth(async (
     const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), {
       calendar: { start: start.toISOString(), end: end.toISOString(), technicianIds },
     }));
-    if (current.handled) return { success: true, entries: current.entries.map(nativeScheduleView) };
+    if (current.handled) {
+      // The delegated reader admitted these entries; the viewer's own client scope still decides what shows of the work item.
+      // An empty result has nothing to mask, so it costs no policy resolution and no transaction.
+      if (current.entries.length === 0) return { success: true, entries: [] };
+      const delegated = await withTransaction(db, async (trx: Knex.Transaction) =>
+        maskEntriesOutsideReadScope(
+          trx,
+          await createScheduleEntryReadScope(trx, tenant, user),
+          current.entries.map(nativeScheduleView),
+          delegatedViewAccess(user.user_id)
+        ));
+      return { success: true, entries: delegated };
+    }
 
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {
@@ -187,15 +201,17 @@ export const getScheduleEntries = withAuth(async (
 
       const narrowByPeople = technicianIds && technicianIds.length > 0;
       const narrowByCalendars = calendarIds && calendarIds.length > 0;
-      if (!narrowByPeople && !narrowByCalendars) {
-        return visible;
-      }
+      const shown = !narrowByPeople && !narrowByCalendars
+        ? visible
+        : visible.filter(entry =>
+            (narrowByPeople && entry.assigned_user_ids.some(assignedId => technicianIds!.includes(assignedId))) ||
+            (narrowByCalendars && !!entry.calendar_id && calendarIds!.includes(entry.calendar_id)) ||
+            (canUpdate && entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
+          );
 
-      return visible.filter(entry =>
-        (narrowByPeople && entry.assigned_user_ids.some(assignedId => technicianIds!.includes(assignedId))) ||
-        (narrowByCalendars && !!entry.calendar_id && calendarIds!.includes(entry.calendar_id)) ||
-        (canUpdate && entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
-      );
+      // The viewer's own policy, resolved once for the request: work items they may not read become busy time.
+      const readScope = await createScheduleEntryReadScope(trx, tenant, user);
+      return maskEntriesOutsideReadScope(trx, readScope, shown, access);
     });
 
     return { success: true, entries };
@@ -1251,7 +1267,15 @@ export const getScheduleEntryById = withAuth(async (
     const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { id: entryId }));
     if (current.handled) {
       const entry = current.entries[0];
-      return entry ? nativeScheduleView(entry) : null;
+      if (!entry) return null;
+      const [masked] = await withTransaction(db, async (trx: Knex.Transaction) =>
+        maskEntriesOutsideReadScope(
+          trx,
+          await createScheduleEntryReadScope(trx, tenant, user),
+          [nativeScheduleView(entry)],
+          delegatedViewAccess(user.user_id)
+        ));
+      return masked;
     }
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {
@@ -1294,11 +1318,12 @@ export const getScheduleEntryById = withAuth(async (
       if (decision.access === 'none') {
         return null;
       }
-      if (decision.access === 'busy') {
-        return maskEntry(scheduleEntry, access);
-      }
-
-      return { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
+      const readScope = await createScheduleEntryReadScope(trx, tenant, user);
+      const shown: IScheduleEntry = decision.access === 'busy'
+        ? maskEntry(scheduleEntry, access)
+        : { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
+      const [masked] = await maskEntriesOutsideReadScope(trx, readScope, [shown], access);
+      return masked;
     });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);

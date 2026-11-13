@@ -14,7 +14,9 @@ describe('project hours report tenant-scoped query contract', () => {
     const section = projectHoursSection();
 
     expect(section).toContain('await assertCanReadReports(user, knex)');
-    expect(section).toContain('const scopedDb = tenantDb(knex, tenant);');
+    // The handle is tenantDb narrowed to the subject's clients (a no-op for a subject nothing narrows).
+    expect(section).toContain('const scopedDb = await clientScopedTenantDb(knex, tenant, user, {');
+    expect(section).toContain("reportId: 'project.hours'");
 
     expect(section).toContain("scopedDb.table('projects as p')");
     expect(section).toContain("scopedDb.table('project_phases as ph')");

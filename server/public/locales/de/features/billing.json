@@ -203,6 +203,7 @@
       "exclude": "Ausschließen",
       "excluded": "Nicht enthalten",
       "fallbackTitle": "Angebot {{id}}",
+      "unnumberedTitle": "Angebot",
       "include": "Aufnehmen",
       "included": "Enthalten",
       "lineItems": "Positionen",
@@ -230,6 +231,79 @@
       "termsAndConditions": "Allgemeine Geschäftsbedingungen",
       "total": "Gesamt",
       "validUntil": "Gültig bis"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Angebot angenommen",
+        "body": "Vielen Dank. Ihre Annahme wurde erfasst und wir wurden benachrichtigt."
+      },
+      "rejected": {
+        "title": "Angebot abgelehnt",
+        "body": "Ihre Antwort wurde erfasst und wir wurden benachrichtigt."
+      },
+      "already": {
+        "title": "Dieses Angebot wurde bereits beantwortet",
+        "accepted": "Dieses Angebot wurde am {{date}} angenommen.",
+        "rejected": "Dieses Angebot wurde am {{date}} abgelehnt."
+      },
+      "changed": {
+        "title": "Dieses Angebot hat sich geändert",
+        "body": "Dieses Angebot hat sich geändert, seit Sie es geöffnet haben. Bitte kontaktieren Sie uns."
+      },
+      "optionalItems": "Optionale Positionen",
+      "optionalHint": "Wählen Sie die gewünschten optionalen Positionen. Ihre Auswahl wird bei der Annahme übermittelt.",
+      "subtotal": "Zwischensumme",
+      "tax": "Steuer",
+      "total": "Gesamt",
+      "fullName": "Vollständiger Name",
+      "titleOptional": "Position (optional)",
+      "agreementVersion": "Vereinbarungsversion {{version}}",
+      "accept": "Angebot annehmen",
+      "reject": "Angebot ablehnen",
+      "submitting": "Wird gesendet...",
+      "rejectTitle": "Angebot ablehnen",
+      "rejectHint": "Teilen Sie uns mit, was geändert werden soll. Wir überarbeiten das Angebot gegebenenfalls und senden es erneut.",
+      "rejectConfirm": "Ablehnen",
+      "cancel": "Abbrechen",
+      "errors": {
+        "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+        "nameRequired": "Bitte geben Sie Ihren vollständigen Namen ein.",
+        "agreementRequired": "Bitte bestätigen Sie die Vereinbarung, um dieses Angebot anzunehmen.",
+        "agreementOutdated": "Der Wortlaut der Vereinbarung wurde aktualisiert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
+        "commentRequired": "Bitte fügen Sie einen kurzen Kommentar hinzu, bevor Sie dieses Angebot ablehnen.",
+        "tooLong": "Eine Ihrer Eingaben ist zu lang.",
+        "reload": "Bitte laden Sie diese Seite neu und versuchen Sie es erneut."
+      }
+    },
+    "public": {
+      "metaTitle": "Angebotsprüfung",
+      "notice": {
+        "accepted": "Dieses Angebot wurde angenommen. Es wird hier zu Ihrer Information angezeigt.",
+        "declined": "Dieses Angebot wurde abgelehnt. Es wird hier zu Ihrer Information angezeigt.",
+        "converted": "Dieses Angebot wurde angenommen und wird umgesetzt. Es wird hier zu Ihrer Information angezeigt.",
+        "readOnly": "Dies ist eine schreibgeschützte Ansicht Ihres Angebots."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Dieser Link ist nicht verfügbar",
+          "body": "Der Link ist möglicherweise falsch eingegeben oder nicht mehr aktiv."
+        },
+        "expired": {
+          "title": "Dieser Link ist abgelaufen",
+          "body": "Aus Sicherheitsgründen funktionieren Angebotslinks nur für begrenzte Zeit."
+        },
+        "superseded": {
+          "title": "Dieses Angebot wurde ersetzt",
+          "body": "Eine neuere Version wurde gesendet. Bitte verwenden Sie den Link in der neuesten E-Mail."
+        },
+        "decided": {
+          "title": "Über dieses Angebot wurde bereits entschieden",
+          "body": "Eine Antwort wurde bereits erfasst, daher kann es über diesen Link nicht mehr geöffnet werden."
+        },
+        "help": "Brauchen Sie Hilfe? Antworten Sie auf die E-Mail, in der Sie diesen Link erhalten haben.",
+        "signIn": "Im Kundenportal anmelden",
+        "signInHint": "Sie haben bereits ein Kundenportal-Konto?"
+      }
     }
   },
   "enums": {

@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -194,7 +195,7 @@ describe('asset_type_registry migration artifacts and seeding', () => {
 
     try {
       await expect(
-        db('assets').insert({
+        insertTestAssets(db, {
           tenant: tenantId,
           client_id: client.client_id,
           asset_type: 'door_access',

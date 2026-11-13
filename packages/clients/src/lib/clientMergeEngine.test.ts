@@ -96,6 +96,10 @@ class FakeBuilder {
     return this;
   }
 
+  forUpdate() {
+    return this;
+  }
+
   distinct(column: string) {
     this.projection = [column];
     return this;
@@ -106,6 +110,21 @@ class FakeBuilder {
     return {
       first: async () => ({ count: String(matched.length) }),
     };
+  }
+
+  /** Knex's single-column read; the engine uses it for location-id allowlists. */
+  pluck(column: string): Promise<any[]> {
+    return Promise.resolve(this.resolve().map((row) => valueOf(row, column)));
+  }
+
+  whereNotIn(column: string, values: any[]) {
+    this.predicates.push((row) => !values.includes(valueOf(row, column)));
+    return this;
+  }
+
+  /** knex exposes `delete` beside `del`; replaceContactLocations calls the former. */
+  delete(): Promise<number> {
+    return this.del();
   }
 
   select(...columns: string[]) {
@@ -308,7 +327,7 @@ const coManagedWorkspaces = vi.hoisted(() => ({
 }));
 vi.mock('@alga-psa/core/config/deletion', () => ({ countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count }));
 
-import { ClientMergeBlockedError, executeClientMerge } from './clientMergeEngine';
+import { ClientMergeBlockedError, executeClientMerge, previewClientMerge } from './clientMergeEngine';
 
 const TENANT = 'tenant-1';
 
@@ -370,6 +389,13 @@ function seed() {
 beforeEach(seed);
 
 describe('executeClientMerge', () => {
+  it('moves pending intake to the surviving client without changing its printed tag or claim', async () => {
+    table('asset_number_reservations').push({ tenant: TENANT, reservation_id: 'label-1', client_id: 'source', asset_tag: 'FTS-00431', normalized_tag: 'FTS-00431', state: 'reserved' });
+    table('asset_tag_claims').push({ tenant: TENANT, normalized_tag: 'FTS-00431', owner_kind: 'reservation', owner_id: 'label-1' });
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', { sourceClientId: 'source', targetClientId: 'target' });
+    expect(table('asset_number_reservations')[0]).toMatchObject({ client_id: 'target', asset_tag: 'FTS-00431', normalized_tag: 'FTS-00431', state: 'reserved' });
+    expect(table('asset_tag_claims')[0]).toMatchObject({ normalized_tag: 'FTS-00431', owner_kind: 'reservation', owner_id: 'label-1' });
+  });
   it('moves the profiles, keeps their ids, and leaves the source with one fresh default', async () => {
     const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
       sourceClientId: 'source',
@@ -647,6 +673,204 @@ describe('executeClientMerge', () => {
     expect(locations.find((row) => row.location_id === 'loc-source')).toMatchObject({
       client_id: 'target',
       is_default: false,
+    });
+  });
+
+  it('previews the number of contact location links that will move, and the report matches', async () => {
+    table('contacts').push(
+      { tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada', email: 'ada@acme.test' },
+      { tenant: TENANT, contact_name_id: 'bob', client_id: 'source', full_name: 'Bob', email: 'bob@acme.test' },
+    );
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: false },
+      { tenant: TENANT, location_id: 'loc-depot', client_id: 'source', is_default: false },
+    );
+    table('contact_locations').push(
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-source', is_primary: true },
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-depot', is_primary: false },
+      { tenant: TENANT, contact_name_id: 'bob', location_id: 'loc-depot', is_primary: true },
+    );
+
+    const preview = await previewClientMerge(fakeTrx, TENANT, {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+    expect(preview.counts['contact location']).toBe(3);
+
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+    expect(result.counts['contact location']).toBe(preview.counts['contact location']);
+  });
+
+  it('carries every contact location link across, demoted source default included', async () => {
+    table('contacts').push(
+      { tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada' },
+      { tenant: TENANT, contact_name_id: 'bob', client_id: 'source', full_name: 'Bob' },
+    );
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: true },
+      { tenant: TENANT, location_id: 'loc-depot', client_id: 'source', is_default: false },
+      { tenant: TENANT, location_id: 'loc-target', client_id: 'target', is_default: true },
+    );
+    table('contact_locations').push(
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-source', is_primary: true },
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-depot', is_primary: false },
+      { tenant: TENANT, contact_name_id: 'bob', location_id: 'loc-depot', is_primary: true },
+    );
+
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    // The links key on contact and location, both of which moved wholesale, so not a row changes.
+    expect(table('contact_locations')).toHaveLength(3);
+    expect(result.counts['contact location']).toBe(3);
+    expect(table('contact_locations').filter((row) => row.is_primary)).toHaveLength(2);
+    // The demoted source default keeps its link.
+    expect(table('contact_locations').find((row) => row.location_id === 'loc-source'))
+      .toMatchObject({ contact_name_id: 'ada', is_primary: true });
+  });
+
+  it('fails the merge when a contact location link would end up crossing clients', async () => {
+    table('contacts').push({ tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada' });
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: false },
+      // A location of a third client: nothing in the merge moves it, so the link straddles.
+      { tenant: TENANT, location_id: 'loc-third', client_id: 'sibling', is_default: false },
+    );
+    table('contact_locations').push(
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-source', is_primary: true },
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-third', is_primary: false },
+    );
+
+    await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    })).rejects.toThrow(/cross clients/);
+  });
+
+  describe('contact location assignments', () => {
+    beforeEach(() => {
+      table('contacts').push(
+        { tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada', email: 'ada@acme.test' },
+        { tenant: TENANT, contact_name_id: 'bob', client_id: 'source', full_name: 'Bob', email: 'bob@acme.test' },
+      );
+      table('client_locations').push(
+        { tenant: TENANT, location_id: 'src-head', client_id: 'source', location_name: 'Head office', is_default: false, is_active: true },
+        { tenant: TENANT, location_id: 'tgt-head', client_id: 'target', location_name: ' head  OFFICE ', is_default: false, is_active: true },
+        { tenant: TENANT, location_id: 'third-depot', client_id: 'sibling', location_name: 'Depot', is_default: false, is_active: true },
+      );
+      table('contact_locations').push(
+        { tenant: TENANT, contact_name_id: 'ada', location_id: 'src-head', is_primary: true },
+        { tenant: TENANT, contact_name_id: 'bob', location_id: 'src-head', is_primary: true },
+      );
+    });
+
+    it('re-points a listed contact to the target location and leaves an unlisted one alone', async () => {
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [
+          { contactNameId: 'ada', locations: [{ locationId: 'tgt-head', isPrimary: true }] },
+        ],
+      });
+
+      expect(table('contact_locations').filter((row) => row.contact_name_id === 'ada'))
+        .toEqual([expect.objectContaining({ location_id: 'tgt-head', is_primary: true })]);
+      // Bob was not listed, so his link simply travelled with the moved source location.
+      expect(table('contact_locations').filter((row) => row.contact_name_id === 'bob'))
+        .toEqual([expect.objectContaining({ location_id: 'src-head', is_primary: true })]);
+      expect(result.repointedContactLocationCount).toBe(1);
+      expect(result.counts['contact location re-pointed']).toBe(1);
+      expect(result.counts['contact location']).toBe(2);
+    });
+
+    it('clears a contact\'s links when the assignment is empty', async () => {
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{ contactNameId: 'ada', locations: [] }],
+      });
+
+      expect(table('contact_locations').filter((row) => row.contact_name_id === 'ada')).toEqual([]);
+      expect(result.counts['contact location']).toBe(1);
+      expect(result.repointedContactLocationCount).toBe(0);
+    });
+
+    it('fails the merge when an assignment names two primaries', async () => {
+      await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{
+          contactNameId: 'ada',
+          locations: [
+            { locationId: 'src-head', isPrimary: true },
+            { locationId: 'tgt-head', isPrimary: true },
+          ],
+        }],
+      })).rejects.toThrow(/only one primary location/);
+    });
+
+    it('fails the merge, naming the contact and location, for a third client\'s location', async () => {
+      await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{ contactNameId: 'ada', locations: [{ locationId: 'third-depot' }] }],
+      })).rejects.toThrow(/ada cannot be linked to location third-depot/);
+    });
+
+    it('the dry run refuses the same third-client location the engine does, as a blocker', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{ contactNameId: 'ada', locations: [{ locationId: 'third-depot' }] }],
+      });
+
+      expect(preview.blockers).toEqual([expect.objectContaining({
+        code: 'INVALID_CONTACT_LOCATION',
+        message: expect.stringMatching(/ada cannot be linked to location third-depot/),
+      })]);
+    });
+
+    it('the dry run passes a source or target location, and ignores an unmoved contact', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [
+          { contactNameId: 'ada', locations: [{ locationId: 'tgt-head', isPrimary: true }] },
+          { contactNameId: 'bob', locations: [{ locationId: 'src-head' }] },
+          // Not a contact of the source: nothing to refuse, because nothing will be applied.
+          { contactNameId: 'stranger', locations: [{ locationId: 'third-depot' }] },
+        ],
+      });
+
+      expect(preview.blockers).toEqual([]);
+    });
+
+    it('suggests the target location whose name matches, case- and whitespace-insensitively', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+      });
+
+      const ada = preview.contacts.find((contact) => contact.contactNameId === 'ada');
+      expect(ada?.locations).toEqual([
+        expect.objectContaining({
+          locationId: 'src-head',
+          locationName: 'Head office',
+          isPrimary: true,
+          suggestedTargetLocationId: 'tgt-head',
+        }),
+      ]);
+      expect(preview.locationsAfterMerge).toEqual(expect.arrayContaining([
+        expect.objectContaining({ locationId: 'src-head', fromSource: true }),
+        expect.objectContaining({ locationId: 'tgt-head', fromSource: false }),
+      ]));
+      // A third client's location is not part of the merged client.
+      expect(preview.locationsAfterMerge.map((row) => row.locationId)).not.toContain('third-depot');
     });
   });
 

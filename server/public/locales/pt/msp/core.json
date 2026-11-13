@@ -108,10 +108,13 @@
     "ticketsTemplates": "Modelos de tickets",
     "assetsCustody": "Equipamento sob custódia",
     "ticketsCannedResponses": "Respostas prontas",
+    "ticketsCustomer": "Tickets dos clientes",
     "profile": "Perfil",
     "signOut": "Sair",
     "coManaged": "TI cogerida",
-    "coManagedAdministration": "Acesso e administração"
+    "coManagedArchive": "Arquivo de TI cogerida",
+    "coManagedAdministration": "Acesso e administração",
+    "assetsAudits": "Auditorias de locais"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",

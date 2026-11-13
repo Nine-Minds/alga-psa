@@ -42,20 +42,29 @@ import {
 } from '../../../lib/calendarAvailability';
 import { getAddOnDestination } from '../../../lib/addOnNavigation';
 
+// Loading chrome for the dynamic imports below. A component, not inline JSX, so
+// the copy can reach useTranslation from module scope.
+function IntegrationLoadingCard({ i18nKey, defaultValue }: { i18nKey: string; defaultValue: string }) {
+  const { t } = useTranslation('msp/settings');
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <div className="flex flex-col items-center justify-center gap-2">
+          <Spinner size="md" />
+          <span className="text-sm text-muted-foreground">{t(i18nKey, { defaultValue })}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Dynamic import for StripeConnectionSettings (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
 const StripeConnectionSettings = dynamic(
   () => import('@product/billing/entry').then(mod => (mod as unknown as { StripeConnectionSettings: React.ComponentType }).StripeConnectionSettings),
   {
     loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading payment settings...</span>
-          </div>
-        </CardContent>
-      </Card>
+      <IntegrationLoadingCard i18nKey="integrations.loading.payments" defaultValue="Loading payment settings..." />
     ),
     ssr: false,
   }
@@ -70,14 +79,7 @@ const HuduIntegrationSettings = dynamic(
   () => import('@enterprise/components/settings/integrations/HuduIntegrationSettings'),
   {
     loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading Hudu integration settings...</span>
-          </div>
-        </CardContent>
-      </Card>
+      <IntegrationLoadingCard i18nKey="integrations.loading.hudu" defaultValue="Loading Hudu integration settings..." />
     ),
     ssr: false,
   }
@@ -119,13 +121,14 @@ function AddOnRequiredNotice({ featureName, addOn, addOnName, description, linkI
   /** Sub-sections stay mounted, so notices sharing an add-on need distinct ids. */
   linkId?: string;
 }) {
+  const { t } = useTranslation('msp/settings');
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
       <div className="rounded-full bg-muted p-4 mb-6">
         <Lock className="w-8 h-8 text-muted-foreground" />
       </div>
       <h2 className="text-xl font-semibold mb-2">
-        {featureName} requires the {addOnName} add-on
+        {t('integrations.addOnRequired.heading', { defaultValue: '{{featureName}} requires the {{addOnName}} add-on', featureName, addOnName })}
       </h2>
       <p className="text-muted-foreground max-w-md mb-6">{description}</p>
       <a
@@ -133,7 +136,7 @@ function AddOnRequiredNotice({ featureName, addOn, addOnName, description, linkI
         href={getAddOnDestination(addOn)}
         className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
-        Manage add-ons
+        {t('integrations.addOnRequired.manageAddOns', { defaultValue: 'Manage add-ons' })}
       </a>
     </div>
   );
@@ -386,7 +389,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
                   featureName={t('integrations.items.entra.name')}
                   addOn={ADD_ONS.ENTERPRISE}
                   addOnName="Enterprise"
-                  description="Purchase the Enterprise add-on to activate Microsoft Entra Sync, including tenant discovery, client mapping, contact sync, and reconciliation workflows."
+                  description={t('integrations.addOnRequired.entraDescription', { defaultValue: 'Purchase the Enterprise add-on to activate Microsoft Entra Sync, including tenant discovery, client mapping, contact sync, and reconciliation workflows.' })}
                 />
               ),
           isEE: true,

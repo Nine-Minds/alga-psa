@@ -5,8 +5,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IPermission, IUserWithRoles } from '@alga-psa/types';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
-import { 
-  getClientUserById, 
+import type { ClientUserWithLocations } from '../../actions/client-portal-actions/clientUserActions';
+import {
+  getClientUserById,
   updateClientUser, 
   getClientUserManagerOptions,
   resetClientUserPassword,
@@ -20,6 +21,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Eye, EyeOff, ChevronDown, ChevronUp, X } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
@@ -43,7 +45,7 @@ const isReturnedActionError = (value: unknown) =>
 const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate }) => {
   const { t: tProfile } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
-  const [user, setUser] = useState<IUser | null>(null);
+  const [user, setUser] = useState<ClientUserWithLocations | null>(null);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -330,6 +332,35 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           />
         </div>
 
+        {(user?.locations?.length || user?.work_arrangement) ? (
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              {tProfile('clientSettings.users.locations', { defaultValue: 'Locations' })}
+            </label>
+            {/* Read-only: locations are managed by the service provider, and the portal write path
+                rejects them outright rather than dropping them quietly. */}
+            <div id={`user-${userId}-locations`} className="text-sm text-gray-700 space-y-0.5">
+              {user?.work_arrangement === 'remote' && (user?.locations?.length ?? 0) === 0 ? (
+                <div>{tProfile('clientSettings.users.remote', { defaultValue: 'Remote' })}</div>
+              ) : (
+                (user?.locations ?? []).map((location) => (
+                  <div key={location.location_id}>
+                    {location.location_name || '—'}
+                    {location.is_primary
+                      ? ` • ${tProfile('clientSettings.users.primaryLocation', { defaultValue: 'Primary' })}`
+                      : ''}
+                  </div>
+                ))
+              )}
+              {user?.work_arrangement === 'remote' && (user?.locations?.length ?? 0) > 0 ? (
+                <div className="text-gray-500">
+                  {tProfile('clientSettings.users.remote', { defaultValue: 'Remote' })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between py-3">
           <div className="flex-1">
             <div className="text-sm font-medium">{tProfile('clientSettings.users.status')}</div>
@@ -385,20 +416,37 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
               {/* Current Roles */}
               <div className="space-y-2 mb-4">
                 {userRoles.length > 0 ? (
-                  userRoles.map((role) => (
-                    <div key={role.role_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <span className="text-sm">{role.role_name}</span>
+                  userRoles.map((role) => {
+                    // The server refuses to leave a user with no role; don't offer it.
+                    const isOnlyRole = userRoles.length === 1;
+                    const removeButton = (
                       <Button
                         id={`remove-role-${role.role_id}`}
-                        onClick={() => handleRemoveRole(role.role_id)}
+                        onClick={(e) => {
+                          if (isOnlyRole) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                          }
+                          handleRemoveRole(role.role_id);
+                        }}
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0"
+                        aria-disabled={isOnlyRole || undefined}
+                        className={`h-6 w-6 p-0${isOnlyRole ? ' cursor-not-allowed opacity-50' : ''}`}
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
-                  ))
+                    );
+                    return (
+                      <div key={role.role_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <span className="text-sm">{role.role_name}</span>
+                        {isOnlyRole
+                          ? <Tooltip content={tProfile('errors.roles.lastRole')}>{removeButton}</Tooltip>
+                          : removeButton}
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-gray-500">{tProfile('clientSettings.users.noRolesAssigned', 'No roles assigned')}</p>
                 )}

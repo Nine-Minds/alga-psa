@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Manual invoices read terms and payment method from the client's default
 // billing profile; these suites mock knex, so the identity is stubbed.
+// The tenant-local date helper reads tenant_settings through a real DB; these
+// suites fake the DB at a coarser grain, so pin the helper at its boundary (UTC).
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  const { Temporal } = await import('@js-temporal/polyfill');
+  return { ...actual, resolveTenantToday: async () => Temporal.Now.plainDateISO('UTC') };
+});
+
 vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
   (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
 

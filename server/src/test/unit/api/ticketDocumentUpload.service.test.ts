@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { validateFileUploadMock, uploadFileMock, withTransactionMock, generateDocumentPreviewsMock } = vi.hoisted(() => ({
+const { validateFileUploadMock, uploadFileMock, withTransactionMock, scheduleDocumentPreviewsMock, externalFiles } = vi.hoisted(() => ({
   validateFileUploadMock: vi.fn(),
   uploadFileMock: vi.fn(),
   withTransactionMock: vi.fn(),
-  generateDocumentPreviewsMock: vi.fn(),
+  scheduleDocumentPreviewsMock: vi.fn(),
+  externalFiles: [] as Array<{ tenant: string; file_id: string; is_deleted: boolean; metadata: Record<string, unknown> }>,
 }));
 
-vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
-  generateDocumentPreviews: (...args: unknown[]) => generateDocumentPreviewsMock(...args),
+vi.mock('@alga-psa/documents/lib/documentPreviewJob', () => ({
+  scheduleDocumentPreviews: (...args: unknown[]) => scheduleDocumentPreviewsMock(...args),
 }));
 
 vi.mock('@alga-psa/storage/StorageService', () => ({
@@ -23,8 +24,20 @@ vi.mock('@alga-psa/db', async () => {
   return {
     ...actual,
     withTransaction: (...args: unknown[]) => withTransactionMock(...args),
-    tenantDb: (conn: any, _tenant: string) => ({
-      table: (t: string) => conn(t),
+    tenantDb: (conn: any, tenant: string) => ({
+      table: (t: string) => {
+        if (t !== 'external_files') return conn(t);
+        const filters: Record<string, unknown> = { tenant };
+        let fileIds: string[] = [];
+        const builder: any = {
+          where: vi.fn((criteria: Record<string, unknown>) => { Object.assign(filters, criteria); return builder; }),
+          whereIn: vi.fn((_column: string, ids: string[]) => { fileIds = ids; return builder; }),
+          select: vi.fn(async () => externalFiles.filter((row) =>
+            Object.entries(filters).every(([key, value]) => (row as any)[key] === value)
+            && fileIds.includes(row.file_id))),
+        };
+        return builder;
+      },
       scoped: (t: string) => conn(t),
       subquery: (t: string) => conn(t),
       parentScopedTable: (t: string) => conn(t),
@@ -67,19 +80,16 @@ describe('TicketService.uploadTicketDocument', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    externalFiles.length = 0;
     validateFileUploadMock.mockResolvedValue(undefined);
     uploadFileMock.mockResolvedValue({
       file_id: 'file-1',
       storage_path: '/docs/file-1',
     });
-    generateDocumentPreviewsMock.mockResolvedValue({
-      thumbnail_file_id: 'thumb-1',
-      preview_file_id: 'preview-1',
-      preview_generated_at: new Date('2026-09-10T00:00:00.000Z'),
-    });
+    scheduleDocumentPreviewsMock.mockResolvedValue(true);
   });
 
-  it('T012/T013/T014: uploads the file, creates a ticket association, and returns the created document', async () => {
+  it.each([undefined, 'delegating-user'])('uploads and records activity with via attribution %s', async (viaPrincipalUserId) => {
     const service = new TicketService();
     const insertedDocuments: Record<string, unknown>[] = [];
     const insertedAssociations: Record<string, unknown>[] = [];
@@ -164,7 +174,7 @@ describe('TicketService.uploadTicketDocument', () => {
     });
 
     const file = new File([Buffer.from('hello world')], 'report.pdf', { type: 'application/pdf' });
-    const result = await service.uploadTicketDocument(ticketId, file, context);
+    const result = await service.uploadTicketDocument(ticketId, file, { ...context, viaPrincipalUserId });
 
     expect(validateFileUploadMock).toHaveBeenCalledWith('tenant-1', 'application/pdf', file.size);
     expect(uploadFileMock).toHaveBeenCalledWith(
@@ -190,27 +200,24 @@ describe('TicketService.uploadTicketDocument', () => {
         tenant: 'tenant-1',
         ticket_id: ticketId,
         entity_id: insertedDocuments[0]?.document_id,
+        actor_type: 'user',
         actor_user_id: 'user-1',
       }),
     ]);
+    expect(insertedAuditLogs[0]?.via_principal_user_id).toBe(viaPrincipalUserId);
     expect(result).toMatchObject({
       document_id: 'doc-1',
       document_name: 'report.pdf',
       file_id: 'file-1',
     });
-    // Previews are generated after commit and persisted on the document row.
-    expect(generateDocumentPreviewsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ document_id: insertedDocuments[0]?.document_id, mime_type: 'application/pdf' }),
-      expect.any(Buffer),
-    );
-    expect(previewUpdates).toEqual([
-      expect.objectContaining({ thumbnail_file_id: 'thumb-1', preview_file_id: 'preview-1' }),
-    ]);
+    // Previews are only scheduled after commit; nothing on the request path writes preview columns.
+    expect(scheduleDocumentPreviewsMock).toHaveBeenCalledWith('tenant-1', insertedDocuments[0]?.document_id, 'user-1');
+    expect(previewUpdates).toEqual([]);
   });
 
-  it('T016: a preview generation failure does not fail the upload', async () => {
+  it('T016: failing to schedule previews does not fail the upload', async () => {
     const service = new TicketService();
-    generateDocumentPreviewsMock.mockRejectedValue(new Error('sharp missing'));
+    scheduleDocumentPreviewsMock.mockResolvedValue(false);
     withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trxArg: unknown) => unknown) =>
       callback((table: string) => ({
         insert: vi.fn(async () => undefined),

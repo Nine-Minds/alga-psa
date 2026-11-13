@@ -1,8 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { AuthorizationEvaluationInput, RelationshipTemplateKey } from '../kernel';
+import type { AuthorizationEvaluationInput, AuthorizationSubject, RelationshipTemplateKey } from '../kernel';
 import type { BundleNarrowingRule } from '../kernel/providers/bundleProvider';
 import { assertBundleRuleCatalogInput } from './catalog';
+import { publishedAssignmentsQuery } from './publishedAssignments';
+import { peekTenantAuthorizationScope } from '../subject/tenantScope';
 
 export type AuthorizationBundleTargetType = 'role' | 'team' | 'user' | 'api_key';
 
@@ -17,11 +19,23 @@ export interface CreateBundleAssignmentInput extends BundleAssignmentTarget {
   actorUserId?: string | null;
 }
 
+/**
+ * open: a deny-list of narrowing rules (a resource/action with no rule is unrestricted).
+ * closed: an allow-list (a resource/action the revision has no rule for is denied).
+ */
+export type BundleBaseline = 'open' | 'closed';
+
+export function normalizeBundleBaseline(value: unknown): BundleBaseline {
+  return value === 'closed' ? 'closed' : 'open';
+}
+
 export interface PublishBundleRevisionInput {
   tenant: string;
   bundleId: string;
   revisionId: string;
   actorUserId?: string | null;
+  /** When given, the revision is published with this baseline; otherwise it keeps the draft's own. */
+  baseline?: BundleBaseline;
 }
 
 export interface UpsertBundleRuleInput {
@@ -36,6 +50,10 @@ export interface UpsertBundleRuleInput {
   config?: Record<string, unknown>;
   position?: number;
   actorUserId?: string | null;
+}
+
+export interface EnsurePublishedBundleRuleInput extends Omit<UpsertBundleRuleInput, 'revisionId' | 'ruleId' | 'position'> {
+  bundleId: string;
 }
 
 export interface CreateAuthorizationBundleInput {
@@ -176,6 +194,17 @@ export async function ensureDraftBundleRevision(
 
     if (!bundle.published_revision_id) {
       return { revisionId: draftRevision.revision_id, created: true };
+    }
+
+    // A draft seeded from the published revision keeps its baseline.
+    const publishedRevision = await scopedDb.table('authorization_bundle_revisions')
+      .where({ revision_id: bundle.published_revision_id })
+      .first<{ baseline: string | null }>('baseline');
+    const seededBaseline = normalizeBundleBaseline(publishedRevision?.baseline);
+    if (seededBaseline !== 'open') {
+      await scopedDb.table('authorization_bundle_revisions')
+        .where({ revision_id: draftRevision.revision_id })
+        .update({ baseline: seededBaseline });
     }
 
     const publishedRules = await scopedDb.table('authorization_bundle_rules')
@@ -446,7 +475,7 @@ export async function cloneAuthorizationBundle(
       .where({
         revision_id: sourceBundle.published_revision_id,
       })
-      .first<{ revision_id: string }>('revision_id');
+      .first<{ revision_id: string; baseline: string | null }>('revision_id', 'baseline');
 
     const created = await createAuthorizationBundle(trx, {
       tenant: input.tenant,
@@ -457,6 +486,13 @@ export async function cloneAuthorizationBundle(
 
     if (!sourceRevision) {
       return created;
+    }
+
+    const clonedBaseline = normalizeBundleBaseline(sourceRevision.baseline);
+    if (clonedBaseline !== 'open') {
+      await scopedDb.table('authorization_bundle_revisions')
+        .where({ revision_id: created.revisionId })
+        .update({ baseline: clonedBaseline });
     }
 
     const sourceRules = await scopedDb.table('authorization_bundle_rules')
@@ -691,6 +727,54 @@ export async function archiveBundle(
   });
 }
 
+/**
+ * Set the baseline of a draft revision. Published and archived revisions are immutable.
+ * A closed revision must still carry at least one rule to publish (publishBundleRevision refuses an
+ * empty draft); the closed-baseline evaluation in the bundle provider relies on that.
+ */
+export async function setBundleRevisionBaseline(
+  knex: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    bundleId: string;
+    revisionId: string;
+    baseline: BundleBaseline;
+    actorUserId?: string | null;
+  }
+): Promise<void> {
+  if (input.baseline !== 'open' && input.baseline !== 'closed') {
+    throw new Error("Bundle baseline must be 'open' or 'closed'.");
+  }
+  const updated = await tenantDb(knex, input.tenant).table('authorization_bundle_revisions')
+    .where({
+      bundle_id: input.bundleId,
+      revision_id: input.revisionId,
+      lifecycle_state: 'draft',
+    })
+    .update({
+      baseline: input.baseline,
+      updated_by: input.actorUserId ?? null,
+      updated_at: knex.fn.now(),
+    });
+  if (updated === 0) {
+    throw new Error('Only a draft revision of this bundle can have its baseline changed.');
+  }
+}
+
+/**
+ * The baseline of each given revision, by revision id. Revisions not found are absent from the map.
+ */
+export async function readPublishedBundleBaselines(
+  knex: Knex | Knex.Transaction,
+  input: { tenant: string; revisionIds: readonly string[] }
+): Promise<Map<string, BundleBaseline>> {
+  if (input.revisionIds.length === 0) return new Map();
+  const rows = await tenantDb(knex, input.tenant).table('authorization_bundle_revisions')
+    .whereIn('revision_id', [...input.revisionIds])
+    .select<Array<{ revision_id: string; baseline: string | null }>>('revision_id', 'baseline');
+  return new Map(rows.map((row) => [row.revision_id, normalizeBundleBaseline(row.baseline)]));
+}
+
 export async function publishBundleRevision(
   knex: Knex | Knex.Transaction,
   input: PublishBundleRevisionInput
@@ -723,6 +807,10 @@ export async function publishBundleRevision(
 
     if (!revision) {
       throw new Error('Revision not found for bundle in tenant scope.');
+    }
+
+    if (input.baseline !== undefined && input.baseline !== 'open' && input.baseline !== 'closed') {
+      throw new Error("Bundle baseline must be 'open' or 'closed'.");
     }
 
     if (revision.lifecycle_state !== 'draft') {
@@ -764,6 +852,7 @@ export async function publishBundleRevision(
         lifecycle_state: 'draft',
       })
       .update({
+        ...(input.baseline !== undefined ? { baseline: input.baseline } : {}),
         lifecycle_state: 'published',
         published_at: trx.fn.now(),
         published_by: input.actorUserId ?? null,
@@ -785,6 +874,111 @@ export async function publishBundleRevision(
         updated_by: input.actorUserId ?? null,
         updated_at: trx.fn.now(),
       });
+  });
+}
+
+/**
+ * Ensure a tenant-owned bundle has a required narrowing rule in its published revision.
+ * Repair revisions are based only on published rules; an editor's draft stays unpublished.
+ */
+export async function ensurePublishedBundleRule(
+  knex: Knex | Knex.Transaction,
+  input: EnsurePublishedBundleRuleInput
+): Promise<void> {
+  await knex.transaction(async (trx) => {
+    const scopedDb = tenantDb(trx, input.tenant);
+    const bundle = await scopedDb.table('authorization_bundles')
+      .where({ bundle_id: input.bundleId })
+      .forUpdate()
+      .first<{ published_revision_id: string | null; status: 'active' | 'archived' }>(
+        'published_revision_id', 'status'
+      );
+
+    if (!bundle) {
+      throw new Error('Bundle not found in tenant scope.');
+    }
+    if (bundle.status === 'archived') {
+      return;
+    }
+
+    const matchesRequiredRule = (rule: BundleRuleRecord) =>
+      rule.resourceType === input.resourceType &&
+      rule.action === input.action &&
+      rule.templateKey === input.templateKey &&
+      rule.constraintKey === (input.constraintKey ?? null);
+
+    const publishedRevisionRow = bundle.published_revision_id
+      ? await scopedDb.table('authorization_bundle_revisions')
+        .where({ revision_id: bundle.published_revision_id })
+        .first<{ baseline: string | null }>('baseline')
+      : undefined;
+
+    const publishedRules = bundle.published_revision_id
+      ? await listBundleRulesForRevision(trx, { tenant: input.tenant, revisionId: bundle.published_revision_id })
+      : [];
+    if (publishedRules.some(matchesRequiredRule)) {
+      return;
+    }
+
+    const maxRevision = await scopedDb.table('authorization_bundle_revisions')
+      .where({ bundle_id: input.bundleId })
+      .max<{ max_revision_number: string | null }>('revision_number as max_revision_number')
+      .first();
+    const nextRevisionNumber = Number(maxRevision?.max_revision_number || 0) + 1;
+    const now = trx.fn.now();
+    if (bundle.published_revision_id) {
+      await scopedDb.table('authorization_bundle_revisions')
+        .where({ bundle_id: input.bundleId, revision_id: bundle.published_revision_id, lifecycle_state: 'published' })
+        .update({ lifecycle_state: 'archived', updated_at: now });
+    }
+    const [repairRevision] = await scopedDb.table('authorization_bundle_revisions').insert({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_number: nextRevisionNumber,
+      lifecycle_state: 'published',
+      baseline: normalizeBundleBaseline(publishedRevisionRow?.baseline),
+      summary: 'Security repair: add asset delete narrowing rule',
+      published_at: now,
+      published_by: input.actorUserId ?? null,
+      created_by: input.actorUserId ?? null,
+      updated_by: input.actorUserId ?? null,
+    }).returning<{ revision_id: string }[]>('revision_id');
+
+    if (publishedRules.length) {
+      await scopedDb.table('authorization_bundle_rules').insert(publishedRules.map(rule => ({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_id: repairRevision.revision_id,
+        resource_type: rule.resourceType,
+        action: rule.action,
+        template_key: rule.templateKey,
+        effect: 'narrow',
+        constraint_key: rule.constraintKey,
+        config: rule.config,
+        position: rule.position,
+        created_by: input.actorUserId ?? null,
+      })));
+    }
+    await scopedDb.table('authorization_bundle_rules').insert({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_id: repairRevision.revision_id,
+      resource_type: input.resourceType,
+      action: input.action,
+      template_key: input.templateKey,
+      effect: 'narrow',
+      constraint_key: input.constraintKey ?? null,
+      config: input.config ?? {},
+      position: publishedRules.reduce((max, rule) => Math.max(max, rule.position), -1) + 1,
+      created_by: input.actorUserId ?? null,
+    });
+
+    await scopedDb.table('authorization_bundles').where({ bundle_id: input.bundleId }).update({
+      published_revision_id: repairRevision.revision_id,
+      status: 'active',
+      updated_by: input.actorUserId ?? null,
+      updated_at: now,
+    });
   });
 }
 
@@ -902,6 +1096,25 @@ function normalizeRuleIdList(value: unknown): string[] | undefined {
   return normalized.length > 0 ? normalized : [];
 }
 
+/** Shared assignment targeting for both retained-lock commands and composable snapshots. */
+function assignedBundlesForSubjectQuery(
+  knex: Knex | Knex.Transaction,
+  subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
+  memberships: { roleIds: string[] | Knex.QueryBuilder; teamIds: string[] | Knex.QueryBuilder },
+): Knex.QueryBuilder {
+  return publishedAssignmentsQuery(knex, subject.tenant)
+    .where(function () {
+      this.where({ 'a.target_type': 'user', 'a.target_id': subject.userId })
+        .orWhere(function () {
+          this.where('a.target_type', 'role').whereIn('a.target_id', memberships.roleIds);
+        })
+        .orWhere(function () {
+          this.where('a.target_type', 'team').whereIn('a.target_id', memberships.teamIds);
+        });
+      if (subject.apiKeyId) this.orWhere({ 'a.target_type': 'api_key', 'a.target_id': subject.apiKeyId });
+    });
+}
+
 /** lock retains existing memberships, assignments, bundles and rules through a command transaction. */
 export async function resolveBundleNarrowingRulesForEvaluation(
   knex: Knex | Knex.Transaction,
@@ -916,48 +1129,21 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     return emptyRuleSet();
   }
 
+  // Fast path: this request already learned the tenant has no published assignment, so no
+  // subject can have bundle rules. Never taken when retaining locks, and never inferred: only
+  // a probe result the subject resolver cached for this request counts.
+  if (!options.lock && peekTenantAuthorizationScope(input.requestCache, tenant)?.publishedAssignments === false) {
+    return emptyRuleSet();
+  }
+
   const [roleIds, teamIds] = await Promise.all([
     resolveRoleIdsForUser(knex, tenant, userId, options.lock),
     resolveTeamIdsForUser(knex, tenant, userId, options.lock),
   ]);
 
-  const targetClauses: Array<{ target_type: AuthorizationBundleTargetType; ids: string[] }> = [
-    { target_type: 'user', ids: [userId] },
-    { target_type: 'role', ids: roleIds },
-    { target_type: 'team', ids: teamIds },
-  ];
-
-  if (input.subject.apiKeyId) {
-    targetClauses.push({ target_type: 'api_key', ids: [input.subject.apiKeyId] });
-  }
-
   const scopedDb = tenantDb(knex, tenant);
-  const assignmentsQuery = scopedDb.table('authorization_bundle_assignments as a');
-  const assignedBundlesQuery = scopedDb.tenantJoin(
-    assignmentsQuery,
-    'authorization_bundles as b',
-    'b.bundle_id',
-    'a.bundle_id'
-  )
-    .andWhere('a.status', 'active')
-    .andWhere('b.status', 'active')
-    .whereNotNull('b.published_revision_id')
-    .andWhere((builder) => {
-      for (const clause of targetClauses) {
-        if (clause.ids.length === 0) {
-          continue;
-        }
-        builder.orWhere((subBuilder) => {
-          subBuilder.where('a.target_type', clause.target_type).whereIn('a.target_id', clause.ids);
-        });
-      }
-    })
-    .select<
-      Array<{
-        bundle_id: string;
-        revision_id: string;
-      }>
-    >('a.bundle_id', 'b.published_revision_id as revision_id');
+  const assignedBundlesQuery = assignedBundlesForSubjectQuery(knex, input.subject, { roleIds, teamIds })
+    .select<Array<{ bundle_id: string; revision_id: string }>>('a.bundle_id', 'b.published_revision_id as revision_id');
   if (options.lock) assignedBundlesQuery.forShare();
   const assignments = await assignedBundlesQuery;
 
@@ -972,23 +1158,39 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     return emptyRuleSet();
   }
 
-  const rulesQuery = scopedDb.table('authorization_bundle_rules')
-    .whereIn('revision_id', revisionIds)
-    .select<
-      Array<{
-        rule_id: string;
-        resource_type: string;
-        action: string;
-        template_key: string;
-        constraint_key: string | null;
-        config: Record<string, unknown>;
-      }>
-    >('rule_id', 'resource_type', 'action', 'template_key', 'constraint_key', 'config');
+  // The baseline lives on the revision row; each rule carries it with its owning bundle and revision.
+  const rulesQuery = scopedDb.table('authorization_bundle_rules as r');
+  scopedDb.tenantJoin(rulesQuery, 'authorization_bundle_revisions as v', 'v.revision_id', 'r.revision_id');
+  rulesQuery
+    .whereIn('r.revision_id', revisionIds)
+    .select<BundleRuleRow[]>(
+      'r.rule_id', 'r.resource_type', 'r.action', 'r.template_key', 'r.constraint_key', 'r.config',
+      'r.bundle_id', 'r.revision_id', 'v.baseline'
+    );
   if (options.lock) rulesQuery.forShare();
   const rules = await rulesQuery;
 
-  return rules.map((rule) => ({
+  return rules.map(bundleNarrowingRuleFromRow);
+}
+
+interface BundleRuleRow {
+  rule_id: string;
+  resource_type: string;
+  action: string;
+  template_key: string;
+  constraint_key: string | null;
+  config: Record<string, unknown>;
+  bundle_id?: string | null;
+  revision_id?: string | null;
+  baseline?: string | null;
+}
+
+export function bundleNarrowingRuleFromRow(rule: BundleRuleRow): BundleNarrowingRule {
+  return {
     id: rule.rule_id,
+    bundleId: rule.bundle_id ?? undefined,
+    revisionId: rule.revision_id ?? undefined,
+    baseline: normalizeBundleBaseline(rule.baseline),
     resource: rule.resource_type,
     action: rule.action,
     templateKey: rule.template_key as RelationshipTemplateKey,
@@ -1005,5 +1207,72 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     selectedBoardIds:
       normalizeRuleIdList(rule.config?.selectedBoardIds) ??
       normalizeRuleIdList(rule.config?.selected_board_ids),
-  }));
+  };
+}
+
+/** Database facts for one evaluation; never cached across requests or transactions. */
+export interface AuthorizationEvaluationSnapshot {
+  roleIds: string[];
+  teamIds: string[];
+  managedUserIds: string[];
+  portfolioClientIds: string[];
+  rules: BundleRuleRow[];
+}
+
+/**
+ * One composable SELECT for memberships, reports and published bundle rules.
+ * Scalar aggregates avoid multiplying membership/rule rows. The same membership
+ * CTEs feed both the subject and bundle targeting, so they cannot disagree.
+ * It can be selected alongside a resource row without another database round trip.
+ * Query failures propagate: failure to load narrowing must never mean no rules.
+ */
+export function authorizationEvaluationSnapshotQuery(
+  knex: Knex | Knex.Transaction,
+  subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
+): Knex.QueryBuilder {
+  const { tenant, userId } = subject;
+  if (!tenant || !userId) throw new Error('Authorization requires tenant and user identity');
+  const db = tenantDb(knex, tenant);
+  const roles = db.table('user_roles').where({ user_id: userId }).select('role_id');
+  const teams = db.table('team_members').where({ user_id: userId }).select('team_id');
+  const managed = db.table('users').where({ reports_to: userId }).select('user_id');
+  const portfolio = db.table('user_client_portfolios').where({ user_id: userId }).orderBy('client_id', 'asc').select('client_id');
+
+  const assignments = assignedBundlesForSubjectQuery(knex, subject, {
+    roleIds: knex.select('role_id').from('evaluation_roles'),
+    teamIds: knex.select('team_id').from('evaluation_teams'),
+  }).select('b.published_revision_id');
+
+  const rules = db.table('authorization_bundle_rules as r');
+  db.tenantJoin(rules, 'authorization_bundle_revisions as v', 'v.revision_id', 'r.revision_id');
+  rules
+    .whereIn('r.revision_id', assignments)
+    .select(
+      'r.rule_id', 'r.resource_type', 'r.action', 'r.template_key', 'r.constraint_key', 'r.config',
+      'r.bundle_id', 'r.revision_id', 'v.baseline'
+    );
+  const aggregate = (query: Knex.QueryBuilder, value: string) =>
+    knex.select(knex.raw("coalesce(jsonb_agg(??), '[]'::jsonb)", [value])).from(query.as('facts'));
+
+  return knex.queryBuilder()
+    .with('evaluation_roles', roles)
+    .with('evaluation_teams', teams)
+    .select(knex.raw(`jsonb_build_object(
+      'roleIds', (?), 'teamIds', (?), 'managedUserIds', (?), 'portfolioClientIds', (?), 'rules', (?)
+    )`, [
+      aggregate(knex.select('role_id').from('evaluation_roles'), 'role_id'),
+      aggregate(knex.select('team_id').from('evaluation_teams'), 'team_id'),
+      aggregate(managed, 'user_id'),
+      aggregate(portfolio, 'client_id'),
+      aggregate(rules, 'facts'),
+    ]));
+}
+
+export async function loadAuthorizationEvaluationSnapshot(
+  knex: Knex | Knex.Transaction,
+  subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
+): Promise<AuthorizationEvaluationSnapshot> {
+  const row = await knex.queryBuilder().select(authorizationEvaluationSnapshotQuery(knex, subject).as('snapshot')).first();
+  if (!row?.snapshot) throw new Error('Authorization context unavailable');
+  return row.snapshot as AuthorizationEvaluationSnapshot;
 }

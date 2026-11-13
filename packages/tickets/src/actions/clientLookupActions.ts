@@ -1,8 +1,12 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
+import type { IClient, IClientLocation, IContact, IContactLocation } from '@alga-psa/types';
+import {
+  getContactLocations,
+  resolveContactLocationId,
+} from '@alga-psa/shared/models/contactLocation';
 import type { ContactFilterStatus } from '@alga-psa/shared/ticketClients/types';
 import { getAllClients as getAllClientsModel, getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
 import {
@@ -24,6 +28,14 @@ import {
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { createClientScopeContext, type ClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+
+// LEVERAGE: pattern client-scope-per-action — every action here (and the twins in @alga-psa/clients) opens one
+// scope per call, narrows, and turns "out of scope" into its own not-found shape; a lookup layer that took the
+// scope once and answered "not found" uniformly would absorb it.
+function scopeFor(knex: Knex, tenant: string, user: IUserWithRoles): Promise<ClientScopeContext> {
+  return createClientScopeContext(knex, tenant, user);
+}
 
 // MSP-only lookups: these actions back internal ticket UIs and expose
 // tenant-wide client/contact data, so client-portal callers (user_type
@@ -42,8 +54,11 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
+  // Resolved before the transaction opens; the predicate is applied inside the list query.
+  const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('client', 'clients');
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getAllClientsModel(trx, tenant, includeInactive);
+    return getAllClientsModel(trx, tenant, includeInactive, { narrowQuery: (query) => { narrowing.apply(query); } });
   });
 });
 
@@ -51,10 +66,12 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
   await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
+  const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('client', 'clients');
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getClientByIdModel(trx, tenant, clientId);
+    return getClientByIdModel(trx, tenant, clientId, { narrowQuery: (query) => { narrowing.apply(query); } });
   });
 
+  // Out of scope reads as not found, before the logo lookup.
   if (!client) {
     return null;
   }
@@ -76,8 +93,19 @@ export const getContactsByClient = withAuth(async (
   await assertInternalReadAccess(user, 'contact');
   const { knex } = await createTenantKnex();
 
+  // One scope for the call: the client check and the contact rows share its probe, subject and rules.
+  const scope = await scopeFor(knex, tenant, user);
+  const contactNarrowing = await scope.narrowing('contact', 'contacts');
+
+  // Same answer as getContactsByClient in @alga-psa/clients when the client is out of scope.
+  if (!(await scope.permits('client', clientId))) {
+    throw new Error('VALIDATION_ERROR: The specified client does not exist');
+  }
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getContactsByClientModel(trx, tenant, clientId, status, sortBy, sortDirection);
+    return getContactsByClientModel(trx, tenant, clientId, status, sortBy, sortDirection, {
+      narrowQuery: (query) => { contactNarrowing.apply(query); },
+    });
   });
 });
 
@@ -85,8 +113,10 @@ export const getContactByContactNameId = withAuth(async (user, { tenant }, conta
   await assertInternalReadAccess(user, 'contact');
   const { knex } = await createTenantKnex();
 
+  const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('contact', 'contacts');
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getContactByContactNameIdModel(trx, tenant, contactNameId);
+    return getContactByContactNameIdModel(trx, tenant, contactNameId, { narrowQuery: (query) => { narrowing.apply(query); } });
   });
 });
 
@@ -98,8 +128,11 @@ export const getAllActiveContacts = withAuth(async (
   await assertInternalReadAccess(user, 'contact');
   const { knex } = await createTenantKnex();
 
+  // A narrowed subject sees no contact without a client, nor one of a client out of scope.
+  const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('contact', 'contacts');
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getAllActiveContactsModel(trx, tenant, sortDirection);
+    return getAllActiveContactsModel(trx, tenant, sortDirection, { narrowQuery: (query) => { narrowing.apply(query); } });
   });
 });
 
@@ -118,6 +151,9 @@ export const getClientBillingProfiles = withAuth(async (
   await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
+  // Out of scope: no profiles. Checked first because the model backfills a default profile on read.
+  if (!(await (await scopeFor(knex, tenant, user)).permits('client', clientId))) return [];
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return listClientBillingProfiles(trx, tenant, clientId);
   });
@@ -127,8 +163,95 @@ export const getClientLocations = withAuth(async (user, { tenant }, clientId: st
   await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
+  // Out of scope: no locations.
+  if (!(await (await scopeFor(knex, tenant, user)).permits('client', clientId))) return [];
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientLocationsModel(trx, tenant, clientId);
+  });
+});
+
+export interface ContactEffectiveLocation {
+  /** What TicketModel.createTicket would fill in when nobody picks a location. */
+  locationId: string | null;
+  /** The contact's own links, so the form can mark and group them. */
+  locations: IContactLocation[];
+  workArrangement: string | null;
+}
+
+/**
+ * The same effective-location rule the model applies, read ahead of the save so the ticket forms
+ * can show the operator what they are about to get and let them override it. One source of truth:
+ * the form calls this, the model calls the same function again on write.
+ */
+export const getContactEffectiveLocation = withAuth(async (
+  user,
+  { tenant },
+  contactId: string,
+): Promise<ContactEffectiveLocation> => {
+  await assertInternalReadAccess(user, 'contact');
+  const { knex } = await createTenantKnex();
+
+  // An out-of-scope contact reads like one that does not exist: no links, no effective location.
+  if (!(await (await scopeFor(knex, tenant, user)).permits('contact', contactId))) {
+    return { locationId: null, locations: [], workArrangement: null };
+  }
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const contact = await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
+      .first<{ work_arrangement: string | null }>(['work_arrangement']);
+
+    return {
+      locationId: await resolveContactLocationId(trx, tenant, contactId),
+      locations: await getContactLocations(trx, tenant, contactId),
+      workArrangement: contact?.work_arrangement ?? null,
+    };
+  });
+});
+
+export interface TicketFilterLocationOption {
+  location_id: string;
+  location_name: string;
+  client_id: string;
+  client_name: string | null;
+}
+
+/**
+ * The options behind the two Location `where` filters. Narrowed to one client when the list is
+ * filtered to it (then the client name is left off, because every row would carry the same one);
+ * otherwise every active tenant location, labelled by client so two "Head office" rows are
+ * tellable apart.
+ */
+export const listTicketFilterLocations = withAuth(async (
+  user,
+  { tenant },
+  clientId?: string | null,
+): Promise<TicketFilterLocationOption[]> => {
+  await assertInternalReadAccess(user, 'client');
+  const { knex } = await createTenantKnex();
+  const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('client', 'c');
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, tenant);
+    const query = db.table('client_locations as loc').where('loc.is_active', true);
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'loc.client_id', { type: 'left' });
+    // The scope predicate reads the joined client's id, which equals loc.client_id; a location whose client
+    // is out of scope (or has no client row) fails it, so the left join cannot let one through.
+    narrowing.apply(query);
+    if (clientId) query.where('loc.client_id', clientId);
+
+    const rows = await query
+      .select('loc.location_id', 'loc.location_name', 'loc.address_line1', 'loc.client_id', 'c.client_name')
+      .orderBy([{ column: 'c.client_name', order: 'asc' }, { column: 'loc.location_name', order: 'asc' }]) as
+      Array<{ location_id: string; location_name: string | null; address_line1: string | null; client_id: string; client_name: string | null }>;
+
+    return rows.map((row) => ({
+      location_id: row.location_id,
+      location_name: row.location_name?.trim() || row.address_line1?.trim() || row.location_id,
+      client_id: row.client_id,
+      client_name: clientId ? null : row.client_name,
+    }));
   });
 });
 
@@ -148,7 +271,11 @@ export const searchClientsForPicker = withAuth(async (
   await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
-  const { clients, total } = await searchClientsForPickerModel(knex, tenant, user, params);
+  // Resolved before the picker opens its own transaction; the predicate is applied inside its query.
+  const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('client', 'c');
+  const { clients, total } = await searchClientsForPickerModel(knex, tenant, user, params, {
+    narrowQuery: (query) => { narrowing.apply(query); },
+  });
   const withTags = await attachDisplayTags(knex, tenant, user, 'client', clients, (c) => c.client_id);
 
   return { clients: withTags, total };

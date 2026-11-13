@@ -51,6 +51,11 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, cron: '0 4 * * *' },
 
   { jobName: 'recover-file-uploads', cron: '*/5 * * * *' },
+  // Resumable document uploads past their expiry: marks them expired and aborts the provider write session.
+  { jobName: 'expire-document-upload-sessions', cron: '*/15 * * * *' },
+  // Co-managed upload/transfer cleanup. Capability-gated in the fan-out (inert for tenants
+  // `co-managed` does not serve); registered server-side by registerServerMaintenanceJobs.
+  { jobName: 'co-managed-upload-cleanup', cron: '17 * * * *' },
 
   // Server-registered jobs (registerServerMaintenanceJobs.ts).
   { jobName: 'create-client-contract-line-cycles', cron: '0 0 * * *' },

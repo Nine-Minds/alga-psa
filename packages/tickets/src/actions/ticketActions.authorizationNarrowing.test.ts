@@ -197,6 +197,10 @@ function buildTrx(params: {
       return queryBuilder;
     }
 
+    if (table === 'user_client_portfolios') {
+      return { where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue([]) }) }) };
+    }
+
     if (table === 'user_roles' || table === 'team_members') {
       return {
         where: vi.fn().mockReturnValue({
@@ -216,13 +220,15 @@ function buildTrx(params: {
     }
 
     if (table === 'users') {
-      return {
+      // Agent directory: `.select(...).where(...).orderBy(...)`; authorization subject lookup:
+      // `.where({ reports_to }).select('user_id')`.
+      const builder: any = {
+        select: vi.fn(() => builder),
+        where: vi.fn(() => builder),
         orderBy: vi.fn().mockResolvedValue([]),
-        where: vi.fn().mockReturnValue({
-          select: vi.fn().mockResolvedValue([]),
-          orderBy: vi.fn().mockResolvedValue([]),
-        }),
+        then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
       };
+      return builder;
     }
 
     if (table === 'statuses') {

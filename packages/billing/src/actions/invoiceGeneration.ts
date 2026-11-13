@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server'
 
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction, resolveTenantToday } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { requireTenantId } from '@alga-psa/db';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
@@ -49,6 +49,7 @@ import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITime
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { applyInvoiceDiscountSummary, attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
+import { buildBundleComponents, buildPreviewFixedBundles } from '../lib/invoiceBundleComponents';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -74,6 +75,7 @@ import {
 
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate } from './billingAndTax';
+import { calculatePreviewTaxAfterDiscounts } from '../lib/billing/taxAfterDiscounts';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { applyCreditToInvoice } from './creditActions';
 import { getCurrencySymbol } from '@alga-psa/core';
@@ -378,7 +380,13 @@ function previewTimeEntrySnapshots(
 
 function buildPreviewViewModelItem(item: IInvoiceCharge) {
   const recurringSummary = resolvePreviewRecurringSummary(item);
+  // The draft is operator-only, so component money is always included.
+  const bundle = buildBundleComponents(item.bundle_presentation, {
+    includePricing: true,
+    amounts: item.bundle_component_amounts,
+  });
   return {
+    ...(bundle ? { subtitle: bundle.subtitle, hasComponents: bundle.hasComponents, components: bundle.components } : {}),
     id: item.item_id,
     description: item.description,
     quantity: item.quantity,
@@ -1296,13 +1304,15 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
 }
 
 /**
- * Resolves every recurring due obligation materialized for a client's billing
- * window (legacy billing-cycle bridge). A client cycle window can contain
- * multiple client-cadence schedules (one per contract line) plus
- * contract-cadence lines whose invoice window coincides with the cycle window;
- * production grouped generation (recurringBillingRunActions) passes one
- * selector input per obligation, and the cycle bridge must do the same or it
- * silently drops every obligation after the first.
+ * Resolves every live recurring obligation (anything not archived or
+ * superseded) in a client's invoice window, **including obligations that are
+ * already billed**. It is meant for whole-window previews such as
+ * previewRecurringUnitRevisionInvoiceImpact. Generation must not select its
+ * members here: a billed member trips the duplicate-invoice guard for the whole
+ * request. Generation selects members through due-work
+ * (getAvailableRecurringDueWork), which only offers unbilled obligations.
+ * A client window can contain multiple client-cadence schedules (one per
+ * contract line) plus contract-cadence lines whose invoice window coincides.
  */
 async function resolveCanonicalSelectorInputsForClientWindow(params: {
   knex: Knex;
@@ -1542,26 +1552,35 @@ async function normalizeRecurringSelectorInput(params: {
   return params.selectorInput;
 }
 
-// TODO: Move to billingAndTax.ts
-async function calculatePreviewTax(
+/**
+ * Invoice total (tax included) the way generation will compute it: automatic
+ * discounts reduce both the total and the taxable base before tax, via the
+ * same preview adjustments and allocation the main preview uses. Used by the
+ * purchase-order overage checks so they agree with the generated invoice.
+ */
+async function previewInvoiceTotalAfterDiscounts(
+  knex: Knex,
+  tenant: string,
   charges: IBillingCharge[],
+  grossTotal: number,
   clientId: string,
   cycleEnd: ISO8601String,
-  defaultTaxRegion: string
+  defaultTaxRegion: string,
+  currencyCode: string,
 ): Promise<number> {
-  // Sum the pre-calculated tax amounts from the BillingEngine charges
-  // BillingEngine already handles multi-region tax allocation for fixed fees
-  // and calculates tax for other charge types.
-  let totalTax = 0;
-  for (const charge of charges) {
-    // Add the tax_amount if it exists and is greater than 0
-    if (charge.tax_amount && charge.tax_amount > 0) {
-      totalTax += charge.tax_amount;
-    }
-  }
-  console.log(`[calculatePreviewTax] Summed pre-calculated tax: ${totalTax}`);
-
-  return totalTax;
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, clientId, charges, (await resolveTenantToday(knex, tenant)).toString(),
+  );
+  const tax = await calculatePreviewTaxAfterDiscounts(
+    charges,
+    clientId,
+    cycleEnd,
+    defaultTaxRegion,
+    currencyCode,
+    { discounts: adjustments.discounts, chargeItemIds: adjustments.chargeItemIds },
+  );
+  const discountTotal = adjustments.discounts.reduce((sum, discount) => sum + Math.abs(Number(discount.amount) || 0), 0);
+  return Math.trunc(Math.max(0, grossTotal - discountTotal) + tax);
 }
 
 function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | undefined): string | null {
@@ -2029,13 +2048,16 @@ async function getPurchaseOrderOverageForSelectionInputInternal(params: {
 
   const client = await getClientDetails(knex, tenant, client_id);
   const defaultRegion = await getClientDefaultTaxRegionCode(knex, tenant, client_id);
-  const previewTax = await calculatePreviewTax(
+  const invoiceTotal = await previewInvoiceTotalAfterDiscounts(
+    knex,
+    tenant,
     billingResult.charges,
+    billingResult.totalAmount,
     client_id,
     cycleEnd,
     defaultRegion || client?.tax_region || '',
+    billingResult.currency_code || 'USD',
   );
-  const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
 
   const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
   const computed = computePurchaseOrderOverage({
@@ -2247,7 +2269,11 @@ async function adaptToWasmViewModel(
 
   const previewViewModel: WasmInvoiceViewModel = {
     invoiceNumber: 'PREVIEW',
-    issueDate: toISODate(Temporal.Now.plainDateISO()),
+    issueDate: toISODate(
+      tenant
+        ? await resolveTenantToday((await createTenantKnex(tenant)).knex, tenant)
+        : Temporal.Now.plainDateISO(),
+    ),
     dueDate: dueDate,
     currencyCode: billingResult.currency_code || 'USD',
     poNumber,
@@ -2390,6 +2416,13 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
    * previews, which bill the client's default profile.
    */
   billingProfileId?: string | null;
+  /**
+   * Fold each Fixed line's per-service charges into one bundle item (the shape
+   * generation persists) so template renderers show the same layout as the
+   * final invoice. Off by default: the Automatic Invoices dialog is an operator
+   * table that keeps the per-service view.
+   */
+  consolidateFixedBundles?: boolean;
 }): Promise<BuiltPreviewInvoice> {
   const { knex, tenant, selectorInputs } = params;
   const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
@@ -2479,7 +2512,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   const client = await getClientDetails(knex, tenant, client_id);
-  const previewInvoiceDate = Temporal.Now.plainDateISO().toString();
+  const previewInvoiceDate = (await resolveTenantToday(knex, tenant)).toString();
   // Same resolution as generation: the profile's terms and payment method,
   // inheriting the client's field by field.
   const previewBillingIdentity = await resolveEffectiveBillingIdentity(
@@ -2561,8 +2594,37 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     });
   });
 
-  for (const [contractKey, charges] of Object.entries(chargesByContractGroup)) {
+  const previewBundles = params.consolidateFixedBundles
+    ? await buildPreviewFixedBundles(knex, tenant, Object.values(chargesByContractGroup).flat())
+    : [];
+  const bundledCharges = new Set<unknown>(previewBundles.flatMap((bundle) => bundle.charges));
+  for (const bundle of previewBundles) {
+    const first = bundle.charges[0];
+    invoiceItems.push({
+      item_id: 'preview-' + uuidv4(),
+      invoice_id: `preview-${previewInvoiceKey}`,
+      description: bundle.title,
+      quantity: 1,
+      unit_price: bundle.total,
+      total_price: bundle.total,
+      tax_amount: bundle.charges.reduce((sum, c) => sum + (c.tax_amount || 0), 0),
+      tax_rate: first.tax_rate || 0,
+      tax_region: first.tax_region || '',
+      net_amount: bundle.total,
+      is_manual: false,
+      rate: bundle.total,
+      client_contract_id: first.client_contract_id,
+      contract_name: first.contract_name,
+      billing_charge_type: 'fixed',
+      bundle_presentation: bundle.snapshot,
+      bundle_component_amounts: bundle.amounts,
+    } as IInvoiceCharge);
+  }
+
+  for (const [contractKey, allContractCharges] of Object.entries(chargesByContractGroup)) {
     const contractGroupName = contractKey;
+    const charges = allContractCharges.filter((charge) => !bundledCharges.has(charge));
+    if (charges.length === 0) continue;
     const clientContractGroupId = charges[0].client_contract_id;
     const contractGroupHeaderId = 'preview-' + uuidv4();
     invoiceItems.push({
@@ -2692,15 +2754,19 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     });
   }
 
-  const previewTax = await calculatePreviewTax(
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+  );
+
+  // Same allocation and per-region tax as generation: discounts lower the
+  // taxable base before tax, so the preview equals the generated invoice.
+  const previewTax = await calculatePreviewTaxAfterDiscounts(
     previewCharges,
     client_id,
     cycleEnd,
     client?.tax_region || '',
-  );
-
-  const adjustments = await previewAutomaticInvoiceDiscounts(
-    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+    billingResult.currency_code || 'USD',
+    { discounts: adjustments.discounts, chargeItemIds: adjustments.chargeItemIds },
   );
 
   const viewModel = await adaptToWasmViewModel(
@@ -2912,12 +2978,14 @@ async function buildPreviewInvoiceForSelectionInput(params: {
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
   billingProfileId?: string | null;
+  consolidateFixedBundles?: boolean;
 }): Promise<BuiltPreviewInvoice> {
   return buildPreviewInvoiceForSelectionInputs({
     knex: params.knex,
     tenant: params.tenant,
     selectorInputs: [params.selectorInput],
     billingProfileId: params.billingProfileId,
+    consolidateFixedBundles: params.consolidateFixedBundles,
   });
 }
 
@@ -2972,6 +3040,10 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
   user,
   { tenant },
   groupedSelections: RecurringGroupedPreviewSelectionInput[],
+  // LEVERAGE: pattern preview-vs-persisted-shape — the legacy draft emits per-service rows plus a $0 header,
+  // persisted invoices emit one bundle parent. Default (true) matches persisted output; the operator
+  // dialog passes false to keep its per-service layout.
+  options: { consolidateFixedBundles?: boolean } = {},
 ): Promise<RecurringGroupedPreviewResponse> => {
   const { knex } = await createTenantKnex();
   let normalizedGroupedSelections = groupedSelections;
@@ -3005,6 +3077,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           knex,
           tenant,
           selectorInputs: group.selectorInputs,
+          consolidateFixedBundles: options.consolidateFixedBundles !== false,
         });
         return {
           previewGroupKey: group.previewGroupKey,
@@ -3066,6 +3139,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   user,
   { tenant },
   selectorInput: IRecurringDueSelectionInput,
+  options: { consolidateFixedBundles?: boolean } = {},
 ): Promise<PreviewInvoiceResponse> => {
   const { knex } = await createTenantKnex();
   let normalizedSelectorInput = selectorInput;
@@ -3083,6 +3157,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       knex,
       tenant,
       selectorInput: normalizedSelectorInput,
+      consolidateFixedBundles: options.consolidateFixedBundles !== false,
     });
     return {
       success: true,
@@ -3174,6 +3249,7 @@ export const previewInvoice = withAuth(async (
       tenant,
       selectorInput,
       billingProfileId: await getCycleBillingProfileId(knex, tenant, billing_cycle_id, client_id),
+      consolidateFixedBundles: true,
     });
     return {
       success: true,
@@ -3419,93 +3495,6 @@ export const createSeparateProjectProductInvoices = withAuth(async (
   });
 });
 
-export const generateInvoice = withAuth(async (
-  user,
-  { tenant },
-  billing_cycle_id: string,
-  options: IInvoiceGenerationRequestOptions = {}
-): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
-  return withInvoiceGenerationActionErrors(async () => {
-  // Get billing cycle details
-  const { knex } = await createTenantKnex();
-
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Check permissions within transaction
-    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
-      throw new Error('Permission denied: Cannot generate invoices');
-    }
-
-    return await tenantDb(trx, tenant).table('client_billing_cycles')
-      .where({
-        billing_cycle_id,
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
-    throw new Error('Billing cycle not found');
-  }
-
-  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
-
-  let cycleStart: ISO8601String;
-  let cycleEnd: ISO8601String;
-
-  if (period_start_date && period_end_date) {
-    cycleStart = normalizeRecurringWindowDate(period_start_date);
-    cycleEnd = normalizeRecurringWindowDate(period_end_date);
-  } else if (effective_date) {
-    cycleStart = normalizeRecurringWindowDate(effective_date);
-    cycleEnd = normalizeRecurringWindowDate(
-      unwrapBillingHelperResult(await getNextBillingDate(client_id, cycleStart)),
-    );
-  } else {
-    throw new Error('Invalid billing cycle dates');
-  }
-
-  // Resolve every materialized obligation in this cycle window (multiple
-  // client-cadence schedules and same-window contract-cadence lines), matching
-  // how grouped recurring generation invoices a window. Resolving only the
-  // first schedule key would silently drop the remaining contract lines.
-  const selectorInputs = await resolveCanonicalSelectorInputsForClientWindow({
-    knex,
-    tenant,
-    clientId: client_id,
-    windowStart: cycleStart,
-    windowEnd: cycleEnd,
-  });
-
-  let normalizedSelectorInputs: IRecurringDueSelectionInput[];
-  try {
-    normalizedSelectorInputs = await Promise.all(
-      selectorInputs.map((selectorInput) =>
-        normalizeRecurringSelectorInput({
-          knex,
-          tenant,
-          selectorInput,
-        }),
-      ),
-    );
-  } catch (error) {
-    throw withRecurringWindowErrorContext(
-      error instanceof Error
-        ? error
-        : new Error('An error occurred while validating the recurring execution window.'),
-      selectorInputs[0],
-    );
-  }
-
-  return generateInvoiceForNormalizedSelectionInputs({
-    user,
-    tenant,
-    knex,
-    normalizedSelectorInputs,
-    options,
-    bridgeMetadata: { billingCycleId: billing_cycle_id },
-  });
-  });
-});
-
 export const generateInvoiceForSelectionInput = withAuth(async (
   user,
   { tenant },
@@ -3746,13 +3735,16 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
 
     if (poContext.po_amount != null) {
       const defaultRegion = await getClientDefaultTaxRegionCode(knex, tenant, client_id);
-      const previewTax = await calculatePreviewTax(
+      const invoiceTotal = await previewInvoiceTotalAfterDiscounts(
+        knex,
+        tenant,
         billingResult.charges,
+        billingResult.totalAmount,
         client_id,
         cycleEnd,
         defaultRegion || '',
+        billingResult.currency_code || 'USD',
       );
-      const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
       const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
       const computed = computePurchaseOrderOverage({
         authorizedCents: poContext.po_amount,
@@ -3762,7 +3754,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       if (computed.overageCents > 0 && !params.options?.allowPoOverage) {
         const currencyCode = billingResult.currency_code || 'USD';
         console.warn(
-          `[generateInvoice] PO overage detected (client_contract_id=${clientContractId}). ` +
+          `[generateInvoiceForNormalizedSelectionInputs] PO overage detected (client_contract_id=${clientContractId}). ` +
             `Over by ${formatCurrencyFromMinorUnits(computed.overageCents, 'en-US', currencyCode)}; continuing because PO limits are advisory.`,
         );
       }
@@ -4050,9 +4042,9 @@ export async function createInvoiceFromBillingResultImpl(
   // `invoice_date` (and the due date computed from it) is the invoice's "today".
   // The calendar month-end close passes `options.invoiceDate` — the tenant-local
   // final calendar day its eligibility gate approved — so the draft is stamped on
-  // the billing calendar. Every other caller omits it and this stays exactly the
-  // server-host calendar date it has always been.
-  const currentDate = options.invoiceDate ?? Temporal.Now.plainDateISO().toString();
+  // the billing calendar. Every other caller omits it and gets the tenant-local
+  // calendar date (never the server host's UTC date). `knex` may be a transaction.
+  const currentDate = options.invoiceDate ?? (await resolveTenantToday(knex, tenant)).toString();
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 

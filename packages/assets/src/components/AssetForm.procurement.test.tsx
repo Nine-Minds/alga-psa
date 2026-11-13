@@ -22,6 +22,10 @@ vi.mock('../actions/assetActions', () => ({
   updateAsset: (...args: unknown[]) => mockUpdateAsset(...args),
 }));
 
+vi.mock('../actions/assetNumberingActions', () => ({
+  previewAssetNumber: vi.fn(),
+}));
+
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   ClientPicker: () => <div data-testid="client-picker" />,
 }));

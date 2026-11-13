@@ -56,6 +56,19 @@
     "manageLicense": "Gestisci licenza",
     "ariaLabel": "Stato della licenza",
     "dismiss": "Chiudi",
+    "subscriptionEnding": "Il tuo abbonamento Pro è stato annullato. Pro termina il {{date}}. Riabbonati per mantenere Pro.",
+    "subscriptionEndingNoDate": "Il tuo abbonamento Pro è stato annullato. Riabbonati per mantenere Pro.",
+    "subscriptionLapsed": "Ora stai usando l'edizione gratuita. Riabbonati per ripristinare Pro.",
+    "resubscribe": "Riabbonati",
+    "termEnds": "Il tuo accesso a Pro termina il {{date}}. Rinnova per mantenere Pro.",
+    "termEndsNoDate": "Il tuo periodo Pro sta per terminare. Rinnova per mantenere Pro.",
+    "paymentFailed": "Pagamento non riuscito — riproveremo il {{date}}. Aggiorna il metodo di pagamento per mantenere Pro.",
+    "paymentFailedNoRetry": "Pagamento non riuscito. Aggiorna il metodo di pagamento per mantenere Pro.",
+    "paymentFailedEndsOn": "Pro termina il {{date}} se il pagamento continua a non riuscire.",
+    "paymentFailedEnded": "Pro è terminato — pagamento non riuscito. La tua appliance funziona con Essentials.",
+    "paymentFailedEndedEnding": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Pro resta attivo fino al {{date}}. Riabbonati per mantenere Pro.",
+    "paymentFailedEndedEndingNoDate": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Riabbonati per mantenere Pro.",
+    "updatePaymentMethod": "Aggiorna il metodo di pagamento",
     "licenseExpiresIn_few": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
     "licenseExpiresIn_many": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
     "trialDaysRemaining_few": "Prova Pro attiva — {{count}} giorni rimanenti.",
@@ -257,7 +270,22 @@
       "verify": "Verifica",
       "title": "Facilissimo",
       "instructions": "Inserisci il codice a 6 cifre dell’app di autenticazione.",
-      "digitsLeft": "{{count}} cifre rimanenti"
+      "digitsLeft": "{{count}} cifre rimanenti",
+      "enroll": {
+        "title": "Configura l’autenticazione a due fattori",
+        "instructions": "La tua organizzazione richiede l’autenticazione a due fattori. Scansiona il codice QR con un’app di autenticazione, quindi inserisci il codice a 6 cifre.",
+        "qrAlt": "Codice QR per la tua app di autenticazione",
+        "manualKey": "Oppure inserisci questa chiave manualmente:",
+        "cancel": "Annulla",
+        "errors": {
+          "invalid_credentials": "L’e-mail o la password non sono più valide. Accedi di nuovo.",
+          "enrollment_not_required": "La configurazione non è necessaria per questo account. Accedi di nuovo.",
+          "invalid_code": "Questo codice non è valido. Riprova.",
+          "rate_limited": "Troppi tentativi. Attendi qualche minuto e riprova.",
+          "captcha_required": "Completa prima la verifica nella pagina di accesso.",
+          "unavailable": "La configurazione non è al momento disponibile. Riprova."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Il token di trasferimento dell'accesso è mancante o non valido. Accedi di nuovo.",
@@ -843,6 +871,7 @@
       "pending": "In attesa",
       "error": "Impossibile caricare il documento",
       "fileError": "Impossibile caricare il file",
+      "fileTooLarge": "Questo file è di {{size}}. Il limite attuale è di {{limit}} per file.",
       "associatedEntityTypeLabel": "Associa a",
       "noAssociation": "Nessuna associazione",
       "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare.",
@@ -854,7 +883,16 @@
       "emptyDropMessage": "Non è stato ricevuto alcun file. Salva l'allegato o l'email sul computer, poi trascina qui il file salvato oppure usa «Sfoglia file».",
       "uploadInProgress": "Un caricamento è già in corso. Attendi che finisca prima di aggiungere altri file.",
       "refreshFailed": "I file sono stati caricati, ma l'elenco dei documenti non è stato aggiornato. Ricarica la pagina per visualizzarli.",
-      "clearResults": "Cancella risultati"
+      "clearResults": "Cancella risultati",
+      "typeNotAllowed": "Questo tipo di file non è consentito. Scegli un altro file.",
+      "permissionDenied": "Non hai l'autorizzazione per caricare documenti qui.",
+      "networkFailed": "La connessione si è interrotta e non è stato possibile riprendere il caricamento. Controlla la connessione e riprova.",
+      "sessionGone": "Questo caricamento è scaduto prima del completamento. Avvialo di nuovo.",
+      "cancelled": "Annullato",
+      "cancelUpload": "Annulla caricamento",
+      "tryAgain": "Riprova",
+      "progress": "{{committed}} di {{total}}",
+      "progressLabel": "Avanzamento del caricamento di {{name}}"
     },
     "folders": {
       "root": "Radice",
@@ -868,7 +906,8 @@
       "collapse": "Comprimi cartelle",
       "allDocuments": "Tutti i documenti",
       "expand": "Mostra cartelle",
-      "deleteTitle": "Elimina cartella"
+      "deleteTitle": "Elimina cartella",
+      "show": "Mostra cartelle"
     },
     "folderManager": {
       "title": "Crea nuova cartella",
@@ -930,6 +969,28 @@
     "huduTab": {
       "documentsTabLabel": "Documenti",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Utente",
+    "selectOrCreate": "Seleziona un documento o creane uno nuovo.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Stampa",
+      "edit": "Modifica",
+      "upload": "Carica",
+      "closePreview": "Chiudi anteprima",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio..."
+    },
+    "viewMode": {
+      "grid": "Griglia",
+      "list": "Elenco"
+    },
+    "unsavedChanges": {
+      "title": "Modifiche non salvate",
+      "message": "Vuoi davvero annullare? Tutte le modifiche non salvate andranno perse.",
+      "confirm": "Annulla modifiche",
+      "cancel": "Continua a modificare"
     }
   },
   "surveys": {
@@ -1410,7 +1471,17 @@
     "unnamedUser": "Utente senza nome",
     "unnamedTeam": "Team senza nome",
     "userPicker": "Selettore utenti",
-    "noUsersFound": "Nessun utente trovato"
+    "noUsersFound": "Nessun utente trovato",
+    "contactRemoteLocation": "Remoto",
+    "selectBoard": "Seleziona bacheca",
+    "activeBoards": "Bacheche attive",
+    "inactiveBoards": "Bacheche inattive",
+    "allBoards": "Tutte le bacheche",
+    "boardPicker": "Selettore bacheche",
+    "filterByStatus": "Filtra per stato",
+    "statusFilter": "Filtro per stato",
+    "boards": "Bacheche",
+    "inactiveSuffix": "(Inattiva)"
   },
   "serviceTypeSelect": {
     "placeholder": "Seleziona un tipo di servizio...",
@@ -1618,7 +1689,9 @@
       "ticketTitle": "Stampa etichette di lavoro",
       "tooMany": "Puoi stampare al massimo {{max}} etichette alla volta.",
       "unnamedAsset": "Asset senza nome",
-      "useTemplate": "Usa {{template}}"
+      "useTemplate": "Usa {{template}}",
+      "copiesPerAsset": "Copie per asset",
+      "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme."
     }
   },
   "deleteEntity": {
@@ -1711,7 +1784,14 @@
       "assigned": "Assegnato:",
       "performedBy": "da {{name}}",
       "internal": "Interno"
-    }
+    },
+    "title": "Notifiche",
+    "reconnectingToServer": "Riconnessione al server...",
+    "refresh": "Aggiorna",
+    "markAllAsRead": "Segna tutte come lette",
+    "markAllRead": "Segna tutte come lette",
+    "emptyTitle": "Nessuna notifica",
+    "emptyDescription": "Non c'è nulla da leggere!"
   },
   "importConflicts": {
     "title": "Risolvi i conflitti di importazione",

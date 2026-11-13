@@ -166,11 +166,26 @@ function buildTrx(params: {
     }
 
     if (table === 'users') {
-      return {
-        where: vi.fn().mockReturnValue({
-          orderBy: vi.fn().mockResolvedValue(params.availableAgents ?? []),
-        }),
+      // Chainable + awaitable: the agent directory is `.select(...).where(...).orderBy(...)`; the
+      // authorization subject lookup awaits `.where(...).select(...)`.
+      const rows = params.availableAgents ?? [];
+      const builder: any = {
+        select: vi.fn(() => builder),
+        where: vi.fn(() => builder),
+        orderBy: vi.fn().mockResolvedValue(rows),
+        then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
       };
+      return builder;
+    }
+
+    if (table === 'user_roles' || table === 'team_members' || table === 'user_client_portfolios') {
+      // Authorization subject lookups (no roles, teams or stored portfolio); `tenantDb` pre-applies `.where({ tenant })`.
+      const builder: any = {
+        where: () => builder,
+        orderBy: () => builder,
+        select: async () => [],
+      };
+      return builder;
     }
 
     throw new Error(`Unexpected table: ${table}`);

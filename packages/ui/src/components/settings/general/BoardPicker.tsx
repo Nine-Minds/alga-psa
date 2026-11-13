@@ -33,11 +33,12 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
   filterState,
   onFilterStateChange,
   fitContent = false,
-  placeholder = 'Select Board',
+  placeholder,
   modal = true,
   "data-automation-type": dataAutomationType = 'picker'
 }) => {
   const { t } = useTranslation('common');
+  const resolvedPlaceholder = placeholder ?? t('pickers.selectBoard', { defaultValue: 'Select Board' });
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLButtonElement>(null);
@@ -162,19 +163,19 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
   }, [isOpen]);
 
   const opts = useMemo(() => [
-    { value: 'active', label: 'Active Boards' },
-    { value: 'inactive', label: 'Inactive Boards' },
-    { value: 'all', label: 'All Boards' },
-  ], []);
+    { value: 'active', label: t('pickers.activeBoards', { defaultValue: 'Active Boards' }) },
+    { value: 'inactive', label: t('pickers.inactiveBoards', { defaultValue: 'Inactive Boards' }) },
+    { value: 'all', label: t('pickers.allBoards', { defaultValue: 'All Boards' }) },
+  ], [t]);
 
   return (
-    <ReflectionContainer id={`${id}-board`} data-automation-type={dataAutomationType} label="Board Picker">
+    <ReflectionContainer id={`${id}-board`} data-automation-type={dataAutomationType} label={t('pickers.boardPicker', { defaultValue: 'Board Picker' })}>
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger asChild>
           <Button
             variant="outline"
             className="w-full justify-between"
-            label={selectedBoard?.board_name || placeholder}
+            label={selectedBoard?.board_name || resolvedPlaceholder}
             type="button"
             ref={dropdownRef}
             onKeyDown={(event) => {
@@ -190,7 +191,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
             data-automation-type={dataAutomationType}
           >
             <span className={`flex-1 text-left ${!selectedBoardId ? 'text-gray-400' : ''}`}>
-              {selectedBoard?.board_name || (selectedBoardId ? t('status.loading', { defaultValue: 'Loading...' }) : placeholder)}
+              {selectedBoard?.board_name || (selectedBoardId ? t('status.loading', { defaultValue: 'Loading...' }) : resolvedPlaceholder)}
             </span>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </Button>
@@ -223,8 +224,8 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
                   value={filterState}
                   onValueChange={(value) => onFilterStateChange(value as 'active' | 'inactive' | 'all')}
                   options={opts}
-                  placeholder="Filter by status"
-                  label="Status Filter"
+                  placeholder={t('pickers.filterByStatus', { defaultValue: 'Filter by status' })}
+                  label={t('pickers.statusFilter', { defaultValue: 'Status Filter' })}
                   modal={modal}
                 />
               </div>
@@ -245,7 +246,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
               className="max-h-60 overflow-y-auto border-t border-[rgb(var(--color-border-200))]"
               role="listbox"
               id={`${id}-boards-listbox`}
-              aria-label="Boards"
+              aria-label={t('pickers.boards', { defaultValue: 'Boards' })}
               onWheel={(e) => {
                 e.stopPropagation();
               }}
@@ -266,7 +267,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
                     type="button"
                   >
                     {board.board_name || ''}
-                    {board.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
+                    {board.is_inactive && <span className="ml-2 text-gray-500">{t('pickers.inactiveSuffix', { defaultValue: '(Inactive)' })}</span>}
                   </Button>
                 ))
               )}

@@ -1,5 +1,6 @@
 'use server'
 
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { queueContactCreated } from '../lib/contactEvents';
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -15,7 +16,10 @@ import {
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { withClientSinceDateString } from '../lib/clientSince';
 import { attachDisplayTags } from '../lib/displayTags';
+import { attachContactLocations } from '../lib/contactLocations';
+import { contactLocationSortKey } from '../lib/contactLocationDisplay';
 import InteractionModel from '../models/interactions';
+import { resolveInteractionReadScope } from '../lib/interactionAuthorizationSql';
 import {
   actionError,
   permissionError,
@@ -23,6 +27,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { buildContactListSearchQuery } from '../lib/listSearchSql';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 
 type QueryActionUser = {
   user_id: string;
@@ -204,6 +209,8 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
   const clientData = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const db = tenantDb(trx, tenant);
     const query = db.table<any>('clients as c');
+    // An out-of-scope client reads as not found: the row is never selected.
+    (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(query);
 
     db.tenantJoin(query, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
     db.tenantJoin(query, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
@@ -252,6 +259,7 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
     const query = tenantScopedTable(trx, 'clients', tenant)
       .select('*')
       .orderBy('client_name', 'asc');
+    (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'clients')).apply(query);
 
     if (!includeInactive) {
       query.andWhere({ is_inactive: false });
@@ -299,17 +307,17 @@ function getDefaultPhoneNumber(contact: Pick<IContact, 'default_phone_number' | 
     || '';
 }
 
+/** Sorts in TypeScript, for the columns whose value is not a column of `contacts`. */
+const CONTACT_SORT_VALUE: Record<string, (contact: IContact) => string> = {
+  phone_number: getDefaultPhoneNumber,
+  // The Location column: primary location name, then 'Remote', with the unlinked last.
+  primaryLocation: contactLocationSortKey,
+};
+
 function sortContacts(contacts: IContact[], sortBy: string, sortDirection: 'asc' | 'desc'): IContact[] {
   const direction = sortDirection === 'desc' ? -1 : 1;
-  return [...contacts].sort((left, right) => {
-    const leftValue = sortBy === 'phone_number'
-      ? getDefaultPhoneNumber(left)
-      : String((left as any)[sortBy] ?? '');
-    const rightValue = sortBy === 'phone_number'
-      ? getDefaultPhoneNumber(right)
-      : String((right as any)[sortBy] ?? '');
-    return leftValue.localeCompare(rightValue) * direction;
-  });
+  const valueOf = CONTACT_SORT_VALUE[sortBy] ?? ((contact: IContact) => String((contact as any)[sortBy] ?? ''));
+  return [...contacts].sort((left, right) => valueOf(left).localeCompare(valueOf(right)) * direction);
 }
 
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
@@ -331,14 +339,17 @@ export const getContactsByClient = withAuth(async (
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number', 'primaryLocation'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
+    // One scope for the request: the client check and the contact list share its probe, subject and rules.
+    const scope = await createClientScopeContext(db, tenant, user);
+
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await tenantScopedTable(trx, 'clients', tenant)
-        .where({ client_id: clientId })
-        .first();
+      const clientQuery = tenantScopedTable(trx, 'clients', tenant).where({ client_id: clientId });
+      (await scope.narrowing('client', 'clients')).apply(clientQuery);
+      return await clientQuery.first();
     });
 
     if (!client) {
@@ -358,6 +369,7 @@ export const getContactsByClient = withAuth(async (
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
 
       facade.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
+      (await scope.narrowing('contact', 'contacts')).apply(contactQuery);
 
       const rows = await contactQuery;
 
@@ -377,7 +389,10 @@ export const getContactsByClient = withAuth(async (
       client_logo_url: clientLogoUrl,
     }));
 
-    return (await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id)) as IContact[];
+    const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
+    const withLocations = (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    // The links only exist once they are attached, so that one column is ordered here.
+    return safeSortBy === 'primaryLocation' ? sortContacts(withLocations, safeSortBy, safeSortDirection) : withLocations;
   } catch (err) {
     console.error('Error fetching contacts for client:', err);
 
@@ -420,8 +435,16 @@ export const searchContactListIds = withAuth(async (
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const { sql, bindings } = buildContactListSearchQuery(trx, tenant, rawSearch, permissions, user.user_id);
     const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(sql, bindings);
+    const matchedIds = result.rows.map((row) => row.contact_id);
 
-    return result.rows.map((row) => row.contact_id);
+    // The search legs are raw SQL; the matched ids are intersected with the in-scope contacts in SQL.
+    const narrowing = await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'contacts');
+    if (!narrowing.narrowed || matchedIds.length === 0) return matchedIds;
+    const inScope = await narrowing
+      .apply(tenantDb(trx, tenant).table('contacts').whereIn('contacts.contact_name_id', matchedIds))
+      .select<Array<{ contact_name_id: string }>>('contacts.contact_name_id');
+    const allowed = new Set(inScope.map((row) => row.contact_name_id));
+    return matchedIds.filter((id) => allowed.has(id));
   });
 });
 
@@ -441,7 +464,7 @@ export const getAllContacts = withAuth(async (
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number', 'primaryLocation'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
@@ -454,7 +477,8 @@ export const getAllContacts = withAuth(async (
           ? 'full_name'
           : CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name';
 
-        const fetchedContacts = await tenantScopedTable(trx, 'contacts', tenant)
+        const contactScope = await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'contacts');
+        const fetchedContacts = await contactScope.apply(tenantScopedTable(trx, 'contacts', tenant))
           .select('*')
           .modify(function (queryBuilder: Knex.QueryBuilder) {
             if (status !== 'all') {
@@ -529,7 +553,10 @@ export const getAllContacts = withAuth(async (
       client_logo_url: contact.client_id ? clientLogoMap.get(contact.client_id) ?? null : null,
     }));
 
-    return (await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id)) as IContact[];
+    const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
+    const withLocations = (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    // The links only exist once they are attached, so that one column is ordered here.
+    return safeSortBy === 'primaryLocation' ? sortContacts(withLocations, safeSortBy, safeSortDirection) : withLocations;
   } catch (err) {
     console.error('Error fetching all contacts:', err);
 
@@ -615,6 +642,12 @@ export const createOrFindContactByEmail = withAuth(async (
         return { contact: contactWithClientName, isNew: false };
       }
 
+      await assertRecordCreateAllowed(trx, {
+        tenant,
+        user,
+        resourceType: 'contact',
+        record: { clientId },
+      }, 'contact');
       const newContact = await ContactModel.createContact({
         full_name: name || extractNameFromEmail(email),
         email: normalizedEmail,
@@ -675,8 +708,10 @@ export const getInteractionById = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    // An interaction outside the reader's client scope is indistinguishable from a missing one.
     const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getById(interactionId, tenant, trx);
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
+      return await InteractionModel.getById(interactionId, tenant, trx, readScope);
     });
     if (!interaction) {
       throw new Error('Interaction not found');

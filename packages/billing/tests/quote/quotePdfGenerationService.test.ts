@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const TENANT_ID = '22222222-2222-4222-8222-222222222222';
@@ -97,13 +98,18 @@ describe('quotePdfGenerationService', () => {
     vi.clearAllMocks();
 
     const pageMock = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-quote-test')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browserMock = {
+    const contextMock = {
       newPage: vi.fn().mockResolvedValue(pageMock),
+      close: vi.fn().mockResolvedValue(undefined),
     };
+    const browserMock = { createBrowserContext: vi.fn().mockResolvedValue(contextMock) };
 
     getBrowserMock.mockResolvedValue(browserMock);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -181,8 +187,13 @@ describe('quotePdfGenerationService', () => {
     expect(Buffer.isBuffer(pdf)).toBe(true);
     expect(pdf.toString('utf8')).toContain('%PDF-quote-test');
     const browser = await getBrowserMock.mock.results[0].value;
-    const page = await browser.newPage.mock.results[0].value;
-    expect(page.setContent).toHaveBeenCalledWith(expect.stringContaining('<!doctype html>'), { waitUntil: 'load' });
+    const context = await browser.createBrowserContext.mock.results[0].value;
+    const page = await context.newPage.mock.results[0].value;
+    expect(context.close).toHaveBeenCalledOnce();
+    expect(page.setContent).toHaveBeenCalledWith(expect.any(String), { waitUntil: 'load' });
+    const document = new JSDOM(page.setContent.mock.calls[0][0]).window.document;
+    expect(document.doctype?.name).toBe('html');
+    expect(document.body.textContent).toContain('Q-0042');
   });
 
   it('T084: stores generated file in file storage and returns file_id', async () => {

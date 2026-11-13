@@ -3,10 +3,11 @@
  * Handles all time entry-related database operations for the REST API
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
 import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import {
   CreateTimeEntryData,
   UpdateTimeEntryData,
@@ -27,7 +28,6 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
-import { hasPermission } from '../../auth/rbac';
 import type { IUser } from '@alga-psa/types';
 import {
   StopwatchConflictError,
@@ -43,16 +43,28 @@ import {
   getWorkItemBillingContext,
   deleteTimeEntryCore,
   persistTimeEntry,
+  assertTimeEntryCreateInScope,
   publishPersistedTimeEntryEvents,
   type PersistedTimeEntry,
 } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
 import { getEligibleContractLines } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
 import { resolveDeterministicContractLineSelection } from '@alga-psa/scheduling/lib/contractLineDisambiguation.shared';
 import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '@alga-psa/scheduling/actions/timeEntrySchemas';
+import { resolveTimeEntryReadScope } from '@alga-psa/scheduling/lib/timeEntryAuthorizationSql';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import {
   CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
   type ContractLineSource,
 } from '@alga-psa/types';
+
+/** `readScope.apply` narrows the builder in place; this returns it so it chains with the query it was applied to. */
+function narrowToReadScope<Q extends Knex.QueryBuilder>(
+  readScope: { apply(builder: Knex.QueryBuilder): void },
+  query: Q,
+): Q {
+  readScope.apply(query);
+  return query;
+}
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -61,6 +73,10 @@ export class TimeEntryService extends BaseService<any> {
       primaryKey: 'entry_id',
       tenantColumn: 'tenant',
       searchableFields: ['notes'],
+      viaPrincipalColumns: {
+        create: ['created_via_principal_id', 'updated_via_principal_id'],
+        update: ['updated_via_principal_id'],
+      },
       defaultSort: 'start_time',
       defaultOrder: 'desc'
     });
@@ -182,7 +198,8 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'list', [options, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Extract filters from options
     const filters = options.filters as TimeEntryFilterData;
@@ -216,7 +233,7 @@ export class TimeEntryService extends BaseService<any> {
     query.limit(limit).offset(offset);
 
     // Get total count - need to apply same filters to count query
-    const countQuery = this.buildTenantScopedQuery(knex, context);
+    const countQuery = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     
     // Apply same filters to count query
     this.applyFilters(countQuery, filters, knex, context.tenant);
@@ -237,8 +254,9 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getById', [id, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
     const scopedDb = tenantDb(knex, context.tenant);
-    const query = this.buildTenantScopedQuery(knex, context);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'service_catalog', 'time_entries.service_id', 'service_catalog.service_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'time_sheets', 'time_entries.time_sheet_id', 'time_sheets.id', { type: 'left' });
@@ -305,7 +323,7 @@ export class TimeEntryService extends BaseService<any> {
         throw new ForbiddenError('Permission denied: Missing user context');
       }
 
-      const canReadTickets = await hasPermission(context.user, 'ticket', 'read', knex);
+      const canReadTickets = await hasApiContextPermission(context, 'ticket', 'read', knex);
       if (!canReadTickets) {
         throw new ForbiddenError('Permission denied: Cannot read tickets');
       }
@@ -373,6 +391,13 @@ export class TimeEntryService extends BaseService<any> {
     if (overlapping) {
       throw new ConflictError('Time entry overlaps with existing entry');
     }
+
+    // The create gate runs before anything is written, so a refused entry leaves no time sheet behind. The write core
+    // asks the same question again inside its transaction.
+    if (!context.user) {
+      throw new ForbiddenError('Permission denied: Missing user context');
+    }
+    await knex.transaction((trx) => assertTimeEntryCreateInScope(trx, context.tenant, context.user as IUser, context.userId, data as any));
 
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheetForWorkDate(work_date, context.userId, context);
@@ -766,7 +791,7 @@ export class TimeEntryService extends BaseService<any> {
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
 
-    if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
+    if (!await hasApiContextPermission(context, 'time_entry', 'read', knex)) {
       throw new ForbiddenError('Permission denied: Cannot read time entries');
     }
 
@@ -817,6 +842,10 @@ export class TimeEntryService extends BaseService<any> {
     };
     
     this.applyFilters(query, filters, knex, context.tenant);
+
+    // Only the entries the caller may read: entries on work items of clients outside their scope are not exported,
+    // and an entry on client-less work (ad hoc) is exported to its own user only. Free for a caller nothing narrows.
+    (await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName)).apply(query);
     
     // Add joins for complete data
     const scopedDb = tenantDb(knex, context.tenant);
@@ -900,11 +929,12 @@ export class TimeEntryService extends BaseService<any> {
     // Human-work guard: approval requires a human approver. Checked before the per-entry
     // loop, whose catch would otherwise swallow the error into a per-entry failure.
     await assertHumanWorkOwner(knex, context.tenant, context.userId, 'approved_by');
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
 
     for (const entryId of data.entry_ids) {
       try {
         // First check if the entry exists
-        const entry = await this.buildTenantScopedQuery(knex, context)
+        const entry = await narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context))
           .where('entry_id', entryId)
           .first();
           
@@ -921,10 +951,10 @@ export class TimeEntryService extends BaseService<any> {
         
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'APPROVED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -981,16 +1011,17 @@ export class TimeEntryService extends BaseService<any> {
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
     
     for (const entryId of data.entry_ids) {
       try {
-        await this.buildTenantScopedQuery(knex, context)
+        await narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context))
           .where('entry_id', entryId)
           .where('approval_status', 'SUBMITTED')
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'CHANGES_REQUESTED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -1020,7 +1051,8 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'searchTimeEntries', [searchData, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
     const tableName = this.tableName;
@@ -1068,7 +1100,7 @@ export class TimeEntryService extends BaseService<any> {
     query.limit(limit).offset(offset);
 
     // Get total count
-    const countQuery = this.buildTenantScopedQuery(knex, context);
+    const countQuery = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     
     if (searchData.query) {
       countQuery.where(`${this.tableName}.notes`, 'ilike', `%${searchData.query}%`);
@@ -1089,7 +1121,8 @@ export class TimeEntryService extends BaseService<any> {
   
   async search(searchData: TimeEntrySearchData, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
     if (searchData.fields && searchData.fields.length > 0) {
@@ -1165,7 +1198,8 @@ export class TimeEntryService extends BaseService<any> {
   
   async getStatistics(context: ServiceContext, filters?: TimeEntryFilterData): Promise<any> {
     const { knex } = await this.getKnex();
-    let query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    let query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Apply date filters if provided
     if (filters?.date_from) {
@@ -1274,17 +1308,19 @@ export class TimeEntryService extends BaseService<any> {
       throw new ForbiddenError('Permission denied: Missing user context');
     }
     try {
-      return await knex.transaction((trx) =>
-        persistTimeEntry(trx, {
+      return await knex.transaction(async (trx) => {
+        const persisted = await persistTimeEntry(trx, {
           tenant: context.tenant,
           actor: context.user as IUser,
           entry,
+          viaPrincipalUserId: context.viaPrincipalUserId,
           contractLine,
           // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
           // so the period is checked against the same date the bucketing used.
           sheetPeriodCheck: 'work_date',
-        }),
-      );
+        });
+        return persisted;
+      });
     } catch (error) {
       throw mapStopwatchError(error);
     }

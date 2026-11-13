@@ -18,6 +18,7 @@ export type AssetListFilterParams =
     | 'location_id'
     | 'contact_name_id'
     | 'asset_type'
+    | 'asset_types'
     | 'status'
     | 'ownership'
     | 'in_custody'
@@ -26,6 +27,8 @@ export type AssetListFilterParams =
     | 'ungrouped_only'
     | 'search'
     | 'rmm_managed'
+    | 'last_audit_result'
+    | 'not_audited_days'
   > & { agent_status?: string };
 
 function tenantScopedTable(
@@ -88,7 +91,7 @@ export function applyAssetListFilters(
         query.where('assets.contact_name_id', params.contact_name_id);
     }
     if (exclude !== 'asset_type') {
-        applyAssetTypeFilter(query, params.asset_type);
+        applyAssetTypeFilter(query, selectedAssetTypes(params));
     }
     if (params.status) {
         query.where('assets.status', params.status);
@@ -139,6 +142,21 @@ export function applyAssetListFilters(
     if (params.agent_status) {
         query.where('assets.agent_status', params.agent_status);
     }
+    // Site audits: the verdict of the last completed run. 'never' is its own
+    // answer — a device no audit has ever looked for is not "present".
+    if (params.last_audit_result) {
+        if (params.last_audit_result === 'never') {
+            query.whereNull('assets.last_audited_at');
+        } else {
+            query.where('assets.last_audit_result', params.last_audit_result);
+        }
+    }
+    if (params.not_audited_days) {
+        const cutoff = new Date(Date.now() - params.not_audited_days * 86_400_000).toISOString();
+        query.where(function () {
+            this.whereNull('assets.last_audited_at').orWhere('assets.last_audited_at', '<', cutoff);
+        });
+    }
     if (params.rmm_managed !== undefined) {
         if (params.rmm_managed) {
             query.whereNotNull('assets.rmm_provider').whereNotNull('assets.rmm_device_id');
@@ -152,12 +170,28 @@ export function applyAssetListFilters(
     return query;
 }
 
+/**
+ * The type slugs the list is narrowed to, merging the single `asset_type`
+ * param with the multi-select `asset_types`. Empty means "every type".
+ */
+export function selectedAssetTypes(
+    params: Pick<AssetListFilterParams, 'asset_type' | 'asset_types'>,
+): string[] {
+    const slugs = params.asset_types?.length
+        ? params.asset_types
+        : params.asset_type ? [params.asset_type] : [];
+    return Array.from(new Set(slugs));
+}
+
+/** Narrows to any of the selected types with a single predicate. */
 export function applyAssetTypeFilter(
     query: Knex.QueryBuilder,
-    assetType: AssetQueryParams['asset_type'],
+    assetTypes: readonly string[],
 ): Knex.QueryBuilder {
-    if (assetType) {
-        query.where('assets.asset_type', assetType);
+    if (assetTypes.length === 1) {
+        query.where('assets.asset_type', assetTypes[0]);
+    } else if (assetTypes.length > 1) {
+        query.whereIn('assets.asset_type', [...assetTypes]);
     }
     return query;
 }

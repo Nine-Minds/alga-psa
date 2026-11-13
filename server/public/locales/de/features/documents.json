@@ -196,6 +196,7 @@
     "fileError": "Datei konnte nicht hochgeladen werden"
   },
   "folders": {
+    "show": "Ordner anzeigen",
     "root": "Stammordner",
     "loadFailed": "Ordnerbaum konnte nicht geladen werden",
     "deleteConfirm": "Möchten Sie den Ordner \"{{name}}\" wirklich löschen? Dies funktioniert nur, wenn der Ordner leer ist.",
@@ -304,6 +305,11 @@
   },
   "ticketDocuments": "Ticket-Dokumente",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Drucken",
+    "edit": "Bearbeiten",
+    "upload": "Hochladen",
+    "closePreview": "Vorschau schließen",
     "save": "Speichern",
     "saving": "Wird gespeichert...",
     "cancel": "Abbrechen"
@@ -379,5 +385,17 @@
   },
   "skeleton": {
     "cardLabel": "Ladeplatzhalter für Dokumentkarte"
+  },
+  "fallbackUserName": "Benutzer",
+  "selectOrCreate": "Wählen Sie ein Dokument aus oder erstellen Sie ein neues.",
+  "viewMode": {
+    "grid": "Raster",
+    "list": "Liste"
+  },
+  "unsavedChanges": {
+    "title": "Ungespeicherte Änderungen",
+    "message": "Möchten Sie wirklich abbrechen? Alle ungespeicherten Änderungen gehen verloren.",
+    "confirm": "Änderungen verwerfen",
+    "cancel": "Weiter bearbeiten"
   }
 }

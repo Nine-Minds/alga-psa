@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { attachClientScopes } from '../clientScope';
 
 interface ClientSearchRow {
   client_id: string;
@@ -48,7 +49,9 @@ export const clientIndexer: EntityIndexer = {
       .andWhere('client_id', id)
       .first();
 
-    return row ? toSearchDoc(tenant, row) : null;
+    if (!row) return null;
+    const [doc] = await attachClientScopes(knex, tenant, 'client', [toSearchDoc(tenant, row)]);
+    return doc;
   },
 
   async loadBatch(
@@ -67,6 +70,6 @@ export const clientIndexer: EntityIndexer = {
     }
 
     const rows = await query;
-    return rows.map((row) => toSearchDoc(tenant, row));
+    return attachClientScopes(knex, tenant, 'client', rows.map((row) => toSearchDoc(tenant, row)));
   },
 };

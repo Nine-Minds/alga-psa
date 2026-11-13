@@ -4,10 +4,10 @@ import path from 'node:path';
 import { TENANT_TABLE_MANIFEST, tenantExportOrder } from './tenantTableManifest';
 
 describe('tenant export order', () => {
-  it('is the declared export ranks, 48 unique names', () => {
+  it('is the declared export ranks, 53 unique names', () => {
     const order = tenantExportOrder();
-    expect(order).toHaveLength(48);
-    expect(new Set(order).size).toBe(48);
+    expect(order).toHaveLength(53);
+    expect(new Set(order).size).toBe(53);
     expect(order.every(t => TENANT_TABLE_MANIFEST.some(e => e.table === t))).toBe(true);
   });
 
