@@ -1,12 +1,16 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { LabelClass, LabelPrintFailure } from '@alga-psa/types';
+import type { LabelClass, LabelPrintErrorCode, LabelPrintFailure } from '@alga-psa/types';
 
 export interface LabelTemplateChoice {
   id: string;
   name: string;
   source: 'standard' | 'custom';
+  /** True when the template declares a full-sheet page (an A4 or Letter worksheet), so "template paper" printing applies. */
+  prefersPaperPage?: boolean;
+  /** The page the template declares in millimetres, when it declares one. */
+  paperSizeMm?: { width: number; height: number } | null;
 }
 
 export interface LabelTemplateList {
@@ -40,13 +44,40 @@ export interface LabelPrintRequest {
 }
 
 export type LabelPrintOutcome =
-  | { status: 'printed'; printed: number; skipped: number; blobUrl: string; popupBlocked: boolean }
-  | { status: 'failed'; httpStatus: number; message: string; failures: LabelPrintFailure[] };
+  | {
+      status: 'printed';
+      printed: number;
+      skipped: number;
+      missingImages: number;
+      /** Description images that could not be read from storage (counted apart from missing files). */
+      unavailableImages: number;
+      blobUrl: string;
+      popupBlocked: boolean;
+    }
+  | {
+      status: 'failed';
+      httpStatus: number;
+      message: string;
+      failures: LabelPrintFailure[];
+      errorCode?: LabelPrintErrorCode;
+    };
 
-async function readError(response: Response): Promise<{ message: string; failures: LabelPrintFailure[] }> {
+async function readError(response: Response): Promise<{
+  message: string;
+  failures: LabelPrintFailure[];
+  errorCode?: LabelPrintErrorCode;
+}> {
   try {
-    const body = (await response.json()) as { error?: string; failures?: LabelPrintFailure[] };
-    return { message: body.error ?? '', failures: Array.isArray(body.failures) ? body.failures : [] };
+    const body = (await response.json()) as {
+      error?: string;
+      failures?: LabelPrintFailure[];
+      errorCode?: LabelPrintErrorCode;
+    };
+    return {
+      message: body.error ?? '',
+      failures: Array.isArray(body.failures) ? body.failures : [],
+      ...(body.errorCode ? { errorCode: body.errorCode } : {}),
+    };
   } catch {
     return { message: '', failures: [] };
   }
@@ -86,10 +117,12 @@ export function useLabelPrint() {
         body: JSON.stringify(body),
       });
       if (!response.ok) {
-        const { message, failures } = await readError(response);
-        return { status: 'failed', httpStatus: response.status, message, failures };
+        const error = await readError(response);
+        return { status: 'failed', httpStatus: response.status, ...error };
       }
       const skipped = Number(response.headers.get('X-Label-Skipped') ?? '0') || 0;
+      const missingImages = Number(response.headers.get('X-Label-Missing-Images') ?? '0') || 0;
+      const unavailableImages = Number(response.headers.get('X-Label-Unavailable-Images') ?? '0') || 0;
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       const opened = window.open(blobUrl, '_blank');
@@ -97,6 +130,8 @@ export function useLabelPrint() {
         status: 'printed',
         printed: body.labels.length - skipped,
         skipped,
+        missingImages,
+        unavailableImages,
         blobUrl,
         popupBlocked: !opened,
       };

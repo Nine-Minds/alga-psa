@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { LabelViewModel, LabelViewModelProvider } from '@alga-psa/types';
 import { printLabels, sanitizeLabelOverride, type PrintLabelsDeps } from '../../lib/labels/printLabels';
+import { getStandardLabelTemplateAstByCode } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -19,7 +20,7 @@ const setup = (readable: string[], userType = 'internal') => {
     entityType: 'ticket', labelClass: 'ticket-work-tag',
     getLabelViewModels: vi.fn(async (_c, ids) => ids.map((i) => (readable.includes(i) ? vm(i) : null))),
   };
-  const renderPdf = vi.fn(async () => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }));
+  const renderPdf = vi.fn(async (..._args: unknown[]): Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number; unavailableImages?: number }> => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }));
   const deps: PrintLabelsDeps = {
     providers: { 'ticket-work-tag': provider, 'asset-identity': undefined, 'stock-unit-identity': undefined, 'staging-container': undefined, 'rma-work-tag': undefined },
     renderPdf, describeClientError: () => null,
@@ -37,6 +38,16 @@ describe('printLabels', () => {
     expect(r.ok).toBe(true);
     const items = (s.renderPdf.mock.calls[0] as unknown[])[1] as Array<{ viewModel: LabelViewModel }>;
     expect(items.map((i) => i.viewModel.recordId)).toEqual([C, A, B]);
+  });
+
+  it('passes the counts of images the renderer could not print through to the caller', async () => {
+    const s = setup([A]);
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) }))
+      .toMatchObject({ ok: true, missingImages: 0, unavailableImages: 0 });
+    expect((s.renderPdf.mock.calls[0] as unknown[])[3]).toEqual({ baseUrl: 'https://x.test' });
+    s.renderPdf.mockResolvedValueOnce({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1, missingImages: 3, unavailableImages: 2 });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) }))
+      .toMatchObject({ ok: true, missingImages: 3, unavailableImages: 2 });
   });
 
   it('T-skip: unreadable records are skipped and only counted; missing and unauthorized look the same', async () => {
@@ -85,6 +96,70 @@ describe('printLabels', () => {
     expect(parts.mock.calls[0][1]).toEqual([{ recordId: A, linkedAssetId: C }]);
     const vms = ((s.renderPdf.mock.calls[0] as unknown[])[1] as Array<{ viewModel: LabelViewModel }>).map((i) => i.viewModel);
     expect(vms[0]).toMatchObject({ secondaryIdentifier: 'WL-1', serialSuffix: '9876' });
+  });
+
+  it('requests worksheet details only for resolved portrait ticket templates at least 210 mm wide', async () => {
+    const s = setup([A]);
+    const parts = s.deps.getLinkedAssetParts as ReturnType<typeof vi.fn>;
+    const linkedAssetInfo = { assetId: C, name: 'Desktop', manufacturer: null, model: null, cpuLine: null, ramLine: null, storageLine: null, osLine: null };
+    parts.mockResolvedValue([{ assetId: C, assetTag: 'WL-1', serialSuffix: null, assetSerialNumber: '1234567', linkedAssetInfo }]);
+    const resolve = s.deps.resolveTemplate as ReturnType<typeof vi.fn>;
+
+    await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) });
+    expect(s.provider.getLabelViewModels).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: false }), [A]);
+    expect(parts).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: false }), expect.anything());
+    const tagViewModel = ((s.renderPdf.mock.calls.at(-1) as unknown[])[1] as Array<{ viewModel: LabelViewModel }>)[0].viewModel;
+    expect(tagViewModel).not.toHaveProperty('assetSerialNumber');
+    expect(tagViewModel).not.toHaveProperty('linkedAsset');
+
+    resolve.mockResolvedValue({ ok: true, templateCode: 'standard-ticket-customer-worksheet', templateAst: null });
+    await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) });
+    expect(s.provider.getLabelViewModels).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: true }), [A]);
+    expect(parts).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: true }), expect.anything());
+    const worksheetViewModel = ((s.renderPdf.mock.calls.at(-1) as unknown[])[1] as Array<{ viewModel: LabelViewModel }>)[0].viewModel;
+    expect(worksheetViewModel.assetSerialNumber).toBe('1234567');
+    expect(worksheetViewModel.linkedAsset).toEqual(linkedAssetInfo);
+
+    resolve.mockResolvedValue({
+      ok: true,
+      templateCode: 'custom',
+      templateAst: getStandardLabelTemplateAstByCode('standard-ticket-customer-worksheet'),
+    });
+    await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) });
+    expect(s.provider.getLabelViewModels).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: true }), [A]);
+  });
+
+  describe('worksheet size rule on custom templates', () => {
+    const customAst = (width: number, height: number) => {
+      const base = getStandardLabelTemplateAstByCode('standard-ticket-customer-worksheet')!;
+      return {
+        ...base,
+        metadata: { ...base.metadata, printSettings: { ...base.metadata?.printSettings, paperPreset: undefined, customPageSize: { width, height, unit: 'mm' as const } } },
+      };
+    };
+    const printWith = async (labelClass: 'ticket-work-tag' | 'asset-identity', templateAst: unknown) => {
+      const s = setup([A]);
+      if (labelClass !== 'ticket-work-tag') {
+        s.deps.providers[labelClass] = { ...s.provider, entityType: 'asset', labelClass } as never;
+      }
+      (s.deps.resolveTemplate as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, templateCode: 'custom', templateAst });
+      const r = await printLabels(s.deps, s.caller, { labelClass, labels: L([A]) });
+      expect(r).toMatchObject({ ok: true });
+      return (s.provider.getLabelViewModels as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0].includeWorksheetDetails;
+    };
+
+    it('a portrait ticket work tag 210 mm wide is a worksheet; 209 mm wide is a label', async () => {
+      expect(await printWith('ticket-work-tag', customAst(210, 297))).toBe(true);
+      expect(await printWith('ticket-work-tag', customAst(209, 297))).toBe(false);
+    });
+
+    it('a landscape A4 ticket work tag is a label', async () => {
+      expect(await printWith('ticket-work-tag', customAst(297, 210))).toBe(false);
+    });
+
+    it('a full-page portrait template of another label class never requests worksheet details', async () => {
+      expect(await printWith('asset-identity', customAst(210, 297))).toBe(false);
+    });
   });
 
   it('F3: one ticket named three times with different picks gives three labels, each with its own parts', async () => {
@@ -199,9 +274,22 @@ describe('printLabels', () => {
       status: 422,
       message: 'bad layout',
     });
+
     s.renderPdf.mockRejectedValueOnce(new Error('boom'));
     s.deps.describeClientError = () => null;
     await expect(printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).rejects.toThrow('boom');
+  });
+
+  it('preserves request-level worksheet error codes for client localization', async () => {
+    const s = setup([A]);
+    s.renderPdf.mockRejectedValueOnce(new Error('too small'));
+    s.deps.describeClientError = () => ({ message: 'Too small', errorCode: 'worksheetPageSize' });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).toEqual({
+      ok: false,
+      status: 422,
+      message: 'Too small',
+      errorCode: 'worksheetPageSize',
+    });
   });
 
   it('a 422 lists every record that cannot print, with the suggested template', async () => {

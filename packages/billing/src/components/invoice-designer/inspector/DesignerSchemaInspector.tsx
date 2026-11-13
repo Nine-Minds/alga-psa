@@ -36,6 +36,7 @@ import { getNodeMetadata } from '../utils/nodeProps';
 import { isPlainObject, readFieldValue, isFieldSetOnNode, isRuleVisible } from './fieldState';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { type InvoiceFieldCategory } from '../fields/fieldCatalog';
+import { designerFieldTranslationKey } from '../fields/fieldTranslationKey';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
 import {
   buildDocumentExpressionPathOptions,
@@ -90,13 +91,20 @@ type BindingOption = {
   searchText: string;
 };
 
-const toBindingOption = (option: SharedExpressionPathOption): BindingOption | null => {
+const toBindingOption = (
+  option: SharedExpressionPathOption,
+  translate: (key: string, fallback: string, path: string) => string,
+): BindingOption | null => {
   const described = describeBindingOption(option);
   if (!described) return null;
+  const label = translate(designerFieldTranslationKey(option.path, 'label'), described.label, option.path);
+  const description = translate(designerFieldTranslationKey(option.path, 'description'), described.description, option.path);
   return {
     path: option.path,
     ...described,
-    searchText: `${described.label} ${option.path} ${described.description} ${described.category}`.toLowerCase(),
+    label,
+    description,
+    searchText: `${label} ${option.path} ${description} ${described.category}`.toLowerCase(),
   };
 };
 
@@ -115,7 +123,7 @@ const InsertTokenControl: React.FC<InsertTokenControlProps> = ({ domId, onInsert
   const options = useMemo(() => {
     const byPath = new Map<string, BindingOption>();
     buildDocumentExpressionPathOptions({ mode: 'template', includeRootPaths: false, documentKind })
-      .map(toBindingOption)
+      .map((option) => toBindingOption(option, (key, fallback, path) => t(key, { defaultValue: fallback, path })))
       .forEach((option) => {
         if (option && !byPath.has(option.path)) byPath.set(option.path, option);
       });
@@ -123,7 +131,7 @@ const InsertTokenControl: React.FC<InsertTokenControlProps> = ({ domId, onInsert
     return Array.from(byPath.values())
       .filter((option) => normalized.length === 0 || option.searchText.includes(normalized))
       .slice(0, 50);
-  }, [documentKind, query]);
+  }, [documentKind, query, t]);
 
   const choose = (path: string) => {
     onInsert(path);
@@ -172,6 +180,7 @@ const InsertTokenControl: React.FC<InsertTokenControlProps> = ({ domId, onInsert
         {options.map((option) => (
           <button
             key={option.path}
+            id={`${domId}-option-${option.path.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
             type="button"
             role="option"
             aria-selected={false}
@@ -233,7 +242,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
       includeRootPaths: false,
       documentKind,
     })
-      .map(toBindingOption)
+      .map((option) => toBindingOption(option, (key, fallback, path) => t(key, { defaultValue: fallback, path })))
       .filter((option): option is BindingOption => option !== null)
       .filter((option) => {
         if (seen.has(option.path)) {
@@ -248,7 +257,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
         }
         return left.label.localeCompare(right.label);
       });
-  }, [documentKind]);
+  }, [documentKind, t]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -283,7 +292,11 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
 
   const resultsRef = React.useRef<HTMLDivElement | null>(null);
 
-  const currentLabel = normalizedBinding ? resolveDocumentFieldLabel(normalizedBinding) : t('designer.inspector.binding.noFieldSelected', { defaultValue: 'No field selected' });
+  const currentLabel = normalizedBinding
+    ? t(designerFieldTranslationKey(normalizedBinding, 'label'), {
+        defaultValue: resolveDocumentFieldLabel(normalizedBinding),
+      })
+    : t('designer.inspector.binding.noFieldSelected', { defaultValue: 'No field selected' });
 
   if (customMode) {
     return (
@@ -303,6 +316,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
           {t('designer.inspector.binding.customHint', { defaultValue: 'Type any binding path when the field you need is not listed.' })}
         </p>
         <button
+          id={`${domId}-use-picker`}
           type="button"
           className="rounded border border-slate-300 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-50"
           data-automation-id={`${domId}-use-picker`}
@@ -323,9 +337,9 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
         {label}
       </label>
       <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-2 dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-border-100))]">
-        <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('designer.inspector.binding.current', { defaultValue: 'Current' })}</div>
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('designer.inspector.binding.current', { defaultValue: 'Current' })}</div>
         <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{currentLabel}</div>
-        <div className="text-[11px] font-mono text-slate-500">{normalizedBinding || t('designer.inspector.binding.unbound', { defaultValue: 'Unbound' })}</div>
+        <div className="text-[11px] font-mono text-muted-foreground">{normalizedBinding || t('designer.inspector.binding.unbound', { defaultValue: 'Unbound' })}</div>
       </div>
       <Input
         id={`${domId}-search`}
@@ -352,16 +366,19 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
         data-automation-id={`${domId}-results`}
       >
         {filteredOptions.length === 0 ? (
-          <p className="text-[11px] text-slate-500">{t('designer.inspector.binding.noMatches', { defaultValue: 'No matching fields.' })}</p>
+          <p className="text-[11px] text-muted-foreground">{t('designer.inspector.binding.noMatches', { defaultValue: 'No matching fields.' })}</p>
         ) : (
           Object.entries(groupedOptions).map(([category, categoryOptions]) => (
             <div key={category} className="space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{category}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t(`designer.palette.fields.categories.${category.toLowerCase().replace(/\s+/g, '-')}`, { defaultValue: category })}
+              </p>
               {categoryOptions.map((option) => {
                 const selected = option.path === normalizedBinding;
                 return (
                   <button
                     key={option.path}
+                    id={`${domId}-option-${option.path.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                     type="button"
                     role="option"
                     aria-selected={selected}
@@ -396,6 +413,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
         )}
       </div>
       <button
+        id={`${domId}-use-custom`}
         type="button"
         className="rounded border border-slate-300 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-50"
         data-automation-id={`${domId}-use-custom`}

@@ -140,7 +140,30 @@
     "replacementSerial": "Serienummer vervanging",
     "shipping": "Verzending",
     "returnBy": "Retour vóór",
-    "returnShipTo": "Retour verzenden naar"
+    "returnShipTo": "Retour verzenden naar",
+    "worksheet": {
+      "ticketNumber": "Ticketnr.",
+      "customer": "Klant",
+      "assetTag": "Assettag",
+      "serial": "Serienummer",
+      "custodyLocation": "Bewaarlocatie",
+      "nextAction": "Volgende actie",
+      "assetSpecifications": "Assetspecificaties",
+      "ticketDetails": "Ticketdetails",
+      "imageNotIncluded": "[Afbeelding niet opgenomen]",
+      "imageNotIncludedNamed": "[Afbeelding niet opgenomen: {{name}}]",
+      "unsupportedContent": "[Inhoud niet opgenomen in deze afdruk]",
+      "assetName": "Naam",
+      "make": "Merk",
+      "model": "Model",
+      "os": "Besturingssysteem",
+      "cpu": "Processor",
+      "ram": "Werkgeheugen",
+      "storage": "Opslag",
+      "cpuCoreCount_one": "{{count}} kern",
+      "cpuCoreCount_other": "{{count}} kernen",
+      "cpuCoreCount_many": "{{count}} kernen"
+    }
   },
   "errors": {
     "permissions": {

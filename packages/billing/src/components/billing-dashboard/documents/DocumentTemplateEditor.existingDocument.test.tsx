@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const runAuthoritativeTemplatePreviewMock = vi.hoisted(() => vi.fn());
 const listExistingDocumentsForPreviewMock = vi.hoisted(() => vi.fn());
+const saveDocumentTemplateMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@monaco-editor/react', () => ({
   Editor: () => <div data-automation-id="monaco-editor-mock" />,
@@ -18,7 +19,7 @@ vi.mock('react-hot-toast', () => ({
 vi.mock('../../../actions/documentTemplateActions', () => ({
   runAuthoritativeTemplatePreview: (...args: unknown[]) => runAuthoritativeTemplatePreviewMock(...args),
   listExistingDocumentsForPreview: (...args: unknown[]) => listExistingDocumentsForPreviewMock(...args),
-  saveDocumentTemplate: vi.fn(),
+  saveDocumentTemplate: (...args: unknown[]) => saveDocumentTemplateMock(...args),
 }));
 
 vi.mock('../../invoice-designer/DesignerShell', () => ({
@@ -47,6 +48,12 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 
 import DocumentTemplateEditor from './DocumentTemplateEditor';
 import { getDocumentTypeStandardAst } from '../../../lib/document-templates/registry';
+import {
+  getStandardLabelTemplateAstByCode,
+  STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE,
+  STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
+  STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+} from '../../../lib/label-template-ast/standardTemplates';
 
 const renderEditor = (documentType: string = 'sales-order') =>
   render(
@@ -83,6 +90,8 @@ describe('DocumentTemplateEditor existing-document preview', () => {
     });
     runAuthoritativeTemplatePreviewMock.mockReset();
     listExistingDocumentsForPreviewMock.mockReset();
+    saveDocumentTemplateMock.mockReset();
+    saveDocumentTemplateMock.mockResolvedValue({ success: true, template_id: 'saved-template' });
     runAuthoritativeTemplatePreviewMock.mockResolvedValue({ html: '<html><body>Preview</body></html>' });
     listExistingDocumentsForPreviewMock.mockResolvedValue({
       options: [
@@ -129,5 +138,87 @@ describe('DocumentTemplateEditor existing-document preview', () => {
       'packing-slip',
       expect.objectContaining({ page: 1 })
     );
+  });
+
+  it('preserves worksheet metadata through preview and save, including dependent visibility', async () => {
+    const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE)!;
+    ast.metadata!.labelSettings!.hiddenFields = ['serialSuffix', 'detail'];
+    const onSave = vi.fn();
+    render(
+      <DocumentTemplateEditor
+        documentType="work-tag"
+        template={{ name: 'Customer worksheet', version: 1, templateAst: ast }}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    );
+    // The Letter page the template declares makes it a worksheet, so the worksheet-only fields render.
+    const serial = await waitFor(() => {
+      const element = screen.getByLabelText('Full asset serial number') as HTMLInputElement;
+      expect(element.disabled).toBe(true);
+      return element;
+    });
+    expect(serial.checked).toBe(false);
+    const description = screen.getByLabelText('Ticket description') as HTMLInputElement;
+    expect(description.checked).toBe(false);
+    expect(description.disabled).toBe(true);
+
+    await openPreviewTab();
+    await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
+    const previewAst = runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1];
+    expect(previewAst.metadata).toMatchObject({
+      labelClass: 'ticket-work-tag',
+      labelSettings: { hiddenFields: ['serialSuffix', 'detail'] },
+      printSettings: { customPageSize: { width: 8.5, height: 11, unit: 'in' } },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Layout' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('saved-template'));
+    expect(saveDocumentTemplateMock.mock.calls.at(-1)?.[1].templateAst.metadata).toMatchObject(previewAst.metadata);
+  });
+
+  it('keeps worksheet-only fields off a tag-sized template and carries field visibility through export', async () => {
+    const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_WORK_TAG_CODE)!;
+    render(
+      <DocumentTemplateEditor
+        documentType="work-tag"
+        template={{ name: 'Custom tag', version: 1, templateAst: ast }}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    // A 4 x 2 in page is a tag, so the worksheet-only fields never appear.
+    expect(screen.queryByLabelText('Full asset serial number')).toBeNull();
+    await openPreviewTab();
+    await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
+    expect(runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1].metadata.labelSettings).toMatchObject({
+      hiddenFields: [],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Layout' }));
+    await waitFor(() => expect(saveDocumentTemplateMock).toHaveBeenCalled());
+    expect(saveDocumentTemplateMock.mock.calls.at(-1)?.[1].templateAst.metadata.labelSettings).toEqual({
+      hiddenFields: [],
+    });
+  });
+
+  it('shows worksheet-only fields when the author sets a worksheet page size', async () => {
+    const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE)!;
+    render(
+      <DocumentTemplateEditor
+        documentType="work-tag"
+        template={{ name: 'A4 worksheet', version: 1, templateAst: ast }}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    // The A4 page the template declares is worksheet paper: the fields render and can be toggled.
+    await waitFor(() => expect(screen.getByLabelText('Full asset serial number')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Full asset serial number'));
+    await openPreviewTab();
+    await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
+    expect(runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1].metadata.labelSettings).toMatchObject({
+      hiddenFields: ['assetSerialNumber'],
+    });
   });
 });

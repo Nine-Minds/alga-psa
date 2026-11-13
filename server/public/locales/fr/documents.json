@@ -140,7 +140,30 @@
     "replacementSerial": "Numéro de série du remplacement",
     "shipping": "Expédition",
     "returnBy": "Retour avant le",
-    "returnShipTo": "Adresse de retour"
+    "returnShipTo": "Adresse de retour",
+    "worksheet": {
+      "ticketNumber": "Ticket n°",
+      "customer": "Client",
+      "assetTag": "Étiquette de l'actif",
+      "serial": "N° de série",
+      "custodyLocation": "Lieu de garde",
+      "nextAction": "Prochaine action",
+      "assetSpecifications": "Caractéristiques de l'actif",
+      "ticketDetails": "Détails du ticket",
+      "imageNotIncluded": "[Image non incluse]",
+      "imageNotIncludedNamed": "[Image non incluse : {{name}}]",
+      "unsupportedContent": "[Contenu non inclus dans cette impression]",
+      "assetName": "Nom",
+      "make": "Fabricant",
+      "model": "Modèle",
+      "os": "Système d'exploitation",
+      "cpu": "Processeur",
+      "ram": "Mémoire vive",
+      "storage": "Stockage",
+      "cpuCoreCount_one": "{{count}} cœur",
+      "cpuCoreCount_other": "{{count}} cœurs",
+      "cpuCoreCount_many": "{{count}} cœurs"
+    }
   },
   "errors": {
     "permissions": {

@@ -1685,13 +1685,45 @@
       "skipFailures": "Skip these and print the rest",
       "skipped_one": "{{count}} record was skipped because it could not be opened.",
       "skipped_other": "{{count}} records were skipped because they could not be opened.",
+      "missingImages_one": "{{count}} image in the ticket descriptions could not be included. It is marked on the worksheet.",
+      "missingImages_other": "{{count}} images in the ticket descriptions could not be included. They are marked on the worksheets.",
+      "unavailableImages_one": "{{count}} image in the ticket descriptions could not be read from storage. It is marked on the worksheet; try printing again later.",
+      "unavailableImages_other": "{{count}} images in the ticket descriptions could not be read from storage. They are marked on the worksheets; try printing again later.",
       "template": "Template",
       "ticketTitle": "Print work tags",
       "tooMany": "You can print at most {{max}} labels at a time.",
       "unnamedAsset": "Unnamed asset",
       "useTemplate": "Use {{template}}",
       "copiesPerAsset": "Copies per asset",
-      "adjacentCopies": "Copies print together for each asset."
+      "adjacentCopies": "Copies print together for each asset.",
+      "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label.",
+      "paperMismatchWarning": "This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose \"Template paper\" or the matching full-sheet layout, or the content will not fit.",
+      "worksheetPageSizeError": "The worksheet does not fit the selected print layout. Use \"Template paper\" or a layout on the same paper as the template.",
+      "worksheetTextOverflowError": "This worksheet contains text that will not fit. Adjust the layout or shorten the content before printing."
+    },
+    "layout": {
+      "template-preferred": "Template paper (default)",
+      "roll-4x2": "One per label (4 × 2 in roll)",
+      "letter-2x5": "Letter sheet, 2 × 5 (Avery 5163-style)",
+      "a4-2x7": "A4 sheet, 2 × 7 (99.1 × 38.1 mm style)",
+      "letter-full": "Letter sheet, one per page",
+      "a4-full": "A4 sheet, one per page"
+    },
+    "paper": {
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal",
+      "custom": "{{width}} × {{height}} mm"
+    },
+    "standardTemplates": {
+      "standard-ticket-work-tag": "Standard Ticket Work Tag",
+      "standard-asset-label": "Standard Asset Label",
+      "standard-asset-label-code128": "Standard Asset Label with Code 128",
+      "standard-stock-unit-label": "Standard Stock Unit Label",
+      "standard-staging-container-label": "Standard Staging Container Label",
+      "standard-rma-label": "Standard RMA Return Label",
+      "standard-ticket-customer-worksheet": "Standard Customer Worksheet",
+      "standard-ticket-customer-worksheet-a4": "Standard Customer Worksheet (A4)"
     }
   },
   "deleteEntity": {

@@ -39,6 +39,7 @@ import { rmaLabelViewModelProvider } from '@alga-psa/inventory/lib/rmaLabelViewM
 import { ticketLabelViewModelProvider } from '@alga-psa/tickets/lib/labelViewModelProvider';
 import { stagingContainerLabelViewModelProvider } from '@alga-psa/projects/lib/stagingLabelViewModelProvider';
 import { BarcodeError } from '@alga-psa/billing/lib/invoice-template-ast/barcode/constraints';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { LabelClass, LabelViewModelProvider } from '@alga-psa/types';
 
 import { printLabels, type PrintLabelsDeps } from '../../../../lib/labels/printLabels';
@@ -55,15 +56,42 @@ const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
 
 const deps: PrintLabelsDeps = {
   providers: PROVIDERS,
-  renderPdf: (tenant, items, layout) => renderLabelBatchPdf(tenant, items, layout),
+  renderPdf: async (tenant, items, layout, { baseUrl }) => {
+    const locale = await getServerLocale();
+    const { t } = await getServerTranslation(locale, 'documents');
+    return renderLabelBatchPdf(tenant, items, layout, {
+      locale,
+      missingImageText: (name) =>
+        name
+          ? String(t('labels.worksheet.imageNotIncludedNamed', { defaultValue: '[Image not included: {{name}}]', name }))
+          : String(t('labels.worksheet.imageNotIncluded', { defaultValue: '[Image not included]' })),
+      unsupportedContentText: String(
+        t('labels.worksheet.unsupportedContent', { defaultValue: '[Content not included in this printout]' })
+      ),
+      baseUrl,
+    });
+  },
   resolveTemplate: (tenant, labelClass, templateId) => resolveLabelTemplateForTenant(tenant, labelClass, templateId),
-  getLinkedAssetParts: (context, subjects) => getTicketLinkedAssetLabelParts(context, subjects),
+  getLinkedAssetParts: async (context, subjects) => {
+    const locale = await getServerLocale();
+    const { t } = await getServerTranslation(locale, 'documents');
+    return getTicketLinkedAssetLabelParts(context, subjects, {
+      formatCpuCoreCount: (count) =>
+        String(t('labels.worksheet.cpuCoreCount', {
+          count,
+          defaultValue: count === 1 ? '{{count}} core' : '{{count}} cores',
+        })),
+    });
+  },
   describeClientError: (error) => {
     if (error instanceof LabelRenderError) {
       return { message: error.message, failures: error.failures };
     }
     if (error instanceof LabelLayoutError || error instanceof BarcodeError) {
-      return { message: error.message };
+      return {
+        message: error.message,
+        ...(error instanceof LabelLayoutError && error.errorCode ? { errorCode: error.errorCode } : {}),
+      };
     }
     return null;
   },
@@ -100,7 +128,11 @@ export async function POST(request: Request) {
   try {
     const result = await printLabelsAuthenticated(body as Record<string, unknown>, baseUrl);
     if (!result.ok) {
-      return json(result.status, { error: result.message, ...(result.failures ? { failures: result.failures } : {}) });
+      return json(result.status, {
+        error: result.message,
+        ...(result.failures ? { failures: result.failures } : {}),
+        ...(result.errorCode ? { errorCode: result.errorCode } : {}),
+      });
     }
     return new Response(new Uint8Array(result.pdf), {
       status: 200,
@@ -111,6 +143,12 @@ export async function POST(request: Request) {
         'X-Label-Count': String(result.labels),
         // Only a count: never which records were skipped or why.
         'X-Label-Skipped': String(result.skipped),
+        // Sheets the batch consumed: a worksheet flows across pages, so this can exceed the label count.
+        'X-Label-Sheets': String(result.sheets),
+        // Description images that could not be embedded; each one is marked on the printed worksheet.
+        'X-Label-Missing-Images': String(result.missingImages),
+        // Description images that could not be read from storage; each one is marked on the printed worksheet.
+        'X-Label-Unavailable-Images': String(result.unavailableImages),
       },
     });
   } catch (error) {

@@ -11,6 +11,7 @@ import { useInvoiceDesignerStore } from '../state/designerStore';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
 import { type InvoiceFieldCategory } from '../fields/fieldCatalog';
 import { buildDocumentExpressionPathOptions, describeBindingOption } from '../fields/documentBindingCatalog';
+import { designerFieldTranslationKey } from '../fields/fieldTranslationKey';
 import { getNodeName } from '../utils/nodeProps';
 
 interface PaletteProps {
@@ -146,11 +147,11 @@ const TemplateVariableRow: React.FC<TemplateVariableRowProps> = ({ option, onIns
   const { t } = useTranslation('msp/invoicing');
   const token = `{{${option.path}}}`;
   const automationKey = option.path.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const keySlug = option.path.replace(/\./g, '_');
-  const translatedLabel = t(`designer.fields.${keySlug}.label`, { defaultValue: option.label });
-  const translatedDescription = t(`designer.fields.${keySlug}.description`, { defaultValue: option.description });
+  const translatedLabel = t(designerFieldTranslationKey(option.path, 'label'), { defaultValue: option.label });
+  const translatedDescription = t(designerFieldTranslationKey(option.path, 'description'), { defaultValue: option.description, path: option.path });
   return (
     <button
+      id={`designer-template-variable-${automationKey}`}
       type="button"
       className={clsx(
         'w-full rounded border px-2 py-1.5 text-left transition-colors',
@@ -247,7 +248,9 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
     return Object.entries(templateVariableGroups).reduce<Record<string, TemplateVariableOption[]>>(
       (acc, [category, variables]) => {
         const filtered = variables.filter((option) => {
-          const haystack = `${option.label} ${option.path} ${option.description}`.toLowerCase();
+          const label = t(designerFieldTranslationKey(option.path, 'label'), { defaultValue: option.label });
+          const description = t(designerFieldTranslationKey(option.path, 'description'), { defaultValue: option.description, path: option.path });
+          const haystack = `${label} ${option.path} ${description}`.toLowerCase();
           return haystack.includes(normalizedQuery);
         });
         if (filtered.length > 0) {
@@ -257,7 +260,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
       },
       {}
     );
-  }, [normalizedQuery, templateVariableGroups]);
+  }, [normalizedQuery, templateVariableGroups, t]);
 
   return (
     <div className="flex flex-col h-full min-h-0 border-r border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))]">

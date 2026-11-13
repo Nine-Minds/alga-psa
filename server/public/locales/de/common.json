@@ -1685,13 +1685,45 @@
       "skipFailures": "Diese überspringen und den Rest drucken",
       "skipped_one": "{{count}} Datensatz wurde übersprungen, weil er nicht geöffnet werden konnte.",
       "skipped_other": "{{count}} Datensätze wurden übersprungen, weil sie nicht geöffnet werden konnten.",
+      "missingImages_one": "{{count}} Bild in den Ticketbeschreibungen konnte nicht eingefügt werden. Es ist auf dem Arbeitsblatt markiert.",
+      "missingImages_other": "{{count}} Bilder in den Ticketbeschreibungen konnten nicht eingefügt werden. Sie sind auf den Arbeitsblättern markiert.",
+      "unavailableImages_one": "{{count}} Bild in den Ticketbeschreibungen konnte nicht aus dem Speicher gelesen werden. Es ist auf dem Arbeitsblatt markiert; versuchen Sie den Druck später erneut.",
+      "unavailableImages_other": "{{count}} Bilder in den Ticketbeschreibungen konnten nicht aus dem Speicher gelesen werden. Sie sind auf den Arbeitsblättern markiert; versuchen Sie den Druck später erneut.",
       "template": "Vorlage",
       "ticketTitle": "Arbeitsetiketten drucken",
       "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",
       "unnamedAsset": "Unbenanntes Asset",
       "useTemplate": "{{template}} verwenden",
       "copiesPerAsset": "Exemplare pro Asset",
-      "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt."
+      "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt.",
+      "templatePaperWarning": "Diese Vorlage wird auf ein ganzes Blatt gedruckt. Wählen Sie „Vorlagenpapier“ (oder ein Ganzseiten-Layout), sonst passt der Inhalt nicht auf das Etikett.",
+      "paperMismatchWarning": "Dieses Vorlagenformat ist für {{template}} ausgelegt, aber das gewählte Layout druckt auf {{layout}}. Wählen Sie „Vorlagenpapier“ oder das passende Layout für volle Bögen, sonst passt der Inhalt nicht.",
+      "worksheetPageSizeError": "Das Arbeitsblatt passt nicht zum gewählten Drucklayout. Verwenden Sie „Vorlagenpapier“ oder ein Layout mit demselben Papier wie die Vorlage.",
+      "worksheetTextOverflowError": "Dieses Arbeitsblatt enthält Text, der nicht hineinpasst. Passen Sie das Layout an oder kürzen Sie den Inhalt vor dem Drucken."
+    },
+    "layout": {
+      "template-preferred": "Vorlagenpapier (Standard)",
+      "roll-4x2": "Eines pro Etikett (4 × 2 in Rolle)",
+      "letter-2x5": "Letter-Blatt, 2 × 5 (Avery-5163-Stil)",
+      "a4-2x7": "A4-Blatt, 2 × 7 (99,1 × 38,1 mm-Stil)",
+      "a4-full": "A4-Blatt, eines pro Seite",
+      "letter-full": "Letter-Blatt, eines pro Seite"
+    },
+    "paper": {
+      "a4": "A4-Blatt",
+      "letter": "Letter-Blatt",
+      "legal": "Legal-Blatt",
+      "custom": "{{width}} × {{height}} mm"
+    },
+    "standardTemplates": {
+      "standard-ticket-work-tag": "Standard-Ticket-Arbeitsetikett",
+      "standard-asset-label": "Standard-Asset-Etikett",
+      "standard-asset-label-code128": "Standard-Asset-Etikett mit Code 128",
+      "standard-stock-unit-label": "Standardetikett für Bestandseinheit",
+      "standard-staging-container-label": "Standardetikett für Bereitstellungscontainer",
+      "standard-rma-label": "Standard-RMA-Retourenetikett",
+      "standard-ticket-customer-worksheet-a4": "Standard-Kundenarbeitsblatt (A4)",
+      "standard-ticket-customer-worksheet": "Standard-Kundenarbeitsblatt"
     }
   },
   "deleteEntity": {

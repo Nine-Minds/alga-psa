@@ -1685,13 +1685,45 @@
       "skipFailures": "Ignorar estes e imprimir o restante",
       "skipped_one": "{{count}} registro foi ignorado porque não pôde ser aberto.",
       "skipped_other": "{{count}} registros foram ignorados porque não puderam ser abertos.",
+      "missingImages_one": "Não foi possível incluir {{count}} imagem das descrições dos tickets. Ela está marcada na folha.",
+      "missingImages_other": "Não foi possível incluir {{count}} imagens das descrições dos tickets. Elas estão marcadas nas folhas.",
+      "unavailableImages_one": "Não foi possível ler do armazenamento {{count}} imagem das descrições dos tickets. Ela está marcada na folha; tente imprimir novamente mais tarde.",
+      "unavailableImages_other": "Não foi possível ler do armazenamento {{count}} imagens das descrições dos tickets. Elas estão marcadas nas folhas; tente imprimir novamente mais tarde.",
       "template": "Modelo",
       "ticketTitle": "Imprimir etiquetas de trabalho",
       "tooMany": "Você pode imprimir no máximo {{max}} etiquetas por vez.",
       "unnamedAsset": "Recurso sem nome",
       "useTemplate": "Usar {{template}}",
       "copiesPerAsset": "Cópias por ativo",
-      "adjacentCopies": "As cópias de cada ativo são impressas juntas."
+      "adjacentCopies": "As cópias de cada ativo são impressas juntas.",
+      "templatePaperWarning": "Este modelo é impresso em uma folha inteira. Escolha “Papel do modelo” (ou uma disposição de folha inteira), caso contrário o conteúdo não caberá na etiqueta.",
+      "paperMismatchWarning": "Este modelo foi concebido para {{template}}, mas a disposição selecionada imprime em {{layout}}. Escolha “Papel do modelo” ou a disposição de folha inteira correspondente, ou o conteúdo não caberá.",
+      "worksheetPageSizeError": "A folha de trabalho não corresponde à disposição de impressão selecionada. Use “Papel do modelo” ou uma disposição com o mesmo papel do modelo.",
+      "worksheetTextOverflowError": "Esta folha contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir."
+    },
+    "layout": {
+      "template-preferred": "Papel do modelo (padrão)",
+      "roll-4x2": "Uma por etiqueta (rolo de 4 × 2 pol.)",
+      "letter-2x5": "Folha Letter, 2 × 5 (estilo Avery 5163)",
+      "a4-2x7": "Folha A4, 2 × 7 (estilo 99,1 × 38,1 mm)",
+      "a4-full": "Folha A4, uma por página",
+      "letter-full": "Folha Letter, uma por página"
+    },
+    "paper": {
+      "a4": "Folha A4",
+      "letter": "Folha Letter",
+      "legal": "Folha Legal",
+      "custom": "{{width}} × {{height}} mm"
+    },
+    "standardTemplates": {
+      "standard-ticket-work-tag": "Etiqueta padrão de trabalho do ticket",
+      "standard-asset-label": "Etiqueta padrão de ativo",
+      "standard-asset-label-code128": "Etiqueta padrão de ativo com código 128",
+      "standard-stock-unit-label": "Etiqueta padrão de unidade de estoque",
+      "standard-staging-container-label": "Etiqueta padrão de contêiner de preparação",
+      "standard-rma-label": "Etiqueta padrão de devolução RMA",
+      "standard-ticket-customer-worksheet-a4": "Folha de trabalho padrão do cliente (A4)",
+      "standard-ticket-customer-worksheet": "Folha de trabalho padrão do cliente"
     }
   },
   "deleteEntity": {

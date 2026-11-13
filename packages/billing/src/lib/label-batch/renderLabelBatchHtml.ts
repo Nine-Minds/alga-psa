@@ -1,8 +1,10 @@
 import {
+  DEFAULT_INVOICE_PRINT_SETTINGS,
   customPageSizeToMm,
   matchRecordPath,
   recordUrl,
   type LabelHideableField,
+  type LabelLinkedAssetInfo,
   type LabelPrintFailure,
   type LabelTenantClient,
   type LabelViewModel,
@@ -10,7 +12,9 @@ import {
 } from '@alga-psa/types';
 
 import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
+import { resolveTemplatePrintSettingsFromAst } from '../invoice-template-ast/printSettings';
 import { renderTemplateAstFragment } from '../invoice-template-ast/server-render';
+import type { RichTextRenderOptions } from '@alga-psa/formatting/blocknoteUtils';
 import { BarcodeError } from '../invoice-template-ast/barcode/constraints';
 import {
   LABEL_CLASS_BY_STANDARD_CODE,
@@ -19,7 +23,7 @@ import {
   getStandardLabelTemplateAstByCode,
 } from '../label-template-ast/standardTemplates';
 import { composeLabelSheets, type ComposedLabelDocument, type RenderedLabelCell } from './composeLabelSheets';
-import type { LabelBatchLayout } from './layout';
+import { LabelLayoutError, resolveCellSizeMm, resolveWorksheetDesignSizeMm, type LabelBatchLayout } from './layout';
 
 export interface LabelPrintItem {
   viewModel: LabelViewModel;
@@ -55,6 +59,36 @@ function batchFailureMessage(failures: readonly LabelPrintFailure[], total: numb
 }
 
 /**
+ * The print-time text-fit check names labels by their position in the batch; this turns them into
+ * per-record failures (record, ticket number, template, error code) so the caller can name each
+ * ticket and skip exactly those records.
+ */
+export function labelTextOverflowError(
+  items: readonly LabelPrintItem[],
+  labelIndexes: readonly number[]
+): LabelRenderError {
+  const failures: LabelPrintFailure[] = labelIndexes.map((index) => {
+    const item = items[index];
+    if (!Number.isInteger(index) || item === undefined) {
+      // The text-fit check reports positions in this batch; one outside it means the cells and items disagree.
+      throw new Error(
+        `Text-fit check reported label index ${index}, but the batch has ${items.length} label(s); ` +
+        'the rendered cells and the print items are out of sync.'
+      );
+    }
+    return {
+      index,
+      recordId: item.viewModel.recordId,
+      identifier: item.viewModel.identifier,
+      templateCode: item.templateCode ?? LABEL_STANDARD_CODE_BY_CLASS[item.viewModel.labelClass],
+      errorCode: 'worksheetTextOverflow' as const,
+      message: 'Contains text that does not fit. Adjust the layout or shorten the content before printing.',
+    };
+  });
+  return new LabelRenderError(batchFailureMessage(failures, items.length), failures);
+}
+
+/**
  * Invariant: the QR content is only the canonical `recordUrl` (no tokens, no secrets). Providers
  * build `url` with `recordUrl`; this re-derives it from the record type, id and the URL's own origin
  * and refuses anything else, so a provider bug cannot put a query token or fragment into a code.
@@ -73,6 +107,40 @@ export function assertCanonicalLabelUrl(viewModel: LabelViewModel): void {
   }
 }
 
+/** Which `linkedAsset` line each worksheet spec hideable field carries. */
+const SPEC_FIELD_TO_ASSET_LINE: Record<
+  'assetName' | 'assetManufacturer' | 'assetModel' | 'assetOs' | 'assetCpu' | 'assetRam' | 'assetStorage',
+  keyof Omit<LabelLinkedAssetInfo, 'assetId'>
+> = {
+  assetName: 'name',
+  assetManufacturer: 'manufacturer',
+  assetModel: 'model',
+  assetOs: 'osLine',
+  assetCpu: 'cpuLine',
+  assetRam: 'ramLine',
+  assetStorage: 'storageLine',
+};
+
+/**
+ * Applies the worksheet spec hideable fields to the linked-asset block: each hidden field nulls its own
+ * spec line, and when every spec line is hidden the whole block goes null (an empty "Asset Specifications"
+ * section must not print). `assetId` never renders, so it never keeps the block alive on its own.
+ */
+function applySpecVisibility(
+  linkedAsset: LabelLinkedAssetInfo | null,
+  hidden: ReadonlySet<LabelHideableField>
+): LabelLinkedAssetInfo | null {
+  if (!linkedAsset) return null;
+  const fields = Object.keys(SPEC_FIELD_TO_ASSET_LINE) as (keyof typeof SPEC_FIELD_TO_ASSET_LINE)[];
+  if (fields.every((field) => hidden.has(field))) return null;
+  if (!fields.some((field) => hidden.has(field))) return linkedAsset;
+  const visible = { ...linkedAsset };
+  for (const field of fields) {
+    if (hidden.has(field)) visible[SPEC_FIELD_TO_ASSET_LINE[field]] = null;
+  }
+  return visible;
+}
+
 /**
  * The model a label template evaluates. Fields the template hides (`metadata.labelSettings.hiddenFields`)
  * are NULLED here, before evaluation, so a hidden value cannot reach the HTML even when a custom text node
@@ -82,7 +150,8 @@ export function assertCanonicalLabelUrl(viewModel: LabelViewModel): void {
 export function buildLabelModel(
   viewModel: LabelViewModel,
   tenantClient: LabelTenantClient | null | undefined,
-  hiddenFields: readonly LabelHideableField[] = []
+  hiddenFields: readonly LabelHideableField[] = [],
+  options: { worksheet?: boolean } = {}
 ): LabelViewModel {
   const hidden = new Set<LabelHideableField>(hiddenFields);
   const base = tenantClient ?? viewModel.tenantClient ?? null;
@@ -93,8 +162,13 @@ export function buildLabelModel(
   const custodyLocation = hidden.has('custodyLocation') ? null : viewModel.custodyLocation ?? null;
   const nextAction = hidden.has('nextAction') ? null : viewModel.nextAction ?? null;
   // Line budget: the two held-equipment lines take the work-reason and serial lines' place (the 4x2 in tag
-  // has no spare height). The asset line still names the held device; its serial suffix yields.
-  const custodyPrints = viewModel.labelClass === 'ticket-work-tag' && Boolean(custodyLocation || nextAction);
+  // has no spare height). The asset line still names the held device; its serial suffix yields. A full-page
+  // worksheet (the template's own page is worksheet paper) has room for every line, so the budget never applies.
+  const custodyPrints =
+    options.worksheet !== true &&
+    viewModel.labelClass === 'ticket-work-tag' &&
+    Boolean(custodyLocation || nextAction);
+  const worksheet = options.worksheet === true && viewModel.labelClass === 'ticket-work-tag';
   return {
     ...viewModel,
     title: hidden.has('title') ? null : viewModel.title,
@@ -102,6 +176,19 @@ export function buildLabelModel(
     detail: hidden.has('detail') || custodyPrints ? null : viewModel.detail,
     secondaryIdentifier,
     serialSuffix,
+    assetSerialNumber:
+      worksheet && !hidden.has('assetSerialNumber') && !hidden.has('serialSuffix')
+        ? viewModel.assetSerialNumber ?? null
+        : null,
+    ticketDescription:
+      worksheet && !hidden.has('ticketDescription') && !hidden.has('detail')
+        ? viewModel.ticketDescription ?? null
+        : null,
+    ticketDescriptionRichText:
+      worksheet && !hidden.has('ticketDescription') && !hidden.has('detail')
+        ? viewModel.ticketDescriptionRichText ?? viewModel.ticketDescription ?? null
+        : null,
+    linkedAsset: worksheet ? applySpecVisibility(viewModel.linkedAsset ?? null, hidden) : null,
     custodyLocation,
     nextAction,
     tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,
@@ -142,7 +229,12 @@ function resolveTemplateAst(item: LabelPrintItem): { ast: TemplateAst; code: str
 export async function renderLabelBatchHtml(
   items: readonly LabelPrintItem[],
   layout: LabelBatchLayout,
-  options: { tenantClient?: LabelTenantClient | null; locale?: string } = {}
+  options: {
+    tenantClient?: LabelTenantClient | null;
+    locale?: string;
+    /** Placeholders and diagnostics for rich-text content (a worksheet description) the converter cannot render. */
+    richText?: RichTextRenderOptions;
+  } = {}
 ): Promise<ComposedLabelDocument> {
   const cells: RenderedLabelCell[] = [];
   const failures: LabelPrintFailure[] = [];
@@ -152,15 +244,49 @@ export async function renderLabelBatchHtml(
     try {
       assertCanonicalLabelUrl(item.viewModel);
       const { ast, code } = resolveTemplateAst(item);
-      const model = buildLabelModel(item.viewModel, options.tenantClient, ast.metadata?.labelSettings?.hiddenFields);
+      const labelSettings = ast.metadata?.labelSettings;
+      const worksheetSize = resolveWorksheetDesignSizeMm(item.viewModel.labelClass, ast.metadata);
+      if (worksheetSize) {
+        const cellSize = resolveCellSizeMm(layout);
+        if (
+          cellSize.widthMm >= cellSize.heightMm ||
+          worksheetSize.widthMm > cellSize.widthMm + 0.05 ||
+          worksheetSize.heightMm > cellSize.heightMm + 0.05
+        ) {
+          throw new LabelLayoutError('The selected print layout is too small for this worksheet.', {
+            errorCode: 'worksheetPageSize',
+          });
+        }
+      }
+      const model = buildLabelModel(item.viewModel, options.tenantClient, labelSettings?.hiddenFields, {
+        worksheet: Boolean(worksheetSize),
+      });
       const evaluation = evaluateTemplateAst(ast, model as unknown as Record<string, unknown>);
-      const { html, css } = await renderTemplateAstFragment(ast, evaluation, { locale: options.locale });
+      // A worksheet's margin becomes its flow sheet's `@page` margin so it repeats on every continuation
+      // page; the root must not pad it a second time, so the fragment renders with a zero margin. The
+      // margin is the whole-pixel value the designer preview pads with, so preview and paper line up.
+      const flowMarginMm = worksheetSize ? (resolveTemplatePrintSettingsFromAst(ast).marginPx * 25.4) / 96 : 0;
+      const renderAst: TemplateAst = worksheetSize
+        ? {
+            ...ast,
+            metadata: { ...ast.metadata, printSettings: { ...DEFAULT_INVOICE_PRINT_SETTINGS, ...ast.metadata?.printSettings, marginMm: 0 } },
+          }
+        : ast;
+      const { html, css } = await renderTemplateAstFragment(renderAst, evaluation, {
+        locale: options.locale,
+        richText: options.richText,
+      });
       const printSettings = ast.metadata?.printSettings;
       cells.push({
         html,
         css,
-        designedSizeMm: printSettings?.customPageSize ? customPageSizeToMm(printSettings.customPageSize) : null,
+        designedSizeMm: worksheetSize ?? (printSettings?.customPageSize ? customPageSizeToMm(printSettings.customPageSize) : null),
         description: `Label ${index + 1} (${code})`,
+        validateTextFits: Boolean(worksheetSize),
+        // A worksheet prints as a flow section: a description taller than one page continues onto the
+        // next page (like a regular document) instead of being clipped or refused.
+        flow: Boolean(worksheetSize),
+        ...(worksheetSize ? { flowMarginMm } : {}),
       });
     } catch (error) {
       const fallback = LABEL_FALLBACK_TEMPLATE_BY_CODE[templateCode];
@@ -170,6 +296,7 @@ export async function renderLabelBatchHtml(
         identifier: item.viewModel.identifier,
         templateCode,
         message: error instanceof Error ? error.message : String(error),
+        ...(error instanceof LabelLayoutError && error.errorCode ? { errorCode: error.errorCode } : {}),
         // Only a barcode the record's data cannot fit is fixed by switching template.
         ...(fallback && error instanceof BarcodeError ? { suggestedTemplateCode: fallback } : {}),
       });

@@ -1697,13 +1697,49 @@
       "skipped_few": "Pominięto {{count}} rekordy, ponieważ nie udało się ich otworzyć.",
       "skipped_many": "Pominięto {{count}} rekordów, ponieważ nie udało się ich otworzyć.",
       "skipped_other": "Pominięto {{count}} rekordu, ponieważ nie udało się go otworzyć.",
+      "missingImages_one": "Nie udało się dołączyć {{count}} obrazu z opisów zgłoszeń. Jest oznaczony na karcie.",
+      "missingImages_few": "Nie udało się dołączyć {{count}} obrazów z opisów zgłoszeń. Są oznaczone na kartach.",
+      "missingImages_many": "Nie udało się dołączyć {{count}} obrazów z opisów zgłoszeń. Są oznaczone na kartach.",
+      "missingImages_other": "Nie udało się dołączyć {{count}} obrazu z opisów zgłoszeń. Są oznaczone na kartach.",
+      "unavailableImages_one": "Nie udało się odczytać z pamięci masowej {{count}} obrazu z opisów zgłoszeń. Jest oznaczony na karcie; spróbuj wydrukować ponownie później.",
+      "unavailableImages_few": "Nie udało się odczytać z pamięci masowej {{count}} obrazów z opisów zgłoszeń. Są oznaczone na kartach; spróbuj wydrukować ponownie później.",
+      "unavailableImages_many": "Nie udało się odczytać z pamięci masowej {{count}} obrazów z opisów zgłoszeń. Są oznaczone na kartach; spróbuj wydrukować ponownie później.",
+      "unavailableImages_other": "Nie udało się odczytać z pamięci masowej {{count}} obrazu z opisów zgłoszeń. Są oznaczone na kartach; spróbuj wydrukować ponownie później.",
       "template": "Szablon",
       "ticketTitle": "Drukuj etykiety robocze",
       "tooMany": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet.",
       "unnamedAsset": "Zasób bez nazwy",
       "useTemplate": "Użyj szablonu {{template}}",
       "copiesPerAsset": "Kopie na zasób",
-      "adjacentCopies": "Kopie każdego zasobu są drukowane razem."
+      "adjacentCopies": "Kopie każdego zasobu są drukowane razem.",
+      "templatePaperWarning": "Ten szablon drukuje się na całym arkuszu. Wybierz „Papier szablonu” (lub układ pełnoarkuszowy), w przeciwnym razie zawartość nie zmieści się na etykiecie.",
+      "paperMismatchWarning": "Ten szablon jest zaprojektowany dla papieru {{template}}, ale wybrany układ drukuje na {{layout}}. Wybierz „Papier szablonu” lub pasujący układ pełnostronicowy, inaczej treść się nie zmieści.",
+      "worksheetPageSizeError": "Karta pracy nie pasuje do wybranego układu wydruku. Użyj „Papier szablonu” lub układu z tym samym papierem co szablon.",
+      "worksheetTextOverflowError": "Ta karta zawiera tekst, który się nie mieści. Przed drukowaniem zmień układ lub skróć treść."
+    },
+    "layout": {
+      "template-preferred": "Papier szablonu (domyślnie)",
+      "roll-4x2": "Jedna na etykietę (rolka 4 × 2 cale)",
+      "letter-2x5": "Arkusz Letter, 2 × 5 (styl Avery 5163)",
+      "a4-2x7": "Arkusz A4, 2 × 7 (styl 99,1 × 38,1 mm)",
+      "a4-full": "Arkusz A4, jeden na stronę",
+      "letter-full": "Arkusz Letter, jeden na stronę"
+    },
+    "paper": {
+      "a4": "Arkusz A4",
+      "letter": "Arkusz Letter",
+      "legal": "Arkusz Legal",
+      "custom": "{{width}} × {{height}} mm"
+    },
+    "standardTemplates": {
+      "standard-ticket-work-tag": "Standardowa etykieta robocza zgłoszenia",
+      "standard-asset-label": "Standardowa etykieta zasobu",
+      "standard-asset-label-code128": "Standardowa etykieta zasobu z kodem 128",
+      "standard-stock-unit-label": "Standardowa etykieta jednostki magazynowej",
+      "standard-staging-container-label": "Standardowa etykieta pojemnika stagingowego",
+      "standard-rma-label": "Standardowa etykieta zwrotu RMA",
+      "standard-ticket-customer-worksheet-a4": "Standardowa karta pracy klienta (A4)",
+      "standard-ticket-customer-worksheet": "Standardowa karta pracy klienta"
     }
   },
   "deleteEntity": {

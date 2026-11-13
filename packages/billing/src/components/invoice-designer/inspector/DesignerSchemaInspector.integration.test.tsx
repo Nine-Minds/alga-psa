@@ -249,7 +249,10 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     expect((updated.props as any)?.metadata?.bindingKey).toBe('customer.address');
     expect((updated.props as any)?.metadata?.placeholder).toBe('Customer Address');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Use custom path' }));
+    const useCustomPath = screen.getByRole('button', { name: 'Use custom path' });
+    expect(useCustomPath.id).toMatch(/-use-custom$/);
+    fireEvent.click(useCustomPath);
+    expect(screen.getByRole('button', { name: 'Use field picker' }).id).toMatch(/-use-picker$/);
 
     const customInput = screen.getByDisplayValue('customer.address') as HTMLInputElement;
     expect(customInput.getAttribute('data-template-insert-target')).toBe('metadata.bindingKey');

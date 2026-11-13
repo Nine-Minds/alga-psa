@@ -1394,7 +1394,9 @@
           "quote-totals": "Offertsummor",
           "invoice": "Faktura",
           "customer": "Kund",
-          "tenant": "Organisation"
+          "tenant": "Organisation",
+          "work-tag": "Arbetsetikett",
+          "asset": "Tillgång"
         }
       },
       "noFieldsMatch": "Inga fält matchar sökningen.",
@@ -1453,6 +1455,11 @@
       "insertDataField": "+ Infoga datafält…",
       "searchDataFields": "Sök datafält…",
       "dataFields": "Datafält",
+      "bindingPathHint": "Ange en bindningssökväg om fältet du behöver inte finns i listan.",
+      "useFieldPicker": "Använd fältväljaren",
+      "currentField": "Aktuellt",
+      "unbound": "Inte bundet",
+      "useCustomPath": "Använd egen sökväg",
       "box": {
         "top": "Överkant",
         "right": "Höger",
@@ -2303,6 +2310,86 @@
       "tenantClient_address": {
         "label": "Organisationens adress",
         "description": "Ditt företags adress."
+      },
+      "label_recordUrl": {
+        "label": "Länk till posten",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_identifier": {
+        "label": "Identifierare",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_code128Value": {
+        "label": "Streckkodsvärde",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_title": {
+        "label": "Titel",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_clientName": {
+        "label": "Kundnamn",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_detail": {
+        "label": "Detalj / orsak",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_secondaryIdentifier": {
+        "label": "Sekundär identifierare",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_serialSuffix": {
+        "label": "Serienumrets slut",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_assetSerialNumber": {
+        "label": "Tillgångens fullständiga serienummer",
+        "description": "Fullständigt serienummer för vald tillgång, endast tillgängligt på kundarbetsblad med stående sida som är minst 210 mm bred."
+      },
+      "label_ticketDescription": {
+        "label": "Ärendebeskrivning",
+        "description": "Ärendebeskrivning som ren text, endast tillgänglig på kundarbetsblad med stående sida som är minst 210 mm bred."
+      },
+      "label_custodyLocation": {
+        "label": "Förvaringsplats",
+        "description": "Datasökväg: {{path}}"
+      },
+      "label_nextAction": {
+        "label": "Nästa åtgärd",
+        "description": "Datasökväg: {{path}}"
+      },
+      "linkedAsset_name": {
+        "label": "Tillgångens namn",
+        "description": "Datasökväg: {{path}}"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "Tillgångens tillverkare",
+        "description": "Datasökväg: {{path}}"
+      },
+      "linkedAsset_model": {
+        "label": "Tillgångens modell",
+        "description": "Datasökväg: {{path}}"
+      },
+      "linkedAsset_osLine": {
+        "label": "Tillgångens operativsystem",
+        "description": "Datasökväg: {{path}}"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "Tillgångens CPU",
+        "description": "Datasökväg: {{path}}"
+      },
+      "linkedAsset_ramLine": {
+        "label": "Tillgångens RAM",
+        "description": "Datasökväg: {{path}}"
+      },
+      "linkedAsset_storageLine": {
+        "label": "Tillgångens lagring",
+        "description": "Datasökväg: {{path}}"
+      },
+      "tenant_brandText": {
+        "label": "Företagsnamn utan logotyp",
+        "description": "Datasökväg: {{path}}"
       }
     },
     "canvas": {
@@ -2810,7 +2897,9 @@
         "version": "Version",
         "labelClass": "Etikettklass",
         "labelFields": "Fält som visas på etiketten",
-        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid."
+        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid.",
+        "worksheetPageHint": "En ärendeetikett med stående sida som är minst 210 mm bred (A4, Letter, Legal eller lämpligt anpassat papper) skrivs ut som ett kundarbetsblad på en hel sida, med fälten för fullständigt serienummer och ärendebeskrivning. Mindre sidor skrivs ut som etiketter.",
+        "worksheetFieldsHint": "Om serienumrets slut döljs döljs även hela serienumret; om detaljen döljs döljs även ärendebeskrivningen."
       },
       "placeholders": {
         "templateName": "Mall – {{type}}"
@@ -2851,6 +2940,30 @@
       "workTag": "Arbetsetikett / Etikett",
       "stagingManifest": "Packlista",
       "rmaReturnSlip": "RMA-returfölje"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "Ärendets arbetsetikett",
+      "asset-identity": "Tillgångsetikett",
+      "stock-unit-identity": "Lagerenhetsetikett",
+      "staging-container": "Etikett för plocklåda",
+      "rma-work-tag": "RMA-etikett"
+    },
+    "labelFields": {
+      "clientName": "Kundnamn",
+      "title": "Titel",
+      "detail": "Detalj / orsak",
+      "secondaryIdentifier": "Sekundär identifierare",
+      "serialSuffix": "Serienumrets slut",
+      "assetSerialNumber": "Tillgångens fullständiga serienummer",
+      "ticketDescription": "Ärendebeskrivning",
+      "custodyLocation": "Förvaringsplats",
+      "nextAction": "Nästa åtgärd",
+      "tenantLogo": "Företagslogotyp",
+      "tenantName": "Företagsnamn"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet-a4": "Standardkundarbetsblad (A4)",
+      "standard-ticket-customer-worksheet": "Standardkundarbetsblad"
     }
   },
   "errors": {

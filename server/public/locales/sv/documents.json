@@ -140,7 +140,30 @@
     "replacementSerial": "Ersättningens serienummer",
     "shipping": "Frakt",
     "returnBy": "Retur senast",
-    "returnShipTo": "Returnera till"
+    "returnShipTo": "Returnera till",
+    "worksheet": {
+      "ticketNumber": "Ärende nr",
+      "customer": "Kund",
+      "assetTag": "Tillgångstagg",
+      "serial": "Serienummer",
+      "custodyLocation": "Förvaringsplats",
+      "nextAction": "Nästa åtgärd",
+      "assetSpecifications": "Tillgångsspecifikationer",
+      "ticketDetails": "Ärendedetaljer",
+      "imageNotIncluded": "[Bild inte medtagen]",
+      "imageNotIncludedNamed": "[Bild inte medtagen: {{name}}]",
+      "unsupportedContent": "[Innehållet ingår inte i den här utskriften]",
+      "assetName": "Namn",
+      "make": "Tillverkare",
+      "model": "Modell",
+      "os": "Operativsystem",
+      "cpu": "Processor",
+      "ram": "Arbetsminne",
+      "storage": "Lagring",
+      "cpuCoreCount_one": "{{count}} kärna",
+      "cpuCoreCount_other": "{{count}} kärnor",
+      "cpuCoreCount_many": "{{count}} kärnor"
+    }
   },
   "errors": {
     "permissions": {

@@ -2243,12 +2243,16 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "A4",
+      "Letter",
+      "Legal",
       "{{count}} ticket(s)",
       "{{actor}} • {{eventType}}",
       "Actor",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
+      "{{width}} × {{height}} mm",
       "API",
       "CSV",
       "Datto RMM",

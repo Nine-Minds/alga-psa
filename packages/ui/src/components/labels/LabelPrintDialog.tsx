@@ -1,14 +1,22 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { MAX_LABELS_PER_REQUEST, type LabelClass, type LabelPrintFailure } from '@alga-psa/types';
-import { Dialog, DialogContent, DialogFooter } from '../Dialog';
+import {
+  INVOICE_PAPER_PRESET_IDS,
+  INVOICE_PAPER_PRESET_REGISTRY,
+  MAX_LABELS_PER_REQUEST,
+  customPageSizeToMm,
+  type LabelClass,
+  type LabelPrintErrorCode,
+  type LabelPrintFailure,
+} from '@alga-psa/types';
+import { Dialog, DialogContent } from '../Dialog';
 import { Button } from '../Button';
 import { Input } from '../Input';
 import { Checkbox } from '../Checkbox';
 import CustomSelect from '../CustomSelect';
 import { Alert, AlertDescription } from '../Alert';
-import { useTranslation } from '../../lib/i18n/client';
+import { useFormatters, useTranslation } from '../../lib/i18n/client';
 import {
   DEFAULT_LABEL_LAYOUT_PRESET,
   LABEL_LAYOUT_PRESETS,
@@ -80,6 +88,7 @@ export function LabelPrintDialog({
   idPrefix = 'label-print',
 }: LabelPrintDialogProps) {
   const { t } = useTranslation('common');
+  const { formatNumber } = useFormatters();
   const { print, loadTemplates, loadLinkedAssets, isPrinting } = useLabelPrint();
 
   const isSingleTicket = labelClass === 'ticket-work-tag' && ids.length === 1;
@@ -146,7 +155,55 @@ export function LabelPrintDialog({
     [t]
   );
 
-  const templateOptions = (templates?.templates ?? []).map((tpl) => ({ value: tpl.id, label: tpl.name }));
+  const templateOptions = (templates?.templates ?? []).map((tpl) => ({
+    value: tpl.id,
+    label: tpl.source === 'standard'
+      ? t(`labels.standardTemplates.${tpl.id}`, { defaultValue: tpl.name })
+      : tpl.name,
+  }));
+
+  // Human-readable page size for a template or layout preset, used by the paper-mismatch warning.
+  const formatPaper = (size?: { width: number; height: number } | null): string | null => {
+    if (!size) return null;
+    const preset = INVOICE_PAPER_PRESET_IDS.map((id) => INVOICE_PAPER_PRESET_REGISTRY[id]).find(
+      (candidate) => Math.abs(size.width - candidate.widthMm) < 1 && Math.abs(size.height - candidate.heightMm) < 1
+    );
+    if (preset) return t(`labels.paper.${preset.id.toLowerCase()}`, { defaultValue: preset.label });
+    return t('labels.paper.custom', {
+      defaultValue: '{{width}} × {{height}} mm',
+      width: formatNumber(Math.round(size.width)),
+      height: formatNumber(Math.round(size.height)),
+    });
+  };
+  const mmFromLayout = (layout: unknown): { width: number; height: number } | null => {
+    if (!layout || typeof layout !== 'object') return null;
+    const l = layout as {
+      kind?: string;
+      pageSize?: { width: number; height: number; unit: string };
+      labelWidth?: number;
+      labelHeight?: number;
+      unit?: string;
+    };
+    const source = l.kind === 'grid' ? { width: l.labelWidth, height: l.labelHeight, unit: l.unit } : l.pageSize;
+    if (!source || typeof source.width !== 'number' || typeof source.height !== 'number') return null;
+    if (source.unit !== 'in' && source.unit !== 'mm') return null;
+    const { widthMm, heightMm } = customPageSizeToMm({ width: source.width, height: source.height, unit: source.unit });
+    return { width: widthMm, height: heightMm };
+  };
+  // True when the chosen layout prints on a different paper than the template declares (e.g. an A4
+  // template sent through the Letter layout), which the server rejects with a paper-size error.
+  const paperMismatch = (() => {
+    if (preset === 'template-preferred') return null;
+    const resolvedTemplateId = templateId || templates?.defaultTemplateId || templates?.templates[0]?.id;
+    const tpl = (templates?.templates ?? []).find((candidate) => candidate.id === resolvedTemplateId);
+    if (!tpl?.prefersPaperPage) return null;
+    const templatePaper = tpl.paperSizeMm ?? null;
+    const layoutPaper = mmFromLayout(LABEL_LAYOUT_PRESETS[preset].layout);
+    if (!templatePaper || !layoutPaper) return null;
+    const same = Math.abs(templatePaper.width - layoutPaper.width) < 1 && Math.abs(templatePaper.height - layoutPaper.height) < 1;
+    if (same) return null;
+    return { template: formatPaper(templatePaper), layout: formatPaper(layoutPaper) };
+  })();
 
   const run = useCallback(
     async (skipRecordIds: Set<string>, overrideTemplateCode?: string) => {
@@ -157,11 +214,13 @@ export function LabelPrintDialog({
         ? expandAssetLabelCopies(selectedLabels, copiesPerAsset).map((subject) => ({ ...subject }))
         : selectedLabels;
       if (labels.length === 0) return;
+      const presetLayout = LABEL_LAYOUT_PRESETS[preset].layout;
       const result = await print({
         labelClass,
         labels,
         templateId: overrideTemplateCode ?? (templateId || undefined),
-        layout: LABEL_LAYOUT_PRESETS[preset].layout,
+        // `template-preferred` sends no layout: the server prints on the template's own paper.
+        ...(presetLayout !== null ? { layout: presetLayout } : {}),
         ...(isSingleTicket
           ? {
               overrides: {
@@ -201,6 +260,19 @@ export function LabelPrintDialog({
   }
 
   const failures: LabelPrintFailure[] = outcome?.status === 'failed' ? outcome.failures : [];
+  const localizedWorksheetError = (code?: LabelPrintErrorCode): string | null => {
+    if (code === 'worksheetPageSize') {
+      return t('labels.dialog.worksheetPageSizeError', {
+        defaultValue: 'The worksheet does not fit the selected print layout. Use "Template paper" or a layout on the same paper as the template.',
+      });
+    }
+    if (code === 'worksheetTextOverflow') {
+      return t('labels.dialog.worksheetTextOverflowError', {
+        defaultValue: 'This worksheet contains text that will not fit. Adjust the layout or shorten the content before printing.',
+      });
+    }
+    return null;
+  };
 
   const skipFailures = () => {
     const next = new Set(excluded);
@@ -218,6 +290,22 @@ export function LabelPrintDialog({
         labelClass === 'asset-identity'
           ? t('labels.dialog.assetTitle', { defaultValue: 'Print asset labels' })
           : t('labels.dialog.ticketTitle', { defaultValue: 'Print work tags' })
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button id={`${idPrefix}-cancel-button`} variant="outline" onClick={onClose}>
+            {t('actions.close', { defaultValue: 'Close' })}
+          </Button>
+          <Button
+            id={`${idPrefix}-submit-button`}
+            disabled={isPrinting || tooMany || ids.length === 0}
+            onClick={() => void run(excluded)}
+          >
+            {isPrinting
+              ? t('labels.dialog.printing', { defaultValue: 'Preparing…' })
+              : t('labels.dialog.print', { defaultValue: 'Print' })}
+          </Button>
+        </div>
       }
     >
       <DialogContent>
@@ -279,6 +367,21 @@ export function LabelPrintDialog({
               onValueChange={onPresetChange}
             />
           </div>
+
+          {/* A worksheet template declares a full-sheet page; a different paper cannot hold it, so say
+              so before the print fails with "does not fit on the label". */}
+          {paperMismatch && (
+            <Alert variant="warning">
+              <AlertDescription>
+                {t('labels.dialog.paperMismatchWarning', {
+                  defaultValue:
+                    'This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose "Template paper" or the matching full-sheet layout, or the content will not fit.',
+                  template: paperMismatch.template,
+                  layout: paperMismatch.layout,
+                })}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {isSingleTicket && (
             <>
@@ -355,6 +458,24 @@ export function LabelPrintDialog({
                       })}
                     </>
                   )}
+                  {outcome.missingImages > 0 && (
+                    <>
+                      {' '}
+                      {t('labels.dialog.missingImages', {
+                        defaultValue: '{{count}} images in the ticket descriptions could not be included. They are marked on the worksheets.',
+                        count: outcome.missingImages,
+                      })}
+                    </>
+                  )}
+                  {outcome.unavailableImages > 0 && (
+                    <>
+                      {' '}
+                      {t('labels.dialog.unavailableImages', {
+                        defaultValue: '{{count}} images in the ticket descriptions could not be read from storage. They are marked on the worksheets; try printing again later.',
+                        count: outcome.unavailableImages,
+                      })}
+                    </>
+                  )}
                   {outcome.popupBlocked && (
                     <>
                       {' '}
@@ -381,7 +502,10 @@ export function LabelPrintDialog({
                   <p>
                     {outcome.httpStatus === 404
                       ? t('labels.dialog.notFound', { defaultValue: 'These records could not be opened.' })
-                      : outcome.message ||
+                      : localizedWorksheetError(outcome.errorCode) ||
+                        (failures.some((failure) => failure.errorCode)
+                         ? t('labels.dialog.failed', { defaultValue: 'The labels could not be printed.' })
+                         : outcome.message) ||
                         t('labels.dialog.failed', { defaultValue: 'The labels could not be printed.' })}
                   </p>
                   {failures.length > 0 && (
@@ -389,7 +513,7 @@ export function LabelPrintDialog({
                       <ul className="list-disc pl-5">
                         {failures.map((f) => (
                           <li key={`${f.recordId}-${f.index}`}>
-                            <span className="font-medium">{f.identifier}</span>: {f.message}
+                            <span className="font-medium">{f.identifier}</span>: {localizedWorksheetError(f.errorCode) || f.message}
                             {f.suggestedTemplateCode && (
                               <Button
                                 id={`${idPrefix}-use-${f.recordId}`}
@@ -416,20 +540,6 @@ export function LabelPrintDialog({
             </Alert>
           )}
         </div>
-        <DialogFooter>
-          <Button id={`${idPrefix}-cancel-button`} variant="outline" onClick={onClose}>
-            {t('actions.close', { defaultValue: 'Close' })}
-          </Button>
-          <Button
-            id={`${idPrefix}-submit-button`}
-            disabled={isPrinting || tooMany || ids.length === 0}
-            onClick={() => void run(excluded)}
-          >
-            {isPrinting
-              ? t('labels.dialog.printing', { defaultValue: 'Preparing…' })
-              : t('labels.dialog.print', { defaultValue: 'Print' })}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

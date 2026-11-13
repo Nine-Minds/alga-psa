@@ -2,7 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { recordUrl, type LabelViewModel } from '@alga-psa/types';
 
 import { composeLabelSheets } from './composeLabelSheets';
-import { LabelLayoutError, planLabelBatch, resolveLabelBatchPdfOptions, type GridLayout } from './layout';
+import {
+  LabelLayoutError,
+  isWorksheetLabelTemplate,
+  labelMetadataPrefersPaperPage,
+  planLabelBatch,
+  resolveLabelBatchPdfOptions,
+  resolveTemplateDeclaredPageSizeMm,
+  resolveTemplatePreferredPageSizes,
+  resolveWorksheetDesignSizeMm,
+  WORKSHEET_MIN_WIDTH_MM,
+  type GridLayout,
+} from './layout';
 import { LabelRenderError, assertCanonicalLabelUrl } from './renderLabelBatchHtml';
 
 const grid = (overrides: Partial<GridLayout> = {}): GridLayout => ({
@@ -31,6 +42,82 @@ describe('planLabelBatch', () => {
       height: '50.8mm',
       preferCSSPageSize: true,
       margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+    });
+  });
+
+  describe('full-page worksheet geometry', () => {
+    const letter = { printSettings: { paperPreset: 'Letter' as const } };
+
+    it('uses the Letter preset when no custom page size is set', () => {
+      expect(resolveWorksheetDesignSizeMm('ticket-work-tag', letter)).toEqual({ widthMm: 215.9, heightMm: 279.4 });
+      expect(labelMetadataPrefersPaperPage(letter)).toBe(true);
+      expect(resolveTemplatePreferredPageSizes([{ labelClass: 'ticket-work-tag' as const, metadata: letter }])).toEqual({ width: 215.9, height: 279.4, unit: 'mm' });
+    });
+
+    it('accepts A4 by its own right: the gate is the A4 width floor, not a Letter comparison', () => {
+      const a4 = { printSettings: { paperPreset: 'A4' as const } };
+      expect(WORKSHEET_MIN_WIDTH_MM).toBe(210);
+      expect(resolveWorksheetDesignSizeMm('ticket-work-tag', a4)).toEqual({ widthMm: 210, heightMm: 297 });
+      expect(resolveTemplateDeclaredPageSizeMm(a4)).toEqual({ widthMm: 210, heightMm: 297 });
+      expect(isWorksheetLabelTemplate('ticket-work-tag', a4)).toBe(true);
+      expect(resolveTemplatePreferredPageSizes([{ labelClass: 'ticket-work-tag' as const, metadata: a4 }])).toEqual({ width: 210, height: 297, unit: 'mm' });
+      // A4 and Letter templates can share one auto-selected print run only when they agree on a page.
+      expect(resolveTemplatePreferredPageSizes([{ labelClass: 'ticket-work-tag' as const, metadata: a4 }, { labelClass: 'ticket-work-tag' as const, metadata: letter }])).toBeNull();
+    });
+
+    it('accepts equivalent Letter dimensions expressed in different units', () => {
+      const custom = {
+        ...letter,
+        printSettings: { paperPreset: 'Letter' as const, customPageSize: { width: 8.5, height: 11, unit: 'in' as const } },
+      };
+      expect(resolveTemplatePreferredPageSizes([{ labelClass: 'ticket-work-tag' as const, metadata: custom }, { labelClass: 'ticket-work-tag' as const, metadata: letter }])).toEqual(custom.printSettings.customPageSize);
+    });
+
+    it('accepts larger portrait pages but treats landscape and square designs as tags', () => {
+      expect(resolveWorksheetDesignSizeMm('ticket-work-tag', { printSettings: { paperPreset: 'Legal' } })).toEqual({ widthMm: 215.9, heightMm: 355.6 });
+      for (const width of [11, 12]) {
+        expect(resolveWorksheetDesignSizeMm('ticket-work-tag', {
+          printSettings: { customPageSize: { width, height: 11, unit: 'in' } },
+        })).toBeNull();
+      }
+    });
+
+    it('only treats ticket work tags as worksheets; other label classes on portrait paper stay fixed labels', () => {
+      const a4 = { printSettings: { paperPreset: 'A4' as const } };
+      for (const labelClass of ['asset-identity', 'stock-unit-identity', 'staging-container', 'rma-work-tag'] as const) {
+        expect(isWorksheetLabelTemplate(labelClass, letter)).toBe(false);
+        expect(isWorksheetLabelTemplate(labelClass, a4)).toBe(false);
+        expect(resolveWorksheetDesignSizeMm(labelClass, letter)).toBeNull();
+        // Without an explicit custom page there is no worksheet page to prefer: the default roll applies.
+        expect(resolveTemplatePreferredPageSizes([{ labelClass, metadata: letter }])).toBeNull();
+      }
+      expect(isWorksheetLabelTemplate(undefined, letter)).toBe(false);
+    });
+
+    it('treats missing, thermal and too-narrow page sizes as tags rather than exposing worksheet data', () => {
+      expect(resolveWorksheetDesignSizeMm('ticket-work-tag', undefined)).toBeNull();
+      expect(resolveWorksheetDesignSizeMm('ticket-work-tag', {})).toBeNull();
+      expect(resolveWorksheetDesignSizeMm('ticket-work-tag', {
+        printSettings: { paperPreset: 'Letter', customPageSize: { width: 4, height: 2, unit: 'in' } },
+      })).toBeNull();
+      // A5 (148 mm) is narrower than the A4 floor: a slip, not worksheet paper.
+      expect(resolveWorksheetDesignSizeMm('ticket-work-tag', {
+        printSettings: { customPageSize: { width: 148, height: 210, unit: 'mm' } },
+      })).toBeNull();
+    });
+
+    it('a custom ticket-work-tag template on tag-sized paper never claims the page: the caller keeps its default layout', () => {
+      // Regression guard for the template-preferred default in printLabels: a 2 x 1 in custom template
+      // must yield null so the batch falls back to the 4 x 2 in roll exactly as before the page-size rule.
+      const tagSized = { printSettings: { customPageSize: { width: 2, height: 1, unit: 'in' as const } } };
+      expect(isWorksheetLabelTemplate('ticket-work-tag', tagSized)).toBe(false);
+      expect(labelMetadataPrefersPaperPage(tagSized)).toBe(false);
+      expect(resolveTemplatePreferredPageSizes([{ labelClass: 'ticket-work-tag' as const, metadata: tagSized }])).toBeNull();
+      // Mixed batches are just as strict: one tag-sized template vetoes the whole preference.
+      expect(resolveTemplatePreferredPageSizes([
+        { labelClass: 'ticket-work-tag' as const, metadata: letter },
+        { labelClass: 'ticket-work-tag' as const, metadata: tagSized },
+      ])).toBeNull();
     });
   });
 
@@ -95,6 +182,16 @@ describe('composeLabelSheets', () => {
     expect(() => composeLabelSheets([cell(0, { widthMm: 101.6, heightMm: 50.8 })], grid({ labelWidth: 2.625, labelHeight: 1 }))).toThrow(
       /designed for/,
     );
+  });
+
+  it('refuses a flow page margin that is not a number from 0 to a quarter of the page', () => {
+    const a4 = { kind: 'one-per-page' as const, pageSize: { width: 210, height: 297, unit: 'mm' as const } };
+    const flow = (flowMarginMm: number) => ({ ...cell(0), flow: true, flowMarginMm });
+    expect(composeLabelSheets([flow(10)], a4).html).toContain('margin: 10mm');
+    expect(composeLabelSheets([flow(52.5)], a4).html).toContain('label-cell-flow');
+    for (const bad of [-1, Number.NaN, Number.POSITIVE_INFINITY, 52.6]) {
+      expect(() => composeLabelSheets([flow(bad)], a4)).toThrow(LabelLayoutError);
+    }
   });
 });
 

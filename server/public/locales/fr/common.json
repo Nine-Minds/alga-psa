@@ -1685,13 +1685,45 @@
       "skipFailures": "Ignorer ceux-ci et imprimer le reste",
       "skipped_one": "{{count}} enregistrement a été ignoré car il n'a pas pu être ouvert.",
       "skipped_other": "{{count}} enregistrements ont été ignorés car ils n'ont pas pu être ouverts.",
+      "missingImages_one": "{{count}} image des descriptions de tickets n'a pas pu être incluse. Elle est signalée sur la fiche.",
+      "missingImages_other": "{{count}} images des descriptions de tickets n'ont pas pu être incluses. Elles sont signalées sur les fiches.",
+      "unavailableImages_one": "{{count}} image des descriptions de tickets n'a pas pu être lue depuis le stockage. Elle est signalée sur la fiche ; réessayez l'impression plus tard.",
+      "unavailableImages_other": "{{count}} images des descriptions de tickets n'ont pas pu être lues depuis le stockage. Elles sont signalées sur les fiches ; réessayez l'impression plus tard.",
       "template": "Modèle",
       "ticketTitle": "Imprimer les étiquettes de travail",
       "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",
       "unnamedAsset": "Actif sans nom",
       "useTemplate": "Utiliser {{template}}",
       "copiesPerAsset": "Exemplaires par actif",
-      "adjacentCopies": "Les exemplaires de chaque actif sont imprimés ensemble."
+      "adjacentCopies": "Les exemplaires de chaque actif sont imprimés ensemble.",
+      "templatePaperWarning": "Ce modèle s'imprime sur une feuille entière. Choisissez « Papier du modèle » (ou une mise en page pleine feuille), sinon le contenu ne tiendra pas sur l'étiquette.",
+      "paperMismatchWarning": "Ce modèle est conçu pour du papier {{template}}, mais la mise en page sélectionnée imprime sur {{layout}}. Choisissez « Papier du modèle » ou la mise en page plein format correspondante, sinon le contenu ne tiendra pas.",
+      "worksheetPageSizeError": "La feuille de travail ne correspond pas à la mise en page d’impression sélectionnée. Utilisez « Papier du modèle » ou une mise en page utilisant le même papier que le modèle.",
+      "worksheetTextOverflowError": "Cette feuille de travail contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression."
+    },
+    "layout": {
+      "template-preferred": "Papier du modèle (par défaut)",
+      "roll-4x2": "Une par étiquette (rouleau 4 × 2 po)",
+      "letter-2x5": "Feuille Letter, 2 × 5 (style Avery 5163)",
+      "a4-2x7": "Feuille A4, 2 × 7 (style 99,1 × 38,1 mm)",
+      "a4-full": "Feuille A4, une par page",
+      "letter-full": "Feuille Letter, une par page"
+    },
+    "paper": {
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal",
+      "custom": "{{width}} × {{height}} mm"
+    },
+    "standardTemplates": {
+      "standard-ticket-work-tag": "Étiquette de travail de ticket standard",
+      "standard-asset-label": "Étiquette d’actif standard",
+      "standard-asset-label-code128": "Étiquette d’actif standard avec Code 128",
+      "standard-stock-unit-label": "Étiquette d’unité de stock standard",
+      "standard-staging-container-label": "Étiquette de conteneur de préparation standard",
+      "standard-rma-label": "Étiquette de retour RMA standard",
+      "standard-ticket-customer-worksheet-a4": "Feuille de travail client standard (A4)",
+      "standard-ticket-customer-worksheet": "Feuille de travail client standard"
     }
   },
   "deleteEntity": {

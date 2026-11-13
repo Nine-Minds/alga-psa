@@ -102,6 +102,7 @@ import {
   resolveDocumentFieldLabel,
 } from './fields/documentBindingCatalog';
 import { getTemplateFieldDefinition, getTemplateFieldDisplayFormats } from './fields/fieldCatalog';
+import { designerFieldTranslationKey } from './fields/fieldTranslationKey';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -2726,7 +2727,9 @@ export const DesignerShell: React.FC = () => {
                       >
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('designer.inspector.fieldTypeLabel', { defaultValue: 'Field Type' })}</p>
                         <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-field-type">
-                          {selectedFieldType.label}
+                          {t(designerFieldTranslationKey(selectedFieldType.bindingKey, 'label'), {
+                            defaultValue: selectedFieldType.label,
+                          })}
                         </p>
                         <p className="text-[11px] text-slate-500">{selectedFieldType.bindingKey || t('designer.inspector.noBindingKey', { defaultValue: 'No binding key set' })}</p>
                       </div>

@@ -28,14 +28,15 @@ vi.mock('../../lib/i18n/client', () => ({
       return s;
     },
   }),
+  useFormatters: () => ({ formatNumber: (value: number) => String(value) }),
 }));
 vi.mock('./useLabelPrint', () => ({
   useLabelPrint: () => ({ ...hook, isPrinting: false }),
 }));
 vi.mock('../Dialog', () => ({
-  Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => (isOpen ? <div>{children}</div> : null),
+  Dialog: ({ isOpen, children, footer }: { isOpen: boolean; children: React.ReactNode; footer?: React.ReactNode }) =>
+    isOpen ? <div>{children}<div data-testid="dialog-footer">{footer}</div></div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('../CustomSelect', () => ({
   default: ({ id, disabled, options }: { id: string; disabled?: boolean; options: Array<{ value: string; label: string }> }) => (
@@ -68,9 +69,19 @@ beforeEach(() => {
   hook.print.mockReset();
   hook.loadTemplates.mockResolvedValue({ defaultTemplateId: 'standard-ticket-work-tag', templates: [{ id: 'standard-ticket-work-tag', name: 'Ticket', source: 'standard' }] });
   hook.loadLinkedAssets.mockResolvedValue([]);
+  window.localStorage.removeItem('alga.labels.layout');
 });
 
 describe('LabelPrintDialog', () => {
+  it('places print and close actions in the dialog footer', () => {
+    const onClose = vi.fn();
+    render(<LabelPrintDialog isOpen onClose={onClose} labelClass="asset-identity" ids={[A]} />);
+    const footer = screen.getByTestId('dialog-footer');
+    expect(footer.contains(screen.getByText('Print'))).toBe(true);
+    fireEvent.click(screen.getByText('Close'));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('reports the skipped count after printing', async () => {
     hook.print.mockResolvedValue({ status: 'printed', printed: 2, skipped: 3, blobUrl: 'blob:x', popupBlocked: false });
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A, B]} />);
@@ -79,11 +90,51 @@ describe('LabelPrintDialog', () => {
     expect(screen.getByText(/3 records were skipped because they could not be opened\./)).toBeTruthy();
   });
 
+  it('says how many description images could not be printed, and stays quiet when all were', async () => {
+    hook.print.mockResolvedValueOnce({ status: 'printed', printed: 1, skipped: 0, missingImages: 2, blobUrl: 'blob:x', popupBlocked: false });
+    const { unmount } = render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(/2 images in the ticket descriptions could not be included\./)).toBeTruthy());
+    unmount();
+
+    hook.print.mockResolvedValueOnce({ status: 'printed', printed: 1, skipped: 0, missingImages: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(/Printed 1 label/)).toBeTruthy());
+    expect(screen.queryByText(/could not be included/)).toBeNull();
+  });
+
+  it('reports images that could not be read from storage separately from missing ones', async () => {
+    hook.print.mockResolvedValueOnce({ status: 'printed', printed: 1, skipped: 0, missingImages: 0, unavailableImages: 2, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(/2 images in the ticket descriptions could not be read from storage\./)).toBeTruthy());
+    expect(screen.queryByText(/could not be included/)).toBeNull();
+  });
+
   it('offers an Open PDF link when the popup was blocked', async () => {
     hook.print.mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: true });
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A]} />);
     fireEvent.click(screen.getByText('Print'));
     await waitFor(() => expect(screen.getByText('Open PDF')).toBeTruthy());
+  });
+
+  it('uses the tenant default template for the paper mismatch warning and formats custom paper sizes', async () => {
+    window.localStorage.setItem('alga.labels.layout', 'letter-full');
+    hook.loadTemplates.mockResolvedValue({
+      defaultTemplateId: 'tenant-default',
+      templates: [{
+        id: 'tenant-default',
+        name: 'Tenant worksheet',
+        source: 'custom',
+        prefersPaperPage: true,
+        paperSizeMm: { width: 300, height: 400 },
+      }],
+    });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    await waitFor(() => expect(document.body.textContent).toContain(
+      'This template is designed for 300 × 400 mm paper, but the selected layout prints on Letter.',
+    ));
   });
 
   it('lists 422 failures, and "Skip these" reprints without the failing records', async () => {
@@ -122,6 +173,42 @@ describe('LabelPrintDialog', () => {
     expect(missing.mock.calls.map(call => call[2]).filter(key =>
       key === 'labels.dialog.copiesPerAsset' || key === 'labels.dialog.adjacentCopies'
     )).toEqual([]);
+  });
+
+  it('names the ticket whose worksheet overflows, and "Skip these" reprints the rest', async () => {
+    hook.print
+      .mockResolvedValueOnce({
+        status: 'failed',
+        httpStatus: 422,
+        message: 'server fallback',
+        failures: [{ index: 1, recordId: B, identifier: 'TIC-2', templateCode: 'standard-ticket-customer-worksheet', message: 'server detail', errorCode: 'worksheetTextOverflow' }],
+      })
+      .mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A, B]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText('TIC-2')).toBeTruthy());
+    expect(screen.getByText(/This worksheet contains text that will not fit\./)).toBeTruthy();
+    expect(screen.queryByText('server fallback')).toBeNull();
+    expect(screen.queryByText(/server detail/)).toBeNull();
+    fireEvent.click(screen.getByText('Skip these and print the rest'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalledTimes(2));
+    expect(hook.print.mock.calls[1][0].labels).toEqual([{ recordId: A }]);
+  });
+
+  it('localizes worksheet page-size failures instead of showing the server fallback', async () => {
+    hook.print.mockResolvedValue({
+      status: 'failed',
+      httpStatus: 422,
+      message: 'server fallback',
+      failures: [{ index: 0, recordId: A, identifier: 'TIC-1', templateCode: 'custom', message: 'server detail', errorCode: 'worksheetPageSize' }],
+    });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(
+      /The worksheet does not fit the selected print layout/,
+    )).toBeTruthy());
+    expect(screen.queryByText('server fallback')).toBeNull();
+    expect(screen.queryByText(/server detail/)).toBeNull();
   });
 
   it('disables printing above the 200-label limit and says why', async () => {

@@ -1685,13 +1685,45 @@
       "skipFailures": "Salta questi e stampa il resto",
       "skipped_one": "{{count}} record è stato saltato perché non è stato possibile aprirlo.",
       "skipped_other": "{{count}} record sono stati saltati perché non è stato possibile aprirli.",
+      "missingImages_one": "Non è stato possibile includere {{count}} immagine delle descrizioni dei ticket. È segnalata sul foglio.",
+      "missingImages_other": "Non è stato possibile includere {{count}} immagini delle descrizioni dei ticket. Sono segnalate sui fogli.",
+      "unavailableImages_one": "Non è stato possibile leggere dall'archivio {{count}} immagine delle descrizioni dei ticket. È segnalata sul foglio; riprova a stampare più tardi.",
+      "unavailableImages_other": "Non è stato possibile leggere dall'archivio {{count}} immagini delle descrizioni dei ticket. Sono segnalate sui fogli; riprova a stampare più tardi.",
       "template": "Modello",
       "ticketTitle": "Stampa etichette di lavoro",
       "tooMany": "Puoi stampare al massimo {{max}} etichette alla volta.",
       "unnamedAsset": "Asset senza nome",
       "useTemplate": "Usa {{template}}",
       "copiesPerAsset": "Copie per asset",
-      "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme."
+      "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme.",
+      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli «Carta del modello» (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
+      "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli «Carta del modello» o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
+      "worksheetPageSizeError": "Il foglio di lavoro non corrisponde al layout di stampa selezionato. Usa «Carta del modello» o un layout con la stessa carta del modello.",
+      "worksheetTextOverflowError": "Questo foglio di lavoro contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
+    },
+    "layout": {
+      "template-preferred": "Carta del modello (predefinita)",
+      "roll-4x2": "Una per etichetta (rotolo 4 × 2 in)",
+      "letter-2x5": "Foglio Letter, 2 × 5 (stile Avery 5163)",
+      "a4-2x7": "Foglio A4, 2 × 7 (stile 99,1 × 38,1 mm)",
+      "a4-full": "Foglio A4, uno per pagina",
+      "letter-full": "Foglio Letter, uno per pagina"
+    },
+    "paper": {
+      "a4": "Foglio A4",
+      "letter": "Foglio Letter",
+      "legal": "Foglio Legal",
+      "custom": "{{width}} × {{height}} mm"
+    },
+    "standardTemplates": {
+      "standard-ticket-work-tag": "Etichetta standard attività ticket",
+      "standard-asset-label": "Etichetta standard asset",
+      "standard-asset-label-code128": "Etichetta standard asset con Code 128",
+      "standard-stock-unit-label": "Etichetta standard unità di magazzino",
+      "standard-staging-container-label": "Etichetta standard contenitore di preparazione",
+      "standard-rma-label": "Etichetta standard reso RMA",
+      "standard-ticket-customer-worksheet-a4": "Foglio di lavoro cliente standard (A4)",
+      "standard-ticket-customer-worksheet": "Foglio di lavoro cliente standard"
     }
   },
   "deleteEntity": {
