@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Unit: capability matrix for `co-managed-seat` across flag, entitlement, product code, participation and both `FORCE_CAPABILITIES` values, with `co-managed` unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
