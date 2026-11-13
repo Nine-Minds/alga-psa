@@ -339,22 +339,6 @@
       "minimumNoticeHours": {
         "label": "Minimalne powiadomienie (godziny)"
       },
-      "portalBooking": {
-        "title": "Rezerwacje w portalu klienta"
-      },
-      "portalHideContractServices": {
-        "label": "W portalu klienta pokazuj tylko skonfigurowane usługi dostępne do rezerwacji",
-        "help": "Ukrywa usługi, które klienci otrzymują ze swoich umów, więc portal pokazuje tylko usługi skonfigurowane w Regulaminie serwisu z opcją „Zezwalaj na rezerwację bez umowy”."
-      },
-      "portalDefaultService": {
-        "label": "Domyślna usługa rezerwacji",
-        "none": "Brak domyślnej — wybiera klient",
-        "help": "Jest wybierana z góry dla klientów, aby nigdy nie musieli wybierać usługi. Domyślna może być tylko usługa skonfigurowana w Regulaminie serwisu."
-      },
-      "portalShowServiceRates": {
-        "label": "Pokazuj klientom stawki usług",
-        "help": "Gdy ta opcja jest wyłączona, klienci nigdy nie widzą ceny usługi podczas rezerwacji."
-      },
       "actions": {
         "save": "Zapisz ustawienia ogólne"
       },
@@ -488,18 +472,37 @@
         "noLimit": "Bez limitu"
       },
       "actions": {
-        "save": "Zapisz Regulamin usługi"
+        "save": "Zapisz Regulamin usługi",
+        "savePortalBooking": "Zapisz ustawienia rezerwacji w portalu"
       },
       "feedback": {
         "selectServiceError": "Wybierz usługę",
         "saveSuccess": "Regulamin usługi został zapisany",
         "saveError": "Nie udało się zapisać reguł usługi",
         "deleteSuccess": "Reguły usługi zostały usunięte",
-        "deleteError": "Nie udało się usunąć reguł usługi"
+        "deleteError": "Nie udało się usunąć reguł usługi",
+        "portalBookingSaveSuccess": "Zapisano ustawienia rezerwacji w portalu klienta"
       },
       "deleteDialog": {
         "title": "Usuń reguły usługi",
         "message": "Czy na pewno chcesz usunąć reguły dla {{serviceName}}? Tej operacji nie można cofnąć."
+      },
+      "portalBooking": {
+        "title": "Rezerwacje w portalu klienta",
+        "description": "Co widzą klienci, gdy proszą o termin w portalu."
+      },
+      "portalHideContractServices": {
+        "label": "W portalu klienta pokazuj tylko skonfigurowane usługi dostępne do rezerwacji",
+        "help": "Ukrywa usługi, które klienci otrzymują ze swoich umów, więc portal pokazuje tylko usługi skonfigurowane powyżej z opcją „Zezwalaj na rezerwację bez umowy”."
+      },
+      "portalDefaultService": {
+        "label": "Domyślna usługa rezerwacji",
+        "none": "Brak domyślnej — wybiera klient",
+        "help": "Jest wybierana z góry dla klientów, aby nigdy nie musieli wybierać usługi. Wybierz jedną ze skonfigurowanych usług — dopóki tego nie zrobisz, nic nie jest wybrane z góry."
+      },
+      "portalShowServiceRates": {
+        "label": "Pokazuj klientom stawki usług",
+        "help": "Gdy ta opcja jest wyłączona, klienci nigdy nie widzą ceny usługi podczas rezerwacji."
       }
     },
     "exceptions": {

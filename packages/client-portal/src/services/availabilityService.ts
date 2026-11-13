@@ -779,7 +779,8 @@ export interface PortalBookingConfig {
 
 /**
  * Read the tenant-wide portal booking curation set by the MSP in the
- * General tab of Availability Settings.
+ * Service Rules tab of Availability Settings (stored on the general_settings
+ * row, which is tenant-wide rather than per-service).
  */
 export async function getPortalBookingConfig(
   tenantId: string

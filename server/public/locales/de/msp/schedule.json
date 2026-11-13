@@ -339,22 +339,6 @@
       "minimumNoticeHours": {
         "label": "Mindestbenachrichtigung (Stunden)"
       },
-      "portalBooking": {
-        "title": "Buchung im Kundenportal"
-      },
-      "portalHideContractServices": {
-        "label": "Im Kundenportal nur konfigurierte buchbare Services anzeigen",
-        "help": "Blendet die Services aus, die Kunden über ihre Verträge erhalten. Das Portal zeigt dann nur Services, die unter Serviceregeln mit „Buchung ohne Vertrag zulassen“ konfiguriert sind."
-      },
-      "portalDefaultService": {
-        "label": "Standard-Buchungsservice",
-        "none": "Kein Standard – Kunde wählt aus",
-        "help": "Wird für Kunden vorausgewählt, damit sie keinen Service auswählen müssen. Nur unter Serviceregeln konfigurierte Services können der Standard sein."
-      },
-      "portalShowServiceRates": {
-        "label": "Servicesätze für Kunden anzeigen",
-        "help": "Wenn deaktiviert, sehen Kunden bei der Buchung nie einen Preis für einen Service."
-      },
       "actions": {
         "save": "Allgemeine Einstellungen speichern"
       },
@@ -488,18 +472,37 @@
         "noLimit": "Keine Begrenzung"
       },
       "actions": {
-        "save": "Serviceregeln speichern"
+        "save": "Serviceregeln speichern",
+        "savePortalBooking": "Portal-Buchungseinstellungen speichern"
       },
       "feedback": {
         "selectServiceError": "Bitte wählen Sie eine Dienstleistung aus",
         "saveSuccess": "Serviceregeln gespeichert",
         "saveError": "Dienstregeln konnten nicht gespeichert werden",
         "deleteSuccess": "Serviceregeln gelöscht",
-        "deleteError": "Serviceregeln konnten nicht gelöscht werden"
+        "deleteError": "Serviceregeln konnten nicht gelöscht werden",
+        "portalBookingSaveSuccess": "Buchungseinstellungen für das Kundenportal gespeichert"
       },
       "deleteDialog": {
         "title": "Serviceregeln löschen",
         "message": "Möchten Sie die Regeln für {{serviceName}} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "portalBooking": {
+        "title": "Buchung im Kundenportal",
+        "description": "Was Kunden sehen, wenn sie im Portal einen Termin anfragen."
+      },
+      "portalHideContractServices": {
+        "label": "Im Kundenportal nur konfigurierte buchbare Services anzeigen",
+        "help": "Blendet die Services aus, die Kunden über ihre Verträge erhalten. Das Portal zeigt dann nur die oben konfigurierten Services mit „Buchung ohne Vertrag zulassen“."
+      },
+      "portalDefaultService": {
+        "label": "Standard-Buchungsservice",
+        "none": "Kein Standard – Kunde wählt aus",
+        "help": "Wird für Kunden vorausgewählt, damit sie keinen Service auswählen müssen. Wählen Sie einen Ihrer konfigurierten Services – bis dahin wird nichts vorausgewählt."
+      },
+      "portalShowServiceRates": {
+        "label": "Servicesätze für Kunden anzeigen",
+        "help": "Wenn deaktiviert, sehen Kunden bei der Buchung nie einen Preis für einen Service."
       }
     },
     "exceptions": {

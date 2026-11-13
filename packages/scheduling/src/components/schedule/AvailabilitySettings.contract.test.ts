@@ -15,13 +15,21 @@ describe('AvailabilitySettings portal booking contract', () => {
     expect(source).toMatch(/\{\(canDeleteSystemSettings \|\| isManager\) && \([\s\S]{0,400}id=\{`delete-user-\$\{user\.user_id\}`\}/);
   });
 
-  it('exposes all three MSP-owned portal booking controls on the General tab', () => {
-    expect(source).toContain('id="portal-hide-contract-services"');
-    expect(source).toContain('id="portal-default-service"');
-    expect(source).toContain('id="portal-show-service-rates"');
-    expect(source).toContain('options={portalDefaultServiceOptions}');
+  it('exposes all three MSP-owned portal booking controls on the Service Rules tab', () => {
+    const serviceRulesTab = source.slice(
+      source.indexOf('<TabsContent value="service-rules"'),
+      source.indexOf('<TabsContent value="exceptions"'),
+    );
+    expect(serviceRulesTab).toContain('id="portal-hide-contract-services"');
+    expect(serviceRulesTab).toContain('id="portal-default-service"');
+    expect(serviceRulesTab).toContain('id="portal-show-service-rates"');
+    expect(serviceRulesTab).toContain('options={portalDefaultServiceOptions}');
+    // Saving them writes the general_settings row these three live on.
+    expect(serviceRulesTab).toMatch(/id="save-portal-booking"[\s\S]{0,300}handleSaveGeneralSettings\(/);
     // Clearable: the empty row removes the default again.
-    expect(source).toContain("{ value: '', label: t('availabilitySettings.general.portalDefaultService.none'");
+    expect(source).toContain("{ value: '', label: t('availabilitySettings.serviceRules.portalDefaultService.none'");
+    // They moved off the General tab, so nothing competes across tabs.
+    expect(source).not.toContain("t('availabilitySettings.general.portalBooking.title'");
   });
 
   it('persists every portal key in the wholesale general config_json', () => {
