@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "description": "DB integration: a ticket with ten legacy internal notes shows a seat technician none of them, in the conversation, the activity list, attachments and search.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F044",

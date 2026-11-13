@@ -5,7 +5,8 @@ import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
-  audiencesVisibleTo, commentAudienceVisibleSql, resolveCommentAudienceReader, type CommentAudienceReader,
+  audiencesVisibleTo, commentAudienceSql, isCommentAudience, isCommentAudienceVisible, resolveCommentAudienceReader,
+  type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
@@ -366,17 +367,18 @@ function tenantScopedRoot<Row extends object>(
 
 /** The live audience check: the shared predicate for `reader`, over the comment as stored now. */
 async function commentVisibleToReader(knex: Knex, user: SearchAclPrincipal, commentId: string, reader: CommentAudienceReader | null): Promise<boolean> {
-  const query = tenantScopedRoot<{ comment_id: string }>(knex, user, 'comments as c');
-  const scoped = tenantDb(knex, user.tenant ?? SEARCH_ACL_MISSING_TENANT);
+  if (!reader || !user.tenant) return false;
+  const query = tenantScopedRoot<{ audience: string | null; client_id: string | null }>(knex, user, 'comments as c');
+  const scoped = tenantDb(knex, user.tenant);
   scoped.tenantJoin(query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
   scoped.tenantJoin(query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
   scoped.tenantJoin(query, 'tickets as t', 't.ticket_id', 'c.ticket_id', { type: 'left' });
   const found = await query
-    .select('c.comment_id')
+    .select('t.client_id', knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
     .where('c.comment_id', commentId)
-    .whereRaw('?', [commentAudienceVisibleSql(knex, reader, { thread: 'ct', root: 'rc', comment: 'c', ownerTenant: 'c.tenant', ownerClient: 't.client_id' })])
     .first();
-  return Boolean(found);
+  return isCommentAudience(found?.audience)
+    && isCommentAudienceVisible(found.audience, { tenant: user.tenant, clientId: found.client_id }, reader);
 }
 
 /**

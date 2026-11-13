@@ -338,7 +338,7 @@
   {
     "id": "F043",
     "description": "Attachments and inline images are readable by a seat technician only when their parent comment's audience is visible to them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "Ticket activity and audit entries shown to a seat technician omit events about private notes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "F045",
     "description": "Search indexing and its access check carry the audience, so a seat technician's search never returns private note text.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
