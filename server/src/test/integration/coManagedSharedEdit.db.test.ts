@@ -29,6 +29,7 @@ vi.mock('../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: asy
 import {
   escalateCoManagedTicket,
   getCoManagedTicketScreen,
+  listCoManagedCustomerTickets,
   handBackCoManagedTicket,
   type CoManagedSessionActor,
   type CoManagedSharedResource,
@@ -116,6 +117,25 @@ describeDb('co-managed screen state and shared edit on real Postgres', { shuffle
     expect(s.summary.fields.explicit_grant_active).toBe(false);
     expect(s.canEscalate).toBe(true);
     expect(s.canHandBack).toBe(false);
+  });
+
+  it('redacts organization names in list and detail envelopes using relationship policy', async () => {
+    const organization = (await db('tenants').where({ tenant: customer }).first('client_name')).client_name;
+    const visibleList = await listCoManagedCustomerTickets(db, tech);
+    expect(visibleList.rows.find(row => row.resource.id === ticketId)?.customerName).toBe(organization);
+    expect((await screen(tech)).customerName).toBe(organization);
+
+    for (const redactedFields of [['client_name'], ['tenants'], ['*']]) {
+      await db('co_management_relationships').where({ tenant: customer, relationship_id: relationshipId }).update({ redacted_fields: redactedFields });
+      const list = await listCoManagedCustomerTickets(db, tech);
+      const serializedList = JSON.stringify(list);
+      expect(serializedList).not.toContain(organization);
+      expect(list.rows.find(row => row.resource.id === ticketId)?.customerName).toBe('');
+      const detail = await screen(tech);
+      expect(JSON.stringify(detail)).not.toContain(organization);
+      expect(detail.customerName).toBe('');
+    }
+    await db('co_management_relationships').where({ tenant: customer, relationship_id: relationshipId }).update({ redacted_fields: [] });
   });
 
   it('after escalation responsibility is msp and the MSP can hand back; the customer can take back', async () => {
