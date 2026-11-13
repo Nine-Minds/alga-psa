@@ -343,3 +343,14 @@ PREVIEW_CACHE_MAX_SIZE=5368709120  # 5GB in bytes
 - Corrupted cache detection
 - Automatic recovery
 - Fallback mechanisms
+
+## Upload size limit
+
+There is one per-file limit: the default storage provider's `maxFileSize`, set with `STORAGE_LOCAL_MAX_FILE_SIZE` or `STORAGE_S3_MAX_FILE_SIZE` (default 500 MiB, `DEFAULT_MAX_FILE_SIZE_BYTES` in `packages/storage/src/config/storage.ts`). The server enforces it in upload validation and the ingest pipeline and fails with `UploadSizeLimitError` (413). The browser learns it only from the `maxFileSize` field of the upload-session API.
+
+The Next body caps in `server/next.config.mjs` are transport limits, not file limits:
+
+- `serverActions.bodySizeLimit` (`SERVER_ACTIONS_BODY_LIMIT`, default 26mb): Next answers 413 past it.
+- `proxyClientMaxBodySize` (100mb): Next truncates silently past it, so `server/src/middleware/bodySizeGuard.ts` answers 413 on a declared `Content-Length` over the cap.
+
+A provider's `getCapabilities().maxFileSize` is the backing store's ceiling, clamped to the configured limit.
