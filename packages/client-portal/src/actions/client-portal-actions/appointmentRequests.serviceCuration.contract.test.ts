@@ -48,7 +48,10 @@ describe('Portal appointment service curation contract', () => {
     expect(actionsSource).toContain('default_service_id: string | null;');
     expect(actionsSource).toContain('const defaultServiceId = bookingConfig.defaultServiceId');
     expect(actionsSource).toContain('servicesMap.has(bookingConfig.defaultServiceId)');
-    expect(actionsSource).toContain('services.length === 1\n        ? services[0].service_id\n        : null');
+    // Only the MSP's configured default preselects: a tenant that happens to
+    // have one bookable service must not have it chosen on its behalf.
+    expect(actionsSource).toContain('? bookingConfig.defaultServiceId\n      : null;');
+    expect(actionsSource).not.toContain('services.length === 1');
     // Still numeric so a $0 rate can be hidden; the rate-visibility gate that
     // now wraps both fields is asserted by the withholding test below.
     expect(actionsSource).toContain('Number(s.default_rate ?? 0)');

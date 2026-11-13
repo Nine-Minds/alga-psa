@@ -1587,7 +1587,7 @@ export const getAvailableServicesAndTickets = withAuth(async (
 
     const clientId = contact.client_id;
 
-    // The MSP curates this menu in Availability Settings → General.
+    // The MSP curates this menu in Availability Settings → Service Rules.
     const bookingConfig = await getPortalBookingConfig(tenant);
 
     // Get available services for the client from two sources:
@@ -1641,14 +1641,14 @@ export const getAvailableServicesAndTickets = withAuth(async (
 
     const services = Array.from(servicesMap.values());
 
-    // Preselect a service so clients never have to choose: the MSP default when
-    // it survived the filter, otherwise the only service on offer.
+    // Only the MSP's own choice preselects a service. A tenant that happens to
+    // have a single bookable service is not a decision anybody made, so "No
+    // default" leaves the client to pick rather than silently locking in
+    // whatever one service exists.
     const defaultServiceId = bookingConfig.defaultServiceId
       && servicesMap.has(bookingConfig.defaultServiceId)
       ? bookingConfig.defaultServiceId
-      : services.length === 1
-        ? services[0].service_id
-        : null;
+      : null;
 
     // Get open tickets for the client
     const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {

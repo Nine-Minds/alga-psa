@@ -25,17 +25,22 @@ describe('RequestAppointmentModal service step contract', () => {
     expect(source).toContain("resolveUnitOfMeasure({ catalog: { label: selectedService.unit_of_measure }, fallback: 'HUR' }).label");
   });
 
-  it('preselects the MSP default (or the only) service without clearing an edit', () => {
+  it('preselects only the MSP default, without clearing an edit', () => {
     expect(source).toContain('getAvailableServicesAndTickets(editingAppointment?.service_id)');
     expect(source).toContain('setSelectedServiceId(prev =>');
-    expect(source).toContain("prev || data.default_service_id || (data.services.length === 1 ? data.services[0].service_id : '')");
+    expect(source).toContain("prev || data.default_service_id || ''");
+    // A lone service is nobody's decision: it must not stand in for a default.
+    expect(source).not.toContain('data.services.length === 1 ? data.services[0].service_id');
   });
 
-  it('drops the picker entirely when there is a single service to book', () => {
-    // Not `> 1`: an empty list keeps its (empty) picker rather than vanishing.
-    expect(source).toContain('{services.length !== 1 && (');
-    expect(source).toMatch(/\{services\.length !== 1 && \([\s\S]{0,400}id="appointment-service-select"/);
+  it('drops the picker only when the MSP default is the single service', () => {
+    expect(source).toContain('!!mspDefaultServiceId');
+    expect(source).toContain('services[0].service_id === mspDefaultServiceId');
+    expect(source).toContain('{!serviceChosenByMsp && (');
+    expect(source).toMatch(/\{!serviceChosenByMsp && \([\s\S]{0,400}id="appointment-service-select"/);
     expect(source).toContain('id="appointment-service-readonly"');
-    expect(source).toContain("services.length === 1 ? t('step1.preselectedServiceNotice') : t('step1.description')");
+    expect(source).toContain("serviceChosenByMsp ? t('step1.preselectedServiceNotice') : t('step1.description')");
+    // Without an MSP default the client still picks, even from a list of one.
+    expect(source).not.toContain('{services.length !== 1 && (');
   });
 });
