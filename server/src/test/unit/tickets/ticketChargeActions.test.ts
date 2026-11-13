@@ -180,23 +180,41 @@ describe('ticket fixed-fee actions', () => {
     expect(mocks.movement).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['read', () => listTicketFixedFeeServices(ticketId), 'read'],
-    ['add', () => addTicketFixedFeeService(input), 'update'],
-    ['edit', () => updateTicketFixedFeeService(entryId, { quantity: 3, description: '' }), 'update'],
-    ['remove', () => deleteTicketFixedFeeService(entryId), 'update'],
-  ] as const)('checks record-level access before it can %s fixed-fee charges', async (_name, action, access) => {
+  it('checks record-level access before it can read fixed-fee charges', async () => {
     mocks.recordAccess.mockRejectedValue(new TicketRecordAccessDeniedError());
-    expect(await action()).toHaveProperty('permissionError');
+    expect(await listTicketFixedFeeServices(ticketId)).toHaveProperty('permissionError');
     expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
       tenant: 'tenant-a',
       user: expect.anything(),
       ticketId,
-      action: access,
+      action: 'read',
     }));
-    expect(tables.ticket_fixed_fee_services.insert).not.toHaveBeenCalled();
-    expect(tables.ticket_fixed_fee_services.update).not.toHaveBeenCalled();
-    expect(tables.ticket_fixed_fee_services.delete).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['add', () => addTicketFixedFeeService(input), 'tickets', 'features/tickets:fixedFeeServices.errors.ticketMissing'],
+    ['edit', () => updateTicketFixedFeeService(entryId, { quantity: 3, description: '' }), 'ticket_fixed_fee_services', 'features/tickets:chargeEdit.errors.notEditable'],
+    ['remove', () => deleteTicketFixedFeeService(entryId), 'ticket_fixed_fee_services', 'features/tickets:fixedFeeServices.errors.cannotDelete'],
+  ] as const)('reports an inaccessible record like a missing one before it can %s fixed-fee charges', async (_name, action, lookupTable, messageKey) => {
+    const entries = tables.ticket_fixed_fee_services;
+    mocks.recordAccess.mockRejectedValue(new TicketRecordAccessDeniedError());
+    const denied = await action();
+    expect(denied).not.toHaveProperty('permissionError');
+    expect(denied).toHaveProperty('messageKey', messageKey);
+    expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-a',
+      user: expect.anything(),
+      ticketId,
+      action: 'update',
+    }));
+    expect(entries.insert).not.toHaveBeenCalled();
+    expect(entries.update).not.toHaveBeenCalled();
+    expect(entries.delete).not.toHaveBeenCalled();
+
+    mocks.recordAccess.mockClear();
+    tables[lookupTable] = query(undefined);
+    expect(await action()).toEqual(denied);
+    expect(mocks.recordAccess).not.toHaveBeenCalled();
   });
 
   it.each([0, -1, 1.5, 2147483648, NaN])('rejects invalid quantity %s', async (quantity) => {
