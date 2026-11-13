@@ -125,7 +125,7 @@ export function builtinResolverFactsExpression(
   const sources = builtinResolverFactSources();
   if (sources.length === 0) return null;
   return knex.raw(
-    `jsonb_build_object(${sources.map(() => '?::text, (?)').join(', ')})`,
+    `jsonb_build_object(${sources.map(() => '?::text, ?').join(', ')})`,
     sources.flatMap(({ id, facts }) => [id, facts.subjectFacts(knex, subject)])
   );
 }
