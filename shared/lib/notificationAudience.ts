@@ -246,3 +246,60 @@ export function readNotificationAudience(tokenMetadata: unknown): CommentAudienc
   const audience = (metadata as Record<string, unknown>)[NOTIFICATION_AUDIENCE_TOKEN_KEY];
   return isCommentAudience(audience) ? audience : null;
 }
+
+/** What to do with an email reply, once its sender is known to be an internal user. */
+export type InboundReplyAudience =
+  /** Not a seat technician: the native reply rules stand. */
+  | { seat: false }
+  /** A seat technician with no access to this ticket: nothing is stored. */
+  | { seat: true; admitted: false }
+  /**
+   * A seat technician, in scope. The reply is stored with `audience`, written as `author`. It
+   * joins the thread it answers only while that thread still has this audience; otherwise it
+   * starts a new thread, so a later audience change never widens what the technician wrote.
+   */
+  | { seat: true; admitted: true; author: CommentAudienceReader; audience: CommentAudience; joinThread: boolean };
+
+/**
+ * The audience of a seat technician's email reply: the audience of the notification they answered.
+ *
+ *   - `notificationAudience` is what the reply token recorded when the notification was sent
+ *     (`NOTIFICATION_AUDIENCE_TOKEN_KEY`). A reply matched by thread headers has none and takes
+ *     the audience of the thread it answers; with no thread it is a new `requester` comment, as
+ *     an email reply to a ticket has always been.
+ *   - An audience the technician may not write (a private or legacy internal thread they were
+ *     never notified of) is never used: the reply becomes a new `shared_it` thread, the narrowest
+ *     audience their organization has.
+ *
+ * The write itself is still decided by `assertCommentWriteAudience` in the comment writer; this
+ * only chooses what to ask it for.
+ */
+export async function resolveInboundReplyAudience(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  input: { ticketId: string; userId: string; threadId?: string | null; notificationAudience?: CommentAudience | null },
+): Promise<InboundReplyAudience> {
+  const recipient = await resolveTicketNotificationRecipient(trx, tenant, { ticketId: input.ticketId }, { userId: input.userId });
+  if (!recipient.seat) return { seat: false };
+  if (!recipient.reader || !recipientInScope(recipient)) return { seat: true, admitted: false };
+
+  let threadAudience: CommentAudience | null = null;
+  if (input.threadId) {
+    const db = tenantDb(trx, tenant);
+    const query = db.table('comment_threads as t').where('t.thread_id', input.threadId).where('t.ticket_id', input.ticketId);
+    db.tenantJoin(query, 'comments as root', 't.root_comment_id', 'root.comment_id', { type: 'left' });
+    const thread = await query.first({
+      collaboration_audience: 't.collaboration_audience', is_internal: 't.is_internal',
+      root_comment_id: 'root.comment_id', root_is_internal: 'root.is_internal',
+    });
+    threadAudience = thread ? resolveCommentAudienceForRead({
+      collaboration_audience: thread.collaboration_audience,
+      is_internal: thread.is_internal,
+      root_is_internal: thread.root_comment_id ? thread.root_is_internal : undefined,
+    }) : 'organization_private';
+  }
+
+  const intended = input.notificationAudience ?? threadAudience ?? 'requester';
+  const audience = recipientMayReceive(recipient, intended) ? intended : 'shared_it';
+  return { seat: true, admitted: true, author: recipient.reader, audience, joinThread: threadAudience === audience };
+}
