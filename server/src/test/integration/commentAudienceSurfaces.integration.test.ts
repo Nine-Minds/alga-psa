@@ -275,7 +275,7 @@ describe('comment audience in attachments, activity and search (integration)', (
     for (const userId of [mspUser, seatUser]) {
       const reader = await resolveCommentAudienceReader(knex, tenant, { userId, userType: 'internal' });
       const expected = rows.filter(row => isCommentAudienceVisible(resolveCommentAudienceForRead(row), { tenant, clientId }, reader)).map(row => row.comment_id);
-      const actual = (await Comment.getAllbyTicketId(knex, tenant, ticketId, userId)).map(c => c.comment_id);
+      const actual = (await Comment.getAllbyTicketId(knex, tenant, ticketId, userId)).map(c => c.comment_id as string);
       expect(sorted(actual)).toEqual(sorted(expected));
     }
   });
