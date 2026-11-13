@@ -179,13 +179,15 @@ export const runAccountingSyncNow = withAuth(async (
   return result;
 });
 
+export type InvoiceSyncRefusalReason = 'not_found' | 'paid' | 'cancelled';
+
 /** Queue a single invoice for (re-)export on the next cycle. */
 export const queueInvoiceSync = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
   selection?: AccountingIntegrationSelection
-): Promise<{ queued: boolean; error?: string; opId?: string }> => {
+): Promise<{ queued: boolean; error?: string; reason?: InvoiceSyncRefusalReason; opId?: string }> => {
   assertEnterpriseEdition();
   await checkExportsExecuteAccess(user);
   const { knex } = await createTenantKnex();
@@ -204,11 +206,12 @@ export const queueInvoiceSync = withAuth(async (
     .where({ invoice_id: invoiceId })
     .first('status');
   if (!invoice) {
-    return { queued: false, error: 'Invoice not found.' };
+    return { queued: false, error: 'Invoice not found.', reason: 'not_found' };
   }
   if (isInvoiceSyncBlockedStatus(invoice.status)) {
     return {
       queued: false,
+      reason: invoice.status === 'paid' ? 'paid' : 'cancelled',
       error: invoice.status === 'paid'
         ? 'Paid invoices are not synced to the accounting provider.'
         : 'Voided or cancelled invoices are not synced to the accounting provider.'
@@ -644,14 +647,21 @@ export const getErroredSyncOperations = withAuth(async (
       ? db.table('invoices').whereIn('invoice_id', invoiceIds).select('invoice_id', 'invoice_number', 'invoice_type')
       : Promise.resolve([] as any[]),
     billIds.length
-      ? db.table('vendor_bills').whereIn('bill_id', billIds).select('bill_id', 'bill_number')
+      // vendor_bills is not in the tenantDb table registry (vendorBillExportActions
+      // also reads it through raw knex), so scope by tenant explicitly.
+      ? knex('vendor_bills').where({ tenant }).whereIn('bill_id', billIds).select('bill_id', 'bill_number')
       : Promise.resolve([] as any[]),
-    invoiceIds.length
+    invoiceIds.length + billIds.length
       ? db.tenantJoin(db.table('accounting_export_lines as line'), 'accounting_export_batches as batch', 'line.batch_id', 'batch.batch_id')
           .where({ 'batch.adapter_type': adapterType, 'batch.target_realm': realm })
-          .whereIn('line.invoice_id', invoiceIds)
+          // Lines reference documents generically (document_id); export_type keeps
+          // invoice and vendor-bill documents apart.
+          .where((q: any) =>
+            q.where((inv: any) => inv.where('batch.export_type', 'invoice').whereIn('line.document_id', invoiceIds))
+              .orWhere((bill: any) => bill.where('batch.export_type', 'vendor_bill').whereIn('line.document_id', billIds))
+          )
           .orderBy('batch.created_at', 'desc')
-          .select('line.invoice_id', 'batch.batch_id', 'batch.export_type', 'batch.queued_at')
+          .select('line.document_id', 'batch.batch_id', 'batch.export_type', 'batch.queued_at')
       : Promise.resolve([] as any[])
   ]);
 
@@ -659,7 +669,8 @@ export const getErroredSyncOperations = withAuth(async (
   const bills = new Map<string, any>(billRows.map((r: any) => [r.bill_id, r]));
   const latestBatch = new Map<string, any>();
   for (const row of batchRows as any[]) {
-    if (!latestBatch.has(row.invoice_id)) latestBatch.set(row.invoice_id, row);
+    const key = `${row.export_type}:${row.document_id}`;
+    if (!latestBatch.has(key)) latestBatch.set(key, row);
   }
 
   return ops.map((op): ErroredSyncOperationRow => {
@@ -670,10 +681,11 @@ export const getErroredSyncOperations = withAuth(async (
       const invoice = invoices.get(op.alga_entity_id);
       entityKind = invoice?.invoice_type === 'credit_note' || op.operation === 'export_credit_memo' ? 'credit_memo' : 'invoice';
       displayName = invoice?.invoice_number ?? null;
-      batch = latestBatch.get(op.alga_entity_id) ?? null;
+      batch = latestBatch.get(`invoice:${op.alga_entity_id}`) ?? null;
     } else if (op.alga_entity_type === 'vendor_bill') {
       entityKind = 'vendor_bill';
       displayName = bills.get(op.alga_entity_id)?.bill_number ?? null;
+      batch = latestBatch.get(`vendor_bill:${op.alga_entity_id}`) ?? null;
     }
     // LEVERAGE: pattern sync-entity-display-name — other op entity types (client, service, credit_application,
     // invoice_payment, ...) have no resolver here; they render a generic placeholder, never the ID.

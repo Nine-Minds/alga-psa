@@ -6,11 +6,12 @@ const tenantDbMock = vi.hoisted(() => vi.fn());
 const listErroredMock = vi.hoisted(() => vi.fn());
 const enqueueMock = vi.hoisted(() => vi.fn());
 const getByIdMock = vi.hoisted(() => vi.fn());
+const batchSelectMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: unknown) => fn }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  createTenantKnex: vi.fn(async () => ({ knex: (name: string) => builder(currentTables[name] ?? []) })),
   tenantDb: tenantDbMock,
   writeAccountingAudit: vi.fn(async () => undefined)
 }));
@@ -39,13 +40,16 @@ const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 function builder(rows: unknown[]): any {
   const b: any = {};
-  for (const m of ['where', 'whereIn', 'select', 'orderBy', 'join']) b[m] = () => b;
+  for (const m of ['where', 'whereIn', 'orderBy', 'join', 'orWhere']) b[m] = () => b;
+  b.select = (...cols: string[]) => { batchSelectMock(cols); return b; };
   b.first = async () => rows[0];
   b.then = (resolve: (v: unknown[]) => unknown) => Promise.resolve(rows).then(resolve);
   return b;
 }
 
+let currentTables: Record<string, unknown[]> = {};
 function mockTables(tables: Record<string, unknown[]>) {
+  currentTables = tables;
   tenantDbMock.mockImplementation(() => ({
     table: (name: string) => builder(tables[name.split(' ')[0]] ?? []),
     tenantJoin: (b: unknown) => b
@@ -68,6 +72,7 @@ describe('queueInvoiceSync status guard', () => {
     const result = await (queueInvoiceSync as any)(USER, { tenant: TENANT }, 'inv-1');
     expect(result.queued).toBe(false);
     expect(result.error).toBeTruthy();
+    expect(result.reason).toBe(status);
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
@@ -103,14 +108,18 @@ describe('getErroredSyncOperations', () => {
     mockTables({
       invoices: [{ invoice_id: 'bbbbbbbb-0000-0000-0000-000000000001', invoice_number: 'INV-26-10-000002', invoice_type: 'standard' }],
       vendor_bills: [{ bill_id: 'bill-1', bill_number: 'BILL-9' }],
-      accounting_export_lines: [{ invoice_id: 'bbbbbbbb-0000-0000-0000-000000000001', batch_id: 'batch-1', export_type: 'invoice', queued_at: '2026-01-02' }]
+      accounting_export_lines: [{ document_id: 'bbbbbbbb-0000-0000-0000-000000000001', export_type: 'invoice', batch_id: 'batch-1', queued_at: '2026-01-02' },
+        { document_id: 'bill-1', export_type: 'vendor_bill', batch_id: 'batch-2', queued_at: '2026-01-03' }]
     });
     const rows = await (getErroredSyncOperations as any)(USER, { tenant: TENANT }, { preferredAdapterType: 'quickbooks_online' });
 
     expect(listErroredMock).toHaveBeenCalledWith(TENANT, 'quickbooks_online', 'realm-1', expect.anything());
     expect(rows.map((r: any) => r.displayName)).toEqual(['INV-26-10-000002', null, 'BILL-9', null]);
+    expect(batchSelectMock).toHaveBeenCalledWith(expect.arrayContaining(['line.document_id']));
+    expect(batchSelectMock.mock.calls.flat(2)).not.toContain('line.invoice_id');
     expect(rows[0].batchId).toBe('batch-1');
     expect(rows[1].batchId).toBeNull();
+    expect(rows[2].batchId).toBe('batch-2');
     for (const r of rows) {
       expect(r.displayName ?? '').not.toMatch(UUID_RE);
     }

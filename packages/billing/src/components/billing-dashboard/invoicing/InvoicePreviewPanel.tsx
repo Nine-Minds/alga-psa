@@ -623,9 +623,14 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     return;
                   }
                   if (!queued.queued || !queued.opId) {
+                    const refusal: Record<string, string> = {
+                      not_found: t('invoicePreview.syncFeedback.refusedNotFound', { defaultValue: 'Invoice not found.' }),
+                      paid: t('invoicePreview.syncFeedback.refusedPaid', { provider, defaultValue: 'Paid invoices are not synced to {{provider}}.' }),
+                      cancelled: t('invoicePreview.syncFeedback.refusedCancelled', { provider, defaultValue: 'Voided or cancelled invoices are not synced to {{provider}}.' }),
+                    };
                     setSyncActionFeedback({
                       type: 'error',
-                      message: queued.error ?? t('invoicePreview.syncFeedback.unknown', { provider, defaultValue: 'Could not determine whether the invoice was synced to {{provider}}.' })
+                      message: (queued.reason && refusal[queued.reason]) ?? queued.error ?? t('invoicePreview.syncFeedback.unknown', { provider, defaultValue: 'Could not determine whether the invoice was synced to {{provider}}.' })
                     });
                     return;
                   }

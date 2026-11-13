@@ -92,6 +92,18 @@ describe('InvoicePreviewPanel Sync to <provider> button', () => {
     expect(runMock).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['paid', 'Paid invoices are not synced to QuickBooks.'],
+    ['cancelled', 'Voided or cancelled invoices are not synced to QuickBooks.'],
+    ['not_found', 'Invoice not found.'],
+  ])('renders the localized message for refusal reason %s', async (reason, message) => {
+    queueMock.mockResolvedValue({ queued: false, reason, error: 'raw english from server' });
+    renderPanel('sent');
+    await clickSync();
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.queryByText('raw english from server')).toBeNull();
+  });
+
   it('reports a cycle that did not run, never success', async () => {
     runMock.mockResolvedValue({ ran: false, status: 'skipped', error: 'Another cycle is running' });
     renderPanel('sent');

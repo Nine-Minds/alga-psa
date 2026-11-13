@@ -12,8 +12,8 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { getErroredSyncOperations } from '../../actions/accountingSyncActions';
 import type { ErroredSyncOperationRow } from '../../actions/accountingSyncActions';
 
-// There is no per-batch route; Billing > Accounting Exports (tab) is the batch surface.
-const ACCOUNTING_EXPORTS_HREF = '/msp/billing?tab=accounting-exports';
+// Accounting Exports opens the batch's detail/errors dialog from the batchId query parameter.
+const batchHref = (batchId: string) => `/msp/billing?tab=accounting-exports&batchId=${encodeURIComponent(batchId)}`;
 
 interface ErroredSyncOpsDialogProps {
   isOpen: boolean;
@@ -80,7 +80,7 @@ export default function ErroredSyncOpsDialog({ isOpen, onClose, adapterType, rea
       dataIndex: 'batchId',
       render: (_: unknown, row: ErroredSyncOperationRow) =>
         row.batchId ? (
-          <Link id={`errored-sync-op-batch-link-${row.opId}`} href={ACCOUNTING_EXPORTS_HREF} className="underline">
+          <Link id={`errored-sync-op-batch-link-${row.opId}`} href={batchHref(row.batchId)} className="underline">
             {t('integrations.qbo.sync.erroredOpsBatchLink', { batch: row.batchLabel ?? '', defaultValue: 'View {{batch}} batch' })}
           </Link>
         ) : null

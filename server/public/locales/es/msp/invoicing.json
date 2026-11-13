@@ -836,6 +836,9 @@
   },
   "invoicePreview": {
     "syncFeedback": {
+      "refusedNotFound": "Invoice not found.",
+      "refusedPaid": "Paid invoices are not synced to {{provider}}.",
+      "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}.",
       "synced": "Invoice synced to {{provider}}.",
       "failed": "{{provider}} sync failed: {{reason}}",
       "failedNoReason": "{{provider}} sync failed. Check the Errored ops list on the accounting integration page.",
