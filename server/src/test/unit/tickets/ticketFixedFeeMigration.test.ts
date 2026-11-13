@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 const migration = require('../../../../migrations/20261113000000_create_ticket_fixed_fee_services.cjs');
 const originalMigration = require('../../../../migrations/20261028193400_create_ticket_fixed_fee_services.cjs');
 
-function migrationDatabase(citus: boolean, existingConstraints: string[] = []) {
+function migrationDatabase(citus: boolean, existingConstraints: string[] = [], tableExists = false) {
   const constraints = new Set(existingConstraints);
   const distributed = new Set(['tenants', 'tickets', 'service_catalog']);
   const statements: string[] = [];
@@ -19,7 +19,7 @@ function migrationDatabase(citus: boolean, existingConstraints: string[] = []) {
       return { rows: [] };
     }
     if (sql.includes('pg_constraint')) {
-      events.push('check-constraint');
+      events.push(`check-constraint:${bindings[0]}`);
       return { rows: [{ present: constraints.has(bindings[0]) }] };
     }
     if (sql.includes('pg_extension')) return { rows: [{ has_citus: citus }] };
@@ -37,7 +37,11 @@ function migrationDatabase(citus: boolean, existingConstraints: string[] = []) {
     }
     throw new Error(`Unexpected migration SQL: ${sql}`);
   });
-  return { knex: { schema: { hasTable: vi.fn().mockResolvedValue(true) }, raw }, constraints, events, statements };
+  const schema = {
+    hasTable: vi.fn(async () => tableExists),
+    createTable: vi.fn(async () => { tableExists = true; }),
+  };
+  return { knex: { schema, raw }, constraints, events, statements };
 }
 
 describe.each([
@@ -63,11 +67,11 @@ describe.each([
   });
 
   it('distributes first and removes an incompatible Citus foreign key on retry', async () => {
-    const db = migrationDatabase(true, ['ticket_fixed_fee_client_fk']);
+    const db = migrationDatabase(true, ['ticket_fixed_fee_tenant_fk', 'ticket_fixed_fee_client_fk'], true);
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       await migrationUnderTest.up(db.knex);
-      expect(db.events.indexOf('distribute')).toBeLessThan(db.events.indexOf('check-constraint'));
+      expect(db.events.indexOf('distribute')).toBeLessThan(db.events.indexOf('check-constraint:ticket_fixed_fee_client_fk'));
       expect(db.constraints).toEqual(new Set([
         'ticket_fixed_fee_tenant_fk',
         'ticket_fixed_fee_ticket_fk',
@@ -105,5 +109,16 @@ describe('renamed ticket fixed-fee migration rollback', () => {
     const db = rollbackDatabase(false);
     await migration.down(db.knex);
     expect(db.dropTable).toHaveBeenCalledWith('ticket_fixed_fee_services');
+  });
+});
+
+describe('renamed ticket fixed-fee migration on existing tables', () => {
+  it('fails before changing an existing table if its tenant foreign key is missing', async () => {
+    const db = migrationDatabase(true, [], true);
+    await expect(migration.up(db.knex)).rejects.toThrow(
+      'Existing ticket_fixed_fee_services table is missing ticket_fixed_fee_tenant_fk',
+    );
+    expect(db.events).not.toContain('distribute');
+    expect(db.statements).toEqual([]);
   });
 });
