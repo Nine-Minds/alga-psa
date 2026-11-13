@@ -20,7 +20,7 @@ describe('Employee Utilization report wiring', () => {
     expect(source).toContain("category: 'operations'");
     expect(source).toContain("minimumTier: 'pro'");
     expect(source).toContain("selectedReportId === 'employee-utilization' ? (");
-    expect(source).toContain('<EmployeeUtilizationView range={range} />');
+    expect(source).toContain('<EmployeeUtilizationView range={range} onWindowLoaded={setLoadedWindow} />');
   });
 
   it('handles the loading and error states of the report action', () => {
@@ -30,7 +30,7 @@ describe('Employee Utilization report wiring', () => {
     expect(view).toContain('if (!report) return <LoadingReport />;');
     // The effect re-runs per range — preset or custom — and drops results from
     // a stale one.
-    expect(view).toContain('}, [range, t]);');
+    expect(view).toContain('}, [range, t, onWindowLoaded]);');
     expect(view).toContain('cancelled = true;');
   });
 
@@ -38,10 +38,15 @@ describe('Employee Utilization report wiring', () => {
     expect(source).toContain('<DateRangePicker');
     expect(source).toContain('customRange.from && customRange.to');
     expect(source).toContain('formatLocalYMD(customRange.from)');
+    // A complete span the report cannot cover is checked, not sent.
+    expect(source).toContain('checkReportDateRange(picked');
+    expect(source).toContain('customPick && !customPick.problem ? customPick.range : rangeDays');
     // Clicking a preset clears the custom span rather than leaving two filters on.
     expect(source).toContain("setCustomRange({ from: undefined, to: undefined });");
-    // The subtitle labels a custom span by its bounds, not as "last N days".
+    // The subtitle labels a custom span by its bounds, not as "last N days",
+    // and the header follows the window the server echoed once it has one.
     expect(source).toContain("t('reportsPage.dateRange.customRange'");
+    expect(source).toContain('loadedWindow ??');
   });
 
   it('renders capacity-aware metrics, including employees without capacity', () => {

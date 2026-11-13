@@ -45,7 +45,7 @@ describe('employee utilization report tenant-scoped query contract', () => {
     const section = employeeUtilizationSection();
 
     expect(section).toContain('SELECT CURRENT_DATE::text AS today');
-    expect(section).toContain('buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate, reportWindow.range)');
+    expect(section).toContain('buildEmployeeUtilizationReport(inputRows, reportWindow.rangeDays, rangeEndDate, reportWindow.range)');
   });
 
   it('restricts the roster to active internal users and windows time entries by calendar day', () => {
@@ -55,21 +55,23 @@ describe('employee utilization report tenant-scoped query contract', () => {
     expect(section).toContain("where('is_inactive', false)");
     // Explicit work_date boundaries, so the numerator covers exactly the
     // rangeDays calendar days the capacity denominator is prorated over.
-    expect(section).toContain("where('work_date', '>=', knex.raw(`CURRENT_DATE - INTERVAL '${reportWindow.rangeDays - 1} days'`))");
+    expect(section).toContain("where('work_date', '>=', knex.raw('CURRENT_DATE - ?::int', [reportWindow.rangeDays - 1]))");
     expect(section).toContain("where('work_date', '<=', knex.raw('CURRENT_DATE'))");
     expect(section).not.toContain("where('start_time'");
   });
 
-  it('binds a custom window and clamps its end to the database date', () => {
+  it('binds a custom window that was already clamped to the viewer\'s today', () => {
     const section = employeeUtilizationSection();
 
+    // The window is pinned to the viewer's calendar (and cut off at today)
+    // before any query runs.
+    expect(section).toContain('await windowForViewer(knex, tenant, user, requestedWindow)');
     // Caller-supplied dates are parameters, never spliced into the SQL text.
     expect(section).toContain("whereRaw('work_date >= ?::date', [reportWindow.range.from])");
-    expect(section).toContain("whereRaw('work_date <= LEAST(?::date, CURRENT_DATE)', [reportWindow.range.to])");
+    expect(section).toContain("whereRaw('work_date <= ?::date', [reportWindow.range.to])");
     expect(section).not.toMatch(/work_date\s*[<>]=?\s*'?\$\{reportWindow\.range/);
-    // The day count follows the clamped end, so capacity cannot be prorated
-    // over days the worked-hours numerator never reached.
-    expect(section).toContain('inclusiveDayCount(reportWindow.range.from, rangeEndDate)');
+    // Capacity is counted back from the same (clamped) end the numerator uses.
+    expect(section).toContain('? reportWindow.range.to');
   });
 
   it('reads one capacity row per user rather than aggregating duplicates', () => {
@@ -81,6 +83,6 @@ describe('employee utilization report tenant-scoped query contract', () => {
 
   it('delegates utilization math to the pure builder', () => {
     const section = employeeUtilizationSection();
-    expect(section).toContain('return buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate, reportWindow.range);');
+    expect(section).toContain('return buildEmployeeUtilizationReport(inputRows, reportWindow.rangeDays, rangeEndDate, reportWindow.range);');
   });
 });

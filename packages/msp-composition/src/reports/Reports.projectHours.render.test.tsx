@@ -35,8 +35,11 @@ const stubT = (_key: string, options?: Record<string, any>) => {
 };
 const stubTranslation = { t: stubT };
 
+const stubFormatters = { formatCalendarDate: (day: string) => day };
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => stubTranslation,
+  useFormatters: () => stubFormatters,
 }));
 
 // The real range picker reaches for DateTimeField's i18n hooks, which the stub
