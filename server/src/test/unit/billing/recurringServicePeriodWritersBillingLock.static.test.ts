@@ -6,6 +6,8 @@ const repoRoot = path.resolve(__dirname, '../../../../..');
 const SOURCE_ROOTS = ['packages', 'shared', 'server/src', 'ee/server/src', 'ee/packages', 'services'];
 const SKIPPED_DIRS = new Set(['node_modules', 'dist', '.next', '__tests__', 'test', 'tests']);
 const WRITE = /\.(insert|update|delete|del)\(/;
+const INVOICE_SERVICE = 'packages/billing/src/services/invoiceService.ts';
+const INVOICE_GENERATION = 'packages/billing/src/actions/invoiceGeneration.ts';
 // A query on the table reaches its write call within this many lines.
 const WRITE_WINDOW = 15;
 
@@ -40,8 +42,49 @@ describe('recurring_service_periods writers', () => {
 
     expect(writers.length).toBeGreaterThanOrEqual(7);
     const unlocked = writers.filter(
-      (file) => !fs.readFileSync(path.join(repoRoot, file), 'utf8').includes('lockTenantBilling('),
+      (file) => file !== INVOICE_SERVICE
+        && !fs.readFileSync(path.join(repoRoot, file), 'utf8').includes('lockTenantBilling('),
     );
     expect(unlocked).toEqual([]);
+  });
+
+  // invoiceService claims periods without locking: taking the lock again would
+  // add statements to every invoice run for nothing. That holds only while its
+  // two claim functions are reached solely through the locked generation path.
+  it('reach the invoice period claims only from locked invoice generation', () => {
+    const callers = SOURCE_ROOTS
+      .flatMap((root) => sourceFiles(path.join(repoRoot, root)))
+      .filter((file) => path.relative(repoRoot, file) !== INVOICE_SERVICE)
+      .filter((file) => /\b(persistInvoiceCharges|claimRecurringServicePeriodsForSelectionInputs)\(/
+        .test(fs.readFileSync(file, 'utf8')))
+      .map((file) => path.relative(repoRoot, file));
+    expect(callers).toEqual([INVOICE_GENERATION]);
+
+    const generation = fs.readFileSync(path.join(repoRoot, INVOICE_GENERATION), 'utf8');
+    const section = (from: string, to: string) => generation.split(from)[1].split(to)[0];
+
+    // The transaction takes the lock before anything else runs in it.
+    const entry = section(
+      'export async function generateInvoiceForNormalizedSelectionInputs(',
+      'async function generateInvoiceForLockedSelectionInputs(',
+    );
+    expect(entry.indexOf('await lockTenantBilling(trx, params.tenant);')).toBeGreaterThan(-1);
+    expect(entry.indexOf('await lockTenantBilling(trx, params.tenant);'))
+      .toBeLessThan(entry.indexOf('generateInvoiceForLockedSelectionInputs('));
+
+    // Recurring invoices are created only inside that transaction...
+    const locked = section(
+      'async function generateInvoiceForLockedSelectionInputs(',
+      'export const generateInvoiceForSelectionInputs',
+    );
+    expect(generation.match(/createInvoiceFromBillingResultImpl\(/g)).toHaveLength(3);
+    expect(locked.match(/createInvoiceFromBillingResultImpl\(/g)).toHaveLength(2);
+    expect(generation.match(/generateInvoiceForLockedSelectionInputs\(/g)).toHaveLength(2);
+
+    // ...and the session-bound wrapper only ever creates project invoices,
+    // which claim no recurring period.
+    const wrapperCalls = generation.split('await createInvoiceFromBillingResult(').slice(1);
+    expect(wrapperCalls).toHaveLength(2);
+    for (const call of wrapperCalls) expect(call.split(');')[0]).toContain('{ projectId }');
   });
 });
