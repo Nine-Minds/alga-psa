@@ -66,7 +66,12 @@ function query(row?: Record<string, unknown>, rows: Record<string, unknown>[] = 
     forUpdate: vi.fn(() => builder),
     forShare: vi.fn(() => builder),
     select: vi.fn(() => builder),
-    first: vi.fn(async () => requiredVersion && requiredVersion !== row?.updated_at ? undefined : row),
+    first: vi.fn(async (...columns: unknown[]) => {
+      if (requiredVersion && requiredVersion !== row?.updated_at) return undefined;
+      const versionCheck = columns.find((column): column is { versionCheck: string } =>
+        typeof column === 'object' && column !== null && 'versionCheck' in column);
+      return row && versionCheck ? { ...row, version_matches: versionCheck.versionCheck === row.updated_at } : row;
+    }),
     insert: vi.fn(async () => 1),
     update: vi.fn(async () => 1),
     then: (resolve: (value: Record<string, unknown>[]) => unknown, reject: (error: unknown) => unknown) =>
@@ -75,8 +80,11 @@ function query(row?: Record<string, unknown>, rows: Record<string, unknown>[] = 
   return builder;
 }
 let tables: Record<string, ReturnType<typeof query>>;
+// The validation version check is a raw select expression; the claim is a raw UPDATE.
 const transaction = (rows: Array<{ source_id: string }> = [{ source_id: 'fee-a' }]) => {
-  const raw = vi.fn(async () => ({ rows }));
+  const raw = vi.fn((sql: string, bindings: unknown[] = []) => (sql.includes('AS version_matches')
+    ? { versionCheck: String(bindings[0]) }
+    : Promise.resolve({ rows })));
   return { trx: { raw } as unknown as Knex.Transaction, raw };
 };
 beforeEach(() => {
@@ -112,7 +120,9 @@ beforeEach(() => {
 
 describe('ticket fixed-fee quick invoice selection', () => {
   it('creates a fee-only invoice with catalog name fallback and an exact source version', async () => {
-    await generateTicketInvoice({ ticketId: 'ticket-a', timeEntryIds: [], materialIds: [], fixedFeeIds: ['fee-a', 'fee-a'] });
+    await generateTicketInvoice({
+      ticketId: 'ticket-a', timeEntryIds: [], materialIds: [], fixedFeeIds: ['fee-a', 'fee-a'], sourceVersions: { 'fee-a': version },
+    });
     expect(mocks.generate).toHaveBeenCalledWith({
       clientId: 'client-a', ticket_id: 'ticket-a', currency_code: 'USD',
       items: [{
@@ -131,8 +141,14 @@ describe('ticket fixed-fee quick invoice selection', () => {
   it('lists same-currency fees and reports exclusions', async () => {
     tables['ticket_fixed_fee_services as f'] = query(undefined, [{ ...fee }, { ...fee, entry_id: 'fee-eur', currency_code: 'EUR' }]);
     expect(await getTicketBillableItems('ticket-a')).toMatchObject({
-      fixedFeeItems: [{ id: 'fee-a', quantity: 2, rate: 2500, amount: 5000 }],
+      fixedFeeItems: [{ id: 'fee-a', quantity: 2, rate: 2500, amount: 5000, version }],
       excludedFixedFeeCount: 1,
+    });
+    expect(tables['ticket_fixed_fee_services as f'].where).toHaveBeenCalledWith({
+      'f.ticket_id': 'ticket-a', 'f.client_id': 'client-a', 'f.is_billed': false,
+    });
+    expect(tables['ticket_materials as tm'].where).toHaveBeenCalledWith({
+      'tm.ticket_id': 'ticket-a', 'tm.client_id': 'client-a', 'tm.is_billed': false,
     });
     expect(mocks.recordAccess).toHaveBeenCalledWith(expect.objectContaining({
       tenant: 'tenant-a', ticketId: 'ticket-a', action: 'read',
@@ -158,8 +174,18 @@ describe('ticket fixed-fee quick invoice selection', () => {
   it('rejects currency mismatch', async () => {
     tables['ticket_fixed_fee_services as f'] = query(undefined, [{ ...fee, currency_code: 'EUR' }]);
     expect(await generateTicketInvoice({
-      ticketId: 'ticket-a', timeEntryIds: [], materialIds: [], fixedFeeIds: ['fee-a'],
+      ticketId: 'ticket-a', timeEntryIds: [], materialIds: [], fixedFeeIds: ['fee-a'], sourceVersions: { 'fee-a': version },
     })).toMatchObject({ success: false, code: 'SOURCE_CURRENCY_MISMATCH' });
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['older than the stored entry', { 'fee-a': '2026-10-27 12:00:00.123455+00' }],
+  ])('rejects a selection whose reviewed version is %s', async (_case, sourceVersions) => {
+    expect(await generateTicketInvoice({
+      ticketId: 'ticket-a', timeEntryIds: [], materialIds: [], fixedFeeIds: ['fee-a'], sourceVersions,
+    })).toMatchObject({ success: false, code: 'SOURCE_CHANGED', params: { recordId: 'fee-a' } });
+    expect(mocks.generate).not.toHaveBeenCalled();
   });
 
   it('requires billing create permission', async () => {
@@ -235,12 +261,78 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
         message: expect.stringContaining('changed or was already billed'),
       });
     });
+
+    // Evaluates the claim's VALUES bindings against seeded rows, so the
+    // version/billed/tenant predicates decide the outcome rather than a stub.
+    const seededClaim = (seeded: Array<Record<string, unknown>>) => {
+      const raw = vi.fn(async (sql: string, bindings: unknown[]) => {
+        expect(sql).toMatch(/WHERE source\.tenant = \?/);
+        expect(sql).toContain('source.updated_at = requested.source_updated_at');
+        expect(sql).toContain('source.is_billed = FALSE');
+        const [invoiceId, , updatedAt] = bindings;
+        const tenant = bindings.at(-1);
+        const values = bindings.slice(3, -1);
+        const rows: Array<{ source_id: string }> = [];
+        for (let index = 0; index < values.length; index += 7) {
+          const [sourceId, sourceUpdatedAt, clientId, serviceId, quantity, rate, currencyCode] = values.slice(index, index + 7);
+          const row = seeded.find((candidate) => candidate.entry_id === sourceId && candidate.tenant === tenant &&
+            candidate.updated_at === sourceUpdatedAt && candidate.is_billed === false &&
+            candidate.client_id === clientId && candidate.service_id === serviceId &&
+            candidate.quantity === quantity && candidate.rate === rate && candidate.currency_code === currencyCode);
+          if (!row) continue;
+          Object.assign(row, { is_billed: true, billed_invoice_id: invoiceId, updated_at: updatedAt });
+          rows.push({ source_id: String(sourceId) });
+        }
+        return { rows };
+      });
+      return { trx: { raw } as unknown as Knex.Transaction, raw };
+    };
+    const persistSeeded = (trx: Knex.Transaction) => persistInvoiceCharges(
+      trx, 'invoice-a', [{ ...charge }],
+      { client_id: 'client-a', tax_region: 'client-region' },
+      { user: { id: 'user-a' } } as never, 'tenant-a',
+    );
+
+    it('claims a seeded fee whose stored version still matches the calculated charge', async () => {
+      const row = { ...fee, tenant: 'tenant-a' };
+      expect(await persistSeeded(seededClaim([row]).trx)).toBe(5000);
+      expect(row).toMatchObject({ is_billed: true, billed_invoice_id: 'invoice-a' });
+    });
+
+    it.each([
+      ['edited after calculation', { updated_at: '2026-10-27 12:00:00.123457+00' }],
+      ['already billed', { is_billed: true }],
+      ['owned by another tenant', { tenant: 'tenant-b' }],
+      ['repriced after calculation', { rate: 3000 }],
+    ])('rejects a seeded fee that was %s without claiming it', async (_case, changes) => {
+      const row = { ...fee, tenant: 'tenant-a', ...changes };
+      const before = { ...row };
+      await expect(persistSeeded(seededClaim([row]).trx)).rejects.toMatchObject({ code: 'SOURCE_CHANGED' });
+      expect(row).toEqual(before);
+    });
   });
 
   it('rejects stale microsecond versions, including description-only edits', async () => {
     await expect(persist({ ...link, updatedAt: '2026-10-27 12:00:00.123455+00' })).rejects.toMatchObject({
       code: 'SOURCE_CHANGED',
     });
+    expect(tables.invoice_charges.insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects a source link without a loaded version', async () => {
+    await expect(persist({ ...link, updatedAt: '' })).rejects.toMatchObject({ code: 'SOURCE_CHANGED' });
+    await expect(persist({ kind: 'ticket_material', materialId: 'material-a', updatedAt: '' }))
+      .rejects.toMatchObject({ code: 'SOURCE_CHANGED' });
+    expect(tables.invoice_charges.insert).not.toHaveBeenCalled();
+  });
+
+  it('applies the exact stored material rate the claim requires', async () => {
+    tables.ticket_materials = query({
+      ticket_material_id: 'material-a', ticket_id: 'ticket-a', client_id: 'client-a',
+      service_id: 'service-a', quantity: 2, rate: 2500.4, currency_code: 'USD', updated_at: version,
+    });
+    await expect(persist({ kind: 'ticket_material', materialId: 'material-a', updatedAt: version }))
+      .rejects.toMatchObject({ code: 'SOURCE_NOT_ELIGIBLE' });
     expect(tables.invoice_charges.insert).not.toHaveBeenCalled();
   });
 
@@ -276,13 +368,32 @@ describe('manual invoice fixed-fee and edited material source lifecycle', () => 
 });
 
 describe('scheduled ticket fixed-fee calculation', () => {
+  const taxInfo = vi.fn();
+  const clientRegion = vi.fn();
   const calculate = async () => {
     const engine = BillingEngine.forTransaction({ raw: (sql: string) => sql } as never, 'tenant-a');
-    Reflect.set(engine, 'getTaxInfoFromService', vi.fn(async () => ({ taxRegion: 'service-region', isTaxable: true })));
+    Reflect.set(engine, 'getTaxInfoFromService', taxInfo);
+    Reflect.set(engine, 'getClientDefaultTaxRegionCode', clientRegion);
     const method = Reflect.get(engine, 'calculateTicketFixedFeeCharges');
     if (typeof method !== 'function') throw new Error('Ticket fixed-fee calculator is missing');
     return method.call(engine, 'client-a', { startDate: '2026-10-01', endDate: '2026-11-01' }, 'USD');
   };
+  beforeEach(() => {
+    taxInfo.mockReset().mockResolvedValue({ taxRegion: 'service-region', isTaxable: true });
+    clientRegion.mockReset().mockResolvedValue('client-region');
+  });
+
+  it('resolves tax info once per service and the client default region once per run', async () => {
+    taxInfo.mockResolvedValue({ taxRegion: null, isTaxable: true });
+    tables['ticket_fixed_fee_services as f'] = query(undefined, [
+      { ...fee }, { ...fee, entry_id: 'fee-b' }, { ...fee, entry_id: 'fee-c', service_id: 'service-b' },
+    ]);
+    const charges = await calculate();
+    expect(charges).toHaveLength(3);
+    expect(charges.every((charge: IFixedPriceCharge) => charge.tax_region === 'client-region')).toBe(true);
+    expect(taxInfo).toHaveBeenCalledTimes(2);
+    expect(clientRegion).toHaveBeenCalledTimes(1);
+  });
 
   it('calculates quantity times catalog price, taxes, and exact provenance before the end-exclusive boundary', async () => {
     expect(await calculate()).toEqual([expect.objectContaining({

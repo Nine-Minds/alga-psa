@@ -154,7 +154,11 @@ export default function QuickInvoiceTicketDialog({
         .map((item) => item.id);
 
       const fixedFeeIds = fixedFeeItems.filter((item) => selectedKeys.has(`fixed:${item.id}`)).map((item) => item.id);
-      const result = await generateTicketInvoice({ ticketId, timeEntryIds, materialIds, fixedFeeIds });
+      // Send the versions the user reviewed so an entry edited since loading is rejected, not billed.
+      const sourceVersions = Object.fromEntries([...materialItems, ...fixedFeeItems]
+        .filter((item) => materialIds.includes(item.id) || fixedFeeIds.includes(item.id))
+        .map((item) => [item.id, item.version]));
+      const result = await generateTicketInvoice({ ticketId, timeEntryIds, materialIds, fixedFeeIds, sourceVersions });
 
       if (result.success) {
         setCreatedInvoiceId(result.invoice.invoice_id);
@@ -335,9 +339,9 @@ export default function QuickInvoiceTicketDialog({
                 <section>
                   <h3 className="mb-2 text-sm font-semibold text-[rgb(var(--color-text-800))]">{t('quickInvoice.fixedFeeServices')}</h3>
                   <div className="divide-y divide-[rgb(var(--color-border-200))] rounded-md border border-[rgb(var(--color-border-200))]">
-                    {fixedFeeItems.map((item, index) => (
+                    {fixedFeeItems.map((item) => (
                       <label key={item.id} className="flex cursor-pointer items-center gap-3 px-3 py-2">
-                        <Checkbox id={`${id}-fixed-fee-${index}-checkbox`} data-entry-id={item.id}
+                        <Checkbox id={`quick-invoice-fixed-fee-${item.id}`}
                           checked={selectedKeys.has(`fixed:${item.id}`)} onChange={() => toggle(`fixed:${item.id}`)} skipRegistration />
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm text-[rgb(var(--color-text-900))]">{item.description || item.serviceName}</div>

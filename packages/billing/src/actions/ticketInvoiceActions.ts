@@ -69,6 +69,8 @@ export interface TicketBillableMaterialItem {
   rate: number;
   amount: number;
   description: string | null;
+  /** `updated_at::text` as loaded; echoed back so generation bills only the reviewed version. */
+  version: string;
 }
 
 export interface TicketBillableFixedFeeItem extends Omit<TicketBillableMaterialItem, 'kind'> {
@@ -102,6 +104,11 @@ export interface GenerateTicketInvoiceInput {
   timeEntryIds: string[];
   materialIds: string[];
   fixedFeeIds?: string[];
+  /**
+   * Loaded `version` of every selected product and fixed-fee entry, keyed by
+   * id. A missing or different version rejects the invoice as SOURCE_CHANGED.
+   */
+  sourceVersions?: Record<string, string>;
 }
 
 export type GenerateTicketInvoiceResult = ManualInvoiceResult;
@@ -240,7 +247,7 @@ export const getTicketBillableItems = withAuth(async (
     const materialQuery = db.table('ticket_materials as tm');
     db.tenantJoin(materialQuery, 'service_catalog as sc', 'sc.service_id', 'tm.service_id', { type: 'left' });
     const materialRows = await materialQuery
-      .where({ 'tm.ticket_id': ticketId, 'tm.is_billed': false })
+      .where({ 'tm.ticket_id': ticketId, 'tm.client_id': ticket.client_id, 'tm.is_billed': false })
       .orderBy('tm.created_at', 'asc')
       .select(
         'tm.ticket_material_id',
@@ -250,6 +257,7 @@ export const getTicketBillableItems = withAuth(async (
         'tm.description',
         'tm.currency_code',
         'sc.service_name',
+        knex.raw('tm.updated_at::text as source_updated_at'),
       );
 
     const timeItems: TicketBillableTimeItem[] = timeRows.map((row: any) => {
@@ -273,15 +281,17 @@ export const getTicketBillableItems = withAuth(async (
     const fixedFeeQuery = db.table('ticket_fixed_fee_services as f');
     db.tenantJoin(fixedFeeQuery, 'service_catalog as sc', 'sc.service_id', 'f.service_id');
     const fixedFeeRows = await fixedFeeQuery
-      .where({ 'f.ticket_id': ticketId, 'f.is_billed': false })
+      .where({ 'f.ticket_id': ticketId, 'f.client_id': ticket.client_id, 'f.is_billed': false })
       .orderBy('f.created_at', 'asc')
-      .select('f.entry_id', 'f.service_id', 'f.quantity', 'f.rate', 'f.description', 'f.currency_code', 'sc.service_name');
+      .select('f.entry_id', 'f.service_id', 'f.quantity', 'f.rate', 'f.description', 'f.currency_code', 'sc.service_name',
+        knex.raw('f.updated_at::text as source_updated_at'));
     const fixedFeeItems: TicketBillableFixedFeeItem[] = fixedFeeRows
       .filter((row) => row.currency_code === currencyCode)
       .map((row) => ({
         kind: 'ticket_fixed_fee', id: row.entry_id, serviceId: row.service_id,
         serviceName: row.service_name, quantity: Number(row.quantity), rate: Number(row.rate),
         amount: Number(row.quantity) * Number(row.rate), description: row.description,
+        version: row.source_updated_at,
       }));
     const eligibleMaterials = materialRows.filter((row: any) => row.currency_code === currencyCode);
     const materialItems: TicketBillableMaterialItem[] = eligibleMaterials.map((row: any) => {
@@ -296,6 +306,7 @@ export const getTicketBillableItems = withAuth(async (
         rate,
         amount: Math.round(quantity * rate),
         description: row.description ?? null,
+        version: row.source_updated_at,
       };
     });
 
@@ -402,7 +413,7 @@ export const generateTicketInvoice = withAuth(async (
     : await db
         .table('ticket_materials as tm')
         .whereIn('tm.ticket_material_id', materialIds)
-        .where({ 'tm.ticket_id': input.ticketId, 'tm.is_billed': false })
+        .where({ 'tm.ticket_id': input.ticketId, 'tm.client_id': ticket.client_id, 'tm.is_billed': false })
         .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description', 'tm.currency_code',
           knex.raw('tm.updated_at::text as source_updated_at'));
 
@@ -425,6 +436,18 @@ export const generateTicketInvoice = withAuth(async (
         'Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.',
       error:
         'Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.',
+    };
+  }
+
+  const versions = input.sourceVersions ?? {};
+  const changedSource = [
+    ...materialRows.map((row) => ({ id: row.ticket_material_id, version: row.source_updated_at })),
+    ...fixedFeeRows.map((row) => ({ id: row.entry_id, version: row.source_updated_at })),
+  ].find(({ id, version }) => !versions[id] || versions[id] !== version);
+  if (changedSource) {
+    const message = 'A product or fixed-fee service changed or was already billed. Refresh the charges and try again.';
+    return {
+      success: false, code: 'SOURCE_CHANGED', params: { recordId: changedSource.id }, message, error: message,
     };
   }
 

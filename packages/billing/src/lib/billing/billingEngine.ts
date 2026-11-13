@@ -7343,6 +7343,10 @@ export class BillingEngine {
     if (rows.length === 0) return [];
     const client = await db.table("clients").where("client_id", clientId).first();
     if (!client) throw new Error(`Client ${clientId} not found for ticket fixed-fee billing.`);
+    // Many entries share a service, so resolve each service's tax info and the
+    // client default region once rather than per entry.
+    const taxInfoByService = new Map<string, Promise<{ taxRegion: string | null; isTaxable: boolean }>>();
+    let clientDefaultRegion: Promise<string | null> | undefined;
     return Promise.all(rows.map(async (row): Promise<IFixedPriceCharge> => {
       const quantity = Number(row.quantity);
       const rate = Number(row.rate);
@@ -7351,10 +7355,17 @@ export class BillingEngine {
           !Number.isSafeInteger(total)) {
         throw new Error(`Ticket fixed-fee entry ${row.entry_id} has an invalid quantity or rate.`);
       }
-      const { taxRegion, isTaxable } = await this.getTaxInfoFromService({
-        service_id: row.service_id, tax_rate_id: row.tax_rate_id,
-      });
-      const region = taxRegion ?? await this.getClientDefaultTaxRegionCode(clientId) ?? undefined;
+      const taxInfoKey = `${row.service_id}|${row.tax_rate_id ?? ""}`;
+      let taxInfo = taxInfoByService.get(taxInfoKey);
+      if (!taxInfo) {
+        taxInfo = this.getTaxInfoFromService({ service_id: row.service_id, tax_rate_id: row.tax_rate_id });
+        taxInfoByService.set(taxInfoKey, taxInfo);
+      }
+      const { taxRegion, isTaxable } = await taxInfo;
+      if (taxRegion == null && !clientDefaultRegion) {
+        clientDefaultRegion = this.getClientDefaultTaxRegionCode(clientId);
+      }
+      const region = taxRegion ?? await clientDefaultRegion ?? undefined;
       const tax = !client.is_tax_exempt && isTaxable && region
         ? await new TaxService().calculateTax(clientId, total, billingPeriod.endDate, region, true, currencyCode)
         : { taxAmount: 0, taxRate: 0 };

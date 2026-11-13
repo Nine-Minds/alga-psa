@@ -293,8 +293,8 @@ describe('quick invoice fixed-fee selection', () => {
     state.invoice.list.mockResolvedValue({
       ticketId: 'ticket-1', clientId: 'client-1', currencyCode: 'USD',
       timeItems: [],
-      materialItems: [{ id: 'material-1', description: 'Widget', quantity: 1, rate: 1000, amount: 1000 }],
-      fixedFeeItems: [{ id: 'fee-1', serviceName: 'Setup', quantity: 2, rate: 2500, amount: 5000 }],
+      materialItems: [{ id: 'material-1', description: 'Widget', quantity: 1, rate: 1000, amount: 1000, version: 'material-v1' }],
+      fixedFeeItems: [{ id: 'fee-1', serviceName: 'Setup', quantity: 2, rate: 2500, amount: 5000, version: 'fee-v1' }],
       excludedFixedFeeCount: 1, excludedMaterialCount: 0,
     });
     state.invoice.invoices.mockResolvedValue([]);
@@ -306,11 +306,12 @@ describe('quick invoice fixed-fee selection', () => {
     expect(await screen.findByText('quickInvoice.fixedFeeServices')).toBeInTheDocument();
     expect(screen.getByText('quickInvoice.excludedFixedFees')).toBeInTheDocument();
     expect(screen.getByText('USD 60')).toBeInTheDocument();
-    const feeCheckbox = document.getElementById('ticket-details-fixed-fee-0-checkbox');
+    const feeCheckbox = document.getElementById('quick-invoice-fixed-fee-fee-1');
     expect(feeCheckbox).toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'quickInvoice.create' }));
     await waitFor(() => expect(state.invoice.generate).toHaveBeenCalledWith({
       ticketId: 'ticket-1', timeEntryIds: [], materialIds: ['material-1'], fixedFeeIds: ['fee-1'],
+      sourceVersions: { 'material-1': 'material-v1', 'fee-1': 'fee-v1' },
     }));
     expect(await screen.findByRole('button', { name: /quickInvoice.viewInvoice/ })).toBeInTheDocument();
   });
