@@ -14,13 +14,13 @@ import { tenantDb } from '@alga-psa/db';
 import { CoManagedAdmissionError } from './co-managed-admission';
 import { materializeState, type CoManagedEntitlementState } from './co-managed-entitlements';
 import type { CoManagedOperationalState } from './co-managed-lifecycle-error';
-import type { CoManagedSeatAllocation } from './co-managed-reservation';
+import type { CoManagedSeatAllocationRecord } from './co-managed-reservation';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const validSeats = (seats: number) => Number.isSafeInteger(seats) && seats >= 1 && seats <= 2147483647;
 
 /** A seat-kind row of `co_managed_allocations`, as the commands here read it. */
-export type CoManagedSeatAllocationSnapshot = Pick<CoManagedSeatAllocation,
+export type CoManagedSeatAllocationSnapshot = Pick<CoManagedSeatAllocationRecord,
   'allocation_id' | 'sponsor_client_id' | 'seats' | 'state'>;
 
 /**
