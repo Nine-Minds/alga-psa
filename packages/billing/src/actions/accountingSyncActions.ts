@@ -20,6 +20,7 @@ import { SyncOperationsRepository } from '../services/accountingSync/syncOperati
 import { SyncCycleRepository } from '../services/accountingSync/syncCycleRepository';
 import { SyncMappingLedger } from '../services/accountingSync/syncMappingLedger';
 import { WorkflowTaskSyncExceptionService } from '../services/accountingSync/syncExceptionService';
+import { isInvoiceSyncBlockedStatus } from '../lib/invoiceSyncEligibility';
 import { MAPPING_SYNC_STATUS, type AccountingSyncCycleRecord } from '../services/accountingSync/accountingSync.types';
 
 function isEnterpriseEdition(): boolean {
@@ -178,13 +179,15 @@ export const runAccountingSyncNow = withAuth(async (
   return result;
 });
 
+export type InvoiceSyncRefusalReason = 'not_found' | 'paid' | 'cancelled';
+
 /** Queue a single invoice for (re-)export on the next cycle. */
 export const queueInvoiceSync = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
   selection?: AccountingIntegrationSelection
-): Promise<{ queued: boolean; error?: string }> => {
+): Promise<{ queued: boolean; error?: string; reason?: InvoiceSyncRefusalReason; opId?: string }> => {
   assertEnterpriseEdition();
   await checkExportsExecuteAccess(user);
   const { knex } = await createTenantKnex();
@@ -198,7 +201,24 @@ export const queueInvoiceSync = withAuth(async (
   }
   const target = resolution.target;
 
-  await new SyncOperationsRepository(knex).enqueue({
+  const invoice = await tenantDb(knex, tenant)
+    .table('invoices')
+    .where({ invoice_id: invoiceId })
+    .first('status');
+  if (!invoice) {
+    return { queued: false, error: 'Invoice not found.', reason: 'not_found' };
+  }
+  if (isInvoiceSyncBlockedStatus(invoice.status)) {
+    return {
+      queued: false,
+      reason: invoice.status === 'paid' ? 'paid' : 'cancelled',
+      error: invoice.status === 'paid'
+        ? 'Paid invoices are not synced to the accounting provider.'
+        : 'Voided or cancelled invoices are not synced to the accounting provider.'
+    };
+  }
+
+  const op = await new SyncOperationsRepository(knex).enqueue({
     tenant,
     adapterType: target.integration.adapterType,
     targetRealm: target.integration.targetRealm,
@@ -207,7 +227,7 @@ export const queueInvoiceSync = withAuth(async (
     algaEntityId: invoiceId
   });
 
-  return { queued: true };
+  return { queued: true, opId: op.op_id };
 });
 
 /** Drift resolution: push Alga's version back to the provider (queues a re-export). */
@@ -532,6 +552,187 @@ export const getAccountingSyncHealth = withAuth(async (
     adapterType,
     organisationName
   };
+});
+
+export type InvoiceSyncOutcome =
+  | { outcome: 'synced' }
+  | { outcome: 'failed'; reason: string | null }
+  | { outcome: 'skipped'; reason: string | null }
+  | { outcome: 'pending' }
+  | { outcome: 'unknown' };
+
+/**
+ * What actually happened to the export op queued for one invoice. `done` is the
+ * only synced state. A pending op that already recorded an error was attempted
+ * and failed (it is retried by a later cycle) — reported as failed, never as
+ * success.
+ */
+export const getInvoiceSyncOutcome = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+  opId: string
+): Promise<InvoiceSyncOutcome> => {
+  assertEnterpriseEdition();
+  await checkExportsExecuteAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const op = await new SyncOperationsRepository(knex).getById(tenant, opId);
+  if (!op || op.alga_entity_type !== 'invoice' || op.alga_entity_id !== invoiceId) {
+    return { outcome: 'unknown' };
+  }
+  switch (op.status) {
+    case 'done':
+      return { outcome: 'synced' };
+    case 'failed':
+      return { outcome: 'failed', reason: op.last_error || null };
+    case 'skipped':
+      return { outcome: 'skipped', reason: op.last_error || null };
+    default:
+      return op.attempts > 0 && op.last_error
+        ? { outcome: 'failed', reason: op.last_error }
+        : { outcome: 'pending' };
+  }
+});
+
+export type ErroredSyncEntityKind =
+  | 'invoice'
+  | 'credit_memo'
+  | 'vendor_bill'
+  /** record_payment op; displayName is the paid invoice's number. */
+  | 'payment'
+  /** apply_credit op; displayName is the invoice the credit was applied to. */
+  | 'credit_application'
+  | 'other';
+
+export interface ErroredSyncOperationRow {
+  opId: string;
+  entityType: string;
+  entityKind: ErroredSyncEntityKind;
+  /** Resolved on the server; null when the entity was deleted or has no display field. Never an ID. */
+  displayName: string | null;
+  operation: string;
+  status: 'failed' | 'skipped';
+  attempts: number;
+  lastError: string | null;
+  timestamp: string;
+  batchId: string | null;
+  batchLabel: string | null;
+  batchQueuedAt: string | null;
+}
+
+const ERRORED_OPS_LIMIT = 500;
+
+/** Failed + skipped sync operations behind the "Errored ops" badge, same scope. */
+export const getErroredSyncOperations = withAuth(async (
+  user,
+  { tenant },
+  selection: AccountingIntegrationSelection = {}
+): Promise<ErroredSyncOperationRow[]> => {
+  assertEnterpriseEdition();
+  await checkCatalogReadAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const target = await resolveSyncTarget(knex, tenant, selection);
+  const adapterType = target?.integration.adapterType ?? selection.preferredAdapterType ?? null;
+  const realm = target?.integration.targetRealm ?? null;
+  // Mirrors getAccountingSyncHealth: without a resolved adapter + realm the badge is 0.
+  if (!target || !realm || !adapterType) return [];
+
+  const ops = await new SyncOperationsRepository(knex).listErrored(tenant, adapterType, realm, {
+    limit: ERRORED_OPS_LIMIT
+  });
+  if (ops.length === 0) return [];
+
+  const idsOf = (type: string) => [...new Set(ops.filter((o) => o.alga_entity_type === type).map((o) => o.alga_entity_id))];
+  const invoiceIds = idsOf('invoice');
+  const billIds = idsOf('vendor_bill');
+  const paymentIds = idsOf('invoice_payment');
+  const allocationIds = idsOf('credit_allocation');
+  const db = tenantDb(knex, tenant);
+
+  // One batched query per entity type — never per row. Payments and credit
+  // applications are named by the invoice they settle.
+  const [invoiceRows, billRows, batchRows, paymentRows, allocationRows] = await Promise.all([
+    invoiceIds.length
+      ? db.table('invoices').whereIn('invoice_id', invoiceIds).select('invoice_id', 'invoice_number', 'invoice_type')
+      : Promise.resolve([] as any[]),
+    billIds.length
+      // vendor_bills is not in the tenantDb table registry (vendorBillExportActions
+      // also reads it through raw knex), so scope by tenant explicitly.
+      ? knex('vendor_bills').where({ tenant }).whereIn('bill_id', billIds).select('bill_id', 'bill_number')
+      : Promise.resolve([] as any[]),
+    invoiceIds.length + billIds.length
+      ? db.tenantJoin(db.table('accounting_export_lines as line'), 'accounting_export_batches as batch', 'line.batch_id', 'batch.batch_id')
+          .where({ 'batch.adapter_type': adapterType, 'batch.target_realm': realm })
+          // Lines reference documents generically (document_id); export_type keeps
+          // invoice and vendor-bill documents apart.
+          .where((q: any) =>
+            q.where((inv: any) => inv.where('batch.export_type', 'invoice').whereIn('line.document_id', invoiceIds))
+              .orWhere((bill: any) => bill.where('batch.export_type', 'vendor_bill').whereIn('line.document_id', billIds))
+          )
+          .orderBy('batch.created_at', 'desc')
+          .select('line.document_id', 'batch.batch_id', 'batch.export_type', 'batch.queued_at')
+      : Promise.resolve([] as any[]),
+    paymentIds.length
+      ? db.tenantJoin(db.table('invoice_payments as payment'), 'invoices as inv', 'payment.invoice_id', 'inv.invoice_id')
+          .whereIn('payment.payment_id', paymentIds)
+          .select('payment.payment_id', 'inv.invoice_number')
+      : Promise.resolve([] as any[]),
+    allocationIds.length
+      ? db.tenantJoin(db.table('credit_allocations as allocation'), 'invoices as inv', 'allocation.invoice_id', 'inv.invoice_id')
+          .whereIn('allocation.allocation_id', allocationIds)
+          .select('allocation.allocation_id', 'inv.invoice_number')
+      : Promise.resolve([] as any[])
+  ]);
+
+  const invoices = new Map<string, any>(invoiceRows.map((r: any) => [r.invoice_id, r]));
+  const bills = new Map<string, any>(billRows.map((r: any) => [r.bill_id, r]));
+  const paymentInvoiceNumbers = new Map<string, string>(paymentRows.map((r: any) => [r.payment_id, r.invoice_number]));
+  const allocationInvoiceNumbers = new Map<string, string>(allocationRows.map((r: any) => [r.allocation_id, r.invoice_number]));
+  const latestBatch = new Map<string, any>();
+  for (const row of batchRows as any[]) {
+    const key = `${row.export_type}:${row.document_id}`;
+    if (!latestBatch.has(key)) latestBatch.set(key, row);
+  }
+
+  return ops.map((op): ErroredSyncOperationRow => {
+    let entityKind: ErroredSyncEntityKind = 'other';
+    let displayName: string | null = null;
+    let batch: any = null;
+    if (op.alga_entity_type === 'invoice') {
+      const invoice = invoices.get(op.alga_entity_id);
+      entityKind = invoice?.invoice_type === 'credit_note' || op.operation === 'export_credit_memo' ? 'credit_memo' : 'invoice';
+      displayName = invoice?.invoice_number ?? null;
+      batch = latestBatch.get(`invoice:${op.alga_entity_id}`) ?? null;
+    } else if (op.alga_entity_type === 'vendor_bill') {
+      entityKind = 'vendor_bill';
+      displayName = bills.get(op.alga_entity_id)?.bill_number ?? null;
+      batch = latestBatch.get(`vendor_bill:${op.alga_entity_id}`) ?? null;
+    } else if (op.alga_entity_type === 'invoice_payment') {
+      entityKind = 'payment';
+      displayName = paymentInvoiceNumbers.get(op.alga_entity_id) ?? null;
+    } else if (op.alga_entity_type === 'credit_allocation') {
+      entityKind = 'credit_application';
+      displayName = allocationInvoiceNumbers.get(op.alga_entity_id) ?? null;
+    }
+    // LEVERAGE: pattern sync-entity-display-name — the op entity types are a closed set (SyncOperationType);
+    // a registry of per-entity-type resolvers would replace this chain. Unknown types render a placeholder, never the ID.
+    return {
+      opId: op.op_id,
+      entityType: op.alga_entity_type,
+      entityKind,
+      displayName,
+      operation: op.operation,
+      status: op.status as 'failed' | 'skipped',
+      attempts: op.attempts,
+      lastError: op.last_error,
+      timestamp: String(op.processed_at ?? op.created_at),
+      batchId: batch?.batch_id ?? null,
+      batchLabel: batch ? String(batch.export_type) : null,
+      batchQueuedAt: batch?.queued_at ? String(batch.queued_at) : null
+    };
+  });
 });
 
 /** Best-effort read of QBO 'Automatically apply credits'; null when unreadable. */
