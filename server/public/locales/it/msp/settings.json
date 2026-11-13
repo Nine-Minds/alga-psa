@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}.",
       "nameRequired": "Il nome del ruolo è obbligatorio.",
       "builtInRename": "I ruoli predefiniti non possono essere rinominati.",
-      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale."
+      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale.",
+      "lastMspAdmin": "Un tenant deve mantenere almeno un utente MSP Admin attivo.",
+      "lastRole": "Un utente deve mantenere almeno un ruolo. Assegnare prima un altro ruolo, quindi rimuovere questo."
     },
     "secrets": {
       "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",

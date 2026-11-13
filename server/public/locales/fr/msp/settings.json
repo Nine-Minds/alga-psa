@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Un champ obligatoire du rôle utilisateur est manquant : {{field}}.",
       "nameRequired": "Le nom du rôle est obligatoire.",
       "builtInRename": "Les rôles intégrés ne peuvent pas être renommés.",
-      "duplicateName": "Un rôle nommé « {{name}} » existe déjà pour ce portail."
+      "duplicateName": "Un rôle nommé « {{name}} » existe déjà pour ce portail.",
+      "lastMspAdmin": "Un locataire doit conserver au moins un utilisateur MSP Admin actif.",
+      "lastRole": "Un utilisateur doit conserver au moins un rôle. Affectez d’abord un autre rôle, puis supprimez celui-ci."
     },
     "secrets": {
       "tenantContextMissing": "Le contexte du locataire est absent. Veuillez actualiser la page et réessayer.",
