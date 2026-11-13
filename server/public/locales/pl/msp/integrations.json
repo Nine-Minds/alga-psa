@@ -2282,7 +2282,13 @@
           "invoice": "Deleted invoice",
           "credit_memo": "Deleted credit memo",
           "vendor_bill": "Deleted vendor bill",
+          "payment": "Deleted payment",
+          "credit_application": "Deleted credit application",
           "other": "Unavailable item"
+        },
+        "erroredOpsItem": {
+          "payment": "Payment on {{invoice}}",
+          "creditApplication": "Credit applied to {{invoice}}"
         },
         "erroredOpsOperation": {
           "export_invoice": "Export invoice",

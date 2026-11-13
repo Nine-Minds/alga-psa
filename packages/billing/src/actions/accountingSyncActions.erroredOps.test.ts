@@ -103,18 +103,30 @@ describe('getErroredSyncOperations', () => {
       op({}),
       op({ op_id: 'op2', alga_entity_id: 'gone-id', status: 'skipped' }),
       op({ op_id: 'op3', alga_entity_type: 'vendor_bill', alga_entity_id: 'bill-1', operation: 'export_vendor_bill' }),
-      op({ op_id: 'op4', alga_entity_type: 'client', alga_entity_id: 'client-1', operation: 'export_invoice' })
+      op({ op_id: 'op4', alga_entity_type: 'client', alga_entity_id: 'client-1', operation: 'export_invoice' }),
+      op({ op_id: 'op5', alga_entity_type: 'invoice_payment', alga_entity_id: 'pay-1', operation: 'record_payment' }),
+      op({ op_id: 'op6', alga_entity_type: 'credit_allocation', alga_entity_id: 'alloc-1', operation: 'apply_credit' }),
+      op({ op_id: 'op7', alga_entity_type: 'invoice_payment', alga_entity_id: 'pay-gone', operation: 'record_payment' })
     ]);
     mockTables({
       invoices: [{ invoice_id: 'bbbbbbbb-0000-0000-0000-000000000001', invoice_number: 'INV-26-10-000002', invoice_type: 'standard' }],
       vendor_bills: [{ bill_id: 'bill-1', bill_number: 'BILL-9' }],
       accounting_export_lines: [{ document_id: 'bbbbbbbb-0000-0000-0000-000000000001', export_type: 'invoice', batch_id: 'batch-1', queued_at: '2026-01-02' },
-        { document_id: 'bill-1', export_type: 'vendor_bill', batch_id: 'batch-2', queued_at: '2026-01-03' }]
+        { document_id: 'bill-1', export_type: 'vendor_bill', batch_id: 'batch-2', queued_at: '2026-01-03' }],
+      invoice_payments: [{ payment_id: 'pay-1', invoice_number: 'INV-26-10-000007' }],
+      credit_allocations: [{ allocation_id: 'alloc-1', invoice_number: 'INV-26-10-000008' }]
     });
     const rows = await (getErroredSyncOperations as any)(USER, { tenant: TENANT }, { preferredAdapterType: 'quickbooks_online' });
 
     expect(listErroredMock).toHaveBeenCalledWith(TENANT, 'quickbooks_online', 'realm-1', expect.anything());
-    expect(rows.map((r: any) => r.displayName)).toEqual(['INV-26-10-000002', null, 'BILL-9', null]);
+    expect(rows.map((r: any) => r.displayName)).toEqual([
+      'INV-26-10-000002', null, 'BILL-9', null, 'INV-26-10-000007', 'INV-26-10-000008', null
+    ]);
+    expect(rows.map((r: any) => r.entityKind)).toEqual([
+      'invoice', 'invoice', 'vendor_bill', 'other', 'payment', 'credit_application', 'payment'
+    ]);
+    expect(batchSelectMock).toHaveBeenCalledWith(['payment.payment_id', 'inv.invoice_number']);
+    expect(batchSelectMock).toHaveBeenCalledWith(['allocation.allocation_id', 'inv.invoice_number']);
     expect(batchSelectMock).toHaveBeenCalledWith(expect.arrayContaining(['line.document_id']));
     expect(batchSelectMock.mock.calls.flat(2)).not.toContain('line.invoice_id');
     expect(rows[0].batchId).toBe('batch-1');

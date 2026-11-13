@@ -54,9 +54,19 @@ export default function ErroredSyncOpsDialog({ isOpen, onClose, adapterType, rea
     return () => { cancelled = true; };
   }, [isOpen, adapterType, realmId, t]);
 
-  const itemName = (row: ErroredSyncOperationRow) =>
-    row.displayName ??
-    t(`integrations.qbo.sync.erroredOpsDeleted.${row.entityKind}`, { defaultValue: 'Unavailable item' });
+  const itemName = (row: ErroredSyncOperationRow) => {
+    if (!row.displayName) {
+      return t(`integrations.qbo.sync.erroredOpsDeleted.${row.entityKind}`, { defaultValue: 'Unavailable item' });
+    }
+    // Payments and credit applications are named by the invoice they settle.
+    if (row.entityKind === 'payment') {
+      return t('integrations.qbo.sync.erroredOpsItem.payment', { invoice: row.displayName, defaultValue: 'Payment on {{invoice}}' });
+    }
+    if (row.entityKind === 'credit_application') {
+      return t('integrations.qbo.sync.erroredOpsItem.creditApplication', { invoice: row.displayName, defaultValue: 'Credit applied to {{invoice}}' });
+    }
+    return row.displayName;
+  };
 
   const columns = [
     { title: t('integrations.qbo.sync.erroredOpsColItem', { defaultValue: 'Item' }), dataIndex: 'displayName', render: (_: unknown, row: ErroredSyncOperationRow) => itemName(row) },

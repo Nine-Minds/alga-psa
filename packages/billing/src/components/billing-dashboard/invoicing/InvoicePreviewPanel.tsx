@@ -79,6 +79,8 @@ interface InvoicePreviewPanelProps {
   invoiceTotal?: number;
   /** Called after a credit is applied so the parent can refresh its list. */
   onCreditApplied?: () => Promise<void> | void;
+  /** Called after the invoice is voided here so the parent can refresh its list. */
+  onInvoiceVoided?: () => Promise<void> | void;
 }
 
 const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
@@ -100,7 +102,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   invoiceSummary = null,
   clientId = null,
   invoiceTotal = 0,
-  onCreditApplied
+  onCreditApplied,
+  onInvoiceVoided
 }) => {
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
@@ -124,6 +127,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
   const [voidLoading, setVoidLoading] = useState(false);
+  // Set once this panel voids the invoice: the listing row (invoiceSummary) is
+  // the status source and stays stale until the parent reloads it.
+  const [voidedHere, setVoidedHere] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const [clientDelegatesTax, setClientDelegatesTax] = useState(false);
   const [delegateTaxDialogOpen, setDelegateTaxDialogOpen] = useState(false);
@@ -184,7 +190,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
   const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
   const syncProviderLabel = syncStatus?.provider === 'xero' ? 'Xero' : 'QuickBooks';
-  const invoiceStatus = invoiceSummary?.status ?? (detailedInvoiceData as any)?.status ?? null;
+  const invoiceStatus = voidedHere
+    ? 'cancelled'
+    : invoiceSummary?.status ?? (detailedInvoiceData as any)?.status ?? null;
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -466,7 +474,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       }
       setVoidDialogOpen(false);
       setVoidReason('');
+      setVoidedHere(true);
+      setSyncActionFeedback(null);
       setPreviewRefreshCounter((c) => c + 1);
+      await onInvoiceVoided?.();
     } catch (err) {
       setVoidError(err instanceof Error ? err.message : 'Failed to void invoice.');
     } finally {
@@ -651,6 +662,21 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   const result = await getInvoiceSyncOutcome(invoiceId, queued.opId);
                   if (isReturnedActionError(result)) {
                     setSyncActionFeedback({ type: 'error', message: getErrorMessage(result) });
+                    return;
+                  }
+                  // The cycle ran but stopped before this invoice was processed
+                  // (provider unreachable, auth expired, inbound failure): report
+                  // that failure rather than a neutral "not processed yet".
+                  if (
+                    (result.outcome === 'pending' || result.outcome === 'unknown') &&
+                    (cycle.status === 'failed' || cycle.status === 'aborted')
+                  ) {
+                    setSyncActionFeedback({
+                      type: 'error',
+                      message: cycle.error
+                        ? t('invoicePreview.syncFeedback.cycleFailed', { provider, reason: cycle.error, defaultValue: '{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.' })
+                        : t('invoicePreview.syncFeedback.cycleFailedNoReason', { provider, defaultValue: '{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync.' })
+                    });
                     return;
                   }
                   switch (result.outcome) {

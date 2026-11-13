@@ -848,7 +848,9 @@
       "unknown": "Could not determine whether the invoice was synced to {{provider}}.",
       "notRun": "{{provider}} sync did not run: {{reason}}",
       "notRunNoReason": "{{provider}} sync did not run.",
-      "error": "Sync failed: {{error}}"
+      "error": "Sync failed: {{error}}",
+      "cycleFailed": "{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.",
+      "cycleFailedNoReason": "{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync."
     },
     "sessionExpired": "La sesión expiró mientras se cargaba esta factura. Inicie sesión de nuevo y vuelva a cargar la vista previa.",
     "title": "Vista previa de factura",

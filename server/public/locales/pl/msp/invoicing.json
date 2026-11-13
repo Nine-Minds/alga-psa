@@ -949,7 +949,9 @@
       "error": "Sync failed: {{error}}",
       "refusedNotFound": "Invoice not found.",
       "refusedPaid": "Paid invoices are not synced to {{provider}}.",
-      "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}."
+      "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}.",
+      "cycleFailed": "{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.",
+      "cycleFailedNoReason": "{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync."
     }
   },
   "templateEditor": {

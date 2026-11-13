@@ -9,11 +9,12 @@ import InvoicePreviewPanel from './InvoicePreviewPanel';
 const queueMock = vi.hoisted(() => vi.fn());
 const runMock = vi.hoisted(() => vi.fn());
 const outcomeMock = vi.hoisted(() => vi.fn());
+const voidMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({ useFeatureFlag: () => ({ enabled: false, value: false, loading: false }) }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: () => null }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock('../../../actions/voidInvoiceActions', () => ({ voidInvoice: vi.fn() }));
+vi.mock('../../../actions/voidInvoiceActions', () => ({ voidInvoice: voidMock }));
 vi.mock('../../../actions/accountingSyncActions', () => ({
   queueInvoiceSync: queueMock,
   runAccountingSyncNow: runMock,
@@ -42,7 +43,7 @@ vi.mock('../CreditExpirationInfo', () => ({ default: () => null }));
 vi.mock('../CreditApplicationUI', () => ({ default: () => null }));
 vi.mock('../../invoices/InvoiceTaxSourceBadge', () => ({ InvoiceTaxSourceBadge: () => null }));
 
-function renderPanel(status: string) {
+function renderPanel(status: string, extra: Record<string, unknown> = {}) {
   return render(
     <InvoicePreviewPanel
       invoiceId="inv-1"
@@ -51,6 +52,7 @@ function renderPanel(status: string) {
       onTemplateChange={vi.fn()}
       isFinalized
       invoiceSummary={{ status } as any}
+      {...extra}
     />
   );
 }
@@ -123,5 +125,48 @@ describe('InvoicePreviewPanel Sync to <provider> button', () => {
     await clickSync();
     expect(await screen.findByText(message)).toBeTruthy();
     expect(outcomeMock).toHaveBeenCalledWith('inv-1', 'op-1');
+  });
+
+  it.each(['failed', 'aborted'])(
+    'reports a %s cycle with its reason when the invoice was not processed',
+    async (status) => {
+      runMock.mockResolvedValue({ ran: true, status, error: 'QBO API Error during changeDataCapture: Service Unavailable' });
+      outcomeMock.mockResolvedValue({ outcome: 'pending' });
+      renderPanel('sent');
+      await clickSync();
+      expect(
+        await screen.findByText(
+          'QuickBooks sync failed: QBO API Error during changeDataCapture: Service Unavailable The invoice was not sent; it stays queued and is retried on the next sync.'
+        )
+      ).toBeTruthy();
+      expect(screen.queryByText(/has not been processed yet/)).toBeNull();
+    }
+  );
+
+  it('lets the op outcome win over a failed cycle when the invoice itself was processed', async () => {
+    runMock.mockResolvedValue({ ran: true, status: 'failed', error: 'later step failed' });
+    outcomeMock.mockResolvedValue({ outcome: 'synced' });
+    renderPanel('sent');
+    await clickSync();
+    expect(await screen.findByText('Invoice synced to QuickBooks.')).toBeTruthy();
+  });
+
+  it('hides the button once the invoice is voided from this panel and tells the parent', async () => {
+    voidMock.mockResolvedValue({ success: true });
+    const onInvoiceVoided = vi.fn();
+    renderPanel('sent', {
+      onInvoiceVoided,
+      templates: [{ template_id: 'tpl-1', name: 'Standard', isStandard: true }],
+      selectedTemplateId: 'tpl-1'
+    });
+    expect(await screen.findByRole('button', { name: /Sync to QuickBooks/ })).toBeTruthy();
+    await waitFor(() => expect(document.getElementById('invoice-void-button')).toBeTruthy());
+    fireEvent.click(document.getElementById('invoice-void-button')!);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(dialog.querySelector('textarea')!, { target: { value: 'duplicate' } });
+    fireEvent.click(document.getElementById('void-invoice-confirm-button')!);
+    await waitFor(() => expect(voidMock).toHaveBeenCalledWith('inv-1', 'duplicate'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Sync to QuickBooks/ })).toBeNull());
+    expect(onInvoiceVoided).toHaveBeenCalledTimes(1);
   });
 });

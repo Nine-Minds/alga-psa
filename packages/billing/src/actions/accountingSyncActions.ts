@@ -595,7 +595,15 @@ export const getInvoiceSyncOutcome = withAuth(async (
   }
 });
 
-export type ErroredSyncEntityKind = 'invoice' | 'credit_memo' | 'vendor_bill' | 'other';
+export type ErroredSyncEntityKind =
+  | 'invoice'
+  | 'credit_memo'
+  | 'vendor_bill'
+  /** record_payment op; displayName is the paid invoice's number. */
+  | 'payment'
+  /** apply_credit op; displayName is the invoice the credit was applied to. */
+  | 'credit_application'
+  | 'other';
 
 export interface ErroredSyncOperationRow {
   opId: string;
@@ -639,10 +647,13 @@ export const getErroredSyncOperations = withAuth(async (
   const idsOf = (type: string) => [...new Set(ops.filter((o) => o.alga_entity_type === type).map((o) => o.alga_entity_id))];
   const invoiceIds = idsOf('invoice');
   const billIds = idsOf('vendor_bill');
+  const paymentIds = idsOf('invoice_payment');
+  const allocationIds = idsOf('credit_allocation');
   const db = tenantDb(knex, tenant);
 
-  // One batched query per entity type — never per row.
-  const [invoiceRows, billRows, batchRows] = await Promise.all([
+  // One batched query per entity type — never per row. Payments and credit
+  // applications are named by the invoice they settle.
+  const [invoiceRows, billRows, batchRows, paymentRows, allocationRows] = await Promise.all([
     invoiceIds.length
       ? db.table('invoices').whereIn('invoice_id', invoiceIds).select('invoice_id', 'invoice_number', 'invoice_type')
       : Promise.resolve([] as any[]),
@@ -662,11 +673,23 @@ export const getErroredSyncOperations = withAuth(async (
           )
           .orderBy('batch.created_at', 'desc')
           .select('line.document_id', 'batch.batch_id', 'batch.export_type', 'batch.queued_at')
+      : Promise.resolve([] as any[]),
+    paymentIds.length
+      ? db.tenantJoin(db.table('invoice_payments as payment'), 'invoices as inv', 'payment.invoice_id', 'inv.invoice_id')
+          .whereIn('payment.payment_id', paymentIds)
+          .select('payment.payment_id', 'inv.invoice_number')
+      : Promise.resolve([] as any[]),
+    allocationIds.length
+      ? db.tenantJoin(db.table('credit_allocations as allocation'), 'invoices as inv', 'allocation.invoice_id', 'inv.invoice_id')
+          .whereIn('allocation.allocation_id', allocationIds)
+          .select('allocation.allocation_id', 'inv.invoice_number')
       : Promise.resolve([] as any[])
   ]);
 
   const invoices = new Map<string, any>(invoiceRows.map((r: any) => [r.invoice_id, r]));
   const bills = new Map<string, any>(billRows.map((r: any) => [r.bill_id, r]));
+  const paymentInvoiceNumbers = new Map<string, string>(paymentRows.map((r: any) => [r.payment_id, r.invoice_number]));
+  const allocationInvoiceNumbers = new Map<string, string>(allocationRows.map((r: any) => [r.allocation_id, r.invoice_number]));
   const latestBatch = new Map<string, any>();
   for (const row of batchRows as any[]) {
     const key = `${row.export_type}:${row.document_id}`;
@@ -686,9 +709,15 @@ export const getErroredSyncOperations = withAuth(async (
       entityKind = 'vendor_bill';
       displayName = bills.get(op.alga_entity_id)?.bill_number ?? null;
       batch = latestBatch.get(`vendor_bill:${op.alga_entity_id}`) ?? null;
+    } else if (op.alga_entity_type === 'invoice_payment') {
+      entityKind = 'payment';
+      displayName = paymentInvoiceNumbers.get(op.alga_entity_id) ?? null;
+    } else if (op.alga_entity_type === 'credit_allocation') {
+      entityKind = 'credit_application';
+      displayName = allocationInvoiceNumbers.get(op.alga_entity_id) ?? null;
     }
-    // LEVERAGE: pattern sync-entity-display-name — other op entity types (client, service, credit_application,
-    // invoice_payment, ...) have no resolver here; they render a generic placeholder, never the ID.
+    // LEVERAGE: pattern sync-entity-display-name — the op entity types are a closed set (SyncOperationType);
+    // a registry of per-entity-type resolvers would replace this chain. Unknown types render a placeholder, never the ID.
     return {
       opId: op.op_id,
       entityType: op.alga_entity_type,
