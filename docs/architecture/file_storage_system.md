@@ -160,6 +160,52 @@ Enterprise Edition:
 - Error handling
 - File listing and management
 
+## Document Upload Sessions (Chunked, Resumable Uploads)
+
+Document uploads from the web UI no longer send the whole file in one server-action request. `DocumentUpload` (and every surface that mounts it: the Documents page, entity document tabs for tickets, clients, contacts, assets, contracts, opportunities and project tasks, and the client-portal Documents page) uploads through a resumable, tus-style session API so large files survive dropped connections and never have to be buffered in server memory.
+
+### Routes (`server/src/app/api/documents/uploads/`)
+
+| Method and path | Purpose |
+| --- | --- |
+| `POST /api/documents/uploads` | Create a session. Sends file metadata only (name, size, MIME, optional `entityType`/`entityId` pair). Returns the session id and the server `chunkSize`. A file over the provider's size limit is refused here with `413 UPLOAD_TOO_LARGE`, carrying `error.maxFileSize`, so the client learns the limit before any bytes are sent. |
+| `PUT /api/documents/uploads/:id` | Upload one chunk with a `Content-Range` header. Chunks must arrive in order (`409` otherwise); a length mismatch is `400`; a mid-stream limit breach is `413` with nothing committed. |
+| `HEAD` / `GET /api/documents/uploads/:id` | Return the committed offset in `Upload-Offset`, used by the client to resume. |
+| `POST /api/documents/uploads/:id/complete` | Commit the file and create the document, its entity association, the upload event and the preview job. Repeated or raced completes do not create duplicates. |
+| `DELETE /api/documents/uploads/:id` | Abort the session (idempotent). |
+
+The handlers authenticate either a browser session or an API key themselves (the paths are exempted from the API-key-only middleware) and scope every session to tenant plus uploader; another user's session id reads as `404`. Upload permission checks are the same as for `uploadDocument` (`createDocumentFromCommittedFile` and `assertDocumentUploadAllowed` are the shared implementation).
+
+### Server behaviour
+
+- The size limit and MIME allowlist come from the storage provider policy. The first chunk is MIME-sniffed; the sniffed type is stored on the session and file row.
+- Chunks stream straight into the provider's multipart write (`writePart`) with a byte counter and exact-length guard — no full-body buffering or multipart parsing. A failed request body aborts the in-flight part through `WritePartOptions.signal`.
+- `committed_offset` only advances after a durable write. Every status transition is a conditional update, and a 120-second `chunk_claim_token` lease stops two requests writing the same session at once.
+- No content SHA-256 is recorded for chunked uploads, so `external_files.content_sha256` stays `NULL` for them.
+
+### Table and housekeeping
+
+- `document_upload_sessions` (tenant-first PK and indexes, distributed by tenant). `entity_type` and `entity_id` are optional as a pair (a `CHECK` enforces both-or-neither) so uploads into the document library with no association, and pending project-task uploads, are supported.
+- The `expire-document-upload-sessions` maintenance job runs every 15 minutes and aborts expired sessions. The session TTL is 24 hours, sliding on activity.
+- Configuration: `DOCUMENT_UPLOAD_SESSION_TTL_HOURS` (default `24`), `DOCUMENT_UPLOAD_CHUNK_SIZE_BYTES` (default 8 MiB).
+
+### Client resume policy (`packages/documents/src/lib/uploadSessionClient.ts`)
+
+Progress is the committed offset. On a failure the client retries with capped exponential backoff and jitter for a window of about 90 seconds, fetching the committed offset with `HEAD` before each retry and resuming from it. While `navigator.onLine` is false it waits for the `online` event without spending the window. Cancel aborts the request and sends `DELETE`. Errors map to specific, translated messages (over limit, type not allowed, permission denied, network, session expired).
+
+Not yet on the session path: the client-portal project task upload (`uploadClientTaskDocument`) and the remaining `uploadDocument` callers (ticket creation forms, rich-text image paste, clipboard actions).
+
+## Background Document Previews
+
+Image thumbnails, PDF first-page previews and video frames are no longer generated inline during upload from an in-memory buffer:
+
+- After the document row commits, `scheduleDocumentPreviews` enqueues `generate-document-previews` (`{ tenantId, documentId }`, singleton per tenant and document) through the job-runner accessor in `@alga-psa/core/jobRunnerAccessor`.
+- `generatePreviewsForDocument` (`packages/documents/src/lib/documentPreviewGenerator.ts`) reads the source back from storage with `provider.getReadStream` and writes `thumbnail_file_id`, `preview_file_id` and `preview_generated_at` in one update. It is idempotent per document id, so retries upsert the same preview ids.
+- Video: ffmpeg gets a seekable input from `StorageProvider.getSeekableInput` (a local path, or an S3 presigned URL), never stdin. ffmpeg is resolved from `FFMPEG_PATH`, then `ffmpeg-static`, then the system binary.
+- PDF: streamed to a temp file for pdf2pic/Ghostscript. PDFs over `DOCUMENT_PREVIEW_MAX_PDF_BYTES` (default 100 MiB) get no preview and no failure event; rendering is bounded by `DOCUMENT_PREVIEW_PDF_RENDER_TIMEOUT_MS` (default 120 s) and a timeout fails the job retryably.
+- Enterprise Edition: jobs run in the Temporal worker, which cannot load sharp/pdf2pic, so the worker forwards `generate-document-previews` to the server through `MAINTENANCE_JOB_REQUESTED`.
+- UI: while a recent image/PDF/video document has no preview (`isAwaitingPreview` in `documentPreviewPending.ts`), `Documents.tsx` polls with bounded backoff and `DocumentStorageCard` shows a placeholder instead of requesting a legacy preview. Older documents without a stored preview still use the legacy in-request preview path.
+
 ## Usage
 
 ### Setting Up a Storage Provider (Enterprise Edition)
