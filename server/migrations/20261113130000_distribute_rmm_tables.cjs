@@ -55,24 +55,51 @@ async function missingParents(knex, table, column, parent) {
   return result;
 }
 
+const BATCH_SIZE = 1000;
+
+// Repeats a statement that touches at most BATCH_SIZE rows until none are left.
+// Each batch commits on its own: this migration runs outside a transaction.
+async function drain(runBatch) {
+  for (;;) {
+    const result = await runBatch();
+    if (result.rowCount < BATCH_SIZE) return;
+  }
+}
+
 // Each orphan gets what its key's delete action would have done: alerts and
 // organisation mappings lose the reference, maintenance windows go.
 async function repairOrphans(knex) {
   for (const { tenant, missing } of await missingParents(knex, 'rmm_alerts', 'asset_id', 'assets')) {
-    // migration-lint: allow 5 - bounded: one tenant per statement, only rows whose parent row no longer exists
-    await knex.raw('UPDATE rmm_alerts SET asset_id = NULL WHERE tenant = ? AND asset_id = ANY(?::uuid[])', [tenant, missing]);
+    await drain(() => knex.raw(
+      `UPDATE rmm_alerts SET asset_id = NULL
+        WHERE tenant = ? AND alert_id IN (
+          SELECT alert_id FROM rmm_alerts WHERE tenant = ? AND asset_id = ANY(?::uuid[]) LIMIT ?)`,
+      [tenant, tenant, missing, BATCH_SIZE],
+    ));
   }
   for (const { tenant, missing } of await missingParents(knex, 'rmm_organization_mappings', 'client_id', 'clients')) {
-    // migration-lint: allow 5 - bounded: one tenant per statement, only rows whose parent row no longer exists
-    await knex.raw('UPDATE rmm_organization_mappings SET client_id = NULL WHERE tenant = ? AND client_id = ANY(?::uuid[])', [tenant, missing]);
+    await drain(() => knex.raw(
+      `UPDATE rmm_organization_mappings SET client_id = NULL
+        WHERE tenant = ? AND mapping_id IN (
+          SELECT mapping_id FROM rmm_organization_mappings WHERE tenant = ? AND client_id = ANY(?::uuid[]) LIMIT ?)`,
+      [tenant, tenant, missing, BATCH_SIZE],
+    ));
   }
   for (const { tenant, missing } of await missingParents(knex, 'rmm_maintenance_windows', 'asset_id', 'assets')) {
-    // migration-lint: allow 5 - bounded: one tenant per statement, only rows whose parent row no longer exists
-    await knex.raw('DELETE FROM rmm_maintenance_windows WHERE tenant = ? AND asset_id = ANY(?::uuid[])', [tenant, missing]);
+    await drain(() => knex.raw(
+      `DELETE FROM rmm_maintenance_windows
+        WHERE tenant = ? AND window_id IN (
+          SELECT window_id FROM rmm_maintenance_windows WHERE tenant = ? AND asset_id = ANY(?::uuid[]) LIMIT ?)`,
+      [tenant, tenant, missing, BATCH_SIZE],
+    ));
   }
   for (const { tenant, missing } of await missingParents(knex, 'rmm_maintenance_windows', 'client_id', 'clients')) {
-    // migration-lint: allow 5 - bounded: one tenant per statement, only rows whose parent row no longer exists
-    await knex.raw('DELETE FROM rmm_maintenance_windows WHERE tenant = ? AND client_id = ANY(?::uuid[])', [tenant, missing]);
+    await drain(() => knex.raw(
+      `DELETE FROM rmm_maintenance_windows
+        WHERE tenant = ? AND window_id IN (
+          SELECT window_id FROM rmm_maintenance_windows WHERE tenant = ? AND client_id = ANY(?::uuid[]) LIMIT ?)`,
+      [tenant, tenant, missing, BATCH_SIZE],
+    ));
   }
 }
 
