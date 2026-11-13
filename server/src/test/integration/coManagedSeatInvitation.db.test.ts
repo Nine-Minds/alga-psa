@@ -230,9 +230,10 @@ describeDb('inviting a seat technician against the allocation', { shuffle: false
     const sponsor = await sponsorWithPool(10);
     const arrangement = await arrange(sponsor, 2);
     await invite(sponsor, arrangement.arrangement_id);
+    const technician = await createUser(db, sponsor, { user_type: 'internal' });
     // An active technician and a pending invitation each hold a seat; a revoked one holds none.
     await db('co_managed_seat_assignments').insert([
-      { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, user_id: randomUUID(), state: 'active' },
+      { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, user_id: technician, state: 'active' },
       { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, state: 'revoked', revoked_at: new Date() },
     ]);
 
