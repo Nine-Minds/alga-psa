@@ -223,9 +223,9 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    // Two reply-target queries, the per-ticket one-off Cc/Bcc lookup, and the
-    // new comment's visibility read for its embedded images.
-    expect(commentsQueryCount).toBe(4);
+    // Two reply-target queries plus the per-ticket one-off Cc/Bcc lookup. The
+    // new comment's visibility is read only for a body that embeds an image.
+    expect(commentsQueryCount).toBe(3);
   });
 
   it('T034: In-Reply-To resolves outbound message id to comment thread', async () => {
@@ -327,9 +327,9 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    // One reply-target query, the per-ticket one-off Cc/Bcc lookup, and the
-    // new comment's visibility read for its embedded images.
-    expect(commentsQueryCount).toBe(3);
+    // One reply-target query plus the per-ticket one-off Cc/Bcc lookup. The
+    // new comment's visibility is read only for a body that embeds an image.
+    expect(commentsQueryCount).toBe(2);
   });
 
   it('quarantines a forged In-Reply-To from an unrelated sender before comment, artifacts, or watcher effects', async () => {

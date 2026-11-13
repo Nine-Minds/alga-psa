@@ -519,4 +519,56 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
     );
     expect(embedded.content_id).toBe('inline-image-1');
   });
+
+  it('never asks who may read an embedded image when the body embeds none', async () => {
+    const { processInboundEmailArtifactsBestEffort } = await import('../processInboundEmailArtifacts');
+    const whoMayRead = vi.fn(async () => true);
+
+    await processInboundEmailArtifactsBestEffort({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      ticketId: 'ticket-1',
+      scopeLabel: 'reply',
+      clientVisibleEmbeddedImages: whoMayRead,
+      emailData: buildEmailData({ attachments: [wavAttachment()] }),
+    });
+
+    expect(whoMayRead).not.toHaveBeenCalled();
+  });
+
+  it('keeps an embedded image staff-only when its visibility cannot be read', async () => {
+    const { processInboundEmailArtifactsBestEffort } = await import('../processInboundEmailArtifacts');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processInboundEmailArtifactsBestEffort({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      ticketId: 'ticket-1',
+      scopeLabel: 'reply',
+      clientVisibleEmbeddedImages: async () => {
+        throw new Error('comment read failed');
+      },
+      emailData: buildEmailData({
+        body: { text: '', html: '<p><img src="cid:inline-image-1" /></p>' },
+        attachments: [
+          {
+            id: 'attachment-inline-1',
+            name: 'screenshot.png',
+            contentType: 'image/png',
+            size: 3,
+            contentId: '<inline-image-1>',
+            isInline: true,
+            content: Buffer.from('abc').toString('base64'),
+          },
+        ],
+      }),
+    });
+
+    const pngDocument = h.getTable('documents').find((doc) => doc.mime_type === 'image/png');
+    expect(pngDocument).toBeTruthy();
+    expect(pngDocument.is_client_visible).toBeFalsy();
+    expect(
+      warn.mock.calls.some(([message]) => String(message).includes('embedded image visibility lookup failed'))
+    ).toBe(true);
+  });
 });
