@@ -149,6 +149,28 @@ describe('F048 canonical materials service (T005)', () => {
     });
   });
 
+  it('marks a non-serialized ticket material linked to a stock unit as quantity-locked', async () => {
+    await inTx(async (trx) => {
+      const product = await makeTrackedProduct(trx, `vitest-unitlink-${randomUUID().slice(0, 8)}`, 0);
+      const [material] = await trx('ticket_materials').insert({
+        tenant: TENANT, ticket_id: TICKET, client_id: CLIENT, service_id: product,
+        quantity: 1, rate: 100, currency_code: 'USD', is_billed: false,
+      }).returning('ticket_material_id');
+      const [unit] = await trx('stock_units').insert({
+        tenant: TENANT, service_id: product, serial_number: `SN-LINK-${randomUUID().slice(0, 8)}`,
+        status: 'delivered', client_id: CLIENT, location_id: null,
+      }).returning('unit_id');
+      await recordStockMovement(trx, TENANT, {
+        movement_type: 'consume', service_id: product, quantity: 1, unit_id: unit.unit_id,
+        from_location_id: LOCATION, source_doc_type: 'ticket_material', source_doc_id: material.ticket_material_id,
+      });
+
+      const materials = await listMaterials(trx, TENANT, 'ticket', TICKET);
+      const linked = materials.find((row) => 'ticket_material_id' in row && row.ticket_material_id === material.ticket_material_id);
+      expect(linked?.quantity_locked).toBe(true);
+    });
+  });
+
   it('addMaterial writes the row, consumes stock, derives client from the ticket; deleteMaterial reverses', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t005-${randomUUID().slice(0, 8)}`, 3);

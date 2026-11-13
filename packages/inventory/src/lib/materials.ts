@@ -2,6 +2,7 @@ import {
   admitOperationalWrite,
   registerAfterCommit,
   registerAfterCommitWithConnection,
+  tenantDb,
   withTransaction,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -182,12 +183,13 @@ export async function listMaterials(
       return material;
     });
     const serviceIds = [...new Set(materials.map((material) => material.service_id))];
-    const serializedServices = await trx('product_inventory_settings')
-      .where({ tenant, is_serialized: true })
+    const db = tenantDb(trx, tenant);
+    const serializedServices = await db.table('product_inventory_settings')
+      .where({ is_serialized: true })
       .whereIn('service_id', serviceIds)
       .select('service_id');
-    const linkedUnits = await trx('stock_movements')
-      .where({ tenant, source_doc_type: cfg.sourceDocType, movement_type: 'consume' })
+    const linkedUnits = await db.table('stock_movements')
+      .where({ source_doc_type: cfg.sourceDocType, movement_type: 'consume' })
       .whereIn('source_doc_id', ticketMaterials.map((material) => material.ticket_material_id))
       .whereNotNull('unit_id')
       .select('source_doc_id');
