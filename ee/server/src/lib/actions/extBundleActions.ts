@@ -10,6 +10,8 @@ import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
 import { Readable } from "node:stream";
+import { effectiveBufferedCap, serverActionFileLimitBytes } from "@alga-psa/storage/ingest/bufferedCap";
+import { UploadSizeLimitError } from "@alga-psa/storage/ingest/errors";
 import * as fzstd from "fzstd";
 import * as tarStream from "tar-stream";
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
@@ -64,7 +66,18 @@ class HttpError extends Error {
   }
 }
 
-const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB
+const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB: the most finalize will read back from the bundle bucket
+/** Largest bundle the browser may send through extUploadProxy. It buffers because the bundle arrives inside a server-action FormData that Next holds in memory, so it is also bounded by SERVER_ACTIONS_BODY_LIMIT. */
+const EXT_BUNDLE_UPLOAD_CAP_BYTES = MAX_BUNDLE_SIZE_BYTES;
+
+function extBundleUploadLimit(): number {
+  return effectiveBufferedCap(EXT_BUNDLE_UPLOAD_CAP_BYTES, serverActionFileLimitBytes(), 'EXT_BUNDLE_UPLOAD_CAP_BYTES');
+}
+
+/** The largest bundle extUploadProxy accepts, so the installer can refuse an oversized file before sending it. */
+export async function extGetUploadLimit(): Promise<{ maxBytes: number }> {
+  return { maxBytes: extBundleUploadLimit() };
+}
 const BASE_PREFIX = "sha256/";
 
 /**
@@ -148,7 +161,8 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
   if (!sizeRaw) throw new Error("size is required");
   const size = Number(sizeRaw);
   if (!Number.isFinite(size) || size <= 0) throw new Error("size must be a positive number");
-  if (size > MAX_BUNDLE_SIZE_BYTES) throw new Error(`size exceeds maximum of ${MAX_BUNDLE_SIZE_BYTES} bytes`);
+  const uploadLimit = extBundleUploadLimit();
+  if (size > uploadLimit) throw new UploadSizeLimitError(uploadLimit);
 
   let declaredHash: string | undefined;
   if (typeof declaredHashRaw === "string" && declaredHashRaw.length > 0) {
@@ -157,6 +171,7 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
   }
 
   if (!file || typeof (file as any).stream !== "function") throw new Error("file is required and must be a File");
+  if ((file as any).size > uploadLimit) throw new UploadSizeLimitError(uploadLimit);
 
   const { tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
