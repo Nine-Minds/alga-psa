@@ -53,7 +53,9 @@ describe('buildLabelModel', () => {
       'nextAction', 'rma.shipping', 'rma.statusLabel', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
       'tenantClient.logoUrl', 'tenantClient.name', 'ticketDescription', 'ticketDescriptionRichText', 'title', 'url',
     ]);
-    expect(paths.some((p) => /recordId|email|phone/i.test(p))).toBe(false);
+    // assetSerialNumber is the only full serial; it is gated to full-page worksheets (tested below).
+    const allowedSerialPaths = new Set(['serialSuffix', 'assetSerialNumber']);
+    expect(paths.some((p) => /serial(Number)?$|recordId|email|phone/i.test(p) && !allowedSerialPaths.has(p))).toBe(false);
   });
 
   it('provides the full serial, description and asset specifications only to full-page ticket worksheets before evaluation', () => {

@@ -296,7 +296,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
     ? t(designerFieldTranslationKey(normalizedBinding, 'label'), {
         defaultValue: resolveDocumentFieldLabel(normalizedBinding),
       })
-    : t('designer.inspector.noFieldSelected', { defaultValue: 'No field selected' });
+    : t('designer.inspector.binding.noFieldSelected', { defaultValue: 'No field selected' });
 
   if (customMode) {
     return (

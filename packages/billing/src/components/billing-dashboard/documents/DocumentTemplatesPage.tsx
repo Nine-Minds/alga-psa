@@ -77,7 +77,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
 
   const templateDisplayName = useCallback((record: DocumentTemplateListItem) =>
     record.source === 'standard'
-      ? t(`documentTemplates.standardNames.${record.template_id}`, { defaultValue: record.name })
+      ? t(`documentTemplates.standardNames.${record.code}`, { defaultValue: record.name })
       : record.name,
   [t]);
 

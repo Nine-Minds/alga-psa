@@ -98,7 +98,7 @@ describe('getTicketLinkedAssetLabelParts', () => {
 
   it('no asset line (count only): no worksheet info block', async () => {
     three();
-    const [r] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T }]);
+    const [r] = await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T }]);
     expect(r?.linkedAssetInfo).toBeNull();
   });
 

@@ -1438,7 +1438,6 @@
       "insertDataField": "+ Insérer un champ de données…",
       "searchDataFields": "Rechercher des champs de données…",
       "dataFields": "Champs de données",
-      "noFieldSelected": "Aucun champ sélectionné",
       "bindingPathHint": "Saisissez un chemin de liaison si le champ souhaité ne figure pas dans la liste.",
       "useFieldPicker": "Utiliser le sélecteur de champs",
       "currentField": "Actuel",

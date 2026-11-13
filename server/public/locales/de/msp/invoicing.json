@@ -1438,7 +1438,6 @@
       "insertDataField": "+ Datenfeld einfügen…",
       "searchDataFields": "Datenfelder suchen…",
       "dataFields": "Datenfelder",
-      "noFieldSelected": "Kein Feld ausgewählt",
       "bindingPathHint": "Geben Sie einen Bindungspfad ein, wenn das gewünschte Feld nicht aufgeführt ist.",
       "useFieldPicker": "Feldauswahl verwenden",
       "currentField": "Aktuell",

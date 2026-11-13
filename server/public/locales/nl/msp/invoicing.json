@@ -1438,7 +1438,6 @@
       "insertDataField": "+ Gegevensveld invoegen…",
       "searchDataFields": "Gegevensvelden zoeken…",
       "dataFields": "Gegevensvelden",
-      "noFieldSelected": "Geen veld geselecteerd",
       "bindingPathHint": "Voer een bindingspad in als het gewenste veld niet in de lijst staat.",
       "useFieldPicker": "Veldkiezer gebruiken",
       "currentField": "Huidig",

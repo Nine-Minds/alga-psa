@@ -1438,7 +1438,6 @@
       "insertDataField": "+ Infoga datafält…",
       "searchDataFields": "Sök datafält…",
       "dataFields": "Datafält",
-      "noFieldSelected": "Inget fält valt",
       "bindingPathHint": "Ange en bindningssökväg om fältet du behöver inte finns i listan.",
       "useFieldPicker": "Använd fältväljaren",
       "currentField": "Aktuellt",

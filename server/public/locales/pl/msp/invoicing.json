@@ -1490,7 +1490,6 @@
       "insertDataField": "+ Wstaw pole danych…",
       "searchDataFields": "Szukaj pól danych…",
       "dataFields": "Pola danych",
-      "noFieldSelected": "Nie wybrano pola",
       "bindingPathHint": "Wpisz ścieżkę powiązania, jeśli potrzebnego pola nie ma na liście.",
       "useFieldPicker": "Użyj selektora pól",
       "currentField": "Bieżące",

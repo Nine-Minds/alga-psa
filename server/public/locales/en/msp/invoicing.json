@@ -1438,7 +1438,6 @@
       "insertDataField": "+ Insert data field…",
       "searchDataFields": "Search data fields…",
       "dataFields": "Data fields",
-      "noFieldSelected": "No field selected",
       "bindingPathHint": "Type any binding path when the field you need is not listed.",
       "useFieldPicker": "Use field picker",
       "currentField": "Current",
