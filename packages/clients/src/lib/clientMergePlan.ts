@@ -34,7 +34,7 @@ export interface MergeClientFacts {
   mergedIntoClientId: string | null;
   /** The tenant's own client record cannot be absorbed into a customer. */
   isTenantDefault: boolean;
-  /** A co-managed workspace provisioned for this client still holds seats. */
+  /** A live co-managed workspace or seat arrangement still belongs to this client. */
   hasLiveCoManagement?: boolean;
 }
 
@@ -139,7 +139,7 @@ export function evaluateMergeGuards(input: MergeGuardInput): MergeBlocker[] {
   if (input.source.hasLiveCoManagement) {
     blockers.push(blocker(
       'SOURCE_HAS_CO_MANAGEMENT',
-      'This client has a co-managed IT workspace. Cancel its setup or end co-management before merging it.',
+      'This client has a co-managed IT arrangement. Cancel its setup or end co-management before merging it.',
       'msp/clients:errors.clientMerge.sourceHasCoManagement',
     ));
   }
@@ -530,6 +530,13 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
  * re-derive that half of these columns are not Alga clients at all.
  */
 export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: string }> = [
+  {
+    table: 'co_managed_seat_arrangements',
+    reason:
+      'Live seat arrangements block the merge through SOURCE_HAS_CO_MANAGEMENT. Ended arrangements '
+      + 'retain the original client identity, matching their allocation and assignment history; '
+      + 'moving them would misattribute that history to the destination client.',
+  },
   {
     table: 'tenant_companies',
     reason: "The tenant's own client record. SOURCE_IS_TENANT_DEFAULT refuses the merge instead.",

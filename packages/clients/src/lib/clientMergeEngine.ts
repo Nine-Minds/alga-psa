@@ -255,7 +255,9 @@ async function readClientFacts(
     clientName: row.client_name as string,
     mergedIntoClientId: (row.merged_into_client_id as string | null) ?? null,
     isTenantDefault: Boolean(tenantDefault),
-    hasLiveCoManagement: await countLiveCoManagedWorkspacesForClient(trx, { tenant, entityId: clientId }) > 0,
+    hasLiveCoManagement: await countLiveCoManagedWorkspacesForClient(trx, { tenant, entityId: clientId }) > 0 ||
+      Boolean(await scoped(trx, tenant, 'co_managed_seat_arrangements')
+        .where({ client_id: clientId, state: 'active' }).first('arrangement_id')),
   };
 }
 
@@ -892,6 +894,12 @@ export async function executeClientMerge(
   input: ClientMergeInput,
 ): Promise<ClientMergeResult> {
   await lockTenantBilling(trx, tenant);
+
+  // Seat creation holds a share lock on its client through commit. Lock both
+  // clients before reading arrangements so a new one cannot slip past the guard.
+  await scoped(trx, tenant, 'clients')
+    .whereIn('client_id', [input.sourceClientId, input.targetClientId])
+    .orderBy('client_id').forUpdate().select('client_id');
 
   const source = await readClientFacts(trx, tenant, input.sourceClientId);
   const target = await readClientFacts(trx, tenant, input.targetClientId);

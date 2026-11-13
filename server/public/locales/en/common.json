@@ -56,7 +56,6 @@
     "manageLicense": "Manage License",
     "ariaLabel": "License status",
     "dismiss": "Dismiss",
-
     "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.",
     "subscriptionEndingNoDate": "Your Pro subscription has been cancelled. Resubscribe to keep Pro.",
     "subscriptionLapsed": "You're now on the free edition. Resubscribe to restore Pro.",
@@ -70,13 +69,12 @@
     "paymentFailedEndedEnding": "Your Pro subscription ended — payment failed. Pro stays active until {{date}}. Resubscribe to keep Pro.",
     "paymentFailedEndedEndingNoDate": "Your Pro subscription ended — payment failed. Resubscribe to keep Pro.",
     "updatePaymentMethod": "Update payment method",
-"licenseExpiresIn_few": "License expires in {{count}} days. Renew to avoid service interruption.",
+    "licenseExpiresIn_few": "License expires in {{count}} days. Renew to avoid service interruption.",
     "licenseExpiresIn_many": "License expires in {{count}} days. Renew to avoid service interruption.",
     "trialDaysRemaining_few": "Pro trial active — {{count}} days remaining.",
     "trialDaysRemaining_many": "Pro trial active — {{count}} days remaining.",
     "trialExpiresIn_few": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",
     "trialExpiresIn_many": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features."
-
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -939,7 +937,16 @@
       "emptyDropMessage": "No files were received. Save the attachment or email to your computer, then drag the saved file here or use Browse Files.",
       "uploadInProgress": "An upload is already in progress. Wait for it to finish before adding more files.",
       "refreshFailed": "Your files were uploaded, but the document list could not refresh. Reload the page to see them.",
-      "clearResults": "Clear results"
+      "clearResults": "Clear results",
+      "typeNotAllowed": "This file type isn't allowed. Choose a different file.",
+      "permissionDenied": "You don't have permission to upload documents here.",
+      "networkFailed": "The connection was interrupted and the upload could not be resumed. Check your connection and try again.",
+      "sessionGone": "This upload expired before it finished. Start it again.",
+      "cancelled": "Cancelled",
+      "cancelUpload": "Cancel upload",
+      "tryAgain": "Try again",
+      "progress": "{{committed}} of {{total}}",
+      "progressLabel": "Upload progress for {{name}}"
     },
     "folders": {
       "root": "Root",
