@@ -11,9 +11,12 @@ it('caps files below both the configured action envelope and the attachment limi
 });
 
 it('is the shared server-action limit, so the two parsers cannot disagree', () => {
-  for (const limit of ['20mb', '30 MB', '1.5mb', '1048576', '1kb', '2gb']) {
+  for (const limit of ['20mb', '1.5mb', '1048576', '1kb']) {
     expect(coManagedAttachmentUploadLimit(limit)).toBe(serverActionFileLimitBytes(limit));
   }
+  // Only the co-managed limit is clamped to 25 MiB; the shared limit follows the body limit.
+  expect(coManagedAttachmentUploadLimit('200mb')).toBe(25 * 1048576);
+  expect(serverActionFileLimitBytes('200mb')).toBe(200 * 1048576 - 65536);
 });
 
 it('throws on an unparseable body limit instead of assuming a default', () => {

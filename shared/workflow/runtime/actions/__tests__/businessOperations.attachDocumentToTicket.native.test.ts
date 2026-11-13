@@ -323,7 +323,7 @@ describe('attachDocumentToTicket url branch: cleanup of the stored object', () =
 
   it('aborts the write session when the ingest fails mid-stream (byte guard), leaving no object and no rows', async () => {
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
-    // Cap 10 MiB (default MAX_ATTACHMENT_BYTES); 9 MiB then 2 MiB crosses it after the first part went out.
+    // Cap 10 MiB (default WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES); 9 MiB then 2 MiB crosses it after the first part went out.
     vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', String(500 * 1024 * 1024));
     await resetStoragePolicy();
     vi.stubGlobal('fetch', vi.fn(streamResponse([new Uint8Array(9 * 1024 * 1024), new Uint8Array(2 * 1024 * 1024)], { 'content-type': 'application/octet-stream' })));

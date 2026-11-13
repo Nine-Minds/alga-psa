@@ -17,7 +17,7 @@ import {
   requirePermission,
   writeRunAudit,
   throwActionError,
-  MAX_ATTACHMENT_BYTES
+  getMaxAttachmentBytes
 } from './shared';
 import {
   workflowUserRecipientsSchema,
@@ -290,7 +290,7 @@ export function registerEmailActions(): void {
         if (!provider.capabilities.supportsAttachments) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Email provider does not support attachments' });
         }
-        const maxPerAttachment = provider.capabilities.maxAttachmentSize ?? MAX_ATTACHMENT_BYTES;
+        const maxPerAttachment = provider.capabilities.maxAttachmentSize ?? getMaxAttachmentBytes();
         const storage = await StorageProviderFactory.createProvider();
         const db = tenantDb(tx.trx, tx.tenantId);
         for (const fileId of attachmentFileIds) {

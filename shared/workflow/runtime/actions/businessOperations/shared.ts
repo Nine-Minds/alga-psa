@@ -351,7 +351,10 @@ export type AttachmentSource = z.infer<typeof attachmentSourceSchema>;
  * runs unattended and an attachment is also re-read into memory when an email action sends it.
  * Never advertised above the provider's own limit: `effectiveBufferedCap` clamps it at use.
  */
-export const MAX_ATTACHMENT_BYTES = parseAttachmentMaxBytes(process.env.WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES, 10 * 1024 * 1024);
+export function getMaxAttachmentBytes(): number {
+  // Read at call time: a malformed value fails the attachment action with a clear error, not module import.
+  return parseAttachmentMaxBytes(process.env.WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES, 10 * 1024 * 1024);
+}
 
 /** Strict: a whole number of bytes > 0. `Number("10MB")` is NaN, which would silently disable the limit. */
 export function parseAttachmentMaxBytes(raw: string | undefined, fallback: number): number {
@@ -417,7 +420,7 @@ export async function attachDocumentToTicket(
     if (!fileRecord) {
       throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'File not found', details: { file_id: input.source.file_id } });
     }
-    if (typeof fileRecord.file_size === 'number' && fileRecord.file_size > MAX_ATTACHMENT_BYTES) {
+    if (typeof fileRecord.file_size === 'number' && fileRecord.file_size > getMaxAttachmentBytes()) {
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
     }
     // Unify with the same MIME/size policy manual upload uses so workflow
@@ -454,7 +457,7 @@ export async function attachDocumentToTicket(
     const { Readable } = await import('node:stream');
 
     const policy = await getUploadPolicy();
-    const cap = effectiveBufferedCap(MAX_ATTACHMENT_BYTES, policy.maxFileSize);
+    const cap = effectiveBufferedCap(getMaxAttachmentBytes(), policy.maxFileSize, 'WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES');
     const filename = input.filename ?? new URL(input.source.url).pathname.split('/').filter(Boolean).pop() ?? 'attachment.bin';
     const provider = await StorageProviderFactory.createProvider();
     const storagePath = generateStoragePath(tx.tenantId, '', filename);

@@ -40,7 +40,9 @@ type ClientTaskDocument = {
  * the largest file it can accept (the limit less the multipart envelope) is the cap, clamped to
  * the provider max. The file is still streamed from the received File into the ingest.
  */
-const CLIENT_TASK_UPLOAD_MAX_BYTES = serverActionFileLimitBytes();
+// Computed per call, not at import: an unparseable SERVER_ACTIONS_BODY_LIMIT must fail the upload
+// with a clear error, not every action in this module.
+const clientTaskUploadMaxBytes = (): number => serverActionFileLimitBytes();
 
 function clientProjectUploadErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
@@ -574,7 +576,7 @@ export const uploadClientTaskDocument = withAuth(async (
 
     // 1. Never advertise or enforce more than the action transport accepts (or the provider allows).
     const { maxFileSize } = await getUploadPolicy();
-    assertWithinBufferedCap(file.size, effectiveBufferedCap(CLIENT_TASK_UPLOAD_MAX_BYTES, maxFileSize));
+    assertWithinBufferedCap(file.size, effectiveBufferedCap(clientTaskUploadMaxBytes(), maxFileSize, 'client task upload cap'));
 
     // 2. Stream the file into storage: the ingest owns the size, type and hash checks
     // (StorageService.uploadFile is static, doesn't support transactions).

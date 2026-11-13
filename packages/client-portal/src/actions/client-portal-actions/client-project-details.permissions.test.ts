@@ -206,5 +206,22 @@ describe('client portal project detail actions enforce project:read', () => {
       expect(result).toEqual({ success: false, error: `File size exceeds limit of ${cap} bytes` });
       expect(uploadFileMock).not.toHaveBeenCalled();
     });
+
+    it('the cap follows SERVER_ACTIONS_BODY_LIMIT (200mb gives 200 MiB less 64 KiB), with no 25 MiB clamp', async () => {
+      vi.stubEnv('SERVER_ACTIONS_BODY_LIMIT', '200mb');
+      try {
+        const cap = 200 * 1024 * 1024 - 64 * 1024;
+        const file = new File(['x'], 'huge.mp4', { type: 'video/mp4' });
+        Object.defineProperty(file, 'size', { value: cap + 1 });
+        const form = new FormData();
+        form.set('file', file);
+        const { uploadClientTaskDocument } = await import('./client-project-details');
+        const result = await uploadClientTaskDocument('task-1', form);
+        // Refused at exactly the body-limit cap (the provider max in this suite is 500 MB), not at 25 MiB.
+        expect(result).toEqual({ success: false, error: `File size exceeds limit of ${cap} bytes` });
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
   });
 });

@@ -47,9 +47,6 @@ export function parseByteSize(value: string): number | null {
 /** Room reserved for multipart framing and the action's other (serialized) arguments. */
 export const SERVER_ACTION_ENVELOPE_BYTES = 64 * 1024;
 
-/** Ceiling on any server-action file, however high SERVER_ACTIONS_BODY_LIMIT is set. */
-export const SERVER_ACTION_MAX_FILE_BYTES = 25 * 1024 * 1024;
-
 /**
  * The largest file a server action can receive: Next's `bodySizeLimit` (SERVER_ACTIONS_BODY_LIMIT,
  * default 20mb, see next.config.mjs) less the envelope, clamped to SERVER_ACTION_MAX_FILE_BYTES.
@@ -62,5 +59,5 @@ export function serverActionFileLimitBytes(bodyLimit: string = process.env.SERVE
   if (bytes === null) {
     throw new Error(`SERVER_ACTIONS_BODY_LIMIT must be a size such as "20mb" or "4096" (got "${bodyLimit}")`);
   }
-  return Math.min(SERVER_ACTION_MAX_FILE_BYTES, Math.max(0, bytes - SERVER_ACTION_ENVELOPE_BYTES));
+  return Math.max(0, bytes - SERVER_ACTION_ENVELOPE_BYTES);
 }

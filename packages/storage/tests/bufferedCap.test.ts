@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { UploadSizeLimitError } from '../src/ingest/errors';
 import {
   SERVER_ACTION_ENVELOPE_BYTES,
-  SERVER_ACTION_MAX_FILE_BYTES,
   assertWithinBufferedCap,
   effectiveBufferedCap,
   parseByteSize,
@@ -56,7 +55,7 @@ describe('buffered upload caps', () => {
     expect(serverActionFileLimitBytes('1mb')).toBe(1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
     expect(() => serverActionFileLimitBytes('nonsense')).toThrow(/SERVER_ACTIONS_BODY_LIMIT/);
     expect(() => serverActionFileLimitBytes('')).toThrow(/SERVER_ACTIONS_BODY_LIMIT/);
-    expect(serverActionFileLimitBytes('30 MB')).toBe(SERVER_ACTION_MAX_FILE_BYTES);
+    expect(serverActionFileLimitBytes('200mb')).toBe(200 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
     expect(serverActionFileLimitBytes('10b')).toBe(0);
   });
 });
