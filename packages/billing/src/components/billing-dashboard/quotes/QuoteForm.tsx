@@ -41,6 +41,7 @@ import {
   pickDefaultLocation,
   collectDistinctLocationIds,
   formatLocationSummaryLabel,
+  relocateLocationGroup,
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteMarkAcceptedDialog from './QuoteMarkAcceptedDialog';
@@ -359,14 +360,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // second group has items yet.
   const showLocationGroups = multiLocationMode;
 
-  // Auto-flip back to flat if everything collapses to one location and no
-  // user-seeded empty location group is still visible.
+  /**
+   * Every location band the editor currently shows: the sited items' locations
+   * plus the user-seeded empty ones. The quote-wide (discount) band is not one
+   * of these — it has no location and cannot be removed.
+   */
+  const locationGroupIds = useMemo(() => {
+    const ids = new Set<string>(distinctLocationIds);
+    for (const id of extraGroupLocationIds) ids.add(id);
+    return Array.from(ids);
+  }, [distinctLocationIds, extraGroupLocationIds]);
+
+  // Only leave grouped mode when nothing is left to group. Collapsing as soon
+  // as one location remains tore down the surviving band too, which read as
+  // "removing the second location removed both of them".
   useEffect(() => {
     if (!multiLocationMode) return;
-    if (distinctLocationIds.length <= 1 && extraGroupLocationIds.length === 0) {
+    if (locationGroupIds.length === 0) {
       setMultiLocationMode(false);
     }
-  }, [multiLocationMode, distinctLocationIds.length, extraGroupLocationIds.length]);
+  }, [multiLocationMode, locationGroupIds.length]);
 
   // An extra group is "realized" once items land on it — drop it from the
   // placeholder list so `buildLocationGroups` doesn't double-count it.
@@ -1304,25 +1317,51 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   };
 
   /**
-   * Where "move items" sends a removed group's items: the client's primary
-   * location, or — when the primary group is the one being removed — the first
-   * other location the quote still uses, else any other client location.
+   * Re-point a band at another location. Picking a location that another band
+   * already owns swaps the two bands rather than merging them, so the choice
+   * always changes *this* section — and an item-less band (a seeded
+   * placeholder) follows the picker instead of ignoring it.
+   */
+  const handleChangeLocationGroup = (fromLocationId: string | null, toLocationId: string) => {
+    if (!toLocationId || toLocationId === fromLocationId) return;
+    // Mid-client-switch the loaded list still belongs to the previous client.
+    if (!locationsReady) return;
+    if (!clientLocations.some((location) => location.location_id === toLocationId)) return;
+
+    const targetIsAnotherBand = locationGroupIds.includes(toLocationId);
+    const swapWithTarget = targetIsAnotherBand && fromLocationId !== null;
+
+    setLineItems((current) => relocateLocationGroup(current, fromLocationId, toLocationId, swapWithTarget));
+    setExtraGroupLocationIds((current) => current.map((id) => {
+      if (id === fromLocationId) return toLocationId;
+      if (swapWithTarget && id === toLocationId) return fromLocationId;
+      return id;
+    }));
+  };
+
+  /**
+   * Where "move items" sends a removed group's items: another band on this
+   * quote — the client's primary when it still has one, else the first band
+   * that remains. Never a location the quote does not use.
    */
   const locationRemovalTarget = useMemo(() => {
     if (!locationRemovalGroupId) return null;
+    const remainingIds = locationGroupIds.filter((id) => id !== locationRemovalGroupId);
+    if (remainingIds.length === 0) return null;
     const primary = pickDefaultLocation(clientLocations);
-    if (primary && primary.location_id !== locationRemovalGroupId) return primary;
-    const fallbackId = distinctLocationIds.find((id) => id !== locationRemovalGroupId)
-      ?? extraGroupLocationIds.find((id) => id !== locationRemovalGroupId)
-      ?? null;
-    return clientLocations.find((location) =>
-      location.location_id === (fallbackId ?? '')
-    ) ?? clientLocations.find((location) => location.location_id !== locationRemovalGroupId) ?? null;
-  }, [locationRemovalGroupId, clientLocations, distinctLocationIds, extraGroupLocationIds]);
+    const targetId = primary && remainingIds.includes(primary.location_id)
+      ? primary.location_id
+      : remainingIds[0];
+    return clientLocations.find((location) => location.location_id === targetId) ?? null;
+  }, [locationRemovalGroupId, clientLocations, locationGroupIds]);
 
   const dropLocationGroupPlaceholder = (removedLocationId: string) => {
     setExtraGroupLocationIds((current) => current.filter((id) => id !== removedLocationId));
   };
+
+  /** True when `locationId` is the only band left on the quote. */
+  const isOnlyLocationGroup = (locationId: string): boolean =>
+    locationGroupIds.every((id) => id === locationId);
 
   const handleRemoveLocationGroup = (
     removedLocationId: string | null,
@@ -1331,13 +1370,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     if (!removedLocationId) return;
     // The editor's last-item cleanup has nothing to move or delete, so the
     // placeholder group just goes away — prompting there would ask the user
-    // about items that no longer exist.
-    if (source === 'empty-group') {
+    // about items that no longer exist. Sibling bands stay on screen: only the
+    // band that was asked for goes.
+    if (source === 'empty-group' || !lineItems.some((item) => item.location_id === removedLocationId)) {
       dropLocationGroupPlaceholder(removedLocationId);
-      return;
-    }
-    if (!lineItems.some((item) => item.location_id === removedLocationId)) {
-      dropLocationGroupPlaceholder(removedLocationId);
+      if (isOnlyLocationGroup(removedLocationId)) setMultiLocationMode(false);
       return;
     }
     setLocationRemovalGroupId(removedLocationId);
@@ -1348,13 +1385,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     if (!removedLocationId) return;
     if (choice === 'delete') {
       setLineItems((current) => current.filter((item) => item.location_id !== removedLocationId));
-    } else {
-      const targetLocationId = locationRemovalTarget?.location_id ?? null;
+    } else if (locationRemovalTarget) {
+      const targetLocationId = locationRemovalTarget.location_id;
       setLineItems((current) => current.map((item) =>
         item.location_id === removedLocationId ? { ...item, location_id: targetLocationId } : item
       ));
     }
+    // "ungroup" (the last band) keeps the items exactly where they are and
+    // simply stops showing the quote by location.
     dropLocationGroupPlaceholder(removedLocationId);
+    if (choice === 'delete' || !locationRemovalTarget) {
+      if (isOnlyLocationGroup(removedLocationId)) setMultiLocationMode(false);
+    }
     setLocationRemovalGroupId(null);
   };
 
@@ -1366,6 +1408,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         label: t('quoteForm.locations.removeGroup.moveOption', {
           defaultValue: 'Move these items to {{location}}',
           location: formatLocationSummaryLabel(locationRemovalTarget),
+        }),
+      });
+    } else {
+      // Last band on the quote: there is nowhere to move the items, so the
+      // non-destructive choice is to keep them and stop grouping.
+      options.push({
+        value: 'ungroup',
+        label: t('quoteForm.locations.removeGroup.ungroupOption', {
+          defaultValue: 'Keep these items and stop grouping by location',
         }),
       });
     }
@@ -1815,6 +1866,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                             item.location_id ? { ...item, location_id: null } : item
                           ));
                           setExtraGroupLocationIds([]);
+                          // Grouping belonged to the previous client's sites;
+                          // the new client starts flat until asked otherwise.
+                          setMultiLocationMode(false);
                           // A new quote re-defaults from the client, but a
                           // source template still owns the currency (create
                           // precedence: template, then client, then tenant).
@@ -1964,6 +2018,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 onAddLocationGroup={
                   !isTemplate && !isReadOnly ? handleAddLocationGroup : undefined
                 }
+                onChangeLocationGroup={handleChangeLocationGroup}
                 onRemoveLocationGroup={handleRemoveLocationGroup}
               />
             </section>

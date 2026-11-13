@@ -338,6 +338,7 @@
         "title": "Ta bort den här platsen?",
         "message": "Den här platsen har fortfarande {{count}} rad(er). Välj vad som ska hända med dem.",
         "moveOption": "Flytta dessa rader till {{location}}",
+        "ungroupOption": "Behåll dessa rader och sluta gruppera efter plats",
         "deleteOption": "Ta bort dessa rader",
         "confirm": "Ta bort plats"
       }

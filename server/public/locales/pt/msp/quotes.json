@@ -338,6 +338,7 @@
         "title": "Remover este local?",
         "message": "Este local ainda tem {{count}} item(ns). Escolha o que acontece com eles.",
         "moveOption": "Mover estes itens para {{location}}",
+        "ungroupOption": "Manter estes itens e deixar de agrupar por localização",
         "deleteOption": "Excluir estes itens",
         "confirm": "Remover local"
       }

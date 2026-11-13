@@ -338,6 +338,7 @@
         "title": "Usunąć tę lokalizację?",
         "message": "Ta lokalizacja ma jeszcze {{count}} pozycji. Wybierz, co z nimi zrobić.",
         "moveOption": "Przenieś te pozycje do {{location}}",
+        "ungroupOption": "Zachowaj te pozycje i zakończ grupowanie według lokalizacji",
         "deleteOption": "Usuń te pozycje",
         "confirm": "Usuń lokalizację"
       }

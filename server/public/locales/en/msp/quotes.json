@@ -338,6 +338,7 @@
         "title": "Remove this location?",
         "message": "This location still has {{count}} line item(s). Choose what happens to them.",
         "moveOption": "Move these items to {{location}}",
+        "ungroupOption": "Keep these items and stop grouping by location",
         "deleteOption": "Delete these items",
         "confirm": "Remove location"
       }

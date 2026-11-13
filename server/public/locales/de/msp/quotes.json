@@ -338,6 +338,7 @@
         "title": "Diesen Standort entfernen?",
         "message": "Dieser Standort hat noch {{count}} Position(en). Wählen Sie aus, was damit geschehen soll.",
         "moveOption": "Diese Positionen zu {{location}} verschieben",
+        "ungroupOption": "Diese Positionen behalten und nicht mehr nach Standort gruppieren",
         "deleteOption": "Diese Positionen löschen",
         "confirm": "Standort entfernen"
       }

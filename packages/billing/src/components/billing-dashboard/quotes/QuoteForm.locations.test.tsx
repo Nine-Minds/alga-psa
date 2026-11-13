@@ -173,8 +173,10 @@ type EditorProps = {
   items: DraftQuoteItem[];
   onChange: (items: DraftQuoteItem[]) => void;
   locations?: Array<{ location_id: string }>;
+  showLocationGroups?: boolean;
   extraGroupLocationIds?: string[];
   onAddLocationGroup?: () => void;
+  onChangeLocationGroup?: (fromLocationId: string | null, toLocationId: string) => void;
   onRemoveLocationGroup?: (locationId: string | null, source: 'user' | 'empty-group') => void;
 };
 
@@ -211,7 +213,11 @@ const location = (id: string, clientId: string, name: string, isDefault = false)
   email: null,
 });
 
-const CLIENT_1_LOCATIONS = [location('loc-a', 'client-1', 'Site A', true), location('loc-b', 'client-1', 'Site B')];
+const CLIENT_1_LOCATIONS = [
+  location('loc-a', 'client-1', 'Site A', true),
+  location('loc-b', 'client-1', 'Site B'),
+  location('loc-e', 'client-1', 'Site E'),
+];
 const CLIENT_2_LOCATIONS = [location('loc-c', 'client-2', 'Site C', true), location('loc-d', 'client-2', 'Site D')];
 
 const draft = (overrides: Partial<DraftQuoteItem> & { local_id: string }): DraftQuoteItem => ({
@@ -361,6 +367,134 @@ describe('QuoteForm multi-location editing (alga-2026-0002902)', () => {
     expect(currentItems().map((item) => item.local_id)).toEqual(['item-1', 'item-2']);
     expect(currentItems().map((item) => item.location_id)).toEqual(['loc-a', 'loc-a']);
     expect(document.getElementById('quote-location-remove-dialog')).toBeNull();
+  });
+
+  it('keeps the surviving band on screen when one location is removed', async () => {
+    await renderForm();
+    await setItems([
+      draft({ local_id: 'item-1', location_id: 'loc-a' }),
+      draft({ local_id: 'item-2', location_id: 'loc-b' }),
+    ]);
+    await waitFor(() => expect(editorProps!.showLocationGroups).toBe(true));
+
+    await act(async () => {
+      editorProps!.onRemoveLocationGroup?.('loc-b', 'user');
+    });
+    await act(async () => {
+      (document.getElementById('quote-location-remove-dialog-option-move') as HTMLButtonElement).click();
+    });
+
+    // Removing the second location must not tear down the first one's band.
+    expect(editorProps!.showLocationGroups).toBe(true);
+    expect(editorProps!.extraGroupLocationIds ?? []).toEqual([]);
+  });
+
+  it('keeps the first band when a seeded empty band is removed', async () => {
+    await renderForm();
+    await setItems([draft({ local_id: 'item-1', location_id: 'loc-a' })]);
+
+    await act(async () => {
+      editorProps!.onAddLocationGroup?.();
+    });
+    await waitFor(() => expect(editorProps!.extraGroupLocationIds).toEqual(['loc-b']));
+
+    await act(async () => {
+      editorProps!.onRemoveLocationGroup?.('loc-b', 'user');
+    });
+
+    // Nothing to move or delete, so no prompt — and Site A stays grouped.
+    expect(document.getElementById('quote-location-remove-dialog')).toBeNull();
+    expect(editorProps!.extraGroupLocationIds ?? []).toEqual([]);
+    expect(editorProps!.showLocationGroups).toBe(true);
+  });
+
+  it('stops grouping only when the last band is removed, keeping its items', async () => {
+    await renderForm();
+    await setItems([draft({ local_id: 'item-1', location_id: 'loc-a' }), draft({ local_id: 'item-2', location_id: 'loc-b' })]);
+    await waitFor(() => expect(editorProps!.showLocationGroups).toBe(true));
+
+    await act(async () => {
+      editorProps!.onRemoveLocationGroup?.('loc-b', 'user');
+    });
+    await act(async () => {
+      (document.getElementById('quote-location-remove-dialog-option-move') as HTMLButtonElement).click();
+    });
+
+    await act(async () => {
+      editorProps!.onRemoveLocationGroup?.('loc-a', 'user');
+    });
+
+    // The last band has nowhere to move items to, so the safe choice is to
+    // keep them and stop grouping.
+    const dialog = document.getElementById('quote-location-remove-dialog');
+    expect(dialog).toBeTruthy();
+    expect(document.getElementById('quote-location-remove-dialog-option-move')).toBeNull();
+
+    await act(async () => {
+      (document.getElementById('quote-location-remove-dialog-option-ungroup') as HTMLButtonElement).click();
+    });
+
+    expect(currentItems().map((item) => item.local_id)).toEqual(['item-1', 'item-2']);
+    expect(currentItems().every((item) => item.location_id === 'loc-a')).toBe(true);
+    expect(editorProps!.showLocationGroups).toBe(false);
+  });
+
+  it('re-points a seeded empty band at the location the user picks', async () => {
+    await renderForm();
+    await setItems([draft({ local_id: 'item-1', location_id: 'loc-a' })]);
+
+    await act(async () => {
+      editorProps!.onAddLocationGroup?.();
+    });
+    await waitFor(() => expect(editorProps!.extraGroupLocationIds).toEqual(['loc-b']));
+
+    await act(async () => {
+      editorProps!.onChangeLocationGroup?.('loc-b', 'loc-e');
+    });
+
+    expect(editorProps!.extraGroupLocationIds).toEqual(['loc-e']);
+    expect(currentItems().map((item) => item.location_id)).toEqual(['loc-a']);
+  });
+
+  it('swaps two bands instead of merging them when the picked location is taken', async () => {
+    await renderForm();
+    await setItems([
+      draft({ local_id: 'item-1', location_id: 'loc-a' }),
+      draft({ local_id: 'item-2', location_id: 'loc-b' }),
+    ]);
+
+    await act(async () => {
+      editorProps!.onChangeLocationGroup?.('loc-a', 'loc-b');
+    });
+
+    expect(currentItems().map((item) => item.location_id)).toEqual(['loc-b', 'loc-a']);
+    expect(editorProps!.showLocationGroups).toBe(true);
+  });
+
+  it('moves a band to a free location without leaving an empty one behind', async () => {
+    await renderForm();
+    await setItems([
+      draft({ local_id: 'item-1', location_id: 'loc-a' }),
+      draft({ local_id: 'item-2', location_id: 'loc-b' }),
+    ]);
+
+    await act(async () => {
+      editorProps!.onChangeLocationGroup?.('loc-b', 'loc-e');
+    });
+
+    expect(currentItems().map((item) => item.location_id)).toEqual(['loc-a', 'loc-e']);
+    expect(editorProps!.extraGroupLocationIds ?? []).toEqual([]);
+  });
+
+  it('refuses a location that does not belong to the selected client', async () => {
+    await renderForm();
+    await setItems([draft({ local_id: 'item-1', location_id: 'loc-a' })]);
+
+    await act(async () => {
+      editorProps!.onChangeLocationGroup?.('loc-a', 'loc-c');
+    });
+
+    expect(currentItems().map((item) => item.location_id)).toEqual(['loc-a']);
   });
 
   it('deletes the group items only when the user explicitly chooses delete', async () => {

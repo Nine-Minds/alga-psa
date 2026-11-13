@@ -338,6 +338,7 @@
         "title": "Rimuovere questa sede?",
         "message": "Questa sede contiene ancora {{count}} voce/voci. Scegli cosa farne.",
         "moveOption": "Sposta queste voci in {{location}}",
+        "ungroupOption": "Mantieni questi articoli e interrompi il raggruppamento per sede",
         "deleteOption": "Elimina queste voci",
         "confirm": "Rimuovi sede"
       }

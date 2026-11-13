@@ -338,6 +338,7 @@
         "title": "Deze locatie verwijderen?",
         "message": "Deze locatie heeft nog {{count}} regel(s). Kies wat ermee gebeurt.",
         "moveOption": "Deze items verplaatsen naar {{location}}",
+        "ungroupOption": "Deze regels behouden en niet meer groeperen op locatie",
         "deleteOption": "Deze items verwijderen",
         "confirm": "Locatie verwijderen"
       }

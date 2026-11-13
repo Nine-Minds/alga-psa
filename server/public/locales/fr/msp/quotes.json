@@ -338,6 +338,7 @@
         "title": "Supprimer cet emplacement ?",
         "message": "Cet emplacement contient encore {{count}} ligne(s). Choisissez ce qu'elles deviennent.",
         "moveOption": "Déplacer ces éléments vers {{location}}",
+        "ungroupOption": "Conserver ces lignes et arrêter le regroupement par site",
         "deleteOption": "Supprimer ces éléments",
         "confirm": "Supprimer l'emplacement"
       }
