@@ -378,8 +378,8 @@
   },
   {
     "id": "T042",
-    "description": "DB integration: the rendered email to a seat technician for a ticket with private notes contains no private text, a private note produces no technician notification, and a technician cannot watch an out-of-scope ticket.",
-    "implemented": true,
+    "description": "DB integration: the rendered email to a seat technician for a ticket with private notes contains no private text, a private note produces no technician notification, and a seat technician added as a watcher on an out-of-scope ticket is admitted and receives only the requester-audience client rendering (no MSP link, no shared IT or private content), while on an in-scope ticket they receive their audience's rendering.",
+    "implemented": false,
     "featureIds": [
       "F080",
       "F083"
