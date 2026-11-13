@@ -246,10 +246,8 @@ const nextConfig = {
         const ossPath = path.join(__dirname, '../packages/product-service-principals/oss/entry.ts');
         return isEE ? eePath : ossPath;
       })(),
-      // SSO provider buttons - swap between CE stub and EE implementation
-      '@alga-psa/auth/sso/entry': isEE
-        ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/auth/src/components/SsoProviderButtons.tsx',
+      // SSO provider buttons - one shared component for both editions (edition is decided at render time)
+      '@alga-psa/auth/sso/entry': '../packages/auth/src/components/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -749,10 +747,8 @@ const nextConfig = {
         console.log(`[WEBPACK ALIAS DEBUG] @product/mcp/entry -> ${selectedPath} (isEE: ${isEE})`);
         return selectedPath;
       })(),
-      // SSO provider buttons - swap between CE stub and EE implementation
-      '@alga-psa/auth/sso/entry': isEE
-        ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
+      // SSO provider buttons - one shared component for both editions (edition is decided at render time)
+      '@alga-psa/auth/sso/entry': path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),
@@ -1126,10 +1122,6 @@ const nextConfig = {
         const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
         const userActivitiesWorkflowTaskActionsServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts');
         const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
-        const authSsoButtonsEeEntry = path.join(
-          __dirname,
-          '../ee/server/src/components/auth/SsoProviderButtons.tsx',
-        );
         config.plugins = config.plugins || [];
         // Force the MCP seam to the EE implementation before resolution, so the
         // tsconfig `paths` CE default (@product/mcp/entry -> oss) can't win via
@@ -1175,12 +1167,6 @@ const nextConfig = {
             }
             if (req === '@alga-psa/user-activities/client/workflow-tasks') {
               resource.request = userActivitiesWorkflowTasksClientEe;
-              return;
-            }
-            // Same issue for auth SSO provider buttons: tsconfig may point `@alga-psa/auth/sso/entry`
-            // at the CE stub. Force the EE implementation for enterprise builds.
-            if (req === '@alga-psa/auth/sso/entry') {
-              resource.request = authSsoButtonsEeEntry;
               return;
             }
             // IMPORTANT:

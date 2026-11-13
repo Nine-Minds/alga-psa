@@ -4211,7 +4211,7 @@
   },
   "loginPolicy": {
     "title": "Política de início de sessão",
-    "description": "Controle como a equipa e os utilizadores do portal do cliente podem iniciar sessão com palavra-passe. Estas regras são aplicadas no servidor.",
+    "description": "Controle como a equipa e os utilizadores do portal do cliente podem iniciar sessão, com palavra-passe ou início de sessão único. Estas regras são aplicadas no servidor.",
     "requireSso": {
       "title": "Exigir início de sessão único para a equipa do MSP",
       "body": "Os utilizadores internos têm de iniciar sessão com Google, Microsoft ou o seu fornecedor Keycloak. O início de sessão com palavra-passe e a redefinição de palavra-passe ficam bloqueados, exceto para os administradores de emergência abaixo.",
@@ -4243,10 +4243,21 @@
         "not_found": "O usuário não existe mais."
       }
     },
+    "clientPortalSso": {
+      "title": "Opções de início de sessão do portal do cliente",
+      "body": "Escolha que fornecedores de início de sessão único aparecem na página de início de sessão do portal do cliente. Só são listados os fornecedores com que a sua organização pode iniciar sessão. O início de sessão com palavra-passe não é afetado.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Não há fornecedores de início de sessão único configurados para a sua organização. Configure um nas definições de início de sessão único para o oferecer no portal do cliente."
+    },
     "guard": {
       "sso_provider_required": "Configure pelo menos um fornecedor de início de sessão único antes de o exigir.",
       "break_glass_required": "Selecione pelo menos um administrador de emergência antes de exigir o início de sessão único.",
-      "break_glass_invalid_user": "Os utilizadores de emergência têm de ser administradores ativos com a autenticação de dois fatores ativada."
+      "break_glass_invalid_user": "Os utilizadores de emergência têm de ser administradores ativos com a autenticação de dois fatores ativada.",
+      "client_portal_sso_provider_invalid": "Escolha apenas fornecedores de início de sessão único suportados."
     },
     "errors": {
       "load": "Não foi possível carregar a política de início de sessão.",

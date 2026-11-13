@@ -12,6 +12,8 @@ import {
   type PolicyGuardErrorCode,
   type TenantAuthPolicy,
 } from "@alga-psa/auth/lib/authPolicy";
+import type { SsoProviderId } from "@alga-psa/auth/lib/sso/types";
+import { listClientPortalAvailableSsoProviders } from "@alga-psa/auth/lib/sso/clientPortalSsoResolution";
 import {
   listBreakGlassCandidates,
   loadTenantAuthPolicy,
@@ -39,6 +41,8 @@ export interface LoginPolicyState {
     reason?: "inactive" | "not_admin" | "no_two_factor" | "not_internal" | "not_found";
   }>;
   hasConfiguredSsoProvider: boolean;
+  /** Providers that can sign in on this tenant's client portal (tenant or app credentials): the ones the card can offer. */
+  availableClientPortalSsoProviders: SsoProviderId[];
 }
 
 export type LoginPolicyUpdate = Partial<Omit<TenantAuthPolicy, "passwordAuthDisabledAt">>;
@@ -124,13 +128,21 @@ async function listIneligibleStoredUsers(
 
 export async function getLoginPolicyAction(): Promise<LoginPolicyState> {
   const { tenant, knex } = await ensureSsoSettingsPermission();
-  const [policy, eligibleBreakGlassAdmins, hasConfiguredSsoProvider] = await Promise.all([
-    loadTenantAuthPolicy(tenant, { bypassCache: true }),
-    listEligibleAdmins(knex, tenant),
-    hasConfiguredProvider(tenant),
-  ]);
+  const [policy, eligibleBreakGlassAdmins, hasConfiguredSsoProvider, availableClientPortalSsoProviders] =
+    await Promise.all([
+      loadTenantAuthPolicy(tenant, { bypassCache: true }),
+      listEligibleAdmins(knex, tenant),
+      hasConfiguredProvider(tenant),
+      listClientPortalAvailableSsoProviders(tenant),
+    ]);
   const ineligibleBreakGlassUsers = await listIneligibleStoredUsers(knex, tenant, policy);
-  return { policy, eligibleBreakGlassAdmins, ineligibleBreakGlassUsers, hasConfiguredSsoProvider };
+  return {
+    policy,
+    eligibleBreakGlassAdmins,
+    ineligibleBreakGlassUsers,
+    hasConfiguredSsoProvider,
+    availableClientPortalSsoProviders,
+  };
 }
 
 export async function updateLoginPolicyAction(
@@ -157,6 +169,8 @@ export async function updateLoginPolicyAction(
     previous,
     hasConfiguredSsoProvider,
     breakGlassCandidates,
+    // The raw list: `applyPolicyChange` drops unknown ids, and a bad request must fail rather than lose them.
+    requestedClientPortalSsoProviders: updates.clientPortalSsoProviders,
   });
   if (!guard.ok) {
     return {
@@ -194,6 +208,7 @@ export async function updateLoginPolicyAction(
       eligibleBreakGlassAdmins: await listEligibleAdmins(knex, tenant),
       ineligibleBreakGlassUsers: await listIneligibleStoredUsers(knex, tenant, next),
       hasConfiguredSsoProvider,
+      availableClientPortalSsoProviders: await listClientPortalAvailableSsoProviders(tenant),
     },
   };
 }

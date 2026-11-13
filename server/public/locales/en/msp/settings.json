@@ -4211,7 +4211,7 @@
   },
   "loginPolicy": {
     "title": "Sign-in policy",
-    "description": "Control how staff and client portal users may sign in with a password. These rules are enforced on the server.",
+    "description": "Control how staff and client portal users may sign in, with a password or single sign-on. These rules are enforced on the server.",
     "requireSso": {
       "title": "Require single sign-on for MSP staff",
       "body": "Internal users must sign in with Google, Microsoft or your Keycloak provider. Password sign-in and password reset are blocked, except for the break-glass administrators below.",
@@ -4243,10 +4243,21 @@
         "not_found": "The user no longer exists."
       }
     },
+    "clientPortalSso": {
+      "title": "Client portal sign-in options",
+      "body": "Choose which single sign-on providers appear on your client portal sign-in page. Only providers that can sign in for your organization are listed. Password sign-in is not affected.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "No single sign-on providers are configured for your organization. Set one up in the single sign-on settings to offer it on the client portal."
+    },
     "guard": {
       "sso_provider_required": "Configure at least one single sign-on provider before requiring single sign-on.",
       "break_glass_required": "Select at least one break-glass administrator before requiring single sign-on.",
-      "break_glass_invalid_user": "Break-glass users must be active administrators with two-factor authentication enabled."
+      "break_glass_invalid_user": "Break-glass users must be active administrators with two-factor authentication enabled.",
+      "client_portal_sso_provider_invalid": "Choose only supported single sign-on providers."
     },
     "errors": {
       "load": "Unable to load the sign-in policy.",

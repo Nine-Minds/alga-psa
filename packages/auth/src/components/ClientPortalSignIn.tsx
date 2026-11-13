@@ -10,7 +10,11 @@ import type { AlertProps } from '@alga-psa/types';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isValidTenantSlug } from '@alga-psa/validation';
-import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
+import {
+  oauthMappingFailureFallbackMessage,
+  parseOAuthMappingFailureCode,
+  type SsoProviderId,
+} from '../lib/sso/types';
 
 type TenantBranding = {
   primaryColor: string;
@@ -24,9 +28,11 @@ interface ClientPortalSignInProps {
   branding?: TenantBranding | null;
   portalDomain?: string;
   tenantSlug?: string;
+  /** SSO providers the tenant offers, computed server-side by the sign-in page. */
+  offeredProviders?: readonly SsoProviderId[];
 }
 
-export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug: tenantSlugProp }: ClientPortalSignInProps) {
+export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug: tenantSlugProp, offeredProviders }: ClientPortalSignInProps) {
   const { t } = useTranslation('client-portal');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
@@ -351,6 +357,7 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
                 tenantSlug={tenantSlug}
                 portalDomain={resolvedPortalDomain}
+                offeredProviders={offeredProviders}
               />
               <div className="mt-6 pt-6 border-t text-center">
                 <a href="/auth/msp/signin" className="text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">

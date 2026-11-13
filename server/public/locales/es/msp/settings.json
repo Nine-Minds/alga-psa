@@ -4211,7 +4211,7 @@
   },
   "loginPolicy": {
     "title": "Política de inicio de sesión",
-    "description": "Controle cómo pueden iniciar sesión con contraseña el personal y los usuarios del portal de clientes. Estas reglas se aplican en el servidor.",
+    "description": "Controle cómo pueden iniciar sesión el personal y los usuarios del portal de clientes, con contraseña o con inicio de sesión único. Estas reglas se aplican en el servidor.",
     "requireSso": {
       "title": "Exigir inicio de sesión único para el personal del MSP",
       "body": "Los usuarios internos deben iniciar sesión con Google, Microsoft o su proveedor Keycloak. El inicio de sesión con contraseña y el restablecimiento de contraseña están bloqueados, salvo para los administradores de emergencia indicados abajo.",
@@ -4243,10 +4243,21 @@
         "not_found": "El usuario ya no existe."
       }
     },
+    "clientPortalSso": {
+      "title": "Opciones de inicio de sesión del portal de clientes",
+      "body": "Elija qué proveedores de inicio de sesión único aparecen en la página de inicio de sesión del portal de clientes. Solo se muestran los proveedores con los que puede iniciar sesión su organización. El inicio de sesión con contraseña no cambia.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "No hay proveedores de inicio de sesión único configurados para su organización. Configure uno en los ajustes de inicio de sesión único para ofrecerlo en el portal de clientes."
+    },
     "guard": {
       "sso_provider_required": "Configure al menos un proveedor de inicio de sesión único antes de exigirlo.",
       "break_glass_required": "Seleccione al menos un administrador de emergencia antes de exigir el inicio de sesión único.",
-      "break_glass_invalid_user": "Los usuarios de emergencia deben ser administradores activos con la autenticación de dos factores habilitada."
+      "break_glass_invalid_user": "Los usuarios de emergencia deben ser administradores activos con la autenticación de dos factores habilitada.",
+      "client_portal_sso_provider_invalid": "Elija solo proveedores de inicio de sesión único compatibles."
     },
     "errors": {
       "load": "No se pudo cargar la política de inicio de sesión.",

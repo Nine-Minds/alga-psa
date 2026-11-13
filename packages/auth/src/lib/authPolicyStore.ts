@@ -236,12 +236,7 @@ export async function saveTenantAuthPolicy(params: {
     ...currentSettings,
     sso: {
       ...(currentSettings.sso ?? {}),
-      requireSsoForInternalUsers: after.requireSsoForInternalUsers,
-      require2faForInternalUsers: after.require2faForInternalUsers,
-      require2faForClientUsers: after.require2faForClientUsers,
-      allowKnownDevice2faSkip: after.allowKnownDevice2faSkip,
-      passwordBreakGlassUserIds: after.passwordBreakGlassUserIds,
-      passwordAuthDisabledAt: after.passwordAuthDisabledAt,
+      ...after,
     },
   };
 
