@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { assertHumanWorkAssignee } from '../../lib/humanWork/assertHumanWorkAssignee';
 
 export type RemoveTeamFromTicketMode = 'remove_all' | 'keep_all' | 'selective';
@@ -110,6 +111,11 @@ export async function assignTeamToTicketCore(
       updated_by: actorUserId,
       updated_at: new Date()
     });
+
+  if (!ticket.assigned_to) {
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, ticketId);
+  }
 
   if (toInsert.length > 0) {
     await tenantScopedTable(trx, 'ticket_resources', tenant).insert(

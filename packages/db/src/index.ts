@@ -22,6 +22,8 @@ export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
+export { advanceSeatTicketWork, liveSeatArrangement, prepareTicketAssigneeChange, recordTicketAssigneeChange, seatTicketWork } from './lib/seatTicketWork';
+export type { SeatArrangementRow, SeatTicketResponsibility, SeatTicketWork, SeatTicketWorkRow } from './lib/seatTicketWork';
 export { getTenantTableScope, parseTableExpression, registerTenantTables, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
 export {
@@ -91,6 +93,20 @@ export {
   ACCOUNTING_EXPORT_INVOICE_CANCELLED,
   ACCOUNTING_EXPORT_INVOICE_NOT_FOUND,
 } from './lib/invoiceExternalSyncLock';
+
+// Role floors every user/role write path goes through (one MSP admin per
+// tenant, one role per user)
+export {
+  LAST_MSP_ADMIN_MESSAGE,
+  LAST_ROLE_MESSAGE,
+  USER_ROLE_FLOOR_LOCK_NAMESPACE,
+  UserRoleFloorError,
+  assertUserRoleFloor,
+  isUserRoleFloorError,
+  isUserRoleFloorRejected,
+  lockUserRoleFloor,
+} from './lib/userRoleFloor';
+export type { UserRoleFloorChange, UserRoleFloorResult, UserRoleFloorViolation } from './lib/userRoleFloor';
 
 // QBO item-target advisory lock (shared by integrations mapping CRUD and billing item import)
 export { lockQboItemTarget, lockQboItemTargets, qboItemTargetLockKey } from './lib/qboItemTargetLock';

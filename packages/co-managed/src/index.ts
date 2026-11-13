@@ -142,3 +142,5 @@ export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManag
 export * from './seatArrangement';
 // Seat shape (S7): inviting a technician against the arrangement's allocation.
 export * from './seatInvitation';
+// Seat shape (S23): ticket responsibility and the handoff in each direction.
+export * from './seatTicketHandoff';

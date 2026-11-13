@@ -23,6 +23,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -616,19 +617,36 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             {t('userDetails.fields.roles')}
           </Text>
           <div className="space-y-2">
-            {roles.map((role: IRole): React.JSX.Element => (
-              <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <Text size="2">{role.role_name}</Text>
+            {roles.map((role: IRole): React.JSX.Element => {
+              // The server refuses to leave a user with no role; don't offer it.
+              const isOnlyRole = roles.length === 1;
+              const removeButton = (
                 <Button
                   id={`remove-role-${role.role_id}`}
                   variant="ghost"
-                  onClick={() => handleRemoveRole(role.role_id)}
-                  className="text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    if (isOnlyRole) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    handleRemoveRole(role.role_id);
+                  }}
+                  className={`text-destructive hover:text-destructive${isOnlyRole ? ' cursor-not-allowed opacity-50' : ''}`}
+                  aria-disabled={isOnlyRole || undefined}
                 >
                   {t('userDetails.actions.removeRole')}
                 </Button>
-              </div>
-            ))}
+              );
+              return (
+                <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <Text size="2">{role.role_name}</Text>
+                  {isOnlyRole
+                    ? <Tooltip content={t('errors.roles.lastRole')}>{removeButton}</Tooltip>
+                    : removeButton}
+                </div>
+              );
+            })}
           </div>
           <div className="mt-2 flex gap-2">
             <CustomSelect

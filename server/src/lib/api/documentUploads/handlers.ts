@@ -30,8 +30,14 @@ interface Authenticated {
   knex: Knex;
 }
 
-function errorResponse(status: number, code: string, message: string, headers: Record<string, string> = {}): NextResponse {
-  return NextResponse.json({ error: { code, message } }, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
+function errorResponse(
+  status: number,
+  code: string,
+  message: string,
+  headers: Record<string, string> = {},
+  details: Record<string, unknown> = {},
+): NextResponse {
+  return NextResponse.json({ error: { code, message, ...details } }, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 }
 
 /**
@@ -77,7 +83,7 @@ async function authenticated(
     });
   } catch (error) {
     if (error instanceof UploadSessionError) {
-      return errorResponse(error.status, error.code, error.message, error.headers);
+      return errorResponse(error.status, error.code, error.message, error.headers, error.details);
     }
     console.error('[document-uploads] Unexpected error', error);
     return errorResponse(500, 'INTERNAL_ERROR', 'Internal server error');

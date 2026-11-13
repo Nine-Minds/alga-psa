@@ -9,6 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
@@ -1471,6 +1472,11 @@ export class TicketModel {
       throw new Error('Ticket not found or update failed');
     }
 
+    if ('assigned_to' in updateData && (updateData.assigned_to ?? null) !== (currentTicket.assigned_to ?? null)) {
+      // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+      await recordTicketAssigneeChange(trx, tenant, ticketId);
+    }
+
     // Publish update event if publisher provided
     if (eventPublisher) {
       try {
@@ -1599,7 +1605,10 @@ export class TicketModel {
         assigned_to: updateData.assigned_to
       });
     }
-    
+
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, ticketId);
+
     return updatedTicket;
   }
 

@@ -1,7 +1,11 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import { randomUUID } from 'node:crypto';
+import {
+  commentAudienceSql, commentAudienceVisibleSql, isCommentAudienceVisible, resolveCommentAudienceForRead,
+  resolveCommentAudienceReader, type CommentAudienceReader,
+} from '@alga-psa/shared/lib/commentAudience';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import Comment from '../../../../packages/tickets/src/models/comment';
 
@@ -17,6 +21,22 @@ describe('conversation audiences (integration)', () => {
   let userId: string;
   let originalProduct: string | null;
   const created: string[] = [];
+  const seatArrangements: string[] = [];
+
+  /** A seat arrangement row for a client, written directly: no command creates assignments yet. */
+  async function seatArrangement(clientId: string, state: 'active' | 'ended' = 'active') {
+    const arrangementId = randomUUID();
+    seatArrangements.push(arrangementId);
+    await t('co_managed_seat_arrangements').insert({ tenant, arrangement_id: arrangementId, client_id: clientId, allocation_id: randomUUID(),
+      state, ended_at: state === 'ended' ? new Date() : null });
+    return arrangementId;
+  }
+
+  async function seatAssignment(arrangementId: string, state: 'invited' | 'active' | 'revoked', seatUserId: string | null = randomUUID()) {
+    await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: seatUserId,
+      state, revoked_at: state === 'revoked' ? new Date() : null });
+    return seatUserId as string;
+  }
 
   const t = (table: string) => tenantDb(knex, tenant).table(table);
 
@@ -68,6 +88,10 @@ describe('conversation audiences (integration)', () => {
   });
 
   afterAll(async () => {
+    for (const id of seatArrangements) {
+      await t('co_managed_seat_assignments').where({ arrangement_id: id }).delete();
+      await t('co_managed_seat_arrangements').where({ arrangement_id: id }).delete();
+    }
     for (const id of created.reverse()) {
       const c = await t('comments').where({ comment_id: id }).first('thread_id');
       await t('comments').where({ comment_id: id }).delete();
@@ -144,5 +168,103 @@ describe('conversation audiences (integration)', () => {
     const root = await insert({ is_internal: false });
     await t('comments').where({ comment_id: root }).update({ is_internal: true });
     expect(await audienceOf(root)).toBe('organization_private');
+  });
+
+  // T022 (F035-F038): the SQL form agrees with the TypeScript form on the same rows.
+  it('the SQL visibility form agrees with the TypeScript predicate for every reader organization', async () => {
+    resetAdmission(true);
+    await setProduct('psa');
+    const { client_id: clientId } = await t('tickets').where({ ticket_id: ticketId }).first('client_id');
+    expect(clientId).toBeTruthy();
+
+    const relabel = async (commentId: string, audience: string) =>
+      t('comment_threads').where({ thread_id: (await threadOf(commentId)).thread_id }).update({ collaboration_audience: audience });
+    const publicLegacy = await insert({ is_internal: false });
+    const internalLegacy = await insert({ is_internal: true });
+    const shared = await insert({ is_internal: true });
+    await relabel(shared, 'shared_it');
+    const sharedReply = await insert({ is_internal: true, parent_comment_id: shared });
+    const privateNote = await insert({ is_internal: true });
+    await relabel(privateNote, 'organization_private');
+    const requesterNamed = await insert({ is_internal: false });
+    await relabel(requesterNamed, 'requester');
+    // Damaged rows: the comment disagrees with its thread.
+    const damagedPublic = await insert({ is_internal: false });
+    await t('comments').where({ comment_id: damagedPublic }).update({ is_internal: true });
+    const damagedShared = await insert({ is_internal: true });
+    await relabel(damagedShared, 'shared_it');
+    await t('comments').where({ comment_id: damagedShared }).update({ is_internal: false });
+    const ids = [publicLegacy, internalLegacy, shared, sharedReply, privateNote, requesterNamed, damagedPublic, damagedShared];
+
+    const readers: Record<string, CommentAudienceReader | null> = {
+      'MSP staff': { kind: 'staff', tenant },
+      'staff of another tenant': { kind: 'staff', tenant: randomUUID() },
+      "the client's seat technician": { kind: 'seat', tenant, clientId },
+      "another client's seat technician": { kind: 'seat', tenant, clientId: randomUUID() },
+      "another tenant's seat technician": { kind: 'seat', tenant: randomUUID(), clientId },
+      requester: { kind: 'requester', tenant },
+      'nobody': null,
+    };
+    const seen: Record<string, string[]> = {};
+    for (const [name, reader] of Object.entries(readers)) {
+      const db = tenantDb(knex, tenant);
+      const query = db.table('comments as c').whereIn('c.comment_id', ids);
+      db.tenantJoin(query, 'comment_threads as th', 'c.thread_id', 'th.thread_id');
+      db.tenantJoin(query, 'comments as root', 'th.root_comment_id', 'root.comment_id');
+      db.tenantJoin(query, 'tickets as tk', 'c.ticket_id', 'tk.ticket_id');
+      const rows = await query.select({
+        comment_id: 'c.comment_id', owner_tenant: 'c.tenant', owner_client: 'tk.client_id',
+        collaboration_audience: 'th.collaboration_audience', is_internal: 'th.is_internal',
+        root_is_internal: 'root.is_internal', comment_is_internal: 'c.is_internal',
+        audience: commentAudienceSql(knex, 'th', 'root', 'c'),
+        visible: commentAudienceVisibleSql(knex, reader, { thread: 'th', root: 'root', comment: 'c', ownerTenant: 'c.tenant', ownerClient: 'tk.client_id' }),
+      });
+      expect(rows).toHaveLength(ids.length);
+      for (const row of rows) {
+        const audience = resolveCommentAudienceForRead(row);
+        expect(row.audience, `${name} audience of ${row.comment_id}`).toBe(audience);
+        expect(row.visible, `${name} sees ${row.comment_id} (${audience})`)
+          .toBe(isCommentAudienceVisible(audience, { tenant: row.owner_tenant, clientId: row.owner_client }, reader));
+      }
+      seen[name] = rows.filter(row => row.visible).map(row => row.comment_id).sort();
+    }
+    const sorted = (...list: string[]) => [...list].sort();
+    expect(seen['MSP staff']).toEqual(sorted(...ids));
+    // F036/F037/F038: shared_it and requester threads, never a private or legacy internal one.
+    expect(seen["the client's seat technician"]).toEqual(sorted(publicLegacy, shared, sharedReply, requesterNamed));
+    expect(seen['staff of another tenant']).toEqual(sorted(publicLegacy, shared, sharedReply, requesterNamed));
+    expect(seen.requester).toEqual(sorted(publicLegacy, requesterNamed));
+    expect(seen["another client's seat technician"]).toEqual([]);
+    expect(seen["another tenant's seat technician"]).toEqual([]);
+    expect(seen.nobody).toEqual([]);
+  });
+
+  // F035: a seat technician's organization comes from the seat assignment.
+  it('resolves the reader organization from the live seat assignment', async () => {
+    const resolve = (id: string, userType = 'internal') => resolveCommentAudienceReader(knex, tenant, { userId: id, userType });
+    // No assignment: an internal user is MSP staff, a client user the requester. This is every user today.
+    expect(await resolve(randomUUID())).toEqual({ kind: 'staff', tenant });
+    expect(await resolve(randomUUID(), 'client')).toEqual({ kind: 'requester', tenant });
+    expect(await resolve(randomUUID(), 'something_else')).toBeNull();
+    expect(await resolve('')).toBeNull();
+
+    const clientId = randomUUID();
+    const live = await seatArrangement(clientId);
+    const active = await seatAssignment(live, 'active');
+    expect(await resolve(active)).toEqual({ kind: 'seat', tenant, clientId });
+    // Not live and not revoked: sees nothing, and is never promoted to MSP staff.
+    const invited = await seatAssignment(live, 'invited');
+    expect(await resolve(invited)).toBeNull();
+    const ended = await seatArrangement(randomUUID(), 'ended');
+    const stranded = await seatAssignment(ended, 'active');
+    expect(await resolve(stranded)).toBeNull();
+    const orphan = await seatAssignment(randomUUID(), 'active');
+    seatArrangements.push((await t('co_managed_seat_assignments').where({ user_id: orphan }).first('arrangement_id')).arrangement_id);
+    expect(await resolve(orphan)).toBeNull();
+    // Revoked no longer binds the user (a converted technician is an MSP user).
+    const revoked = await seatAssignment(live, 'revoked');
+    expect(await resolve(revoked)).toEqual({ kind: 'staff', tenant });
+    // Another tenant's assignment is not this tenant's.
+    expect(await resolveCommentAudienceReader(knex, randomUUID(), { userId: active, userType: 'internal' })).toMatchObject({ kind: 'staff' });
   });
 });

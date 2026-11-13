@@ -1,0 +1,8 @@
+{
+  "attemptedAt": "2026-11-02T17:31:49.429Z",
+  "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+  "command": "node ~/.alga-xo/bin/cli.mjs pane-activate-tab --paneId=c8403826-ff91-488f-aa28-8447b4f96c06",
+  "exitStatus": 0,
+  "stdout": "{\"paneId\":\"c8403826-ff91-488f-aa28-8447b4f96c06\",\"success\":true,\"activeTabId\":\"c8403826-ff91-488f-aa28-8447b4f96c06\"}\n",
+  "stderr": ""
+}

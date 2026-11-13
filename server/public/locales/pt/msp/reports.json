@@ -66,7 +66,11 @@
     "fallbackTitle": "Relatório",
     "dateRange": {
       "lastDays": "Últimos dias {{count}}",
-      "allActiveProjects": "Todos os projetos ativos, desde o início"
+      "allActiveProjects": "Todos os projetos ativos, desde o início",
+      "customRange": "{{start}} a {{end}}",
+      "customFrom": "Data de início",
+      "customTo": "Data de término",
+      "agingSnapshotNote": "As contagens e faixas de idade mostram os tickets abertos neste momento. O intervalo de datas filtra apenas a lista dos tickets abertos mais antigos."
     },
     "units": {
       "daysWithCount": "{{count}} dias"
@@ -564,7 +568,13 @@
         "not_client_attributable": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: ele lê {{table}}, que não pode ser atribuído a um cliente.",
         "unnarrowable_report": "Este relatório não está disponível para você porque não pode ser limitado aos seus clientes: ele soma as contas de todos os clientes."
       },
-      "clientOutOfScope": "Você não tem acesso a este cliente."
+      "clientOutOfScope": "Você não tem acesso a este cliente.",
+      "range": {
+        "malformed": "Não foi possível ler o intervalo de datas personalizado. Escolha as duas datas novamente.",
+        "backwards": "A data final é anterior à data inicial.",
+        "tooLong": "Um intervalo de datas personalizado pode abranger no máximo {{maxDays}} dias.",
+        "startsInFuture": "O intervalo de datas personalizado começa depois de hoje, portanto ainda não há nada para relatar."
+      }
     }
   }
 }

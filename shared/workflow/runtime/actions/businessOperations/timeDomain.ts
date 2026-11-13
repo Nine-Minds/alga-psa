@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { assertHumanWorkAssignee, assertHumanWorkOwner } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
@@ -860,6 +861,8 @@ async function applyTicketAssignmentSideEffects(params: {
         updated_at: new Date().toISOString(),
         updated_by: actorUserId,
       });
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenantId, ticketId);
   }
 }
 

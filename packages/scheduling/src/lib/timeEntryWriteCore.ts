@@ -6,6 +6,7 @@ import { formatISO } from 'date-fns';
 import {
   computeWorkDateFields,
   recalculateProjectTaskActualHoursForEntryChange,
+  recordTicketAssigneeChange,
   resolveUserTimeZone,
   tenantDb,
   truncateToMinute,
@@ -644,6 +645,8 @@ export async function persistTimeEntry(
                 updated_at: new Date().toISOString(),
                 updated_by: actorUserId,
               });
+            // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+            await recordTicketAssigneeChange(trx, tenant, work_item_id);
           }
         }
       }
