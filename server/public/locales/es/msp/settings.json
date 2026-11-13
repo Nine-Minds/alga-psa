@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}.",
       "nameRequired": "El nombre del rol es obligatorio.",
       "builtInRename": "Los roles integrados no se pueden renombrar.",
-      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal."
+      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal.",
+      "lastMspAdmin": "Un inquilino debe conservar al menos un usuario MSP Admin activo.",
+      "lastRole": "Un usuario debe conservar al menos un rol. Asigne primero otro rol y luego quite este."
     },
     "secrets": {
       "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",

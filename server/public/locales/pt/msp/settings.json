@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}.",
       "nameRequired": "O nome da função é obrigatório.",
       "builtInRename": "Funções integradas não podem ser renomeadas.",
-      "duplicateName": "Já existe uma função chamada \"{{name}}\" para este portal."
+      "duplicateName": "Já existe uma função chamada \"{{name}}\" para este portal.",
+      "lastMspAdmin": "Um tenant deve manter pelo menos um usuário MSP Admin ativo.",
+      "lastRole": "Um usuário deve manter pelo menos uma função. Atribua outra função primeiro e depois remova esta."
     },
     "secrets": {
       "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",
