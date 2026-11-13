@@ -3,19 +3,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@alga-psa/storage/config/storage', () => ({
   getStorageConfig: async () => ({ defaultProvider: 'local', providers: { local: { maxFileSize: 500 * 1024 * 1024 } } }),
 }));
-vi.mock('../fetchHostSettings', () => ({
+vi.mock('server/src/lib/api/services/documents/fetchHostSettings', () => ({
   loadEffectiveFetchHosts: async () => ['files.example.com'],
 }));
 
 import { Readable } from 'node:stream';
-import { PayloadTooLargeError, ValidationError } from '../../../middleware/apiErrors';
-import { UrlFetchError } from '../../../../net/safeFetch';
+import { PayloadTooLargeError, ValidationError } from 'server/src/lib/api/middleware/apiErrors';
+import { UrlFetchError } from 'server/src/lib/net/safeFetch';
 import {
   MAX_BASE64_SOURCE_BYTES,
   base64EncodedLength,
   mapFetchError,
   resolveSource,
-} from '../resolveSource';
+} from 'server/src/lib/api/services/documents/resolveSource';
 
 const tenantCtx = { knex: {} as any, tenant: 'tenant-1' };
 const publicLookup = async () => [{ address: '93.184.216.34', family: 4 }];
@@ -84,6 +84,18 @@ describe('resolveSource: base64', () => {
     });
     expect(Buffer.isBuffer(file.body) && file.body.toString()).toBe('hello');
     expect(file.mimeType).toBe('text/plain');
+  });
+});
+
+describe('resolveSource: base64 exact cap', () => {
+  const b64 = (n: number) => Buffer.alloc(n, 1).toString('base64');
+
+  it('accepts exactly the cap and 413s one decoded byte over it, though both encode to the same length', async () => {
+    const ok = await resolveSource({ source: { type: 'base64', content: b64(10) }, fileName: 'a.bin' }, { maxBytes: 10 });
+    expect((ok.body as Buffer).length).toBe(10);
+    // 11 bytes encode to 16 chars, the same as 10 or 12: only the decoded size tells them apart.
+    const error = await resolveSource({ source: { type: 'base64', content: b64(11) }, fileName: 'a.bin' }, { maxBytes: 10 }).catch((e) => e);
+    expect(error).toBeInstanceOf(PayloadTooLargeError);
   });
 });
 

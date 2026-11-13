@@ -302,11 +302,25 @@ export function registerEmailActions(): void {
           if (size > maxPerAttachment) {
             throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
           }
-          const mimeType = (file.mime_type as string | null) ?? null;
-          // The provider's allowlist, the same policy that accepted the file when it was stored.
+          const storedMime = (file.mime_type as string | null) ?? null;
+          const content = await storage.download(String(file.storage_path));
+          // The provider's allowlist, the same policy that accepted the file when it was stored
+          // (`validateFileUpload` replaced a private list here; it is wider, so an unattended
+          // workflow can now email any type the tenant may upload). A row with no recorded type is
+          // sniffed from its bytes; if that finds nothing it is application/octet-stream, which
+          // the allowlist refuses unless it permits everything.
+          let mimeType = storedMime;
           try {
-            const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
-            await validateFileUpload(mimeType ?? 'application/octet-stream', size);
+            if (storedMime) {
+              const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
+              await validateFileUpload(storedMime, size);
+            } else {
+              const { getUploadPolicy, validateFileUpload } = await import('@alga-psa/storage/config/storage');
+              const { resolveMimeForBuffer } = await import('@alga-psa/storage/ingest/mime');
+              const policy = await getUploadPolicy();
+              mimeType = (await resolveMimeForBuffer(null, content, policy.allowedMimeTypes)).mime;
+              await validateFileUpload(mimeType, size);
+            }
           } catch (error) {
             throwActionError(ctx, {
               category: 'ValidationError',
@@ -314,7 +328,6 @@ export function registerEmailActions(): void {
               message: error instanceof Error ? error.message : 'Attachment mime_type not allowed'
             });
           }
-          const content = await storage.download(String(file.storage_path));
           attachments.push({
             filename: String(file.original_name ?? file.file_name ?? 'attachment'),
             content,

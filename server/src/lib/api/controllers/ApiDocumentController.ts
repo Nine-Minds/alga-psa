@@ -14,7 +14,7 @@ import { attachDocumentSchema } from '../schemas/documentAttach';
 import { ENTITY_ADAPTERS, assertEntityAvailableForProduct } from '../services/documents/entityAdapters';
 import { attachDocument } from '../services/documents/attachDocument';
 import {
-  assertBase64EncodedWithinCap,
+  assertJsonBodyWithinCap,
   base64SourceCap,
   getMaxUploadBytes,
   mapFetchError,
@@ -52,12 +52,9 @@ export class ApiDocumentController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot create document');
           }
 
-          // `req.json()` holds the whole body, so refuse an oversized one on Content-Length before
-          // reading it: a url source is tiny, so anything past the base64 cap is base64.
-          const declaredLength = req.headers.get('content-length');
-          if (declaredLength !== null && /^\d+$/.test(declaredLength)) {
-            assertBase64EncodedWithinCap(Number(declaredLength), base64SourceCap(await getMaxUploadBytes()));
-          }
+          // `req.json()` holds the whole body, so it is bounded on Content-Length before it is read
+          // (411 without one): a url source is tiny, so anything past the base64 cap is base64.
+          assertJsonBodyWithinCap(req.headers.get('content-length'), base64SourceCap(await getMaxUploadBytes()));
 
           let input;
           try {
@@ -74,13 +71,15 @@ export class ApiDocumentController extends ApiBaseController {
           await assertEntityAvailableForProduct(adapter, apiRequest.context.tenant);
           await adapter.assertCanAttach(apiRequest, input.entity_id, knex);
 
+          // Nothing that can throw may sit between resolveSource and attachDocument: attachDocument
+          // owns (and destroys) a url source's stream from the moment it receives it.
+          const providerMax = await getMaxUploadBytes();
           const file = await resolveSource(
             { source: input.source, fileName: input.file_name, mimeType: input.mime_type },
             {},
             { knex, tenant: apiRequest.context.tenant },
           );
 
-          const providerMax = await getMaxUploadBytes();
           const document = await attachDocument({
             knex,
             tenant: apiRequest.context.tenant,

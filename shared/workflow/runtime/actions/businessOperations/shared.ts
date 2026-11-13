@@ -351,7 +351,17 @@ export type AttachmentSource = z.infer<typeof attachmentSourceSchema>;
  * runs unattended and an attachment is also re-read into memory when an email action sends it.
  * Never advertised above the provider's own limit: `effectiveBufferedCap` clamps it at use.
  */
-export const MAX_ATTACHMENT_BYTES = Number(process.env.WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES ?? 10 * 1024 * 1024);
+export const MAX_ATTACHMENT_BYTES = parseAttachmentMaxBytes(process.env.WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES, 10 * 1024 * 1024);
+
+/** Strict: a whole number of bytes > 0. `Number("10MB")` is NaN, which would silently disable the limit. */
+export function parseAttachmentMaxBytes(raw: string | undefined, fallback: number): number {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const bytes = /^\s*\d+\s*$/.test(raw) ? Number(raw) : NaN;
+  if (!Number.isSafeInteger(bytes) || bytes <= 0) {
+    throw new Error(`WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES must be a whole number of bytes greater than 0, e.g. 10485760 (got "${raw}")`);
+  }
+  return bytes;
+}
 
 /** Total time a url attachment may take to download (headers and body), via AbortController. */
 export const ATTACHMENT_URL_FETCH_TIMEOUT_MS = 60_000;
@@ -400,6 +410,8 @@ export async function attachDocumentToTicket(
 
   // For file_id or url, ensure we have a file record (create one if url).
   let fileRecord: any | null = null;
+  // Set once the url branch has committed an object; removed if the rows that claim it do not land.
+  let unclaimedObject: { delete(path: string): Promise<void>; path: string } | null = null;
   if (input.source.file_id) {
     fileRecord = await db.table('external_files').where({ file_id: input.source.file_id, is_deleted: false }).first();
     if (!fileRecord) {
@@ -496,33 +508,39 @@ export async function attachDocumentToTicket(
     }
 
     const uploadPath = ingested.upload.path ?? storagePath;
-    const storedMime = ingested.mime;
-    const fileId = uuidv4();
-    const fileName = storagePath.split('/').pop() ?? filename;
-    await db.table('external_files').insert({
-      tenant: tx.tenantId,
-      file_id: fileId,
-      file_name: fileName,
-      original_name: filename,
-      mime_type: storedMime,
-      file_size: ingested.size,
-      content_sha256: ingested.sha256,
-      storage_path: uploadPath,
-      uploaded_by_id: tx.actorUserId,
-      created_at: nowIso,
-      updated_at: nowIso,
-      is_deleted: false,
-      metadata: { source: 'workflow', url: input.source.url }
-    });
+    unclaimedObject = { delete: (path) => provider.delete(path), path: uploadPath };
+    try {
+      const storedMime = ingested.mime;
+      const fileId = uuidv4();
+      const fileName = storagePath.split('/').pop() ?? filename;
+      await db.table('external_files').insert({
+        tenant: tx.tenantId,
+        file_id: fileId,
+        file_name: fileName,
+        original_name: filename,
+        mime_type: storedMime,
+        file_size: ingested.size,
+        content_sha256: ingested.sha256,
+        storage_path: uploadPath,
+        uploaded_by_id: tx.actorUserId,
+        created_at: nowIso,
+        updated_at: nowIso,
+        is_deleted: false,
+        metadata: { source: 'workflow', url: input.source.url }
+      });
 
-    fileRecord = {
-      file_id: fileId,
-      file_name: fileName,
-      original_name: filename,
-      mime_type: storedMime,
-      file_size: ingested.size,
-      storage_path: uploadPath
-    };
+      fileRecord = {
+        file_id: fileId,
+        file_name: fileName,
+        original_name: filename,
+        mime_type: storedMime,
+        file_size: ingested.size,
+        storage_path: uploadPath
+      };
+    } catch (error) {
+      await removeUnclaimedObject(unclaimedObject);
+      throw error;
+    }
   }
 
   if (!fileRecord) {
@@ -530,31 +548,36 @@ export async function attachDocumentToTicket(
   }
 
   // Create a document pointing at the file, then associate it to the ticket.
-  const documentId = uuidv4();
   const documentName = input.filename ?? fileRecord.original_name ?? fileRecord.file_name ?? 'attachment';
-  await db.table('documents').insert({
-    tenant: tx.tenantId,
-    document_id: documentId,
-    document_name: documentName,
-    type_id: null,
-    shared_type_id: null,
-    user_id: tx.actorUserId,
-    created_by: tx.actorUserId,
-    entered_at: nowIso,
-    updated_at: nowIso,
-    file_id: fileRecord.file_id,
-    storage_path: fileRecord.storage_path,
-    mime_type: fileRecord.mime_type,
-    file_size: fileRecord.file_size
-  });
+  const documentId = uuidv4();
+  try {
+    await db.table('documents').insert({
+      tenant: tx.tenantId,
+      document_id: documentId,
+      document_name: documentName,
+      type_id: null,
+      shared_type_id: null,
+      user_id: tx.actorUserId,
+      created_by: tx.actorUserId,
+      entered_at: nowIso,
+      updated_at: nowIso,
+      file_id: fileRecord.file_id,
+      storage_path: fileRecord.storage_path,
+      mime_type: fileRecord.mime_type,
+      file_size: fileRecord.file_size
+    });
 
-  await db.table('document_associations').insert({
-    tenant: tx.tenantId,
-    document_id: documentId,
-    entity_id: ticketId,
-    entity_type: 'ticket',
-    created_at: nowIso
-  });
+    await db.table('document_associations').insert({
+      tenant: tx.tenantId,
+      document_id: documentId,
+      entity_id: ticketId,
+      entity_type: 'ticket',
+      created_at: nowIso
+    });
+  } catch (error) {
+    await removeUnclaimedObject(unclaimedObject);
+    throw error;
+  }
 
   return {
     document_id: documentId,
@@ -562,6 +585,16 @@ export async function attachDocumentToTicket(
     filename: documentName,
     content_type: fileRecord.mime_type ?? null
   };
+}
+
+/** Best-effort removal of an object whose external_files/documents rows were not created. */
+async function removeUnclaimedObject(object: { delete(path: string): Promise<void>; path: string } | null): Promise<void> {
+  if (!object) return;
+  try {
+    await object.delete(object.path);
+  } catch (cleanupError) {
+    console.error('[workflow] Unable to remove unclaimed attachment from storage', cleanupError);
+  }
 }
 
 export function actionProvidedKey(input: { idempotency_key?: string | null }, ctx: ActionContext): string {

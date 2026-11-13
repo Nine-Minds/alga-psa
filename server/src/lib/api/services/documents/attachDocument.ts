@@ -144,10 +144,28 @@ async function publishAfterCommit(
   }
 }
 
+/**
+ * Attach one file to one entity. Owns the source stream from the moment it is handed in: on every
+ * outcome (including a failure before the upload starts) the stream is destroyed, so a URL
+ * download never stays open past the request.
+ */
 export async function attachDocument(input: AttachDocumentInput): Promise<IDocument> {
+  try {
+    return await attachDocumentOwningStream(input);
+  } finally {
+    if (input.file.body instanceof Readable && !input.file.body.destroyed) input.file.body.destroy();
+  }
+}
+
+async function attachDocumentOwningStream(input: AttachDocumentInput): Promise<IDocument> {
   const { knex, tenant, actorUserId, target, file } = input;
   const options = input.options ?? {};
   const adapter = ENTITY_ADAPTERS[target.entityType];
+  if (!adapter) {
+    throw new ValidationError('Validation failed', [
+      { path: ['entity_type'], message: `Unsupported entity type: ${String(target.entityType)}` },
+    ]);
+  }
 
   // An error inside the source stream (a URL timeout) reaches us wrapped by uploadFile; keep the original.
   let sourceError: unknown;
@@ -162,7 +180,8 @@ export async function attachDocument(input: AttachDocumentInput): Promise<IDocum
   } catch (error) {
     // A refusal before the first byte leaves the source unread: stop the transfer.
     if (file.body instanceof Readable) file.body.destroy();
-    if (sourceError !== undefined) throw file.mapSourceError?.(sourceError) ?? sourceError;
+    // Without a mapper an ingest refusal still surfaces as its API error (413/400), never raw.
+    if (sourceError !== undefined) throw translateUploadError(file.mapSourceError ? file.mapSourceError(sourceError) : sourceError);
     throw translateUploadError(error);
   }
   // The ingest may have stored a sniffed type rather than the declared one.

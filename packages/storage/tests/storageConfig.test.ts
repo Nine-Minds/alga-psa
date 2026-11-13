@@ -63,3 +63,14 @@ describe('storage config', () => {
     expect(wrongType.message).toBe('File type not allowed');
   });
 });
+
+describe('isMimeAllowed normalisation', () => {
+  it('ignores case and ; parameters on both the type and the allowlist', async () => {
+    const { isMimeAllowed } = await import('../src/config/storage-mime');
+    expect(isMimeAllowed(['image/png', 'text/*'], 'Image/PNG; foo=bar')).toBe(true);
+    expect(isMimeAllowed(['Application/PDF'], 'application/pdf')).toBe(true);
+    expect(isMimeAllowed(['text/*'], 'TEXT/Plain; charset=utf-8')).toBe(true);
+    expect(isMimeAllowed(['image/png'], 'image/jpeg; q=1')).toBe(false);
+    expect(isMimeAllowed(['*/*'], 'anything/at-all')).toBe(true);
+  });
+});

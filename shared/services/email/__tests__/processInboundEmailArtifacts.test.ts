@@ -332,14 +332,12 @@ async function run(overrides: Partial<any> = {}) {
 describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () => {
   beforeEach(() => {
     seedTables();
-    delete process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES;
-    delete process.env.STORAGE_LOCAL_MAX_FILE_SIZE;
+    vi.unstubAllEnvs();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    delete process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES;
-    delete process.env.STORAGE_LOCAL_MAX_FILE_SIZE;
+    vi.unstubAllEnvs();
   });
 
   it('persists an audio attachment as a downloadable ticket document under the default policy', async () => {
@@ -367,7 +365,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('skips a disallowed audio attachment and posts exactly one internal system comment', async () => {
-    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = 'application/pdf';
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', 'application/pdf');
 
     await run({ attachments: [wavAttachment()] });
 
@@ -394,7 +392,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('skips a genuinely oversized attachment as attachment_too_large and lists it in the trail', async () => {
-    process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '10';
+    vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', '10');
 
     await run({ attachments: [wavAttachment()] });
 
@@ -425,10 +423,23 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
     expect(h.comments[0].content).toContain('voicemail.wav');
   });
 
-  it('skips an attachment whose real bytes exceed the cap although its declared size was small', async () => {
-    process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '8';
+  it('keeps a MIME-wrapped base64 attachment just under the cap (whitespace is not counted)', async () => {
+    vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', '12');
+    const wrapped = Buffer.from('RIFF....WAVE').toString('base64').replace(/(.{4})/g, '$1\r\n');
 
-    // Declared 4 bytes, actually 12: the provider max (8) is the effective cap, checked on the encoded content.
+    await run({ attachments: [{ ...wavAttachment(), size: 12, content: wrapped }] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('success');
+    expect(h.uploads.filter((u) => u.path.endsWith('voicemail.wav'))).toHaveLength(1);
+  });
+
+  it('skips an attachment whose real bytes exceed the cap although its declared size was small', async () => {
+    vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', '8');
+
+    // Declared 4 bytes, actually 12: the provider max (8) is the effective cap, checked on the decoded byte count.
     await run({ attachments: [{ ...wavAttachment(), size: 4 }] });
 
     const processed = h.getTable('email_processed_attachments').find(
@@ -473,7 +484,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('does not duplicate the trail comment when the same email is processed again', async () => {
-    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = 'application/pdf';
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', 'application/pdf');
 
     await run({ attachments: [wavAttachment()] });
     await run({ attachments: [wavAttachment()] });
@@ -482,7 +493,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('never suppresses the original .eml archive for a restrictive user allow-list', async () => {
-    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = 'application/pdf';
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', 'application/pdf');
 
     await run({ attachments: [wavAttachment()] });
 

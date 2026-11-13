@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { UploadSizeLimitError } from '../src/ingest/errors';
 import {
   SERVER_ACTION_ENVELOPE_BYTES,
+  SERVER_ACTION_MAX_FILE_BYTES,
   assertWithinBufferedCap,
   effectiveBufferedCap,
   parseByteSize,
@@ -12,6 +13,15 @@ describe('buffered upload caps', () => {
   it('never exceeds the provider max', () => {
     expect(effectiveBufferedCap(100, 500)).toBe(100);
     expect(effectiveBufferedCap(100, 40)).toBe(40);
+  });
+
+  it('fails fast on a cap that is NaN, zero, negative or infinite instead of disabling the limit', () => {
+    for (const bad of [NaN, 0, -1, Infinity]) {
+      expect(() => effectiveBufferedCap(bad, 500)).toThrow(/must be a finite number of bytes greater than 0/);
+      expect(() => effectiveBufferedCap(100, bad)).toThrow(/storage provider maxFileSize/);
+      expect(() => assertWithinBufferedCap(1, bad)).toThrow(/greater than 0/);
+    }
+    expect(() => effectiveBufferedCap(Number('10MB'), 500, 'WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES')).toThrow(/WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES/);
   });
 
   it('throws the ingest size error (413) past the cap and passes at it', () => {
@@ -33,10 +43,20 @@ describe('buffered upload caps', () => {
     expect(parseByteSize('lots')).toBeNull();
   });
 
+  it('the server-action file limit defaults to 20mb when the env var is unset, and throws on a bad one', () => {
+    vi.stubEnv('SERVER_ACTIONS_BODY_LIMIT', '');
+    expect(serverActionFileLimitBytes()).toBe(20 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
+    vi.stubEnv('SERVER_ACTIONS_BODY_LIMIT', '20 megs');
+    expect(() => serverActionFileLimitBytes()).toThrow(/SERVER_ACTIONS_BODY_LIMIT must be a size/);
+    vi.unstubAllEnvs();
+  });
+
   it('the server-action file limit is the body limit less the envelope, defaulting to 20mb', () => {
     expect(serverActionFileLimitBytes('20mb')).toBe(20 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
     expect(serverActionFileLimitBytes('1mb')).toBe(1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
-    expect(serverActionFileLimitBytes('nonsense')).toBe(20 * 1024 * 1024 - SERVER_ACTION_ENVELOPE_BYTES);
+    expect(() => serverActionFileLimitBytes('nonsense')).toThrow(/SERVER_ACTIONS_BODY_LIMIT/);
+    expect(() => serverActionFileLimitBytes('')).toThrow(/SERVER_ACTIONS_BODY_LIMIT/);
+    expect(serverActionFileLimitBytes('30 MB')).toBe(SERVER_ACTION_MAX_FILE_BYTES);
     expect(serverActionFileLimitBytes('10b')).toBe(0);
   });
 });

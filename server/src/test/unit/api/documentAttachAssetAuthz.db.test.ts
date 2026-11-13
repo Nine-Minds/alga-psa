@@ -60,7 +60,7 @@ vi.mock('../../../lib/api/services/documents/resolveSource', () => ({
   resolveSource: (...args: unknown[]) => spies.resolveSource(...args),
   getMaxUploadBytes: async () => 500 * 1024 * 1024,
   base64SourceCap: (providerMax: number) => Math.min(25 * 1024 * 1024, providerMax),
-  assertBase64EncodedWithinCap: () => undefined,
+  assertJsonBodyWithinCap: () => undefined,
   mapFetchError: (error: unknown) => error,
 }));
 vi.mock('../../../lib/api/services/documents/attachDocument', () => ({

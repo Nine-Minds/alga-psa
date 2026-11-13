@@ -3,29 +3,54 @@
  *
  * `req.formData()` reads the whole request body into memory before a handler sees the file part,
  * and the proxy layer in front of route handlers carries at most 100 MB
- * (`proxyClientMaxBodySize` in next.config.mjs). So multipart is an explicitly buffered path: the
- * file is streamed from that parsed part into the ingest (no second copy, one validator), but the
- * request itself is capped here. Larger files belong on the chunked upload session API.
+ * (`proxyClientMaxBodySize` in next.config.mjs). So multipart is an explicitly buffered path, and
+ * the ingest's byte counter cannot bound it: the request has to be bounded *before* `formData()`
+ * runs, from its declared Content-Length. A request that declares none (chunked) cannot be
+ * bounded that way and is refused with 411. Once parsed, the file part is streamed into the ingest
+ * (no second copy), and the ingest alone enforces the provider's per-file max and MIME allowlist.
+ * Larger files belong on the chunked upload session API.
  */
 import { effectiveBufferedCap } from '@alga-psa/storage/ingest/bufferedCap';
-import { PayloadTooLargeError } from '../../middleware/apiErrors';
+import { LengthRequiredError, PayloadTooLargeError } from '../../middleware/apiErrors';
 import { getMaxUploadBytes } from './resolveSource';
 
 /** Whole multipart request (file plus framing), equal to Next's proxyClientMaxBodySize. */
 export const MAX_MULTIPART_REQUEST_BYTES = 100 * 1024 * 1024;
 
+/** Room for multipart boundaries, part headers and the small non-file form fields. */
+export const MULTIPART_ENVELOPE_BYTES = 64 * 1024;
+
 /**
- * 413 before the body is read when the declared Content-Length is over the cap. A request with
- * no Content-Length (chunked) cannot be pre-checked; the ingest's byte counter still bounds the file.
+ * Largest whole request: the transport cap, or (when the provider max is lower) the provider max
+ * plus the envelope, so a file exactly at the provider max still gets through to the ingest, which
+ * enforces the per-file limit.
+ */
+export function multipartRequestCap(providerMax: number): number {
+  return effectiveBufferedCap(
+    MAX_MULTIPART_REQUEST_BYTES,
+    providerMax + MULTIPART_ENVELOPE_BYTES,
+    'MAX_MULTIPART_REQUEST_BYTES',
+  );
+}
+
+/**
+ * Before the body is read: 411 when there is no numeric Content-Length (the body could not be
+ * bounded), 413 when it is over the request cap.
  */
 export async function assertMultipartRequestWithinCap(
   req: { headers: { get(name: string): string | null } },
   providerMax?: number,
 ): Promise<void> {
-  const cap = effectiveBufferedCap(MAX_MULTIPART_REQUEST_BYTES, providerMax ?? (await getMaxUploadBytes()));
+  const cap = multipartRequestCap(providerMax ?? (await getMaxUploadBytes()));
   const declared = req.headers.get('content-length');
-  if (declared === null || !/^\d+$/.test(declared) || Number(declared) <= cap) return;
   const mb = Math.floor(cap / (1024 * 1024));
+  if (declared === null || !/^\d+$/.test(declared.trim())) {
+    throw new LengthRequiredError(
+      `Multipart uploads must declare a Content-Length (at most ${mb} MB). For larger files, or a streaming client, use the chunked upload session API (POST /api/documents/uploads, then PUT chunks and POST .../complete).`,
+      [{ path: ['file'], message: 'Content-Length header is required' }],
+    );
+  }
+  if (Number(declared) <= cap) return;
   throw new PayloadTooLargeError(
     `Multipart uploads are limited to ${mb} MB per request. For larger files use the chunked upload session API (POST /api/documents/uploads, then PUT chunks and POST .../complete).`,
     [{ path: ['file'], message: `request exceeds ${mb} MB` }],

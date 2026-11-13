@@ -10,7 +10,7 @@
 import type { Readable } from 'node:stream';
 import { getStorageConfig } from '@alga-psa/storage/config/storage';
 import { effectiveBufferedCap } from '@alga-psa/storage/ingest/bufferedCap';
-import { PayloadTooLargeError, ValidationError } from '../../middleware/apiMiddleware';
+import { LengthRequiredError, PayloadTooLargeError, ValidationError } from '../../middleware/apiMiddleware';
 import type { Knex } from 'knex';
 import {
   FetchHostNotAllowedError,
@@ -97,7 +97,17 @@ export function base64EncodedLength(decodedBytes: number): number {
 
 /** The decoded-size cap that applies to a base64 source. */
 export function base64SourceCap(providerMax: number): number {
-  return effectiveBufferedCap(MAX_BASE64_SOURCE_BYTES, providerMax);
+  return effectiveBufferedCap(MAX_BASE64_SOURCE_BYTES, providerMax, 'MAX_BASE64_SOURCE_BYTES');
+}
+
+/** Room in a JSON attach request for everything but the base64 string (entity ids, names, source wrapper). */
+export const JSON_ENVELOPE_BYTES = 64 * 1024;
+
+function base64TooLarge(cap: number): PayloadTooLargeError {
+  return new PayloadTooLargeError(
+    `base64 sources are limited to ${formatLimit(cap)} (about ${formatLimit(base64EncodedLength(cap))} encoded). ${LARGE_FILE_HINT}`,
+    [{ path: ['source'], message: `base64 content exceeds ${formatLimit(cap)}` }],
+  );
 }
 
 /**
@@ -108,12 +118,23 @@ export function assertBase64EncodedWithinCap(rawLength: number, cap: number, com
   const encodedLimit = base64EncodedLength(cap);
   const over =
     compactLength === undefined ? rawLength > encodedLimit * BASE64_WHITESPACE_SLACK : compactLength > encodedLimit;
-  if (over) {
-    throw new PayloadTooLargeError(
-      `base64 sources are limited to ${formatLimit(cap)} (about ${formatLimit(encodedLimit)} encoded). ${LARGE_FILE_HINT}`,
-      [{ path: ['source'], message: `base64 content exceeds ${formatLimit(cap)}` }],
+  if (over) throw base64TooLarge(cap);
+}
+
+/**
+ * The JSON attach request, before `req.json()` buffers it: 411 when no Content-Length bounds the
+ * body, 413 when it is past the encoded cap plus whitespace slack plus the fixed JSON envelope
+ * (so a file exactly at the cap is accepted; the exact decoded check follows in resolveSource).
+ */
+export function assertJsonBodyWithinCap(contentLength: string | null, cap: number): void {
+  if (contentLength === null || !/^\d+$/.test(contentLength.trim())) {
+    throw new LengthRequiredError(
+      `JSON requests must declare a Content-Length (the body is held in memory; base64 sources are limited to ${formatLimit(cap)}). ${LARGE_FILE_HINT}`,
+      [{ path: ['body'], message: 'Content-Length header is required' }],
     );
   }
+  const limit = Math.ceil(base64EncodedLength(cap) * BASE64_WHITESPACE_SLACK) + JSON_ENVELOPE_BYTES;
+  if (Number(contentLength) > limit) throw base64TooLarge(cap);
 }
 
 const MAX_FILE_NAME_BYTES = 255;
@@ -215,7 +236,10 @@ export function decodeBase64Strict(content: string, maxBytes: number): Buffer {
   if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact) || compact.length % 4 !== 0) {
     fail('source', 'base64 content is not valid standard base64 (invalid characters or padding)');
   }
-  return Buffer.from(compact, 'base64');
+  const decoded = Buffer.from(compact, 'base64');
+  // The encoded-length checks are only estimates (padding); the decoded size is the exact cap.
+  if (decoded.length > maxBytes) throw base64TooLarge(maxBytes);
+  return decoded;
 }
 
 /**

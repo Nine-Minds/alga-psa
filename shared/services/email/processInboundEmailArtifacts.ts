@@ -79,6 +79,21 @@ function isBase64(value: string): boolean {
   return /^[A-Za-z0-9+/=\s]+$/.test(value);
 }
 
+/** Decoded size of a base64 string, whitespace and `=` padding excluded, without copying the string. */
+function estimateBase64DecodedBytes(value: string): number {
+  const isSpace = (c: number) => c === 32 || (c >= 9 && c <= 13);
+  let symbols = 0;
+  for (let i = 0; i < value.length; i += 1) if (!isSpace(value.charCodeAt(i))) symbols += 1;
+  let padding = 0;
+  for (let i = value.length - 1; i >= 0 && padding < 2; i -= 1) {
+    const c = value.charCodeAt(i);
+    if (isSpace(c)) continue;
+    if (c !== 61) break;
+    padding += 1;
+  }
+  return Math.max(0, Math.floor((symbols * 3) / 4) - padding);
+}
+
 function normalizeContentId(value: string | undefined | null): string {
   if (!value) return '';
   return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
@@ -872,6 +887,8 @@ async function persistDocumentForBuffer(args: {
   let uploadResult: { path: string };
   let contentSha256: string;
   let storedSize: number;
+  // What the ingest resolved; this, not the sender-declared type, is what the rows record.
+  let storedMime: string;
   try {
     const { ingestToWriteSession } = await import('@alga-psa/storage/ingest/pipeline');
     const { Readable } = await import('node:stream');
@@ -883,6 +900,7 @@ async function persistDocumentForBuffer(args: {
     uploadResult = { path: ingested.upload.path };
     contentSha256 = ingested.sha256;
     storedSize = ingested.size;
+    storedMime = ingested.mime;
   } catch (uploadErr: any) {
     await markProcessedAttachment(args.knex, {
       tenantId: args.tenantId,
@@ -914,7 +932,7 @@ async function persistDocumentForBuffer(args: {
         file_id: fileId,
         file_name: String(storagePath).split('/').pop(),
         original_name: safeFileName,
-        mime_type: args.mimeType,
+        mime_type: storedMime,
         file_size: storedSize,
         content_sha256: contentSha256,
         storage_path: uploadResult.path,
@@ -935,8 +953,8 @@ async function persistDocumentForBuffer(args: {
         updated_at: now,
         file_id: fileId,
         storage_path: uploadResult.path,
-        mime_type: args.mimeType,
-        file_size: args.buffer.length,
+        mime_type: storedMime,
+        file_size: storedSize,
         folder_path: ticketFolder.folderPath,
         is_client_visible: isClientVisible,
       });
@@ -961,8 +979,8 @@ async function persistDocumentForBuffer(args: {
           file_id: fileId,
           document_id: documentId,
           file_name: safeFileName,
-          content_type: args.mimeType,
-          file_size: args.buffer.length,
+          content_type: storedMime,
+          file_size: storedSize,
           updated_at: now,
         });
     });
@@ -1187,9 +1205,11 @@ async function persistInboundEmailAttachment(input: PersistAttachmentInput): Pro
   };
   try {
     if (providedContentBase64) {
-      // Checked on the encoded length, before anything is decoded.
-      if (maxAttachmentBytes !== null && Math.floor((providedContentBase64.length * 3) / 4) > maxAttachmentBytes) {
-        return await skipOversize(Math.floor((providedContentBase64.length * 3) / 4));
+      // Checked before anything is decoded, on the decoded size implied by the base64 text with its
+      // whitespace (MIME line wrapping) and padding left out, so a wrapped body just under the cap is kept.
+      if (maxAttachmentBytes !== null) {
+        const decodedBytes = estimateBase64DecodedBytes(providedContentBase64);
+        if (decodedBytes > maxAttachmentBytes) return await skipOversize(decodedBytes);
       }
       if (!isBase64(providedContentBase64)) {
         throw new Error('Invalid base64 attachment payload');

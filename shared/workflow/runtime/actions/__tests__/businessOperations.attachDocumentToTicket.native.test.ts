@@ -23,6 +23,7 @@ const uploadMock = vi.fn(async (storagePath: string, size: number, mime?: string
   mime_type: mime,
 }));
 const abortWriteMock = vi.fn(async () => undefined);
+const deleteObjectMock = vi.fn(async (_path: string) => undefined);
 
 /** A fetch response whose body is a real web stream, as undici returns. */
 function streamResponse(chunks: Uint8Array[], headers: Record<string, string> = {}, opts: { hang?: boolean } = {}) {
@@ -62,7 +63,7 @@ vi.mock('@alga-psa/storage/StorageProviderFactory', async (importOriginal) => {
         completeWrite: vi.fn(async (handle: any) => uploadMock(handle.path, handle.written, handle.mimeType)),
         abortWrite: abortWriteMock,
         download: vi.fn(),
-        delete: vi.fn(),
+        delete: (path: string) => deleteObjectMock(path),
       })),
     },
   };
@@ -116,7 +117,14 @@ function makeBuilder(table: string) {
   };
 }
 
-const fakeKnex: any = { table: (name: string) => makeBuilder(name) };
+const failInsertFor: { table: string | null } = { table: null };
+const fakeKnex: any = {
+  table: (name: string) => {
+    const builder = makeBuilder(name);
+    if (failInsertFor.table === name) builder.insert = vi.fn(async () => { throw new Error(`insert into ${name} failed`); });
+    return builder;
+  },
+};
 
 const ctx = { stepPath: 'step-1', runId: 'run-1' } as any;
 const tx = { tenantId: 'tenant-1', actorUserId: 'user-1', trx: fakeKnex } as any;
@@ -294,12 +302,110 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
   });
 });
 
-describe('email.send attachments use the provider allowlist', () => {
-  it('validates through the shared upload policy, not a private MIME list', async () => {
-    const fs = await import('node:fs');
-    const path = await import('node:path');
-    const source = fs.readFileSync(path.resolve(__dirname, '../businessOperations/email.ts'), 'utf8');
-    expect(source).not.toContain('isAllowedAttachmentMimeType');
-    expect(source).toContain("import('@alga-psa/storage/config/storage')");
+describe('attachDocumentToTicket url branch: cleanup of the stored object', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    failInsertFor.table = null;
+    state.ticket = { ticket_id: ticketId };
+    state.file = null;
+    state.documents = [];
+    state.associations = [];
+    state.externalFiles = [];
+  });
+
+  afterEach(() => {
+    failInsertFor.table = null;
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('aborts the write session when the ingest fails mid-stream (byte guard), leaving no object and no rows', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    // Cap 10 MiB (default MAX_ATTACHMENT_BYTES); 9 MiB then 2 MiB crosses it after the first part went out.
+    vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', String(500 * 1024 * 1024));
+    await resetStoragePolicy();
+    vi.stubGlobal('fetch', vi.fn(streamResponse([new Uint8Array(9 * 1024 * 1024), new Uint8Array(2 * 1024 * 1024)], { 'content-type': 'application/octet-stream' })));
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+    await expect(
+      attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://example.test/a.bin' }, filename: 'a.bin' })
+    ).rejects.toMatchObject({ category: 'ValidationError', message: 'Attachment too large' });
+
+    expect(abortWriteMock).toHaveBeenCalledTimes(1);
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+  });
+
+  it('aborts the write session when the download stalls past the 60 s timeout', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+      await resetStoragePolicy();
+      const fetchMock = vi.fn(streamResponse([new Uint8Array(9 * 1024 * 1024)], { 'content-type': 'application/octet-stream' }, { hang: true }));
+      vi.stubGlobal('fetch', fetchMock);
+      const { attachDocumentToTicket, ATTACHMENT_URL_FETCH_TIMEOUT_MS } = await import('../businessOperations/shared');
+
+      const attempt = attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://example.test/a.bin' }, filename: 'a.bin' })
+        .catch((error) => error);
+      while (fetchMock.mock.calls.length === 0) await new Promise((resolve) => setImmediate(resolve));
+      // Let the first part reach the write session before time runs out.
+      await new Promise((resolve) => setImmediate(resolve));
+      await vi.advanceTimersByTimeAsync(ATTACHMENT_URL_FETCH_TIMEOUT_MS + 10);
+      const error = await attempt;
+
+      expect(error).toMatchObject({ category: 'TransientError' });
+      expect(abortWriteMock).toHaveBeenCalledTimes(1);
+      expect(uploadMock).not.toHaveBeenCalled();
+      expect(state.externalFiles).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(['external_files', 'documents', 'document_associations'])(
+    'deletes the stored object when the %s insert fails after a successful ingest',
+    async (table) => {
+      vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+      await resetStoragePolicy();
+      vi.stubGlobal('fetch', vi.fn(streamResponse([wavBytes], { 'content-type': 'audio/wav' })));
+      failInsertFor.table = table;
+      const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+      await expect(
+        attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://example.test/v.wav' }, filename: 'v.wav' })
+      ).rejects.toThrow(`insert into ${table} failed`);
+
+      expect(uploadMock).toHaveBeenCalledTimes(1);
+      expect(deleteObjectMock).toHaveBeenCalledTimes(1);
+      expect(deleteObjectMock).toHaveBeenCalledWith(expect.stringContaining('tenant-1'));
+    }
+  );
+
+  it('does not delete anything for a file_id source whose document insert fails (the object is not ours)', async () => {
+    state.file = { ...fileRow };
+    state.ticket = { ticket_id: ticketId };
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    failInsertFor.table = 'documents';
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+    await expect(
+      attachDocumentToTicket(ctx, tx, ticketId, { source: { file_id: fileRow.file_id } })
+    ).rejects.toThrow('insert into documents failed');
+    expect(deleteObjectMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES', () => {
+  it('is parsed strictly: a malformed value throws naming the variable instead of disabling the cap', async () => {
+    const { parseAttachmentMaxBytes } = await import('../businessOperations/shared');
+    expect(parseAttachmentMaxBytes(undefined, 10)).toBe(10);
+    expect(parseAttachmentMaxBytes('', 10)).toBe(10);
+    expect(parseAttachmentMaxBytes('2048', 10)).toBe(2048);
+    for (const bad of ['10MB', '0', '-5', '1.5', 'abc', 'Infinity']) {
+      expect(() => parseAttachmentMaxBytes(bad, 10)).toThrow(/WORKFLOW_ACTION_ATTACHMENT_MAX_BYTES/);
+    }
   });
 });
