@@ -11,7 +11,8 @@
  *                     entitlement row, or `tenants.product_code = 'co_managed'`.
  *
  * The same import registers the relationship-backed lifecycle provider and the
- * operational-write admission provider (see @alga-psa/licensing).
+ * operational-write admission provider (see @alga-psa/licensing), and the seat authority
+ * resolver (see ./seatAuthority).
  */
 import type { Knex } from 'knex';
 import {
@@ -28,6 +29,8 @@ import {
 } from '@alga-psa/licensing/lifecycle';
 import { CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { CO_MANAGED_CAPABILITY } from './permissionsCapability';
+// Side effect: registers the seat authority resolver with the authorization kernel in every process that boots here.
+import './seatAuthority';
 
 const READ_REASON = 'co-managed capability resolver: pre-tenant-context participation read, filtered by tenant ids';
 
