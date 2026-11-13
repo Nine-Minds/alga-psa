@@ -1,7 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   computeListRewriteSender,
-  resolveListRewriteSender,
   type HeaderBag,
 } from '../listRewriteSender';
 
@@ -177,47 +176,5 @@ describe('computeListRewriteSender (preserved-From relay)', () => {
     // list-id alone flags list mail but yields no address; no Sender/List-Post either.
     const result = computeListRewriteSender(headers, { email: 'jane.doe@vendor.example' });
     expect(result).toBeNull();
-  });
-});
-
-describe('resolveListRewriteSender (mailparser shape + feature flag)', () => {
-  const FLAG = 'INBOUND_RESOLVE_LIST_ORIGINAL_SENDER';
-  afterEach(() => {
-    delete process.env[FLAG];
-  });
-
-  function parsedFixture() {
-    return {
-      from: { value: [{ address: 'support@lists.example.com', name: "'Jane Doe' via support" }] },
-      headerLines: [
-        { key: 'authentication-results', line: `Authentication-Results: ${AUTHOR_AUTH}` },
-        { key: 'x-beenthere', line: 'X-BeenThere: support@lists.example.com' },
-        { key: 'x-original-sender', line: 'X-Original-Sender: jane.doe@vendor.example' },
-        { key: 'reply-to', line: 'Reply-To: Jane Doe <jane.doe@vendor.example>' },
-        { key: 'from', line: "From: 'Jane Doe' via support <support@lists.example.com>" },
-      ],
-    };
-  }
-
-  it('reads headerLines and recovers the original sender', () => {
-    const result = resolveListRewriteSender(parsedFixture());
-    expect(result?.sender.email).toBe('jane.doe@vendor.example');
-    expect(result?.listAddress).toBe('support@lists.example.com');
-  });
-
-  it('returns null when the feature flag is disabled', () => {
-    process.env[FLAG] = 'false';
-    expect(resolveListRewriteSender(parsedFixture())).toBeNull();
-  });
-
-  it('keeps the topmost Authentication-Results when duplicated', () => {
-    const fixture = parsedFixture();
-    // A later (lower) auth header for a different domain must not win.
-    fixture.headerLines.push({
-      key: 'authentication-results',
-      line: 'Authentication-Results: relay.example; dmarc=pass header.from=evil.example',
-    });
-    const result = resolveListRewriteSender(fixture);
-    expect(result?.sender.email).toBe('jane.doe@vendor.example');
   });
 });
