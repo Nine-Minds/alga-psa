@@ -244,6 +244,66 @@ describe('deleteUser', () => {
   });
 });
 
+describe('updateUser', () => {
+  /** users.first() for assertInteractiveUserTarget; boards only on an allow. */
+  function buildUpdateTrx(boardsUpdate: ReturnType<typeof vi.fn>) {
+    const trx: any = (table: string) => {
+      if (table === 'users') {
+        return {
+          where: () => ({
+            first: async () => INTERNAL_TARGET,
+            select: () => ({ first: async () => ({ ...INTERNAL_TARGET, is_inactive: false }) }),
+            update: async () => 1,
+          }),
+        };
+      }
+      if (table === 'boards') return { where: () => ({ update: boardsUpdate }) };
+      throw new Error(`Unexpected table ${table}`);
+    };
+    trx.isTransaction = true;
+    trx.schema = { hasTable: async () => false };
+    return trx;
+  }
+
+  it('refuses to deactivate the last active MSP admin and leaves boards alone', async () => {
+    assertUserRoleFloorMock.mockResolvedValue({
+      ok: false,
+      violation: 'last_msp_admin',
+      message: 'A tenant must keep at least one active MSP Admin user.',
+    });
+    const boardsUpdate = vi.fn(async () => 1);
+    withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) =>
+      cb(buildUpdateTrx(boardsUpdate))
+    );
+
+    const { updateUser } = await import('./userActions');
+
+    await expect(updateUser('target-1', { is_inactive: true } as any)).resolves.toEqual({
+      success: false,
+      code: 'LAST_MSP_ADMIN',
+      error: 'A tenant must keep at least one active MSP Admin user.',
+      messageKey: 'msp/settings:errors.roles.lastMspAdmin',
+    });
+    expect(assertUserRoleFloorMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', {
+      kind: 'deactivate_user',
+      userId: 'target-1',
+    });
+    expect(boardsUpdate).not.toHaveBeenCalled();
+  });
+
+  it('does not consult the floor when the update leaves the user active', async () => {
+    const boardsUpdate = vi.fn(async () => 1);
+    withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) =>
+      cb(buildUpdateTrx(boardsUpdate))
+    );
+
+    const { updateUser } = await import('./userActions');
+
+    await updateUser('target-1', { phone: '555-0100' } as any);
+    expect(assertUserRoleFloorMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('deactivateUserWithDisposition', () => {
   it('refuses to deactivate the last active MSP admin, before any work is disposed', async () => {
     assertUserRoleFloorMock.mockResolvedValue({
