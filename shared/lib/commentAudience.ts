@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { isCoManagedWorkspace } from '@alga-psa/db/writeAdmission';
+import { serves } from '@alga-psa/core/capability';
 
 /**
  * Conversation audiences for shared (co-managed) work.
@@ -182,6 +183,48 @@ export async function resolveCommentAudienceReader(
   if (!seat) return { kind: 'staff', tenant };
   if (seat.assignment_state !== 'active' || seat.arrangement_state !== 'active' || !seat.client_id) return null;
   return { kind: 'seat', tenant, clientId: seat.client_id };
+}
+
+/**
+ * Can `tenant` have a seat technician at all? The admission in front of every seat-table read on
+ * an ordinary read path, so a plain PSA tenant never runs seat SQL.
+ *
+ * A seat arrangement is paid for by a seat allocation, and an allocation is only ever reserved
+ * against the sponsor's `co_managed_entitlements` row, which is kept through lapse. That row is
+ * participation in the `co-managed` capability, so a tenant the participation gate has read and
+ * found absent (`not-participating`) has no arrangement and therefore no seat technician. The
+ * gate's decision is cached per process, which is what makes this free on the hot path.
+ *
+ * Two answers say no: `not-participating`, and `resolver-unregistered`, a process in which the
+ * co-managed capability was never registered (an edition without it), where no co-managed
+ * behaviour runs at all. Everything else answers yes: a served tenant, a forced capability (the
+ * kill switch included), a failed participation read, or a gate that throws. The caller then
+ * reads the seat tables and decides per user, as if ungated. Being wrong toward yes costs a
+ * statement; being wrong toward no would show a seat technician private notes.
+ */
+const NO_SEAT_READERS: ReadonlySet<string> = new Set(['not-participating', 'resolver-unregistered']);
+export async function tenantMayHaveSeatReaders(tenant: string): Promise<boolean> {
+  try {
+    return !NO_SEAT_READERS.has((await serves('co-managed', tenant)).reasons.served);
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * `resolveCommentAudienceReader` behind `tenantMayHaveSeatReaders`: an internal user of a tenant
+ * that cannot have seat technicians is its staff, with no SQL. Request boundaries that resolve a
+ * reader for an ordinary read (search) use this form.
+ */
+export async function admitCommentAudienceReader(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: { userId: string; userType: string },
+): Promise<CommentAudienceReader | null> {
+  if (tenant && user?.userId && user.userType === 'internal' && !(await tenantMayHaveSeatReaders(tenant))) {
+    return { kind: 'staff', tenant };
+  }
+  return resolveCommentAudienceReader(trx, tenant, user);
 }
 
 /** The owning organization as a WRITE sees it: the read owner plus whether its client has a live seat arrangement. */
@@ -494,7 +537,8 @@ export const COMMENT_UPLOAD_URL_PATTERN = {
  * that reads the rows: the SQL composition of `resolveCommentAudienceReader` and
  * `commentAudienceVisibleSql`. Read paths that cannot name the reader's organization before they
  * query (the ticket screen, the activity list, the attachment gate) add these expressions to the
- * statement they already run, so a tenant with no seat technician pays no extra statement.
+ * statement they already run. They reach it only through `admitInternalReaderAudienceSql`, so a
+ * tenant that cannot have a seat technician runs none of it.
  *
  *   staff           no seat assignment binds the user: every audience stored in their tenant
  *   commentVisible  staff, or a live seat technician of the comment's ticket's client reading an
@@ -509,7 +553,7 @@ export const COMMENT_UPLOAD_URL_PATTERN = {
  * A bound user whose assignment is not live sees nothing, as in `resolveCommentAudienceReader`.
  * A missing comment, thread, root or ticket fails closed for everyone but staff.
  */
-export function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: string, userId: string) {
+function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: string, userId: string) {
   const staff = db.raw(
     `NOT EXISTS (SELECT 1 FROM co_managed_seat_assignments aud_bound
       WHERE aud_bound.tenant = ? AND aud_bound.user_id = ? AND aud_bound.state <> 'revoked')`, [tenant, userId]);
@@ -545,4 +589,19 @@ export function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: s
       COMMENT_UPLOAD_URL_PATTERN.prefix, COMMENT_UPLOAD_URL_PATTERN.suffix, tenant, id, commentVisible('aud_oc.comment_id')]);
   };
   return { staff, commentVisible, documentVisible };
+}
+
+export type InternalReaderAudienceSql = ReturnType<typeof internalReaderAudienceSql>;
+
+/**
+ * The audience expressions for one internal reader, or `null` when the tenant cannot have a seat
+ * technician (`tenantMayHaveSeatReaders`): the reader is then MSP staff, who read every audience
+ * stored in their tenant, and the caller adds no predicate and no seat table to its statement.
+ */
+export async function admitInternalReaderAudienceSql(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  userId: string,
+): Promise<InternalReaderAudienceSql | null> {
+  return (await tenantMayHaveSeatReaders(tenant)) ? internalReaderAudienceSql(db, tenant, userId) : null;
 }

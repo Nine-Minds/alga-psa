@@ -16,7 +16,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { internalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { admitInternalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -2791,7 +2791,8 @@ export class TicketService extends BaseService<ITicket> {
         });
     } else if (context.userId) {
       // An internal reader sees only the audiences their organization may: MSP staff all of them, a seat technician never a private note.
-      commentsQuery.whereRaw('?', [internalReaderAudienceSql(knex, context.tenant, context.userId).commentVisible('tc.comment_id')]);
+      const audience = await admitInternalReaderAudienceSql(knex, context.tenant, context.userId);
+      if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('tc.comment_id')]);
     }
 
     const comments = await commentsQuery

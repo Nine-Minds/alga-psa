@@ -3,7 +3,7 @@ import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { canReadTicket, canWriteTicket } from '@alga-psa/authorization/portal/ticketAccess.server';
-import { COMMENT_UPLOAD_URL_PATTERN, internalReaderAudienceSql } from './commentAudience';
+import { COMMENT_UPLOAD_URL_PATTERN, admitInternalReaderAudienceSql } from './commentAudience';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -175,9 +175,12 @@ export async function canReadCommentAttachment(conn: Connection, tenant: string,
   if (!row) {
     // No attachment row: an ordinary Documents upload keeps its original policy, except that an
     // internal reader also needs every comment that names the file in its note (a legacy inline
-    // image) to be visible to them. Other readers are not decided here.
+    // image) to be visible to them. Other readers are not decided here, and neither is anyone in
+    // a tenant that cannot have a seat technician: its internal users are staff.
+    const audience = await admitInternalReaderAudienceSql(conn, tenant, userId);
+    if (!audience) return true;
     const reader = await db.table('users').where({ user_id: userId, user_type: 'internal' })
-      .first(conn.raw('(?) as document_visible', [internalReaderAudienceSql(conn, tenant, userId).documentVisible(conn.raw('?::uuid', [documentId]))]));
+      .first(conn.raw('(?) as document_visible', [audience.documentVisible(conn.raw('?::uuid', [documentId]))]));
     return !reader || reader.document_visible === true;
   }
   // Callers filtering many attachments share one decision per ticket.
@@ -192,7 +195,8 @@ export async function canReadCommentAttachment(conn: Connection, tenant: string,
   if (row.state !== 'attached' || !row.comment_id) return false;
   // An internal reader also needs the parent comment's audience: MSP staff read every audience, a
   // seat technician only what their organization may. Decided in the comment read itself.
-  const audience = user?.user_type === 'internal' ? internalReaderAudienceSql(conn, tenant, userId) : null;
+  // `null` for an internal user means the tenant cannot have a seat technician: they are staff.
+  const audience = user?.user_type === 'internal' ? await admitInternalReaderAudienceSql(conn, tenant, userId) : null;
   const comment = await db.table('comments').where({ comment_id: row.comment_id, ticket_id: row.ticket_id })
     .first('comments.*', ...(audience ? [
       conn.raw('(?) as audience_visible', [audience.commentVisible('comments.comment_id')]),
@@ -200,8 +204,8 @@ export async function canReadCommentAttachment(conn: Connection, tenant: string,
       conn.raw('(?) as document_visible', [audience.documentVisible(conn.raw('?::uuid', [documentId]))]),
     ] : []));
   if (!comment || comment.deleted_at || comment.publish_state === 'canceled') return false;
-  return audience ? comment.audience_visible === true && comment.document_visible === true
-    : await isPublicAttachmentComment(conn, tenant, row.comment_id, row.ticket_id);
+  if (audience) return comment.audience_visible === true && comment.document_visible === true;
+  return user?.user_type === 'internal' || await isPublicAttachmentComment(conn, tenant, row.comment_id, row.ticket_id);
 }
 
 export async function listPublishedCommentAttachments(conn: Connection, tenant: string, ticketId: string, commentId: string) {

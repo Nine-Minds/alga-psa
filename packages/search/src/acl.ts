@@ -5,7 +5,7 @@ import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
-  audiencesVisibleTo, commentAudienceSql, isCommentAudience, isCommentAudienceVisible, resolveCommentAudienceReader,
+  audiencesVisibleTo, commentAudienceSql, isCommentAudience, isCommentAudienceVisible, admitCommentAudienceReader,
   type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 
@@ -72,7 +72,7 @@ export interface SearchAclPrincipal {
   isInternal?: boolean;
   clientAccess: ClientAccess;
   /**
-   * The organization an internal principal reads comments as (`resolveCommentAudienceReader`).
+   * The organization an internal principal reads comments as (`admitCommentAudienceReader`).
    * `staff` sees every audience stored in its tenant; a `seat` technician sees the audiences the
    * shared predicate admits on its own client's tickets; `null` is a seat user with no live
    * assignment and sees no comment. Unset means owning-tenant staff, as before the seat shape.
@@ -288,9 +288,10 @@ export async function resolveSearchAclPrincipal(
     roles: [...roles],
     isInternal: !isClientPortal,
     clientAccess,
-    // One read for an internal user; a client user is the requester with no SQL.
+    // A client user is the requester and an internal user of a tenant that cannot have seat
+    // technicians is staff, both with no SQL; otherwise one read.
     audienceReader: user.tenant
-      ? await resolveCommentAudienceReader(knex, user.tenant, { userId: user.user_id, userType: isClientPortal ? 'client' : 'internal' })
+      ? await admitCommentAudienceReader(knex, user.tenant, { userId: user.user_id, userType: isClientPortal ? 'client' : 'internal' })
       : undefined,
   };
 }

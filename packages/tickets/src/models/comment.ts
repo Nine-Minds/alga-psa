@@ -5,7 +5,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import {
-  CommentAudienceError, internalReaderAudienceSql, isCommentAudience, nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader,
+  CommentAudienceError, admitInternalReaderAudienceSql, isCommentAudience, nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
@@ -78,6 +78,7 @@ const Comment = {
    * `internalReaderId` is the internal user the comments are read for. Named, the read keeps only
    * the audiences that user's organization may see (MSP staff: all of them; a seat technician:
    * never a private note), in the same statement. Omitted, the read is unfiltered (system callers).
+   * A tenant that cannot have a seat technician adds nothing to the statement.
    */
   getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string, internalReaderId?: string): Promise<IComment[]> => {
     try {
@@ -99,9 +100,8 @@ const Comment = {
       scopedConn.tenantJoin(commentsQuery, 'comments as src', 'bm.source_comment_id', 'src.comment_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
       scopedConn.tenantJoin(commentsQuery, 'tickets as mt', 'src.ticket_id', 'mt.ticket_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
 
-      if (internalReaderId) {
-        commentsQuery.whereRaw('?', [internalReaderAudienceSql(knexOrTrx, tenant, internalReaderId).commentVisible('comments.comment_id')]);
-      }
+      const audience = internalReaderId ? await admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReaderId) : null;
+      if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
       const comments = await commentsQuery
         .where('comments.ticket_id', ticket_id)
         .orderBy('comments.created_at', 'asc');
@@ -134,9 +134,8 @@ const Comment = {
       const query = tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
         .where('comments.comment_id', id);
-      if (internalReaderId) {
-        query.whereRaw('?', [internalReaderAudienceSql(knexOrTrx, tenant, internalReaderId).commentVisible('comments.comment_id')]);
-      }
+      const audience = internalReaderId ? await admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReaderId) : null;
+      if (audience) query.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
       const comment = await query.first();
       return comment;
     } catch (error) {

@@ -3,8 +3,12 @@ import type { Knex } from 'knex';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import {
-  isCommentAudienceVisible, resolveCommentAudienceForRead, resolveCommentAudienceReader, type CommentAudienceReader,
+  admitCommentAudienceReader, isCommentAudienceVisible, resolveCommentAudienceForRead, resolveCommentAudienceReader,
+  tenantMayHaveSeatReaders, type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
+import { registerCapabilityParticipation, serves } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
+import { coManagedParticipants } from '@alga-psa/co-managed/capability';
 import { canReadCommentAttachment, filterReadableCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { buildUnifiedTicketTimeline, readTicketActivity, writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
 import { ticketCommentIndexer } from '@alga-psa/search/indexers/ticket_comment';
@@ -24,7 +28,9 @@ import Comment from '../../../../packages/tickets/src/models/comment';
  * reads the other two. MSP staff read everything, as before.
  *
  * The seat technician is a real internal user holding an active assignment, written directly: no
- * invitation command is on main.
+ * invitation command is on main. The tenant holds a co-managed entitlement row, as every tenant
+ * with a seat arrangement does, and the process registers the production participation resolver:
+ * that is what admits the tenant to the seat read (`tenantMayHaveSeatReaders`).
  */
 describe('comment audience in attachments, activity and search (integration)', () => {
   let knex: Knex;
@@ -34,6 +40,9 @@ describe('comment audience in attachments, activity and search (integration)', (
   let mspUser: string;
   let seatUser: string;
   let arrangementId: string;
+  /** True when this file wrote the tenant's entitlement row and must remove it. */
+  let entitlementAdded = false;
+  const participation = () => registerCapabilityParticipation('co-managed', ({ tenantIds }) => coManagedParticipants(tenantIds, knex));
   const TERM = `quillfeather${randomUUID().slice(0, 8)}`;
   const privateNotes: string[] = [];
   let sharedNote: string;
@@ -99,6 +108,15 @@ describe('comment audience in attachments, activity and search (integration)', (
     if (users.length < 2) throw new Error('fixture: two free internal users are required');
     [mspUser, seatUser] = users.map(row => row.user_id);
 
+    if (!await t('co_managed_entitlements').first('tenant')) {
+      await t('co_managed_entitlements').insert({ tenant, source: 'hosted', source_reference: `sub_${randomUUID()}`, capacity: 1,
+        verified_at: new Date(Date.now() - 86_400_000), valid_until: new Date(Date.now() + 365 * 86_400_000) });
+      entitlementAdded = true;
+    }
+    delete process.env.FORCE_CAPABILITIES;
+    participation();
+    expect((await serves('co-managed', tenant)).reasons.served).toBe('open');
+
     arrangementId = randomUUID();
     await t('co_managed_seat_arrangements').insert({ tenant, arrangement_id: arrangementId, client_id: clientId, allocation_id: randomUUID(), state: 'active' });
     await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: seatUser, state: 'active' });
@@ -156,7 +174,9 @@ describe('comment audience in attachments, activity and search (integration)', (
         await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId }).delete().catch(() => undefined);
         await t('co_managed_seat_arrangements').where({ arrangement_id: arrangementId }).delete().catch(() => undefined);
       }
+      if (entitlementAdded) await t('co_managed_entitlements').delete().catch(() => undefined);
     }
+    resetCapabilityRegistry();
     await knex.destroy();
   });
 
@@ -380,6 +400,94 @@ describe('comment audience in attachments, activity and search (integration)', (
         await t('document_associations').where({ document_id: documentId }).delete();
         await t('documents').where({ document_id: documentId }).update({ file_id: null });
       }
+    });
+  });
+
+  describe('admission to the seat read', () => {
+    /** Every statement `run` sends, as SQL text. */
+    async function statements(run: () => Promise<unknown>): Promise<string[]> {
+      const seen: string[] = [];
+      const listen = (query: { sql: string }) => { seen.push(query.sql); };
+      knex.on('query', listen);
+      try { await run(); } finally { knex.removeListener('query', listen); }
+      return seen;
+    }
+    const readEverySurface = (inTenant: string, userId: string) => async () => {
+      await Comment.getAllbyTicketId(knex, inTenant, ticketId, userId);
+      await Comment.get(knex, inTenant, sharedNote, userId);
+      await buildUnifiedTicketTimeline(knex, inTenant, ticketId, { internalReaderId: userId });
+      await canReadCommentAttachment(knex, inTenant, userId, attachments.get(sharedNote)!);
+      await canReadCommentAttachment(knex, inTenant, userId, plainDocumentId);
+      await admitCommentAudienceReader(knex, inTenant, { userId, userType: 'internal' });
+    };
+    const seatReadsOnlyItsAudiences = async () => {
+      expect(onlyMine((await Comment.getAllbyTicketId(knex, tenant, ticketId, seatUser)).map(c => c.comment_id))).toEqual(sorted([sharedNote, requesterComment]));
+      expect(await canReadCommentAttachment(knex, tenant, seatUser, attachments.get(privateNotes[0])!)).toBe(false);
+      const rows = (await readTicketActivity(knex, tenant, ticketId, { internalReaderId: seatUser })).filter(row => auditIds.includes(row.audit_id));
+      expect(rows.some(row => row.entity_type === 'comment' && privateNotes.includes(row.entity_id as string))).toBe(false);
+      expect(await admitCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal' })).toEqual({ kind: 'seat', tenant, clientId });
+      expect(sorted((await searchHits(await searchPrincipal(seatUser))).map(h => h.id))).toEqual(sorted([sharedNote, requesterComment]));
+    };
+    const restore = () => { delete process.env.FORCE_CAPABILITIES; participation(); clearCapabilityCache(); };
+
+    it('a tenant that does not participate reads every surface with no seat table in any statement', async () => {
+      // No entitlement row, so no seat arrangement can exist: its internal users are staff.
+      const plain = randomUUID();
+      expect((await serves('co-managed', plain)).reasons.served).toBe('not-participating');
+      expect(await tenantMayHaveSeatReaders(plain)).toBe(false);
+      expect(await admitCommentAudienceReader(knex, plain, { userId: mspUser, userType: 'internal' })).toEqual({ kind: 'staff', tenant: plain });
+      const sql = await statements(readEverySurface(plain, mspUser));
+      expect(sql.length).toBeGreaterThan(0);
+      expect(sql.filter(text => /co_managed_/.test(text))).toEqual([]);
+    });
+
+    it('the participating tenant still decides per user in the statement', async () => {
+      expect(await tenantMayHaveSeatReaders(tenant)).toBe(true);
+      expect((await statements(readEverySurface(tenant, mspUser))).some(text => /co_managed_seat_assignments/.test(text))).toBe(true);
+      await seatReadsOnlyItsAudiences();
+    });
+
+    it('a failed participation read does not promote a seat technician to staff', async () => {
+      registerCapabilityParticipation('co-managed', async () => { throw new Error('participation read failed'); });
+      try {
+        expect((await serves('co-managed', tenant)).reasons.served).toBe('participation-error');
+        expect(await tenantMayHaveSeatReaders(tenant)).toBe(true);
+        await seatReadsOnlyItsAudiences();
+      } finally { restore(); }
+    });
+
+    it.each(['co-managed:off', 'co-managed:on', 'co-managed:sideways'])('FORCE_CAPABILITIES=%s does not promote a seat technician to staff', async (forced) => {
+      process.env.FORCE_CAPABILITIES = forced;
+      try {
+        expect(await tenantMayHaveSeatReaders(tenant)).toBe(true);
+        await seatReadsOnlyItsAudiences();
+      } finally { restore(); }
+    });
+
+    it('a seat user whose assignment is not yet active reads nothing, on every surface', async () => {
+      await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId, user_id: seatUser }).update({ state: 'invited' });
+      try {
+        expect(await admitCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal' })).toBeNull();
+        expect(onlyMine((await Comment.getAllbyTicketId(knex, tenant, ticketId, seatUser)).map(c => c.comment_id))).toEqual([]);
+        expect(await canReadCommentAttachment(knex, tenant, seatUser, attachments.get(requesterComment)!)).toBe(false);
+        const rows = (await readTicketActivity(knex, tenant, ticketId, { internalReaderId: seatUser })).filter(row => auditIds.includes(row.audit_id));
+        expect(rows.some(row => row.entity_type === 'comment')).toBe(false);
+        expect(await searchHits(await searchPrincipal(seatUser))).toEqual([]);
+      } finally {
+        await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId, user_id: seatUser }).update({ state: 'active' });
+      }
+    });
+
+    it('a process that never registered the capability runs no seat SQL: no co-managed behaviour exists there', async () => {
+      // The one non-participation answer read as "no seat technicians". Recorded here because it
+      // is the edge of the admission: a server whose capability registration failed at boot is
+      // in this state too, and would read a seat technician as staff.
+      registerCapabilityParticipation('co-managed', null);
+      try {
+        expect((await serves('co-managed', tenant)).reasons.served).toBe('resolver-unregistered');
+        expect(await tenantMayHaveSeatReaders(tenant)).toBe(false);
+        expect((await statements(readEverySurface(tenant, mspUser))).filter(text => /co_managed_/.test(text))).toEqual([]);
+      } finally { restore(); }
     });
   });
 
