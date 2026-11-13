@@ -162,7 +162,6 @@
       "storage": "Armazenamento",
       "cpuCoreCount_one": "{{count}} núcleo",
       "cpuCoreCount_other": "{{count}} núcleos",
-      "cpuCoreCount_few": "{{count}} núcleos",
       "cpuCoreCount_many": "{{count}} núcleos"
     }
   },

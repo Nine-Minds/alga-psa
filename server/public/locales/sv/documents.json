@@ -162,7 +162,6 @@
       "storage": "Lagring",
       "cpuCoreCount_one": "{{count}} kärna",
       "cpuCoreCount_other": "{{count}} kärnor",
-      "cpuCoreCount_few": "{{count}} kärnor",
       "cpuCoreCount_many": "{{count}} kärnor"
     }
   },

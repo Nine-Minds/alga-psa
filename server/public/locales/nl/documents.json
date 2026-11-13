@@ -162,7 +162,6 @@
       "storage": "Opslag",
       "cpuCoreCount_one": "{{count}} kern",
       "cpuCoreCount_other": "{{count}} kernen",
-      "cpuCoreCount_few": "{{count}} kernen",
       "cpuCoreCount_many": "{{count}} kernen"
     }
   },

@@ -162,7 +162,6 @@
       "storage": "Archiviazione",
       "cpuCoreCount_one": "{{count}} nucleo",
       "cpuCoreCount_other": "{{count}} nuclei",
-      "cpuCoreCount_few": "{{count}} nuclei",
       "cpuCoreCount_many": "{{count}} nuclei"
     }
   },

@@ -162,7 +162,6 @@
       "storage": "Datenspeicher",
       "cpuCoreCount_one": "{{count}} Kern",
       "cpuCoreCount_other": "{{count}} Kerne",
-      "cpuCoreCount_few": "{{count}} Kerne",
       "cpuCoreCount_many": "{{count}} Kerne"
     }
   },
