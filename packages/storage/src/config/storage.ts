@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
+import { isMimeAllowed } from './storage-mime';
 import type { StorageConfig, StorageProviderConfig } from '../types/storage';
 
 // Cached configuration to avoid multiple async calls
@@ -90,21 +91,8 @@ async function validateFileSize(fileSize: number): Promise<StorageProviderConfig
 export async function validateFileUpload(mimeType: string, fileSize: number): Promise<void> {
   const provider = await validateFileSize(fileSize);
 
-  // Check if all file types are allowed (via */* wildcard)
-  const allowsAllTypes = provider.allowedMimeTypes.includes('*/*');
-
-  if (!allowsAllTypes) {
-    const isAllowedMimeType = provider.allowedMimeTypes.some((allowed) => {
-      if (allowed.endsWith('/*')) {
-        const prefix = allowed.slice(0, -1);
-        return mimeType.startsWith(prefix);
-      }
-      return mimeType === allowed;
-    });
-
-    if (!isAllowedMimeType) {
-      throw new Error('File type not allowed');
-    }
+  if (!isMimeAllowed(provider.allowedMimeTypes, mimeType)) {
+    throw new Error('File type not allowed');
   }
 }
 
@@ -115,6 +103,13 @@ export async function validateFileUpload(mimeType: string, fileSize: number): Pr
  */
 export async function validateSystemArtifact(fileSize: number): Promise<void> {
   await validateFileSize(fileSize);
+}
+
+/** Size ceiling and MIME allowlist of the default provider, as enforced on streamed uploads. */
+export async function getUploadPolicy(): Promise<{ maxFileSize: number; allowedMimeTypes: string[] }> {
+  const config = await buildStorageConfig();
+  const provider = config.providers[config.defaultProvider];
+  return { maxFileSize: provider.maxFileSize, allowedMimeTypes: provider.allowedMimeTypes };
 }
 
 export function clearCachedStorageConfig(): void {

@@ -871,6 +871,7 @@
       "pending": "Oczekujące",
       "error": "Nie udało się przesłać dokumentu",
       "fileError": "Nie udało się przesłać pliku",
+      "fileTooLarge": "Ten plik ma rozmiar {{size}}. Obecny limit to {{limit}} na plik.",
       "associatedEntityTypeLabel": "Powiąż z",
       "noAssociation": "Brak powiązania",
       "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt.",
@@ -882,7 +883,16 @@
       "emptyDropMessage": "Nie otrzymano żadnych plików. Zapisz załącznik lub wiadomość e-mail na komputerze, a następnie przeciągnij zapisany plik tutaj albo użyj opcji „Przeglądaj pliki”.",
       "uploadInProgress": "Przesyłanie jest już w toku. Poczekaj na jego zakończenie, zanim dodasz kolejne pliki.",
       "refreshFailed": "Twoje pliki zostały przesłane, ale nie udało się odświeżyć listy dokumentów. Odśwież stronę, aby je zobaczyć.",
-      "clearResults": "Wyczyść wyniki"
+      "clearResults": "Wyczyść wyniki",
+      "typeNotAllowed": "Ten typ pliku jest niedozwolony. Wybierz inny plik.",
+      "permissionDenied": "Nie masz uprawnień do przesyłania tutaj dokumentów.",
+      "networkFailed": "Połączenie zostało przerwane i nie udało się wznowić przesyłania. Sprawdź połączenie i spróbuj ponownie.",
+      "sessionGone": "To przesyłanie wygasło, zanim się zakończyło. Rozpocznij je ponownie.",
+      "cancelled": "Anulowano",
+      "cancelUpload": "Anuluj przesyłanie",
+      "tryAgain": "Spróbuj ponownie",
+      "progress": "{{committed}} z {{total}}",
+      "progressLabel": "Postęp przesyłania pliku {{name}}"
     },
     "folders": {
       "root": "Główny",

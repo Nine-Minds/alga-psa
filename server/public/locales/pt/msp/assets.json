@@ -54,6 +54,22 @@
       "closed": "Fechado",
       "warranty_review": "Análise de garantia",
       "repaired": "Reparado"
+    },
+    "assetAuditStatus": {
+      "in_progress": "Em andamento",
+      "completed": "Concluída",
+      "cancelled": "Cancelada"
+    },
+    "assetAuditResult": {
+      "expected": "Previsto",
+      "present": "Presente",
+      "missing": "Ausente",
+      "unexpected": "Não previsto"
+    },
+    "assetAuditMethod": {
+      "scan": "Leitura de código",
+      "manual": "Manual",
+      "register": "Cadastro no local"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Qualquer custódia",
         "inCustody": "Sob custódia do MSP",
         "notInCustody": "Fora da custódia do MSP"
+      },
+      "audit": {
+        "any": "Qualquer resultado de auditoria",
+        "present": "Última auditoria: presente",
+        "missing": "Última auditoria: ausente",
+        "never": "Nunca auditado",
+        "stale": "Sem auditoria há 90 dias"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Localização",
       "purchaseDate": "Data de compra",
       "warrantyEnd": "Fim da garantia",
-      "notProvided": "Não fornecido"
+      "notProvided": "Não fornecido",
+      "lastAudited": "Última auditoria",
+      "neverAudited": "Nunca auditado"
     },
     "info": {
       "client": "Cliente",
@@ -850,24 +875,6 @@
     "links": {
       "title": "Links de acesso remoto",
       "description": "Configure modelos de URL para ScreenConnect e outras ferramentas de acesso remoto.",
-      "errors": {
-        "load": "Falha ao carregar os links de acesso remoto.",
-        "save": "Falha ao salvar o link de acesso remoto.",
-        "delete": "Falha ao excluir o link de acesso remoto.",
-        "templateHttp": "O modelo deve começar com http:// ou https:// e um host literal.",
-        "templatePlaceholder": "O modelo contém um marcador de posição não compatível.",
-        "templateUrl": "O modelo deve gerar uma URL http ou https válida.",
-        "required": "O rótulo e o modelo de URL são obrigatórios.",
-        "partialDelete": "Não foi possível excluir {{count}} link(s) selecionado(s)."
-      },
-      "noneAvailable": "Nenhuma opção de acesso remoto disponível.",
-      "confirmDeleteTitle": "Excluir link de acesso remoto?",
-      "confirmDeleteMessage": "Tem certeza de que deseja excluir “{{label}}”? Esta ação não pode ser desfeita.",
-      "openMenu": "Abrir menu",
-      "selectLabel": "Selecionar {{label}}",
-      "confirmBulkDeleteTitle": "Excluir os links selecionados?",
-      "confirmBulkDeleteMessage": "Excluir {{count}} link(s) de acesso remoto selecionado(s)?",
-      "selectedCount": "{{count}} selecionado(s)",
       "add": "Adicionar link",
       "empty": "Nenhum link de acesso remoto configurado.",
       "edit": "Editar",
@@ -880,10 +887,28 @@
       "template": "Modelo de URL",
       "ninjaExample": "Exemplo do painel de dispositivo do NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Substitua o host pela sua região do NinjaOne: app, eu, ca, oc ou us2 .ninjarmm.com.",
       "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
+      "errors": {
+        "load": "Falha ao carregar os links de acesso remoto.",
+        "save": "Falha ao salvar o link de acesso remoto.",
+        "delete": "Falha ao excluir o link de acesso remoto.",
+        "templateHttp": "O modelo deve começar com http:// ou https:// e um host literal.",
+        "templatePlaceholder": "O modelo contém um marcador de posição não compatível.",
+        "templateUrl": "O modelo deve gerar uma URL http ou https válida.",
+        "required": "O rótulo e o modelo de URL são obrigatórios.",
+        "partialDelete": "Não foi possível excluir {{count}} link(s) selecionado(s)."
+      },
       "loading": "Carregando opções de acesso remoto…",
+      "noneAvailable": "Nenhuma opção de acesso remoto disponível.",
       "unavailable": "Indisponível para este ativo",
+      "confirmDeleteTitle": "Excluir link de acesso remoto?",
+      "confirmDeleteMessage": "Tem certeza de que deseja excluir “{{label}}”? Esta ação não pode ser desfeita.",
       "actions": "Ações",
-      "selectAll": "Selecionar todos os links"
+      "openMenu": "Abrir menu",
+      "selectLabel": "Selecionar {{label}}",
+      "selectAll": "Selecionar todos os links",
+      "confirmBulkDeleteTitle": "Excluir os links selecionados?",
+      "confirmBulkDeleteMessage": "Excluir {{count}} link(s) de acesso remoto selecionado(s)?",
+      "selectedCount": "{{count}} selecionado(s)"
     }
   },
   "assetListErrors": {
@@ -1839,7 +1864,8 @@
     "assignDialogTitle": "Atribuir este ativo",
     "sharedWorkspace": "Espaço compartilhado",
     "sharedWorkspaceValue": "{{name}} · {{count}} pessoas",
-    "billingProfile": "Perfil de faturamento"
+    "billingProfile": "Perfil de faturamento",
+    "lastAudited": "Última auditoria"
   },
   "assetTimeline": {
     "title": "Linha do tempo",
@@ -1869,7 +1895,11 @@
       "aGroup": "um grupo",
       "autoAssignedFrom": "Atribuído automaticamente a {{contact}} a partir de {{provider}}",
       "groupLocationMoved": "Movido para {{location}} com {{group}}",
-      "groupLocationCleared": "Localização removida com {{group}}"
+      "groupLocationCleared": "Localização removida com {{group}}",
+      "audit": "Auditoria",
+      "auditPresent": "Auditoria: presente",
+      "auditMissing": "Auditoria: ausente",
+      "auditMethod": "Marcado via {{method}}"
     },
     "changeTypes": {
       "created": "Criado",
@@ -2332,6 +2362,108 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Auditorias no local",
+    "startAudit": "Iniciar auditoria",
+    "noLocation": "Sem local",
+    "loading": "Carregando auditorias…",
+    "empty": "Ainda não há auditorias no local que correspondam a esta visualização.",
+    "columns": {
+      "audit": "Auditoria",
+      "client": "Cliente",
+      "location": "Local",
+      "status": "Status",
+      "startedBy": "Iniciada por",
+      "started": "Início",
+      "completed": "Conclusão",
+      "expected": "Previstos",
+      "present": "Presentes",
+      "missing": "Ausentes",
+      "unexpected": "Não previstos"
+    },
+    "filters": {
+      "client": "Cliente",
+      "allLocations": "Todos os locais",
+      "allStatuses": "Todos os status",
+      "started": "Início"
+    },
+    "stats": {
+      "expected": "previstos",
+      "present": "presentes",
+      "missing": "ausentes",
+      "remaining": "restantes",
+      "unexpected": "não previstos"
+    },
+    "segments": {
+      "remaining": "Restantes",
+      "present": "Presentes",
+      "missing": "Ausentes",
+      "unexpected": "Não previstos",
+      "all": "Todos"
+    },
+    "start": {
+      "title": "Iniciar auditoria no local",
+      "client": "Cliente",
+      "clientPlaceholder": "Selecione um cliente",
+      "location": "Local",
+      "locationHint": "\"Sem local\" audita os dispositivos do cliente que não têm um local registrado.",
+      "statuses": "Status dos ativos no escopo",
+      "statusesHint": "Se nenhum status for selecionado, todos os status serão auditados.",
+      "statusesLoading": "Carregando status…",
+      "notes": "Observações",
+      "notesPlaceholder": "Objetivo desta visita (opcional)",
+      "pickClient": "Selecione um cliente para ver o que está no escopo.",
+      "counting": "Contando os dispositivos no escopo…",
+      "countUnavailable": "A contagem de dispositivos está indisponível no momento.",
+      "expected_one": "1 dispositivo previsto neste escopo",
+      "expected_other": "{{count}} dispositivos previstos neste escopo",
+      "submit": "Iniciar auditoria",
+      "starting": "Iniciando…"
+    },
+    "detail": {
+      "reference": "Auditoria",
+      "untitledClient": "Cliente",
+      "location": "Local",
+      "startedBy": "Iniciada por",
+      "started": "Início",
+      "completed": "Conclusão",
+      "scopeStatuses": "Status no escopo",
+      "allStatuses": "Todos os status",
+      "notes": "Observações",
+      "exportCsv": "Exportar CSV",
+      "exportStarted": "Exportação CSV iniciada.",
+      "exportEmpty": "Não há nada para exportar nesta visualização.",
+      "addUnexpected": "Adicionar ativo não previsto",
+      "addUnexpectedHint": "Um dispositivo encontrado no local, mas fora do escopo desta auditoria, é registrado como não previsto, nunca como previsto.",
+      "addUnexpectedPlaceholder": "Buscar um ativo…",
+      "addUnexpectedEmpty": "Nenhum outro ativo para este cliente.",
+      "complete": "Concluir auditoria",
+      "completeConfirm_one": "1 dispositivo não marcado será registrado como ausente.",
+      "completeConfirm_other": "{{count}} dispositivos não marcados serão registrados como ausentes.",
+      "cancelAudit": "Cancelar auditoria",
+      "cancelConfirm": "A auditoria será abandonada e nada será gravado nos ativos. Esta ação não pode ser desfeita.",
+      "keepAudit": "Continuar auditoria"
+    },
+    "items": {
+      "columns": {
+        "asset": "Ativo",
+        "type": "Tipo",
+        "serial": "Número de série / tag",
+        "result": "Resultado",
+        "method": "Método",
+        "markedBy": "Marcado por",
+        "markedAt": "Marcado em",
+        "actions": "Ações"
+      },
+      "searchPlaceholder": "Buscar por nome, tag ou número de série",
+      "empty": "Nenhum ativo nesta visualização.",
+      "markPresent": "Marcar como presente",
+      "undoMark": "Desfazer",
+      "createTicket": "Criar ticket",
+      "ticketTitle": "Ausente na auditoria no local: {{asset}}",
+      "ticketDescription": "Não encontrado durante a auditoria no local iniciada em {{date}}."
     }
   },
   "scanLookup": {

@@ -1,3 +1,5 @@
+import { assertTicketCreateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
@@ -24,14 +26,14 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canWriteAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import {
   runAuthorizedTicketWatcherWrite,
   TicketWatcherPermissionError,
   TicketWatcherTicketNotFoundError,
 } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
-import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
@@ -152,8 +154,8 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
+import { generatePreviewsForDocument } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { attachDocumentFromBytes } from './documents/attachDocument';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -1320,7 +1322,11 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      const subject = buildAuthorizationPrincipalSubject(context.user ?? { user_id: context.userId, tenant: context.tenant }, context.apiKeyId);
+      const subject = await resolveAuthorizationSubject(knex, {
+        tenant: context.tenant,
+        user: context.user ?? { user_id: context.userId },
+        apiKeyId: context.apiKeyId,
+      });
       const kernel = await getAuthorizationKernel();
       result = await withTransaction(knex, (trx) =>
         runAuthorizedTicketWatcherWrite({
@@ -1638,9 +1644,14 @@ export class TicketService extends BaseService<ITicket> {
     let fileId = doc[column] ?? null;
 
     if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
-      const original = await StorageService.downloadFile(doc.file_id);
-      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
-      fileId = generated?.[column] ?? null;
+      // Lazy backfill for documents that predate previews: inline because this response needs the
+      // image. Reads from storage; the request never holds the original in memory.
+      try {
+        const generated = await generatePreviewsForDocument(doc.document_id);
+        fileId = generated[column] ?? null;
+      } catch (error) {
+        console.error(`[TicketService] Preview backfill failed for document ${doc.document_id}:`, error);
+      }
     }
 
     if (!fileId) {
@@ -1653,15 +1664,6 @@ export class TicketService extends BaseService<ITicket> {
       fileId,
       mimeType: result.metadata.mime_type ?? null,
     };
-  }
-
-  private persistDocumentPreviews(
-    knex: Knex,
-    document: IDocument,
-    buffer: Buffer,
-    tenant: string,
-  ): Promise<PreviewGenerationResult | null> {
-    return persistDocumentPreviews(knex, document, buffer, tenant);
   }
 
   async deleteTicketDocument(
@@ -1920,6 +1922,9 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
+        // Same create gate as the MSP ticket actions: the candidate ticket must be one the caller's scope includes.
+        await assertTicketCreateAllowed(trx, context.tenant, subjectFromServiceContext(context), data);
+
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -2455,6 +2460,8 @@ export class TicketService extends BaseService<ITicket> {
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+        // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+        await recordTicketAssigneeChange(trx, context.tenant, id);
       }
 
       if (clearsResponseStateOnClose) {

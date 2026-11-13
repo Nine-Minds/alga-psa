@@ -354,7 +354,7 @@ describe('fleet search and software catalog mutation authorization', () => {
     await updateSoftwareCatalogEntry('sw1', { category: 'Browser', is_managed: true });
     expect(h.state.catalogUpdates).toEqual([{
       table: 'software_catalog',
-      data: { category: 'Browser', is_managed: true },
+      data: { category: 'Browser', is_managed: true, updated_at: expect.any(Date) },
     }]);
   });
 });

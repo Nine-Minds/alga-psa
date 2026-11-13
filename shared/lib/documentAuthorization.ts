@@ -8,12 +8,20 @@ import { canReadCommentAttachment, isPublicAttachmentComment } from './ticketCom
 import {
   BuiltinAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
+  clientResolvers,
   createAuthorizationKernel,
+  parentVisibleViaChildClients,
   type AuthorizationRecord,
-  type AuthorizationSubject,
   type RelationshipRule,
+  type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
+import {
+  applyReadScope,
+  resolveNarrowedReadScope,
+  type NarrowedReadScope,
+} from '@alga-psa/authorization/readScope';
 import { createBundleNarrowingProvider } from '@alga-psa/authorization/bundles/narrowingProvider';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 
 // Shared by initial ticket loading and subsequent document actions.
 // LEVERAGE: pattern tenant-scoped-table — document actions and shared authorization repeat this typed facade.
@@ -25,7 +33,6 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-type UserWithOptionalRoles = IUser & { roles?: Array<{ role_id?: string } | string> };
 
 interface DocumentAssociationRow {
   document_id: string;
@@ -37,54 +44,6 @@ interface DocumentAuthorizationInput {
   document_id: string;
   created_by?: string | null;
   is_client_visible?: boolean | null;
-}
-
-function extractRoleIdsFromUser(user: UserWithOptionalRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role: { role_id?: string } | string) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value: string | null): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: UserWithOptionalRoles
-): Promise<AuthorizationSubject> {
-  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-      .where('user_id', user.user_id)
-      .select<{ role_id: string }[]>('role_id');
-    roleIds = roleRows.map((row) => row.role_id);
-  }
-
-  const teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-    .where('user_id', user.user_id)
-    .select<{ team_id: string }[]>('team_id');
-  const managedRows = await tenantScopedTable(trx, 'users', tenant)
-    .where('reports_to', user.user_id)
-    .select<{ user_id: string }[]>('user_id');
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
 }
 
 function applyDocumentRedactions<T extends object>(document: T, redactedFields: string[]): T {
@@ -313,6 +272,8 @@ async function resolveDocumentAuthorizationRecords(
       : (candidateClientIds.values().next().value ?? null);
 
     records.set(document.document_id, {
+      // Every client the document reaches, for subjects with no client of their own (see authorizeAndRedactDocuments).
+      candidateClientIds: Array.from(candidateClientIds),
       id: document.document_id,
       ownerUserId: ownerFromUserAssociation ?? ownerViaContactMatch ?? document.created_by ?? null,
       assignedUserIds: Array.from(new Set(userAssociations.map((association) => association.entity_id))),
@@ -325,11 +286,32 @@ async function resolveDocumentAuthorizationRecords(
   return records;
 }
 
+export type DocumentAuthorizationAction = 'read' | 'update' | 'delete';
+
 export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
   user: IUser,
   documents: T[],
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+): Promise<T[]> {
+  return authorizeAndRedactDocumentsForAction(trx, tenant, user, documents, 'read', verifiedRecipientLifecycleAccess);
+}
+
+/**
+ * The documents the user may perform `action` on, with the read redactions applied.
+ *
+ * Every action starts from the read decision: it carries the redaction set and the document-specific
+ * read checks (asset links, client visibility, comment attachments). `update` and `delete` are then
+ * decided by the kernel's mutation path, which itself refuses a record the subject's read rules do not
+ * allow before it evaluates the write rules. Coarse document RBAC stays with the caller.
+ */
+export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: T[],
+  action: DocumentAuthorizationAction,
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
   if (documents.length === 0) {
@@ -352,7 +334,9 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   }
   const deniedDocuments = new Set(assetLinks.filter(link => !readableAssetIds.has(link.entity_id)).map(link => link.document_id));
 
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user as UserWithOptionalRoles);
+  const requestCache = new RequestLocalAuthorizationCache();
+  // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
+  const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const relationshipRules = getDocumentBuiltinRelationshipRules(user);
   const selectedClientIds = user.clientId ? [user.clientId] : undefined;
   const authorizationKernel = createAuthorizationKernel({
@@ -362,7 +346,6 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     bundleProvider: createBundleNarrowingProvider(trx),
     rbacEvaluator: async () => true,
   });
-  const requestCache = new RequestLocalAuthorizationCache();
   const authorizationRecords = await resolveDocumentAuthorizationRecords(
     trx,
     tenant,
@@ -376,30 +359,60 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
 
   const decisions = await Promise.all(
     documents.map(async (document) => {
+      const evaluateDocumentRead = (candidateRecord: AuthorizationRecord) =>
+        authorizationKernel.authorizeResource({
+          subject: authorizationSubject,
+          resource: {
+            type: 'document',
+            action: 'read',
+            id: document.document_id,
+          },
+          record: candidateRecord,
+          selectedClientIds,
+          requestCache,
+          knex: trx,
+        });
       const record = authorizationRecords.get(document.document_id) ?? {
         id: document.document_id,
         ownerUserId: document.created_by ?? null,
         is_client_visible: document.is_client_visible === true,
       };
 
-      const decision = await authorizationKernel.authorizeResource({
-        subject: authorizationSubject,
-        resource: {
-          type: 'document',
-          action: 'read',
-          id: document.document_id,
-        },
-        record,
-        selectedClientIds,
-        requestCache,
-        knex: trx,
-      });
+      // LEVERAGE: friction record-single-client — AuthorizationRecord carries one clientId, so "any client" has to be
+      // re-derived here by evaluating the kernel once per candidate; a records-with-client-set facet would absorb it.
+      // A document reachable from several clients is readable when ANY of them is in scope
+      // (PRD Open Question 1). The record carries one client, so a subject with no client of its
+      // own is evaluated against each candidate in turn; which one came first must not decide.
+      // A client-portal subject keeps its single preferred candidate, exactly as before.
+      const candidateClientIds = Array.isArray(record.candidateClientIds) ? (record.candidateClientIds as string[]) : [];
+      const recordsToTry: AuthorizationRecord[] =
+        !user.clientId && candidateClientIds.length > 1
+          ? candidateClientIds.map((candidate) => ({ ...record, clientId: candidate }))
+          : [record];
+      let decidingRecord = recordsToTry[0]!;
+      let decision = await evaluateDocumentRead(decidingRecord);
+      for (let index = 1; index < recordsToTry.length && !decision.allowed; index += 1) {
+        decidingRecord = recordsToTry[index]!;
+        decision = await evaluateDocumentRead(decidingRecord);
+      }
+      // LEVERAGE: friction mutation-decision-without-read-view — a write needs the read redactions and the mutation verdict, so read is evaluated here and again inside authorizeMutation; a kernel decision that returns both would remove the second pass.
+      // The mutation verdict is taken against the client record that granted the read.
+      const mutationAllowed = action === 'read' || !decision.allowed || (
+        await authorizationKernel.authorizeMutation({
+          subject: authorizationSubject,
+          resource: { type: 'document', action, id: document.document_id },
+          record: decidingRecord,
+          selectedClientIds,
+          requestCache,
+          knex: trx,
+        })
+      ).allowed;
 
       const isClientVisible = record.is_client_visible === true;
       const isOwnedBySubject = record.ownerUserId === authorizationSubject.userId;
       const deniedByClientVisibility =
         user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
-      const allowed = decision.allowed && !deniedDocuments.has(document.document_id) && !deniedByClientVisibility &&
+      const allowed = decision.allowed && mutationAllowed && !deniedDocuments.has(document.document_id) && !deniedByClientVisibility &&
         await (verifiedRecipientLifecycleAccess ? verifiedRecipientLifecycleAccess(document.document_id) : canReadCommentAttachment(trx, tenant, user.user_id, document.document_id));
 
       return {
@@ -428,3 +441,150 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   return authorizedDocuments;
 }
 
+
+
+// ---------------------------------------------------------------------------
+// SQL facet of the document read decision.
+//
+// `authorizeAndRedactDocuments` decides record by record. A list, a folder tree or an
+// entity-type filter needs the same decision inside the query, so counts, pages and the
+// structure around them are computed over readable documents only. The adapter below maps
+// the kernel's relationship templates onto the document tables; the kernel compiles them.
+//
+// How each template decides for a document (record facet = resolveDocumentAuthorizationRecords):
+//   client templates : some association resolves, through the document_entity resolver, to an
+//                      in-scope client. A document with no client association has no client:
+//                      the record check gives it clientId null, which no client template matches.
+//   own              : the first `user` association, else the contact-match, else created_by.
+//   assigned/managed : the `user` associations.      same_team : the `team` associations.
+//   client_visible_only : documents.is_client_visible = true.
+// ---------------------------------------------------------------------------
+
+export interface DocumentSqlAdapterOptions {
+  /** Alias of `documents` in the query being narrowed. */
+  documentAlias: string;
+  /** The subject's contact, for the contact-match ownership of a client-portal user. */
+  contactId?: string | null;
+}
+
+export function createDocumentRelationshipSqlAdapter(options: DocumentSqlAdapterOptions): RelationshipSqlAdapter {
+  const { documentAlias: d } = options;
+  const associationOfType = (builder: Knex.QueryBuilder, type: string, entityIds: string[], alias: string) =>
+    builder.whereExists(function association(this: Knex.QueryBuilder) {
+      this.select(this.client.raw('1'))
+        .from(`document_associations as ${alias}`)
+        .whereRaw('?? = ??', [`${alias}.tenant`, `${d}.tenant`])
+        .whereRaw('?? = ??', [`${alias}.document_id`, `${d}.document_id`])
+        .where(`${alias}.entity_type`, type)
+        .whereIn(`${alias}.entity_id`, entityIds);
+    });
+  const denyUnless = (builder: Knex.QueryBuilder, ids: string[], apply: (nonEmpty: string[]) => void) => {
+    const nonEmpty = Array.from(new Set(ids.filter((id) => typeof id === 'string' && id.length > 0)));
+    if (nonEmpty.length === 0) builder.whereRaw('1 = 0');
+    else apply(nonEmpty);
+  };
+
+  return {
+    clientVisibleColumn: `${d}.is_client_visible`,
+    applyClients: parentVisibleViaChildClients(
+      { table: 'document_associations', parentKeyColumn: 'document_id', alias: 'scope_da' },
+      { tenantRef: `${d}.tenant`, keyRef: `${d}.document_id` }
+    ),
+    applyAssignedUsers(builder, userIds) {
+      denyUnless(builder, userIds, (ids) => associationOfType(builder, 'user', ids, 'scope_assigned'));
+    },
+    applyTeams(builder, teamIds) {
+      denyUnless(builder, teamIds, (ids) => associationOfType(builder, 'team', ids, 'scope_team'));
+    },
+    applyOwnerUsers(builder, userIds) {
+      denyUnless(builder, userIds, (ids) => {
+        builder.where(function ownedBy(this: Knex.QueryBuilder) {
+          // An explicit `user` association owns the document ...
+          associationOfType(this, 'user', ids, 'scope_owner');
+          // ... and only a document with none falls back to the contact-match, then the creator.
+          this.orWhere(function fallbackOwner(this: Knex.QueryBuilder) {
+            this.whereNotExists(function noUserAssociation(this: Knex.QueryBuilder) {
+              this.select(this.client.raw('1'))
+                .from('document_associations as scope_no_owner')
+                .whereRaw('?? = ??', ['scope_no_owner.tenant', `${d}.tenant`])
+                .whereRaw('?? = ??', ['scope_no_owner.document_id', `${d}.document_id`])
+                .where('scope_no_owner.entity_type', 'user');
+            }).where(function contactOrCreator(this: Knex.QueryBuilder) {
+              if (options.contactId) {
+                this.whereExists(function contactMatch(this: Knex.QueryBuilder) {
+                  this.select(this.client.raw('1'))
+                    .from('document_associations as scope_contact')
+                    .whereRaw('?? = ??', ['scope_contact.tenant', `${d}.tenant`])
+                    .whereRaw('?? = ??', ['scope_contact.document_id', `${d}.document_id`])
+                    .where('scope_contact.entity_type', 'contact')
+                    .where('scope_contact.entity_id', options.contactId as string);
+                }).orWhereIn(`${d}.created_by`, ids);
+              } else {
+                this.whereIn(`${d}.created_by`, ids);
+              }
+            });
+          });
+        });
+      });
+    },
+  };
+}
+
+export interface DocumentReadScope {
+  /** Narrow a query over `documents` (aliased `documentAlias`) to documents the subject may read. */
+  apply(query: Knex.QueryBuilder, documentAlias: string): void;
+  /**
+   * Narrow a query over `document_folders` (aliased `folderAlias`) to folders whose ENTITY the
+   * subject may read, by the same rules: a folder made for an entity (ensureEntityFolders)
+   * follows that entity's client. A folder with no entity matches nothing.
+   */
+  applyToEntityFolders(query: Knex.QueryBuilder, folderAlias: string): void;
+}
+
+/**
+ * The subject's document read scope, or null when nothing narrows it: add no clause, and no
+ * query beyond the S2 tenant probe has been made. A client-portal subject with no bundle rule
+ * for documents is also null: the record check alone governs it, exactly as before.
+ */
+export async function resolveDocumentReadScope(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUser
+): Promise<DocumentReadScope | null> {
+  const scope: NarrowedReadScope | null = await resolveNarrowedReadScope(conn, {
+    tenant,
+    user,
+    resourceType: 'document',
+  });
+  if (!scope) return null;
+
+  const builtinRules = getDocumentBuiltinRelationshipRules(user);
+  return {
+    apply(query, documentAlias) {
+      applyReadScope(query, scope, {
+        resourceType: 'document',
+        builtinRules,
+        adapter: createDocumentRelationshipSqlAdapter({ documentAlias, contactId: user.contact_id }),
+      });
+    },
+    applyToEntityFolders(query, folderAlias) {
+      const folderAdapter: RelationshipSqlAdapter = {
+        clientVisibleColumn: `${folderAlias}.is_client_visible`,
+        applyAssignedUsers: (builder) => builder.whereRaw('1 = 0'),
+        applyClients: (builder, clientIds) =>
+          clientResolvers.applyClients(
+            builder,
+            'document_entity',
+            {
+              tenantRef: `${folderAlias}.tenant`,
+              discriminatorRef: `${folderAlias}.entity_type`,
+              idRef: `${folderAlias}.entity_id`,
+            },
+            clientIds
+          ),
+      };
+      // Built-in rules are not applied to folders: a client-portal subject's `own` has no folder meaning.
+      applyReadScope(query, scope, { resourceType: 'document', builtinRules: [], adapter: folderAdapter });
+    },
+  };
+}

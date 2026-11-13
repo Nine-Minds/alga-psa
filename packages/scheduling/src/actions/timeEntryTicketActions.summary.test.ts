@@ -39,6 +39,10 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: async () => [],
 }));
 
+// The client read scope has its own DB test (T012); here the subject is not client-restricted.
+vi.mock('../lib/timeEntryAuthorizationSql', () => ({
+  resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined }),
+}));
 vi.mock('./timeEntryDelegationAuth', () => ({
   resolveManagedSubjectUserIds: async () => [],
 }));

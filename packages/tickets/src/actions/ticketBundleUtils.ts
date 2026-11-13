@@ -2,6 +2,7 @@
 
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
@@ -117,7 +118,9 @@ export type BundleMasterClosedContext = {
 export async function getBundleMasterClosedContext(
   trx: Knex.Transaction,
   tenant: string,
-  masterTicketId: string
+  masterTicketId: string,
+  /** Display-only narrowing of the open-children count (see `openBundleChildrenCount`). */
+  narrowChildren?: (query: Knex.QueryBuilder) => Knex.QueryBuilder
 ): Promise<BundleMasterClosedContext | null> {
   const master = await tenantDb(trx, tenant)
     .tenantJoin(
@@ -139,7 +142,7 @@ export async function getBundleMasterClosedContext(
   const requireNoOpenChildren = Boolean(rules?.is_enabled && rules?.require_no_open_children);
 
   const [openChildren, resolutionComment] = await Promise.all([
-    openBundleChildrenCount(trx, tenant, masterTicketId),
+    openBundleChildrenCount(trx, tenant, masterTicketId, narrowChildren),
     tenantScopedTable(trx, 'comments as c', tenant)
       .select(
         'c.comment_id',
@@ -1160,6 +1163,21 @@ interface DerivedBundleChildRow {
   propagation_id: string | null;
 }
 
+/** Records the assignee change of each child whose assignee a propagated write actually changed. */
+async function recordChildAssigneeChanges(
+  trx: Knex.Transaction,
+  tenant: string,
+  children: ReadonlyArray<{ ticket_id?: unknown; assigned_to?: unknown }>,
+  written: Record<string, unknown>,
+): Promise<void> {
+  if (!Object.prototype.hasOwnProperty.call(written, 'assigned_to')) return;
+  for (const child of children) {
+    if ((child.assigned_to ?? null) === (written.assigned_to ?? null)) continue;
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, child.ticket_id as string);
+  }
+}
+
 function propagationDisplayName(user: BundlePropagationUser): string {
   return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Unknown User';
 }
@@ -1463,6 +1481,7 @@ export async function propagateBundleMasterStatus(
         .whereIn('ticket_id', closedChildIds)
         .update({ ...closedFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
     }
+    await recordChildAssigneeChanges(trx, ctx.tenant, childRows, propagateFields);
 
     for (const before of childSnapshots.values()) {
       await publishTicketTransitionsAfterCommit(trx, {
@@ -1551,6 +1570,7 @@ export async function propagateBundleMasterStatus(
     .whereIn('ticket_id', affectedChildIds)
     // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
     .update({ ...propagate, ...ticketStatusClockPatch(trx, propagate.status_id as string | null | undefined) });
+  await recordChildAssigneeChanges(trx, ctx.tenant, affected, propagate);
 
   for (const before of propagateSnapshots.values()) {
     await publishTicketTransitionsAfterCommit(trx, {

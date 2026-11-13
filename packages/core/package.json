@@ -18,6 +18,10 @@
       "import": "./dist/capability/server.js",
       "types": "./src/capability/server.ts"
     },
+    "./jobRunnerAccessor": {
+      "import": "./dist/lib/jobRunnerAccessor.js",
+      "types": "./src/lib/jobRunnerAccessor.ts"
+    },
     "./features": {
       "import": "./dist/lib/features.js",
       "types": "./src/lib/features.ts"

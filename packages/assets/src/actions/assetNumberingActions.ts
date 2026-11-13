@@ -1,5 +1,6 @@
 'use server';
 
+import { assertAssetCreateAllowed } from '../lib/assetCreateAuthorization';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { previewNextAssetTag, reserveAssetNumber, normalizeAssetTag, effectiveAssetTagSql } from '../lib/assetNumbering';
@@ -29,6 +30,7 @@ export const createMinimalAssetForLabelIntake = withAuth(async (user, { tenant }
   if (!await hasPermission(user, 'asset', 'create')) throw new Error('Permission denied: Cannot create assets');
   const { knex } = await createTenantKnex();
   const asset = await withTransaction(knex, async (trx) => {
+    await assertAssetCreateAllowed(trx, tenant, user, clientId);
     const reserved = await reserveAssetNumber(trx, { tenant, clientId, createdBy: user.user_id });
     return createAssetInTransaction(trx, tenant, user.user_id, {
       asset_type: 'unknown',
@@ -69,6 +71,7 @@ export const completeScannedAssetReservation = withAuth(async (user, { tenant },
       throw new Error('This printed asset reservation is no longer available for intake');
     }
     if (!reservation.client_id) throw new Error('This asset reservation has no client. Recreate it through label-first intake.');
+    await assertAssetCreateAllowed(trx, tenant, user, reservation.client_id);
     return createAssetInTransaction(trx, tenant, user.user_id, {
       asset_type: 'unknown',
       client_id: reservation.client_id,

@@ -56,7 +56,6 @@
     "manageLicense": "Gérer la licence",
     "ariaLabel": "Statut de la licence",
     "dismiss": "Masquer",
-
     "subscriptionEnding": "Votre abonnement Pro a été annulé. Pro prend fin le {{date}}. Réabonnez-vous pour conserver Pro.",
     "subscriptionEndingNoDate": "Votre abonnement Pro a été annulé. Réabonnez-vous pour conserver Pro.",
     "subscriptionLapsed": "Vous utilisez maintenant l'édition gratuite. Réabonnez-vous pour rétablir Pro.",
@@ -70,13 +69,12 @@
     "paymentFailedEndedEnding": "Votre abonnement Pro a pris fin — échec du paiement. Pro reste actif jusqu’au {{date}}. Réabonnez-vous pour conserver Pro.",
     "paymentFailedEndedEndingNoDate": "Votre abonnement Pro a pris fin — échec du paiement. Réabonnez-vous pour conserver Pro.",
     "updatePaymentMethod": "Mettre à jour le moyen de paiement",
-"licenseExpiresIn_few": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
+    "licenseExpiresIn_few": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
     "licenseExpiresIn_many": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
     "trialDaysRemaining_few": "Essai Pro actif — {{count}} jours restants.",
     "trialDaysRemaining_many": "Essai Pro actif — {{count}} jours restants.",
     "trialExpiresIn_few": "L'essai Pro expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Pro.",
     "trialExpiresIn_many": "L'essai Pro expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Pro."
-
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -756,6 +754,7 @@
       "pending": "En attente",
       "error": "Impossible de téléverser le document",
       "fileError": "Impossible de téléverser le fichier",
+      "fileTooLarge": "Ce fichier fait {{size}}. La limite actuelle est de {{limit}} par fichier.",
       "associatedEntityTypeLabel": "Associer à",
       "noAssociation": "Aucune association",
       "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser.",
@@ -767,7 +766,16 @@
       "emptyDropMessage": "Aucun fichier n'a été reçu. Enregistrez la pièce jointe ou l'e-mail sur votre ordinateur, puis glissez le fichier enregistré ici ou utilisez « Parcourir les fichiers ».",
       "uploadInProgress": "Un téléversement est déjà en cours. Attendez qu'il se termine avant d'ajouter d'autres fichiers.",
       "refreshFailed": "Vos fichiers ont été téléversés, mais la liste des documents n'a pas pu être actualisée. Rechargez la page pour les voir.",
-      "clearResults": "Effacer les résultats"
+      "clearResults": "Effacer les résultats",
+      "typeNotAllowed": "Ce type de fichier n'est pas autorisé. Choisissez un autre fichier.",
+      "permissionDenied": "Vous n'avez pas l'autorisation de téléverser des documents ici.",
+      "networkFailed": "La connexion a été interrompue et le téléversement n'a pas pu reprendre. Vérifiez votre connexion et réessayez.",
+      "sessionGone": "Ce téléversement a expiré avant d'être terminé. Relancez-le.",
+      "cancelled": "Annulé",
+      "cancelUpload": "Annuler le téléversement",
+      "tryAgain": "Réessayer",
+      "progress": "{{committed}} sur {{total}}",
+      "progressLabel": "Progression du téléversement de {{name}}"
     },
     "folders": {
       "root": "Racine",

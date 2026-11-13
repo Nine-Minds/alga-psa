@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }), permits: async () => true }) }));
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOriginal) => ({ ...(await importOriginal<any>()), assertRecordCreateAllowed: async () => undefined }));
+
 const withTransactionMock = vi.fn();
 const createContactMock = vi.fn();
 const getContactByIdMock = vi.fn();

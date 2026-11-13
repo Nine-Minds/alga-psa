@@ -33,6 +33,8 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -259,6 +261,23 @@ export class ClientService extends BaseService<IClient> {
   }
 
   /**
+   * The clients the caller may read, as one SQL predicate (the same compiled narrowing the client actions use, with the
+   * API key's bundles folded into the subject). Free for a caller nothing narrows.
+   */
+  private async clientNarrowing(trx: Knex.Transaction, context: ServiceContext, alias: string) {
+    return (await createClientScopeContext(trx, context.tenant, subjectFromServiceContext(context))).narrowing('client', alias);
+  }
+
+  // LEVERAGE: pattern rest-assert-in-scope — the same "404 unless the one row is in the caller's read scope" guard is in ContactService; a shared service-layer guard over ClientScopeContext.permits would own it.
+  /** 404 for a client the caller may not read: an out-of-scope client is indistinguishable from a missing one. */
+  private async assertClientInScope(trx: Knex.Transaction, clientId: string, context: ServiceContext): Promise<void> {
+    const scope = await createClientScopeContext(trx, context.tenant, subjectFromServiceContext(context));
+    if (!(await scope.permits('client', clientId))) {
+      throw new NotFoundError('Client not found');
+    }
+  }
+
+  /**
    * List clients with enhanced filtering and search
    */
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IClient>> {
@@ -281,6 +300,11 @@ export class ClientService extends BaseService<IClient> {
 
       let countQuery = db.table('clients as c');
       joinDefaultLocation(db, countQuery);
+
+      // Narrow both queries before filters and pagination: the page and the total cover the readable set.
+      const narrowing = await this.clientNarrowing(trx, context, 'c');
+      narrowing.apply(dataQuery);
+      narrowing.apply(countQuery);
 
       // Apply filters
       dataQuery = this.applyClientFilters(dataQuery, filters);
@@ -343,6 +367,8 @@ export class ClientService extends BaseService<IClient> {
       const clientQuery = db.table<IClient>('clients as c');
       db.tenantJoin(clientQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       joinDefaultLocation(db, clientQuery);
+
+      (await this.clientNarrowing(trx, context, 'c')).apply(clientQuery);
 
       const client = await clientQuery
         .select(
@@ -422,14 +448,11 @@ export class ClientService extends BaseService<IClient> {
         clientData as unknown as CreateClientWithDefaultsData
       ).catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
-      // Handle tags if provided
+      // Tags are written in the client's transaction, so a tag failure fails the create. It cannot be caught and
+      // skipped here: after a failed statement PostgreSQL aborts the transaction and the commit becomes a rollback,
+      // so the caller would get a 201 for a client that was never saved.
       if ((data as any).tags && (data as any).tags.length > 0) {
-        try {
-          await this.handleTags(client.client_id, (data as any).tags, context, trx);
-        } catch (tagError) {
-          console.warn('Failed to handle tags:', tagError);
-          // Continue without tags - they can be added later
-        }
+        await this.handleTags(client.client_id, (data as any).tags, context, trx);
       }
 
       return client;
@@ -462,10 +485,13 @@ export class ClientService extends BaseService<IClient> {
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const client = await scopedTable(knex, context.tenant, 'clients')
-      .where({ client_id: id })
-      .select('client_id')
-      .first();
+    const client = await withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, id, context);
+      return scopedTable(trx, context.tenant, 'clients')
+        .where({ client_id: id })
+        .select('client_id')
+        .first();
+    });
     if (!client?.client_id) {
       throw new NotFoundError('Client not found');
     }
@@ -653,6 +679,7 @@ export class ClientService extends BaseService<IClient> {
     const result = await withTransaction(knex, async (trx) => {
       let newlyDeactivatedContactIds: string[] = [];
       const db = tenantDb(trx, context.tenant);
+      await this.assertClientInScope(trx, id, context);
       const before = await db.table('clients')
         .where('client_id', id)
         .first();
@@ -738,14 +765,9 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
-      // Handle tags if provided
+      // In the update's transaction, so a tag failure fails the update (see create: it cannot be skipped).
       if (data.tags !== undefined) {
-        try {
-          await this.handleTags(id, data.tags, context, trx);
-        } catch (tagError) {
-          console.warn('Failed to handle tags:', tagError);
-          // Continue without tags - they can be added later
-        }
+        await this.handleTags(id, data.tags, context, trx);
       }
 
       return { before, after: client, updatedFieldKeys, newlyDeactivatedContactIds };
@@ -896,6 +918,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, clientId, context);
       const locations = await scopedTable<IClientLocation>(trx, context.tenant, 'client_locations')
         .where({
           client_id: clientId
@@ -928,7 +951,8 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       return await withTransaction(knex, async (trx) => {
-        // Verify client exists before entering the shared mutation layer.
+        // Verify client exists (and is in the caller's scope) before entering the shared mutation layer.
+        await this.assertClientInScope(trx, clientId, context);
         const client = await scopedTable(trx, context.tenant, 'clients')
           .where({ client_id: clientId })
           .first();
@@ -954,9 +978,10 @@ export class ClientService extends BaseService<IClient> {
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
     try {
-      return await withTransaction(knex, (trx) =>
-        updateClientLocation(trx, context.tenant, clientId, locationId, data, { actorUserId: context.userId })
-      );
+      return await withTransaction(knex, async (trx) => {
+        await this.assertClientInScope(trx, clientId, context);
+        return updateClientLocation(trx, context.tenant, clientId, locationId, data, { actorUserId: context.userId });
+      });
     } catch (error) {
       throwClientLocationApiError(error);
     }
@@ -971,9 +996,10 @@ export class ClientService extends BaseService<IClient> {
   ): Promise<void> {
     const { knex } = await this.getKnex();
     try {
-      await withTransaction(knex, (trx) =>
-        deleteClientLocation(trx, context.tenant, clientId, locationId, { actorUserId: context.userId })
-      );
+      await withTransaction(knex, async (trx) => {
+        await this.assertClientInScope(trx, clientId, context);
+        await deleteClientLocation(trx, context.tenant, clientId, locationId, { actorUserId: context.userId });
+      });
     } catch (error) {
       throwClientLocationApiError(error);
     }
@@ -987,6 +1013,8 @@ export class ClientService extends BaseService<IClient> {
 
     return withTransaction(knex, async (trx) => {
       const clientsTable = scopedTable(trx, context.tenant, 'clients');
+      // Statistics are computed over the clients the caller may read.
+      (await this.clientNarrowing(trx, context, 'clients')).apply(clientsTable);
       const [
         totalStats,
         billingCycleStats,
@@ -1168,12 +1196,14 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<ClientMergePreview> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, (trx) =>
-      previewClientMerge(trx, context.tenant, {
+    return withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, sourceClientId, context);
+      await this.assertClientInScope(trx, clientId, context);
+      return previewClientMerge(trx, context.tenant, {
         sourceClientId,
         targetClientId: clientId,
-      })
-    );
+      });
+    });
   }
 
   async mergeClient(
@@ -1201,8 +1231,10 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     let result: ClientMergeResult;
     try {
-      result = await withTransaction(knex, (trx) =>
-        executeClientMerge(trx, context.tenant, context.userId ?? null, {
+      result = await withTransaction(knex, async (trx) => {
+        await this.assertClientInScope(trx, input.sourceClientId, context);
+        await this.assertClientInScope(trx, clientId, context);
+        return executeClientMerge(trx, context.tenant, context.userId ?? null, {
           sourceClientId: input.sourceClientId,
           targetClientId: clientId,
           contactAssignments: input.contactAssignments,
@@ -1210,8 +1242,8 @@ export class ClientService extends BaseService<IClient> {
           pinPortalGrants: input.pinPortalGrants,
           externalRemapChoices: input.externalRemapChoices,
           billingStrategy: input.billingStrategy,
-        })
-      );
+        });
+      });
     } catch (error) {
       // A refused merge is the caller asking for something impossible, not a
       // server fault; the blockers carry the reason.
@@ -1354,6 +1386,7 @@ export class ClientService extends BaseService<IClient> {
     billingProfileId: string,
     context: ServiceContext
   ): Promise<void> {
+    await this.assertClientInScope(trx, clientId, context);
     const profile = await tenantDb(trx, context.tenant)
       .table('client_billing_profiles')
       .where({ billing_profile_id: billingProfileId })
@@ -1390,9 +1423,11 @@ export class ClientService extends BaseService<IClient> {
         .delete();
     }
 
-    // Add new tags
-    if (tags.length > 0) {
-      for (const tagText of tags) {
+    // One mapping per distinct tag: a repeated text ("vip", " vip") names the same tag, and a second mapping
+    // for it would violate tag_mappings (tenant, tag_id, tagged_id).
+    const tagTexts = [...new Set(tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0))];
+    if (tagTexts.length > 0) {
+      for (const tagText of tagTexts) {
         // First, ensure the tag definition exists
         let tagDef = await db.table('tag_definitions')
           .where({

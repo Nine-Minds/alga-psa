@@ -138,3 +138,7 @@ export { getCoManagedIndependentUpgradeScreen, resolveCoManagedUpgradeAccess, ty
 export { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, CO_MANAGED_UPGRADE_PURCHASE_STATES,
   CO_MANAGED_UPGRADE_PENDING_STATES } from './upgradePurchase';
 export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManagedUpgradePurchaseState } from './upgradePurchase';
+// Seat shape (S5): seat arrangements and their board scope.
+export * from './seatArrangement';
+// Seat shape (S23): ticket responsibility and the handoff in each direction.
+export * from './seatTicketHandoff';

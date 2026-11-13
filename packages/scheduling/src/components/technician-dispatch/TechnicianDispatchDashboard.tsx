@@ -774,8 +774,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                        event.assigned_user_ids[0] === session?.user?.id;
       const isPrivateNonOwner = isPrivateEvent && !isCreator;
       
-      // If this is a private event and the user is not the creator, show the entry popup in view-only mode with "Busy" title
-      if (isPrivateNonOwner) {
+      // A private event the user does not own, or busy time (the server masked an entry the viewer may not read):
+      // show the entry popup in view-only mode with the "Busy" title, without looking up its work item.
+      if (isPrivateNonOwner || event.access === 'busy') {
         // Create a modified version of the event with "Busy" title for non-owners
         const privateEvent = {
           ...event,

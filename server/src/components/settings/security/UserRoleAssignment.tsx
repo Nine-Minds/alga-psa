@@ -16,6 +16,7 @@ import type { IRole, IUserWithRoles } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -32,7 +33,7 @@ const isReturnedActionError = (value: unknown) =>
 // viewOptions is defined inside the component to access translations
 
 export default function UserRoleAssignment() {
-  const { t } = useTranslation('msp/profile');
+  const { t } = useTranslation(['msp/profile', 'msp/settings']);
 
   const viewOptions: ViewSwitcherOption<ViewMode>[] = [
     { value: 'msp', label: t('security.userRoles.viewSwitcher.msp') },
@@ -194,19 +195,40 @@ export default function UserRoleAssignment() {
       width: '20%',
       render: (userId) => {
         const roles = getFilteredUserRoles(userId);
+        // Counted over every portal: the server refuses only the removal that
+        // would leave the user with no role at all.
+        const isOnlyRole = (userRoles[userId] || []).length === 1;
         return (
           <Flex gap="2" wrap="wrap">
-            {roles.map((role) => (
-              <Button
-                id={`remove-role-${userId}-${role.role_id}-btn`}
-                key={role.role_id}
-                variant="destructive"
-                size="sm"
-                onClick={() => handleRemoveRole(userId, role.role_id)}
-              >
-                {t('security.userRoles.removeRole', { role: role.role_name })}
-              </Button>
-            ))}
+            {roles.map((role) => {
+              const removeButton = (
+                <Button
+                  id={`remove-role-${userId}-${role.role_id}-btn`}
+                  key={role.role_id}
+                  variant="destructive"
+                  size="sm"
+                  className={isOnlyRole ? 'cursor-not-allowed opacity-50' : undefined}
+                  aria-disabled={isOnlyRole || undefined}
+                  onClick={(e) => {
+                    if (isOnlyRole) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    handleRemoveRole(userId, role.role_id);
+                  }}
+                >
+                  {t('security.userRoles.removeRole', { role: role.role_name })}
+                </Button>
+              );
+              return isOnlyRole
+                ? (
+                  <Tooltip key={role.role_id} content={t('msp/settings:errors.roles.lastRole')}>
+                    {removeButton}
+                  </Tooltip>
+                )
+                : removeButton;
+            })}
           </Flex>
         );
       },

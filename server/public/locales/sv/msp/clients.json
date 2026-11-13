@@ -329,7 +329,8 @@
       "empty": "Inga kundspecifika checklistmallar.",
       "loadFailed": "Det gick inte att läsa in checklistmallar",
       "retry": "Försök igen"
-    }
+    },
+    "audits": "Inventeringar"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} med utgången garanti",
       "warrantyExpiring_one": "1 med garanti som löper ut inom 90 dagar",
       "warrantyExpiring_other": "{{count}} med garanti som löper ut inom 90 dagar",
-      "warrantyTracked": " (av {{count}} spårade)"
+      "warrantyTracked": " (av {{count}} spårade)",
+      "auditsLink": "Inventeringar på plats",
+      "lastAudit": "Senaste inventering {{date}}",
+      "lastAuditMissing_one": "1 saknas",
+      "lastAuditMissing_other": "{{count}} saknas",
+      "neverAudited": "Aldrig inventerad"
     },
     "locations": {
       "billing": "Fakturering",
@@ -392,7 +398,9 @@
       "manage": "Hantera",
       "more": "+{{count}} till",
       "none": "Inga platser ännu.",
-      "shipping": "Leverans"
+      "shipping": "Leverans",
+      "lastAudit": "Inventerad {{date}}",
+      "neverAudited": "Aldrig inventerad"
     },
     "money": {
       "activeContracts": "Aktiva avtal",
@@ -1821,7 +1829,8 @@
           "members": "Medlemmar",
           "people": "Personer"
         }
-      }
+      },
+      "startAudit": "Starta inventering"
     },
     "tickets": {
       "addTicket": "Lägg till ärende",

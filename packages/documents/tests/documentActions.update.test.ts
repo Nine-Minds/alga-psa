@@ -92,7 +92,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@shared/lib/documentAuthorization', () => ({
-  authorizeAndRedactDocuments: async (_trx: unknown, _tenant: string, _user: unknown, docs: Row[]) =>
+  authorizeAndRedactDocumentsForAction: async (_trx: unknown, _tenant: string, _user: unknown, docs: Row[]) =>
     docs.filter((doc) => state.readable.has(doc.document_id)),
 }));
 vi.mock('../src/lib/meetingDocumentAdmission', () => ({
@@ -115,14 +115,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   },
   publishWorkflowEvent: vi.fn(),
 }));
-vi.mock('../src/lib/documentPreviewGenerator', () => ({
-  generateDocumentPreviews: async (document: Row) => {
-    state.previewCalls.push(document);
-    return {
-      thumbnail_file_id: 'generated-thumb',
-      preview_file_id: 'generated-preview',
-      preview_generated_at: new Date('2026-01-01T00:00:00Z'),
-    };
+vi.mock('../src/lib/documentPreviewJob', () => ({
+  scheduleDocumentPreviews: async (tenant: string, documentId: string) => {
+    state.previewCalls.push({ tenant, document_id: documentId });
+    return true;
   },
 }));
 vi.mock('@alga-psa/storage/StorageService', () => ({
@@ -378,7 +374,7 @@ describe('replaceDocumentFile', () => {
       expect(row()[field], field).toEqual(before[field]);
     }
     expect(Object.keys(state.updates[0]).sort()).toEqual(
-      ['file_id', 'file_size', 'mime_type', 'storage_path', 'updated_at'],
+      ['file_id', 'file_size', 'mime_type', 'preview_file_id', 'preview_generated_at', 'storage_path', 'thumbnail_file_id', 'updated_at'],
     );
     expect(state.published[0].payload.changedFields).toEqual([
       'file_id', 'storage_path', 'file_size', 'mime_type',
@@ -386,14 +382,15 @@ describe('replaceDocumentFile', () => {
     ]);
   });
 
-  it('regenerates previews from the new file and writes them only from the generator result', async () => {
+  it('clears the old previews and schedules background regeneration for the new file', async () => {
     await replaceDocumentFile('doc-1', 'readable-file');
 
-    expect(state.previewCalls).toHaveLength(1);
-    expect(state.previewCalls[0]).toMatchObject({ file_id: 'new-file-1', mime_type: 'application/pdf' });
+    expect(state.previewCalls).toEqual([{ tenant: TENANT, document_id: 'doc-1' }]);
     expect(row()).toMatchObject({
-      preview_file_id: 'generated-preview',
-      thumbnail_file_id: 'generated-thumb',
+      file_id: 'new-file-1',
+      preview_file_id: null,
+      thumbnail_file_id: null,
+      preview_generated_at: null,
     });
   });
 

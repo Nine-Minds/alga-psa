@@ -7,7 +7,14 @@ import { getHierarchicalLocaleAction } from '@alga-psa/tenancy/actions';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { ReportEngine } from '../core/ReportEngine';
 import { ReportRegistry } from '../core/ReportRegistry';
-import { ReportDefinition, ReportResult, ReportValidationError, ReportExecutionError } from '../core/types';
+import {
+  ReportDefinition,
+  ReportResult,
+  ReportValidationError,
+  ReportExecutionError,
+  ReportClientScopeRefusedError,
+} from '../core/types';
+import { clientScopeRefusalActionError, type ReportingActionError } from '../../../actions/report-actions/reportingActionErrors';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 const ExecuteReportSchema = z.object({
@@ -65,7 +72,7 @@ export const executeReport = withAuth(async (
   user,
   _ctx,
   input: ExecuteReportInput
-): Promise<ReportResult> => {
+): Promise<ReportResult | ReportingActionError> => {
   
   // Validate input
   const validationResult = ExecuteReportSchema.safeParse(input);
@@ -89,13 +96,19 @@ export const executeReport = withAuth(async (
     
     // Execute the report, formatting values in the viewer's locale
     const locale = options.locale ?? (await getHierarchicalLocaleAction());
-    const result = await ReportEngine.execute(definition, parameters, { ...options, locale });
+    const result = await ReportEngine.execute(definition, parameters, { ...options, locale, scopeSubject: user });
     
     return result;
     
   } catch (error) {
     console.error(`Error executing report ${reportId}:`, error);
     
+    // A report that cannot be limited to the subject's clients is refused with its reason, through the
+    // reporting error catalogue, rather than thrown as a failure.
+    if (error instanceof ReportClientScopeRefusedError) {
+      return clientScopeRefusalActionError(error.refusal);
+    }
+
     if (error instanceof ReportValidationError || error instanceof ReportExecutionError) {
       throw error;
     }
@@ -165,7 +178,7 @@ export async function listReportsByCategory(category: string) {
 /**
  * Execute the billing overview report
  */
-export async function getBillingOverview(): Promise<ReportResult> {
+export async function getBillingOverview(): Promise<ReportResult | ReportingActionError> {
   return executeReport({ reportId: 'billing.overview' });
 }
 
@@ -175,7 +188,7 @@ export async function getBillingOverview(): Promise<ReportResult> {
 export async function getBillingOverviewForPeriod(
   startDate: string,
   endDate: string
-): Promise<ReportResult> {
+): Promise<ReportResult | ReportingActionError> {
   return executeReport({
     reportId: 'billing.overview',
     parameters: {

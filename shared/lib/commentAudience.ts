@@ -13,7 +13,10 @@ import { isCoManagedWorkspace } from '@alga-psa/db/writeAdmission';
  *   1. Audience is an ADDITIONAL restriction applied after resource/principal
  *      authorization. It never grants anything.
  *   2. Every reader (portal, search ACL/indexer, private reads) reuses
- *      `commentAudienceSql` / `isCommentAudienceVisible`. There is no second predicate.
+ *      `isCommentAudienceVisible` / `commentAudienceVisibleSql` over the audience resolved by
+ *      `resolveCommentAudienceForRead` / `commentAudienceSql`. There is no second predicate.
+ *   3. Visibility is keyed on the reader's ORGANIZATION (`CommentAudienceReader`), not their
+ *      tenant: a seat technician is an internal user of the owning tenant and still not its staff.
  */
 export const COMMENT_AUDIENCES = ['requester', 'shared_it', 'organization_private'] as const;
 export type CommentAudience = (typeof COMMENT_AUDIENCES)[number];
@@ -83,14 +86,85 @@ export function resolveCommentAudienceForRead(row: AudienceRow): CommentAudience
 }
 
 /**
- * Audience is an additional restriction after resource and principal authorization.
- * `ownerTenant` is the tenant that stores the comment; `actorTenant` is the reader's.
- * A requester only ever sees `requester`. Anything missing fails closed.
+ * WHO is reading, as an organization rather than a tenant.
+ *
+ * An organization is usually a whole tenant (`staff`): the MSP on its own tickets, or either side
+ * of a co-managed workspace relationship. The seat shape puts a second organization INSIDE the
+ * sponsor's tenant: a `seat` technician is an internal user of that tenant whose organization is
+ * the one client named by their live seat assignment (`resolveCommentAudienceReader`).
+ * `requester` is the ticket's own contact side (the client portal).
  */
-export function isCommentAudienceVisible(audience: CommentAudience, ownerTenant: string, actorTenant: string, requester = false): boolean {
-  if (!ownerTenant || !actorTenant || !isCommentAudience(audience)) return false;
-  if (requester) return audience === 'requester';
-  return audience === 'requester' || audience === 'shared_it' || (audience === 'organization_private' && ownerTenant === actorTenant);
+export type CommentAudienceReader =
+  | { kind: 'staff'; tenant: string }
+  | { kind: 'seat'; tenant: string; clientId: string }
+  | { kind: 'requester'; tenant: string };
+
+/** The organization that owns the comment: the tenant that stores it and the ticket's client. */
+export interface CommentAudienceOwner {
+  tenant: string;
+  /** `tickets.client_id`. A seat technician sees nothing without it. */
+  clientId?: string | null;
+}
+
+/**
+ * Audience is an additional restriction after resource and principal authorization.
+ *
+ *   requester             everyone admitted to the ticket
+ *   shared_it             staff of either tenant, and seat technicians of the ticket's client
+ *   organization_private  staff of the owning tenant only
+ *
+ * A seat technician reads only their own client's tickets in their own tenant; a requester only
+ * ever sees `requester`. Anything missing fails closed. With no seat reader this is exactly the
+ * old tenant comparison. `commentAudienceVisibleSql` is the SQL twin.
+ */
+export function isCommentAudienceVisible(
+  audience: CommentAudience,
+  owner: CommentAudienceOwner,
+  reader: CommentAudienceReader | null | undefined,
+): boolean {
+  if (!owner?.tenant || !reader?.tenant || !isCommentAudience(audience)) return false;
+  switch (reader.kind) {
+    case 'requester':
+      return audience === 'requester';
+    case 'seat':
+      return !!reader.clientId && reader.tenant === owner.tenant && reader.clientId === owner.clientId
+        && audience !== 'organization_private';
+    case 'staff':
+      return audience !== 'organization_private' || owner.tenant === reader.tenant;
+    default:
+      return false;
+  }
+}
+
+/**
+ * The reader organization of one user of `tenant`.
+ *
+ * A client user is the requester. An internal user is MSP staff unless a seat assignment names
+ * them: a live one (active assignment on an active arrangement) makes them that client's seat
+ * technician. An assignment that is not live and not revoked (arrangement ended, invitation not
+ * yet active) resolves `null`, which every predicate treats as "sees nothing": such a user is
+ * never promoted to MSP staff. A revoked assignment no longer binds the user (revocation
+ * deactivates them; conversion to an MSP user ends the assignment).
+ *
+ * One read on `co_managed_one_live_seat_assignment (tenant, user_id)`. Callers that read many
+ * comments resolve the reader once per request, never per comment.
+ */
+export async function resolveCommentAudienceReader(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: { userId: string; userType: string },
+): Promise<CommentAudienceReader | null> {
+  if (!tenant || !user?.userId) return null;
+  if (user.userType === 'client') return { kind: 'requester', tenant };
+  if (user.userType !== 'internal') return null;
+  const db = tenantDb(trx, tenant);
+  const query = db.table('co_managed_seat_assignments as sa')
+    .where('sa.user_id', user.userId).whereNot('sa.state', 'revoked');
+  db.tenantJoin(query, 'co_managed_seat_arrangements as ar', 'sa.arrangement_id', 'ar.arrangement_id', { type: 'left' });
+  const seat = await query.first({ assignment_state: 'sa.state', arrangement_state: 'ar.state', client_id: 'ar.client_id' });
+  if (!seat) return { kind: 'staff', tenant };
+  if (seat.assignment_state !== 'active' || seat.arrangement_state !== 'active' || !seat.client_id) return null;
+  return { kind: 'seat', tenant, clientId: seat.client_id };
 }
 
 /**
@@ -188,4 +262,45 @@ export function commentAudienceSql(
       AND ??.collaboration_audience = 'shared_it' THEN 'shared_it'
     ELSE 'organization_private' END`,
   [threadAlias, rootAlias, commentAlias, threadAlias, threadAlias, threadAlias, rootAlias, commentAlias, threadAlias]);
+}
+
+/** Where a query exposes the comment's audience and its owning organization. */
+export interface CommentAudienceSqlSource {
+  /** `comment_threads` alias. */
+  thread: string;
+  /** Alias of the thread's root comment. */
+  root: string;
+  /** Alias of the comment being read; defaults to the root. */
+  comment?: string;
+  /** Column holding the tenant that stores the comment, e.g. `'c.tenant'`. */
+  ownerTenant: string;
+  /** Column holding the ticket's client, e.g. `'t.client_id'`. Required for a seat reader. */
+  ownerClient?: string;
+}
+
+/**
+ * SQL twin of `isCommentAudienceVisible`: a boolean expression over `commentAudienceSql` and the
+ * owning organization's columns for one reader. The reader is a value known before the query;
+ * the audience and the owner come from the row. Fails closed (`FALSE`) exactly where the
+ * TypeScript form does. Identifiers are bound (`??`), values are bound (`?`).
+ */
+export function commentAudienceVisibleSql(
+  db: Knex | Knex.Transaction,
+  reader: CommentAudienceReader | null | undefined,
+  source: CommentAudienceSqlSource,
+): Knex.Raw {
+  const audience = commentAudienceSql(db, source.thread, source.root, source.comment ?? source.root);
+  if (!reader?.tenant) return db.raw('FALSE');
+  switch (reader.kind) {
+    case 'requester':
+      return db.raw(`((?) = 'requester')`, [audience]);
+    case 'seat':
+      if (!reader.clientId || !source.ownerClient) return db.raw('FALSE');
+      return db.raw(`((?) <> 'organization_private' AND ?? = ? AND ?? IS NOT DISTINCT FROM ?)`,
+        [audience, source.ownerTenant, reader.tenant, source.ownerClient, reader.clientId]);
+    case 'staff':
+      return db.raw(`((?) <> 'organization_private' OR ?? = ?)`, [audience, source.ownerTenant, reader.tenant]);
+    default:
+      return db.raw('FALSE');
+  }
 }

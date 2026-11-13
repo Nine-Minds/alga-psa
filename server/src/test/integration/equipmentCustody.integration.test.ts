@@ -13,8 +13,16 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 
 import { tenantDb } from '@alga-psa/db';
+import { registerJobRunnerAccessor } from '@alga-psa/core/jobRunnerAccessor';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
+/** Background jobs enqueued by uploads; the suite runs them explicitly, as the job runner would. */
+const scheduledJobs: Array<{ jobName: string; data: { tenantId: string; documentId: string } }> = [];
+const runScheduledPreviewJobs = async () => {
+  const { generateDocumentPreviewsHandler } = await import('../../lib/jobs/handlers/generateDocumentPreviewsHandler');
+  const jobs = scheduledJobs.splice(0);
+  return Promise.allSettled(jobs.map(job => generateDocumentPreviewsHandler(job.data)));
+};
 const published = vi.hoisted(() => ({ events: [] as Array<{ eventType: string; payload: any }>, verifyFiles: false, committedFiles: [] as boolean[] }));
 /** Assets/actions the record-level asset check refuses (per test). Empty = the real kernel decision (allow). */
 const denied = vi.hoisted(() => ({ assetIds: new Set<string>(), updateAssetIds: new Set<string>(), denyNextUpdate: false }));
@@ -56,15 +64,42 @@ const storage = vi.hoisted(() => ({
 }));
 vi.mock('@alga-psa/storage/StorageProviderFactory', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/storage/StorageProviderFactory')>();
+  // Stores on commit, then fails on demand: the object exists, so only upload cleanup can remove it.
+  const store = (path: string, body: Buffer, mimeType = 'application/octet-stream') => {
+    storage.files.set(path, body);
+    if ((mimeType === 'image/png' && ++storage.originalCount === storage.failOriginal) ||
+        (mimeType === 'image/jpeg' && storage.failDerived)) {
+      throw new Error('provider failed after writing');
+    }
+    return { path, size: body.length, mime_type: mimeType };
+  };
+  const sessions = new Map<string, { path: string; mimeType?: string; parts: Map<number, Buffer> }>();
+  let sessionCount = 0;
   return { ...actual, StorageProviderFactory: { createProvider: async () => ({
-    upload: async (buffer: Buffer, path: string, options: { mime_type: string }) => {
-      storage.files.set(path, buffer);
-      if ((options.mime_type === 'image/png' && ++storage.originalCount === storage.failOriginal) ||
-          (options.mime_type === 'image/jpeg' && storage.failDerived)) {
-        throw new Error('provider failed after writing');
-      }
-      return { path, size: buffer.length, mime_type: options.mime_type };
+    upload: async (buffer: Buffer, path: string, options: { mime_type: string }) => store(path, buffer, options.mime_type),
+    // The background preview job streams the stored original.
+    getReadStream: async (path: string) => {
+      const body = storage.files.get(path);
+      if (!body) throw new Error(`object not found: ${path}`);
+      return (await import('node:stream')).Readable.from([body]);
     },
+    // uploadFile streams through the write-session API.
+    beginWrite: async (path: string, options: { mimeType?: string } = {}) => {
+      const partialPath = `${path}.partial-${++sessionCount}`;
+      sessions.set(partialPath, { path, mimeType: options.mimeType, parts: new Map() });
+      return { provider: 'local', path, partialPath };
+    },
+    writePart: async (handle: { partialPath: string }, partNumber: number, part: Buffer, size: number, options: { final?: boolean } = {}) => {
+      sessions.get(handle.partialPath)!.parts.set(partNumber, Buffer.from(part));
+      return { partNumber, size, final: options.final === true };
+    },
+    completeWrite: async (handle: { partialPath: string }) => {
+      const session = sessions.get(handle.partialPath)!;
+      sessions.delete(handle.partialPath);
+      const body = Buffer.concat([...session.parts.entries()].sort(([a], [b]) => a - b).map(([, part]) => part));
+      return store(session.path, body, session.mimeType);
+    },
+    abortWrite: async (handle: { partialPath: string }) => { sessions.delete(handle.partialPath); },
     delete: async (path: string) => {
       if (storage.failDelete) throw new Error('provider temporarily unavailable');
       storage.files.delete(path);
@@ -279,12 +314,19 @@ describe('equipment custody (integration)', () => {
     storage.files.clear(); storage.failOriginal = 0; storage.originalCount = 0; storage.failDelete = false; storage.failDerived = false;
     actionAuth.userType = 'internal'; actionAuth.clientId = undefined;
     published.verifyFiles = false; published.committedFiles = [];
+    scheduledJobs.length = 0;
     denied.assetIds.clear(); denied.updateAssetIds.clear(); denied.denyNextUpdate = false;
   });
   beforeAll(async () => {
     const sharp = (await import('sharp')).default;
     image = new Uint8Array(await sharp({ create: { width: 1200, height: 800, channels: 3, background: '#aaa' } }).png().toBuffer());
     wireLocalTestDbEnv();
+    registerJobRunnerAccessor(async () => ({
+      scheduleJob: async (jobName: string, data: any) => {
+        scheduledJobs.push({ jobName, data });
+        return { jobId: randomUUID(), externalId: null };
+      },
+    }));
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     db = await createTestDbConnection({ runSeeds: false });
     for (const name of ['tenants', 'users', 'clients']) {
@@ -313,10 +355,21 @@ describe('equipment custody (integration)', () => {
     published.verifyFiles = true;
     const result = unwrap<any>(await receiveEquipment(intake(fx), photoForm()));
     published.verifyFiles = false;
-    expect(published.committedFiles).toHaveLength(6);
+    // The request stores only the originals; every FILE_UPLOADED it publishes names a committed document.
+    expect(published.committedFiles).toHaveLength(2);
     expect(published.committedFiles.every(Boolean)).toBe(true);
+    expect(storage.files.size).toBe(2);
     const ids = result.event.document_ids;
     expect(ids).toHaveLength(2);
+    // Previews are generated after commit by one background job per document.
+    expect(scheduledJobs.map(job => job.jobName)).toEqual(['generate-document-previews', 'generate-document-previews']);
+    expect(scheduledJobs.map(job => job.data.documentId).sort()).toEqual([...ids].sort());
+    expect(scheduledJobs.every(job => job.data.tenantId === fx.tenantId)).toBe(true);
+    for (const outcome of await runScheduledPreviewJobs()) expect(outcome.status).toBe('fulfilled');
+    for (const document of await table(fx.tenantId, 'documents').whereIn('document_id', ids)) {
+      expect(document.thumbnail_file_id).toBeTruthy();
+      expect(document.preview_file_id).toBeTruthy();
+    }
     const { getAssetDocuments } = await import('@alga-psa/assets/actions/assetDocumentActions');
     expect((await getAssetDocuments(result.asset.asset_id) as any[]).map(doc => doc.document_id).sort()).toEqual([...ids].sort());
     const { getDocument } = await import('@alga-psa/documents/actions/documentActions');
@@ -402,6 +455,13 @@ describe('equipment custody (integration)', () => {
     const received = unwrap<any>(await receiveEquipment(intake(fx), photoForm()));
     expect(received.event.document_ids).toHaveLength(2);
     expect(storage.files.size).toBe(2);
+    // The background job's derivative writes fail after writing; the job fails (and would retry) without touching originals.
+    for (const outcome of await runScheduledPreviewJobs()) expect(outcome.status).toBe('rejected');
+    expect(storage.files.size).toBe(2);
+    for (const document of await table(fx.tenantId, 'documents').whereIn('document_id', received.event.document_ids)) {
+      expect(document.thumbnail_file_id).toBeNull();
+      expect(document.preview_file_id).toBeNull();
+    }
     expect(await table(fx.tenantId, 'external_files')).toHaveLength(2);
     expect(await table(fx.tenantId, 'file_upload_sessions')).toHaveLength(0);
   });

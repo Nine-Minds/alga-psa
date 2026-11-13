@@ -1,5 +1,6 @@
 'use server';
 
+import { assertAssetCreateAllowed } from '../lib/assetCreateAuthorization';
 import { revalidatePath } from 'next/cache';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
@@ -74,6 +75,7 @@ import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAss
 import { applyAssetListFilters, applyAssetTypeFilter, joinAssetListRelations, selectedAssetTypes } from '../lib/assetListFilters';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { prepareTicketAssigneeChange } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
@@ -91,6 +93,8 @@ import {
     BuiltinAuthorizationKernelProvider,
     BundleAuthorizationKernelProvider,
     RequestLocalAuthorizationCache,
+    builtinResolversRestrict,
+    bundleRulesRestrict,
     createAuthorizationKernel,
     type AuthorizationRecord,
     type AuthorizationSubject,
@@ -516,9 +520,10 @@ type AssetAuthUser = SharedAssetAuthUser;
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
-    user: AssetAuthUser
+    user: AssetAuthUser,
+    requestCache?: RequestLocalAuthorizationCache
 ): Promise<AuthorizationSubject> {
-    return resolveSharedAuthorizationSubject(trx, tenant, user);
+    return resolveSharedAuthorizationSubject(trx, tenant, user, undefined, requestCache);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -562,10 +567,11 @@ async function createAssetReadAuthorizationContext(
     tenant: string,
     user: AssetAuthUser
 ): Promise<AssetReadAuthorizationContext> {
+    const requestCache = new RequestLocalAuthorizationCache();
     return {
-        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
+        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user, requestCache),
         authorizationKernel: createAssetReadAuthorizationKernel(trx),
-        requestCache: new RequestLocalAuthorizationCache(),
+        requestCache,
     };
 }
 
@@ -875,7 +881,7 @@ export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id
         throw new Error('Permission denied: Cannot read asset facts');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
         await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
         return listAvailableAssetFactsForAsset(trx, { tenant, assetId: asset_id });
     });
@@ -894,7 +900,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         throw new Error('Permission denied: Cannot read assets');
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
+    return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
         const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
             getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser),
             hasPermission(user, 'ticket', 'read', trx),
@@ -1261,7 +1267,8 @@ export async function createAssetRecord(
     data: CreateAssetRequest,
     // Importers (e.g. Hudu) project best-effort attributes and must never fail
     // on a required custom field the source didn't supply; they pass false.
-    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource },
+    hooks?: Pick<AssetWriteHooks, 'authorize'>
 ): Promise<Asset> {
     try {
         // Validate input data first
@@ -1276,9 +1283,11 @@ export async function createAssetRecord(
         }
 
         // Start transaction. The output-schema check lives inside it.
-        const created = await knex.transaction(async (trx: Knex.Transaction) =>
-            createAssetInTransaction(trx, tenant, actorUserId, data, options)
-        );
+        const created = await knex.transaction(async (trx: Knex.Transaction) => {
+            // Same hook updateAssetRecord takes: the wrapper's user-scoped decision, run before any write.
+            if (hooks?.authorize) await hooks.authorize(trx);
+            return createAssetInTransaction(trx, tenant, actorUserId, data, options);
+        });
 
         const occurredAt = created.created_at || new Date().toISOString();
         const postCommit = { tenant, assetId: created.asset_id };
@@ -1354,7 +1363,9 @@ export const createAsset = withAuth(async (
         throw new Error('Permission denied: Cannot create assets');
     }
 
-    return await createAssetRecord(knex, tenant, user.user_id, data, options);
+    return await createAssetRecord(knex, tenant, user.user_id, data, options, {
+        authorize: (trx) => assertAssetCreateAllowed(trx, tenant, user, data.client_id),
+    });
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -2394,8 +2405,12 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 ...baseContext,
                 authorizationKernel: createAssetReadAuthorizationKernel(trx, assetReadRules),
             };
+            // A closed bundle that does not name asset:read restricts it too, so ask the kernel rather than
+            // looking for an asset:read rule; otherwise the type facet below would count every asset.
             const requiresRecordAuthorization = context.subject.userType === 'client'
-                || assetReadRules.some((rule) => rule.resource === 'asset' && rule.action === 'read');
+                || bundleRulesRestrict(assetReadRules, 'asset', 'read')
+                // A registered built-in rule resolver (closed baseline or named rule) restricts it as well.
+                || builtinResolversRestrict({ subject: context.subject, resource: { type: 'asset', action: 'read' } });
             const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
                 rule.resource === 'asset' && rule.action === 'read'
                 && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')
@@ -2986,7 +3001,10 @@ export const setOccurrenceTicketAssignee = withAuth(async (user, { tenant }, occ
             if (!occurrence) throw new Error('Maintenance occurrence not found');
             await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, occurrence.asset_id);
             if (!occurrence.ticket_id) throw new Error('Occurrence has no linked ticket to assign');
+            // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+            const recordAssigneeChange = await prepareTicketAssigneeChange(trx, tenant, occurrence.ticket_id);
             await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: occurrence.ticket_id }).update({ assigned_to: assignee_user_id, updated_at: trx.fn.now(), updated_by: user.user_id });
+            await recordAssigneeChange(assignee_user_id);
         });
         revalidatePath('/msp/assets/maintenance');
     } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }

@@ -56,7 +56,6 @@
     "manageLicense": "Licentie beheren",
     "ariaLabel": "Licentiestatus",
     "dismiss": "Sluiten",
-
     "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}. Abonneer opnieuw om Pro te behouden.",
     "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd. Abonneer opnieuw om Pro te behouden.",
     "subscriptionLapsed": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
@@ -70,13 +69,12 @@
     "paymentFailedEndedEnding": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro blijft actief tot {{date}}. Abonneer opnieuw om Pro te behouden.",
     "paymentFailedEndedEndingNoDate": "Uw Pro-abonnement is beëindigd — betaling mislukt. Abonneer opnieuw om Pro te behouden.",
     "updatePaymentMethod": "Betaalmethode bijwerken",
-"licenseExpiresIn_few": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
+    "licenseExpiresIn_few": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
     "licenseExpiresIn_many": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
     "trialDaysRemaining_few": "Pro-proefperiode actief — nog {{count}} dagen.",
     "trialDaysRemaining_many": "Pro-proefperiode actief — nog {{count}} dagen.",
     "trialExpiresIn_few": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden.",
     "trialExpiresIn_many": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden."
-
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -756,6 +754,7 @@
       "pending": "In behandeling",
       "error": "Document kon niet worden geüpload",
       "fileError": "Bestand kon niet worden geüpload",
+      "fileTooLarge": "Dit bestand is {{size}}. De huidige limiet is {{limit}} per bestand.",
       "associatedEntityTypeLabel": "Koppelen aan",
       "noAssociation": "Geen koppeling",
       "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt.",
@@ -767,7 +766,16 @@
       "emptyDropMessage": "Er zijn geen bestanden ontvangen. Sla de bijlage of e-mail op uw computer op en sleep het opgeslagen bestand hierheen of gebruik ‘Bestanden bladeren’.",
       "uploadInProgress": "Er is al een upload bezig. Wacht tot deze is voltooid voordat u meer bestanden toevoegt.",
       "refreshFailed": "Uw bestanden zijn geüpload, maar de documentenlijst kon niet worden vernieuwd. Herlaad de pagina om ze te zien.",
-      "clearResults": "Resultaten wissen"
+      "clearResults": "Resultaten wissen",
+      "typeNotAllowed": "Dit bestandstype is niet toegestaan. Kies een ander bestand.",
+      "permissionDenied": "U hebt geen toestemming om hier documenten te uploaden.",
+      "networkFailed": "De verbinding is verbroken en de upload kon niet worden hervat. Controleer uw verbinding en probeer het opnieuw.",
+      "sessionGone": "Deze upload is verlopen voordat hij klaar was. Start hem opnieuw.",
+      "cancelled": "Geannuleerd",
+      "cancelUpload": "Upload annuleren",
+      "tryAgain": "Opnieuw proberen",
+      "progress": "{{committed}} van {{total}}",
+      "progressLabel": "Uploadvoortgang van {{name}}"
     },
     "folders": {
       "root": "Hoofdmap",

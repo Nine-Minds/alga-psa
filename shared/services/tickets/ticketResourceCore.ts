@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import type { ITicketResource } from '@alga-psa/types';
@@ -190,6 +191,9 @@ export async function addTicketResourceCore(
     if (!updatedTicket) {
       throw new Error(`Primary assignment update for ticket ${ticketId} completed without returning the updated ticket.`);
     }
+
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, ticketId);
 
     await writeAdditionalAgentActivity(
       trx, tenant, actorUserId, ticketId, TICKET_ACTIVITY_EVENT.ASSIGNED, additionalUserId,

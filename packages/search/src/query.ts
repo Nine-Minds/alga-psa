@@ -273,22 +273,80 @@ export function decodeSearchCursor(cursor: string | undefined): SearchCursorPayl
   }
 }
 
-export async function runSearchQuery(options: SearchQueryOptions): Promise<SearchIndexHit[]> {
-  const parsed = parseQuery(options.query);
+type SqlFragment = { sql: string; bindings: Knex.RawBinding[] };
+
+/**
+ * The `q` and `matched` CTEs every search statement starts from: `matched` is each index row of an
+ * allowed type that the principal may see and the query matches. Ranking, pagination, counts and
+ * typeahead all read `matched`, so they cannot disagree about which rows exist. `matched` is NOT
+ * MATERIALIZED: a statement that reads it twice (a page and its counts) gets each read planned
+ * against the index, as two separate statements would.
+ */
+function matchedRelationSql(
+  options: Pick<SearchQueryOptions, 'knex' | 'tenant' | 'allowedTypes' | 'acl' | 'searchIndex'>,
+  parsed: ParsedSearchQuery,
+): SqlFragment {
+  const aclPredicate = options.acl
+    ? aclPredicateSql(options.acl)
+    : { sql: 'TRUE', bindings: [] };
+  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
+
+  return {
+    sql: `
+      q AS (
+        SELECT
+          websearch_to_tsquery('english', ?) AS tsq,
+          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+          ?::text AS raw,
+          ?::text AS identifier
+      ),
+      matched AS NOT MATERIALIZED (
+        SELECT s.*
+        FROM ${searchIndex.sql}
+        CROSS JOIN q
+        WHERE s.object_type = ANY(?::text[])
+          AND ${aclPredicate.sql}
+          AND (
+            s.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
+            OR s.title ILIKE '%' || q.raw || '%'
+            OR coalesce(s.subtitle, '') ILIKE '%' || q.raw || '%'
+            OR s.title % q.raw
+            OR coalesce(s.subtitle, '') % q.raw
+            OR (
+              q.identifier IS NOT NULL
+              AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+            )
+            OR (
+              q.identifier IS NOT NULL
+              AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
+            )
+          )
+      )
+    `,
+    bindings: [
+      parsed.raw,
+      parsed.prefixTsquery,
+      parsed.prefixTsquery,
+      parsed.raw,
+      parsed.identifier ?? null,
+      ...searchIndex.bindings,
+      options.allowedTypes,
+      ...aclPredicate.bindings,
+    ] as Knex.RawBinding[],
+  };
+}
+
+/** The `ranked` CTE (score and snippet over `matched`) and the `page` CTE (cursor, order, limit). */
+function rankedPageSql(
+  options: Pick<SearchQueryOptions, 'limit' | 'offset' | 'cursor' | 'sort' | 'includeSnippets'>,
+): SqlFragment & { orderBySql: string } {
   const limit = normalizeLimit(options.limit);
   const cursor = decodeSearchCursor(options.cursor);
   const offset = cursor ? 0 : normalizeOffset(options.offset);
   const includeSnippets = options.includeSnippets ?? true;
   const sort = options.sort ?? 'relevance';
 
-  if (options.allowedTypes.length === 0) {
-    return [];
-  }
-
-  const aclPredicate = options.acl
-    ? aclPredicateSql(options.acl)
-    : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
   const cursorPredicateSql = sort === 'recent'
     ? `
         ?::timestamptz IS NULL
@@ -341,15 +399,9 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       `
     : 'NULL AS snippet';
 
-  const result = await options.knex.raw<{ rows: SearchIndexHitRow[] }>(
-    `
-      WITH q AS (
-        SELECT
-          websearch_to_tsquery('english', ?) AS tsq,
-          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-          ?::text AS raw,
-          ?::text AS identifier
-      ),
+  return {
+    orderBySql,
+    sql: `
       ranked AS (
         SELECT
           s.object_type,
@@ -384,50 +436,103 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
                 )
             )
           END AS score
-        FROM ${searchIndex.sql}
+        FROM matched s
         CROSS JOIN q
-        WHERE s.object_type = ANY(?::text[])
-          AND ${aclPredicate.sql}
-          AND (
-            s.search_vector @@ q.tsq
-            OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
-            OR s.title ILIKE '%' || q.raw || '%'
-            OR coalesce(s.subtitle, '') ILIKE '%' || q.raw || '%'
-            OR s.title % q.raw
-            OR coalesce(s.subtitle, '') % q.raw
-            OR (
-              q.identifier IS NOT NULL
-              AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
-            )
-            OR (
-              q.identifier IS NOT NULL
-              AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
-            )
-          )
+      ),
+      page AS (
+        SELECT *
+        FROM ranked
+        WHERE (${cursorPredicateSql})
+        ORDER BY ${orderBySql}
+        LIMIT ?
+        OFFSET ?
       )
-      SELECT *
-      FROM ranked
-      WHERE (${cursorPredicateSql})
-      ORDER BY ${orderBySql}
-      LIMIT ?
-      OFFSET ?
     `,
-    [
-      parsed.raw,
-      parsed.prefixTsquery,
-      parsed.prefixTsquery,
-      parsed.raw,
-      parsed.identifier ?? null,
-      ...searchIndex.bindings,
-      options.allowedTypes,
-      ...aclPredicate.bindings,
-      ...cursorBindings,
-      limit,
-      offset,
-    ] as Knex.RawBinding[],
+    bindings: [...cursorBindings, limit, offset] as Knex.RawBinding[],
+  };
+}
+
+function toTypeCounts(rows: Array<{ object_type: SearchObjectType; total: string | number }>): Record<SearchObjectType, number> {
+  const counts = {} as Record<SearchObjectType, number>;
+  for (const row of rows) {
+    counts[row.object_type] = Number(row.total);
+  }
+  return counts;
+}
+
+export async function runSearchQuery(options: SearchQueryOptions): Promise<SearchIndexHit[]> {
+  const parsed = parseQuery(options.query);
+  const page = rankedPageSql(options);
+
+  if (options.allowedTypes.length === 0) {
+    return [];
+  }
+
+  const matched = matchedRelationSql(options, parsed);
+  const result = await options.knex.raw<{ rows: SearchIndexHitRow[] }>(
+    `
+      WITH ${matched.sql},
+      ${page.sql}
+      SELECT *
+      FROM page
+      ORDER BY ${page.orderBySql}
+    `,
+    [...matched.bindings, ...page.bindings] as Knex.RawBinding[],
   );
 
   return result.rows.map(toSearchHit);
+}
+
+export interface SearchPage {
+  hits: SearchIndexHit[];
+  /** Matches per type over the whole result set, not just this page. */
+  countsByType: Record<SearchObjectType, number>;
+}
+
+/**
+ * One page of hits and the per-type match counts, read from one `matched` relation in one
+ * statement. The full search answers both on every request; asking separately would cost a
+ * second round trip that re-derives the same relation.
+ */
+export async function runSearchPage(options: SearchQueryOptions): Promise<SearchPage> {
+  const parsed = parseQuery(options.query);
+  const page = rankedPageSql(options);
+
+  if (options.allowedTypes.length === 0) {
+    return { hits: [], countsByType: {} as Record<SearchObjectType, number> };
+  }
+
+  const matched = matchedRelationSql(options, parsed);
+  const result = await options.knex.raw<{
+    rows: Array<{
+      hits: SearchIndexHitRow[] | string | null;
+      counts: Array<{ object_type: SearchObjectType; total: string | number }> | string | null;
+    }>;
+  }>(
+    `
+      WITH ${matched.sql},
+      ${page.sql},
+      counts AS (
+        SELECT object_type, count(*)::bigint AS total
+        FROM matched
+        GROUP BY object_type
+      )
+      SELECT
+        (SELECT coalesce(json_agg(page ORDER BY ${page.orderBySql}), '[]'::json) FROM page) AS hits,
+        (SELECT coalesce(json_agg(counts), '[]'::json) FROM counts) AS counts
+    `,
+    [...matched.bindings, ...page.bindings] as Knex.RawBinding[],
+  );
+
+  const row = result.rows[0];
+  const hits = parseJsonColumn<SearchIndexHitRow[]>(row?.hits) ?? [];
+  const counts = parseJsonColumn<Array<{ object_type: SearchObjectType; total: string | number }>>(row?.counts) ?? [];
+  return { hits: hits.map(toSearchHit), countsByType: toTypeCounts(counts) };
+}
+
+function parseJsonColumn<T>(value: T | string | null | undefined): T | undefined {
+  if (value === null || value === undefined) return undefined;
+  return typeof value === 'string' ? (JSON.parse(value) as T) : value;
 }
 
 export async function runSearchTypeaheadQuery(
@@ -444,66 +549,23 @@ export async function countSearchMatchesByType(
   options: Omit<SearchQueryOptions, 'limit' | 'offset' | 'cursor' | 'sort' | 'includeSnippets'>,
 ): Promise<Record<SearchObjectType, number>> {
   const parsed = parseQuery(options.query);
-  const empty = {} as Record<SearchObjectType, number>;
 
   if (options.allowedTypes.length === 0) {
-    return empty;
+    return {} as Record<SearchObjectType, number>;
   }
 
-  const aclPredicate = options.acl
-    ? aclPredicateSql(options.acl)
-    : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
-
+  const matched = matchedRelationSql(options, parsed);
   const result = await options.knex.raw<{ rows: Array<{ object_type: SearchObjectType; total: string | number }> }>(
     `
-      WITH q AS (
-        SELECT
-          websearch_to_tsquery('english', ?) AS tsq,
-          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-          ?::text AS raw,
-          ?::text AS identifier
-      )
-      SELECT s.object_type, count(*)::bigint AS total
-      FROM ${searchIndex.sql}
-      CROSS JOIN q
-      WHERE s.object_type = ANY(?::text[])
-        AND ${aclPredicate.sql}
-        AND (
-          s.search_vector @@ q.tsq
-          OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
-          OR s.title ILIKE '%' || q.raw || '%'
-          OR coalesce(s.subtitle, '') ILIKE '%' || q.raw || '%'
-          OR s.title % q.raw
-          OR coalesce(s.subtitle, '') % q.raw
-          OR (
-            q.identifier IS NOT NULL
-            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
-          )
-          OR (
-            q.identifier IS NOT NULL
-            AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
-          )
-        )
-      GROUP BY s.object_type
+      WITH ${matched.sql}
+      SELECT object_type, count(*)::bigint AS total
+      FROM matched
+      GROUP BY object_type
     `,
-    [
-      parsed.raw,
-      parsed.prefixTsquery,
-      parsed.prefixTsquery,
-      parsed.raw,
-      parsed.identifier ?? null,
-      ...searchIndex.bindings,
-      options.allowedTypes,
-      ...aclPredicate.bindings,
-    ] as Knex.RawBinding[],
+    matched.bindings,
   );
 
-  const counts = {} as Record<SearchObjectType, number>;
-  for (const row of result.rows) {
-    counts[row.object_type] = Number(row.total);
-  }
-  return counts;
+  return toTypeCounts(result.rows);
 }
 
 export async function countSearchMatches(
@@ -515,52 +577,14 @@ export async function countSearchMatches(
     return 0;
   }
 
-  const aclPredicate = options.acl
-    ? aclPredicateSql(options.acl)
-    : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
-
+  const matched = matchedRelationSql(options, parsed);
   const result = await options.knex.raw<{ rows: Array<{ total: string | number }> }>(
     `
-      WITH q AS (
-        SELECT
-          websearch_to_tsquery('english', ?) AS tsq,
-          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-          ?::text AS raw,
-          ?::text AS identifier
-      )
+      WITH ${matched.sql}
       SELECT count(*)::bigint AS total
-      FROM ${searchIndex.sql}
-      CROSS JOIN q
-      WHERE s.object_type = ANY(?::text[])
-        AND ${aclPredicate.sql}
-        AND (
-          s.search_vector @@ q.tsq
-          OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
-          OR s.title ILIKE '%' || q.raw || '%'
-          OR coalesce(s.subtitle, '') ILIKE '%' || q.raw || '%'
-          OR s.title % q.raw
-          OR coalesce(s.subtitle, '') % q.raw
-          OR (
-            q.identifier IS NOT NULL
-            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
-          )
-          OR (
-            q.identifier IS NOT NULL
-            AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
-          )
-        )
+      FROM matched
     `,
-    [
-      parsed.raw,
-      parsed.prefixTsquery,
-      parsed.prefixTsquery,
-      parsed.raw,
-      parsed.identifier ?? null,
-      ...searchIndex.bindings,
-      options.allowedTypes,
-      ...aclPredicate.bindings,
-    ] as Knex.RawBinding[],
+    matched.bindings,
   );
 
   return Number(result.rows[0]?.total ?? 0);

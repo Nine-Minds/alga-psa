@@ -9,7 +9,7 @@ import logger from '@alga-psa/core/logger';
 import { getStoredQboCredentialsMap, QboClientService, resolveTenantQboEnvironment } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { isAccountingReconnectRequired } from '@alga-psa/integrations/lib/accountingReconnectHeuristic';
-import { isProviderDisconnectActive, PROVIDER_QBO, PROVIDER_XERO } from '@alga-psa/integrations/lib/providerDisconnect';
+import { PROVIDER_XERO, type ProviderType } from '@alga-psa/integrations/lib/providerDisconnect';
 import {
   getAccountingSyncSettings,
   updateAccountingSyncSettings,
@@ -63,28 +63,13 @@ async function checkMappingsManageAccess(user: IUserWithRoles): Promise<void> {
   }
 }
 
-/**
- * Explicit guard for sync/export entry points: a disconnect record in any
- * non-finalized state means provider cleanup is in flight and credentials are
- * tombstoned, so sync must not start. The tombstoned credentials are the
- * backstop; this check gives a clear reason instead of a generic "not
- * connected" error.
- */
-async function assertNoActiveProviderDisconnect(tenantId: string): Promise<void> {
-  const { knex } = await createTenantKnex();
-  const [qboActive, xeroActive] = await Promise.all([
-    isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => false),
-    isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => false)
-  ]);
-  if (qboActive) {
-    throw new Error('QuickBooks is being disconnected. Sync and exports are paused until the disconnect completes.');
-  }
-  if (xeroActive) {
-    throw new Error('Xero is being disconnected. Sync and exports are paused until the disconnect completes.');
-  }
+/** Actionable, provider-named error for a provider whose disconnect is not finalized. */
+function providerDisconnectError(provider: ProviderType): Error {
+  const name = provider === PROVIDER_XERO ? 'Xero' : 'QuickBooks';
+  return new Error(`${name} is being disconnected. Sync and exports are paused until the disconnect completes.`);
 }
 
-import { resolveSyncTarget } from '../services/accountingSync/syncTarget';
+import { resolveSyncTarget, resolveGuardedSyncTarget } from '../services/accountingSync/syncTarget';
 export { resolveSyncTarget };
 export type { ResolvedSyncTarget } from '../services/accountingSync/syncTarget';
 import type { AccountingIntegrationSelection } from '../services/accountingSync/connectedAccountingIntegration';
@@ -154,13 +139,16 @@ export const runAccountingSyncNow = withAuth(async (
 ): Promise<RunCycleResult> => {
   assertEnterpriseEdition();
   await checkExportsExecuteAccess(user);
-  await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
-  const target = await resolveSyncTarget(knex, tenant, selection);
-  if (!target) {
+  const resolution = await resolveGuardedSyncTarget(knex, tenant, selection);
+  if (resolution.status === 'blocked') {
+    throw providerDisconnectError(resolution.provider);
+  }
+  if (resolution.status !== 'ready') {
     return { ran: false, status: 'skipped', error: selectionUnavailableError(selection) };
   }
+  const target = resolution.target;
 
   const { integration, adapter, refreshTokenExpiresAt } = target;
 
@@ -199,13 +187,16 @@ export const queueInvoiceSync = withAuth(async (
 ): Promise<{ queued: boolean; error?: string }> => {
   assertEnterpriseEdition();
   await checkExportsExecuteAccess(user);
-  await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
-  const target = await resolveSyncTarget(knex, tenant, selection);
-  if (!target) {
+  const resolution = await resolveGuardedSyncTarget(knex, tenant, selection);
+  if (resolution.status === 'blocked') {
+    throw providerDisconnectError(resolution.provider);
+  }
+  if (resolution.status !== 'ready') {
     return { queued: false, error: selectionUnavailableError(selection) };
   }
+  const target = resolution.target;
 
   await new SyncOperationsRepository(knex).enqueue({
     tenant,
@@ -228,13 +219,16 @@ export const resolveAccountingDriftReExport = withAuth(async (
 ): Promise<{ queued: boolean; error?: string }> => {
   assertEnterpriseEdition();
   await checkExportsExecuteAccess(user);
-  await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
-  const target = await resolveSyncTarget(knex, tenant, selection);
-  if (!target) {
+  const resolution = await resolveGuardedSyncTarget(knex, tenant, selection);
+  if (resolution.status === 'blocked') {
+    throw providerDisconnectError(resolution.provider);
+  }
+  if (resolution.status !== 'ready') {
     return { queued: false, error: selectionUnavailableError(selection) };
   }
+  const target = resolution.target;
 
   await new SyncOperationsRepository(knex).enqueue({
     tenant,

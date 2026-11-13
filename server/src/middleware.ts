@@ -304,6 +304,10 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
+    // Resumable document uploads: create, chunk (PUT), offset (HEAD/GET), complete, abort. Each handler
+    // authenticates the session or API key itself and scopes the upload to tenant and uploader.
+    // Exactly these shapes; nothing deeper under /api/documents/uploads is exempted.
+    /^\/api\/documents\/uploads(?:\/[^/]+(?:\/complete)?)?$/.test(pathname) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||

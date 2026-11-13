@@ -1,98 +1,47 @@
 import { Knex } from 'knex';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
-import { resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
+import {
+  assembleAuthorizationSubject,
+  normalizeIdsFromObjects,
+  normalizeStringArray,
+  resolveAuthorizationSubject,
+  roleIdsCarriedByUser,
+} from '@alga-psa/authorization/subject';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import type {
   AuthorizationRecord,
   AuthorizationSubject,
 } from '@alga-psa/authorization/kernel/contracts';
 
-function normalizeStringArray(values: unknown): string[] {
-  if (!Array.isArray(values)) {
-    return [];
-  }
-
-  return values
-    .map((value) => (typeof value === 'string' ? value : null))
-    .filter((value): value is string => Boolean(value));
-}
-
-function normalizeIdArrayFromObjects(values: unknown, key: string): string[] {
-  if (!Array.isArray(values)) {
-    return [];
-  }
-
-  return values
-    .map((value) => {
-      if (!value || typeof value !== 'object') {
-        return null;
-      }
-
-      const candidate = (value as Record<string, unknown>)[key];
-      return typeof candidate === 'string' ? candidate : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-function normalizeOptionalString(value: unknown): string | null | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
+/**
+ * The pure step of subject resolution for a principal whose facts the caller
+ * already holds (roles, teams and reports carried on the user object). It shares
+ * `assembleAuthorizationSubject` with the database resolver, so the two cannot
+ * disagree about what a subject is. Request paths that can reach the database use
+ * `resolveAuthorizationSubject`, which also reads the stored portfolio.
+ */
 export function buildAuthorizationPrincipalSubject(
   user: any,
-  apiKeyId?: string
+  apiKeyId?: string,
+  storedPortfolioClientIds: readonly string[] = []
 ): AuthorizationSubject {
-  const roleIds = Array.from(
-    new Set([
-      ...normalizeIdArrayFromObjects(user?.roles, 'role_id'),
-      ...normalizeStringArray(user?.role_ids),
-    ])
-  );
-
-  const teamIds = Array.from(
-    new Set([
-      ...normalizeIdArrayFromObjects(user?.teams, 'team_id'),
-      ...normalizeStringArray(user?.team_ids),
-    ])
-  );
-
-  const managedUserIds = Array.from(
-    new Set([
-      ...normalizeStringArray(user?.managed_user_ids),
-      ...normalizeStringArray(user?.managedUserIds),
-    ])
-  );
-
-  const portfolioClientIds = Array.from(
-    new Set([
-      ...normalizeStringArray(user?.portfolio_client_ids),
-      ...normalizeStringArray(user?.portfolioClientIds),
-    ])
-  );
-
-  const subject: AuthorizationSubject = {
+  const subject = assembleAuthorizationSubject({
     tenant: user?.tenant ?? '',
-    userId: typeof user?.user_id === 'string' ? user.user_id : '',
-    // 'service' is mapped explicitly; only a missing/legacy type falls back to internal.
-    userType: user?.user_type === 'client' ? 'client' : user?.user_type === 'service' ? 'service' : 'internal',
-    roleIds,
-    teamIds,
-    managedUserIds,
-    portfolioClientIds,
-  };
-
-  const normalizedClientId = normalizeOptionalString(user?.client_id) ?? normalizeOptionalString(user?.clientId);
-  if (normalizedClientId !== undefined) {
-    subject.clientId = normalizedClientId;
-  }
-
-  if (typeof apiKeyId === 'string' && apiKeyId.trim().length > 0) {
-    subject.apiKeyId = apiKeyId;
-  }
-
+    user: user ?? {},
+    apiKeyId,
+    facts: {
+      roleIds: roleIdsCarriedByUser(user ?? {}),
+      teamIds: [
+        ...normalizeIdsFromObjects(user?.teams, 'team_id'),
+        ...normalizeStringArray(user?.team_ids),
+      ],
+      managedUserIds: [
+        ...normalizeStringArray(user?.managed_user_ids),
+        ...normalizeStringArray(user?.managedUserIds),
+      ],
+      storedPortfolioClientIds,
+    },
+  });
   return subject;
 }
 
@@ -106,29 +55,26 @@ export async function authorizeApiResourceAction(input: {
   recordContext: AuthorizationRecord;
 }): Promise<boolean> {
   const kernel = await getAuthorizationKernel();
-  const subject = await resolveAuthorizationSubjectForUser(
-    input.knex,
-    input.tenant,
-    {
-      ...input.user,
-      user_id: input.user?.user_id,
-      user_type: input.user?.user_type === 'client' ? 'client' : input.user?.user_type === 'service' ? 'service' : 'internal',
-      clientId: input.user?.client_id ?? input.user?.clientId,
-      role_ids: [
-        ...normalizeStringArray(input.user?.role_ids),
-        ...normalizeIdArrayFromObjects(input.user?.roles, 'role_id'),
-      ],
-    },
-    input.apiKeyId,
-  );
-  subject.tenant = input.tenant;
+  const requestCache = new RequestLocalAuthorizationCache();
+  const subject = await resolveAuthorizationSubject(input.knex, {
+    tenant: input.tenant,
+    user: input.user,
+    apiKeyId: input.apiKeyId,
+    requestCache,
+  });
 
-  const decision = await kernel.authorizeResource({
+  const evaluation = {
     knex: input.knex as any,
     subject,
+    requestCache,
     resource: { type: input.resource, action: input.action },
     record: input.recordContext,
-  });
+  };
+  // A write is decided by the kernel's mutation path, which also requires the
+  // subject's read rules to allow the record before an update or delete.
+  const decision = input.action === 'read'
+    ? await kernel.authorizeResource(evaluation)
+    : await kernel.authorizeMutation(evaluation);
 
   return decision.allowed;
 }
@@ -145,26 +91,18 @@ export async function authorizeApiResourceRead(input: {
   recordContext: AuthorizationRecord;
 }): Promise<{ allowed: boolean; redactedFields: string[] }> {
   const kernel = await getAuthorizationKernel();
-  const subject = await resolveAuthorizationSubjectForUser(
-    input.knex,
-    input.tenant,
-    {
-      ...input.user,
-      user_id: input.user?.user_id,
-      user_type: input.user?.user_type === 'client' ? 'client' : input.user?.user_type === 'service' ? 'service' : 'internal',
-      clientId: input.user?.client_id ?? input.user?.clientId,
-      role_ids: [
-        ...normalizeStringArray(input.user?.role_ids),
-        ...normalizeIdArrayFromObjects(input.user?.roles, 'role_id'),
-      ],
-    },
-    input.apiKeyId,
-  );
-  subject.tenant = input.tenant;
+  const requestCache = new RequestLocalAuthorizationCache();
+  const subject = await resolveAuthorizationSubject(input.knex, {
+    tenant: input.tenant,
+    user: input.user,
+    apiKeyId: input.apiKeyId,
+    requestCache,
+  });
 
   const decision = await kernel.authorizeResource({
     knex: input.knex as any,
     subject,
+    requestCache,
     resource: { type: input.resource, action: 'read' },
     record: input.recordContext,
   });

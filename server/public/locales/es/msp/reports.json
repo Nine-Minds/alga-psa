@@ -555,7 +555,16 @@
       "invalidValue": "Uno de los registros de informe seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
       "referenceMissing": "Uno de los registros de informe seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio del informe.",
-      "missingFieldNamed": "Falta un campo obligatorio del informe: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del informe: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: lee {{table}}, que no tiene una regla de pertenencia a clientes.",
+        "raw_sql": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: está construido con SQL sin procesar.",
+        "unsupported_join": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: une {{table}} de un modo que conserva filas de otros clientes.",
+        "no_client_anchor": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: ninguno de los datos que lee pertenece a un cliente.",
+        "not_client_attributable": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: lee {{table}}, que no se puede atribuir a un cliente.",
+        "unnarrowable_report": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: suma las cuentas de todos los clientes."
+      },
+      "clientOutOfScope": "No tiene acceso a este cliente."
     }
   }
 }
