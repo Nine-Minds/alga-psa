@@ -361,7 +361,7 @@ export const disconnectTacticalRmmIntegration = withAuth(async (
     const { knex } = await createTenantKnex();
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where('provider', PROVIDER)
-      .update({ is_active: false, connected_at: null, sync_error: null });
+      .update({ is_active: false, connected_at: null, sync_error: null, updated_at: new Date().toISOString() });
 
     return { success: true };
   } catch (err) {
@@ -463,7 +463,7 @@ export const testTacticalRmmConnection = withAuth(async (
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where('provider', PROVIDER)
-      .update({ is_active: true, connected_at: knex.fn.now(), sync_error: null });
+      .update({ is_active: true, connected_at: knex.fn.now(), sync_error: null, updated_at: new Date().toISOString() });
 
     return { success: true };
   } catch (err) {
@@ -565,7 +565,7 @@ export const syncTacticalRmmOrganizations = withAuth(async (
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where('provider', PROVIDER)
-      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null, updated_at: new Date().toISOString() });
 
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_COMPLETED',
@@ -870,7 +870,7 @@ export const backfillTacticalRmmAlerts = withAuth(async (
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where({ provider: PROVIDER })
-      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null, updated_at: new Date().toISOString() });
 
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_COMPLETED',
@@ -1125,7 +1125,7 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where({ provider: PROVIDER })
-      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null, updated_at: new Date().toISOString() });
 
     return {
       success: true,

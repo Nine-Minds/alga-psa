@@ -542,7 +542,7 @@ export const deleteContact = withAuth(async (
       // notification contact (no FK; Citus rejects ON DELETE SET NULL).
       await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
         .where({ default_contact_id: contactId })
-        .update({ default_contact_id: null });
+        .update({ default_contact_id: null, updated_at: new Date().toISOString() });
 
       const contactRecord = await tenantScopedTable(trx, 'contacts', tenantId)
         .where({ contact_name_id: contactId })

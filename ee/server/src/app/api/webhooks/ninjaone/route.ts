@@ -60,8 +60,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Find the integration to get the webhook secret
-    const context = await findIntegrationForWebhook(payload.organizationId);
+    // Find the integration to get the webhook secret. The registered URL
+    // names the tenant, which keeps the lookup on that tenant's shard.
+    const context = await findIntegrationForWebhook(
+      payload.organizationId,
+      request.nextUrl.searchParams.get('tenant'),
+    );
 
     if (!context) {
       logger.warn('[NinjaOne Webhook] No integration found', {
@@ -133,7 +137,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Process the webhook asynchronously but respond quickly
     // NinjaOne expects a response within a few seconds
-    const result = await handleNinjaOneWebhook(payload);
+    const result = await handleNinjaOneWebhook(payload, context);
 
     const duration = Date.now() - startTime;
     logger.info('[NinjaOne Webhook] Processed webhook', {
