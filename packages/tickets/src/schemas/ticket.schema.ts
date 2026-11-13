@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TICKET_ASSIGNEE_ME } from '@alga-psa/types';
 import { TICKET_LIST_SORT_KEYS } from '../lib/ticketListSort';
 import { ticketWhereSchema } from '../lib/ticketWhere';
 
@@ -174,7 +175,7 @@ export const ticketListFiltersSchema = z.object({
   boardFilterState: z.enum(['active', 'inactive', 'all']),
   showOpenOnly: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
-  assignedToIds: z.array(z.string().guid()).optional(),
+  assignedToIds: z.array(z.union([z.string().guid(), z.literal(TICKET_ASSIGNEE_ME)])).optional(),
   assignedTeamIds: z.array(z.string().guid()).optional(),
   includeUnassigned: z.boolean().optional(),
   assignedToMe: z.boolean().optional(),

@@ -95,7 +95,7 @@ export interface ITicketListFilters {
   boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
-  assignedToIds?: string[];        // Array of user IDs to filter by
+  assignedToIds?: string[];        // User IDs to filter by, or the 'me' sentinel (TICKET_ASSIGNEE_ME in @alga-psa/types) for the viewing user
   assignedTeamIds?: string[];      // Array of team IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
   // Due date filters

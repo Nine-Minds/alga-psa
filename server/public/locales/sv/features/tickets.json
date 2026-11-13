@@ -188,6 +188,7 @@
     "search": "Sök i ärenden och kommentarer…",
     "button": "Filter",
     "unassigned": "Ej tilldelat",
+    "me": "Jag",
     "category": "Filtrera efter kategori",
     "removeFilterChip": "Ta bort filter: {{label}}",
     "assignee": "Ansvarig",

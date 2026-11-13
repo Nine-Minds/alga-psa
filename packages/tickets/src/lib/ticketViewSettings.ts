@@ -1,4 +1,4 @@
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
 import { migrateTicketFilters, TICKET_FILTERS_SCHEMA_VERSION } from '@alga-psa/list-views';
 import { normalizeAssignedToIdList } from './ticketFilterUtils';
 import { sanitizeTicketWhere } from './ticketWhere';
@@ -333,7 +333,15 @@ export function validateCapturedFilters(
   out.contactId = keepScalar(filters.contactId, known.contactIds);
   out.categoryIds = keepList(filters.categoryIds, known.categoryIds);
   out.excludeCategoryIds = keepList(filters.excludeCategoryIds, known.categoryIds);
-  out.assignedToIds = keepList(normalizeAssignedToIdList(filters.assignedToIds), known.userIds);
+  // The "Me" sentinel is not a user id, so it must survive whatever the known-user universe is.
+  const assigneeIds = normalizeAssignedToIdList(filters.assignedToIds);
+  const knownUserIds = known.userIds;
+  if (!knownUserIds) {
+    out.assignedToIds = assigneeIds;
+  } else {
+    const keptAssignees = assigneeIds?.filter(value => value === TICKET_ASSIGNEE_ME || knownUserIds.includes(value));
+    out.assignedToIds = keptAssignees && keptAssignees.length > 0 ? keptAssignees : undefined;
+  }
   out.assignedTeamIds = keepList(filters.assignedTeamIds, known.teamIds);
   out.tags = keepList(filters.tags, known.tags);
   out.where = filters.where ? sanitizeTicketWhere(filters.where, known.whereTagIds).where : undefined;

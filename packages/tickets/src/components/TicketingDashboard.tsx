@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import BulkBundleDialog from './BulkBundleDialog';
-import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters, TICKET_ASSIGNEE_ME } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
@@ -91,7 +91,7 @@ import {
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles, UserCheck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -519,6 +519,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Assignee filter values from props
   const selectedAssignees = filterValues.assignedToIds ?? EMPTY_STRING_ARRAY;
   const selectedTeams = filterValues.assignedTeamIds ?? EMPTY_STRING_ARRAY;
+  // "Me" is stored as the TICKET_ASSIGNEE_ME sentinel and resolved to the viewer only when the filter compiles to SQL.
+  const assigneePinnedOptions = useMemo(
+    () => [{ value: TICKET_ASSIGNEE_ME, label: t('filters.me', 'Me'), icon: <UserCheck className="w-4 h-4" /> }],
+    [t],
+  );
   const includeUnassigned = filterValues.includeUnassigned ?? false;
   const [teams] = useState<ITeam[]>(initialTeams);
 
@@ -2293,8 +2298,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
 
     selectedAssignees.forEach((userId) => {
-      const u = initialUsers.find((x) => x.user_id === userId);
-      const name = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || t('fields.assignedTo', 'Assignee') : t('fields.assignedTo', 'Assignee');
+      const u = userId === TICKET_ASSIGNEE_ME ? undefined : initialUsers.find((x) => x.user_id === userId);
+      const name = userId === TICKET_ASSIGNEE_ME ? t('filters.me', 'Me') : u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || t('fields.assignedTo', 'Assignee') : t('fields.assignedTo', 'Assignee');
       chips.push({
         key: `assignee:${userId}`,
         label: name,
@@ -2618,6 +2623,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     filterMode={true}
                     includeUnassigned={includeUnassigned}
                     onUnassignedChange={(value) => onFilterChange({ includeUnassigned: value })}
+                    pinnedOptions={assigneePinnedOptions}
                     placeholder={t('dashboard.filters.allAssignees', 'All Assignees')}
                     showSearch={true}
                     compactDisplay={true}

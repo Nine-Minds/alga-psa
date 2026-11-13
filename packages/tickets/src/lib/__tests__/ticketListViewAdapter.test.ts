@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
+import { ticketViewSettingsSchema as boardViewSettingsSchema } from '../../actions/board-actions/boardViewSettingsSchema';
 import { ticketListViewFiltersSchema, buildListViewSettingsSchema } from '@alga-psa/list-views';
 import {
   captureTicketListView,
@@ -146,6 +147,30 @@ describe('ticket list view adapter', () => {
 
     // A dropped status falls back to the open-status baseline on apply.
     expect(adapter.apply(settings, liveState()).filters.statusId).toBe(TICKET_STATUS_FILTER_OPEN);
+  });
+
+  it('round-trips the "Me" sentinel unresolved through capture, schemas, sanitize and apply', () => {
+    const live = liveState({
+      filters: { ...neutral(), boardIds: [BOARD_SERVICE_DESK], assignedToIds: [TICKET_ASSIGNEE_ME], includeUnassigned: true },
+    });
+    const captured = captureTicketListView(live);
+    expect(captured.filters?.assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(ticketListViewFiltersSchema.parse(captured.filters).assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(envelopeSchema.safeParse(captured).success).toBe(true);
+    // Board default views derive from the same filter shape (board scope keys are excluded there).
+    const boardParsed = boardViewSettingsSchema.safeParse({
+      filters: { assignedToIds: captured.filters?.assignedToIds, includeUnassigned: true },
+    });
+    expect(boardParsed.success).toBe(true);
+
+    // known.userIds does not contain 'me'; it must still be kept and not reported as dropped.
+    const { settings, dropped } = adapter.sanitize(captured);
+    expect(settings.filters?.assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(dropped).toEqual([]);
+
+    const applied = adapter.apply(settings, liveState());
+    expect(applied.filters.assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(applied.filters.includeUnassigned).toBe(true);
   });
 
   it('keeps values whose universe is unknown rather than dropping them', () => {

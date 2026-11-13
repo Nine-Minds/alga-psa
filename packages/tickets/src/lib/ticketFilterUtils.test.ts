@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
+import { TICKET_ASSIGNEE_ME } from '@alga-psa/types';
 import {
   contactFilterUpdateForClientChange,
   normalizeAssignedToIdList,
@@ -195,5 +196,19 @@ describe('parseReturnFilters contact handling', () => {
 
   it('leaves the contact filter unset when the URL carries none', () => {
     expect(parseReturnFilters(encodeURIComponent('statusId=open')).contactId).toBeUndefined();
+  });
+});
+
+describe('"Me" assignee sentinel', () => {
+  it('keeps me in the URL CSV alongside unassigned and ids, dropping junk', () => {
+    expect(normalizeAssignedToIds(`me,${UNASSIGNED_FILTER_SENTINEL},${USER_A},junk,me`)).toEqual({
+      assignedToIds: [TICKET_ASSIGNEE_ME, USER_A],
+      includeUnassigned: true,
+    });
+  });
+
+  it('keeps me in stored arrays, deduped', () => {
+    expect(normalizeAssignedToIdList(['me', USER_A, 'me', 'junk', UNASSIGNED_FILTER_SENTINEL])).toEqual(['me', USER_A]);
+    expect(normalizeAssignedToIdList(['me'])).toEqual(['me']);
   });
 });

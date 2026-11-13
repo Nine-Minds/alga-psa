@@ -220,6 +220,7 @@
     "search": "Search tickets and comments...",
     "button": "Filters",
     "unassigned": "Unassigned",
+    "me": "Me",
     "category": "Filter by category",
     "removeFilterChip": "Remove filter: {{label}}",
     "assignee": "Assignee",
