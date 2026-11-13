@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDefaultAssetExtension, hasDefaultAssetExtension } from './assetDefaultMetadata';
+import { buildDefaultAssetExtension, buildDefaultAssetSeeds, hasDefaultAssetExtension } from './assetDefaultMetadata';
 
 describe('buildDefaultAssetExtension', () => {
   it('returns null for non-built-in asset types and empty metadata', () => {
@@ -53,6 +53,33 @@ describe('buildDefaultAssetExtension', () => {
       model: 'iPhone 17',
     });
     expect(buildDefaultAssetExtension('printer', { model: 'M479' })).toMatchObject({ model: 'M479' });
+  });
+
+  it('routes Model to the base assets row for types without a model column', () => {
+    const { base, extension } = buildDefaultAssetSeeds('workstation', { model: 'OptiPlex 7020', os_type: 'Windows' });
+    expect(base).toEqual({ model: 'OptiPlex 7020' });
+    // The workstation extension table has no model column; the parsed payload
+    // must stay model-free or the create call would carry a stray key.
+    expect(extension).not.toHaveProperty('model');
+    expect(buildDefaultAssetSeeds('server', { model: 'PowerEdge R660' }).base).toEqual({ model: 'PowerEdge R660' });
+    expect(buildDefaultAssetSeeds('network_device', { model: 'SG-2400' })).toEqual({
+      base: { model: 'SG-2400' },
+      extension: expect.objectContaining({ device_type: 'switch' }),
+    });
+  });
+
+  it('routes Model into the extension for mobile devices and printers', () => {
+    const mobile = buildDefaultAssetSeeds('mobile_device', { model: 'iPhone 17' });
+    expect(mobile.base).toEqual({});
+    expect(mobile.extension).toMatchObject({ model: 'iPhone 17' });
+    const printer = buildDefaultAssetSeeds('printer', { model: 'M479' });
+    expect(printer.base).toEqual({});
+    expect(printer.extension).toMatchObject({ model: 'M479' });
+  });
+
+  it('leaves the base model unset when the product has no model default', () => {
+    expect(buildDefaultAssetSeeds('workstation', null).base).toEqual({});
+    expect(buildDefaultAssetSeeds('workstation', { model: '   ' }).base).toEqual({});
   });
 
   it('covers the server extension shape', () => {

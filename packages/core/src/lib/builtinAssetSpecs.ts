@@ -34,12 +34,22 @@ export interface AssetSpecField {
   options?: AssetSpecOptionGroup;
   when?: string;
   defaultValue?: AssetSpecValue;
+  /**
+   * Set when the value belongs on a column of the base `assets` row instead of the
+   * type's extension table (e.g. workstation/server/network_device have no `model`
+   * column, so their Model spec lands on `assets.model`).
+   */
+  baseColumn?: string;
 }
 
 const OS_FIELDS: AssetSpecField[] = [
   { key: 'os_type', labelKey: 'osType', label: 'OS Type', options: 'os' },
   { key: 'os_version', labelKey: 'osVersion', label: 'OS Version' },
 ];
+/** Model for asset types whose extension table has no `model` column. */
+const BASE_MODEL_FIELD: AssetSpecField = { key: 'model', labelKey: 'model', label: 'Model', baseColumn: 'model' };
+/** Model for asset types that carry their own `model` column (mobile_device, printer). */
+const EXTENSION_MODEL_FIELD: AssetSpecField = { key: 'model', labelKey: 'model', label: 'Model' };
 const CPU_FIELDS: AssetSpecField[] = [
   { key: 'cpu_model', labelKey: 'cpuModel', label: 'CPU Model' },
   { key: 'cpu_cores', labelKey: 'cpuCores', label: 'CPU Cores', type: 'number' },
@@ -48,6 +58,7 @@ const CPU_FIELDS: AssetSpecField[] = [
 
 export const BUILTIN_ASSET_SPEC_FIELDS: Record<string, readonly AssetSpecField[]> = {
   workstation: [
+    BASE_MODEL_FIELD,
     ...OS_FIELDS,
     ...CPU_FIELDS,
     { key: 'storage_type', labelKey: 'storageType', label: 'Storage Type', options: 'storage' },
@@ -55,6 +66,7 @@ export const BUILTIN_ASSET_SPEC_FIELDS: Record<string, readonly AssetSpecField[]
     { key: 'gpu_model', labelKey: 'gpuModel', label: 'GPU Model' },
   ],
   network_device: [
+    BASE_MODEL_FIELD,
     { key: 'device_type', labelKey: 'deviceType', label: 'Device Type', options: 'network', defaultValue: 'switch' },
     { key: 'management_ip', labelKey: 'managementIp', label: 'Management IP' },
     { key: 'port_count', labelKey: 'portCount', label: 'Port Count', type: 'number' },
@@ -63,6 +75,7 @@ export const BUILTIN_ASSET_SPEC_FIELDS: Record<string, readonly AssetSpecField[]
     { key: 'supports_poe', labelKey: 'supportsPoe', label: 'Supports PoE', type: 'boolean' },
   ],
   server: [
+    BASE_MODEL_FIELD,
     ...OS_FIELDS,
     ...CPU_FIELDS,
     { key: 'primary_ip', labelKey: 'primaryIp', label: 'Primary IP' },
@@ -71,16 +84,16 @@ export const BUILTIN_ASSET_SPEC_FIELDS: Record<string, readonly AssetSpecField[]
     { key: 'hypervisor', labelKey: 'hypervisor', label: 'Hypervisor', when: 'is_virtual' },
   ],
   mobile_device: [
+    EXTENSION_MODEL_FIELD,
     { key: 'os_type', labelKey: 'osType', label: 'OS Type', options: 'mobileOs' },
     { key: 'os_version', labelKey: 'osVersion', label: 'OS Version' },
-    { key: 'model', labelKey: 'model', label: 'Model' },
     { key: 'imei', labelKey: 'imei', label: 'IMEI' },
     { key: 'phone_number', labelKey: 'phoneNumber', label: 'Phone Number' },
     { key: 'carrier', labelKey: 'carrier', label: 'Carrier' },
     { key: 'is_supervised', labelKey: 'supervisedDevice', label: 'Supervised Device', type: 'boolean' },
   ],
   printer: [
-    { key: 'model', labelKey: 'model', label: 'Model' },
+    EXTENSION_MODEL_FIELD,
     { key: 'ip_address', labelKey: 'ipAddress', label: 'IP Address' },
     { key: 'monthly_duty_cycle', labelKey: 'monthlyDutyCycle', label: 'Monthly Duty Cycle', type: 'number' },
     { key: 'is_network_printer', labelKey: 'networkPrinter', label: 'Network Printer', type: 'boolean' },
@@ -125,4 +138,40 @@ export function normalizeAssetSpecValues(assetType: string, metadata: Record<str
     }
   }
   return result;
+}
+
+export interface PartitionedAssetSpecValues {
+  /** Values that belong on the base `assets` row, keyed by base column name. */
+  base: Record<string, string | number | boolean>;
+  /** Values that belong on the type extension table, keyed by spec key. */
+  extension: AssetSpecValues;
+}
+
+/**
+ * Split normalized spec values into base-row values (fields carrying a
+ * `baseColumn`, e.g. Model on `assets.model`) and extension-table values.
+ * Types with no `baseColumn`-marked field produce an empty `base` map, so
+ * their extension payload stays byte-for-byte identical to a pre-split build.
+ */
+export function partitionAssetSpecValues(assetType: string, values: AssetSpecValues): PartitionedAssetSpecValues {
+  const base: Record<string, string | number | boolean> = {};
+  const extension: AssetSpecValues = {};
+  const fields = Object.hasOwn(BUILTIN_ASSET_SPEC_FIELDS, assetType) ? BUILTIN_ASSET_SPEC_FIELDS[assetType] : [];
+  for (const field of fields) {
+    if (!Object.hasOwn(values, field.key)) continue;
+    const value = values[field.key];
+    if (field.baseColumn) {
+      // Empty base values stay unset so the asset column keeps its own default.
+      if (value == null || value === '') continue;
+      if (Object.hasOwn(base, field.baseColumn)) {
+        throw new Error(`Asset spec type ${assetType} maps two fields to base column '${field.baseColumn}'.`);
+      }
+      base[field.baseColumn] = value;
+    } else {
+      // Extension values pass through untouched (nulls included) so the parsed
+      // payload keeps every column the extension schema requires.
+      extension[field.key] = value;
+    }
+  }
+  return { base, extension };
 }

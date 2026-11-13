@@ -363,7 +363,7 @@ export const confirmDropShipShipment = withAuth(
 
       const svc = await trx('service_catalog')
         .where({ tenant, service_id: soLine.service_id })
-        .select('service_name')
+        .select('service_name', 'manufacturer')
         .first();
 
       const { unitCost: defaultUnitCost, costCurrency } = await resolveCost(
@@ -438,6 +438,7 @@ export const confirmDropShipShipment = withAuth(
               serviceId: soLine.service_id,
               serviceName: svc?.service_name ?? '',
               clientId: so.client_id,
+              manufacturer: (svc as { manufacturer?: string | null } | undefined)?.manufacturer ?? null,
             });
           }
 

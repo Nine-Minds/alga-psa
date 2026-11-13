@@ -84,7 +84,7 @@ function makeQuery(table: string) {
     select: () => builder,
     first: async () => {
       if (table === 'tickets') return { ticket_id: input.parent_id, client_id: 'client-1' };
-      if (table === 'service_catalog') return { service_id: input.service_id };
+      if (table === 'service_catalog') return { service_id: input.service_id, manufacturer: 'Acme Systems' };
       if (table === 'product_inventory_settings') return { track_stock: true, is_serialized: true };
       return undefined;
     },
@@ -135,6 +135,8 @@ describe('addMaterial post-commit effects', () => {
     expect(result).toMatchObject({ ticket_material_id: 'material-1' });
     expect(h.createAsset).toHaveBeenCalledExactlyOnceWith(root, TENANT, {
       ...pendingAsset,
+      // The product's make rides along so the delivered asset keeps its manufacturer.
+      manufacturer: 'Acme Systems',
       parentType: input.parent_type,
       parentId: input.parent_id,
       createdBy: 'user-1',
