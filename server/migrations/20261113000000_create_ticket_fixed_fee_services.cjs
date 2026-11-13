@@ -57,7 +57,7 @@ exports.up = async function up(knex) {
 exports.config = { transaction: false };
 
 exports.down = async function down(knex) {
-  // The original migration name was deployed on rolling and still owns the table.
+  // A previously applied migration under the original filename still owns the table.
   const original = await knex('knex_migrations')
     .where({ name: '20261028193400_create_ticket_fixed_fee_services.cjs' })
     .first('id');

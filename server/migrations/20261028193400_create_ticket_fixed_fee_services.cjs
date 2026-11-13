@@ -1,4 +1,4 @@
-// migration-lint: allow 6 - This filename has already been applied on rolling and must remain in Knex history.
+// migration-lint: allow 6 - Preserve the previously applied migration filename in Knex history.
 const { ensureTenantDistribution, ensureCompositeFk, hasConstraint } = require('./utils/citusDistribution.cjs');
 
 exports.up = async function up(knex) {
