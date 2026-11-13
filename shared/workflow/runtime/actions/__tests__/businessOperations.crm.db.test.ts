@@ -735,6 +735,136 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     });
     expect(foundQuotes.count).toBe(1);
     expect(foundQuotes.first_quote?.quote_id).toBe(createdQuote.quote.quote_id);
+    expect(foundQuotes.pagination).toMatchObject({ page: 1, page_size: 25, has_more: false, next_cursor: null });
+
+    await expect(invokeAction('crm.find_quotes', { page: 10_001, pageSize: 25 })).rejects.toThrow();
+    await expect(invokeAction('crm.find_quotes', { cursor: '', pageSize: 25 })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    await expect(invokeAction('crm.find_quotes', { page: 2, cursor: 'not-a-cursor', pageSize: 25 })).rejects.toThrow();
+    await expect(invokeAction('crm.find_quotes', { cursor: 'not-a-cursor', pageSize: 25 })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    const cursorFor = (overrides: Record<string, unknown>) => Buffer.from(JSON.stringify({
+      v: 1, sortBy: 'created_at', order: 'asc', key: new Date().toISOString(), id: uuidv4(), ...overrides,
+    })).toString('base64url');
+    let invalidCursorQuoteQueries = 0;
+    const invalidCursorListener = (_response: unknown, query: { sql?: string }) => {
+      if (/from\s+"?quotes"?/i.test(query.sql ?? '')) invalidCursorQuoteQueries += 1;
+    };
+    db.on('query-response', invalidCursorListener as any);
+    try {
+      const invalidCursors = [
+        { sortBy: 'created_at', cursor: cursorFor({ id: 'not-a-uuid' }) },
+        { sortBy: 'created_at', cursor: cursorFor({ v: 2 }) },
+        { sortBy: 'created_at', cursor: cursorFor({ sortBy: 'quote_date' }) },
+        { sortBy: 'created_at', cursor: cursorFor({ key: 'not-a-timestamp' }) },
+        { sortBy: 'created_at', cursor: cursorFor({ key: 123 }) },
+        { sortBy: 'created_at', cursor: cursorFor({ key: '2026-02-30 12:00:00+00' }) },
+        { sortBy: 'total_amount', cursor: cursorFor({ sortBy: 'total_amount', key: '1.5' }) },
+        { sortBy: 'total_amount', cursor: cursorFor({ sortBy: 'total_amount', key: '9223372036854775808' }) },
+        { sortBy: 'total_amount', cursor: cursorFor({ sortBy: 'total_amount', key: '-9223372036854775809' }) },
+        { sortBy: 'created_at', cursor: 'YWJj=' },
+      ];
+      for (const { sortBy, cursor } of invalidCursors) {
+        await expect(invokeAction('crm.find_quotes', { cursor, sortBy, pageSize: 1 }))
+          .rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      }
+      await expect(invokeAction('crm.find_quotes', {
+        cursor: cursorFor({}), sortBy: 'created_at', page: 2, pageSize: 1,
+      })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    } finally {
+      db.removeListener('query-response', invalidCursorListener as any);
+    }
+    expect(invalidCursorQuoteQueries).toBe(0);
+
+    const secondQuoteId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      title: 'Workflow Created Quote 2',
+    });
+    const sharedSortTimestamp = new Date().toISOString();
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .whereIn('quote_id', [createdQuote.quote.quote_id, secondQuoteId])
+      .update({ created_at: sharedSortTimestamp });
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where('quote_id', secondQuoteId)
+      .update({ quote_date: null });
+
+    const maxBigint = '9223372036854775807';
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .whereIn('quote_id', [createdQuote.quote.quote_id, secondQuoteId])
+      .update({ total_amount: maxBigint });
+    const maxBigintFirst = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'asc',
+    });
+    const maxBigintCursor = JSON.parse(Buffer.from(maxBigintFirst.pagination.next_cursor, 'base64url').toString('utf8'));
+    expect(maxBigintCursor.key).toBe(maxBigint);
+    const maxBigintSecond = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'asc', cursor: maxBigintFirst.pagination.next_cursor,
+    });
+    expect(maxBigintSecond.quotes).toHaveLength(1);
+
+    const minBigint = '-9223372036854775808';
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .whereIn('quote_id', [createdQuote.quote.quote_id, secondQuoteId])
+      .update({ total_amount: minBigint });
+    const minBigintFirst = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'desc',
+    });
+    const minBigintCursor = JSON.parse(Buffer.from(minBigintFirst.pagination.next_cursor, 'base64url').toString('utf8'));
+    expect(minBigintCursor.key).toBe(minBigint);
+    const minBigintSecond = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'desc', cursor: minBigintFirst.pagination.next_cursor,
+    });
+    expect(minBigintSecond.quotes).toHaveLength(1);
+
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where('quote_id', createdQuote.quote.quote_id)
+      .update({ created_at: '2026-11-01 12:34:56.123456+00' });
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where('quote_id', secondQuoteId)
+      .update({ created_at: '2026-11-01 12:34:56.123457+00' });
+    const microsecondFirst = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc',
+    });
+    const microsecondCursor = JSON.parse(Buffer.from(microsecondFirst.pagination.next_cursor, 'base64url').toString('utf8'));
+    expect(microsecondCursor.key).toContain('.123456');
+    const microsecondSecond = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc', cursor: microsecondFirst.pagination.next_cursor,
+    });
+    expect(microsecondSecond.quotes).toHaveLength(1);
+
+    const firstCursorPage = await invokeAction('crm.find_quotes', { client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc' });
+    expect(firstCursorPage.quotes).toHaveLength(1);
+    expect(firstCursorPage.pagination.has_more).toBe(true);
+    expect(firstCursorPage.pagination.next_cursor).toBeTruthy();
+    const secondCursorPage = await invokeAction('crm.find_quotes', {
+      client_id: clientId,
+      pageSize: 1,
+      sortBy: 'created_at',
+      sortOrder: 'asc',
+      cursor: firstCursorPage.pagination.next_cursor,
+    });
+    expect(secondCursorPage.quotes[0].quote_id).not.toBe(firstCursorPage.quotes[0].quote_id);
+    expect([createdQuote.quote.quote_id, secondQuoteId]).toContain(secondCursorPage.quotes[0].quote_id);
+
+    const firstDescendingPage = await invokeAction('crm.find_quotes', { client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'desc' });
+    const secondDescendingPage = await invokeAction('crm.find_quotes', {
+      client_id: clientId,
+      pageSize: 1,
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+      cursor: firstDescendingPage.pagination.next_cursor,
+    });
+    expect(secondDescendingPage.quotes[0].quote_id).not.toBe(firstDescendingPage.quotes[0].quote_id);
+
+    const beforeNullPage = await invokeAction('crm.find_quotes', { client_id: clientId, pageSize: 1, sortBy: 'quote_date', sortOrder: 'desc' });
+    const nullSortValuePage = await invokeAction('crm.find_quotes', {
+      client_id: clientId,
+      pageSize: 1,
+      sortBy: 'quote_date',
+      sortOrder: 'desc',
+      cursor: beforeNullPage.pagination.next_cursor,
+    });
+    expect(nullSortValuePage.quotes[0].quote_id).toBe(secondQuoteId);
 
     const submitted = await invokeAction('crm.submit_quote_for_approval', {
       quote_id: createdQuote.quote.quote_id,
@@ -781,6 +911,132 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_quote' })
       .first();
     expect(quoteAudit).toBeTruthy();
+  });
+
+  it('bounds denied-heavy scans and resumes from the budget cursor without leaking bundle-denied quotes', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Deep Page Client');
+    const deniedClientId = await createClient(db, runtimeState.tenantId, 'Denied Deep Page Client');
+    const bundleId = uuidv4();
+    const revisionId = uuidv4();
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, bundle_key: `quote-page-${bundleId.slice(0, 8)}`,
+      name: 'Quote client restriction', is_system: false, status: 'active',
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_revisions').insert({
+      tenant: runtimeState.tenantId, revision_id: revisionId, bundle_id: bundleId,
+      revision_number: 1, lifecycle_state: 'published',
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').where({ bundle_id: bundleId })
+      .update({ published_revision_id: revisionId });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_rules').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, revision_id: revisionId,
+      resource_type: 'billing', action: 'read', template_key: 'selected_clients', effect: 'narrow',
+      config: JSON.stringify({ selectedClientIds: [clientId] }), position: 0,
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_assignments').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, target_type: 'user',
+      target_id: runtimeState.actorUserId, status: 'active',
+    });
+    const now = new Date().toISOString();
+    const rows = Array.from({ length: 260 }, (_, index) => ({
+      tenant: runtimeState.tenantId,
+      quote_id: uuidv4(),
+      quote_number: `Q-DEPTH-${index}`,
+      client_id: index % 2 === 0 ? clientId : deniedClientId,
+      title: `Deep page quote ${index}`,
+      description: 'Depth budget fixture',
+      quote_date: now,
+      status: 'draft',
+      version: 1,
+      subtotal: 100,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 100,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: runtimeState.actorUserId,
+      updated_by: runtimeState.actorUserId,
+      created_at: now,
+      updated_at: now,
+    }));
+    await tenantTable(db, runtimeState.tenantId, 'quotes').insert(rows);
+
+    let selectedQuoteRows = 0;
+    let teamMembershipLookups = 0;
+    let authBundleEvaluations = 0;
+    let subjectResolutionLookups = 0;
+    const queryListener = (response: unknown, query: { sql?: string }) => {
+      if (/from\s+"?quotes"?/i.test(query.sql ?? '') && Array.isArray(response)) selectedQuoteRows += response.length;
+      if (/from\s+"?team_members"?/i.test(query.sql ?? '')) teamMembershipLookups += 1;
+      if (/authorization_bundle_assignments/i.test(query.sql ?? '')) authBundleEvaluations += 1;
+      if (/reports_to/i.test(query.sql ?? '')) subjectResolutionLookups += 1;
+    };
+    db.on('query-response', queryListener as any);
+    try {
+      const failure = await invokeAction('crm.find_quotes', { page: 1000, pageSize: 25 }).catch((error) => error);
+      expect(failure).toMatchObject({
+        code: 'PAGINATION_DEPTH_EXCEEDED',
+        retryable: false,
+        details: { next_cursor: expect.any(String) },
+      });
+      const resumed = await invokeAction('crm.find_quotes', { cursor: failure.details.next_cursor, pageSize: 25 });
+      expect(resumed.quotes).toHaveLength(25);
+      expect(resumed.quotes.every((quote: any) => quote.client_id === clientId)).toBe(true);
+      expect(resumed.quotes.some((quote: any) => quote.client_id === deniedClientId)).toBe(false);
+    } finally {
+      db.removeListener('query-response', queryListener as any);
+    }
+    expect(selectedQuoteRows).toBeLessThanOrEqual(1000);
+    expect(authBundleEvaluations).toBeLessThanOrEqual(200);
+    expect(teamMembershipLookups).toBeLessThanOrEqual(200);
+    expect(subjectResolutionLookups).toBe(2);
+  });
+
+  it('matches complete legacy traversal across mixed bundle authority, ties and null sort keys', async () => {
+    const clientA = await createClient(db, runtimeState.tenantId, 'Cursor Traversal Allowed');
+    const clientB = await createClient(db, runtimeState.tenantId, 'Cursor Traversal Denied');
+    const bundleId = uuidv4();
+    const revisionId = uuidv4();
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').insert({ tenant: runtimeState.tenantId,
+      bundle_id: bundleId, bundle_key: `quote-traverse-${bundleId.slice(0, 8)}`, name: 'Quote traversal restriction',
+      is_system: false, status: 'active' });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_revisions').insert({ tenant: runtimeState.tenantId,
+      revision_id: revisionId, bundle_id: bundleId, revision_number: 1, lifecycle_state: 'published' });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').where({ bundle_id: bundleId })
+      .update({ published_revision_id: revisionId });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_rules').insert({ tenant: runtimeState.tenantId,
+      bundle_id: bundleId, revision_id: revisionId, resource_type: 'billing', action: 'read',
+      template_key: 'selected_clients', effect: 'narrow', config: JSON.stringify({ selectedClientIds: [clientA] }), position: 0 });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_assignments').insert({ tenant: runtimeState.tenantId,
+      bundle_id: bundleId, target_type: 'user', target_id: runtimeState.actorUserId, status: 'active' });
+    const base = Date.now();
+    const rows = Array.from({ length: 60 }, (_, index) => {
+      const id = uuidv4();
+      return { tenant: runtimeState.tenantId, quote_id: id, quote_number: `Q-CURSOR-${index}`, client_id: index % 3 ? clientA : clientB,
+        title: `Cursor traversal ${index}`, description: 'Mixed authorization traversal', quote_date: index < 30 ? null : new Date(base + Math.floor(index / 3) * 1000).toISOString(),
+        status: 'draft', version: 1, subtotal: 100, discount_total: 0, tax: 0, total_amount: 100,
+        currency_code: 'USD', is_template: false, created_by: runtimeState.actorUserId, updated_by: runtimeState.actorUserId,
+        created_at: new Date(base + Math.floor(index / 3) * 1000).toISOString(), updated_at: new Date(base).toISOString() };
+    });
+    await tenantTable(db, runtimeState.tenantId, 'quotes').insert(rows);
+
+    for (const [sortBy, sortOrder] of [['created_at', 'asc'], ['created_at', 'desc'], ['quote_date', 'asc'], ['quote_date', 'desc']] as const) {
+      const args = { pageSize: 25, sortBy, sortOrder };
+      const legacyIds: string[] = [];
+      for (let page = 1; page <= 2; page += 1) {
+        const response = await invokeAction('crm.find_quotes', { ...args, page });
+        legacyIds.push(...response.quotes.map((quote: any) => quote.quote_id));
+      }
+      const cursorIds: string[] = [];
+      let cursor: string | undefined;
+      do {
+        const response = await invokeAction('crm.find_quotes', { ...args, cursor });
+        cursorIds.push(...response.quotes.map((quote: any) => quote.quote_id));
+        cursor = response.pagination.next_cursor ?? undefined;
+      } while (cursor);
+      expect(cursorIds).toEqual(legacyIds);
+      expect(cursorIds.every((id) => rows.find((row) => row.quote_id === id)?.client_id === clientA)).toBe(true);
+    }
   });
 
   it('T010: crm.create_quote_from_template carries authored rich terms onto the new quote', async () => {
