@@ -14,7 +14,7 @@ vi.mock('@alga-psa/tenancy/server', () => ({
   getTenantForCurrentRequest: mocks.getTenantForCurrentRequest,
 }));
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/server/tenantSettings', () => ({
   getTenantSettingsByTenantId: mocks.getTenantSettingsByTenantId,
 }));
 
