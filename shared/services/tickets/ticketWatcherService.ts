@@ -10,6 +10,7 @@ import {
   type TicketWatchListRecipientInput,
 } from '../../lib/tickets/watchList';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { recipientInScope, resolveTicketNotificationRecipients } from '../../lib/notificationAudience';
 
 /**
  * The only writer of ticket watchers.
@@ -24,6 +25,11 @@ import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
  *
  * Callers pass an open transaction and own events/notifications: this layer
  * reports `changed` so they can publish only when something actually changed.
+ *
+ * A seat technician watches only tickets in their scope (`notificationAudience`). Naming one on
+ * any other ticket is refused (`watcher_out_of_scope`); a batch (inbound mail, board defaults,
+ * team expansion) leaves them out and keeps the rest. Delivery asks the same question again, so
+ * a watcher row that outlives the ticket's scope delivers nothing.
  */
 
 export interface TicketWatcher {
@@ -41,7 +47,8 @@ export type TicketWatcherErrorKind =
   | 'user_not_found'
   | 'entity_missing_email'
   | 'invalid_email'
-  | 'watcher_not_found';
+  | 'watcher_not_found'
+  | 'watcher_out_of_scope';
 
 const TICKET_WATCHER_MESSAGES: Record<TicketWatcherErrorKind, string> = {
   ticket_not_found: 'Ticket not found',
@@ -50,6 +57,7 @@ const TICKET_WATCHER_MESSAGES: Record<TicketWatcherErrorKind, string> = {
   entity_missing_email: 'The selected contact or user has no email address',
   invalid_email: 'A valid email address is required',
   watcher_not_found: 'Watcher not found on this ticket',
+  watcher_out_of_scope: 'This person cannot watch this ticket',
 };
 
 // `kind` is what the REST layer switches on (404 / 422).
@@ -149,6 +157,17 @@ async function lockTicket(trx: Conn, tenant: string, ticketId: string): Promise<
     throw new TicketWatcherError('ticket_not_found');
   }
   return ticket as { attributes: unknown };
+}
+
+/** Which of these addresses may watch the ticket. Only an out-of-scope seat technician may not. */
+async function watcherAdmission(trx: Conn, tenant: string, ticketId: string, emails: string[]): Promise<boolean[]> {
+  const recipients = await resolveTicketNotificationRecipients(trx, tenant, { ticketId }, emails.map((email) => ({ email })));
+  return recipients.map(recipientInScope);
+}
+
+async function assertWatcherAdmitted(trx: Conn, tenant: string, ticketId: string, email: string): Promise<void> {
+  const [admitted] = await watcherAdmission(trx, tenant, ticketId, [email]);
+  if (!admitted) throw new TicketWatcherError('watcher_out_of_scope');
 }
 
 async function readRows(trx: Conn, tenant: string, ticketId: string): Promise<Array<Record<string, any>>> {
@@ -303,8 +322,9 @@ export async function addTicketWatcher(
 ): Promise<TicketWatcherWriteResult> {
   await lockTicket(trx, tenant, ticketId);
   const target = await resolveTicketWatcherTarget(trx, tenant, input);
-  const before = (await readRows(trx, tenant, ticketId)).map(toWatcher);
   const active = input.active ?? true;
+  if (active) await assertWatcherAdmitted(trx, tenant, ticketId, target.email);
+  const before = (await readRows(trx, tenant, ticketId)).map(toWatcher);
 
   const existing = await watchersTable(trx, tenant)
     .where({ ticket_id: ticketId })
@@ -355,8 +375,15 @@ export async function addTicketWatcherRecipients(
   const before = rows.map(toWatcher);
   const merged = mergeTicketWatchListRecipients(rows.map(toMirrorEntry), recipients);
   const existingEmails = new Set(rows.map((row) => String(row.email).toLowerCase()));
+  // A batch is not a request about one person: an out-of-scope seat technician is left out of it
+  // (not added, and not switched back on) and everyone else is written.
+  const admitted = await watcherAdmission(trx, tenant, ticketId, merged.map((entry) => entry.email));
 
-  for (const entry of merged) {
+  for (const [index, entry] of merged.entries()) {
+    if (!admitted[index] && entry.active) {
+      const row = rows.find((r) => String(r.email).toLowerCase() === entry.email);
+      if (!row?.active) continue;
+    }
     const values = {
       name: entry.name ?? null,
       active: entry.active,
@@ -393,6 +420,7 @@ export async function setTicketWatcherActive(
   const matching = watchersTable(trx, tenant).where({ ticket_id: ticketId }).whereRaw('lower(email) = ?', [normalized]);
   const existing = await matching.clone().first();
   if (!existing) throw new TicketWatcherError('watcher_not_found');
+  if (active && !existing.active) await assertWatcherAdmitted(trx, tenant, ticketId, normalized);
   if (rowDiffers(existing, { active })) {
     await matching.clone().update({ active, updated_at: trx.fn.now() });
   }
