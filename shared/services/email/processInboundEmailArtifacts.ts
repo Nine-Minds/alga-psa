@@ -38,6 +38,7 @@ interface PersistAttachmentInput {
   };
   consumedInlineCids?: Set<string>;
   clientVisibleAttachments?: boolean;
+  clientVisibleEmbeddedImages?: boolean;
   maxAttachmentBytes?: number | null;
 }
 
@@ -57,6 +58,12 @@ export interface ProcessInboundEmailArtifactsInput {
   scopeLabel: 'new-ticket' | 'reply';
   maxAttachmentConcurrency?: number;
   clientVisibleAttachments?: boolean;
+  /**
+   * The body these artifacts belong to is readable in the client portal. An
+   * image embedded in that body is part of it, so it is served to the same
+   * readers even when the sender's file attachments are not.
+   */
+  clientVisibleEmbeddedImages?: boolean;
 }
 
 export interface EmbeddedImageUrlMapping {
@@ -1288,7 +1295,10 @@ async function persistInboundEmailAttachment(input: PersistAttachmentInput): Pro
     fileName: resolvedFileName,
     mimeType: resolvedMimeType,
     buffer,
-    clientVisibleOverride: input.clientVisibleAttachments ? true : undefined,
+    clientVisibleOverride:
+      input.clientVisibleAttachments || (allowInlineProcessing && input.clientVisibleEmbeddedImages)
+        ? true
+        : undefined,
   });
 
   if (!persistResult.success) {
@@ -1538,6 +1548,7 @@ export async function processInboundEmailArtifactsBestEffort(
         },
         consumedInlineCids,
         clientVisibleAttachments: input.clientVisibleAttachments,
+        clientVisibleEmbeddedImages: input.clientVisibleEmbeddedImages,
         maxAttachmentBytes,
       });
 
