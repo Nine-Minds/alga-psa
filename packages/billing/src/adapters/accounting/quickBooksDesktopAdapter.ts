@@ -262,6 +262,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
     const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
     const chargesById = expanded.charges;
     context = { ...context, lines: expanded.lines };
+    await this.applyRecurringSeatQuantities(knex, tenantId, chargesById, context.lines);
     const clientsById = await this.loadClients(knex, tenantId, invoicesById, context);
 
     const linesByInvoice = new Map<string, typeof context.lines>();
@@ -926,6 +927,50 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
+  }
+
+  /**
+   * The shared allocation expansion exports every fixed-plan member as one unit
+   * at its allocated amount. The member's stored detail row keeps the billed
+   * quantity and per-unit rate regardless of pricing basis, so any member
+   * whose quantity × rate reproduces its allocation exactly exports at that
+   * quantity and rate; a prorated period, whose allocation no longer matches
+   * the product, keeps the single-unit line.
+   */
+  private async applyRecurringSeatQuantities(
+    knex: Knex,
+    tenantId: string,
+    charges: Map<string, DbCharge>,
+    lines: AccountingExportAdapterContext['lines']
+  ): Promise<void> {
+    const detailIds = new Set<string>();
+    for (const line of lines) {
+      const metadata = line.payload?.metadata as Record<string, unknown> | undefined;
+      if (typeof metadata?.allocation_detail_id === 'string'
+        && typeof metadata?.allocation_parent_charge_id === 'string') {
+        detailIds.add(metadata.allocation_detail_id);
+      }
+    }
+    if (detailIds.size === 0) {
+      return;
+    }
+
+    const details = await tenantDb(knex, tenantId).table('invoice_charge_details as d')
+      .whereIn('d.item_detail_id', Array.from(detailIds))
+      .select('d.item_detail_id', 'd.quantity', 'd.rate');
+
+    for (const detail of details) {
+      const charge = charges.get(detail.item_detail_id);
+      if (!charge) {
+        continue;
+      }
+      const quantity = Number(detail.quantity);
+      const rate = Number(detail.rate);
+      if (!(quantity > 0) || !Number.isFinite(rate) || Math.round(quantity * rate) !== Number(charge.net_amount)) {
+        continue;
+      }
+      charges.set(detail.item_detail_id, { ...charge, quantity, unit_price: rate });
+    }
   }
 
   private async loadCharges(
