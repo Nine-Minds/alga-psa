@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "An MSP administrator invites a seat technician by name and email for an arrangement; the assignment is recorded as invited and counts as a committed seat; an email already claimed by an internal user elsewhere is refused with that reason.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "An invitation is refused when committed seats would exceed the allocation, and concurrent invitations for the last seat produce exactly one success.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Seat admission takes locks in the established order (entitlement, then arrangement) and cannot deadlock against reservation, purchase or hosted reconcile running concurrently.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]

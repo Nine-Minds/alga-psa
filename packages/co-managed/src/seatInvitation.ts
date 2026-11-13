@@ -165,7 +165,7 @@ export async function inviteCoManagedSeatTechnician(
       return {
         assignment_id: held.assignment_id, arrangement_id: held.arrangement_id, invitation_id: held.invitation_id, email,
         state: 'invited' as const, created: false,
-        token: invitations.find((invitation) => invitation.invitation_id === held.invitation_id)!.token,
+        token: invitations.find((invitation) => invitation.invitation_id === held.invitation_id)?.token ?? '',
       };
     }
 
