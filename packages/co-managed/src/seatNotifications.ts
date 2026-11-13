@@ -37,8 +37,9 @@ type Sponsor = ReturnType<typeof tenantDb>;
  *
  * Off under the `FORCE_CAPABILITIES=co-managed-seat:off` kill switch (or a malformed value) and
  * for a tenant that `release-v2-0-feature` tenant targeting closes; on under `co-managed-seat:on`.
- * Otherwise durable participation decides, which every resolver here checks per ticket as the
- * client's live seat arrangement. Never evaluates PostHog: subscribers and workers call this.
+ * Otherwise requires an explicit tenant rollout opt-in, in addition to the client's live seat
+ * arrangement checked by every resolver. Unset targeting stays off: an arrangement alone is not
+ * rollout consent. Never evaluates PostHog: subscribers and workers call this.
  *
  * Until the `co-managed-seat` capability is registered (plan slice S6) this reads the same force
  * key and rollout flag that capability will own; once it is, the body becomes
@@ -49,7 +50,7 @@ export function coManagedSeatNotificationsServed(tenant: string): boolean {
   const forced = forcedValue(typeof process !== 'undefined' ? process.env.FORCE_CAPABILITIES : undefined, 'co-managed-seat');
   if (forced === 'on') return true;
   if (forced !== null) return false;
-  return resolveFlagTargeting('release-v2-0-feature', tenant) !== false;
+  return resolveFlagTargeting('release-v2-0-feature', tenant) === true;
 }
 
 // ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import {
   createCoManagedSeatArrangement, handCoManagedSeatTicketToClientIt, handCoManagedSeatTicketToMsp,
   registerCoManagedSeatHandoffListener, resolveCoManagedSeatHandoffNotice, resolveCoManagedSeatSharedNoteRecipients,
@@ -178,6 +178,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
       '../../lib/eventBus/subscribers/internalNotificationSubscriber'));
   }, 900_000);
   afterAll(async () => { await db?.destroy(); });
+  beforeEach(() => { process.env[FORCE] = 'co-managed-seat:on'; });
   afterEach(() => { delete process.env[FORCE]; delete process.env[TARGETING]; });
 
   // T041 / F079
@@ -284,6 +285,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
 
   // T041 / F079, F081
   it('nothing is notified when the gate is closed for the tenant', async () => {
+    delete process.env[FORCE];
     const w = await world();
     const ticketId = await ticket(w, { assignedTo: w.technician });
     const receipt = await handCoManagedSeatTicketToClientIt(db, { ...request(w, ticketId, w.staff, 0), technicianUserId: w.technician });
@@ -306,6 +308,25 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
       expect((await resolveCoManagedSeatHandoffNotice(db, lookup))?.recipients, `${key}=${value}`).toEqual([w.technician]);
       delete process.env[key];
     }
+  });
+
+  it('an existing arrangement does not enable notifications without an explicit rollout opt-in', async () => {
+    delete process.env[FORCE];
+    delete process.env[TARGETING];
+    const w = await world();
+    const ticketId = await ticket(w, { assignedTo: w.technician });
+    const receipt = await handCoManagedSeatTicketToClientIt(db, {
+      ...request(w, ticketId, w.staff, 0), technicianUserId: w.technician,
+    });
+
+    expect(await deliver(w, receipt)).toEqual([]);
+    await comment(w, ticketId, w.staff, 'shared_it');
+    expect(await db('internal_notifications').where({ tenant: w.sponsor })).toHaveLength(0);
+
+    process.env[TARGETING] = w.sponsor;
+    expect(await deliver(w, receipt)).toEqual([w.technician]);
+    await comment(w, ticketId, w.staff, 'shared_it');
+    expect(await told(w, COMMENT)).toEqual([w.technician]);
   });
 
   // T041 / F079
