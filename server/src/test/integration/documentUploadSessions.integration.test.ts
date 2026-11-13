@@ -170,11 +170,27 @@ describe.each<Provider>(['s3', 'local'])('resumable document uploads (%s storage
     expect(stored.write_handle.provider).toBe(providerType);
   });
 
+  it('accepts a session with no target entity, and refuses half a target', async () => {
+    const unattached = await createUploadHandler(request('POST', '/api/documents/uploads', {
+      json: { fileName: 'loose.bin', mimeType: MIME, size: 10 },
+    }));
+    expect(unattached.status).toBe(201);
+    const stored = await row((await unattached.json()).sessionId);
+    expect(stored).toMatchObject({ entity_type: null, entity_id: null, status: 'active' });
+
+    const half = await createUploadHandler(request('POST', '/api/documents/uploads', {
+      json: { fileName: 'loose.bin', mimeType: MIME, size: 10, entityId: fx.ticket },
+    }));
+    expect(half.status).toBe(400);
+  });
+
   it('refuses a declared size over the provider limit and a type outside the allowlist', async () => {
     const policy = await getUploadPolicy();
     const tooBig = await create(policy.maxFileSize + 1);
     expect(tooBig.response.status).toBe(413);
     expect(tooBig.json.error.code).toBe('UPLOAD_TOO_LARGE');
+    // The browser learns the limit from the refusal itself, before it sends any bytes.
+    expect(tooBig.json.error.maxFileSize).toBe(policy.maxFileSize);
     const badBody = await createUploadHandler(request('POST', '/api/documents/uploads', {
       json: { fileName: 'x', mimeType: '', size: 10, entityType: 'ticket', entityId: fx.ticket },
     }));
@@ -202,6 +218,8 @@ describe.each<Provider>(['s3', 'local'])('resumable document uploads (%s storage
     const completed = await complete(id);
     expect(completed.status).toBe(200);
     const { document } = await completed.json();
+    // The summary names the stored file, so a caller can list or link it without another read.
+    expect(document.file_id).toBe((await storedDocument(document.document_id)).file_id);
     const provider = await StorageProviderFactory.createProvider();
     const bytes = await provider.download((await storedDocument(document.document_id)).storage_path);
     expect(bytes.length).toBe(13 * MiB);

@@ -145,6 +145,12 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = (prop
         className={props.className}
         placeholder={props.placeholder}
         modal={props.modal}
+        fitContent={props.fitContent}
+        size={props.size}
+        triggerVariant={props.triggerVariant}
+        triggerSize={props.triggerSize}
+        triggerButtonClassName={props.triggerButtonClassName}
+        data-automation-type={props['data-automation-type']}
         onAddNew={props.onAddNew}
         disabled={props.disabled}
       />

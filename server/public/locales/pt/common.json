@@ -56,7 +56,6 @@
     "manageLicense": "Gerenciar licença",
     "ariaLabel": "Status da licença",
     "dismiss": "Dispensar",
-
     "subscriptionEnding": "A sua subscrição Pro foi cancelada. O Pro termina em {{date}}. Subscreva novamente para manter o Pro.",
     "subscriptionEndingNoDate": "A sua subscrição Pro foi cancelada. Subscreva novamente para manter o Pro.",
     "subscriptionLapsed": "Está agora na edição gratuita. Subscreva novamente para restaurar o Pro.",
@@ -70,13 +69,12 @@
     "paymentFailedEndedEnding": "A sua subscrição Pro terminou — falha no pagamento. O Pro continua ativo até {{date}}. Subscreva novamente para manter o Pro.",
     "paymentFailedEndedEndingNoDate": "A sua subscrição Pro terminou — falha no pagamento. Subscreva novamente para manter o Pro.",
     "updatePaymentMethod": "Atualizar método de pagamento",
-"licenseExpiresIn_few": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço.",
+    "licenseExpiresIn_few": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço.",
     "licenseExpiresIn_many": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço.",
     "trialDaysRemaining_few": "Avaliação Pro ativa — {{count}} dias restantes.",
     "trialDaysRemaining_many": "Avaliação Pro ativa — {{count}} dias restantes.",
     "trialExpiresIn_few": "A avaliação Pro expira em {{count}} dias. Insira uma chave de licença para manter os recursos Pro.",
     "trialExpiresIn_many": "A avaliação Pro expira em {{count}} dias. Insira uma chave de licença para manter os recursos Pro."
-
   },
   "nav": {
     "dashboard": "Painel",
@@ -939,7 +937,16 @@
       "emptyDropMessage": "Nenhum arquivo foi recebido. Guarde o anexo ou o e-mail no computador e, em seguida, arraste o arquivo guardado para aqui ou use «Procurar arquivos».",
       "uploadInProgress": "Já existe um envio em andamento. Aguarde a conclusão antes de adicionar mais arquivos.",
       "refreshFailed": "Os seus arquivos foram enviados, mas a lista de documentos não pôde ser atualizada. Recarregue a página para vê-los.",
-      "clearResults": "Limpar resultados"
+      "clearResults": "Limpar resultados",
+      "typeNotAllowed": "Este tipo de arquivo não é permitido. Escolha outro arquivo.",
+      "permissionDenied": "Você não tem permissão para enviar documentos aqui.",
+      "networkFailed": "A conexão foi interrompida e o envio não pôde ser retomado. Verifique sua conexão e tente novamente.",
+      "sessionGone": "Este envio expirou antes de terminar. Inicie-o novamente.",
+      "cancelled": "Cancelado",
+      "cancelUpload": "Cancelar envio",
+      "tryAgain": "Tentar novamente",
+      "progress": "{{committed}} de {{total}}",
+      "progressLabel": "Progresso do envio de {{name}}"
     },
     "folders": {
       "root": "Raiz",
