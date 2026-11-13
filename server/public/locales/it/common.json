@@ -56,7 +56,6 @@
     "manageLicense": "Gestisci licenza",
     "ariaLabel": "Stato della licenza",
     "dismiss": "Chiudi",
-
     "subscriptionEnding": "Il tuo abbonamento Pro è stato annullato. Pro termina il {{date}}. Riabbonati per mantenere Pro.",
     "subscriptionEndingNoDate": "Il tuo abbonamento Pro è stato annullato. Riabbonati per mantenere Pro.",
     "subscriptionLapsed": "Ora stai usando l'edizione gratuita. Riabbonati per ripristinare Pro.",
@@ -70,13 +69,12 @@
     "paymentFailedEndedEnding": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Pro resta attivo fino al {{date}}. Riabbonati per mantenere Pro.",
     "paymentFailedEndedEndingNoDate": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Riabbonati per mantenere Pro.",
     "updatePaymentMethod": "Aggiorna il metodo di pagamento",
-"licenseExpiresIn_few": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
+    "licenseExpiresIn_few": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
     "licenseExpiresIn_many": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
     "trialDaysRemaining_few": "Prova Pro attiva — {{count}} giorni rimanenti.",
     "trialDaysRemaining_many": "Prova Pro attiva — {{count}} giorni rimanenti.",
     "trialExpiresIn_few": "La prova Pro scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
     "trialExpiresIn_many": "La prova Pro scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Pro."
-
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -885,7 +883,16 @@
       "emptyDropMessage": "Non è stato ricevuto alcun file. Salva l'allegato o l'email sul computer, poi trascina qui il file salvato oppure usa «Sfoglia file».",
       "uploadInProgress": "Un caricamento è già in corso. Attendi che finisca prima di aggiungere altri file.",
       "refreshFailed": "I file sono stati caricati, ma l'elenco dei documenti non è stato aggiornato. Ricarica la pagina per visualizzarli.",
-      "clearResults": "Cancella risultati"
+      "clearResults": "Cancella risultati",
+      "typeNotAllowed": "Questo tipo di file non è consentito. Scegli un altro file.",
+      "permissionDenied": "Non hai l'autorizzazione per caricare documenti qui.",
+      "networkFailed": "La connessione si è interrotta e non è stato possibile riprendere il caricamento. Controlla la connessione e riprova.",
+      "sessionGone": "Questo caricamento è scaduto prima del completamento. Avvialo di nuovo.",
+      "cancelled": "Annullato",
+      "cancelUpload": "Annulla caricamento",
+      "tryAgain": "Riprova",
+      "progress": "{{committed}} di {{total}}",
+      "progressLabel": "Avanzamento del caricamento di {{name}}"
     },
     "folders": {
       "root": "Radice",
