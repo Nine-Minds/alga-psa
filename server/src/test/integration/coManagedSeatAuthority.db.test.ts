@@ -28,6 +28,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
 const DAY = 86_400_000;
 const describeDb = await describeWithDb();
 const membershipMigration = createRequire(import.meta.url)('../../../migrations/20261113100000_index_authorization_resolver_subjects.cjs');
+const membershipValidation = createRequire(import.meta.url)('../../../migrations/20261113100100_validate_authorization_resolver_subjects.cjs');
 
 describeDb('co-managed seat authority is resolved from rows on every request', { shuffle: false }, () => {
   let db: Knex;
@@ -307,6 +308,34 @@ describeDb('co-managed seat authority is resolved from rows on every request', {
       ]);
       await membershipMigration.up(trx);
       await membershipMigration.up(trx);
+      const constraints = async () => (await trx.raw(`
+        SELECT conname, convalidated FROM pg_constraint
+        WHERE conrelid = 'co_managed_seat_assignments'::regclass
+          AND conname IN ('co_managed_seat_assignment_resolver_id_check',
+                          'co_managed_seat_assignment_resolver_subject_fk')
+        ORDER BY conname
+      `)).rows;
+      const pendingConstraints = [
+        { conname: 'co_managed_seat_assignment_resolver_id_check', convalidated: false },
+        { conname: 'co_managed_seat_assignment_resolver_subject_fk', convalidated: false },
+      ];
+      expect(await constraints()).toEqual(pendingConstraints);
+      // NOT VALID defers only the historical scan: new writes are still fenced.
+      // Savepoints keep expected constraint errors from aborting the upgrade transaction.
+      await expect(trx.transaction(async (attempt) => {
+        await attempt('co_managed_seat_assignments').insert({ tenant: s.tenant,
+          assignment_id: randomUUID(), arrangement_id: s.arrangementId,
+          user_id: randomUUID(), state: 'active' });
+      })).rejects.toMatchObject({ code: '23503', constraint: 'co_managed_seat_assignment_resolver_subject_fk' });
+      await expect(trx.transaction(async (attempt) => {
+        await attempt('co_managed_seat_assignments').where({ tenant: s.tenant, user_id: s.userId })
+          .update({ authority_resolver_id: 'another-resolver' });
+      })).rejects.toMatchObject({ code: '23514', constraint: 'co_managed_seat_assignment_resolver_id_check' });
+
+      await membershipValidation.up(trx);
+      await membershipValidation.up(trx);
+      await membershipMigration.up(trx);
+      expect(await constraints()).toEqual(pendingConstraints.map((row) => ({ ...row, convalidated: true })));
       const members = await trx('authorization_resolver_subjects').where({ tenant: s.tenant, resolver_id: CO_MANAGED_SEAT_RESOLVER_ID });
       expect(members.map((row) => row.user_id).sort()).toEqual([s.userId, revokedUser].sort());
       const subject = await resolveAuthorizationSubject(trx, { tenant: s.tenant, user: { user_id: revokedUser, user_type: 'internal' } });

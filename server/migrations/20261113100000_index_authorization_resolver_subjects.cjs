@@ -3,8 +3,10 @@
  * Keep conservative resolver membership in the authorization layer. A colocated
  * FK makes missing membership impossible, including for revoked seat assignments;
  * no trigger or rollout flag is involved. Feature facts remain authoritative.
+ * Constraints enforce new writes immediately; 20261113100100 validates existing
+ * rows separately so the validation scan does not hold this migration's DDL locks.
  */
-const { ensureTenantDistribution, hasConstraint } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
 
 const TABLE = 'authorization_resolver_subjects';
 const SEATS = 'co_managed_seat_assignments';
@@ -28,10 +30,13 @@ exports.up = async function up(knex) {
       table.text('authority_resolver_id').notNullable().defaultTo('co-managed-seat');
     });
   }
-  if (!(await hasConstraint(knex, SEATS, CHECK))) {
-    await knex.raw(`ALTER TABLE ${SEATS} ADD CONSTRAINT ${CHECK}
-      CHECK (authority_resolver_id = 'co-managed-seat')`);
-  }
+  await knex.raw(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint
+      WHERE conname = '${CHECK}' AND conrelid = '${SEATS}'::regclass) THEN
+      ALTER TABLE ${SEATS} ADD CONSTRAINT ${CHECK}
+        CHECK (authority_resolver_id = 'co-managed-seat') NOT VALID;
+    END IF;
+  END $$`);
 
   // Migration-wide backfill: carry each source row's tenant into its index key.
   // Every state counts, including revoked assignments and ended arrangements.
@@ -40,13 +45,16 @@ exports.up = async function up(knex) {
     WHERE user_id IS NOT NULL
     ON CONFLICT (tenant, resolver_id, user_id) DO NOTHING`);
 
-  if (!(await hasConstraint(knex, SEATS, FK))) {
-    // Both tables are tenant-distributed and colocated. Never skip this FK:
-    // it is the safety guarantee behind the probe's negative answer.
-    await knex.raw(`ALTER TABLE ${SEATS} ADD CONSTRAINT ${FK}
+  // Both tables are tenant-distributed and colocated. Never skip this FK:
+  // it is the safety guarantee behind the probe's negative answer.
+  await knex.raw(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint
+      WHERE conname = '${FK}' AND conrelid = '${SEATS}'::regclass) THEN
+      ALTER TABLE ${SEATS} ADD CONSTRAINT ${FK}
       FOREIGN KEY (tenant, authority_resolver_id, user_id)
-      REFERENCES ${TABLE} (tenant, resolver_id, user_id)`);
-  }
+      REFERENCES ${TABLE} (tenant, resolver_id, user_id) NOT VALID;
+    END IF;
+  END $$`);
 };
 
 exports.down = async function down(knex) {
