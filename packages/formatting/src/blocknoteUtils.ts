@@ -1123,20 +1123,20 @@ function renderPMInlineContent(nodes: PMNode[] | undefined): string {
   }).join('');
 }
 
-function renderPMNode(node: PMNode, options?: RichTextRenderOptions): string {
+function renderPMNode(node: PMNode, options?: RichTextRenderOptions, struck = false): string {
   switch (node.type) {
     case 'doc':
       return (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
 
     case 'paragraph': {
       const inner = renderPMInlineContent(node.content);
-      return `<p>${inner || '<br>'}</p>`;
+      return `<p>${inner ? (struck ? `<s>${inner}</s>` : inner) : '<br>'}</p>`;
     }
 
     case 'heading': {
       const level = Math.min(Math.max(Number(node.attrs?.level) || 1, 1), 6);
       const inner = renderPMInlineContent(node.content);
-      return `<h${level}>${inner}</h${level}>`;
+      return `<h${level}>${struck && inner ? `<s>${inner}</s>` : inner}</h${level}>`;
     }
 
     case 'bullet_list':
@@ -1165,9 +1165,10 @@ function renderPMNode(node: PMNode, options?: RichTextRenderOptions): string {
 
     case 'task_item':
     case 'taskItem': {
-      const inner = (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
       const checked = node.attrs?.checked === true;
-      return `<div><span style="font-family:Arial,sans-serif;">${checked ? '&#9745;' : '&#9744;'}</span> ${checked ? `<s>${inner}</s>` : inner}</div>`;
+      // <s> is phrasing content, so a completed item strikes the text inside its own blocks.
+      const inner = (node.content ?? []).map(child => renderPMNode(child, options, checked)).join('\n');
+      return `<div><span style="font-family:Arial,sans-serif;">${checked ? '&#9745;' : '&#9744;'}</span> ${inner}</div>`;
     }
 
     case 'table':
