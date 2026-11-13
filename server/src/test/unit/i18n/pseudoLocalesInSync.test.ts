@@ -58,8 +58,7 @@ describe('checked-in pseudo-locales match the generator', () => {
       }
       const english = JSON.parse(fs.readFileSync(path.join(englishRoot, relativePath), 'utf8'));
       const expected = `${JSON.stringify(toPseudo(english, locale), null, 2)}\n`;
-      const actual = fs.readFileSync(pseudoFile, 'utf8').replace(/\r\n/g, '\n');
-      if (actual !== expected) stale.push(relativePath);
+      if (fs.readFileSync(pseudoFile, 'utf8') !== expected) stale.push(relativePath);
     }
 
     expect(

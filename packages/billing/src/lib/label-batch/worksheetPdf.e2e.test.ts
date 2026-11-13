@@ -13,18 +13,6 @@ import { renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtm
 const { PNG } = createRequire(import.meta.url)('pngjs') as {
   PNG: { sync: { read(buffer: Buffer): { width: number; height: number; data: Buffer } } };
 };
-const pdftotextAvailable = (() => {
-  try {
-    execFileSync('pdftotext', ['-v'], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-})();
-if (!pdftotextAvailable) {
-  console.warn('[worksheetPdf.e2e] PDF text-extraction tests are skipped because pdftotext is unavailable. Install Poppler and ensure pdftotext is on PATH (CI uses the install-poppler action).');
-}
-const itWithPdftotext = pdftotextAvailable ? it : it.skip;
 const pageLayout = { kind: 'one-per-page', pageSize: { width: 8.5, height: 11, unit: 'in' } } as const;
 const recordId = '11111111-1111-4111-8111-111111111111';
 const viewModel: LabelViewModel = {
@@ -57,8 +45,8 @@ const item = (description = viewModel.ticketDescription): LabelPrintItem => ({
   viewModel: { ...viewModel, ticketDescription: description },
 });
 
-// Page geometry comes straight from the PDF MediaBox via pdf-lib. Text assertions below additionally
-// require Poppler's pdftotext executable.
+// Page geometry comes straight from the PDF MediaBox via pdf-lib. Text assertions need Poppler's `pdftotext`
+// on PATH (CI installs it via the install-poppler action); like labelBatch.e2e, these tests fail, not skip, without it.
 async function pdfPageSizes(pdf: Buffer): Promise<Array<{ width: number; height: number }>> {
   const doc = await PDFDocument.load(pdf);
   return doc.getPages().map((p) => {
@@ -72,7 +60,7 @@ afterAll(async () => {
 });
 
 describe('Letter customer worksheet PDF', () => {
-  itWithPdftotext('prints a rich description with visible tables, heading hierarchy and checklist states', async () => {
+  it('prints a rich description with visible tables, heading hierarchy and checklist states', async () => {
     const richText = [
       { type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'New Equipment / System Setup' }] },
       { type: 'paragraph', content: [{ type: 'text', text: 'Link the device to the client asset record.' }] },
@@ -134,7 +122,7 @@ describe('Letter customer worksheet PDF', () => {
     }
   }, 120_000);
 
-  itWithPdftotext('flows a long rich-description table across pages without clipping its rows', async () => {
+  it('flows a long rich-description table across pages without clipping its rows', async () => {
     const rows = Array.from({ length: 60 }, (_, index) => ({ cells: [
       { type: 'tableCell', content: [{ type: 'text', text: `Requirement ${index + 1}` }] },
       { type: 'tableCell', content: [{ type: 'text', text: `Approved configuration for requirement ${index + 1}` }] },
@@ -156,7 +144,7 @@ describe('Letter customer worksheet PDF', () => {
     }
   }, 120_000);
 
-  itWithPdftotext('prints the full serial and multiline description on one Letter page with a canonical QR', async () => {
+  it('prints the full serial and multiline description on one Letter page with a canonical QR', async () => {
     const { html, printOptions } = await renderLabelBatchHtml([item()], pageLayout);
     const pdf = await renderHtmlToPdf(html, printOptions);
     const pages = await pdfPageSizes(pdf);
@@ -205,7 +193,7 @@ describe('Letter customer worksheet PDF', () => {
     }
   }, 120_000);
 
-  itWithPdftotext('flows a long description onto continuation pages instead of clipping it', async () => {
+  it('flows a long description onto continuation pages instead of clipping it', async () => {
     const longDescription = Array.from({ length: 100 }, (_, index) => `Description line ${index + 1}`).join('\n');
     const { html, printOptions } = await renderLabelBatchHtml([item(), item(longDescription)], pageLayout);
     const pdf = await renderHtmlToPdf(html, printOptions);
