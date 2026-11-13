@@ -166,26 +166,43 @@ export function recipientInScope(recipient: TicketNotificationRecipient): boolea
   return recipientMayReceive(recipient, 'requester');
 }
 
+/** An audience known now, or read only if a seat technician turns out to be among the recipients. */
+export type AudienceSource = CommentAudience | (() => Promise<CommentAudience>);
+
+/** Reads an audience at most once, and not at all when no recipient needs it. */
+export function lazyAudience(read: () => Promise<CommentAudience>): () => Promise<CommentAudience> {
+  let pending: Promise<CommentAudience> | undefined;
+  return () => (pending ??= read());
+}
+
 /** One rendering of a message, labelled with the narrowest audience of anything it quotes. */
 export interface AudienceContent<T> {
-  audience: CommentAudience;
+  audience: AudienceSource;
   /** The rendering for this audience. Omitted: the message's own content already is it. */
   content?: T;
 }
 
+/** Ticket-level facts only (title, status, assignment, field changes): everyone admitted to the ticket. */
+export const TICKET_FACTS_AUDIENCE: ReadonlyArray<AudienceContent<never>> = [{ audience: 'requester' }];
+
 /**
  * Picks what a recipient gets from a message's renderings, listed richest first.
  *
- * Not a seat technician: `{ admitted: true }` with no selection, so the caller sends what it
- * built. A seat technician gets the first rendering their audience admits, or is not admitted.
+ * Not a seat technician: `{ admitted: true }` with no selection and no audience read, so the
+ * caller sends what it built. A seat technician gets the first rendering their audience admits,
+ * or is not admitted. A message that declares no rendering is never sent to them.
  */
-export function selectAudienceContent<T>(
+export async function selectAudienceContent<T>(
   recipient: TicketNotificationRecipient,
   renderings: ReadonlyArray<AudienceContent<T>> | null | undefined,
-): { admitted: false } | { admitted: true; selected?: AudienceContent<T> } {
+): Promise<{ admitted: false } | { admitted: true; selected?: { audience: CommentAudience; content?: T } }> {
   if (!recipient.seat) return { admitted: true };
-  const selected = (renderings ?? []).find(rendering => recipientMayReceive(recipient, rendering.audience));
-  return selected ? { admitted: true, selected } : { admitted: false };
+  if (!recipientInScope(recipient)) return { admitted: false };
+  for (const rendering of renderings ?? []) {
+    const audience = typeof rendering.audience === 'function' ? await rendering.audience() : rendering.audience;
+    if (recipientMayReceive(recipient, audience)) return { admitted: true, selected: { audience, content: rendering.content } };
+  }
+  return { admitted: false };
 }
 
 /**
