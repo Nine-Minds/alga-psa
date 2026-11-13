@@ -105,10 +105,12 @@ const ids = {
 };
 
 async function post(body: unknown) {
+  const json = JSON.stringify(body);
+  // A real HTTP request declares its length; the endpoint refuses (411) a body it cannot bound.
   const req = new NextRequest('http://localhost/api/v1/documents', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': 'k' },
-    body: JSON.stringify(body),
+    headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(json)), 'x-api-key': 'k' },
+    body: json,
   });
   const res = await controller.attach()(req);
   return { status: res.status, json: await res.json() };

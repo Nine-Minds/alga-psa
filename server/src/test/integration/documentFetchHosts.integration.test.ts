@@ -106,10 +106,11 @@ const ids = { user: uuidv4(), client: uuidv4(), contact: uuidv4() };
 const ctx = () => ({ knex: db, tenant: state.tenant, user: { user_id: ids.user, tenant: state.tenant } as any });
 
 async function postUrl(url: string) {
+  const body = JSON.stringify({ entity_type: 'contact', entity_id: ids.contact, source: { type: 'url', url }, file_name: 'shot.png' });
   const req = new NextRequest('http://localhost/api/v1/documents', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': 'k' },
-    body: JSON.stringify({ entity_type: 'contact', entity_id: ids.contact, source: { type: 'url', url }, file_name: 'shot.png' }),
+    headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(body)), 'x-api-key': 'k' },
+    body,
   });
   const res = await controller.attach()(req);
   return { status: res.status, json: await res.json() };
@@ -225,13 +226,14 @@ describe('allowlist on POST /api/v1/documents', () => {
 
   it('base64 sources are unaffected by the allowlist (even with every built-in disabled)', async () => {
     await settings.disableBuiltinFetchHost(ctx(), 'files.oaiusercontent.com');
+    const body = JSON.stringify({
+      entity_type: 'contact', entity_id: ids.contact,
+      source: { type: 'base64', content: Buffer.from('plain text').toString('base64') }, file_name: 'n.txt',
+    });
     const req = new NextRequest('http://localhost/api/v1/documents', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': 'k' },
-      body: JSON.stringify({
-        entity_type: 'contact', entity_id: ids.contact,
-        source: { type: 'base64', content: Buffer.from('plain text').toString('base64') }, file_name: 'n.txt',
-      }),
+      headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(body)), 'x-api-key': 'k' },
+      body,
     });
     const res = await controller.attach()(req);
     expect(res.status).toBe(201);
