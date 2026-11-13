@@ -23,7 +23,7 @@
       "add": "Não foi possível adicionar este serviço. Tente novamente.",
       "remove": "Não foi possível remover este serviço. Tente novamente.",
       "invalidInput": "Selecione um serviço, uma moeda e uma quantidade inteira positiva.",
-      "ticketMissing": "O ticket já não existe. Atualize a página e tente novamente.",
+      "ticketMissing": "O ticket não existe mais. Atualize a página e tente novamente.",
       "serviceInvalid": "Selecione um serviço de taxa fixa ativo.",
       "priceInvalid": "É necessário um preço de catálogo válido para esta moeda e quantidade.",
       "cannotDelete": "Esta entrada de serviço já foi faturada ou removida. Atualize a página e tente novamente."
@@ -34,13 +34,13 @@
     "save": "Salvar alterações",
     "edit": "Editar cobrança",
     "errors": {
-      "save": "Não foi possível guardar esta cobrança. Tente novamente.",
+      "save": "Não foi possível salvar esta cobrança. Tente novamente.",
       "invalidInput": "Insira uma quantidade inteira positiva e uma descrição com até 2.000 caracteres.",
       "notEditable": "Não é possível editar entradas faturadas ou removidas. Atualize a página e tente novamente.",
-      "amountTooLarge": "Esta quantidade excederia o montante total suportado.",
+      "amountTooLarge": "Esta quantidade excederia o valor total suportado.",
       "serialized": "Os materiais com número de série devem manter a quantidade 1. Adicione ou remova unidades individuais.",
       "trackingChanged": "O controle de inventário mudou após a adição deste material. Reconcilie o estoque antes de alterar a quantidade.",
-      "locationInvalid": "A localização de estoque original está em falta ou é inconsistente. Reconcilie este material antes de alterar a quantidade.",
+      "locationInvalid": "O local de estoque original está ausente ou é inconsistente. Reconcilie este material antes de alterar a quantidade.",
       "costCurrency": "Os custos de estoque utilizam moedas diferentes. Reconcilie este material antes de reduzir a quantidade."
     }
   },
@@ -3317,7 +3317,7 @@
   "catalogFilter": {
     "category": "Categoria",
     "allCategories": "Todas as categorias",
-    "loading": "A carregar categorias...",
+    "loading": "Carregando categorias...",
     "loadError": "Não foi possível carregar as categorias. Tente novamente.",
     "retry": "Tentar novamente"
   }

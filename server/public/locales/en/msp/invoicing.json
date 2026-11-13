@@ -496,7 +496,7 @@
   },
   "quickInvoice": {
     "fixedFeeServices": "Services",
-    "excludedFixedFees_one": "1 fixed-fee service entry was excluded because its currency differs from the invoice currency.",
+    "excludedFixedFees_one": "{{count}} fixed-fee service entry was excluded because its currency differs from the invoice currency.",
     "excludedFixedFees_other": "{{count}} fixed-fee service entries were excluded because their currency differs from the invoice currency.",
     "currencyExcluded": "{{count}} product(s) excluded because their currency differs from {{currency}}.",
     "action": "Quick invoice",
