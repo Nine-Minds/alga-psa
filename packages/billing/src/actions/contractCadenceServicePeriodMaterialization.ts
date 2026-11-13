@@ -10,6 +10,7 @@ import {
   type RecurringChargeFamily,
 } from '@alga-psa/types';
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { whereLiveRecurringContractLine } from '@shared/billingClients/liveClientCadenceRecurringLine';
@@ -296,6 +297,8 @@ async function persistRecurringServicePeriodRegeneration(
     recordsToInsert: IRecurringServicePeriodRecord[];
   },
 ) {
+  if (params.recordsToSupersede.length === 0 && params.recordsToInsert.length === 0) return;
+  await lockTenantBilling(trx, params.tenant);
   const db = tenantDb(trx, params.tenant);
 
   for (const record of params.recordsToSupersede) {
@@ -334,12 +337,15 @@ async function retireFutureContractCadenceRowsForLine(
       tenant: params.tenant,
       obligation_id: params.contractLineId,
       cadence_owner: 'contract',
-    });
+    })
+    .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed']);
   if (params.chargeFamily) {
     query.where('charge_family', params.chargeFamily);
   }
+  // The sweep calls this for every line; only a real retirement is a billing mutation.
+  if (!(await query.clone().first('record_id'))) return 0;
+  await lockTenantBilling(trx, params.tenant);
   return query
-    .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])
     .update({
       lifecycle_state: 'superseded',
       updated_at: params.retiredAt,

@@ -173,6 +173,8 @@ function createMockTx(
       missingTables,
       updateLog,
     );
+  // The tenant billing lock taken before recurring periods are claimed.
+  tx.raw = async () => ({ rows: [] });
 
   return { tx, inserts, tables, updateLog };
 }

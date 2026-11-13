@@ -21,6 +21,7 @@ import { createPendingHourBlockForInvoiceCharge } from './pendingHourBlockServic
 import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
 import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
 import { allocateDiscountsBeforeTax, buildDiscountTaxEntities, type DiscountPool, type DiscountTaxEntity, type DiscountTaxLineInput } from '../lib/discountAllocationBeforeTax';
@@ -168,6 +169,7 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
   excludedServicePeriodRecordIds?: string[];
 }): Promise<void> {
   const { tx, tenant, invoiceId, selectorInputs, linkedAt } = params;
+  await lockTenantBilling(tx, tenant);
   // Usage diagnoses expose inclusive ends; recurring period storage uses
   // half-open boundaries. Match the complete line/period identity so another
   // service period for the same line is still claimed when it was billed.
@@ -2025,6 +2027,8 @@ export async function persistInvoiceCharges(
 ): Promise<number> {
   const requireRecurringServicePeriodLinkage =
     options.requireRecurringServicePeriodLinkage ?? true;
+  // Charges below claim recurring service periods for this invoice.
+  if (requireRecurringServicePeriodLinkage) await lockTenantBilling(tx, tenant);
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
