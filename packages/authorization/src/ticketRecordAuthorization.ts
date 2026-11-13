@@ -14,7 +14,11 @@ import {
   type RelationshipRule,
 } from './kernel';
 import type { AuthorizationKernel } from './kernel';
-import { bundleNarrowingRuleFromRow, loadAuthorizationEvaluationSnapshot } from './bundles/service';
+import {
+  authorizationEvaluationSnapshotQuery, bundleNarrowingRuleFromRow, loadAuthorizationEvaluationSnapshot,
+  type AuthorizationEvaluationSnapshot,
+} from './bundles/service';
+import { builtinResolverFactsExpression } from './kernel/builtinRuleResolvers';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
@@ -85,13 +89,31 @@ interface TicketAuthorizationContext {
   requestCache: RequestLocalAuthorizationCache;
 }
 
+/**
+ * The evaluation snapshot and, when a built-in rule resolver declares a fact source, its facts for the subject:
+ * one statement either way. With no fact source registered this is exactly the snapshot load.
+ */
+async function loadSnapshotWithResolverFacts(
+  trx: Conn,
+  subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
+): Promise<{ snapshot: AuthorizationEvaluationSnapshot; resolverFacts?: Record<string, unknown> }> {
+  const facts = builtinResolverFactsExpression(trx, subject);
+  if (!facts) return { snapshot: await loadAuthorizationEvaluationSnapshot(trx, subject) };
+  const row = await trx.queryBuilder()
+    .select(authorizationEvaluationSnapshotQuery(trx, subject).as('snapshot'), trx.raw('? as "resolverFacts"', [facts]))
+    .first();
+  // A missing part is a failed load, never "no facts": the subject gets no decision.
+  if (!row?.snapshot || !row.resolverFacts) throw new Error('Authorization context unavailable');
+  return { snapshot: row.snapshot as AuthorizationEvaluationSnapshot, resolverFacts: row.resolverFacts as Record<string, unknown> };
+}
+
 // LEVERAGE: pattern ticket-authorization-context — near-duplicate of createTicketAuthorizationContext in actions/optimizedTicketActions.ts (and ticketActions.ts); a shared builder would remove the drift that dropped contact visibility here.
 export async function createTicketAuthorizationContext(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
 ): Promise<TicketAuthorizationContext> {
-  const snapshot = await loadAuthorizationEvaluationSnapshot(trx, {
+  const { snapshot, resolverFacts } = await loadSnapshotWithResolverFacts(trx, {
     tenant,
     userId: user.user_id,
     apiKeyId: (user as IUserWithRoles & { api_key_id?: string | null }).api_key_id ?? null,
@@ -105,6 +127,7 @@ export async function createTicketAuthorizationContext(
       teamIds: snapshot.teamIds,
       managedUserIds: snapshot.managedUserIds,
       storedPortfolioClientIds: snapshot.portfolioClientIds ?? [],
+      resolverFacts,
     },
   });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
