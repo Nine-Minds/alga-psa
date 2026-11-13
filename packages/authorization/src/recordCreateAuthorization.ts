@@ -6,7 +6,6 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   clientResolvers,
-  hasRegisteredBuiltinRuleResolvers,
   type AuthorizationMutationDecision,
   type AuthorizationRecord,
   type AuthorizationRequestCache,
@@ -53,7 +52,8 @@ export async function authorizeRecordCreate(
   const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
 
   const tenantScope = await probeTenantAuthorizationScope(conn, input.tenant, requestCache);
-  if (!tenantScope.publishedAssignments && !hasRegisteredBuiltinRuleResolvers()) return ALLOWED;
+  // Only an explicit "no resolver has a subject here" takes the fast path.
+  if (!tenantScope.publishedAssignments && tenantScope.resolverSubjects === false) return ALLOWED;
 
   const record = typeof input.record === 'function' ? await input.record() : input.record;
   if (record === null) return ALLOWED;

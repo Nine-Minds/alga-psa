@@ -14,6 +14,7 @@ import { evaluateTemplateForRule } from './bundleProvider';
 export const RESOLVER_NARROWING_APPLIED_CODE = 'resolver_narrowing_applied';
 export const RESOLVER_TEMPLATE_DENIED_CODE = 'resolver_template_denied';
 export const RESOLVER_CLOSED_BASELINE_DENIED_CODE = 'resolver_closed_baseline_denied';
+export const RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE = 'resolver_client_visible_only_denied';
 
 /**
  * Evaluates every registered resolver that applies to the subject. Returns null when none contributes, so the
@@ -74,6 +75,23 @@ export function evaluateBuiltinRuleResolvers(input: AuthorizationEvaluationInput
       message: 'Built-in resolver narrowing rules were applied as intersections.',
       metadata: { resolverId: resolver.id, ruleIds: matching.map((rule) => rule.id) },
     });
+    // The bundle provider's `client_visible_only` guard on the same record field. Like a template, it judges a
+    // record; a record-less check is narrowed in SQL through the adapter's `clientVisibleColumn`.
+    const notClientVisible = matching.filter(
+      (rule) => rule.constraintKey === 'client_visible_only' && input.record !== undefined && input.record.is_client_visible !== true
+    );
+    if (notClientVisible.length > 0) {
+      allowed = false;
+      scopes.push(DENY_ALL_SCOPE);
+      reasons.push({
+        stage: 'builtin',
+        sourceType: 'resolver',
+        sourceId: resolver.id,
+        code: RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE,
+        message: 'Built-in resolver client-visible-only guard denied access.',
+        metadata: { resolverId: resolver.id, ruleIds: notClientVisible.map((rule) => rule.id), resource, action },
+      });
+    }
     if (mismatched.length > 0) {
       allowed = false;
       scopes.push(DENY_ALL_SCOPE);

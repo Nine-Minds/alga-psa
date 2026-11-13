@@ -105,6 +105,7 @@ export async function createTicketAuthorizationContext(
       teamIds: snapshot.teamIds,
       managedUserIds: snapshot.managedUserIds,
       storedPortfolioClientIds: snapshot.portfolioClientIds ?? [],
+      resolverFacts: snapshot.resolverFacts,
     },
   });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
