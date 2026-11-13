@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const migration = require('../../../../migrations/20261028193400_create_ticket_fixed_fee_services.cjs');
+const migration = require('../../../../migrations/20261113000000_create_ticket_fixed_fee_services.cjs');
 
 function migrationDatabase(citus: boolean, existingConstraints: string[] = []) {
   const constraints = new Set(existingConstraints);
