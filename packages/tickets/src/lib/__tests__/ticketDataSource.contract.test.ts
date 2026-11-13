@@ -96,6 +96,9 @@ describe('native ticket data source contract', () => {
     expect(composed.capabilities.fixedFeeServices).toBe(false);
     expect(composed.materials.updateTicketMaterial).toBeUndefined();
     expect(composed.materials.getTicketCatalogCategories).toBeUndefined();
+    expect(composed.fixedFees.listTicketFixedFeeServices).not.toBe(nativeTicketDataSource.fixedFees.listTicketFixedFeeServices);
+    expect(() => composed.fixedFees.listTicketFixedFeeServices('ticket-1')).toThrow(/does not support fixed-fee services/);
+    expect(() => composed.fixedFees.deleteTicketFixedFeeService('entry-1')).toThrow(/does not support fixed-fee services/);
   });
 
   it('uses the explicit category loader supplied by an alternate source', async () => {
