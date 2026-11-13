@@ -915,13 +915,20 @@ export async function applyCreditToInvoiceInternal(
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('credit_applied', 'total_amount', 'currency_code', 'project_id', 'billing_profile_id')
+            .select('client_id', 'credit_applied', 'total_amount', 'currency_code', 'project_id', 'billing_profile_id')
             .forUpdate()
             .first();
 
         if (!invoice) {
             throw new Error(`Invoice ${invoiceId} not found`);
         }
+
+        // The locked invoice row is authoritative for credit ownership. Reject
+        // mismatches before writes, including pre-profile and legacy credits.
+        if (String(invoice.client_id).toLowerCase() !== String(clientId).toLowerCase()) {
+            throw new Error('Credit client does not own the invoice');
+        }
+        const invoiceClientId = String(invoice.client_id);
 
         const invoiceCurrency = invoice.currency_code || 'USD';
         // Credit application is constrained to the invoice's own billing
@@ -985,7 +992,7 @@ export async function applyCreditToInvoiceInternal(
         // clamp itself is deferred until after the cross-currency validation
         // below, so an invoice with no eligible charges cannot silently swallow
         // the explicit currency-mismatch error.
-        const policy = await resolveCreditDrawdownPolicy(trx, tenant, clientId);
+        const policy = await resolveCreditDrawdownPolicy(trx, tenant, invoiceClientId);
 
         const creditOrderBy: Array<{ column: string; order: 'asc' | 'desc'; nulls?: 'last' }> =
             policy.applicationOrder === 'oldest_first'
@@ -1018,7 +1025,7 @@ export async function applyCreditToInvoiceInternal(
         const now = new Date().toISOString();
         const creditEntriesQuery = tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
-                client_id: clientId,
+                client_id: invoiceClientId,
                 tenant,
                 is_expired: false,
                 currency_code: invoiceCurrency // Only get credits in the same currency
@@ -1046,7 +1053,7 @@ export async function applyCreditToInvoiceInternal(
             // Check if there are credits in other currencies
             const otherCurrencyCredits = await tenantScopedTable(trx, tenant, 'credit_tracking')
                 .where({
-                    client_id: clientId,
+                    client_id: invoiceClientId,
                     tenant,
                     is_expired: false
                 })
@@ -1058,7 +1065,7 @@ export async function applyCreditToInvoiceInternal(
                 throw new Error(`No ${invoiceCurrency} credits available. Credits exist in other currencies but cannot be applied to ${invoiceCurrency} invoices.`);
             }
 
-            console.log(`No valid credit entries found for client ${clientId}`);
+            console.log(`No valid credit entries found for client ${invoiceClientId}`);
             return;
         }
 
@@ -1075,7 +1082,7 @@ export async function applyCreditToInvoiceInternal(
         // totalAppliedAmount` is the true post-application balance. Scoped to
         // the invoice's billing profile (F111/D7): sibling profiles' credit
         // never counts toward this profile's balance.
-        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency, invoiceBillingProfileId);
+        const availableCredit = await getAvailableCredit(trx, tenant, invoiceClientId, invoiceCurrency, invoiceBillingProfileId);
 
         const invoiceProjectId = invoice.project_id ?? null;
         if (invoiceProjectId) {
@@ -1200,7 +1207,7 @@ export async function applyCreditToInvoiceInternal(
         // If no credits were applied, exit early
         appliedAmountResult = totalAppliedAmount;
         if (totalAppliedAmount <= 0) {
-            console.log(`No credits were applied for client ${clientId}`);
+            console.log(`No credits were applied for client ${invoiceClientId}`);
             return;
         }
         
@@ -1210,7 +1217,7 @@ export async function applyCreditToInvoiceInternal(
         // Create the main credit application transaction
         const [creditTransaction] = await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: uuidv4(),
-            client_id: clientId,
+            client_id: invoiceClientId,
             billing_profile_id: invoiceBillingProfileId,
             invoice_id: invoiceId,
             amount: -totalAppliedAmount,
@@ -1261,7 +1268,7 @@ export async function applyCreditToInvoiceInternal(
         }
         
         // Log the credit application
-        console.log(`Applied ${totalAppliedAmount} credit to invoice ${invoiceId} for client ${clientId}. Remaining credit: ${newBalance}`);
+        console.log(`Applied ${totalAppliedAmount} credit to invoice ${invoiceId} for client ${invoiceClientId}. Remaining credit: ${newBalance}`);
         console.log(`Applied from ${appliedCredits.length} different credit sources, prioritized by expiration date.`);
 
         const appliedInvoice = await loadCreditSourceInvoice(trx, tenant, invoiceId);
@@ -1439,7 +1446,21 @@ export const applyCreditToInvoice = withAuth(async (
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
-    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user, clientId, invoiceId, requestedAmount);
+    const { knex } = await createTenantKnex();
+    const invoice = await tenantDb(knex, tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
+        .select('client_id')
+        .first();
+    if (!invoice) {
+        throw new Error(`Invoice ${invoiceId} not found`);
+    }
+
+    const invoiceClientId = String(invoice.client_id);
+    if (invoiceClientId.toLowerCase() !== String(clientId).toLowerCase()) {
+        throw new Error('Credit client does not own the invoice');
+    }
+
+    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user, invoiceClientId, invoiceId, requestedAmount);
 
     // Reconcile any still-active Checkout links now that the balance changed:
     // a customer must not be able to pay the pre-credit amount through an old
