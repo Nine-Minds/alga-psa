@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import knexFactory from 'knex';
+import type { Knex } from 'knex';
 import { claimTicketChargeSources } from '../../../../../packages/billing/src/lib/billing/ticketChargeClaims';
 import { tenantDb } from '@alga-psa/db/tenantDb';
 
@@ -51,4 +52,15 @@ it('uses the set-based source claim helper with an explicit tenant predicate', a
   expect(sql).toContain('source.tenant = ?');
   expect(sql).toContain('source.is_billed = FALSE');
   expect(bindings.at(-1)).toBe('tenant-a');
+});
+
+it('rejects a repeated source id before issuing the claim', async () => {
+  const raw = vi.fn();
+  const trx = { raw } as unknown as Knex.Transaction;
+  const claim = { sourceId: 'material-a', sourceUpdatedAt: '2026-11-12T15:00:00.123456Z' };
+
+  await expect(claimTicketChargeSources(
+    trx, 'tenant-a', 'ticket_material', [claim, { ...claim }], 'invoice-a', '2026-11-12T15:01:00Z',
+  )).rejects.toThrow('ticket_material source material-a appears on more than one invoice line');
+  expect(raw).not.toHaveBeenCalled();
 });
