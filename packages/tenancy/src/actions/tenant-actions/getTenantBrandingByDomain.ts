@@ -1,13 +1,14 @@
 'use server';
 
 import { buildTenantPortalSlug, getConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
+import { readTenantPortalSettings } from '../../server/tenantSettingsStore';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
 import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale, normalizeLocale } from '@alga-psa/core/i18n/config';
 import { isEnterprise } from '@alga-psa/core/features';
 import { scopeBrandingToEdition } from '../../lib/generateBrandingStyles';
+import { sanitizePortalBranding } from '../../lib/sanitizePortalBranding';
 import { DEFAULT_TENANT_THEME, normalizeTenantTheme, type TenantTheme } from '../../lib/tenantTheme';
-import type { Knex } from 'knex';
 
 const DEV_HOSTS = new Set([
   '',
@@ -23,16 +24,9 @@ export interface TenantPortalConfig {
   theme: TenantTheme;
 }
 
-const tenantSettingsQuery = (knex: Knex, tenant: string) =>
-  tenantDb(knex, tenant).table('tenant_settings');
-
 const PORTAL_DOMAIN_TENANT_DISCOVERY = 'tenant-discovery';
 
-async function getTenantSettings(tenantId: string) {
-  const tenantKnex = await getConnection(tenantId);
-  return tenantSettingsQuery(tenantKnex, tenantId)
-    .first();
-}
+const getTenantSettings = readTenantPortalSettings;
 
 function normalizePortalHost(domain: string): string {
   return domain
@@ -107,7 +101,7 @@ async function fetchTenantPortalConfig(domain: string): Promise<TenantPortalConf
     }
 
     const { tenantSettings, tenantId } = await lookupTenantSettingsByDomain(normalizedDomain);
-    if (!tenantSettings?.settings) {
+    if (!tenantSettings) {
       if (tenantId) {
         console.log('[getTenantBrandingByDomain] No tenant settings found for tenant:', tenantId);
       }
@@ -115,18 +109,18 @@ async function fetchTenantPortalConfig(domain: string): Promise<TenantPortalConf
     }
 
     const branding = scopeBrandingToEdition(
-      tenantSettings.settings.branding || null,
+      sanitizePortalBranding(tenantSettings.branding),
       isEnterprise,
     );
 
-    const locale = normalizeLocale(tenantSettings.settings.clientPortal?.defaultLocale)
-      ?? normalizeLocale(tenantSettings.settings.defaultLocale);
+    const locale = normalizeLocale(tenantSettings.clientPortalDefaultLocale)
+      ?? normalizeLocale(tenantSettings.defaultLocale);
 
     return {
       branding,
       locale,
       theme: isEnterprise
-        ? normalizeTenantTheme(tenantSettings.settings.theme)
+        ? normalizeTenantTheme(tenantSettings.theme)
         : DEFAULT_TENANT_THEME,
     };
   } catch (error) {
@@ -229,19 +223,19 @@ async function fetchTenantPortalConfigBySlug(slug: string): Promise<TenantPortal
     }
 
     const tenantSettings = await getTenantSettings(tenantId);
-    if (!tenantSettings?.settings) {
+    if (!tenantSettings) {
       return { branding: null, locale: null, theme: DEFAULT_TENANT_THEME };
     }
 
     return {
       branding: scopeBrandingToEdition(
-        tenantSettings.settings.branding || null,
+        sanitizePortalBranding(tenantSettings.branding),
         isEnterprise,
       ),
-      locale: normalizeLocale(tenantSettings.settings.clientPortal?.defaultLocale)
-        ?? normalizeLocale(tenantSettings.settings.defaultLocale),
+      locale: normalizeLocale(tenantSettings.clientPortalDefaultLocale)
+        ?? normalizeLocale(tenantSettings.defaultLocale),
       theme: isEnterprise
-        ? normalizeTenantTheme(tenantSettings.settings.theme)
+        ? normalizeTenantTheme(tenantSettings.theme)
         : DEFAULT_TENANT_THEME,
     };
   } catch (error) {
@@ -303,8 +297,8 @@ export async function getTenantLocaleBySlug(slug: string): Promise<SupportedLoca
 export async function getTenantLocaleByTenantId(tenantId: string): Promise<SupportedLocale | null> {
   try {
     const tenantSettings = await getTenantSettings(tenantId);
-    return normalizeLocale(tenantSettings?.settings?.clientPortal?.defaultLocale)
-      ?? normalizeLocale(tenantSettings?.settings?.defaultLocale);
+    return normalizeLocale(tenantSettings?.clientPortalDefaultLocale)
+      ?? normalizeLocale(tenantSettings?.defaultLocale);
   } catch (error) {
     console.error('[getTenantLocaleByTenantId] Error fetching locale:', error);
     return null;
@@ -322,16 +316,14 @@ export async function invalidateDomainBrandingCache(_domain: string): Promise<vo
  */
 export async function getTenantBrandingByTenantId(tenantId: string): Promise<TenantBranding | null> {
   try {
-    const knex = await getConnection(tenantId);
-    const tenantSettings = await tenantSettingsQuery(knex, tenantId)
-      .first();
+    const tenantSettings = await getTenantSettings(tenantId);
 
-    if (!tenantSettings?.settings) {
+    if (!tenantSettings) {
       console.log('[getTenantBrandingByTenantId] No tenant settings found for tenant:', tenantId);
       return null;
     }
 
-    return scopeBrandingToEdition(tenantSettings.settings.branding || null, isEnterprise);
+    return scopeBrandingToEdition(sanitizePortalBranding(tenantSettings.branding), isEnterprise);
   } catch (error) {
     console.error('[getTenantBrandingByTenantId] Error fetching branding:', error);
     return null;
