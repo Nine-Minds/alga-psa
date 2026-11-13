@@ -15,6 +15,8 @@ import {
   setCoManagedSeatBoardScope,
 } from '@alga-psa/co-managed';
 import { tenantDeletionOrder } from '@alga-psa/db';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -51,8 +53,11 @@ describeDb('co-managed seat ticket responsibility and handoff', { shuffle: false
   };
   const seat = async (tenant: string, arrangementId: string, state: 'invited' | 'active' | 'revoked' = 'active') => {
     const userId = await createUser(db, tenant);
-    await db('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId,
-      user_id: userId, state, revoked_at: state === 'revoked' ? new Date() : null });
+    await db.transaction(async trx => {
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await trx('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId,
+        user_id: userId, state, revoked_at: state === 'revoked' ? new Date() : null });
+    });
     return userId;
   };
   const ticket = async (w: World, options: { boardId?: string; clientId?: string; assignedTo?: string | null } = {}) => {
