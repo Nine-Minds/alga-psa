@@ -390,7 +390,7 @@ describe('profitability report actions', () => {
     expect(summary.materialCost).toBe(-500);
     const materialQuery = rawMock.mock.calls.find(([sql]) => sql.includes('WITH material_rows'));
     expect(materialQuery).toBeDefined();
-    expect(materialQuery![0]).toContain('SUM(sm.cogs_cost)');
+    expect(materialQuery![0]).toContain("WHEN sm.movement_type = 'return_restock' THEN -ABS(sm.cogs_cost)");
     expect(materialQuery![0]).toContain("sm.movement_type IN ('consume', 'return_restock')");
     expect(materialQuery![0]).toContain('sm.tenant = ?');
     expect(materialQuery![1]).toContain('tenant-1');
