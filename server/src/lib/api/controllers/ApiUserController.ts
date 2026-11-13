@@ -29,8 +29,8 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { createSystemContext, tenantDb } from '@alga-psa/db';
-import { ApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError, withApiKeyAuth, withQueryValidation } from '../middleware/apiMiddleware';
+import { assertUserRoleFloor, createSystemContext, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import { ApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError, withApiKeyAuth, withQueryValidation } from '../middleware/apiMiddleware';
 import { ZodError, z } from 'zod';
 
 export class ApiUserController extends ApiBaseController {
@@ -600,6 +600,21 @@ export class ApiUserController extends ApiBaseController {
           const knex = await getConnection(apiRequest.context!.tenant);
           await knex.transaction(async (trx) => {
             const db = tenantDb(trx, apiRequest.context!.tenant);
+
+            // The role floors (one role per user, one active MSP admin per
+            // tenant) are decided on the final set, inside this transaction —
+            // which is also what rejects an empty role_ids.
+            const floor = await assertUserRoleFloor(trx, apiRequest.context!.tenant, {
+              kind: 'set_roles',
+              userId: targetUserId,
+              roleIds: role_ids
+            });
+            if (isUserRoleFloorRejected(floor)) {
+              throw floor.violation === 'last_msp_admin'
+                ? new ConflictError(floor.message)
+                : new ValidationError(floor.message);
+            }
+
             // First remove all existing roles
             await db.table('user_roles')
               .where('user_id', targetUserId)

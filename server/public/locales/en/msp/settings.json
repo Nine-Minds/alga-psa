@@ -4123,7 +4123,9 @@
       "missingFieldNamed": "Missing required user role field: {{field}}.",
       "nameRequired": "Role name is required.",
       "builtInRename": "Built-in roles cannot be renamed.",
-      "duplicateName": "A role named \"{{name}}\" already exists for this portal."
+      "duplicateName": "A role named \"{{name}}\" already exists for this portal.",
+      "lastMspAdmin": "A tenant must keep at least one active MSP Admin user.",
+      "lastRole": "A user must keep at least one role. Assign another role first, then remove this one."
     },
     "secrets": {
       "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",

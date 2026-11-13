@@ -189,7 +189,7 @@
   {
     "id": "T022",
     "description": "Unit: audience truth table over audience, reader organization and requester flag, with inconsistent legacy rows resolving private; the SQL form agrees with the TypeScript form on the same rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F036",

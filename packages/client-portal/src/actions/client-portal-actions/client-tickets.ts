@@ -4,7 +4,7 @@ import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
-import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import { commentAudienceVisibleSql } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
@@ -418,7 +418,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where('c.ticket_id', ticketId)
         .where('c.is_internal', false)
         // Same audience predicate as the conversation read below: only requester-audience authors.
-        .whereRaw("(?) = 'requester'", [commentAudienceSql(trx, 'cut', 'cur', 'c')])
+        .whereRaw('?', [commentAudienceVisibleSql(trx, { kind: 'requester', tenant }, { thread: 'cut', root: 'cur', comment: 'c', ownerTenant: 'c.tenant' })])
         // Do not enumerate authors of scheduled/canceled comments before
         // publication — mirror the conversations query's publish_state gate.
         .where('c.publish_state', 'published');
@@ -500,7 +500,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         })
         // Audience is an additional restriction (never a grant): thread, root and comment flags must
         // agree on `requester`, so a damaged or relabelled row can only narrow what the portal sees.
-        .whereRaw("(?) = 'requester'", [commentAudienceSql(trx, 'ct', 'rc', 'comments')])
+        .whereRaw('?', [commentAudienceVisibleSql(trx, { kind: 'requester', tenant }, { thread: 'ct', root: 'rc', comment: 'comments', ownerTenant: 'comments.tenant' })])
         .orderBy('comments.created_at', 'asc');
 
       const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([

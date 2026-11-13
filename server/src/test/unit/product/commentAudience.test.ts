@@ -6,11 +6,14 @@ import {
   assertNativeEditKeepsAudience,
   assertReplyAudience,
   commentAudienceSql,
+  commentAudienceVisibleSql,
   isCommentAudienceVisible,
   nativeThreadAudience,
   resolveCommentAudience,
   resolveCommentAudienceForRead,
   type CommentAudience,
+  type CommentAudienceOwner,
+  type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import {
   registerWriteAdmissionResolver,
@@ -23,26 +26,105 @@ const OTHER = '22222222-2222-4222-8222-222222222222';
 const AUDIENCES: CommentAudience[] = ['requester', 'shared_it', 'organization_private'];
 
 describe('A1 comment audience truth table', () => {
-  it('visibility: audience x owner tenant x actor tenant x requester', () => {
-    const expected = (audience: CommentAudience, same: boolean, requester: boolean) => {
+  // T022 (F035-F038): audience x reader organization x requester.
+  const CLIENT = '33333333-3333-4333-8333-333333333333';
+  const OTHER_CLIENT = '44444444-4444-4444-8444-444444444444';
+  const owner: CommentAudienceOwner = { tenant: OWNER, clientId: CLIENT };
+  const READERS: Record<string, CommentAudienceReader> = {
+    'MSP staff': { kind: 'staff', tenant: OWNER },
+    'staff of another tenant': { kind: 'staff', tenant: OTHER },
+    "the client's seat technician": { kind: 'seat', tenant: OWNER, clientId: CLIENT },
+    "another client's seat technician": { kind: 'seat', tenant: OWNER, clientId: OTHER_CLIENT },
+    "another tenant's seat technician": { kind: 'seat', tenant: OTHER, clientId: CLIENT },
+    requester: { kind: 'requester', tenant: OWNER },
+  };
+  const VISIBLE: Record<string, CommentAudience[]> = {
+    'MSP staff': ['requester', 'shared_it', 'organization_private'],
+    'staff of another tenant': ['requester', 'shared_it'],
+    "the client's seat technician": ['requester', 'shared_it'],
+    "another client's seat technician": [],
+    "another tenant's seat technician": [],
+    requester: ['requester'],
+  };
+
+  it('visibility: audience x reader organization', () => {
+    for (const [name, reader] of Object.entries(READERS)) {
+      for (const audience of AUDIENCES) {
+        expect(isCommentAudienceVisible(audience, owner, reader), `${audience} for ${name}`).toBe(VISIBLE[name].includes(audience));
+      }
+    }
+  });
+
+  it('with no seat reader it is the old tenant comparison (single-tenant MSP, no seat arrangement)', () => {
+    // The predicate as it was before organizations: (audience, ownerTenant, actorTenant, requester).
+    const before = (audience: CommentAudience, ownerTenant: string, actorTenant: string, requester: boolean) => {
+      if (!ownerTenant || !actorTenant) return false;
       if (requester) return audience === 'requester';
-      if (audience === 'organization_private') return same;
-      return true;
+      return audience === 'requester' || audience === 'shared_it' || (audience === 'organization_private' && ownerTenant === actorTenant);
     };
     for (const audience of AUDIENCES) {
       for (const actor of [OWNER, OTHER]) {
         for (const requester of [false, true]) {
-          expect(isCommentAudienceVisible(audience, OWNER, actor, requester), `${audience} actor=${actor === OWNER ? 'owner' : 'other'} requester=${requester}`)
-            .toBe(expected(audience, actor === OWNER, requester));
+          for (const clientId of [CLIENT, null, undefined]) {
+            expect(isCommentAudienceVisible(audience, { tenant: OWNER, clientId }, { kind: requester ? 'requester' : 'staff', tenant: actor }),
+              `${audience} actor=${actor === OWNER ? 'owner' : 'other'} requester=${requester}`).toBe(before(audience, OWNER, actor, requester));
+          }
         }
       }
     }
   });
 
-  it('fails closed when a tenant or the audience is missing', () => {
-    expect(isCommentAudienceVisible('requester', '', OTHER)).toBe(false);
-    expect(isCommentAudienceVisible('requester', OWNER, '')).toBe(false);
-    expect(isCommentAudienceVisible('bogus' as CommentAudience, OWNER, OWNER)).toBe(false);
+  it('a legacy internal thread is private to a seat technician and never shared (F038)', () => {
+    const seat = READERS["the client's seat technician"];
+    const legacy = [
+      { collaboration_audience: null, is_internal: true, root_is_internal: true, comment_is_internal: true },
+      { is_internal: true },
+      { collaboration_audience: null, is_internal: true, root_is_internal: true, comment_is_internal: false },
+      { collaboration_audience: 'shared_it', is_internal: true, root_is_internal: false, comment_is_internal: true },
+    ];
+    for (const row of legacy) {
+      const audience = resolveCommentAudienceForRead(row);
+      expect(audience, JSON.stringify(row)).toBe('organization_private');
+      expect(isCommentAudienceVisible(audience, owner, seat), JSON.stringify(row)).toBe(false);
+      expect(isCommentAudienceVisible(audience, owner, READERS['MSP staff']), JSON.stringify(row)).toBe(true);
+    }
+  });
+
+  it('fails closed when the owner, the reader or the audience is missing', () => {
+    const staff = READERS['MSP staff'];
+    expect(isCommentAudienceVisible('requester', { tenant: '' }, staff)).toBe(false);
+    expect(isCommentAudienceVisible('requester', owner, { kind: 'staff', tenant: '' })).toBe(false);
+    expect(isCommentAudienceVisible('requester', owner, null)).toBe(false);
+    expect(isCommentAudienceVisible('requester', owner, undefined)).toBe(false);
+    expect(isCommentAudienceVisible('requester', owner, { kind: 'bogus', tenant: OWNER } as any)).toBe(false);
+    expect(isCommentAudienceVisible('bogus' as CommentAudience, owner, staff)).toBe(false);
+    // A seat technician needs both sides of the client comparison.
+    expect(isCommentAudienceVisible('requester', { tenant: OWNER }, READERS["the client's seat technician"])).toBe(false);
+    expect(isCommentAudienceVisible('requester', { tenant: OWNER, clientId: null }, { kind: 'seat', tenant: OWNER, clientId: '' })).toBe(false);
+    expect(isCommentAudienceVisible('requester', { tenant: OWNER, clientId: null }, { kind: 'seat', tenant: OWNER, clientId: null } as any)).toBe(false);
+  });
+
+  it('the SQL visibility form wraps the one audience expression and fails closed like the TypeScript form', () => {
+    const db = knex({ client: 'pg' });
+    const source = { thread: 'ct', root: 'rc', comment: 'c', ownerTenant: 'c.tenant', ownerClient: 't.client_id' };
+    const audienceSql = commentAudienceSql(db, 'ct', 'rc', 'c').toSQL().sql;
+    for (const reader of Object.values(READERS)) expect(commentAudienceVisibleSql(db, reader, source).toSQL().sql).toContain(audienceSql);
+    const seat = commentAudienceVisibleSql(db, READERS["the client's seat technician"], source).toSQL();
+    expect(seat.sql).toContain('"c"."tenant" = ?');
+    expect(seat.sql).toContain('"t"."client_id" IS NOT DISTINCT FROM ?');
+    expect(seat.bindings).toEqual([OWNER, CLIENT]);
+    const staff = commentAudienceVisibleSql(db, READERS['MSP staff'], source).toSQL();
+    expect(staff.sql).toContain(`<> 'organization_private' OR "c"."tenant" = ?`);
+    expect(staff.bindings).toEqual([OWNER]);
+    expect(commentAudienceVisibleSql(db, READERS.requester, source).toSQL().sql).toContain(`= 'requester'`);
+    const closed = [
+      commentAudienceVisibleSql(db, null, source),
+      commentAudienceVisibleSql(db, { kind: 'staff', tenant: '' }, source),
+      commentAudienceVisibleSql(db, { kind: 'bogus', tenant: OWNER } as any, source),
+      commentAudienceVisibleSql(db, { kind: 'seat', tenant: OWNER, clientId: '' }, source),
+      commentAudienceVisibleSql(db, READERS["the client's seat technician"], { ...source, ownerClient: undefined }),
+    ];
+    for (const raw of closed) expect(raw.toSQL().sql).toBe('FALSE');
   });
 
   it('NULL audience resolves through the legacy is_internal rule and never becomes shared_it', () => {
