@@ -2263,7 +2263,35 @@
         "outstandingItemsReconnect": "We wszystkich połączonych organizacjach. Te elementy są zachowywane do czasu ponownego połączenia z Xero.",
         "refreshTokenValidUntilProvider": "Autoryzacja {{provider}} ważna do {{date}}. Tokeny są odnawiane automatycznie.",
         "syncSucceeded": "Synchronizacja zakończona",
-        "syncStopped": "Synchronizacja zatrzymana"
+        "syncStopped": "Synchronizacja zatrzymana",
+        "erroredOpsDialogTitle": "Errored {{provider}} sync operations",
+        "erroredOpsDialogDescription": "Operations that failed or were skipped after repeated attempts.",
+        "erroredOpsOpen": "View errored operations",
+        "erroredOpsColItem": "Item",
+        "erroredOpsColOperation": "Operation",
+        "erroredOpsColError": "Error",
+        "erroredOpsColWhen": "When",
+        "erroredOpsColBatch": "Export batch",
+        "erroredOpsLoading": "Loading errored operations…",
+        "erroredOpsEmpty": "No errored operations.",
+        "erroredOpsLoadError": "Failed to load errored operations.",
+        "erroredOpsNoError": "No error details were recorded.",
+        "erroredOpsBatchLink": "View {{batch}} batch",
+        "erroredOpsClose": "Close",
+        "erroredOpsDeleted": {
+          "invoice": "Deleted invoice",
+          "credit_memo": "Deleted credit memo",
+          "vendor_bill": "Deleted vendor bill",
+          "other": "Unavailable item"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Export invoice",
+          "export_credit_memo": "Export credit memo",
+          "export_vendor_bill": "Export vendor bill",
+          "apply_credit": "Apply credit",
+          "record_payment": "Record payment",
+          "void_invoice": "Void invoice"
+        }
       },
       "itemImport": {
         "description": "Zaimportuj produkty i usługi z QuickBooks do katalogu usług Alga dla połączonej firmy QuickBooks. QuickBooks pozostanie źródłem danych referencyjnych dla nazw, stawek, kodów SKU, opisów i kosztów; metoda rozliczania, jednostka miary i typ usługi są ustawiane tutaj i od tej pory zarządzane przez Alga. Ten krok jest opcjonalny — można go pominąć przyciskiem Dalej.",

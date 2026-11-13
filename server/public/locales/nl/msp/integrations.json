@@ -2257,7 +2257,35 @@
         "outstandingItemsReconnect": "Voor alle gekoppelde organisaties. Deze items blijven bewaard totdat u Xero opnieuw verbindt.",
         "refreshTokenValidUntilProvider": "{{provider}}-autorisatie geldig tot {{date}}. Tokens worden automatisch vernieuwd.",
         "syncSucceeded": "Synchronisatie voltooid",
-        "syncStopped": "Synchronisatie gestopt"
+        "syncStopped": "Synchronisatie gestopt",
+        "erroredOpsDialogTitle": "Errored {{provider}} sync operations",
+        "erroredOpsDialogDescription": "Operations that failed or were skipped after repeated attempts.",
+        "erroredOpsOpen": "View errored operations",
+        "erroredOpsColItem": "Item",
+        "erroredOpsColOperation": "Operation",
+        "erroredOpsColError": "Error",
+        "erroredOpsColWhen": "When",
+        "erroredOpsColBatch": "Export batch",
+        "erroredOpsLoading": "Loading errored operations…",
+        "erroredOpsEmpty": "No errored operations.",
+        "erroredOpsLoadError": "Failed to load errored operations.",
+        "erroredOpsNoError": "No error details were recorded.",
+        "erroredOpsBatchLink": "View {{batch}} batch",
+        "erroredOpsClose": "Close",
+        "erroredOpsDeleted": {
+          "invoice": "Deleted invoice",
+          "credit_memo": "Deleted credit memo",
+          "vendor_bill": "Deleted vendor bill",
+          "other": "Unavailable item"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Export invoice",
+          "export_credit_memo": "Export credit memo",
+          "export_vendor_bill": "Export vendor bill",
+          "apply_credit": "Apply credit",
+          "record_payment": "Record payment",
+          "void_invoice": "Void invoice"
+        }
       },
       "itemImport": {
         "description": "Importeer uw QuickBooks-producten en -services in de Alga-servicecatalogus voor het verbonden QuickBooks-bedrijf. QuickBooks blijft de gezaghebbende bron voor namen, tarieven, SKU’s, beschrijvingen en kosten; de facturatiemethode, maateenheid en het servicetype worden hier ingesteld en daarna door Alga beheerd. Deze stap is optioneel — sla deze over met Volgende.",

@@ -835,6 +835,18 @@
     }
   },
   "invoicePreview": {
+    "syncFeedback": {
+      "synced": "Invoice synced to {{provider}}.",
+      "failed": "{{provider}} sync failed: {{reason}}",
+      "failedNoReason": "{{provider}} sync failed. Check the Errored ops list on the accounting integration page.",
+      "skipped": "Invoice was skipped and not sent to {{provider}}: {{reason}}",
+      "skippedNoReason": "Invoice was skipped and not sent to {{provider}}.",
+      "pending": "Invoice is queued for {{provider}} sync; it has not been processed yet.",
+      "unknown": "Could not determine whether the invoice was synced to {{provider}}.",
+      "notRun": "{{provider}} sync did not run: {{reason}}",
+      "notRunNoReason": "{{provider}} sync did not run.",
+      "error": "Sync failed: {{error}}"
+    },
     "sessionExpired": "La sesión expiró mientras se cargaba esta factura. Inicie sesión de nuevo y vuelva a cargar la vista previa.",
     "title": "Vista previa de factura",
     "templatePlaceholder": "Seleccionar plantilla de factura...",

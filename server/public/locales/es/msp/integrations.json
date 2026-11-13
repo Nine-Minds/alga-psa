@@ -2257,7 +2257,35 @@
         "outstandingItemsReconnect": "En todas las organizaciones vinculadas. Estos elementos se conservan hasta que vuelva a conectar Xero.",
         "refreshTokenValidUntilProvider": "Autorización de {{provider}} válida hasta {{date}}. Los tokens se renuevan automáticamente.",
         "syncSucceeded": "Sincronización completada",
-        "syncStopped": "Sincronización detenida"
+        "syncStopped": "Sincronización detenida",
+        "erroredOpsDialogTitle": "Errored {{provider}} sync operations",
+        "erroredOpsDialogDescription": "Operations that failed or were skipped after repeated attempts.",
+        "erroredOpsOpen": "View errored operations",
+        "erroredOpsColItem": "Item",
+        "erroredOpsColOperation": "Operation",
+        "erroredOpsColError": "Error",
+        "erroredOpsColWhen": "When",
+        "erroredOpsColBatch": "Export batch",
+        "erroredOpsLoading": "Loading errored operations…",
+        "erroredOpsEmpty": "No errored operations.",
+        "erroredOpsLoadError": "Failed to load errored operations.",
+        "erroredOpsNoError": "No error details were recorded.",
+        "erroredOpsBatchLink": "View {{batch}} batch",
+        "erroredOpsClose": "Close",
+        "erroredOpsDeleted": {
+          "invoice": "Deleted invoice",
+          "credit_memo": "Deleted credit memo",
+          "vendor_bill": "Deleted vendor bill",
+          "other": "Unavailable item"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Export invoice",
+          "export_credit_memo": "Export credit memo",
+          "export_vendor_bill": "Export vendor bill",
+          "apply_credit": "Apply credit",
+          "record_payment": "Record payment",
+          "void_invoice": "Void invoice"
+        }
       },
       "itemImport": {
         "description": "Importe sus productos y servicios de QuickBooks al catálogo de servicios de Alga para la empresa de QuickBooks conectada. QuickBooks seguirá siendo la fuente de referencia para nombres, tarifas, SKU, descripciones y costos; el método de facturación, la unidad de medida y el tipo de servicio se configuran aquí y después quedan administrados por Alga. Este paso es opcional; puede omitirlo con Siguiente.",

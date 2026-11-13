@@ -2280,7 +2280,35 @@
         "refreshTokenValidUntilProvider": "Auktorisering för {{provider}} är giltig till {{date}}. Token förnyas automatiskt.",
         "autoProvisionCustomersLabelProvider": "Skapa {{provider}}-kunder automatiskt",
         "syncSucceeded": "Synkroniseringen har slutförts",
-        "syncStopped": "Synkroniseringen har stoppats"
+        "syncStopped": "Synkroniseringen har stoppats",
+        "erroredOpsDialogTitle": "Errored {{provider}} sync operations",
+        "erroredOpsDialogDescription": "Operations that failed or were skipped after repeated attempts.",
+        "erroredOpsOpen": "View errored operations",
+        "erroredOpsColItem": "Item",
+        "erroredOpsColOperation": "Operation",
+        "erroredOpsColError": "Error",
+        "erroredOpsColWhen": "When",
+        "erroredOpsColBatch": "Export batch",
+        "erroredOpsLoading": "Loading errored operations…",
+        "erroredOpsEmpty": "No errored operations.",
+        "erroredOpsLoadError": "Failed to load errored operations.",
+        "erroredOpsNoError": "No error details were recorded.",
+        "erroredOpsBatchLink": "View {{batch}} batch",
+        "erroredOpsClose": "Close",
+        "erroredOpsDeleted": {
+          "invoice": "Deleted invoice",
+          "credit_memo": "Deleted credit memo",
+          "vendor_bill": "Deleted vendor bill",
+          "other": "Unavailable item"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Export invoice",
+          "export_credit_memo": "Export credit memo",
+          "export_vendor_bill": "Export vendor bill",
+          "apply_credit": "Apply credit",
+          "record_payment": "Record payment",
+          "void_invoice": "Void invoice"
+        }
       },
       "itemImport": {
         "description": "Importera QuickBooks-produkter och tjänster till Algas tjänstekatalog för det anslutna QuickBooks-företaget. QuickBooks förblir huvudkälla för namn, taxor, SKU:er, beskrivningar och kostnader. Debiteringsmetod, måttenhet och tjänstetyp anges här och hanteras därefter av Alga. Steget är valfritt – hoppa över det med Nästa.",

@@ -20,6 +20,7 @@ import { SyncOperationsRepository } from '../services/accountingSync/syncOperati
 import { SyncCycleRepository } from '../services/accountingSync/syncCycleRepository';
 import { SyncMappingLedger } from '../services/accountingSync/syncMappingLedger';
 import { WorkflowTaskSyncExceptionService } from '../services/accountingSync/syncExceptionService';
+import { isInvoiceSyncBlockedStatus } from '../lib/invoiceSyncEligibility';
 import { MAPPING_SYNC_STATUS, type AccountingSyncCycleRecord } from '../services/accountingSync/accountingSync.types';
 
 function isEnterpriseEdition(): boolean {
@@ -184,7 +185,7 @@ export const queueInvoiceSync = withAuth(async (
   { tenant },
   invoiceId: string,
   selection?: AccountingIntegrationSelection
-): Promise<{ queued: boolean; error?: string }> => {
+): Promise<{ queued: boolean; error?: string; opId?: string }> => {
   assertEnterpriseEdition();
   await checkExportsExecuteAccess(user);
   const { knex } = await createTenantKnex();
@@ -198,7 +199,23 @@ export const queueInvoiceSync = withAuth(async (
   }
   const target = resolution.target;
 
-  await new SyncOperationsRepository(knex).enqueue({
+  const invoice = await tenantDb(knex, tenant)
+    .table('invoices')
+    .where({ invoice_id: invoiceId })
+    .first('status');
+  if (!invoice) {
+    return { queued: false, error: 'Invoice not found.' };
+  }
+  if (isInvoiceSyncBlockedStatus(invoice.status)) {
+    return {
+      queued: false,
+      error: invoice.status === 'paid'
+        ? 'Paid invoices are not synced to the accounting provider.'
+        : 'Voided or cancelled invoices are not synced to the accounting provider.'
+    };
+  }
+
+  const op = await new SyncOperationsRepository(knex).enqueue({
     tenant,
     adapterType: target.integration.adapterType,
     targetRealm: target.integration.targetRealm,
@@ -207,7 +224,7 @@ export const queueInvoiceSync = withAuth(async (
     algaEntityId: invoiceId
   });
 
-  return { queued: true };
+  return { queued: true, opId: op.op_id };
 });
 
 /** Drift resolution: push Alga's version back to the provider (queues a re-export). */
@@ -532,6 +549,149 @@ export const getAccountingSyncHealth = withAuth(async (
     adapterType,
     organisationName
   };
+});
+
+export type InvoiceSyncOutcome =
+  | { outcome: 'synced' }
+  | { outcome: 'failed'; reason: string | null }
+  | { outcome: 'skipped'; reason: string | null }
+  | { outcome: 'pending' }
+  | { outcome: 'unknown' };
+
+/**
+ * What actually happened to the export op queued for one invoice. `done` is the
+ * only synced state. A pending op that already recorded an error was attempted
+ * and failed (it is retried by a later cycle) — reported as failed, never as
+ * success.
+ */
+export const getInvoiceSyncOutcome = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+  opId: string
+): Promise<InvoiceSyncOutcome> => {
+  assertEnterpriseEdition();
+  await checkExportsExecuteAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const op = await new SyncOperationsRepository(knex).getById(tenant, opId);
+  if (!op || op.alga_entity_type !== 'invoice' || op.alga_entity_id !== invoiceId) {
+    return { outcome: 'unknown' };
+  }
+  switch (op.status) {
+    case 'done':
+      return { outcome: 'synced' };
+    case 'failed':
+      return { outcome: 'failed', reason: op.last_error || null };
+    case 'skipped':
+      return { outcome: 'skipped', reason: op.last_error || null };
+    default:
+      return op.attempts > 0 && op.last_error
+        ? { outcome: 'failed', reason: op.last_error }
+        : { outcome: 'pending' };
+  }
+});
+
+export type ErroredSyncEntityKind = 'invoice' | 'credit_memo' | 'vendor_bill' | 'other';
+
+export interface ErroredSyncOperationRow {
+  opId: string;
+  entityType: string;
+  entityKind: ErroredSyncEntityKind;
+  /** Resolved on the server; null when the entity was deleted or has no display field. Never an ID. */
+  displayName: string | null;
+  operation: string;
+  status: 'failed' | 'skipped';
+  attempts: number;
+  lastError: string | null;
+  timestamp: string;
+  batchId: string | null;
+  batchLabel: string | null;
+  batchQueuedAt: string | null;
+}
+
+const ERRORED_OPS_LIMIT = 500;
+
+/** Failed + skipped sync operations behind the "Errored ops" badge, same scope. */
+export const getErroredSyncOperations = withAuth(async (
+  user,
+  { tenant },
+  selection: AccountingIntegrationSelection = {}
+): Promise<ErroredSyncOperationRow[]> => {
+  assertEnterpriseEdition();
+  await checkCatalogReadAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const target = await resolveSyncTarget(knex, tenant, selection);
+  const adapterType = target?.integration.adapterType ?? selection.preferredAdapterType ?? null;
+  const realm = target?.integration.targetRealm ?? null;
+  // Mirrors getAccountingSyncHealth: without a resolved adapter + realm the badge is 0.
+  if (!target || !realm || !adapterType) return [];
+
+  const ops = await new SyncOperationsRepository(knex).listErrored(tenant, adapterType, realm, {
+    limit: ERRORED_OPS_LIMIT
+  });
+  if (ops.length === 0) return [];
+
+  const idsOf = (type: string) => [...new Set(ops.filter((o) => o.alga_entity_type === type).map((o) => o.alga_entity_id))];
+  const invoiceIds = idsOf('invoice');
+  const billIds = idsOf('vendor_bill');
+  const db = tenantDb(knex, tenant);
+
+  // One batched query per entity type — never per row.
+  const [invoiceRows, billRows, batchRows] = await Promise.all([
+    invoiceIds.length
+      ? db.table('invoices').whereIn('invoice_id', invoiceIds).select('invoice_id', 'invoice_number', 'invoice_type')
+      : Promise.resolve([] as any[]),
+    billIds.length
+      ? db.table('vendor_bills').whereIn('bill_id', billIds).select('bill_id', 'bill_number')
+      : Promise.resolve([] as any[]),
+    invoiceIds.length
+      ? db.tenantJoin(db.table('accounting_export_lines as line'), 'accounting_export_batches as batch', 'line.batch_id', 'batch.batch_id')
+          .where({ 'batch.adapter_type': adapterType, 'batch.target_realm': realm })
+          .whereIn('line.invoice_id', invoiceIds)
+          .orderBy('batch.created_at', 'desc')
+          .select('line.invoice_id', 'batch.batch_id', 'batch.export_type', 'batch.queued_at')
+      : Promise.resolve([] as any[])
+  ]);
+
+  const invoices = new Map<string, any>(invoiceRows.map((r: any) => [r.invoice_id, r]));
+  const bills = new Map<string, any>(billRows.map((r: any) => [r.bill_id, r]));
+  const latestBatch = new Map<string, any>();
+  for (const row of batchRows as any[]) {
+    if (!latestBatch.has(row.invoice_id)) latestBatch.set(row.invoice_id, row);
+  }
+
+  return ops.map((op): ErroredSyncOperationRow => {
+    let entityKind: ErroredSyncEntityKind = 'other';
+    let displayName: string | null = null;
+    let batch: any = null;
+    if (op.alga_entity_type === 'invoice') {
+      const invoice = invoices.get(op.alga_entity_id);
+      entityKind = invoice?.invoice_type === 'credit_note' || op.operation === 'export_credit_memo' ? 'credit_memo' : 'invoice';
+      displayName = invoice?.invoice_number ?? null;
+      batch = latestBatch.get(op.alga_entity_id) ?? null;
+    } else if (op.alga_entity_type === 'vendor_bill') {
+      entityKind = 'vendor_bill';
+      displayName = bills.get(op.alga_entity_id)?.bill_number ?? null;
+    }
+    // LEVERAGE: pattern sync-entity-display-name — other op entity types (client, service, credit_application,
+    // invoice_payment, ...) have no resolver here; they render a generic placeholder, never the ID.
+    return {
+      opId: op.op_id,
+      entityType: op.alga_entity_type,
+      entityKind,
+      displayName,
+      operation: op.operation,
+      status: op.status as 'failed' | 'skipped',
+      attempts: op.attempts,
+      lastError: op.last_error,
+      timestamp: String(op.processed_at ?? op.created_at),
+      batchId: batch?.batch_id ?? null,
+      batchLabel: batch ? String(batch.export_type) : null,
+      batchQueuedAt: batch?.queued_at ? String(batch.queued_at) : null
+    };
+  });
 });
 
 /** Best-effort read of QBO 'Automatically apply credits'; null when unreadable. */

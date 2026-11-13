@@ -14,7 +14,8 @@ vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: { marker: 'knex' } })),
-  tenantDb: vi.fn(),
+  // queueInvoiceSync reads the invoice status; a sendable invoice keeps these scope tests on the enqueue path.
+  tenantDb: vi.fn(() => ({ table: () => ({ where: () => ({ first: async () => ({ status: 'sent' }) }) }) })),
   writeAccountingAudit: vi.fn(async () => undefined)
 }));
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({

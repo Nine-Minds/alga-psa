@@ -907,6 +907,18 @@
       },
       "change": "⟦{{from}} → {{to}}⟧",
       "none": "⟦ƞȯƞḗ⟧"
+    },
+    "syncFeedback": {
+      "synced": "⟦Īƞṽȯīƈḗ şẏƞƈḗḓ ŧȯ {{provider}}.⟧",
+      "failed": "⟦{{provider}} şẏƞƈ ƒȧīŀḗḓ: {{reason}}⟧",
+      "failedNoReason": "⟦{{provider}} şẏƞƈ ƒȧīŀḗḓ. Ƈħḗƈķ ŧħḗ Ḗřřȯřḗḓ ȯƥş ŀīşŧ ȯƞ ŧħḗ ȧƈƈȯŭƞŧīƞɠ īƞŧḗɠřȧŧīȯƞ ƥȧɠḗ.⟧",
+      "skipped": "⟦Īƞṽȯīƈḗ ẇȧş şķīƥƥḗḓ ȧƞḓ ƞȯŧ şḗƞŧ ŧȯ {{provider}}: {{reason}}⟧",
+      "skippedNoReason": "⟦Īƞṽȯīƈḗ ẇȧş şķīƥƥḗḓ ȧƞḓ ƞȯŧ şḗƞŧ ŧȯ {{provider}}.⟧",
+      "pending": "⟦Īƞṽȯīƈḗ īş ʠŭḗŭḗḓ ƒȯř {{provider}} şẏƞƈ; īŧ ħȧş ƞȯŧ ƀḗḗƞ ƥřȯƈḗşşḗḓ ẏḗŧ.⟧",
+      "unknown": "⟦Ƈȯŭŀḓ ƞȯŧ ḓḗŧḗřḿīƞḗ ẇħḗŧħḗř ŧħḗ īƞṽȯīƈḗ ẇȧş şẏƞƈḗḓ ŧȯ {{provider}}.⟧",
+      "notRun": "⟦{{provider}} şẏƞƈ ḓīḓ ƞȯŧ řŭƞ: {{reason}}⟧",
+      "notRunNoReason": "⟦{{provider}} şẏƞƈ ḓīḓ ƞȯŧ řŭƞ.⟧",
+      "error": "⟦Şẏƞƈ ƒȧīŀḗḓ: {{error}}⟧"
     }
   },
   "templateEditor": {

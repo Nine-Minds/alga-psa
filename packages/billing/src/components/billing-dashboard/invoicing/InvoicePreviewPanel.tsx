@@ -43,9 +43,11 @@ import {
 import {
   queueInvoiceSync,
   runAccountingSyncNow,
+  getInvoiceSyncOutcome,
   resolveAccountingDriftReExport,
   resolveAccountingDriftAccept,
 } from '../../../actions/accountingSyncActions';
+import { isInvoiceSyncBlockedStatus } from '../../../lib/invoiceSyncEligibility';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -117,7 +119,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DraftInvoiceDetailsSummary | null>(draftInvoiceSummary);
   const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
   const [syncActionLoading, setSyncActionLoading] = useState(false);
-  const [syncActionFeedback, setSyncActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [syncActionFeedback, setSyncActionFeedback] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
@@ -182,6 +184,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
   const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
   const syncProviderLabel = syncStatus?.provider === 'xero' ? 'Xero' : 'QuickBooks';
+  const invoiceStatus = invoiceSummary?.status ?? (detailedInvoiceData as any)?.status ?? null;
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -593,12 +596,12 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         )}
 
         {syncActionFeedback && (
-          <Alert variant={syncActionFeedback.type === 'success' ? 'success' : 'destructive'} className="mb-4">
+          <Alert variant={syncActionFeedback.type === 'success' ? 'success' : syncActionFeedback.type === 'warning' ? 'warning' : 'destructive'} className="mb-4">
             <AlertDescription className="text-sm">{syncActionFeedback.message}</AlertDescription>
           </Alert>
         )}
 
-        {!syncHidden && invoiceId && syncStatus && (
+        {!syncHidden && invoiceId && syncStatus && !isInvoiceSyncBlockedStatus(invoiceStatus) && (
           <div className="flex flex-wrap gap-2 mb-4">
             <Button
               id="invoice-sync-now-button"
@@ -609,12 +612,73 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 if (!invoiceId) return;
                 setSyncActionLoading(true);
                 setSyncActionFeedback(null);
+                const provider = syncProviderLabel;
                 try {
-                  await queueInvoiceSync(invoiceId);
-                  await runAccountingSyncNow();
-                  setSyncActionFeedback({ type: 'success', message: `Invoice queued for ${syncProviderLabel} sync.` });
+                  const selection = syncStatus.provider
+                    ? { preferredAdapterType: syncStatus.provider === 'xero' ? 'xero' as const : 'quickbooks_online' as const }
+                    : undefined;
+                  const queued = await queueInvoiceSync(invoiceId, selection);
+                  if (isReturnedActionError(queued)) {
+                    setSyncActionFeedback({ type: 'error', message: getErrorMessage(queued) });
+                    return;
+                  }
+                  if (!queued.queued || !queued.opId) {
+                    setSyncActionFeedback({
+                      type: 'error',
+                      message: queued.error ?? t('invoicePreview.syncFeedback.unknown', { provider, defaultValue: 'Could not determine whether the invoice was synced to {{provider}}.' })
+                    });
+                    return;
+                  }
+                  const cycle = await runAccountingSyncNow(selection);
+                  if (isReturnedActionError(cycle)) {
+                    setSyncActionFeedback({ type: 'error', message: getErrorMessage(cycle) });
+                    return;
+                  }
+                  if (!cycle.ran) {
+                    setSyncActionFeedback({
+                      type: 'warning',
+                      message: cycle.error
+                        ? t('invoicePreview.syncFeedback.notRun', { provider, reason: cycle.error, defaultValue: '{{provider}} sync did not run: {{reason}}' })
+                        : t('invoicePreview.syncFeedback.notRunNoReason', { provider, defaultValue: '{{provider}} sync did not run.' })
+                    });
+                    return;
+                  }
+                  const result = await getInvoiceSyncOutcome(invoiceId, queued.opId);
+                  if (isReturnedActionError(result)) {
+                    setSyncActionFeedback({ type: 'error', message: getErrorMessage(result) });
+                    return;
+                  }
+                  switch (result.outcome) {
+                    case 'synced':
+                      setSyncActionFeedback({ type: 'success', message: t('invoicePreview.syncFeedback.synced', { provider, defaultValue: 'Invoice synced to {{provider}}.' }) });
+                      break;
+                    case 'failed':
+                      setSyncActionFeedback({
+                        type: 'error',
+                        message: result.reason
+                          ? t('invoicePreview.syncFeedback.failed', { provider, reason: result.reason, defaultValue: '{{provider}} sync failed: {{reason}}' })
+                          : t('invoicePreview.syncFeedback.failedNoReason', { provider, defaultValue: '{{provider}} sync failed. Check the Errored ops list on the accounting integration page.' })
+                      });
+                      break;
+                    case 'skipped':
+                      setSyncActionFeedback({
+                        type: 'warning',
+                        message: result.reason
+                          ? t('invoicePreview.syncFeedback.skipped', { provider, reason: result.reason, defaultValue: 'Invoice was skipped and not sent to {{provider}}: {{reason}}' })
+                          : t('invoicePreview.syncFeedback.skippedNoReason', { provider, defaultValue: 'Invoice was skipped and not sent to {{provider}}.' })
+                      });
+                      break;
+                    case 'pending':
+                      setSyncActionFeedback({ type: 'warning', message: t('invoicePreview.syncFeedback.pending', { provider, defaultValue: 'Invoice is queued for {{provider}} sync; it has not been processed yet.' }) });
+                      break;
+                    default:
+                      setSyncActionFeedback({ type: 'warning', message: t('invoicePreview.syncFeedback.unknown', { provider, defaultValue: 'Could not determine whether the invoice was synced to {{provider}}.' }) });
+                  }
                 } catch (err) {
-                  setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Sync failed.' });
+                  setSyncActionFeedback({
+                    type: 'error',
+                    message: t('invoicePreview.syncFeedback.error', { error: err instanceof Error ? err.message : String(err), defaultValue: 'Sync failed: {{error}}' })
+                  });
                 } finally {
                   setSyncActionLoading(false);
                 }
