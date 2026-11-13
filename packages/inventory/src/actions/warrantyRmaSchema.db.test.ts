@@ -193,6 +193,6 @@ describe('T012 rma_events is append-only', () => {
         if (/\.insert\(/.test(s)) inserters.push(path.relative(REPO, f));
       }
     }
-    expect([...new Set(inserters)]).toEqual(['packages/inventory/src/lib/rma/recordRmaEvent.ts']);
+    expect([...new Set(inserters)]).toEqual(['shared/lib/rma/recordRmaEvent.ts']);
   });
 });

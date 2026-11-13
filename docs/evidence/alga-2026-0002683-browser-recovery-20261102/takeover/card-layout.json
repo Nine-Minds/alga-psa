@@ -1,0 +1,668 @@
+{
+  "before": {
+    "timestamp": "2026-11-02T17:35:32.426Z",
+    "windowId": "window-1-1793580971518",
+    "focused": false,
+    "activeSpaceId": "7bde1750-8419-4b2d-9003-2a7397645a1f",
+    "activeTabId": "f536897d-f1ff-41ce-9106-420e0aafc2c8",
+    "focusedPaneId": "lightweight-review-guide-643ed6e3-de5e-48a4-9239-1255c6bcb257-ts_robert-X670E-Pro-RS",
+    "pinnedSpaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+    "cardTabs": [
+      {
+        "id": "8d252cb3-78cc-4e30-94da-14565106c3cf",
+        "title": "Tab 2297",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "c8b5a26d-b238-4df9-87f0-4d0b95e3b67d",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+        }
+      },
+      {
+        "id": "d82ffbfc-e0ae-4cf5-908d-b45ced84a2e8",
+        "title": "Tab 2298",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "3433cd20-0467-480e-82db-db8263b998f2",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+        }
+      },
+      {
+        "id": "4c723e2f-2bff-44d4-9761-c8c9af6c457d",
+        "title": "Tab 2299",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "3d19d33a-1fac-4b2f-a917-3f57cc7d7f8b",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin?smoke=1715"
+        }
+      },
+      {
+        "id": "1d7870ad-c887-49a7-a763-0235776e06ea",
+        "title": "Tab 2306",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "pinned-visible",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 986,
+            "y": 65,
+            "width": 1818,
+            "height": 1070
+          },
+          "visible": true
+        },
+        "panes": {
+          "kind": "pane-tabs",
+          "id": "1211444d-f70d-4182-96b3-33fd9c33c18e",
+          "activeTabId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+          "tabs": [
+            {
+              "id": "376c175b-b142-46db-b907-5be706188acf",
+              "active": false,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": false
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "376c175b-b142-46db-b907-5be706188acf",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": false
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+              }
+            },
+            {
+              "id": "c8403826-ff91-488f-aa28-8447b4f96c06",
+              "active": true,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": true
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "c8403826-ff91-488f-aa28-8447b4f96c06",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": true
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "diagnostic": {
+    "timestamp": "2026-11-02T17:35:32.937Z",
+    "windowId": "window-1-1793580971518",
+    "focused": false,
+    "activeSpaceId": "7bde1750-8419-4b2d-9003-2a7397645a1f",
+    "activeTabId": "f536897d-f1ff-41ce-9106-420e0aafc2c8",
+    "focusedPaneId": "lightweight-review-guide-643ed6e3-de5e-48a4-9239-1255c6bcb257-ts_robert-X670E-Pro-RS",
+    "pinnedSpaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+    "cardTabs": [
+      {
+        "id": "8d252cb3-78cc-4e30-94da-14565106c3cf",
+        "title": "Tab 2297",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "c8b5a26d-b238-4df9-87f0-4d0b95e3b67d",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+        }
+      },
+      {
+        "id": "d82ffbfc-e0ae-4cf5-908d-b45ced84a2e8",
+        "title": "Tab 2298",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "3433cd20-0467-480e-82db-db8263b998f2",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+        }
+      },
+      {
+        "id": "4c723e2f-2bff-44d4-9761-c8c9af6c457d",
+        "title": "Tab 2299",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "3d19d33a-1fac-4b2f-a917-3f57cc7d7f8b",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin?smoke=1715"
+        }
+      },
+      {
+        "id": "1d7870ad-c887-49a7-a763-0235776e06ea",
+        "title": "Tab 2306",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "pinned-visible",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 986,
+            "y": 65,
+            "width": 1818,
+            "height": 1070
+          },
+          "visible": true
+        },
+        "panes": {
+          "kind": "pane-tabs",
+          "id": "1211444d-f70d-4182-96b3-33fd9c33c18e",
+          "activeTabId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+          "tabs": [
+            {
+              "id": "376c175b-b142-46db-b907-5be706188acf",
+              "active": false,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": false
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "376c175b-b142-46db-b907-5be706188acf",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": false
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+              }
+            },
+            {
+              "id": "c8403826-ff91-488f-aa28-8447b4f96c06",
+              "active": false,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": false
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "c8403826-ff91-488f-aa28-8447b4f96c06",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": false
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E"
+              }
+            },
+            {
+              "id": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+              "active": true,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": true
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": true
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "after": {
+    "timestamp": "2026-11-02T17:35:33.309Z",
+    "windowId": "window-1-1793580971518",
+    "focused": false,
+    "activeSpaceId": "7bde1750-8419-4b2d-9003-2a7397645a1f",
+    "activeTabId": "f536897d-f1ff-41ce-9106-420e0aafc2c8",
+    "focusedPaneId": "lightweight-review-guide-643ed6e3-de5e-48a4-9239-1255c6bcb257-ts_robert-X670E-Pro-RS",
+    "pinnedSpaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+    "cardTabs": [
+      {
+        "id": "8d252cb3-78cc-4e30-94da-14565106c3cf",
+        "title": "Tab 2297",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "c8b5a26d-b238-4df9-87f0-4d0b95e3b67d",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+        }
+      },
+      {
+        "id": "d82ffbfc-e0ae-4cf5-908d-b45ced84a2e8",
+        "title": "Tab 2298",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "3433cd20-0467-480e-82db-db8263b998f2",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+        }
+      },
+      {
+        "id": "4c723e2f-2bff-44d4-9761-c8c9af6c457d",
+        "title": "Tab 2299",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "inactive",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 168,
+            "y": 38,
+            "width": 2636,
+            "height": 1097
+          },
+          "visible": false
+        },
+        "panes": {
+          "kind": "browser",
+          "id": "3d19d33a-1fac-4b2f-a917-3f57cc7d7f8b",
+          "dom": {
+            "found": true,
+            "rect": {
+              "x": 168,
+              "y": 38,
+              "width": 2636,
+              "height": 1097
+            },
+            "visible": false
+          },
+          "anchor": {
+            "found": false
+          },
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin?smoke=1715"
+        }
+      },
+      {
+        "id": "1d7870ad-c887-49a7-a763-0235776e06ea",
+        "title": "Tab 2306",
+        "spaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+        "region": "pinned-visible",
+        "dom": {
+          "found": true,
+          "rect": {
+            "x": 986,
+            "y": 65,
+            "width": 1818,
+            "height": 1070
+          },
+          "visible": true
+        },
+        "panes": {
+          "kind": "pane-tabs",
+          "id": "1211444d-f70d-4182-96b3-33fd9c33c18e",
+          "activeTabId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+          "tabs": [
+            {
+              "id": "376c175b-b142-46db-b907-5be706188acf",
+              "active": false,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": false
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "376c175b-b142-46db-b907-5be706188acf",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": false
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+              }
+            },
+            {
+              "id": "c8403826-ff91-488f-aa28-8447b4f96c06",
+              "active": false,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": false
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "c8403826-ff91-488f-aa28-8447b4f96c06",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": false
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E"
+              }
+            },
+            {
+              "id": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+              "active": true,
+              "dom": {
+                "found": true,
+                "rect": {
+                  "x": 987,
+                  "y": 98,
+                  "width": 1817,
+                  "height": 1038
+                },
+                "visible": true
+              },
+              "tree": {
+                "kind": "browser",
+                "id": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+                "dom": {
+                  "found": true,
+                  "rect": {
+                    "x": 987,
+                    "y": 98,
+                    "width": 1817,
+                    "height": 1038
+                  },
+                  "visible": true
+                },
+                "anchor": {
+                  "found": false
+                },
+                "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "userFocusUnchanged": true,
+  "freshPaneId": "0bc994e8-aab7-4f56-a707-f94f6742349b"
+}

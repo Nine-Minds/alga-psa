@@ -218,6 +218,30 @@ describe('warranty claims (C5)', () => {
     expect(await counts()).toEqual(before);
   });
 
+  it('refuses warranty transitions for a case without an authorizable asset before mutation or publication', async () => {
+    const rmaId = randomUUID();
+    await knex('rma_cases').insert({
+      tenant: holder.tenant,
+      rma_id: rmaId,
+      rma_number: `RMA-${rmaId.slice(0, 8)}`,
+      status: 'warranty_review',
+      asset_id: null,
+      returned_unit_id: null,
+    });
+    holder.grants = new Set(['inventory:update', 'asset:update']);
+
+    const caseBefore = await rmaRow(rmaId);
+    const historyBefore = await events(rmaId);
+    const publishedBefore = [...published.events];
+    const result = await denyWarrantyClaim(rmaId, { denial_reason: 'not authorizable' });
+
+    expect(result).toHaveProperty('actionError');
+    expect(await rmaRow(rmaId)).toEqual(caseBefore);
+    expect(await events(rmaId)).toEqual(historyBefore);
+    expect(historyBefore).toHaveLength(0);
+    expect(published.events).toEqual(publishedBefore);
+  });
+
   it('credit disposes the custody episode; repair comes back through the office', async () => {
     const a1 = await newAsset();
     const { custody } = await inCustody(a1);
@@ -275,8 +299,35 @@ describe('warranty claims (C5)', () => {
     expect(await denyWarrantyClaim(c.rma_id, { denial_reason: 'n' })).toHaveProperty('permissionError');
     holder.grants = new Set(['inventory:update', 'asset:update']);
     denied.assetIds.add(assetId);
+    const priorEvents = await events(c.rma_id);
     expect(await denyWarrantyClaim(c.rma_id, { denial_reason: 'n' })).toHaveProperty('actionError');
     expect((await rmaRow(c.rma_id)).status).toBe('warranty_review');
+    expect(await events(c.rma_id)).toEqual(priorEvents);
+
+    const hiddenAsset = await newAsset();
+    await inCustody(hiddenAsset);
+    denied.assetIds.add(hiddenAsset);
+    const priorCaseCount = await knex('rma_cases').where({ tenant: holder.tenant }).count('* as count').first();
+    const priorCases = Number(priorCaseCount?.count ?? 0);
+    holder.grants = new Set(['inventory:create', 'asset:update']);
+    expect(await openWarrantyClaim({ asset_id: hiddenAsset, reason: 'hidden' })).toHaveProperty('actionError');
+    const currentCaseCount = await knex('rma_cases').where({ tenant: holder.tenant }).count('* as count').first();
+    expect(Number(currentCaseCount?.count ?? 0)).toBe(priorCases);
+
+    holder.grants = new Set(['inventory:update', 'asset:update']);
+    const otherTenant = await createInventoryTestTenant(knex);
+    const foreignRmaId = randomUUID();
+    await knex('rma_cases').insert({
+      tenant: otherTenant,
+      rma_id: foreignRmaId,
+      rma_number: `RMA-${foreignRmaId.slice(0, 8)}`,
+      status: 'warranty_review',
+    });
+    expect(await denyWarrantyClaim(foreignRmaId, { denial_reason: 'cross-tenant attempt' })).toMatchObject({
+      messageKey: 'features/inventory:errors.rma.caseNotFound',
+    });
+    expect(await knex('rma_cases').where({ tenant: otherTenant, rma_id: foreignRmaId }).first()).toMatchObject({ status: 'warranty_review' });
+
     denied.assetIds.clear();
     ok(await denyWarrantyClaim(c.rma_id, { denial_reason: 'n' }));
   });
