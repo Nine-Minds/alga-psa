@@ -1,10 +1,13 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
 import type { EmailAttachment } from '../../../types/email.types';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { isProtectedDocumentUrl, referencedDocumentFileId } from '../../notifications/ticketEmailContentPolicy';
 
-const IMG_SRC_REGEX = /<img\b[^>]*\bsrc=(["'])(.*?)\1/gi;
-const DOCUMENT_VIEW_PATH_REGEX = /^\/api\/documents\/view\/([^/?#]+)$/i;
+const IMG_SRC_REGEX = /<img\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1/gi;
+const IMG_TAG_REGEX = /<img\b[^>]*>/gi;
+const IMG_SRC_ATTRIBUTE_REGEX = /\bsrc\s*=\s*(["'])(.*?)\1/i;
 const DEFAULT_MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_MAX_INLINE_IMAGE_TOTAL_BYTES = 15 * 1024 * 1024;
 const DEFAULT_MAX_INLINE_IMAGE_COUNT = 10;
@@ -12,13 +15,18 @@ const DEFAULT_MAX_INLINE_IMAGE_COUNT = 10;
 export interface InlineImageRewriteOutcome {
   sourceUrl: string;
   resolvedFileId?: string;
-  strategy: 'cid' | 'url-fallback';
+  strategy: 'cid' | 'url-fallback' | 'placeholder';
   reason:
     | 'converted_to_cid'
+    | 'audience_not_internal'
     | 'not_document_view_url'
+    | 'unverified_document_url'
     | 'missing_file_id'
     | 'not_ticket_document'
     | 'non_image_document'
+    | 'authorization_denied'
+    | 'attachments_not_supported'
+    | 'attachment_type_blocked'
     | 'attachment_count_exceeded'
     | 'attachment_over_max_bytes'
     | 'attachment_total_bytes_exceeded'
@@ -29,6 +37,14 @@ interface InlineImageRewriteLimits {
   maxInlineImageBytes: number;
   maxInlineImageTotalBytes: number;
   maxInlineImageCount: number;
+}
+
+export interface TicketInlineImageDocument {
+  document_id: string;
+  document_name: string | null;
+  file_id: string;
+  mime_type: string | null;
+  file_size: number | string | null;
 }
 
 function parsePositiveInteger(
@@ -100,24 +116,27 @@ export function extractImageSourcesFromHtml(html: string): string[] {
 }
 
 export function extractDocumentViewFileId(src: string): string | null {
-  if (!src || typeof src !== 'string') return null;
-
-  try {
-    const url = new URL(src, 'https://example.invalid');
-    const match = DOCUMENT_VIEW_PATH_REGEX.exec(url.pathname);
-    if (!match?.[1]) return null;
-    return decodeURIComponent(match[1]);
-  } catch {
-    return null;
-  }
+  return referencedDocumentFileId(src, 'view');
 }
 
-function rewriteHtmlImageSources(html: string, replacementMap: Map<string, string>): string {
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character]!);
+}
+
+function rewriteHtmlImageSources(
+  html: string,
+  replacementMap: Map<string, string | null>,
+  missingImageText: string,
+): string {
   if (replacementMap.size === 0) return html;
-  return html.replace(IMG_SRC_REGEX, (fullMatch: string, quote: string, srcValue: string) => {
-    const replacement = replacementMap.get(srcValue.trim());
-    if (!replacement) return fullMatch;
-    return fullMatch.replace(`${quote}${srcValue}${quote}`, `${quote}${replacement}${quote}`);
+  return html.replace(IMG_TAG_REGEX, (tag: string) => {
+    const source = IMG_SRC_ATTRIBUTE_REGEX.exec(tag);
+    if (!source || !replacementMap.has(source[2].trim())) return tag;
+    const replacement = replacementMap.get(source[2].trim());
+    if (!replacement) return `<span>${escapeHtml(missingImageText)}</span>`;
+    return tag.replace(IMG_SRC_ATTRIBUTE_REGEX, `src="${escapeHtml(replacement)}"`);
   });
 }
 
@@ -135,8 +154,16 @@ export async function rewriteTicketCommentImagesToCid(params: {
   tenantId: string;
   ticketId: string;
   html: string;
+  authorizeDocument: (documentId: string, document: TicketInlineImageDocument) => Promise<boolean>;
+  missingImageText: string;
+  allowInlineImages: boolean;
+  supportsAttachments: boolean;
+  blockedAttachmentExtensions?: readonly string[];
   limits?: Partial<InlineImageRewriteLimits>;
 }): Promise<RewriteTicketCommentImagesResult> {
+  if (!params.missingImageText.trim()) {
+    throw new Error('An unavailable inline-image marker is required');
+  }
   const limits = resolveInlineImageRewriteLimits(params.limits);
   const imageSources = extractImageSourcesFromHtml(params.html);
   if (imageSources.length === 0) {
@@ -149,15 +176,24 @@ export async function rewriteTicketCommentImagesToCid(params: {
 
   const uniqueSources = Array.from(new Set(imageSources));
   const sourceFileIds = new Map<string, string>();
+  const replacementMap = new Map<string, string | null>();
   const outcomes: InlineImageRewriteOutcome[] = [];
 
   for (const source of uniqueSources) {
+    if (!params.allowInlineImages) {
+      replacementMap.set(source, null);
+      outcomes.push({ sourceUrl: source, strategy: 'placeholder', reason: 'audience_not_internal' });
+      continue;
+    }
     const fileId = extractDocumentViewFileId(source);
     if (!fileId) {
+      const protectedDocument = isProtectedDocumentUrl(source);
+      const externallyRenderable = !protectedDocument && /^(?:https?:\/\/|data:image\/|cid:)/i.test(source);
+      if (!externallyRenderable) replacementMap.set(source, null);
       outcomes.push({
         sourceUrl: source,
-        strategy: 'url-fallback',
-        reason: 'not_document_view_url',
+        strategy: externallyRenderable ? 'url-fallback' : 'placeholder',
+        reason: protectedDocument ? 'unverified_document_url' : 'not_document_view_url',
       });
       continue;
     }
@@ -166,7 +202,7 @@ export async function rewriteTicketCommentImagesToCid(params: {
 
   if (sourceFileIds.size === 0) {
     return {
-      html: params.html,
+      html: rewriteHtmlImageSources(params.html, replacementMap, params.missingImageText),
       attachments: [],
       outcomes,
     };
@@ -177,90 +213,101 @@ export async function rewriteTicketCommentImagesToCid(params: {
   const ticketImageDocumentsQuery = db.table('documents as d');
   db.tenantJoin(ticketImageDocumentsQuery, 'document_associations as da', 'da.document_id', 'd.document_id');
 
-  const ticketImageDocuments = await ticketImageDocumentsQuery
+  const ticketImageDocuments: TicketInlineImageDocument[] = await ticketImageDocumentsQuery
     .whereIn('d.file_id', fileIds)
     .andWhere('da.entity_type', 'ticket')
     .andWhere('da.entity_id', params.ticketId)
     .select('d.document_id', 'd.document_name', 'd.file_id', 'd.mime_type', 'd.file_size');
 
   const managedFiles = ticketImageDocuments.length ? await db.table('ticket_comment_attachments')
-    .whereIn('document_id', ticketImageDocuments.map((doc: any) => doc.document_id)).select('document_id') : [];
+    .whereIn('document_id', ticketImageDocuments.map(doc => doc.document_id)).select('document_id') : [];
   const managedIds = new Set(managedFiles.map(row => row.document_id));
   const documentByFileId = new Map(
     ticketImageDocuments
-      .filter((doc: any) => !managedIds.has(doc.document_id))
-      .filter((doc: any) => typeof doc.file_id === 'string' && doc.file_id.length > 0)
-      .map((doc: any) => [doc.file_id as string, doc])
+      .filter(doc => !managedIds.has(doc.document_id))
+      .filter(doc => typeof doc.file_id === 'string' && doc.file_id.length > 0)
+      .map(doc => [doc.file_id, doc])
   );
 
   const attachments: EmailAttachment[] = [];
   let totalInlineAttachmentBytes = 0;
-  const replacementMap = new Map<string, string>();
+  const decisions = new Map<string, {
+    replacement: string | null;
+    strategy: 'cid' | 'placeholder';
+    reason: InlineImageRewriteOutcome['reason'];
+  }>();
 
   for (const [source, fileId] of sourceFileIds.entries()) {
+    const record = (decision: {
+      replacement: string | null;
+      strategy: 'cid' | 'placeholder';
+      reason: InlineImageRewriteOutcome['reason'];
+    }) => {
+      decisions.set(fileId, decision);
+      replacementMap.set(source, decision.replacement);
+      outcomes.push({ sourceUrl: source, resolvedFileId: fileId, strategy: decision.strategy, reason: decision.reason });
+    };
+    const cached = decisions.get(fileId);
+    if (cached) {
+      record(cached);
+      continue;
+    }
+
     const document = documentByFileId.get(fileId);
     if (!document) {
-      outcomes.push({
-        sourceUrl: source,
-        resolvedFileId: fileId,
-        strategy: 'url-fallback',
-        reason: 'not_ticket_document',
-      });
+      record({ replacement: null, strategy: 'placeholder', reason: 'not_ticket_document' });
       continue;
     }
 
     if (!isImageMimeType(document.mime_type)) {
-      outcomes.push({
-        sourceUrl: source,
-        resolvedFileId: fileId,
-        strategy: 'url-fallback',
-        reason: 'non_image_document',
-      });
+      record({ replacement: null, strategy: 'placeholder', reason: 'non_image_document' });
+      continue;
+    }
+
+    if (!await params.authorizeDocument(document.document_id, document)) {
+      record({ replacement: null, strategy: 'placeholder', reason: 'authorization_denied' });
+      continue;
+    }
+
+    if (!params.supportsAttachments) {
+      record({ replacement: null, strategy: 'placeholder', reason: 'attachments_not_supported' });
+      continue;
+    }
+
+    const extension = document.document_name?.split('.').pop()?.toLowerCase();
+    if (extension && params.blockedAttachmentExtensions?.some(blocked => blocked.toLowerCase() === extension)) {
+      record({ replacement: null, strategy: 'placeholder', reason: 'attachment_type_blocked' });
       continue;
     }
 
     if (attachments.length >= limits.maxInlineImageCount) {
-      outcomes.push({
-        sourceUrl: source,
-        resolvedFileId: fileId,
-        strategy: 'url-fallback',
-        reason: 'attachment_count_exceeded',
-      });
+      record({ replacement: null, strategy: 'placeholder', reason: 'attachment_count_exceeded' });
       continue;
     }
 
     const declaredSize = Number(document.file_size || 0);
     if (Number.isFinite(declaredSize) && declaredSize > 0 && declaredSize > limits.maxInlineImageBytes) {
-      outcomes.push({
-        sourceUrl: source,
-        resolvedFileId: fileId,
-        strategy: 'url-fallback',
-        reason: 'attachment_over_max_bytes',
-      });
+      record({ replacement: null, strategy: 'placeholder', reason: 'attachment_over_max_bytes' });
       continue;
     }
 
     try {
-      const downloadResult = await StorageService.downloadFile(fileId);
-      const inlineBytes = Buffer.isBuffer(downloadResult.buffer)
-        ? downloadResult.buffer.length
-        : Buffer.byteLength(String(downloadResult.buffer || ''), 'utf-8');
+      const downloadResult = await runWithTenant(params.tenantId, () => StorageService.downloadFile(fileId));
+      if (!Buffer.isBuffer(downloadResult.buffer)) {
+        throw new Error('Storage returned an invalid inline-image buffer');
+      }
+      const mimeType = downloadResult.metadata.mime_type || document.mime_type;
+      if (!isImageMimeType(mimeType)) {
+        record({ replacement: null, strategy: 'placeholder', reason: 'non_image_document' });
+        continue;
+      }
+      const inlineBytes = downloadResult.buffer.length;
       if (inlineBytes > limits.maxInlineImageBytes) {
-        outcomes.push({
-          sourceUrl: source,
-          resolvedFileId: fileId,
-          strategy: 'url-fallback',
-          reason: 'attachment_over_max_bytes',
-        });
+        record({ replacement: null, strategy: 'placeholder', reason: 'attachment_over_max_bytes' });
         continue;
       }
       if (totalInlineAttachmentBytes + inlineBytes > limits.maxInlineImageTotalBytes) {
-        outcomes.push({
-          sourceUrl: source,
-          resolvedFileId: fileId,
-          strategy: 'url-fallback',
-          reason: 'attachment_total_bytes_exceeded',
-        });
+        record({ replacement: null, strategy: 'placeholder', reason: 'attachment_total_bytes_exceeded' });
         continue;
       }
       const cid = buildInlineCid({
@@ -272,30 +319,25 @@ export async function rewriteTicketCommentImagesToCid(params: {
       attachments.push({
         filename: document.document_name || `inline-image-${attachments.length + 1}`,
         content: downloadResult.buffer,
-        contentType: downloadResult.metadata.mime_type || document.mime_type || 'application/octet-stream',
+        contentType: mimeType || 'application/octet-stream',
         cid,
       });
       totalInlineAttachmentBytes += inlineBytes;
 
-      replacementMap.set(source, `cid:${cid}`);
-      outcomes.push({
-        sourceUrl: source,
-        resolvedFileId: fileId,
-        strategy: 'cid',
-        reason: 'converted_to_cid',
-      });
+      record({ replacement: `cid:${cid}`, strategy: 'cid', reason: 'converted_to_cid' });
     } catch (error) {
-      outcomes.push({
-        sourceUrl: source,
-        resolvedFileId: fileId,
-        strategy: 'url-fallback',
-        reason: 'storage_download_failed',
+      logger.warn('[TicketEmail] Unable to retrieve inline image', {
+        tenantId: params.tenantId,
+        ticketId: params.ticketId,
+        fileId,
+        error: error instanceof Error ? error.message : String(error),
       });
+      record({ replacement: null, strategy: 'placeholder', reason: 'storage_download_failed' });
     }
   }
 
   return {
-    html: rewriteHtmlImageSources(params.html, replacementMap),
+    html: rewriteHtmlImageSources(params.html, replacementMap, params.missingImageText),
     attachments,
     outcomes,
   };

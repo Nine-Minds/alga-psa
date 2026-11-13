@@ -59,7 +59,7 @@ describe('inbound email tenant-scoped query contract', () => {
   it('uses tenantDb and tenantJoin for ticket comment inline image document lookups', () => {
     const text = source('../../lib/eventBus/subscribers/ticketCommentInlineImageEmail.ts');
 
-    expect(text).toContain("import { tenantDb } from '@alga-psa/db';");
+    expect(text).toMatch(/import\s*\{[^}]*\btenantDb\b[^}]*\}\s*from\s*['"]@alga-psa\/db['"]/);
     expect(text).toContain('const db = tenantDb(params.db, params.tenantId);');
     expect(text).toContain("const ticketImageDocumentsQuery = db.table('documents as d');");
     expect(text).toContain(
