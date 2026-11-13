@@ -104,7 +104,9 @@ export const searchServiceCatalogForPicker = withAuth(async (
   options: CatalogPickerSearchOptions = {}
 ): Promise<{ items: CatalogPickerItem[]; totalCount: number }> => {
   if (!isMspPrincipalUserType(user.user_type)) return { items: [], totalCount: 0 };
-  if (options.category_id !== undefined) z.string().uuid().parse(options.category_id);
+  if (options.category_id !== undefined && !z.string().uuid().safeParse(options.category_id).success) {
+    throw new Error(`Invalid service catalog category filter "${options.category_id}": expected a category UUID.`);
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     if (!await hasPermission(user, 'service', 'read', trx)
@@ -287,6 +289,9 @@ export const deleteTicketMaterial = withAuth(async (
 export const updateTicketMaterial = withAuth(async (
   user, { tenant }, materialId: string, input: { quantity: number; description: string },
 ) => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return permissionError('Permission denied: MSP ticket access required');
+  }
   if (!await hasPermission(user, 'ticket', 'update')) {
     return permissionError('Permission denied: ticket update required');
   }

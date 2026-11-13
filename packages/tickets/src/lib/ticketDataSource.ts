@@ -685,6 +685,17 @@ export function composeTicketDataSource(
         overrides.fixedFees?.deleteTicketFixedFeeService &&
         overrides.fixedFees?.updateTicketFixedFeeService)) {
     merged.capabilities = { ...(merged.capabilities as TicketCapabilities), fixedFeeServices: false };
+    // Never let a foreign source fall through to the native fixed-fee actions.
+    const unsupported = () => {
+      throw new Error(`The "${overrides.kind}" ticket source does not support fixed-fee services.`);
+    };
+    const fixedFeeOverrides = overrides.fixedFees ?? {};
+    merged.fixedFees = {
+      listTicketFixedFeeServices: fixedFeeOverrides.listTicketFixedFeeServices ?? unsupported,
+      addTicketFixedFeeService: fixedFeeOverrides.addTicketFixedFeeService ?? unsupported,
+      deleteTicketFixedFeeService: fixedFeeOverrides.deleteTicketFixedFeeService ?? unsupported,
+      updateTicketFixedFeeService: fixedFeeOverrides.updateTicketFixedFeeService ?? unsupported,
+    } as unknown as TicketFixedFeeMethods;
   }
   if (overrides.kind && overrides.kind !== base.kind && !overrides.materials?.updateTicketMaterial) {
     merged.materials = { ...(merged.materials as TicketMaterialMethods), updateTicketMaterial: undefined };
