@@ -4,7 +4,7 @@ import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import {
   admitCommentAudienceReader, isCommentAudienceVisible, resolveCommentAudienceForRead, resolveCommentAudienceReader,
-  tenantMayHaveSeatReaders, type CommentAudienceReader,
+  type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import { registerCapabilityParticipation, serves } from '@alga-psa/core/capability';
 import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
@@ -28,10 +28,13 @@ import Comment from '../../../../packages/tickets/src/models/comment';
  * reads the other two. MSP staff read everything, as before.
  *
  * The seat technician is a real internal user holding an active assignment, written directly: no
- * invitation command is on main. The tenant holds a co-managed entitlement row, as every tenant
- * with a seat arrangement does, and the process registers the production participation resolver:
- * that is what admits the tenant to the seat read (`tenantMayHaveSeatReaders`).
+ * invitation command is on main. Who is staff is decided by the seat tables, or with no SQL by
+ * `users.seat_reader` on a loaded user row; never by the co-managed capability gate. The tenant
+ * still holds an entitlement row and the process registers the production participation
+ * resolver, so the cases below can put the gate in every state and show it changes nothing.
  */
+type LoadedUser = { user_id: string; user_type: string; tenant: string; seat_reader?: boolean };
+
 describe('comment audience in attachments, activity and search (integration)', () => {
   let knex: Knex;
   let tenant: string;
@@ -82,8 +85,10 @@ describe('comment audience in attachments, activity and search (integration)', (
     sink.push(...added);
   }
 
-  async function searchPrincipal(userId: string): Promise<SearchAclPrincipal> {
-    const principal = await runWithTenant(tenant, () => resolveSearchAclPrincipal(knex, { user_id: userId, user_type: 'internal', tenant } as any, { mode: 'all' }));
+  /** `reader`: a user id (the principal is resolved from the seat tables) or the loaded user row. */
+  async function searchPrincipal(reader: string | LoadedUser): Promise<SearchAclPrincipal> {
+    const user = typeof reader === 'string' ? { user_id: reader, user_type: 'internal', tenant } : reader;
+    const principal = await runWithTenant(tenant, () => resolveSearchAclPrincipal(knex, user as any, { mode: 'all' }));
     // The audience is the subject here, not RBAC: both readers hold ticket:read.
     return { ...principal, permissions: [...new Set([...principal.permissions, 'ticket:read'])] };
   }
@@ -403,7 +408,7 @@ describe('comment audience in attachments, activity and search (integration)', (
     });
   });
 
-  describe('admission to the seat read', () => {
+  describe('who is read as staff', () => {
     /** Every statement `run` sends, as SQL text. */
     async function statements(run: () => Promise<unknown>): Promise<string[]> {
       const seen: string[] = [];
@@ -412,82 +417,183 @@ describe('comment audience in attachments, activity and search (integration)', (
       try { await run(); } finally { knex.removeListener('query', listen); }
       return seen;
     }
-    const readEverySurface = (inTenant: string, userId: string) => async () => {
-      await Comment.getAllbyTicketId(knex, inTenant, ticketId, userId);
-      await Comment.get(knex, inTenant, sharedNote, userId);
-      await buildUnifiedTicketTimeline(knex, inTenant, ticketId, { internalReaderId: userId });
-      await canReadCommentAttachment(knex, inTenant, userId, attachments.get(sharedNote)!);
-      await canReadCommentAttachment(knex, inTenant, userId, plainDocumentId);
-      await admitCommentAudienceReader(knex, inTenant, { userId, userType: 'internal' });
+    /** The user row as a request loads it (`getUserWithRoles` selects every column). */
+    const loaded = async (userId: string): Promise<LoadedUser> => (await t('users').where({ user_id: userId }).first()) as LoadedUser;
+    const readEverySurface = (reader: string | LoadedUser) => async () => {
+      await Comment.getAllbyTicketId(knex, tenant, ticketId, reader);
+      await Comment.get(knex, tenant, sharedNote, reader);
+      await buildUnifiedTicketTimeline(knex, tenant, ticketId, { internalReaderId: reader });
+      await canReadCommentAttachment(knex, tenant, reader, attachments.get(sharedNote)!);
+      await canReadCommentAttachment(knex, tenant, reader, plainDocumentId);
+      await searchPrincipal(reader);
     };
+    /** What one reader gets on each of the four surfaces, over this file's rows. */
+    const surfaces = async (reader: string | LoadedUser) => ({
+      comments: onlyMine((await Comment.getAllbyTicketId(knex, tenant, ticketId, reader)).map(c => c.comment_id)),
+      privateAttachmentReadable: await canReadCommentAttachment(knex, tenant, reader, attachments.get(privateNotes[0])!),
+      sharedAttachmentReadable: await canReadCommentAttachment(knex, tenant, reader, attachments.get(sharedNote)!),
+      privateActivityEvents: (await readTicketActivity(knex, tenant, ticketId, { internalReaderId: reader }))
+        .filter(row => privateNotes.includes(row.entity_id as string)).length,
+      searchHits: sorted((await searchHits(await searchPrincipal(reader))).map(h => h.id)),
+    });
+    const seatSurfaces = () => ({
+      comments: sorted([sharedNote, requesterComment]), privateAttachmentReadable: false, sharedAttachmentReadable: true,
+      privateActivityEvents: 0, searchHits: sorted([sharedNote, requesterComment]),
+    });
+    const staffSurfaces = () => ({
+      comments: sorted(mine()), privateAttachmentReadable: true, sharedAttachmentReadable: true,
+      privateActivityEvents: 11, searchHits: sorted(mine()),
+    });
+    /** The seat technician, named by id and by loaded row, reads only its audiences on every surface. */
     const seatReadsOnlyItsAudiences = async () => {
-      expect(onlyMine((await Comment.getAllbyTicketId(knex, tenant, ticketId, seatUser)).map(c => c.comment_id))).toEqual(sorted([sharedNote, requesterComment]));
-      expect(await canReadCommentAttachment(knex, tenant, seatUser, attachments.get(privateNotes[0])!)).toBe(false);
-      const rows = (await readTicketActivity(knex, tenant, ticketId, { internalReaderId: seatUser })).filter(row => auditIds.includes(row.audit_id));
-      expect(rows.some(row => row.entity_type === 'comment' && privateNotes.includes(row.entity_id as string))).toBe(false);
-      expect(await admitCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal' })).toEqual({ kind: 'seat', tenant, clientId });
-      expect(sorted((await searchHits(await searchPrincipal(seatUser))).map(h => h.id))).toEqual(sorted([sharedNote, requesterComment]));
+      expect(await surfaces(seatUser)).toEqual(seatSurfaces());
+      expect(await surfaces(await loaded(seatUser))).toEqual(seatSurfaces());
     };
     const restore = () => { delete process.env.FORCE_CAPABILITIES; participation(); clearCapabilityCache(); };
 
-    it('a tenant that does not participate reads every surface with no seat table in any statement', async () => {
-      // No entitlement row, so no seat arrangement can exist: its internal users are staff.
-      const plain = randomUUID();
-      expect((await serves('co-managed', plain)).reasons.served).toBe('not-participating');
-      expect(await tenantMayHaveSeatReaders(plain)).toBe(false);
-      expect(await admitCommentAudienceReader(knex, plain, { userId: mspUser, userType: 'internal' })).toEqual({ kind: 'staff', tenant: plain });
-      const sql = await statements(readEverySurface(plain, mspUser));
+    it('a loaded staff row reads every surface in full with no seat table in any statement', async () => {
+      const staff = await loaded(mspUser);
+      expect(staff.seat_reader).toBe(false);
+      expect(await admitCommentAudienceReader(knex, tenant, { userId: mspUser, userType: 'internal', seatReader: staff.seat_reader })).toEqual({ kind: 'staff', tenant });
+      const sql = await statements(readEverySurface(staff));
       expect(sql.length).toBeGreaterThan(0);
       expect(sql.filter(text => /co_managed_/.test(text))).toEqual([]);
+      expect(await surfaces(staff)).toEqual(staffSurfaces());
     });
 
-    it('the participating tenant still decides per user in the statement', async () => {
-      expect(await tenantMayHaveSeatReaders(tenant)).toBe(true);
-      expect((await statements(readEverySurface(tenant, mspUser))).some(text => /co_managed_seat_assignments/.test(text))).toBe(true);
+    it('a bare user id is never presumed staff: the statement asks the seat tables', async () => {
+      expect((await statements(readEverySurface(mspUser))).some(text => /co_managed_seat_assignments/.test(text))).toBe(true);
+      expect(await surfaces(mspUser)).toEqual(staffSurfaces());
+      // A row loaded without the marker says nothing either, and is checked the same way.
+      const { seat_reader: _unknown, ...unmarked } = await loaded(mspUser);
+      expect((await statements(readEverySurface(unmarked))).some(text => /co_managed_seat_assignments/.test(text))).toBe(true);
+    });
+
+    it('the seat technician is filtered whether named by id or by loaded row', async () => {
+      expect((await loaded(seatUser)).seat_reader).toBe(true);
+      expect(await admitCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal', seatReader: true })).toEqual({ kind: 'seat', tenant, clientId });
+      expect(await admitCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal' })).toEqual({ kind: 'seat', tenant, clientId });
       await seatReadsOnlyItsAudiences();
     });
 
-    it('a failed participation read does not promote a seat technician to staff', async () => {
-      registerCapabilityParticipation('co-managed', async () => { throw new Error('participation read failed'); });
+    it.each<[string, () => void, string]>([
+      ['never registered', () => registerCapabilityParticipation('co-managed', null), 'resolver-unregistered'],
+      ['whose participation read fails', () => registerCapabilityParticipation('co-managed', async () => { throw new Error('participation read failed'); }), 'participation-error'],
+      ['forced off', () => { process.env.FORCE_CAPABILITIES = 'co-managed:off'; }, 'forced-off'],
+      ['forced on', () => { process.env.FORCE_CAPABILITIES = 'co-managed:on'; }, 'forced-on'],
+      ['forced to a malformed value', () => { process.env.FORCE_CAPABILITIES = 'co-managed:sideways'; }, 'forced-malformed'],
+    ])('a co-managed capability %s changes nothing for a seat technician or for staff', async (_name, arrange, reason) => {
+      arrange();
+      clearCapabilityCache();
       try {
-        expect((await serves('co-managed', tenant)).reasons.served).toBe('participation-error');
-        expect(await tenantMayHaveSeatReaders(tenant)).toBe(true);
+        expect((await serves('co-managed', tenant)).reasons.served).toBe(reason);
         await seatReadsOnlyItsAudiences();
+        const staff = await loaded(mspUser);
+        expect(await surfaces(staff)).toEqual(staffSurfaces());
+        expect((await statements(readEverySurface(staff))).filter(text => /co_managed_/.test(text))).toEqual([]);
       } finally { restore(); }
     });
 
-    it.each(['co-managed:off', 'co-managed:on', 'co-managed:sideways'])('FORCE_CAPABILITIES=%s does not promote a seat technician to staff', async (forced) => {
-      process.env.FORCE_CAPABILITIES = forced;
+    it('a seat bound just after the capability gate cached "not participating" is filtered on the next read', async () => {
+      const entitlement = await t('co_managed_entitlements').first();
+      const assignment = { arrangement_id: arrangementId, user_id: seatUser };
+      await t('co_managed_seat_assignments').where(assignment).update({ state: 'revoked', revoked_at: new Date() });
+      await t('co_managed_entitlements').delete();
+      clearCapabilityCache();
       try {
-        expect(await tenantMayHaveSeatReaders(tenant)).toBe(true);
-        await seatReadsOnlyItsAudiences();
-      } finally { restore(); }
-    });
+        // The gate reads the tenant before its first entitlement row and caches the negative.
+        expect((await serves('co-managed', tenant)).reasons.served).toBe('not-participating');
+        expect(await surfaces(await loaded(seatUser))).toEqual(staffSurfaces());
 
-    it('a seat user whose assignment is not yet active reads nothing, on every surface', async () => {
-      await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId, user_id: seatUser }).update({ state: 'invited' });
-      try {
-        expect(await admitCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal' })).toBeNull();
-        expect(onlyMine((await Comment.getAllbyTicketId(knex, tenant, ticketId, seatUser)).map(c => c.comment_id))).toEqual([]);
-        expect(await canReadCommentAttachment(knex, tenant, seatUser, attachments.get(requesterComment)!)).toBe(false);
-        const rows = (await readTicketActivity(knex, tenant, ticketId, { internalReaderId: seatUser })).filter(row => auditIds.includes(row.audit_id));
-        expect(rows.some(row => row.entity_type === 'comment')).toBe(false);
-        expect(await searchHits(await searchPrincipal(seatUser))).toEqual([]);
+        await t('co_managed_entitlements').insert(entitlement);
+        await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), ...assignment, state: 'active' });
+        // Still cached, and it does not matter.
+        expect((await serves('co-managed', tenant)).reasons.served).toBe('not-participating');
+        await seatReadsOnlyItsAudiences();
       } finally {
-        await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId, user_id: seatUser }).update({ state: 'active' });
+        if (!await t('co_managed_entitlements').first('tenant')) await t('co_managed_entitlements').insert(entitlement);
+        if (!await t('co_managed_seat_assignments').where(assignment).whereNot('state', 'revoked').first('assignment_id')) {
+          await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), ...assignment, state: 'active' });
+        }
+        restore();
       }
     });
 
-    it('a process that never registered the capability runs no seat SQL: no co-managed behaviour exists there', async () => {
-      // The one non-participation answer read as "no seat technicians". Recorded here because it
-      // is the edge of the admission: a server whose capability registration failed at boot is
-      // in this state too, and would read a seat technician as staff.
-      registerCapabilityParticipation('co-managed', null);
+    it('a seat user whose assignment is not yet active reads nothing, on every surface', async () => {
+      await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId, user_id: seatUser }).whereNot('state', 'revoked').update({ state: 'invited' });
       try {
-        expect((await serves('co-managed', tenant)).reasons.served).toBe('resolver-unregistered');
-        expect(await tenantMayHaveSeatReaders(tenant)).toBe(false);
-        expect((await statements(readEverySurface(tenant, mspUser))).filter(text => /co_managed_/.test(text))).toEqual([]);
-      } finally { restore(); }
+        for (const reader of [seatUser, await loaded(seatUser)]) {
+          expect(await searchPrincipal(reader)).toMatchObject({ audienceReader: null });
+          expect(onlyMine((await Comment.getAllbyTicketId(knex, tenant, ticketId, reader)).map(c => c.comment_id))).toEqual([]);
+          expect(await canReadCommentAttachment(knex, tenant, reader, attachments.get(requesterComment)!)).toBe(false);
+          const rows = (await readTicketActivity(knex, tenant, ticketId, { internalReaderId: reader })).filter(row => auditIds.includes(row.audit_id));
+          expect(rows.some(row => row.entity_type === 'comment')).toBe(false);
+          expect(await searchHits(await searchPrincipal(reader))).toEqual([]);
+        }
+      } finally {
+        await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId, user_id: seatUser }).whereNot('state', 'revoked').update({ state: 'active' });
+      }
+    });
+
+    describe('the users.seat_reader marker', () => {
+      const marker = async (userId: string) => (await loaded(userId)).seat_reader;
+      const live = () => t('co_managed_seat_assignments').where({ arrangement_id: arrangementId, user_id: seatUser }).whereNot('state', 'revoked');
+
+      it('cannot say "not bound" while an assignment binds the user: the foreign key refuses it', async () => {
+        expect(await marker(seatUser)).toBe(true);
+        await expect(t('users').where({ user_id: seatUser }).update({ seat_reader: false }))
+          .rejects.toMatchObject({ code: '23503', constraint: 'co_managed_seat_assignments_seat_reader_foreign' });
+        expect(await marker(seatUser)).toBe(true);
+      });
+
+      it('an invited assignment that names no user binds nobody', async () => {
+        const assignmentId = randomUUID();
+        await t('co_managed_seat_assignments').insert({ tenant, assignment_id: assignmentId, arrangement_id: arrangementId, state: 'invited' });
+        try {
+          expect((await t('co_managed_seat_assignments').where({ assignment_id: assignmentId }).first('binds_seat_reader')).binds_seat_reader).toBeNull();
+        } finally {
+          await t('co_managed_seat_assignments').where({ assignment_id: assignmentId }).delete();
+        }
+      });
+
+      it('where no trigger runs (Citus), binding an unmarked user is refused until the command marks them', async () => {
+        const rollback = new Error('rollback');
+        await expect(knex.transaction(async (trx) => {
+          const tt = (table: string) => tenantDb(trx, tenant).table(table);
+          await trx.raw('ALTER TABLE co_managed_seat_assignments DISABLE TRIGGER co_managed_seat_assignment_marks_reader');
+          const binding = { tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: mspUser, state: 'active' };
+          await trx.raw('SAVEPOINT unmarked');
+          await expect(tt('co_managed_seat_assignments').insert(binding))
+            .rejects.toMatchObject({ code: '23503', constraint: 'co_managed_seat_assignments_seat_reader_foreign' });
+          await trx.raw('ROLLBACK TO SAVEPOINT unmarked');
+          await tt('users').where({ user_id: mspUser }).update({ seat_reader: true });
+          await tt('co_managed_seat_assignments').insert(binding);
+          throw rollback;
+        })).rejects.toBe(rollback);
+        expect(await marker(mspUser)).toBe(false);
+      });
+
+      // Plain Postgres keeps the marker in step by trigger; on Citus the binding command does.
+      it('follows an assignment written directly: set when it binds, cleared when the last one is revoked or deleted', async () => {
+        expect(await marker(mspUser)).toBe(false);
+        await live().update({ state: 'revoked', revoked_at: new Date() });
+        try {
+          expect(await marker(seatUser)).toBe(false);
+          expect(await surfaces(await loaded(seatUser))).toEqual(staffSurfaces());
+
+          const assignmentId = randomUUID();
+          await t('co_managed_seat_assignments').insert({ tenant, assignment_id: assignmentId, arrangement_id: arrangementId, user_id: seatUser, state: 'invited' });
+          expect(await marker(seatUser)).toBe(true);
+          await t('co_managed_seat_assignments').where({ assignment_id: assignmentId }).delete();
+          expect(await marker(seatUser)).toBe(false);
+        } finally {
+          if (!await live().first('assignment_id')) {
+            await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: seatUser, state: 'active' });
+          }
+        }
+        expect(await marker(seatUser)).toBe(true);
+        await seatReadsOnlyItsAudiences();
+      });
     });
   });
 

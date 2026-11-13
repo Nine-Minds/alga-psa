@@ -22,6 +22,7 @@ describe('conversation audiences (integration)', () => {
   let originalProduct: string | null;
   const created: string[] = [];
   const seatArrangements: string[] = [];
+  const seatUsers: string[] = [];
 
   /** A seat arrangement row for a client, written directly: no command creates assignments yet. */
   async function seatArrangement(clientId: string, state: 'active' | 'ended' = 'active') {
@@ -32,7 +33,14 @@ describe('conversation audiences (integration)', () => {
     return arrangementId;
   }
 
-  async function seatAssignment(arrangementId: string, state: 'invited' | 'active' | 'revoked', seatUserId: string | null = randomUUID()) {
+  /** An assignment binds a real user (foreign key to `users`), so the default is a new internal user. */
+  async function seatAssignment(arrangementId: string, state: 'invited' | 'active' | 'revoked', seatUserId?: string | null) {
+    if (seatUserId === undefined) {
+      seatUserId = randomUUID();
+      await t('users').insert({ tenant, user_id: seatUserId, username: `seat.${seatUserId.slice(0, 8)}`, email: `seat.${seatUserId.slice(0, 8)}@example.test`,
+        hashed_password: 'not-used', user_type: 'internal', is_inactive: false });
+      seatUsers.push(seatUserId);
+    }
     await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: seatUserId,
       state, revoked_at: state === 'revoked' ? new Date() : null });
     return seatUserId as string;
@@ -92,6 +100,7 @@ describe('conversation audiences (integration)', () => {
       await t('co_managed_seat_assignments').where({ arrangement_id: id }).delete();
       await t('co_managed_seat_arrangements').where({ arrangement_id: id }).delete();
     }
+    if (seatUsers.length > 0) await t('users').whereIn('user_id', seatUsers).delete();
     for (const id of created.reverse()) {
       const c = await t('comments').where({ comment_id: id }).first('thread_id');
       await t('comments').where({ comment_id: id }).delete();

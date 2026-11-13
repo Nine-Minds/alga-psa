@@ -54,7 +54,7 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
   afterAll(async () => { await db?.destroy(); });
 
   // F012
-  it('the seat tables exist with tenant-first keys and no triggers or foreign keys, and tenant deletion knows them', async () => {
+  it('the seat tables exist with tenant-first keys and no triggers but the seat-reader marker pair, and tenant deletion knows them', async () => {
     for (const table of SEAT_TABLES) {
       const { rows: keys } = await db.raw(`
         SELECT i.indexrelid::regclass::text AS name, (SELECT attname FROM pg_attribute
@@ -62,8 +62,12 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
         FROM pg_index i WHERE i.indrelid = ?::regclass AND (i.indisprimary OR i.indisunique)`, [table]);
       expect(keys.length, table).toBeGreaterThan(0);
       for (const key of keys) expect(key.leading, `${table}.${key.name}`).toBe('tenant');
-      const { rows: triggers } = await db.raw(`SELECT tgname FROM pg_trigger WHERE tgrelid = ?::regclass`, [table]);
-      expect(triggers, table).toEqual([]);
+      // Constraint triggers are the foreign key's own. The one pair of row triggers keeps
+      // `users.seat_reader` in step on plain Postgres (S18, migration 20261113130000); no command
+      // may rely on it, because Citus has no triggers on a distributed table.
+      const { rows: triggers } = await db.raw(`SELECT tgname FROM pg_trigger WHERE tgrelid = ?::regclass AND NOT tgisinternal ORDER BY tgname`, [table]);
+      expect(triggers.map((row: { tgname: string }) => row.tgname), table).toEqual(table === 'co_managed_seat_assignments'
+        ? ['co_managed_seat_assignment_marks_reader', 'co_managed_seat_assignment_unmarks_reader'] : []);
     }
     const order = tenantDeletionOrder();
     for (const table of SEAT_TABLES) {
