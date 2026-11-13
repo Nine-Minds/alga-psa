@@ -597,6 +597,8 @@
       "groupHeading": "Locatie {{index}}",
       "pickerPlaceholder": "Een locatie kiezen",
       "unassigned": "Items zonder locatie staan hier tot er een is gekozen.",
+      "quoteWide": "Hele offerte",
+      "quoteWideHint": "Kortingen gelden voor de hele offerte en zijn dus niet aan een locatie gekoppeld.",
       "removeGroup": "Locatie verwijderen",
       "subtotal": "Subtotaal locatie",
       "addLocationButton": "+ Locatie toevoegen",

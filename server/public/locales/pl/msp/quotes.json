@@ -597,6 +597,8 @@
       "groupHeading": "Lokalizacja {{index}}",
       "pickerPlaceholder": "Wybierz lokalizację",
       "unassigned": "Pozycje bez lokalizacji są tu wymienione, dopóki nie zostanie wybrana.",
+      "quoteWide": "Cała oferta",
+      "quoteWideHint": "Rabaty obowiązują w całej ofercie, więc nie są powiązane z lokalizacją.",
       "removeGroup": "Usuń lokalizację",
       "subtotal": "Suma częściowa lokalizacji",
       "addLocationButton": "+ Dodaj lokalizację",

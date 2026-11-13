@@ -597,6 +597,8 @@
       "groupHeading": "Localização {{index}}",
       "pickerPlaceholder": "Selecione um local",
       "unassigned": "Itens sem localização são listados aqui até que um seja escolhido.",
+      "quoteWide": "Toda a cotação",
+      "quoteWideHint": "Os descontos aplicam-se a toda a cotação, por isso não estão associados a uma localização.",
       "removeGroup": "Remover local",
       "subtotal": "Subtotal de localização",
       "addLocationButton": "+ Adicionar localização",

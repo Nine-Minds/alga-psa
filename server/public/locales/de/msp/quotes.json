@@ -597,6 +597,8 @@
       "groupHeading": "Standort {{index}}",
       "pickerPlaceholder": "Standort auswählen",
       "unassigned": "Positionen ohne Standort werden hier aufgeführt, bis einer ausgewählt wird.",
+      "quoteWide": "Gesamtes Angebot",
+      "quoteWideHint": "Rabatte gelten für das gesamte Angebot und sind daher keinem Standort zugeordnet.",
       "removeGroup": "Standort entfernen",
       "subtotal": "Standort-Zwischensumme",
       "addLocationButton": "+ Standort hinzufügen",

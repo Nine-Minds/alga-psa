@@ -597,6 +597,8 @@
       "groupHeading": "Ubicación {{index}}",
       "pickerPlaceholder": "Seleccionar una ubicación",
       "unassigned": "Los elementos sin ubicación se muestran aquí hasta que se elija una.",
+      "quoteWide": "Toda la cotización",
+      "quoteWideHint": "Los descuentos se aplican a toda la cotización, por lo que no están vinculados a una ubicación.",
       "removeGroup": "Eliminar ubicación",
       "subtotal": "Subtotal de ubicación",
       "addLocationButton": "+ Añadir ubicación",

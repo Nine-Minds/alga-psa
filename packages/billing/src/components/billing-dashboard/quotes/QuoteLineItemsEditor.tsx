@@ -20,6 +20,7 @@ import {
   buildLocationGroups,
   getLocationKey,
   pickDefaultLocation,
+  relocateLocationGroup,
   shouldShowLocationGroups,
   type LocationGroupEntry,
   type LocationSummary,
@@ -184,6 +185,13 @@ interface QuoteLineItemsEditorProps {
   /** Fires when the user asks to add a new empty location group. */
   onAddLocationGroup?: () => void;
   /**
+   * Fires when a group header's picker re-points that group at another
+   * location. The owner also tracks the empty (item-less) groups, so it — not
+   * this editor — decides where the placeholder goes; without a handler the
+   * editor falls back to moving its own items.
+   */
+  onChangeLocationGroup?: (fromLocationId: string | null, toLocationId: string) => void;
+  /**
    * Fires when a location group goes away (used to auto-revert to flat).
    * `source` tells the owner whether the user clicked "Remove location" —
    * which must account for the group's items — or whether the group merely
@@ -256,6 +264,16 @@ const UNGROUPED_PHASE_KEY = '__ungrouped__';
 const getPhaseKey = (phase?: string | null): string => phase?.trim() || UNGROUPED_PHASE_KEY;
 const getPhaseLabel = (phase?: string | null): string => phase?.trim() || 'Ungrouped Items';
 
+/**
+ * Discounts are deliberately never sited, so a band holding nothing but
+ * discounts belongs to the whole quote (the PDF names it the same way). It is
+ * not a location the user can pick or remove.
+ */
+const isQuoteWideGroup = (group: LocationGroupEntry<DraftQuoteItem>): boolean =>
+  group.location_id === null
+  && group.items.length > 0
+  && group.items.every((item) => item.is_discount);
+
 const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   items,
   currencyCode,
@@ -265,6 +283,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   showLocationGroups = false,
   extraGroupLocationIds = [],
   onAddLocationGroup,
+  onChangeLocationGroup,
   onRemoveLocationGroup,
 }) => {
   const { t } = useTranslation('msp/quotes');
@@ -807,54 +826,54 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     return locations.every((loc) => used.has(loc.location_id));
   }, [items, locations, extraGroupLocationIds]);
 
-  const excludedLocationIds = useMemo(() => {
-    // Prevent the same location from being chosen twice across groups.
-    const seen = new Set<string>();
-    for (const item of items) {
-      if (item.location_id) seen.add(item.location_id);
-    }
-    return Array.from(seen);
-  }, [items]);
-
   const renderLocationGroupHeader = (group: LocationGroupEntry<DraftQuoteItem>, index: number) => {
     const pickerId = `quote-location-picker-${group.location_id ?? 'unassigned'}`;
-    // Exclude locations that are already chosen by *other* groups.
-    const exclude = excludedLocationIds.filter((id) => id !== (group.location_id ?? undefined));
+    const isQuoteWideBand = isQuoteWideGroup(group);
+    // The quote-wide band carries no number, so the numbered bands stay 1..n.
+    const bandNumber = locationGroups
+      .slice(0, index)
+      .filter((candidate) => !isQuoteWideGroup(candidate)).length + 1;
 
     return (
       <div className="flex flex-col gap-3 rounded-t-md bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 space-y-2">
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t('quoteLineItems.locations.groupHeading', {
-              defaultValue: 'Location {{index}}',
-              index: index + 1,
-            })}
+            {isQuoteWideBand
+              ? t('quoteLineItems.locations.quoteWide', { defaultValue: 'Quote-wide' })
+              : t('quoteLineItems.locations.groupHeading', {
+                  defaultValue: 'Location {{index}}',
+                  index: bandNumber,
+                })}
           </div>
-          <div className="max-w-md">
-            <LocationPicker
-              id={pickerId}
-              locations={locations}
-              value={group.location_id}
-              onChange={(nextLocationId) => {
-                // Reassign every item in this group to the new location.
-                const currentLocationId = group.location_id;
-                onChange(items.map((item) =>
-                  (item.location_id ?? null) === currentLocationId
-                    ? { ...item, location_id: nextLocationId }
-                    : item
-                ));
-              }}
-              placeholder={t('quoteLineItems.locations.pickerPlaceholder', { defaultValue: 'Select a location' })}
-              disabled={disabled}
-              excludeLocationIds={exclude}
-              allowClear={false}
-            />
-          </div>
+          {isQuoteWideBand ? null : (
+            <div className="max-w-md">
+              <LocationPicker
+                id={pickerId}
+                locations={locations}
+                value={group.location_id}
+                onChange={(nextLocationId) => {
+                  if (!nextLocationId || nextLocationId === group.location_id) return;
+                  if (onChangeLocationGroup) {
+                    onChangeLocationGroup(group.location_id, nextLocationId);
+                    return;
+                  }
+                  // Standalone fallback: move this band's items, swapping with
+                  // the target band rather than merging the two.
+                  onChange(relocateLocationGroup(items, group.location_id, nextLocationId));
+                }}
+                placeholder={t('quoteLineItems.locations.pickerPlaceholder', { defaultValue: 'Select a location' })}
+                disabled={disabled}
+                allowClear={false}
+              />
+            </div>
+          )}
           {group.location ? (
             <LocationAddress location={group.location} showName={false} />
           ) : (
             <p className="text-xs text-muted-foreground">
-              {t('quoteLineItems.locations.unassigned', { defaultValue: 'Items without a location are listed here until one is chosen.' })}
+              {isQuoteWideBand
+                ? t('quoteLineItems.locations.quoteWideHint', { defaultValue: 'Discounts apply across the quote, so they are not tied to a location.' })
+                : t('quoteLineItems.locations.unassigned', { defaultValue: 'Items without a location are listed here until one is chosen.' })}
             </p>
           )}
         </div>
@@ -1032,7 +1051,9 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             <div key={group.key} className="overflow-hidden rounded-md border border-border">
               {renderLocationGroupHeader(group, index)}
               <div className="border-t border-border p-4 space-y-3">
-                {renderServicePicker(group.location_id ?? null, `loc-${group.key}`)}
+                {/* A catalog row added here would be sited anyway, so the
+                    quote-wide band offers no picker. */}
+                {isQuoteWideGroup(group) ? null : renderServicePicker(group.location_id ?? null, `loc-${group.key}`)}
                 {group.items.length === 0 ? (
                   <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
                     {t('quoteLineItems.locations.emptyGroup', { defaultValue: 'No items yet for this location.' })}
@@ -1041,7 +1062,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                   renderPhaseSections(buildPhaseSections(group.items), `loc-${group.key}`)
                 )}
               </div>
-              {group.items.length > 0 ? renderLocationGroupSubtotal(group) : null}
+              {group.items.length > 0 && !isQuoteWideGroup(group) ? renderLocationGroupSubtotal(group) : null}
             </div>
           ))}
         </div>

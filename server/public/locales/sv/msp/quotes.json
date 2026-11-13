@@ -597,6 +597,8 @@
       "groupHeading": "Plats {{index}}",
       "pickerPlaceholder": "Välj en plats",
       "unassigned": "Rader utan plats visas här tills en plats har valts.",
+      "quoteWide": "Hela offerten",
+      "quoteWideHint": "Rabatter gäller hela offerten och är därför inte kopplade till någon plats.",
       "removeGroup": "Ta bort plats",
       "subtotal": "Delsumma för platsen",
       "addLocationButton": "+ Lägg till plats",

@@ -597,6 +597,8 @@
       "groupHeading": "Location {{index}}",
       "pickerPlaceholder": "Select a location",
       "unassigned": "Items without a location are listed here until one is chosen.",
+      "quoteWide": "Quote-wide",
+      "quoteWideHint": "Discounts apply across the quote, so they are not tied to a location.",
       "removeGroup": "Remove location",
       "subtotal": "Location subtotal",
       "addLocationButton": "+ Add location",

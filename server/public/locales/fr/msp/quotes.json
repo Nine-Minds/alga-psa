@@ -597,6 +597,8 @@
       "groupHeading": "Emplacement {{index}}",
       "pickerPlaceholder": "Sélectionner un emplacement",
       "unassigned": "Les éléments sans emplacement sont listés ici jusqu'à ce qu'un soit choisi.",
+      "quoteWide": "Ensemble du devis",
+      "quoteWideHint": "Les remises s’appliquent à l’ensemble du devis ; elles ne sont donc liées à aucun site.",
       "removeGroup": "Supprimer l'emplacement",
       "subtotal": "Sous-total par emplacement",
       "addLocationButton": "+ Ajouter un emplacement",

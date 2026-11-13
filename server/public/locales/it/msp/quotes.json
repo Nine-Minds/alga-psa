@@ -597,6 +597,8 @@
       "groupHeading": "Sede {{index}}",
       "pickerPlaceholder": "Seleziona una sede",
       "unassigned": "Le voci senza sede vengono elencate qui finché non ne viene scelta una.",
+      "quoteWide": "Intero preventivo",
+      "quoteWideHint": "Gli sconti si applicano all’intero preventivo, quindi non sono legati a una sede.",
       "removeGroup": "Rimuovi sede",
       "subtotal": "Subtotale sede",
       "addLocationButton": "+ Aggiungi sede",

@@ -10,7 +10,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatDate: (value: string) => String(value),
   }),
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: (key: string, options?: { defaultValue?: string }) =>
+      (options?.defaultValue ?? key).replace(
+        /\{\{(\w+)\}\}/g,
+        (_match: string, name: string) => String((options as Record<string, unknown> | undefined)?.[name] ?? ''),
+      ),
   }),
 }));
 
@@ -270,6 +274,101 @@ describe('QuoteLineItemsEditor add-location affordance (alga-2026-0002902)', () 
     expect(addLocationButton().disabled).toBe(true);
     expect(document.getElementById('quote-line-all-locations-in-use')?.textContent)
       .toContain('already has a group');
+  });
+});
+
+describe('QuoteLineItemsEditor location bands (alga-2026-0002902)', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const siteLocations = [
+    { location_id: 'loc-a', client_id: 'client-1', location_name: 'Site A', is_default: true, is_active: true },
+    { location_id: 'loc-b', client_id: 'client-1', location_name: 'Site B', is_default: false, is_active: true },
+  ] as any;
+
+  const picker = (suffix: string) =>
+    document.getElementById(`quote-location-picker-${suffix}`) as HTMLSelectElement | null;
+
+  const sited = (localId: string, locationId: string | null): DraftQuoteItem => ({
+    ...draftItem(localId, localId, ''),
+    location_id: locationId,
+  });
+
+  it('offers every client location, including one another band already uses', () => {
+    render(
+      <QuoteLineItemsEditor
+        items={[sited('item-1', 'loc-a'), sited('item-2', 'loc-b')]}
+        currencyCode="USD"
+        onChange={vi.fn()}
+        locations={siteLocations}
+        showLocationGroups
+      />,
+    );
+
+    // Hiding the sibling band's location left nothing to pick, which read as
+    // "the dropdown does not work".
+    expect(Array.from(picker('loc-a')!.options).map((option) => option.value)).toEqual(['loc-a', 'loc-b']);
+  });
+
+  it('hands the owner both ends of the move so empty bands follow the pick', () => {
+    const onChangeLocationGroup = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <QuoteLineItemsEditor
+        items={[sited('item-1', 'loc-a')]}
+        currencyCode="USD"
+        onChange={onChange}
+        locations={siteLocations}
+        extraGroupLocationIds={['loc-b']}
+        showLocationGroups
+        onChangeLocationGroup={onChangeLocationGroup}
+      />,
+    );
+
+    fireEvent.change(picker('loc-b')!, { target: { value: 'loc-a' } });
+
+    expect(onChangeLocationGroup).toHaveBeenCalledWith('loc-b', 'loc-a');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('swaps bands rather than merging them when no owner handler is given', () => {
+    const onChange = vi.fn();
+    render(
+      <QuoteLineItemsEditor
+        items={[sited('item-1', 'loc-a'), sited('item-2', 'loc-b')]}
+        currencyCode="USD"
+        onChange={onChange}
+        locations={siteLocations}
+        showLocationGroups
+      />,
+    );
+
+    fireEvent.change(picker('loc-a')!, { target: { value: 'loc-b' } });
+
+    const next = onChange.mock.calls[0][0] as DraftQuoteItem[];
+    expect(next.map((item) => item.location_id)).toEqual(['loc-b', 'loc-a']);
+  });
+
+  it('labels the discount-only band quote-wide and gives it no location picker', () => {
+    render(
+      <QuoteLineItemsEditor
+        items={[
+          sited('item-1', 'loc-a'),
+          { ...sited('discount-1', null), is_discount: true, discount_type: 'percentage', discount_percentage: 10 },
+        ]}
+        currencyCode="USD"
+        onChange={vi.fn()}
+        locations={siteLocations}
+        showLocationGroups
+      />,
+    );
+
+    expect(picker('unassigned')).toBeNull();
+    expect(document.body.textContent).toContain('Quote-wide');
+    // The numbered bands stay 1..n with the quote-wide band out of the count.
+    expect(document.body.textContent).toContain('Location 1');
+    expect(document.body.textContent).not.toContain('Location 2');
   });
 });
 
