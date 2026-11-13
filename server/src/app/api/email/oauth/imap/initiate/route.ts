@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { encodeState, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
+import {
+  createImapOAuthStateToken,
+  getImapOAuthStateSigningSecret,
+  IMAP_OAUTH_STATE_TTL_SECONDS,
+  storeImapOAuthStateNonce,
+} from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { assertSafeOutboundUrl } from '@alga-psa/shared/services/net/outboundAddressPolicy';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,18 +52,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'IMAP OAuth configuration missing' }, { status: 400 });
     }
 
+    try {
+      await assertSafeOutboundUrl(imapConfig.oauth_authorize_url);
+    } catch {
+      return NextResponse.json({ error: 'IMAP OAuth authorization URL is not allowed' }, { status: 400 });
+    }
+
     const secretProvider = await getSecretProviderInstance();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
     const effectiveRedirectUri = redirectUri || `${baseUrl}/api/email/oauth/imap/callback`;
 
-    const state: OAuthState = {
+    const signingSecret = await getImapOAuthStateSigningSecret();
+    if (!signingSecret) {
+      return NextResponse.json({ error: 'IMAP OAuth state signing secret is not configured' }, { status: 500 });
+    }
+    const { token: stateToken, payload: state } = createImapOAuthStateToken({
       tenant: user.tenant,
       userId: user.user_id,
       providerId,
+      credentialGeneration: imapConfig.credential_generation ?? null,
       redirectUri: effectiveRedirectUri,
-      timestamp: Date.now(),
-      nonce: generateNonce(),
-    };
+      secret: signingSecret,
+      ttlSeconds: IMAP_OAUTH_STATE_TTL_SECONDS,
+    });
+    await storeImapOAuthStateNonce(state.nonce, IMAP_OAUTH_STATE_TTL_SECONDS);
 
     const scopes = imapConfig.oauth_scopes ? imapConfig.oauth_scopes : '';
 
@@ -66,7 +84,7 @@ export async function POST(request: NextRequest) {
       response_type: 'code',
       redirect_uri: effectiveRedirectUri,
       scope: scopes,
-      state: encodeState(state),
+      state: stateToken,
       access_type: 'offline',
       prompt: 'consent',
     });
@@ -77,7 +95,7 @@ export async function POST(request: NextRequest) {
       success: true,
       authUrl,
       provider: 'imap',
-      state: Buffer.from(JSON.stringify(state)).toString('base64')
+      state: stateToken
     });
   } catch (error: any) {
     if (isProductAccessError(error)) {

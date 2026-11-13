@@ -28,6 +28,8 @@ import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics/grap
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
+import { assertSafeOutboundHost } from '../net/outboundAddressPolicy';
+import { getImapCredentialSecret } from './imapCredentialSecrets';
 import { createHash } from 'node:crypto';
 
 export class SourceMessageUnavailableError extends Error {
@@ -631,6 +633,7 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
       'ic.allow_starttls',
       'ic.auth_type',
       'ic.username',
+      'ic.credential_generation',
       'ic.access_token',
       'ic.oauth_token_url',
       'ic.oauth_client_id',
@@ -641,6 +644,8 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
   if (!provider) {
     throw new SourceMessageUnavailableError('imap_provider_not_found');
   }
+
+  await assertSafeOutboundHost(provider.host);
 
   const connectionTimeoutMs = parsePositiveInteger(
     process.env.IMAP_CONNECTION_TIMEOUT_MS,
@@ -667,7 +672,13 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
   const password =
     provider.auth_type === 'oauth2'
       ? null
-      : await (await getSecretProviderInstance()).getTenantSecret(provider.tenant, `imap_password_${provider.id}`);
+      : await getImapCredentialSecret(
+          await getSecretProviderInstance(),
+          provider.tenant,
+          provider.id,
+          'password',
+          provider.credential_generation
+        );
   let accessToken = asNonEmptyString(provider.access_token);
 
   if (provider.auth_type === 'oauth2' && (!accessToken || isTokenExpired(provider.token_expires_at))) {

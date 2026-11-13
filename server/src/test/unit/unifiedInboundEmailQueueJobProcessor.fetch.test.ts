@@ -21,6 +21,10 @@ const imapCloseMock = vi.fn();
 const imapOnMock = vi.fn();
 const getTenantSecretMock = vi.fn();
 
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]) },
+}));
+
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
 }));

@@ -24,6 +24,11 @@ import {
   recordImapWebhookDispatchRetry,
   type MetricImapListenerErrorReason,
 } from '@alga-psa/shared/services/email/inboundEmailMetrics';
+import {
+  assertSafeOutboundHost,
+} from '@alga-psa/shared/services/net/outboundAddressPolicy';
+import { getImapCredentialSecret } from '@alga-psa/shared/services/email/imapCredentialSecrets';
+import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 
 const DEFAULT_REFRESH_MS = 60_000;
 const DEFAULT_RECONNECT_BASE_MS = 2_000;
@@ -229,6 +234,7 @@ function stateLog(event: string, fields: Record<string, unknown> = {}) {
     const payload = {
       ts: new Date().toISOString(),
       event,
+      ...(process.env.EVIDENCE_RUN_ID ? { evidenceRunId: process.env.EVIDENCE_RUN_ID } : {}),
       ...fields,
     };
     // Simple console logging requested; keep a stable prefix for grepping.
@@ -441,6 +447,7 @@ interface ImapProviderRow {
   allow_starttls: boolean;
   auth_type: 'password' | 'oauth2';
   username: string;
+  credential_generation?: string | null;
   auto_process_emails: boolean;
   max_emails_per_sync: number;
   folder_filters: string[];
@@ -484,7 +491,8 @@ class ImapFolderListener {
 
   constructor(
     private provider: ImapProviderRow,
-    private folder: string
+    private folder: string,
+    private workerId: string
   ) {
     this.folderState = this.loadFolderState();
   }
@@ -501,6 +509,12 @@ class ImapFolderListener {
   /** True between a successful connect and the next error/stop (metrics gauge). */
   isConnected(): boolean {
     return this.connected;
+  }
+
+  updateOAuthCredentials(nextProvider: ImapProviderRow) {
+    this.provider.access_token = nextProvider.access_token;
+    this.provider.refresh_token = nextProvider.refresh_token;
+    this.provider.token_expires_at = nextProvider.token_expires_at;
   }
 
   private async persistFolderState(update: Partial<FolderState>): Promise<void> {
@@ -682,61 +696,20 @@ class ImapFolderListener {
 
   private async getPasswordSecret(): Promise<string | null> {
     const secretProvider = await getSecretProviderInstance();
-    return (await secretProvider.getTenantSecret(this.provider.tenant, `imap_password_${this.provider.id}`)) ?? null;
-  }
-
-  private async getOauthSecrets(): Promise<{ clientSecret?: string | null; refreshToken?: string | null }> {
-    const secretProvider = await getSecretProviderInstance();
-    const clientSecret = (await secretProvider.getTenantSecret(this.provider.tenant, `imap_oauth_client_secret_${this.provider.id}`)) ?? null;
-    const refreshToken = (await secretProvider.getTenantSecret(this.provider.tenant, `imap_refresh_token_${this.provider.id}`)) ?? null;
-    return { clientSecret, refreshToken };
+    return (await getImapCredentialSecret(secretProvider, this.provider.tenant, this.provider.id, 'password', this.provider.credential_generation)) ?? null;
   }
 
   private async refreshAccessToken(): Promise<void> {
-    if (!this.provider.oauth_token_url || !this.provider.oauth_client_id) {
-      throw new Error('IMAP OAuth token URL or client ID missing');
-    }
-
-    const { clientSecret, refreshToken } = await this.getOauthSecrets();
-    const effectiveRefreshToken = refreshToken || this.provider.refresh_token;
-    if (!effectiveRefreshToken) {
-      throw new Error('IMAP OAuth refresh token missing');
-    }
-
-    const params = new URLSearchParams();
-    params.append('grant_type', 'refresh_token');
-    params.append('refresh_token', effectiveRefreshToken);
-    params.append('client_id', this.provider.oauth_client_id);
-    if (clientSecret) {
-      params.append('client_secret', clientSecret);
-    }
-
-    let response;
+    const db = await getAdminConnection();
     try {
-      response = await axios.post(this.provider.oauth_token_url, params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
+      await refreshImapAccessToken({ provider: this.provider, db });
     } catch (error: any) {
-      const msg = error?.response?.data?.error || error?.message || 'OAuth token refresh failed';
-      await this.updateProviderStatus('error', msg);
+      const message = error?.response?.data?.error || error?.message || 'OAuth token refresh failed';
+      if (!/stale|missing|not allowed/i.test(message)) {
+        await this.updateProviderStatus('error', message);
+      }
       throw error;
     }
-
-    const accessToken = response.data.access_token;
-    const expiresIn = Number(response.data.expires_in || 3600);
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
-    const db = await getAdminConnection();
-    await tenantDb(db, this.provider.tenant).table('imap_email_provider_config')
-      .where({ email_provider_id: this.provider.id })
-      .update({
-        access_token: accessToken,
-        token_expires_at: expiresAt,
-        updated_at: db.fn.now(),
-      });
-
-    this.provider.access_token = accessToken;
-    this.provider.token_expires_at = expiresAt;
 
     logger.info('[IMAP] Refreshed OAuth access token', {
       providerId: this.provider.id,
@@ -748,7 +721,7 @@ class ImapFolderListener {
       tenant: this.provider.tenant,
       folder: this.folder,
       listenerId: this.listenerId,
-      expiresAt,
+      expiresAt: this.provider.token_expires_at,
     });
   }
 
@@ -759,6 +732,7 @@ class ImapFolderListener {
   }
 
   private async buildClient(): Promise<ImapFlow> {
+    await assertSafeOutboundHost(this.provider.host);
     if (this.provider.auth_type === 'oauth2') {
       if (this.isTokenExpired()) {
         await this.refreshAccessToken();
@@ -1144,6 +1118,8 @@ class ImapFolderListener {
       tenant: this.provider.tenant,
       folder: this.folder,
       listenerId: this.listenerId,
+      workerId: this.workerId,
+      credentialGeneration: this.provider.credential_generation,
       host: this.provider.host,
       port: this.provider.port,
       authType: this.provider.auth_type,
@@ -1333,6 +1309,7 @@ class ImapProviderWorker {
       allow_starttls: this.provider.allow_starttls,
       auth_type: this.provider.auth_type,
       username: this.provider.username,
+      credential_generation: this.provider.credential_generation,
       folder_filters: this.provider.folder_filters,
       max_emails_per_sync: this.provider.max_emails_per_sync,
     });
@@ -1349,9 +1326,10 @@ class ImapProviderWorker {
       host: this.provider.host,
       port: this.provider.port,
       authType: this.provider.auth_type,
+      credentialGeneration: this.provider.credential_generation,
     });
 
-    this.listeners = folders.map(folder => new ImapFolderListener(this.provider, folder));
+    this.listeners = folders.map(folder => new ImapFolderListener(this.provider, folder, this.workerId));
     for (const listener of this.listeners) {
       listener.start();
     }
@@ -1382,6 +1360,7 @@ class ImapProviderWorker {
       allow_starttls: nextProvider.allow_starttls,
       auth_type: nextProvider.auth_type,
       username: nextProvider.username,
+      credential_generation: nextProvider.credential_generation,
       folder_filters: nextProvider.folder_filters,
       max_emails_per_sync: nextProvider.max_emails_per_sync,
     });
@@ -1389,7 +1368,22 @@ class ImapProviderWorker {
   }
 
   updateProvider(nextProvider: ImapProviderRow) {
+    if (this.running || this.listeners.length > 0) {
+      throw new Error('Cannot replace an IMAP worker provider while listeners are running');
+    }
     this.provider = nextProvider;
+  }
+
+  refreshProviderSnapshot(nextProvider: ImapProviderRow) {
+    if (this.needsRestart(nextProvider)) {
+      throw new Error('Cannot refresh an IMAP worker snapshot across a runtime scope change');
+    }
+    this.provider.access_token = nextProvider.access_token;
+    this.provider.refresh_token = nextProvider.refresh_token;
+    this.provider.token_expires_at = nextProvider.token_expires_at;
+    for (const listener of this.listeners) {
+      listener.updateOAuthCredentials(nextProvider);
+    }
   }
 }
 
@@ -1502,6 +1496,7 @@ export class EmailService {
         'ic.allow_starttls',
         'ic.auth_type',
         'ic.username',
+        'ic.credential_generation',
         'ic.auto_process_emails',
         'ic.max_emails_per_sync',
         'ic.folder_filters',
@@ -1621,6 +1616,10 @@ export class EmailService {
           this.workers.delete(row.id);
           continue;
         }
+        // Tokens may be replaced by OAuth reconnect without changing the
+        // destination generation. Keep the polling cycle alive while updating
+        // the worker and every listener's snapshot for its next client.
+        existing.refreshProviderSnapshot(row);
       }
     }
 
