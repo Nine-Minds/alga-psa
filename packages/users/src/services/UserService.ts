@@ -7,7 +7,8 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
+import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
   INTERACTIVE_USER_TYPES,
@@ -40,8 +41,8 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
-import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
 // Stubs for missing imports that are still in server
@@ -71,6 +72,35 @@ class ValidationError extends Error {
   readonly name = 'ValidationError';
   readonly statusCode = 400;
   readonly code = 'VALIDATION_ERROR';
+}
+class ConflictError extends Error {
+  readonly name = 'ConflictError';
+  readonly statusCode = 409;
+  readonly code = 'CONFLICT';
+}
+
+/**
+ * Both role floors, in the one place the API service reports them: a last-role
+ * refusal is a 400 the caller can fix by assigning another role first, a
+ * last-admin refusal is a 409 on the tenant's state.
+ */
+function throwOnUserRoleFloor(violation: UserRoleFloorViolation, message: string): never {
+  if (violation === 'last_msp_admin') {
+    throw new ConflictError(message);
+  }
+  throw new ValidationError(message);
+}
+
+async function enforceUserRoleFloor(
+  trx: Knex.Transaction,
+  tenant: string,
+  change: UserRoleFloorChange,
+  options?: { alsoAffectedUserIds?: readonly string[] }
+): Promise<void> {
+  const floor = await assertUserRoleFloor(trx, tenant, change, options);
+  if (isUserRoleFloorRejected(floor)) {
+    throwOnUserRoleFloor(floor.violation, floor.message);
+  }
 }
 
 function toSafeBulkErrorData(userData: Partial<CreateUserData>): Pick<CreateUserData, 'email'> & {
@@ -250,24 +280,35 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, trx => this.createUsingTransaction(data, context, trx));
+    return withTransaction(knex, async trx => (await this.createUsingTransaction(data, context, trx)).user);
   }
 
-  /** Invitation signup retains the seat lock through account, roles and token consumption. */
-  async createFromCoManagedInvitation(data: any, context: ServiceContext, trx: Knex.Transaction, token: string): Promise<IUser> {
+  /**
+   * Invitation signup: admission, account, roles and (for co-managed tenants)
+   * token consumption share `trx`, so the seat lock is held through all of them.
+   * `coManaged` tells the caller whether the token was consumed here or still
+   * needs marking used.
+   */
+  async createFromInvitation(data: any, context: ServiceContext, trx: Knex.Transaction, token: string): Promise<{ user: IUser; coManaged: boolean }> {
     await this.ensurePermission(context, 'user', 'create');
-    const admission = await assertCoManagedSeatAdmission(trx, context.tenant, { email: data.email, invitationToken: token, kind: 'user' });
-    if (!admission.managed || !admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
-      throw new Error('Invalid or changed invitation');
+    const { user, admission } = await this.createUsingTransaction(data, context, trx, { invitationToken: token });
+    if (admission?.coManaged) {
+      if (!admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
+        throw new Error('Invalid or changed invitation');
+      }
+      const updated = await tenantDb(trx, context.tenant).table('user_invitations')
+        .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
+      if (updated !== 1) throw new Error('Invitation already consumed');
     }
-    const user = await this.createUsingTransaction(data, context, trx, true);
-    const updated = await tenantDb(trx, context.tenant).table('user_invitations')
-      .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
-    if (updated !== 1) throw new Error('Invitation already consumed');
-    return user;
+    return { user, coManaged: admission?.coManaged === true };
   }
 
-  private async createUsingTransaction(data: any, context: ServiceContext, trx: Knex.Transaction, coManagedAdmitted = false): Promise<IUser> {
+  private async createUsingTransaction(
+    data: any,
+    context: ServiceContext,
+    trx: Knex.Transaction,
+    admissionOptions: { invitationToken?: string } = {}
+  ): Promise<{ user: IUser; admission: InternalUserLicenseLimitResult | null }> {
       const knex = trx;
       // Only interactive person types can be created here; 'internal' is the
       // default when no type is supplied. Anything else (including 'service')
@@ -278,11 +319,12 @@ export class UserService extends BaseService<IUser> {
       }
       const targetUserType: 'internal' | 'client' = requestedUserType;
 
-      // Seat check for licensed (internal) users, in the same transaction as the insert.
-      if (isLicensedUserType(targetUserType) && !coManagedAdmitted) {
-        const licenseCheck = await checkInternalUserLicenseLimit(trx, context.tenant);
-        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-          throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+      // Seat admission for licensed (internal) users, in the same transaction as the insert.
+      let admission: InternalUserLicenseLimitResult | null = null;
+      if (isLicensedUserType(targetUserType)) {
+        admission = await admitInternalUserSeat(trx, context.tenant, { email: data.email, kind: 'user', ...admissionOptions });
+        if (isInternalUserLicenseLimitRejected(admission)) {
+          throw new LicenseLimitError(admission.error, admission.code);
         }
       }
 
@@ -306,6 +348,12 @@ export class UserService extends BaseService<IUser> {
 
       if (existingUserByUsername) {
         throw new Error('A user with this username already exists for this user type');
+      }
+
+      // There is no "no roles" state: a user is created with at least one role
+      // (belt for callers that bypass createUserSchema).
+      if (!data.role_ids || data.role_ids.length === 0) {
+        throw new ValidationError('At least one role is required');
       }
 
       // Validate role IDs if provided
@@ -344,6 +392,11 @@ export class UserService extends BaseService<IUser> {
         .insert(userData)
         .returning(USER_RESPONSE_FIELD_NAMES);
 
+      // Tripwire: roll back if the insert left the tenant over its seat limits.
+      if (isLicensedUserType(targetUserType) && !userData.is_inactive) {
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+      }
+
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
         const userRoles = data.role_ids.map((roleId: string) => ({
@@ -372,7 +425,7 @@ export class UserService extends BaseService<IUser> {
         includeHateoas: true
       }, trx);
 
-      return enhancedUser as unknown as IUser;
+      return { user: enhancedUser as unknown as IUser, admission };
   }
 
   /**
@@ -387,7 +440,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
-        .select('user_id', 'email', 'user_type')
+        .select('user_id', 'email', 'user_type', 'is_inactive')
         .first();
 
       // Non-interactive principals are not managed through user management;
@@ -435,11 +488,35 @@ export class UserService extends BaseService<IUser> {
         }
       });
 
+      // A change that newly occupies an internal seat (reactivation, or
+      // client -> internal) is admitted like a new user: the guard takes the
+      // per-tenant seat lock and it is held through the write below.
+      const occupiesSeatNow = existingUser.user_type === 'internal' && existingUser.is_inactive === false;
+      const occupiesSeatAfter =
+        (data.user_type ?? existingUser.user_type) === 'internal'
+        && ((data as { is_inactive?: boolean }).is_inactive ?? existingUser.is_inactive) === false;
+      const takesNewSeat = occupiesSeatAfter && !occupiesSeatNow;
+      // The mirror image: a change that gives up an active internal seat must
+      // not take the tenant's last admin with it.
+      if (occupiesSeatNow && !occupiesSeatAfter) {
+        await enforceUserRoleFloor(trx, context.tenant, { kind: 'deactivate_user', userId: id });
+      }
+      if (takesNewSeat) {
+        const licenseCheck = await admitInternalUserSeat(trx, context.tenant, { email: existingUser.email, kind: 'user', existingUserId: id });
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+        }
+      }
+
       // Update user
       const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
         .update(updateData)
         .returning(USER_RESPONSE_FIELD_NAMES);
+
+      if (takesNewSeat) {
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+      }
 
       // Log user update activity
       await this.logUserActivity({
@@ -481,6 +558,8 @@ export class UserService extends BaseService<IUser> {
       if (!existingUser || !isInteractiveUserType(existingUser.user_type)) {
         throw new NotFoundError('User not found');
       }
+
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'delete_user', userId: id });
 
       // Delete related data in correct order to avoid foreign key constraints
       // 1. Delete user preferences
@@ -731,6 +810,11 @@ export class UserService extends BaseService<IUser> {
         throw new Error('One or more invalid role IDs provided');
       }
 
+      // Assignment replaces the role set, so the floors are decided on the
+      // final set: Admin -> Admin+other passes, Admin -> other on the last
+      // admin does not, and an empty list never does.
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
+
       // Remove existing roles
       await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
@@ -774,6 +858,18 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Verify user exists
+      const user = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
+        .select('user_id')
+        .first();
+
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
+
       // Remove specified roles
       await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
@@ -1099,6 +1195,46 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Reactivating internal users occupies seats: admit them one at a time
+      // under the seat lock (each check sees the previous activation);
+      // an over-limit request fails the whole operation (the transaction rolls back).
+      if (!deactivate) {
+        const candidates = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
+          .whereIn('user_id', userIds)
+          .where({ user_type: 'internal', is_inactive: true })
+          .select('user_id');
+        for (const candidate of candidates) {
+          const licenseCheck = await admitInternalUserSeat(trx, context.tenant, { kind: 'user', existingUserId: candidate.user_id });
+          if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+            throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+          }
+          await this.buildTenantScopedQuery(trx, context)
+            .where({ user_id: candidate.user_id })
+            .update({ is_inactive: false, updated_at: knex.raw('now()') });
+          await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+        }
+      }
+
+      // Deactivation is checked over the whole set: each target is told about
+      // the others, so a request that deactivates every admin at once is
+      // refused as surely as one that deactivates the last remaining admin.
+      if (deactivate) {
+        const targets: Array<{ user_id: string }> = await this.restrictToInteractiveUsers(
+          this.buildTenantScopedQuery(trx, context), false
+        )
+          .whereIn('user_id', userIds)
+          .select('user_id');
+        const targetIds = targets.map((target) => target.user_id);
+        for (const targetId of targetIds) {
+          await enforceUserRoleFloor(
+            trx,
+            context.tenant,
+            { kind: 'deactivate_user', userId: targetId },
+            { alsoAffectedUserIds: targetIds.filter((other) => other !== targetId) }
+          );
+        }
+      }
+
       // Only interactive users are managed here; non-interactive ids are skipped.
       const result = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
         .whereIn('user_id', userIds)

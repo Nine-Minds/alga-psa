@@ -36,6 +36,49 @@
         "suggested": "Suggéré",
         "toSave": "{{total}} à enregistrer"
       },
+      "customerMapping": {
+        "unlink": "Dissocier",
+        "unlinkConfirm": {
+          "title": "Dissocier {{client}} de QuickBooks ?",
+          "body": "{{client}} cesse d’être exporté vers le client QuickBooks {{customer}}. Rien ne change dans QuickBooks et vous pouvez l’associer de nouveau depuis cette liste à tout moment.",
+          "confirm": "Dissocier",
+          "cancel": "Conserver l’association"
+        },
+        "linkFailed": "Échec de l’association.",
+        "unlinkFailed": "Échec de la dissociation.",
+        "createFailed": "Échec de la création.",
+        "createFailedInQbo": "Échec de la création dans QuickBooks.",
+        "loadFailed": "Échec du chargement des associations de clients.",
+        "relink": "Réassocier",
+        "exact": "Correspondance exacte : {{name}}",
+        "suggestion": "Suggestion : {{name}}",
+        "linking": "Association en cours…",
+        "accept": "Accepter",
+        "confirm": "Confirmer",
+        "search": "Rechercher",
+        "searchPlaceholder": "Rechercher des clients QBO…",
+        "linkToCustomer": "Associer à un client QBO",
+        "creating": "Création en cours…",
+        "createInQbo": "Créer dans QuickBooks",
+        "leave": "Laisser tel quel",
+        "noCustomers": "Aucun client QBO trouvé.",
+        "noClients": "Aucun client trouvé.",
+        "notMapped": "Non associé",
+        "subCustomer": "sous-client",
+        "bulkLinked_one": "{{count}} correspondance exacte associée.",
+        "bulkLinked_other": "{{count}} correspondances exactes associées.",
+        "bulkFailed": "Échec de l’acceptation en masse.",
+        "exactReady_one": "{{count}} correspondance exacte de nom prête à être acceptée",
+        "exactReady_other": "{{count}} correspondances exactes de nom prêtes à être acceptées",
+        "accepting": "Acceptation en cours…",
+        "acceptExact_one": "Accepter {{count}} correspondance exacte",
+        "acceptExact_other": "Accepter {{count}} correspondances exactes",
+        "columns": {
+          "client": "Client",
+          "customer": "Client QBO",
+          "action": "Action"
+        }
+      },
       "dialog": {
         "cancel": "Annuler",
         "enterPlaceholder": "Saisir {{field}}...",
@@ -844,7 +887,13 @@
             "expired": "La tentative de connexion a expiré avant de se terminer. Rien n'a été enregistré — relancez la connexion.",
             "generic": "Microsoft Entra n'a pas été connecté et rien n'a été enregistré. Veuillez réessayer.",
             "validationFailed": "Microsoft vous a connecté, mais la liste des locataires gérés n'a pas pu être lue ; rien n'a été enregistré. Vos autorisations ont été acceptées — en général, le locataire partenaire n'est pas intégré à Microsoft 365 Lighthouse ou n'a aucune relation GDAP active.",
-            "tokenRejected": "Microsoft a rejeté le jeton d'accès de la connexion ; rien n'a été enregistré. Relancez la connexion."
+            "tokenRejected": "Microsoft a rejeté le jeton d'accès de la connexion ; rien n'a été enregistré. Relancez la connexion.",
+            "singleTenantApp": "Microsoft a refusé la connexion car cet enregistrement d'application est mono-locataire. Entra nécessite une application multilocataire : ouvrez l'enregistrement de l'application, accédez à Authentification, définissez Types de comptes pris en charge sur « Comptes dans un annuaire organisationnel quelconque », puis reconnectez-vous. Rien n'a été enregistré.",
+            "appNotInDirectory": "Microsoft n'a pas trouvé cette application dans l'annuaire indiqué par l'ID de locataire du profil Microsoft. Vérifiez que l'ID de locataire est l'ID d'annuaire (locataire) où l'application est enregistrée. Rien n'a été enregistré.",
+            "wrongDirectory": "Le compte avec lequel vous vous êtes connecté appartient à un autre annuaire que cette application mono-locataire. Rendez l'application multilocataire (Comptes dans un annuaire organisationnel quelconque), puis reconnectez-vous. Rien n'a été enregistré.",
+            "redirectUriMismatch": "Microsoft a refusé l'URI de redirection car il n'est pas enregistré sur l'application. Ajoutez cet URI exact sous Authentification > URI de redirection web, puis reconnectez-vous : {{redirectUri}}",
+            "invalidClientSecret": "Microsoft a refusé la clé secrète client du profil Microsoft. Vérifiez que vous avez enregistré la Valeur de la clé secrète, et non son ID de clé secrète.",
+            "expiredClientSecret": "La clé secrète client du profil Microsoft a expiré. Créez une nouvelle clé secrète dans Azure, puis mettez à jour le profil."
           },
           "connectingSuffix": " (Connexion...)",
           "details": "Détails de la connexion",
@@ -1919,8 +1968,12 @@
           "calendarRedirect": "Redirect URI de synchronisation du calendrier",
           "calendarTitle": "Guide du calendrier",
           "clientId": "ID client",
+          "copied": "Copié",
+          "copy": "Copier",
+          "copyFailed": "Copie impossible",
           "currentProfileTitle": "Valeurs du profil actuel",
           "emailRedirect": "Redirect URI de l'e-mail entrant",
+          "emailSetupRedirect": "URI de redirection de la configuration e-mail",
           "emailTitle": "Guide de l'e-mail",
           "entraConsent": "Exigence",
           "entraConsentValue": "Inscrivez cette application en multilocataire et accordez le consentement administrateur dans le locataire partenaire.",
@@ -2074,11 +2127,18 @@
         "environment": "Environnement Intuit",
         "environmentProduction": "Production",
         "environmentSandbox": "Bac à sable",
+        "environmentHint": "La production se connecte à de vraies entreprises QuickBooks. Le bac à sable se connecte à une entreprise de test Intuit, ce qui permet d’essayer les exports sans toucher à une comptabilité réelle.",
+        "environmentLockedHint": "Déconnectez QuickBooks avant de changer d’environnement. L’entreprise connectée et ses jetons n’existent que dans l’environnement où ils ont été autorisés.",
+        "environmentSandboxKeysTitle": "Le bac à sable exige votre propre application Intuit",
+        "environmentSandboxKeysDescription": "Les entreprises du bac à sable Intuit n’acceptent que les clés Development d’une application Intuit que vous contrôlez. L’application partagée de ce déploiement utilise des clés Production : enregistrez votre propre application et saisissez ses clés Development ci-dessous avant de vous connecter.",
+        "environmentSavedSandbox": "QuickBooks se connectera désormais à une entreprise du bac à sable Intuit. Connectez-vous avec les clés Development de votre propre application Intuit.",
+        "environmentSavedProduction": "QuickBooks se connectera désormais à de vraies entreprises QuickBooks.",
         "errors": {
           "automatedSalesTax": "Impossible de mettre à jour le mode Automated Sales Tax.",
           "disconnect": "Échec de la déconnexion de QuickBooks.",
           "load": "Échec du chargement des paramètres QuickBooks.",
-          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks."
+          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks.",
+          "environment": "Échec du changement d’environnement Intuit."
         },
         "howItWorksDescription": "Connectez votre entreprise QuickBooks en vous connectant à Intuit ; AlgaPSA l'utilisera comme contexte en direct par défaut pour les exports et les correspondances. La carte « Application Intuit » ci-dessous indique si votre déploiement fournit déjà l'application utilisée pour cette connexion ou si vous devez d'abord en enregistrer une.",
         "howItWorksTitle": "Comment fonctionne QuickBooks live dans cette version",
@@ -2110,6 +2170,7 @@
         "credentialSource": {
           "app": "Ce déploiement fournit une application Intuit partagée : vous pouvez donc connecter QuickBooks sans en enregistrer une. Ignorez cette carte et cliquez sur « Connecter QuickBooks » ci-dessous.",
           "none": "Aucune application Intuit n'est encore disponible. Enregistrez-en une auprès d'Intuit avant de pouvoir vous connecter.",
+          "noneSandbox": "Le bac à sable exige votre propre application Intuit. Enregistrez-en une et saisissez ses clés Development avant de pouvoir vous connecter.",
           "tenant": "Ce tenant se connecte via sa propre application Intuit, avec les identifiants enregistrés ci-dessous. Pour renouveler une clé, collez la nouvelle valeur et enregistrez.",
           "appTitle": "Aucun identifiant nécessaire"
         },
@@ -2408,6 +2469,42 @@
           "title": "Fenêtres de maintenance",
           "description": "Les alertes reçues pendant une fenêtre active sont supprimées et ne créent pas de tickets.",
           "empty": "Aucune fenêtre de maintenance configurée."
+        },
+        "predicate": {
+          "matchAll": "Correspondance",
+          "all": "Toutes les conditions",
+          "any": "N’importe quelle condition",
+          "add": "Ajouter une condition",
+          "remove": "Supprimer",
+          "value": "Valeur",
+          "nestedGroup": "Groupe imbriqué",
+          "legacyRegex": "Expression régulière héritée du message",
+          "and": "et",
+          "or": "ou",
+          "fields": {
+            "severity": "Gravité",
+            "alertClass": "Classe d’alerte",
+            "activityType": "Type d’activité",
+            "sourceType": "Type de source",
+            "organizationId": "ID de l’organisation",
+            "text": "Message et détails",
+            "deviceName": "Nom de l’appareil",
+            "externalDeviceId": "ID externe de l’appareil",
+            "message": "Message",
+            "details": "Détails"
+          },
+          "operators": {
+            "equals": "est",
+            "not_equals": "n’est pas",
+            "in": "est une valeur parmi",
+            "not_in": "n’est aucune des valeurs",
+            "contains": "contient",
+            "not_contains": "ne contient pas",
+            "contains_ci": "contient, sans tenir compte de la casse",
+            "not_contains_ci": "ne contient pas, sans tenir compte de la casse"
+          },
+          "addGroup": "Ajouter un groupe",
+          "removeGroup": "Supprimer le groupe"
         }
       },
       "ninjaOne": {
@@ -3057,6 +3154,138 @@
           "showSecret": "Afficher le secret",
           "title": "Webhook d'alertes",
           "url": "URL du webhook"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "L’intégration UniFi est disponible dans AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Enregistrer la configuration",
+          "testConnection": "Revérifier toutes les clés",
+          "disconnect": "Déconnecter",
+          "discoverSites": "Découvrir les sites",
+          "runDeviceSync": "Lancer la synchronisation des appareils",
+          "checkOfflineNow": "Vérifier les appareils hors ligne maintenant",
+          "saveAlerting": "Enregistrer les paramètres d'alerte"
+        },
+        "alerting": {
+          "title": "Alertes hors ligne",
+          "description": "Un appareil qui reste hors ligne plus longtemps que le délai de grâce déclenche une alerte et, si vos règles d'alerte le prévoient, un ticket. L'alerte est résolue lorsque l'appareil revient en ligne.",
+          "graceMinutes": "Délai de grâce hors ligne (minutes)",
+          "graceHelp": "Durée pendant laquelle un appareil doit rester hors ligne en continu avant qu'une alerte ne soit déclenchée. Utilisez 0 pour alerter immédiatement.",
+          "rulesNote": "La création de tickets, les priorités et la résolution automatique se configurent dans les règles d'alerte ci-dessous."
+        },
+        "connection": {
+          "title": "Connexion UniFi",
+          "description": "Connectez-vous avec une ou plusieurs clés d’API UniFi. Une clé Site Manager créée sous Independent atteint vos consoles indépendantes ; une clé créée sous une fabric n’atteint que cette fabric, ajoutez donc une clé par fabric. Les clés de contrôleur local fonctionnent pour un contrôleur que vous joignez directement. Les passerelles, commutateurs et points d’accès adoptés sont synchronisés.",
+          "syncLabel": "Synchronisation : {{status}}",
+          "syncLabelWithError": "Synchronisation : {{status}} ({{error}})",
+          "connectedAt": "Connecté : {{time}}",
+          "never": "jamais"
+        },
+        "errors": {
+          "loadSettings": "Échec du chargement des paramètres UniFi",
+          "loadMappings": "Échec du chargement des correspondances de sites UniFi",
+          "loadSummary": "Échec du chargement du résumé de connexion UniFi",
+          "loadState": "Échec du chargement de l'état de l'intégration UniFi",
+          "saveConfiguration": "Échec de l'enregistrement de la configuration UniFi",
+          "testConnectionFailed": "Échec du test de connexion",
+          "disconnectFailed": "Échec de la déconnexion de l'intégration UniFi",
+          "siteSyncFailed": "Échec de la découverte des sites",
+          "deviceSyncFailed": "Échec de la synchronisation des appareils",
+          "updateMappingFailed": "Échec de la mise à jour de la correspondance",
+          "reconnectRequired": "UniFi a refusé toutes les clés d’API enregistrées. Remplacez une clé ci-dessous pour reprendre la synchronisation.",
+          "alertCheckFailed": "Échec de la vérification hors ligne",
+          "saveAlertingFailed": "Échec de l'enregistrement des paramètres d'alerte",
+          "invalidGraceMinutes": "Saisissez un nombre entier de minutes compris entre 0 et 1440."
+        },
+        "fields": {
+          "apiKey": "Clé d'API ({{state}})",
+          "apiKeyStateSaved": "enregistrée",
+          "apiKeyStateRequired": "obligatoire",
+          "apiKeyPlaceholderExisting": "Clé enregistrée. Saisissez une nouvelle clé pour la remplacer",
+          "apiKeyPlaceholderNew": "Collez votre clé d'API UniFi",
+          "connectionMode": "Mode de connexion",
+          "modeSiteManager": "Site Manager (dans le cloud)",
+          "modeLocal": "Contrôleur local",
+          "localBaseUrl": "URL du contrôleur",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "Site UniFi",
+          "reachedBy": "Accessible via",
+          "mappedClient": "Client associé",
+          "defaultContact": "Contact par défaut",
+          "selectContact": "Sélectionner un contact",
+          "autoSync": "Synchronisation automatique",
+          "autoSyncEnabled": "Activée",
+          "autoSyncDisabled": "Désactivée"
+        },
+        "status": {
+          "label": "Statut : ",
+          "connected": "Connecté",
+          "disconnected": "Non connecté",
+          "reconnectRequired": "Reconnexion requise"
+        },
+        "success": {
+          "configurationSaved": "Configuration UniFi enregistrée",
+          "connectionTestSucceeded": "Connexion à UniFi réussie",
+          "disconnected": "Intégration UniFi déconnectée",
+          "siteSyncCompleted": "Découverte des sites terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "deviceSyncCompleted": "Synchronisation des appareils terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "alertCheckCompleted": "Vérification hors ligne terminée",
+          "alertingSaved": "Paramètres d'alerte enregistrés"
+        },
+        "sync": {
+          "title": "Synchronisation et correspondances de sites",
+          "description": "Découvrez les sites UniFi et associez chacun à un client. Les appareils des sites non associés sont ignorés.",
+          "summary": "{{mappedSites}} sites associés · {{devices}} appareils · {{activeAlerts}} alertes actives"
+        },
+        "credentials": {
+          "columns": {
+            "label": "Clé",
+            "type": "Type",
+            "status": "Statut",
+            "consoles": "Consoles accessibles",
+            "lastError": "Dernière erreur",
+            "lastChecked": "Dernière vérification",
+            "actions": "Actions"
+          },
+          "statusActive": "Active",
+          "statusReconnect": "Clé refusée",
+          "statusDisabled": "Désactivée",
+          "noConsoles": "Aucune pour l’instant",
+          "unreachableTitle": "Certaines consoles sont visibles, mais aucune de vos clés ne peut y accéder.",
+          "unreachableAction": "Si une console appartient à une fabric, ajoutez une clé créée sous cette fabric. Créez-la dans UniFi Site Manager avec cette fabric sélectionnée.",
+          "firstKeyHelp": "Collez une clé d’API UniFi pour vous connecter. Vous pourrez ajouter d’autres clés plus tard, par exemple une par fabric.",
+          "addHelp": "Une clé créée sous Independent atteint vos consoles indépendantes. Une clé créée sous une fabric n’atteint que cette fabric : ajoutez-en une par fabric.",
+          "labelField": "Libellé",
+          "labelPlaceholderFirst": "Par défaut",
+          "labelPlaceholder": "Par exemple : fabric Acme",
+          "keyField": "Clé d’API",
+          "addKey": "Ajouter la clé",
+          "addAnother": "Ajouter une autre clé",
+          "cancel": "Annuler",
+          "replaceKey": "Remplacer la clé",
+          "replaceTitle": "Remplacer la clé : {{label}}",
+          "replaceHelp": "La nouvelle clé est vérifiée avant de remplacer celle enregistrée. L’ancienne clé est supprimée.",
+          "replaceUrlField": "URL du contrôleur (laissez vide pour conserver celle enregistrée)",
+          "newKeyField": "Nouvelle clé d’API",
+          "rename": "Renommer",
+          "renameTitle": "Renommer la clé",
+          "remove": "Supprimer",
+          "actionsMenu": "Actions pour {{label}}",
+          "removeTitle": "Supprimer la clé : {{label}}",
+          "removeWarning": "Ces sites associés utilisent cette clé. Ils conservent leur association client et leurs actifs, mais cessent de se synchroniser tant qu’une autre clé n’atteint pas leur console.",
+          "added": "Clé d’API ajoutée",
+          "replaced": "Clé d’API remplacée",
+          "renamed": "Libellé mis à jour",
+          "removed": "Clé d’API supprimée",
+          "addFailed": "Échec de l’ajout de la clé d’API",
+          "replaceFailed": "Échec du remplacement de la clé d’API",
+          "renameFailed": "Échec de la mise à jour du libellé",
+          "removeFailed": "Échec de la suppression de la clé d’API"
         }
       },
       "huntress": {

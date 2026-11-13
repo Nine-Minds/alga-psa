@@ -371,6 +371,10 @@
       "title": "Zasoby",
       "custody": {
         "title": "Sprzęt w przechowaniu"
+      },
+      "audits": {
+        "title": "Audyty lokalizacji",
+        "detailTitle": "Audyt lokalizacji"
       }
     },
     "createContact": {
@@ -521,7 +525,10 @@
       "defaultTitle": "Pulpit | AlgaPSA"
     },
     "coManaged": {
-      "title": "Współzarządzane IT"
+      "title": "Współzarządzane IT",
+      "archive": {
+        "title": "Archiwum współzarządzanej IT"
+      }
     },
     "coManagement": {
       "title": "Dostęp do współzarządzania",
@@ -541,6 +548,18 @@
         "title": "Udostępnione zadania",
         "taskTitle": "Udostępnione zadanie",
         "projectTitle": "Udostępniony projekt"
+      },
+      "departure": {
+        "title": "Zakończ współzarządzanie IT"
+      },
+      "sla": {
+        "title": "Priorytety SLA współzarządzania"
+      },
+      "export": {
+        "title": "Eksportuj obszar roboczy"
+      },
+      "upgrade": {
+        "title": "Przejdź na AlgaPSA"
       }
     }
   },

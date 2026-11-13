@@ -20,6 +20,7 @@
  */
 
 import type { Knex } from 'knex';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -32,7 +33,7 @@ import {
   type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { compileBundleReadNarrowingSql } from '@alga-psa/authorization/kernel/relationshipTemplates';
+import { compileBuiltinResolverReadNarrowingSql, compileBundleReadNarrowingSql } from '@alga-psa/authorization/kernel/relationshipTemplates';
 import type { RelationshipSqlCompileResult } from '@alga-psa/authorization/kernel/relationshipTemplates';
 import type { TenantScopedQuery } from '@alga-psa/db';
 
@@ -104,36 +105,23 @@ export function getCredentialBuiltinRelationshipRules(isRestricted: boolean): Re
   return [{ template: 'own_or_assigned' }, { template: 'same_team' }];
 }
 
+/**
+ * The credential subject: the shared resolver's subject, with one deliberate
+ * exception. Credential decisions have never seen a user's reports (`managedUserIds`
+ * was always empty here), so a bundle `managed` / `own_or_managed` rule on the
+ * credential resource matches only the user's own rows. Resolving the real
+ * reports would let a manager reach their reports' credentials under such a rule,
+ * which widens access on a dark feature. Lifting this belongs to the slice that
+ * decides credential visibility for managers, not to subject resolution.
+ */
 export async function resolveCredentialAuthorizationSubjectForUser(
   trx: Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles
+  user: IUserWithRoles,
+  requestCache?: RequestLocalAuthorizationCache
 ): Promise<AuthorizationSubject> {
-  const userId = user.user_id;
-  const roleIds = Array.isArray((user as { roles?: unknown[] }).roles)
-    ? (user.roles as { role_id?: string }[]).map((r) => r.role_id).filter((id): id is string => Boolean(id))
-    : [];
-  let teamIds: string[] = [];
-  try {
-    const rows = await trx
-      .select<{ team_id: string }[]>('team_id')
-      .from('team_members')
-      .where({ tenant, user_id: userId });
-    teamIds = rows.map((row) => row.team_id);
-  } catch {
-    teamIds = [];
-  }
-
-  return {
-    tenant,
-    userId,
-    userType: user.user_type === 'client' ? 'client' : user.user_type === 'service' ? 'service' : 'internal',
-    roleIds,
-    teamIds,
-    managedUserIds: [],
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
+  const subject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
+  return { ...subject, managedUserIds: [] };
 }
 
 export interface CredentialAuthorizationContext {
@@ -152,8 +140,8 @@ export async function createCredentialAuthorizationContext(
   tenant: string,
   user: IUserWithRoles
 ): Promise<CredentialAuthorizationContext> {
-  const subject = await resolveCredentialAuthorizationSubjectForUser(trx, tenant, user);
   const requestCache = new RequestLocalAuthorizationCache();
+  const subject = await resolveCredentialAuthorizationSubjectForUser(trx, tenant, user, requestCache);
   const bundleNarrowingRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
     subject,
     resource: { type: 'credential', action: 'read' },
@@ -173,12 +161,8 @@ export function buildCredentialAuthorizationKernel(
       relationshipRules: getCredentialBuiltinRelationshipRules(isRestricted),
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        if (input.resource.type === 'credential' && input.resource.action === 'read') {
-          return context.bundleNarrowingRules;
-        }
-        return [];
-      },
+      // Full assigned rule set, unfiltered: closed-baseline evaluation derives closed bundles from it.
+      resolveRules: async () => context.bundleNarrowingRules,
     }),
     rbacEvaluator: async () => true,
   });
@@ -261,8 +245,9 @@ export function compileCredentialReadScopeSql(
 
   // AND bundle narrowing (selected_clients → client_id, etc.). When a rule is
   // not representable the caller falls back to the JS kernel.
-  return compileBundleReadNarrowingSql(builder, context.bundleNarrowingRules, 'credential', 'read', {
-    subject,
-    adapter: createCredentialRelationshipSqlAdapter(),
-  });
+  const sqlContext = { subject, adapter: createCredentialRelationshipSqlAdapter() };
+  // Registered built-in rule resolvers narrow first (closed baselines included), then bundles.
+  const resolverResult = compileBuiltinResolverReadNarrowingSql(builder, 'credential', 'read', sqlContext);
+  if (!resolverResult.supported) return resolverResult;
+  return compileBundleReadNarrowingSql(builder, context.bundleNarrowingRules, 'credential', 'read', sqlContext);
 }

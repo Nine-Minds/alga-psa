@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Tickets",
-      "documents": "Dokumente",
-      "time": "Zeit",
-      "projects": "Projekte",
-      "assets": "Assets",
-      "billing": "Abrechnung"
-    },
     "targetTypes": {
       "role": "Rolle",
       "team": "Team",
@@ -453,11 +445,13 @@
         "custom": "Benutzerdefiniert"
       },
       "badges": {
-        "starter": "Startvorlage"
+        "starter": "Startvorlage",
+        "closed": "Geschlossen"
       },
       "descriptions": {
         "systemStarter": "System-Starter-Paket.",
-        "customBundle": "Benutzerdefiniertes Beschränkungspaket für Zuweisungen an Rollen, Teams, Benutzer oder API-Schlüssel."
+        "customBundle": "Benutzerdefiniertes Beschränkungspaket für Zuweisungen an Rollen, Teams, Benutzer oder API-Schlüssel.",
+        "closed": "Geschlossen: verweigert alles, was nicht genannt ist."
       },
       "effectiveSummary": "Effektive Zusammenfassung: {{status}} Paket mit {{count}} aktiven Zuweisung(en).",
       "empty": "Keine Autorisierungspakete gefunden.",
@@ -542,6 +536,17 @@
         "label": "Redigierte Felder",
         "placeholder": "internal_cost, margin",
         "helper": "Durch Kommas getrennte Feldnamen, die redigiert werden, wenn diese Regel den Zugriff erlaubt."
+      },
+      "baseline": {
+        "title": "Geschlossenes Bundle",
+        "explanation": "Ein geschlossenes Bundle verweigert jeden Datensatztyp und jede Aktion, die es nicht nennt. Ein offenes Bundle schränkt nur die genannten ein.",
+        "closedToggle": "Als geschlossen veröffentlichen",
+        "openBadge": "Offen",
+        "previewTitle": "Dieses geschlossene Bundle verweigert",
+        "previewIntro": "Benutzer mit diesem Bundle wird der Zugriff auf diese Datensatztypen und Aktionen verweigert, da das Bundle keine Regel dafür enthält.",
+        "previewNothing": "Das Bundle nennt jeden Datensatztyp und jede Aktion und verweigert daher nichts über seine eigenen Regeln hinaus.",
+        "deniedAll": "Alle Aktionen",
+        "deniedActions": "Verweigert: {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Datensatz",
       "useSynthetic": "Synthetisches Datensatzszenario verwenden",
       "syntheticOwnerPlaceholder": "Besitzer-Benutzer-ID (optional)",
-      "syntheticClientPlaceholder": "Kunden-ID (optional)",
+      "syntheticClientPlaceholder": "Kunde (optional)",
       "syntheticBoardPlaceholder": "Board-ID (optional)",
       "clientVisible": "Für Kunden sichtbar",
       "run": "Simulation ausführen",
@@ -584,7 +589,18 @@
       "publishedRevision": "Veröffentlichte Revision",
       "allowed": "Erlaubt",
       "denied": "Verweigert",
-      "empty": "Führen Sie eine Simulation aus, um das Verhalten von Entwurf und veröffentlichter Version zu vergleichen."
+      "empty": "Führen Sie eine Simulation aus, um das Verhalten von Entwurf und veröffentlichter Version zu vergleichen.",
+      "explanations": {
+        "closedBaseline": "Das Bundle ist geschlossen und hat keine Regel für {{action}} bei {{resource}}, daher wird der Zugriff verweigert.",
+        "clientPortfolio": "Der Datensatz gehört zu einem Kunden außerhalb des Kundenportfolios dieses Benutzers, daher verweigert die Portfolioregel den Zugriff.",
+        "createOutOfScope": "Das Erstellen von {{resource}} für diesen Kunden wird verweigert: Der Kunde liegt außerhalb des Bereichs dieses Benutzers.",
+        "readRequired": "{{action}} bei {{resource}} erfordert auch Lesezugriff auf den Datensatz, und die Leseregeln verweigern ihn.",
+        "templateDenied": "Eine Regel im Bundle beschränkt {{action}} bei {{resource}} auf Datensätze, auf die dieser Benutzer nicht zutrifft.",
+        "clientVisibleOnly": "Das Bundle erlaubt {{action}} bei {{resource}} nur, wenn der Datensatz für den Kunden sichtbar ist.",
+        "notSelfApprover": "Benutzer können ihre eigenen Datensätze nicht genehmigen.",
+        "rulesUnavailable": "Die Regeln des Bundles konnten nicht geladen werden, daher wird der Zugriff verweigert.",
+        "rbacDenied": "Die Rolle des Benutzers gewährt {{action}} bei {{resource}} nicht."
+      }
     },
     "createDialog": {
       "title": "Autorisierungspaket erstellen",
@@ -622,9 +638,47 @@
       "selectRecord": "Wählen Sie einen Datensatz aus, bevor Sie die Simulation ausführen.",
       "runSimulation": "Simulation konnte nicht ausgeführt werden.",
       "simulator": {
-        "unsupportedAction": "Der Simulator unterstützt derzeit nur Lese- und Genehmigungsprüfungen. Wählen Sie eine dieser Aktionen aus und versuchen Sie es erneut.",
+        "unsupportedAction": "Der Simulator unterstützt Prüfungen für Lesen, Erstellen, Aktualisieren, Löschen und Genehmigen. Wählen Sie eine dieser Aktionen und versuchen Sie es erneut.",
         "unsupportedResource": "Dieser Datensatztyp ist im Simulator noch nicht verfügbar. Wählen Sie einen unterstützten Datensatztyp aus und versuchen Sie es erneut.",
-        "clientTicketNotSupported": "Ticketprüfungen für Client-Benutzer sind im Simulator noch nicht verfügbar, da die Sichtbarkeit von Ticket-Boards nicht enthalten ist. Versuchen Sie es mit einem internen Benutzer oder überprüfen Sie den Client-Ticket-Zugriff in der App."
+        "clientTicketNotSupported": "Ticketprüfungen für Client-Benutzer sind im Simulator noch nicht verfügbar, da die Sichtbarkeit von Ticket-Boards nicht enthalten ist. Versuchen Sie es mit einem internen Benutzer oder überprüfen Sie den Client-Ticket-Zugriff in der App.",
+        "syntheticRecordRequired": "Für diesen Datensatztyp gibt es keine gespeicherten Datensätze zur Auswahl. Verwenden Sie ein synthetisches Datensatzszenario und versuchen Sie es erneut."
+      },
+      "saveBaseline": "Die Einstellung „geschlossen“ konnte nicht geändert werden."
+    },
+    "resourceTypes": {
+      "ticket": "Tickets",
+      "document": "Dokumente",
+      "time_entry": "Zeit",
+      "project": "Projekte",
+      "asset": "Assets",
+      "billing": "Abrechnung",
+      "tag": "Tags",
+      "client": "Kunden",
+      "contact": "Kontakte",
+      "interaction": "Interaktionen",
+      "schedule_entry": "Terminplaneinträge"
+    },
+    "actions": {
+      "read": "Lesen",
+      "create": "Erstellen",
+      "update": "Aktualisieren",
+      "delete": "Löschen",
+      "approve": "Genehmigen"
+    },
+    "portfolio": {
+      "title": "Kundenportfolio",
+      "description": "Die Kunden, für die dieser Benutzer arbeitet. Bundles mit einer Kundenportfolio-Regel beschränken den Benutzer auf diese Kunden.",
+      "addClient": "Kunden hinzufügen",
+      "loading": "Kundenportfolio wird geladen...",
+      "empty": "Keine Kunden. Einem Benutzer mit leerem Portfolio wird alles verweigert, was eine Kundenportfolio-Regel abdeckt.",
+      "removeClient": "{{client}} entfernen",
+      "save": "Portfolio speichern",
+      "saving": "Wird gespeichert...",
+      "saved": "Kundenportfolio gespeichert.",
+      "errors": {
+        "load": "Das Kundenportfolio konnte nicht geladen werden.",
+        "lookup": "Der Kunde konnte nicht gefunden werden.",
+        "save": "Das Kundenportfolio konnte nicht gespeichert werden."
       }
     }
   },

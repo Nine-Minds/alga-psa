@@ -9,6 +9,7 @@ import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight, Edit } from 'lucide-react';
 import { getContractLineBillingTimingLabel } from './contractLineBillingTimingLabel';
 import { unitFixedServiceAmountCents } from '../../../lib/fixedServiceBasis';
+import { BillingTermsSection } from './BillingTermsSection';
 import { UsageLegacyTransitionDialog, type UsageLegacyTransitionMode } from './UsageLegacyTransitionDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
@@ -568,6 +569,11 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Billing profile & payment terms, resolved live by the engine's own chains */}
+        {overview.billingTrace && (
+          <BillingTermsSection trace={overview.billingTrace} formatFrequency={formatFrequencyLabel} />
+        )}
 
         {/* Contract Lines List */}
         {overview.contractLines.length > 0 ? (

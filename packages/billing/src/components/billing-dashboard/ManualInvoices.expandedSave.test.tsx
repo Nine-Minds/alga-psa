@@ -49,7 +49,7 @@ const invoice: any = {
   invoice_charges: [{ item_id: 'generated-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Recurring', quantity: 1, unit_price: 390000, total_price: 390000, net_amount: 390000, tax_amount: 0, is_manual: false, is_discount: false, is_taxable: false }],
 };
 const services: any[] = [{ service_id: 'svc-1', service_name: 'Support', item_kind: 'service', is_active: true, default_rate: 5000, prices: [{ currency_code: 'USD', rate: 5000 }] }];
-const renderDraft = (draft = invoice, onSaved?: () => void | Promise<void>) => render(<ManualInvoices clients={[]} services={services} invoice={draft} variant="draftAdjustments" onSaved={onSaved} onGenerateSuccess={vi.fn()} />);
+const renderDraft = (draft = invoice, onSaved?: () => void | Promise<void>) => render(<ManualInvoices services={services} invoice={draft} variant="draftAdjustments" onSaved={onSaved} onGenerateSuccess={vi.fn()} />);
 const fillCharge = async (description: string) => {
   await waitFor(() => expect(document.getElementById('add-line-item-button')).toBeTruthy());
   fireEvent.click(document.getElementById('add-line-item-button')!);
@@ -397,7 +397,7 @@ describe('expanded invoice adjustment global save', () => {
     mocks.lineItems.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; })).mockResolvedValueOnce([newLine] as any);
     const view = renderDraft({ ...invoice, invoice_charges: [oldLine] });
     await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(1));
-    view.rerender(<ManualInvoices clients={[]} services={services} invoice={{ ...invoice, invoice_id: 'invoice-2', invoice_charges: [newLine] }} variant="draftAdjustments" onGenerateSuccess={vi.fn()} />);
+    view.rerender(<ManualInvoices services={services} invoice={{ ...invoice, invoice_id: 'invoice-2', invoice_charges: [newLine] }} variant="draftAdjustments" onGenerateSuccess={vi.fn()} />);
     await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(2));
     resolveOld([oldLine]);
     await waitFor(() => expect(screen.getByText('New invoice row')).toBeTruthy());

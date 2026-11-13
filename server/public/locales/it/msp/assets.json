@@ -54,6 +54,22 @@
       "closed": "Chiuso",
       "warranty_review": "Verifica garanzia",
       "repaired": "Riparato"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In corso",
+      "completed": "Completato",
+      "cancelled": "Annullato"
+    },
+    "assetAuditResult": {
+      "expected": "Previsto",
+      "present": "Presente",
+      "missing": "Mancante",
+      "unexpected": "Non previsto"
+    },
+    "assetAuditMethod": {
+      "scan": "Scansione",
+      "manual": "Manuale",
+      "register": "Registrato in sede"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Qualsiasi custodia",
         "inCustody": "In custodia MSP",
         "notInCustody": "Non in custodia MSP"
+      },
+      "audit": {
+        "any": "Qualsiasi esito dell'audit",
+        "present": "Ultimo audit: presente",
+        "missing": "Ultimo audit: mancante",
+        "never": "Mai sottoposto ad audit",
+        "stale": "Nessun audit negli ultimi 90 giorni"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Posizione",
       "purchaseDate": "Data di acquisto",
       "warrantyEnd": "Fine della garanzia",
-      "notProvided": "Non fornito"
+      "notProvided": "Non fornito",
+      "lastAudited": "Ultimo audit",
+      "neverAudited": "Mai sottoposto ad audit"
     },
     "info": {
       "client": "Cliente",
@@ -739,6 +764,14 @@
     "ownership": {
       "client": "Di proprietà del cliente",
       "msp": "Di proprietà dell'MSP"
+    },
+    "create": {
+      "success": "Asset {{tag}} creato",
+      "autoTag": "Assegna il prossimo tag automatico",
+      "preview": "Anteprima del prossimo tag: {{tag}} (l’anteprima non riserva un numero)",
+      "selectClient": "Seleziona un cliente per l’anteprima",
+      "addAnother": "Salva e aggiungi un altro",
+      "submit": "Crea asset"
     }
   },
   "assetFormClient": {
@@ -842,24 +875,6 @@
     "links": {
       "title": "Collegamenti di accesso remoto",
       "description": "Configura modelli URL per ScreenConnect e altri strumenti di accesso remoto.",
-      "errors": {
-        "load": "Impossibile caricare i collegamenti di accesso remoto.",
-        "save": "Impossibile salvare il collegamento di accesso remoto.",
-        "delete": "Impossibile eliminare il collegamento di accesso remoto.",
-        "templateHttp": "Il modello deve iniziare con http:// o https:// e un host letterale.",
-        "templatePlaceholder": "Il modello contiene un segnaposto non supportato.",
-        "templateUrl": "Il modello deve generare un URL http o https valido.",
-        "required": "Sono obbligatori un’etichetta e un modello URL.",
-        "partialDelete": "Impossibile eliminare {{count}} collegamento/i selezionato/i."
-      },
-      "noneAvailable": "Nessuna opzione di accesso remoto disponibile.",
-      "confirmDeleteTitle": "Eliminare il collegamento di accesso remoto?",
-      "confirmDeleteMessage": "Eliminare “{{label}}”? Questa azione è irreversibile.",
-      "openMenu": "Apri menu",
-      "selectLabel": "Seleziona {{label}}",
-      "confirmBulkDeleteTitle": "Eliminare i collegamenti selezionati?",
-      "confirmBulkDeleteMessage": "Eliminare {{count}} collegamento/i di accesso remoto selezionato/i?",
-      "selectedCount": "{{count}} selezionato/i",
       "add": "Aggiungi collegamento",
       "empty": "Nessun collegamento di accesso remoto configurato.",
       "edit": "Modifica",
@@ -872,10 +887,28 @@
       "template": "Modello URL",
       "ninjaExample": "Esempio di dashboard dispositivo NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Sostituisci l’host con la tua regione NinjaOne: app, eu, ca, oc o us2 .ninjarmm.com.",
       "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} e {field.<key>} con le chiavi dei campi personalizzati definite in Impostazioni → Asset → Tipi di asset.",
+      "errors": {
+        "load": "Impossibile caricare i collegamenti di accesso remoto.",
+        "save": "Impossibile salvare il collegamento di accesso remoto.",
+        "delete": "Impossibile eliminare il collegamento di accesso remoto.",
+        "templateHttp": "Il modello deve iniziare con http:// o https:// e un host letterale.",
+        "templatePlaceholder": "Il modello contiene un segnaposto non supportato.",
+        "templateUrl": "Il modello deve generare un URL http o https valido.",
+        "required": "Sono obbligatori un’etichetta e un modello URL.",
+        "partialDelete": "Impossibile eliminare {{count}} collegamento/i selezionato/i."
+      },
       "loading": "Caricamento delle opzioni di accesso remoto…",
+      "noneAvailable": "Nessuna opzione di accesso remoto disponibile.",
       "unavailable": "Non disponibile per questo asset",
+      "confirmDeleteTitle": "Eliminare il collegamento di accesso remoto?",
+      "confirmDeleteMessage": "Eliminare “{{label}}”? Questa azione è irreversibile.",
       "actions": "Azioni",
-      "selectAll": "Seleziona tutti i collegamenti"
+      "openMenu": "Apri menu",
+      "selectLabel": "Seleziona {{label}}",
+      "selectAll": "Seleziona tutti i collegamenti",
+      "confirmBulkDeleteTitle": "Eliminare i collegamenti selezionati?",
+      "confirmBulkDeleteMessage": "Eliminare {{count}} collegamento/i di accesso remoto selezionato/i?",
+      "selectedCount": "{{count}} selezionato/i"
     }
   },
   "assetListErrors": {
@@ -1058,7 +1091,10 @@
       "vendor": "Fornitore",
       "purchaseCost": "Costo di acquisto",
       "orderNumber": "N. ordine",
-      "ownership": "Proprietà"
+      "ownership": "Proprietà",
+      "autoAssetTag": "Assegna automaticamente",
+      "assetTagPreviewLoading": "Seleziona un cliente per visualizzare il prossimo tag",
+      "previewNotReserved": "Solo anteprima; assegnato al salvataggio"
     },
     "placeholders": {
       "workstationOsType": "ad esempio Windows, macOS, Linux",
@@ -1447,7 +1483,182 @@
   "maintenanceCommandCenter": {
     "title": "Centro di controllo manutenzione",
     "description": "La prossima scadenza viene calcolata dalla data effettiva di completamento.",
-    "assetsLink": "Asset"
+    "assetsLink": "Asset",
+    "notRecorded": "Non registrato",
+    "system": "Sistema",
+    "checklist": {
+      "complete": "Completo",
+      "incomplete": "Incompleto"
+    },
+    "weekdays": {
+      "0": "dom",
+      "1": "lun",
+      "2": "mar",
+      "3": "mer",
+      "4": "gio",
+      "5": "ven",
+      "6": "sab"
+    },
+    "cadence": {
+      "custom": "Personalizzata",
+      "customSchedule": "Pianificazione personalizzata",
+      "everyUnit": "Ogni {{unit}}",
+      "everyCountUnit": "Ogni {{count}} {{unit}}",
+      "onDays": "{{base}} nei giorni {{days}}",
+      "onDatesOfMonth": "{{base}} nei giorni {{dates}} del mese",
+      "frequency": {
+        "daily": "Giornaliera",
+        "weekly": "Settimanale",
+        "monthly": "Mensile",
+        "quarterly": "Trimestrale",
+        "yearly": "Annuale"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} gg di ritardo",
+      "dueToday": "in scadenza oggi",
+      "inDays": "tra {{count}} gg"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "refresh": "Aggiorna",
+      "newPlan": "Nuovo piano di manutenzione",
+      "skip": "Salta",
+      "skipTooltip": "Salta indicando un motivo obbligatorio — il piano passa all'occorrenza successiva",
+      "complete": "Completa manutenzione",
+      "createTicket": "Crea ticket",
+      "openTicket": "Apri ticket ↗",
+      "pausePlan": "Metti in pausa il piano"
+    },
+    "assetPicker": {
+      "title": "Seleziona un asset",
+      "searchPlaceholder": "Cerca per nome, tag o numero di serie",
+      "loading": "Caricamento degli asset…",
+      "loadFailed": "Impossibile caricare gli asset.",
+      "empty": "Nessun asset trovato.",
+      "showingFirst": "Visualizzati i primi {{shown}} di {{total}} — affina la ricerca."
+    },
+    "kpi": {
+      "overdue": "In ritardo",
+      "dueToday": "In scadenza oggi",
+      "upcoming7d": "Prossimi 7 gg",
+      "openTickets": "Ticket aperti",
+      "compliance90d": "Conformità 90 gg",
+      "clickToFilter": "fai clic per filtrare",
+      "allClear": "tutto in regola",
+      "quietWeek": "settimana tranquilla in arrivo",
+      "linkedToOccurrences": "collegati alle occorrenze",
+      "onTimeCompletion": "completamento entro la scadenza"
+    },
+    "tabs": {
+      "queue": "Coda di lavoro",
+      "plans": "Coda dei piani",
+      "history": "Cronologia"
+    },
+    "filters": {
+      "searchPlaceholder": "Cerca piani, asset o clienti",
+      "actionable": "Da eseguire",
+      "allStatuses": "Tutti gli stati",
+      "completed": "Completato",
+      "skipped": "Saltato",
+      "button": "Filtri",
+      "allClients": "Tutti i clienti",
+      "allAssetTypes": "Tutti i tipi di asset",
+      "allPlanTypes": "Tutti i tipi di piano",
+      "due": "Scadenza",
+      "clearAll": "Rimuovi tutti i filtri",
+      "done": "Fatto",
+      "clientChip": "Cliente"
+    },
+    "viewMode": {
+      "list": "Elenco",
+      "calendar": "Calendario"
+    },
+    "queue": {
+      "actionableTitle": "Occorrenze da eseguire",
+      "plansTitle": "Coda dei piani attivi (con occorrenze generate)",
+      "loading": "Caricamento della manutenzione…",
+      "empty": "Nessuna occorrenza di manutenzione corrisponde a questi filtri.",
+      "emptyFiltered": "Nessuna occorrenza di manutenzione corrisponde a questi filtri. Rimuovi un filtro o amplia l'intervallo delle scadenze.",
+      "emptyHistory": "Le occorrenze completate e saltate appariranno qui una volta chiusa la manutenzione.",
+      "emptyPlans": "Le occorrenze aperte dei piani appariranno qui man mano che le pianificazioni generano attività.",
+      "clearBeyond": "Non ci sono altre occorrenze in coda oltre a queste {{count}} — amplia l'intervallo delle scadenze o controlla la coda dei piani.",
+      "allCaughtUp": "Nessuna occorrenza in sospeso",
+      "nextDueIn": "— prossima scadenza tra {{count}} gg",
+      "shownCount": "{{shown}} visualizzati · {{open}} aperti ·",
+      "inHistory": "{{count}} nella cronologia",
+      "itemCount_one": "· {{count}} elemento",
+      "itemCount_other": "· {{count}} elementi",
+      "overdueCount": "{{count}} in ritardo",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} in breve",
+      "overdue": "in ritardo",
+      "today": "oggi",
+      "upcoming": "in arrivo"
+    },
+    "calendar": {
+      "dueCount": "{{count}} in scadenza",
+      "today": "Oggi",
+      "moreCount": "+{{count}} altri",
+      "legend": "Legenda",
+      "scheduled": "Pianificato"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Tipo",
+      "cadence": "Cadenza",
+      "nextDue": "Prossima scadenza",
+      "lastDone": "Ultimo completamento",
+      "assignee": "Assegnatario",
+      "createdBy": "Creato da",
+      "linkedTicket": "Ticket collegato"
+    },
+    "detail": {
+      "noSelection": "Nessuna occorrenza selezionata",
+      "noSelectionHint": "Seleziona un'occorrenza dalla coda per vedere l'asset, il piano, il ticket collegato e le azioni di esecuzione — oppure rimuovi i filtri per vedere altre attività.",
+      "unassignedClient": "Cliente non assegnato",
+      "dueSuffix": "· scadenza {{date}}",
+      "nextDueTooltip": "La prossima scadenza viene calcolata a partire dalla data effettiva di completamento.",
+      "never": "Mai",
+      "unassigned": "Non assegnato",
+      "assignViaTicket": "Assegna tramite ticket",
+      "ticketClosed": "Chiuso",
+      "ticketOpen": "Aperto",
+      "noTicketYet": "Ancora nessuno",
+      "execution": "Esecuzione",
+      "noChecklistPrefix": "Questo piano non ha una lista di controllo —",
+      "addStepsLink": "aggiungi passaggi nell'asset",
+      "noChecklistSuffix": "per guidare i tecnici.",
+      "timeline": "Cronologia"
+    },
+    "timeline": {
+      "created": "Occorrenza creata",
+      "ticketLinked": "Ticket collegato — {{ticket}}",
+      "dueRepeats": "Scadenza — si ripete: {{cadence}}",
+      "completedBy": "Completato da {{name}}{{notes}}",
+      "skippedBy": "Saltato da {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Documentazione del completamento",
+      "performed": "Eseguito:",
+      "performedBy": "Eseguito da:",
+      "notes": "Note:",
+      "checklist": "Lista di controllo:",
+      "skipTitle": "Documentazione dell'occorrenza saltata",
+      "reason": "Motivo:",
+      "closedBy": "Chiuso da:",
+      "closed": "Chiuso:"
+    },
+    "skip": {
+      "title": "Salta manutenzione",
+      "reason": "Motivo"
+    },
+    "ticket": {
+      "title": "Manutenzione: {{plan}}",
+      "description": "Manutenzione {{type}} in scadenza il {{date}}. Occorrenza: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
@@ -1653,7 +1864,8 @@
     "assignDialogTitle": "Assegna questo asset",
     "sharedWorkspace": "Postazione condivisa",
     "sharedWorkspaceValue": "{{name}} · {{count}} persone",
-    "billingProfile": "Profilo di fatturazione"
+    "billingProfile": "Profilo di fatturazione",
+    "lastAudited": "Ultimo audit"
   },
   "assetTimeline": {
     "title": "Cronologia",
@@ -1683,7 +1895,11 @@
       "aGroup": "un gruppo",
       "autoAssignedFrom": "Assegnato automaticamente a {{contact}} da {{provider}}",
       "groupLocationMoved": "Spostato in {{location}} con {{group}}",
-      "groupLocationCleared": "Posizione rimossa con {{group}}"
+      "groupLocationCleared": "Posizione rimossa con {{group}}",
+      "audit": "Audit",
+      "auditPresent": "Audit: presente",
+      "auditMissing": "Audit: mancante",
+      "auditMethod": "Contrassegnato: {{method}}"
     },
     "changeTypes": {
       "created": "Creato",
@@ -1776,6 +1992,7 @@
       "updateAssets": "Permesso negato: impossibile aggiornare gli asset"
     },
     "asset": {
+      "tagAlreadyExists": "Questa etichetta del bene è già in uso o riservata. Scansionala per trovare il bene esistente oppure inserisci un’altra etichetta.",
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "clientNotFound": "Cliente non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "maintenanceNotFound": "Pianificazione della manutenzione non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
@@ -2146,5 +2363,132 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "assetAudits": {
+    "title": "Audit di sede",
+    "startAudit": "Avvia audit",
+    "noLocation": "Nessuna sede",
+    "loading": "Caricamento degli audit…",
+    "empty": "Nessun audit di sede corrisponde ancora a questa vista.",
+    "columns": {
+      "audit": "Audit",
+      "client": "Cliente",
+      "location": "Sede",
+      "status": "Stato",
+      "startedBy": "Avviato da",
+      "started": "Avviato",
+      "completed": "Completato",
+      "expected": "Previsti",
+      "present": "Presenti",
+      "missing": "Mancanti",
+      "unexpected": "Non previsti"
+    },
+    "filters": {
+      "client": "Cliente",
+      "allLocations": "Tutte le sedi",
+      "allStatuses": "Tutti gli stati",
+      "started": "Avviato"
+    },
+    "stats": {
+      "expected": "previsti",
+      "present": "presenti",
+      "missing": "mancanti",
+      "remaining": "rimanenti",
+      "unexpected": "non previsti"
+    },
+    "segments": {
+      "remaining": "Rimanenti",
+      "present": "Presenti",
+      "missing": "Mancanti",
+      "unexpected": "Non previsti",
+      "all": "Tutti"
+    },
+    "start": {
+      "title": "Avvia audit di sede",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleziona un cliente",
+      "location": "Sede",
+      "locationHint": "«Nessuna sede» include nell’audit i dispositivi del cliente senza una sede registrata.",
+      "statuses": "Stati degli asset inclusi nell’audit",
+      "statusesHint": "Se non selezioni alcuno stato, l’audit include tutti gli stati.",
+      "statusesLoading": "Caricamento degli stati…",
+      "notes": "Note",
+      "notesPlaceholder": "Scopo del sopralluogo (facoltativo)",
+      "pickClient": "Seleziona un cliente per vedere cosa è incluso nell’audit.",
+      "counting": "Conteggio dei dispositivi inclusi nell’audit…",
+      "countUnavailable": "Il numero di dispositivi non è disponibile al momento.",
+      "expected_one": "1 dispositivo previsto in questo audit",
+      "expected_other": "{{count}} dispositivi previsti in questo audit",
+      "submit": "Avvia audit",
+      "starting": "Avvio…"
+    },
+    "detail": {
+      "reference": "Audit",
+      "untitledClient": "Cliente",
+      "location": "Sede",
+      "startedBy": "Avviato da",
+      "started": "Avviato",
+      "completed": "Completato",
+      "scopeStatuses": "Stati inclusi nell’audit",
+      "allStatuses": "Tutti gli stati",
+      "notes": "Note",
+      "exportCsv": "Esporta CSV",
+      "exportStarted": "Esportazione CSV avviata.",
+      "exportEmpty": "Non c’è nulla da esportare in questa vista.",
+      "addUnexpected": "Aggiungi asset non previsto",
+      "addUnexpectedHint": "Un dispositivo trovato in sede ma non incluso nell’ambito di questo audit viene registrato come non previsto, mai come previsto.",
+      "addUnexpectedPlaceholder": "Cerca un asset…",
+      "addUnexpectedEmpty": "Nessun altro asset per questo cliente.",
+      "complete": "Completa audit",
+      "completeConfirm_one": "1 dispositivo non contrassegnato verrà registrato come mancante.",
+      "completeConfirm_other": "{{count}} dispositivi non contrassegnati verranno registrati come mancanti.",
+      "cancelAudit": "Annulla audit",
+      "cancelConfirm": "L’audit viene abbandonato e nessun dato viene salvato negli asset. Questa operazione non può essere annullata.",
+      "keepAudit": "Continua l’audit"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Tipo",
+        "serial": "Numero di serie / tag",
+        "result": "Esito",
+        "method": "Metodo",
+        "markedBy": "Contrassegnato da",
+        "markedAt": "Contrassegnato il",
+        "actions": "Azioni"
+      },
+      "searchPlaceholder": "Cerca per nome, tag o numero di serie",
+      "empty": "Nessun asset in questa vista.",
+      "markPresent": "Contrassegna come presente",
+      "undoMark": "Annulla contrassegno",
+      "createTicket": "Crea ticket",
+      "ticketTitle": "Mancante durante l’audit di sede: {{asset}}",
+      "ticketDescription": "Non trovato durante l’audit di sede avviato il {{date}}."
+    }
+  },
+  "scanLookup": {
+    "title": "Scansiona tag asset",
+    "input": "Scansiona o inserisci un tag",
+    "loading": "Ricerca in corso…",
+    "find": "Trova asset",
+    "ambiguous": "Più asset visibili hanno questo tag. Chiedi a un amministratore di risolvere i tag duplicati.",
+    "notFound": "Nessun asset visibile corrisponde esattamente a questo tag.",
+    "failed": "Impossibile cercare questo tag. Verifica i permessi di accesso e riprova."
+  },
+  "fullIntake": {
+    "title": "Aggiungi asset",
+    "description": "Scegli un numero del tenant o mantieni un tag già stampato.",
+    "back": "Torna agli asset"
+  },
+  "labelFirstIntake": {
+    "start": "Acquisizione con etichetta preliminare",
+    "title": "Avvia acquisizione con etichetta preliminare",
+    "help": "Crea una scheda asset permanente con i dati minimi, quindi stampa due copie della sua etichetta. Scansiona una delle copie in seguito per completare la stessa scheda.",
+    "client": "Cliente",
+    "clientRequired": "Scegli un cliente per continuare.",
+    "createFailed": "Impossibile creare la scheda di acquisizione.",
+    "name": "Breve descrizione (facoltativa)",
+    "creating": "Creazione in corso…",
+    "createPrint": "Crea e stampa la coppia"
   }
 }

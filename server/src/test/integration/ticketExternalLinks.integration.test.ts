@@ -51,27 +51,30 @@ vi.mock('server/src/lib/eventBus/publishers', async (importOriginal) => ({
   publishWorkflowEvent: publishWorkflowEventMock,
 }));
 
-// The per-record authorization decision is the seam exercised by the
-// resource-denial tests: coarse RBAC stays granted, the kernel says no.
-const authorizationKernelMock = vi.hoisted(() => ({
-  authorizeResource: vi.fn(async () => ({ allowed: true })),
-  useRealKernel: false,
-}));
+// Exercise the real kernel for reads and mutations; control only its policy snapshot.
 const bundleRulesMock = vi.hoisted(() => vi.fn<() => Promise<import('@alga-psa/authorization/kernel').BundleNarrowingRule[]>>(async () => []));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: bundleRulesMock,
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
+  // Supply snapshot rows while keeping subject resolution and policy evaluation real.
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    rules: (await bundleRulesMock()).map((rule) => ({
+      rule_id: rule.id,
+      resource_type: rule.resource,
+      action: rule.action,
+      template_key: rule.templateKey,
+      constraint_key: null,
+      config: {
+        selectedBoardIds: rule.selectedBoardIds,
+        selectedClientIds: rule.selectedClientIds,
+        constraints: rule.constraints,
+        redactedFields: rule.redactedFields,
+      },
+    })),
+  })),
 }));
-vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/authorization/kernel')>();
-  return {
-    ...actual,
-    createAuthorizationKernel: (input: Parameters<typeof actual.createAuthorizationKernel>[0]) =>
-      authorizationKernelMock.useRealKernel
-        ? actual.createAuthorizationKernel(input)
-        : { authorizeResource: authorizationKernelMock.authorizeResource },
-  };
-});
-
 vi.mock('@alga-psa/event-bus', () => ({
   getEventBus: vi.fn(() => ({ publish: vi.fn() })),
   ServerEventPublisher: class {},
@@ -167,11 +170,8 @@ describe('ticket external system links', () => {
     publishEventMock.mockResolvedValue(undefined);
     publishWorkflowEventMock.mockReset();
     publishWorkflowEventMock.mockResolvedValue(undefined);
-    authorizationKernelMock.useRealKernel = false;
     bundleRulesMock.mockReset();
     bundleRulesMock.mockResolvedValue([]);
-    authorizationKernelMock.authorizeResource.mockReset();
-    authorizationKernelMock.authorizeResource.mockResolvedValue({ allowed: true });
   });
 
   it('migration keeps pre-existing rows private, defaults new rows private, rejects shared comments, and rolls back', async () => {
@@ -799,7 +799,13 @@ describe('ticket external system links', () => {
 
     // Coarse RBAC is fully granted; only the per-record kernel denies.
     hasPermissionMock.mockResolvedValue(true);
-    authorizationKernelMock.authorizeResource.mockResolvedValue({ allowed: false });
+    bundleRulesMock.mockResolvedValue([{
+      id: 'denied-board',
+      resource: 'ticket',
+      action: 'read',
+      templateKey: 'selected_boards',
+      selectedBoardIds: [uuidv4()],
+    }]);
 
     expect(await getTicketExternalLinks(ticketId)).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
@@ -883,7 +889,6 @@ describe('ticket external system links', () => {
 
       // Use the actual kernel and providers: rules match their action exactly.
       // This read-only rule must also protect mutations, even with update RBAC.
-      authorizationKernelMock.useRealKernel = true;
       bundleRulesMock.mockResolvedValue([{
         id: 'restricted-board',
         resource: 'ticket',
@@ -910,6 +915,21 @@ describe('ticket external system links', () => {
         .where({ ticket_id: ticketId }).orderBy('audit_id')).toEqual(auditsBefore);
       expect(publishEventMock).not.toHaveBeenCalled();
       expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+
+      // Allow the same board and prove the real mutation path can now persist changes.
+      bundleRulesMock.mockResolvedValue([{
+        id: 'restricted-board',
+        resource: 'ticket',
+        action: restrictedAction,
+        templateKey: 'selected_boards',
+        selectedBoardIds: [fixture.boardId],
+      }]);
+      expectActionSuccess(await updateExternalLink(link.link_id, { external_status: 'allowed' }));
+      expect(await scopedDbFor(fixture.tenantId).table('external_entity_links')
+        .where({ link_id: link.link_id }).first()).toMatchObject({ external_status: 'allowed' });
+      expectActionSuccess(await removeExternalLink(link.link_id));
+      expect(await scopedDbFor(fixture.tenantId).table('external_entity_links')
+        .where({ link_id: link.link_id })).toEqual([]);
     },
   );
 

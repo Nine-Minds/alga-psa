@@ -329,7 +329,8 @@
       "empty": "Inga kundspecifika checklistmallar.",
       "loadFailed": "Det gick inte att läsa in checklistmallar",
       "retry": "Försök igen"
-    }
+    },
+    "audits": "Inventeringar"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,14 +384,23 @@
       "warrantyExpired_other": "{{count}} med utgången garanti",
       "warrantyExpiring_one": "1 med garanti som löper ut inom 90 dagar",
       "warrantyExpiring_other": "{{count}} med garanti som löper ut inom 90 dagar",
-      "warrantyTracked": " (av {{count}} spårade)"
+      "warrantyTracked": " (av {{count}} spårade)",
+      "auditsLink": "Inventeringar på plats",
+      "lastAudit": "Senaste inventering {{date}}",
+      "lastAuditMissing_one": "1 saknas",
+      "lastAuditMissing_other": "{{count}} saknas",
+      "neverAudited": "Aldrig inventerad"
     },
     "locations": {
       "billing": "Fakturering",
+      "contactCount_one": "1 kontakt",
+      "contactCount_other": "{{count}} kontakter",
       "manage": "Hantera",
       "more": "+{{count}} till",
       "none": "Inga platser ännu.",
-      "shipping": "Leverans"
+      "shipping": "Leverans",
+      "lastAudit": "Inventerad {{date}}",
+      "neverAudited": "Aldrig inventerad"
     },
     "money": {
       "activeContracts": "Aktiva avtal",
@@ -1372,7 +1382,10 @@
         "phoneLabel": "Telefon",
         "setDefault": "Ange som standard",
         "shippingTag": "Leverans",
-        "unnamed": "Plats utan namn"
+        "unnamed": "Plats utan namn",
+        "contactCount_one": "1 kontakt",
+        "contactCount_other": "{{count}} kontakter",
+        "contactPrimary": "Primär"
       },
       "dialog": {
         "addTitle": "Lägg till ny plats",
@@ -1478,7 +1491,14 @@
       "refreshRecordings": "Hämta inspelningar",
       "sectionTitle": "Onlinemöte",
       "transcriptArtifact": "Transkription",
-      "viewTranscript": "Visa transkription"
+      "viewTranscript": "Visa transkription",
+      "status": {
+        "noRecording": "Ingen inspelning",
+        "recordingReady": "Inspelningen är klar",
+        "cancelled": "Avbokat",
+        "failed": "Inspelningen är inte tillgänglig",
+        "recordingPending": "Väntar på inspelning"
+      }
     },
     "quickAdd": {
       "clientRequired": "Välj en kund för interaktionen",
@@ -1537,6 +1557,86 @@
       "assignedTo": {
         "label": "Tilldelad till",
         "placeholder": "Välj användare"
+      },
+      "endBeforeStart": "Sluttiden måste vara samma som eller senare än starttiden.",
+      "endBeforeStartShort": "Sluttiden måste vara samma som eller senare än starttiden",
+      "rangeTooLong": "Interaktioner får inte vara längre än 24 timmar.",
+      "reflectionLabel": "Snabbregistrering av interaktion",
+      "validationIntro": "Rätta följande fel:",
+      "loadingEditor": "Läser in redigeraren…",
+      "dialog": {
+        "createTitle": "Lägg till ny interaktion",
+        "editTitle": "Redigera interaktion"
+      },
+      "actions": {
+        "cancel": "Avbryt",
+        "cancelHelper": "Avbryt skapandet eller redigeringen av interaktionen",
+        "save": "Spara interaktion",
+        "saveHelper": "Skapa den nya interaktionen",
+        "update": "Uppdatera interaktion",
+        "updateHelper": "Spara ändringar i interaktionen",
+        "close": "Stäng dialogrutan",
+        "closeHelper": "Stäng dialogrutan för interaktionen"
+      },
+      "fields": {
+        "type": {
+          "label": "Interaktionstyp",
+          "helper": "Välj typ av interaktion (telefonsamtal, e-post, möte osv.)",
+          "placeholder": "Välj interaktionstyp"
+        },
+        "title": {
+          "label": "Interaktionens titel",
+          "helper": "Ange en beskrivande titel för interaktionen",
+          "placeholder": "Titel"
+        },
+        "notes": {
+          "label": "Interaktionsanteckningar",
+          "helper": "Lägg till detaljerade anteckningar om interaktionen"
+        },
+        "notesShort": "Anteckningar",
+        "status": {
+          "label": "Interaktionsstatus",
+          "helper": "Ange interaktionens aktuella status",
+          "placeholder": "Välj status"
+        },
+        "user": {
+          "label": "Tilldelad användare",
+          "helper": "Välj den användare som ansvarar för interaktionen",
+          "placeholder": "Välj användare"
+        },
+        "userShort": "Användare",
+        "client": {
+          "label": "Kopplad kund",
+          "helper": "Välj den kund som interaktionen gäller"
+        },
+        "clientShort": "Kund",
+        "contact": {
+          "label": "Kopplad kontakt",
+          "helper": "Välj den kontakt som interaktionen sker med",
+          "placeholder": "Välj kontakt"
+        },
+        "contactShort": "Kontakt",
+        "startTime": {
+          "label": "Starttid",
+          "helper": "När började interaktionen?",
+          "placeholder": "Välj starttid"
+        },
+        "endTime": {
+          "label": "Sluttid",
+          "helper": "När slutade interaktionen?",
+          "placeholder": "Välj sluttid"
+        },
+        "durationHours": {
+          "label": "Varaktighet i timmar",
+          "helper": "Antal timmar för interaktionen"
+        },
+        "durationMinutes": {
+          "label": "Varaktighet i minuter",
+          "helper": "Antal minuter för interaktionen"
+        },
+        "duration": "Varaktighet",
+        "hours": "timmar",
+        "minutes": "minuter"
       }
     },
     "feed": {
@@ -1594,6 +1694,51 @@
       "transcriptTitle": "Samtalstranskription",
       "loading": "Läser in transkription…",
       "loadFailed": "Det gick inte att läsa in transkriptionen."
+    },
+    "details": {
+      "title": "Interaktionsdetaljer",
+      "noTitle": "Ingen titel",
+      "unknownUser": "Okänd",
+      "noContact": "Ingen kontakt kopplad",
+      "noClient": "Ingen kund kopplad",
+      "deleteConfirm": "Är du säker på att du vill radera interaktionen? Åtgärden kan inte ångras.",
+      "timeEntryFailed": "Det gick inte att förbereda tidposten. Försök igen.",
+      "fields": {
+        "title": "Titel:",
+        "notes": "Anteckningar",
+        "status": "Status:",
+        "startTime": "Starttid:",
+        "endTime": "Sluttid:",
+        "duration": "Varaktighet:",
+        "user": "Användare:",
+        "contact": "Kontakt:",
+        "client": "Kund:"
+      },
+      "actions": {
+        "cancel": "Avbryt",
+        "editShort": "Redigera",
+        "deleteShort": "Radera",
+        "edit": {
+          "label": "Redigera interaktion",
+          "helper": "Redigera interaktionens detaljer"
+        },
+        "delete": {
+          "label": "Radera interaktion",
+          "helper": "Radera interaktionen permanent"
+        },
+        "back": {
+          "label": "Tillbaka",
+          "helper": "Gå tillbaka till föregående vy"
+        },
+        "addTicket": {
+          "label": "Lägg till ärende",
+          "helper": "Skapa ett nytt ärende som hör till interaktionen"
+        },
+        "addTimeEntry": {
+          "label": "Lägg till tidpost",
+          "helper": "Lägg till en tidpost för interaktionen"
+        }
+      }
     }
   },
   "clientDrawer": {
@@ -1684,7 +1829,8 @@
           "members": "Medlemmar",
           "people": "Personer"
         }
-      }
+      },
+      "startAudit": "Starta inventering"
     },
     "tickets": {
       "addTicket": "Lägg till ärende",
@@ -1969,7 +2115,8 @@
       "sourceIsTenantDefault": "Din egen organisationspost kan inte slås samman med en kund.",
       "sourceHasCoManagement": "Den här kunden har en arbetsyta för samförvaltad IT. Avbryt dess konfiguration eller avsluta samförvaltningen innan du slår ihop den.",
       "parentLinkCycle": "Den kunden är registrerad som underordnad den du slår samman, så en sammanslagning i den riktningen skulle vända hierarkin upp och ner.",
-      "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid."
+      "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid.",
+      "invalidContactLocation": "En vald plats hör inte till någon av de kunder som slås samman."
     },
     "profileContacts": {
       "duplicateManager": "En faktureringsprofil kan bara ha en ansvarig.",
@@ -2033,7 +2180,16 @@
     "billingStrategyHeading": "Fakturera sammanslaget arbete och enheter under",
     "billingStrategySource": "Faktureringsprofilen för {{source}}, behållen som en separat profil hos {{target}}",
     "billingStrategyTarget": "Standardfaktureringsprofilen för {{target}}",
-    "billingStrategyHelp": "Gäller {{tickets}} ärende(n), {{projects}} projekt, {{assets}} tillgång(ar) och {{mappings}} RMM-enhetsgrupp(er) som saknar egen faktureringsprofil. Rader med en uttalad profil behåller den, och fakturor, faktureringscykler, betalningar och tillgodohavanden stannar alltid på den sammanslagna profilen."
+    "billingStrategyHelp": "Gäller {{tickets}} ärende(n), {{projects}} projekt, {{assets}} tillgång(ar) och {{mappings}} RMM-enhetsgrupp(er) som saknar egen faktureringsprofil. Rader med en uttalad profil behåller den, och fakturor, faktureringscykler, betalningar och tillgodohavanden stannar alltid på den sammanslagna profilen.",
+    "locationsColumn": "Platser",
+    "remoteBadge": "Distans",
+    "noLocationsAfterMerge": "Inga platser",
+    "unnamedLocation": "Plats",
+    "movingFrom": "flyttas från {{client}}",
+    "primaryLocation": "Primär",
+    "targetAlsoHas": "{{client}} har också ”{{location}}”",
+    "useIt": "Använd den",
+    "contactLocationSummary": "{{count}} platskopplingar för kontakter, {{repointed}} omdirigerade"
   },
   "billingProfileContacts": {
     "title": "Profilens kontakter",

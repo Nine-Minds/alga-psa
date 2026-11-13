@@ -44,7 +44,7 @@ beforeAll(async () => {
 });
 afterAll(async () => { await db?.destroy(); });
 
-const create = async (request: any) => (await import('../../lib/co-managed/createTicketComment')).createSharedTicketComment(db, actor, resource, request);
+const create = async (request: any) => (await import('@alga-psa/co-managed/sharedTicketCommentWriter')).createSharedTicketComment(db, actor, resource, request);
 const mutate = async (request: any) => (await import('../../lib/co-managed/mutateTicketComment')).mutateSharedTicketComment(db, actor, resource, request);
 
 describe('shared comment receipts and tombstones', () => {

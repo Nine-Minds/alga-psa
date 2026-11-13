@@ -16,11 +16,12 @@ const state = vi.hoisted(() => ({
   links: [] as Record<string, unknown>[],
   permissions: new Set<string>(),
   readable: new Set<string>(),
+  redactions: {} as Record<string, string[]>,
 }));
 
 const authorizeReadMock = vi.hoisted(() =>
   vi.fn(async ({ resource, recordContext }: { resource: string; recordContext: { id: string } }) =>
-    state.readable.has(`${resource}:${recordContext.id}`)
+    ({ allowed: state.readable.has(`${resource}:${recordContext.id}`), redactedFields: state.redactions[`${resource}:${recordContext.id}`] ?? [] })
   )
 );
 const getTicketProjectLinksMock = vi.hoisted(() => vi.fn(async () => state.links));
@@ -113,6 +114,7 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     state.links = [linkRow(PROJECT_A, 'export'), linkRow(PROJECT_B, 'branding'), linkRow(PROJECT_A, 'import')];
     state.permissions = new Set(['project:read', 'ticket:read']);
     state.readable = new Set([`ticket:${TICKET}`, `project:${PROJECT_A}`]);
+    state.redactions = {};
     authorizeReadMock.mockClear();
     getTicketProjectLinksMock.mockClear();
   });
@@ -139,6 +141,103 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     state.permissions = new Set(['ticket:read']);
     expect((await GET(request())).status).toBe(403);
     expect(getTicketProjectLinksMock).not.toHaveBeenCalled();
+  });
+
+  it('projects every link using its own project decision before serialization', async () => {
+    state.readable.add(`project:${PROJECT_B}`);
+    state.redactions[`project:${PROJECT_A}`] = ['projects.project_name'];
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(3);
+    expect(data.filter((link: any) => link.project_id === PROJECT_A)).toHaveLength(2);
+    for (const link of data.filter((link: any) => link.project_id === PROJECT_A)) {
+      expect(link).not.toHaveProperty('project_name');
+      expect(link).toHaveProperty('task_name');
+    }
+    expect(data.find((link: any) => link.project_id === PROJECT_B)).toHaveProperty('project_name', 'Project branding');
+    expect(authorizeReadMock.mock.calls.filter(([input]) => input.resource === 'project')).toHaveLength(2);
+  });
+
+  it.each([
+    ['project_tasks.estimated_hours', 'estimated_hours'],
+    ['project_tasks.project_name', 'project_name'],
+  ])('preserves unrelated task names in serialized links when %s is hidden', async (restriction, hiddenField) => {
+    state.redactions[`project:${PROJECT_A}`] = [restriction];
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(2);
+    for (const link of data) {
+      expect(link).toHaveProperty('task_name');
+      expect(link).not.toHaveProperty(hiddenField);
+    }
+  });
+
+  it.each(['tasks', 'fields.tasks', 'project_tasks'])(
+    'omits task names from serialized links when the whole task resource alias %s is hidden',
+    async (restriction) => {
+      state.redactions[`project:${PROJECT_A}`] = [restriction];
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data).toHaveLength(2);
+      for (const link of data) {
+        expect(link).not.toHaveProperty('task_name');
+        expect(link).not.toHaveProperty('task_id');
+      }
+    },
+  );
+
+  it.each(['task_name', 'fields.task_name', 'values.task_name', 'tasks.task_name', 'project_tasks.task_name'])(
+    'omits task names from serialized links when canonical task-name restriction %s is applied',
+    async (restriction) => {
+      state.redactions[`project:${PROJECT_A}`] = [restriction];
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data).toHaveLength(2);
+      for (const link of data) expect(link).not.toHaveProperty('task_name');
+    },
+  );
+
+  it.each([
+    'task_id', 'fields.task_id',
+    'taskId', 'fields.taskId',
+    'values.task_id', 'fields.values.task_id',
+    'project_tasks.task_id', 'fields.project_tasks.task_id',
+    'tasks.task_id', 'fields.tasks.task_id',
+  ])('omits task names from serialized links when identifier alias %s is hidden', async (restriction) => {
+    state.redactions[`project:${PROJECT_A}`] = [restriction];
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(2);
+    for (const link of data) expect(link).not.toHaveProperty('task_name');
+  });
+
+  it.each(['projects', 'values.project_id', 'projects.project_number', 'values.project_number'])('suppresses linked projects hidden by %s', async (redaction) => {
+    state.readable.add(`project:${PROJECT_B}`);
+    state.redactions[`project:${PROJECT_A}`] = [redaction];
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(1);
+    expect(data[0]).toHaveProperty('project_id', PROJECT_B);
+  });
+
+  it('hides link display fields derived from redacted relations', async () => {
+    state.redactions[`project:${PROJECT_A}`] = ['project_phases.phase_name', 'project_tasks.task_name', 'statuses.is_closed'];
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(2);
+    for (const link of data) {
+      expect(link).not.toHaveProperty('phase_name');
+      expect(link).not.toHaveProperty('task_name');
+      expect(link).not.toHaveProperty('is_closed');
+      expect(link).toHaveProperty('project_name');
+    }
   });
 
   it('refuses a ticket the caller cannot read, and 404s a missing one', async () => {

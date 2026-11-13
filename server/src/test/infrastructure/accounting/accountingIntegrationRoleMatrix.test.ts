@@ -626,7 +626,7 @@ describe('accounting integration capability role matrix', () => {
     // The void denial is connection-based: on a connected tenant an actor
     // without remote_mutate is refused identically for mapped and unmapped
     // invoices (the predicate never reads the per-invoice mapping row), and on
-    // an unconnected tenant invoice:update alone suffices.
+    // an unconnected tenant invoice:void alone suffices.
     const remoteMutateDenial =
       'Permission denied: voiding invoices while the accounting integration is connected requires the accounting remote-mutate permission.';
     const credentials = { 'realm-1': { accessToken: 'x', refreshToken: 'y' } } as Record<string, unknown>;
@@ -655,7 +655,7 @@ describe('accounting integration capability role matrix', () => {
       expect(remote.qboClientCreateCalls.count).toBe(0);
     });
 
-    it('lets Finance void on an unconnected tenant with invoice:update alone', async () => {
+    it('lets Finance void on an unconnected tenant with invoice:void alone', async () => {
       // beforeEach leaves the tenant unconnected (empty credentials map); a
       // purely local invoice voids normally, and even a stale mapping row on an
       // unconnected tenant does not trigger the remote-mutate gate.

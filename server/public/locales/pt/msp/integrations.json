@@ -36,6 +36,49 @@
         "suggested": "Sugerido",
         "toSave": "{{total}} para guardar"
       },
+      "customerMapping": {
+        "unlink": "Desvincular",
+        "unlinkConfirm": {
+          "title": "Desvincular {{client}} do QuickBooks?",
+          "body": "{{client}} deixa de ser exportado para o cliente do QuickBooks {{customer}}. Nada muda no QuickBooks e você pode vinculá-lo novamente por esta lista a qualquer momento.",
+          "confirm": "Desvincular",
+          "cancel": "Manter o vínculo"
+        },
+        "linkFailed": "Falha ao vincular.",
+        "unlinkFailed": "Falha ao desvincular.",
+        "createFailed": "Falha ao criar.",
+        "createFailedInQbo": "Falha ao criar no QuickBooks.",
+        "loadFailed": "Falha ao carregar os mapeamentos de clientes.",
+        "relink": "Vincular novamente",
+        "exact": "Correspondência exata: {{name}}",
+        "suggestion": "Sugestão: {{name}}",
+        "linking": "Vinculando…",
+        "accept": "Aceitar",
+        "confirm": "Confirmar",
+        "search": "Pesquisar",
+        "searchPlaceholder": "Pesquisar clientes do QBO…",
+        "linkToCustomer": "Vincular a um cliente do QBO",
+        "creating": "Criando…",
+        "createInQbo": "Criar no QuickBooks",
+        "leave": "Manter sem vínculo",
+        "noCustomers": "Nenhum cliente do QBO encontrado.",
+        "noClients": "Nenhum cliente encontrado.",
+        "notMapped": "Não mapeado",
+        "subCustomer": "subcliente",
+        "bulkLinked_one": "{{count}} correspondência exata vinculada.",
+        "bulkLinked_other": "{{count}} correspondências exatas vinculadas.",
+        "bulkFailed": "Falha ao aceitar em massa.",
+        "exactReady_one": "{{count}} correspondência exata de nome pronta para aceitar",
+        "exactReady_other": "{{count}} correspondências exatas de nome prontas para aceitar",
+        "accepting": "Aceitando…",
+        "acceptExact_one": "Aceitar {{count}} correspondência exata",
+        "acceptExact_other": "Aceitar {{count}} correspondências exatas",
+        "columns": {
+          "client": "Cliente",
+          "customer": "Cliente do QBO",
+          "action": "Ação"
+        }
+      },
       "dialog": {
         "cancel": "Cancelar",
         "enterPlaceholder": "Digite {{field}}...",
@@ -844,7 +887,13 @@
             "expired": "A tentativa de conexão expirou antes da conclusão. Nada foi salvo. Inicie a conexão novamente.",
             "generic": "O Microsoft Entra não foi conectado e nada foi salvo. Tente novamente.",
             "validationFailed": "A Microsoft fez seu login, mas a lista de tenants gerenciados não pôde ser lida; nada foi salvo. Suas permissões foram aceitas — geralmente significa que o tenant de parceiro não está integrado ao Microsoft 365 Lighthouse ou não tem relações GDAP ativas.",
-            "tokenRejected": "A Microsoft rejeitou o token de acesso da conexão; nada foi salvo. Inicie a conexão novamente."
+            "tokenRejected": "A Microsoft rejeitou o token de acesso da conexão; nada foi salvo. Inicie a conexão novamente.",
+            "singleTenantApp": "A Microsoft rejeitou o início de sessão porque este registro de aplicação é de inquilino único. O Entra precisa de uma aplicação multi-inquilino: abra o registro da aplicação, aceda a Autenticação, defina Tipos de conta suportados como \"Contas em qualquer diretório organizacional\" e volte a ligar. Nada foi guardado.",
+            "appNotInDirectory": "A Microsoft não encontrou esta aplicação no diretório indicado pelo ID de inquilino do perfil Microsoft. Verifique se o ID de inquilino é o ID do diretório (inquilino) onde a aplicação está registrada. Nada foi guardado.",
+            "wrongDirectory": "A conta com que iniciou sessão pertence a um diretório diferente do desta aplicação de inquilino único. Torne a aplicação multi-inquilino (Contas em qualquer diretório organizacional) e volte a ligar. Nada foi guardado.",
+            "redirectUriMismatch": "A Microsoft rejeitou o URI de redirecionamento porque não está registrado na aplicação. Adicione este URI exato em Autenticação > URIs de redirecionamento Web e volte a ligar: {{redirectUri}}",
+            "invalidClientSecret": "A Microsoft rejeitou o segredo do cliente no perfil Microsoft. Verifique se você salvou o Valor do segredo, não o ID do segredo.",
+            "expiredClientSecret": "O segredo do cliente no perfil Microsoft expirou. Crie um novo segredo no Azure e atualize o perfil."
           },
           "connectingSuffix": "(Conectando...)",
           "details": "Detalhes da conexão",
@@ -1919,8 +1968,12 @@
           "calendarRedirect": "URI de redirecionamento de sincronização de calendário",
           "calendarTitle": "Orientação de calendário",
           "clientId": "ID do cliente",
+          "copied": "Copiado",
+          "copy": "Copiar",
+          "copyFailed": "Não foi possível copiar",
           "currentProfileTitle": "Valores atuais do perfil",
           "emailRedirect": "URI de redirecionamento de e-mail de entrada",
+          "emailSetupRedirect": "URI de redirecionamento da configuração de e-mail",
           "emailTitle": "Orientação por e-mail",
           "entraConsent": "Requisito",
           "entraConsentValue": "Registre este aplicativo como multilocatário e conceda o consentimento de administrador no locatário de parceiro.",
@@ -2074,11 +2127,18 @@
         "environment": "Ambiente intuitivo",
         "environmentProduction": "Produção",
         "environmentSandbox": "Caixa de areia",
+        "environmentHint": "A produção se conecta a empresas reais do QuickBooks. A caixa de areia se conecta a uma empresa de teste da Intuit, para você testar exportações sem alterar a contabilidade real.",
+        "environmentLockedHint": "Desconecte o QuickBooks antes de trocar de ambiente. A empresa conectada e seus tokens existem apenas no ambiente em que foram autorizados.",
+        "environmentSandboxKeysTitle": "A caixa de areia exige seu próprio aplicativo da Intuit",
+        "environmentSandboxKeysDescription": "As empresas da caixa de areia da Intuit aceitam apenas as chaves Development de um aplicativo da Intuit que você controla. O aplicativo compartilhado desta instalação usa chaves Production, então registre seu próprio aplicativo e salve as chaves Development abaixo antes de conectar.",
+        "environmentSavedSandbox": "O QuickBooks passará a se conectar a uma empresa da caixa de areia da Intuit. Conecte-se com as chaves Development do seu próprio aplicativo da Intuit.",
+        "environmentSavedProduction": "O QuickBooks passará a se conectar a empresas reais do QuickBooks.",
         "errors": {
           "automatedSalesTax": "Não foi possível atualizar o modo Automated Sales Tax.",
           "disconnect": "Falha ao desconectar QuickBooks.",
           "load": "Falha ao carregar as configurações do QuickBooks.",
-          "saveCredentials": "Falha ao salvar as credenciais do QuickBooks."
+          "saveCredentials": "Falha ao salvar as credenciais do QuickBooks.",
+          "environment": "Não foi possível alterar o ambiente da Intuit."
         },
         "howItWorksDescription": "Conecte sua empresa QuickBooks fazendo login na Intuit, e o AlgaPSA a usará como contexto ao vivo padrão para exportações e mapeamentos. O cartão «Aplicativo Intuit» abaixo informa se sua implantação já fornece o aplicativo usado nesse login ou se você precisa registrar um primeiro.",
         "howItWorksTitle": "Como funciona o QuickBooks ao vivo nesta versão",
@@ -2110,6 +2170,7 @@
         "credentialSource": {
           "app": "Esta implantação fornece um aplicativo Intuit compartilhado, então você pode conectar o QuickBooks sem registrar um. Pule este cartão e clique em «Conectar QuickBooks» abaixo.",
           "none": "Nenhum aplicativo Intuit está disponível ainda. Registre um na Intuit antes de poder conectar.",
+          "noneSandbox": "A caixa de areia precisa de um aplicativo da Intuit próprio. Registre um e salve suas chaves Development antes de poder conectar.",
           "tenant": "Este tenant se conecta por meio do seu próprio aplicativo Intuit, usando as credenciais armazenadas abaixo. Para rotacionar uma chave, cole o novo valor e salve.",
           "appTitle": "Nenhuma credencial necessária"
         },
@@ -2408,6 +2469,42 @@
           "title": "Janelas de manutenção",
           "description": "Os alertas recebidos durante uma janela ativa são suprimidos e não criam tickets.",
           "empty": "Nenhuma janela de manutenção configurada."
+        },
+        "predicate": {
+          "matchAll": "Correspondência",
+          "all": "Todas as condições",
+          "any": "Qualquer condição",
+          "add": "Adicionar condição",
+          "remove": "Remover",
+          "value": "Valor",
+          "nestedGroup": "Grupo aninhado",
+          "legacyRegex": "Expressão regular legada da mensagem",
+          "and": "e",
+          "or": "ou",
+          "fields": {
+            "severity": "Gravidade",
+            "alertClass": "Classe do alerta",
+            "activityType": "Tipo de atividade",
+            "sourceType": "Tipo de origem",
+            "organizationId": "ID da organização",
+            "text": "Mensagem e detalhes",
+            "deviceName": "Nome do dispositivo",
+            "externalDeviceId": "ID externo do dispositivo",
+            "message": "Mensagem",
+            "details": "Detalhes"
+          },
+          "operators": {
+            "equals": "é",
+            "not_equals": "não é",
+            "in": "é um de",
+            "not_in": "não é nenhum de",
+            "contains": "contém",
+            "not_contains": "não contém",
+            "contains_ci": "contém, ignorando maiúsculas e minúsculas",
+            "not_contains_ci": "não contém, ignorando maiúsculas e minúsculas"
+          },
+          "addGroup": "Adicionar grupo",
+          "removeGroup": "Remover grupo"
         }
       },
       "ninjaOne": {
@@ -3057,6 +3154,138 @@
           "showSecret": "Mostrar segredo",
           "title": "Webhook de alerta",
           "url": "URL do webhook"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "A integração com UniFi está disponível no AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Guardar configuração",
+          "testConnection": "Verificar novamente todas as chaves",
+          "disconnect": "Desligar",
+          "discoverSites": "Descobrir sites",
+          "runDeviceSync": "Executar sincronização de dispositivos",
+          "checkOfflineNow": "Verificar dispositivos offline agora",
+          "saveAlerting": "Guardar definições de alertas"
+        },
+        "alerting": {
+          "title": "Alertas de dispositivos offline",
+          "description": "Um dispositivo que permanece offline além do período de tolerância gera um alerta e, se as suas regras de alerta o indicarem, um ticket. O alerta é resolvido quando o dispositivo volta a ficar online.",
+          "graceMinutes": "Período de tolerância offline (minutos)",
+          "graceHelp": "Durante quanto tempo um dispositivo tem de estar continuamente offline antes de ser gerado um alerta. Use 0 para alertar imediatamente.",
+          "rulesNote": "A criação de tickets, as prioridades e a resolução automática são configuradas nas regras de alerta abaixo."
+        },
+        "connection": {
+          "title": "Ligação UniFi",
+          "description": "Ligue-se com uma ou mais chaves de API UniFi. Uma chave Site Manager criada em Independent alcança as suas consolas independentes; uma chave criada numa fabric alcança apenas essa fabric, por isso adicione uma chave por fabric. As chaves de controlador local funcionam para um controlador a que aceda diretamente. Os gateways, switches e pontos de acesso adotados são sincronizados.",
+          "syncLabel": "Sincronização: {{status}}",
+          "syncLabelWithError": "Sincronização: {{status}} ({{error}})",
+          "connectedAt": "Ligado: {{time}}",
+          "never": "nunca"
+        },
+        "errors": {
+          "loadSettings": "Falha ao carregar as definições do UniFi",
+          "loadMappings": "Falha ao carregar os mapeamentos de sites do UniFi",
+          "loadSummary": "Falha ao carregar o resumo da ligação UniFi",
+          "loadState": "Falha ao carregar o estado da integração UniFi",
+          "saveConfiguration": "Falha ao guardar a configuração do UniFi",
+          "testConnectionFailed": "O teste de ligação falhou",
+          "disconnectFailed": "Falha ao desligar a integração UniFi",
+          "siteSyncFailed": "A descoberta de sites falhou",
+          "deviceSyncFailed": "A sincronização de dispositivos falhou",
+          "updateMappingFailed": "Falha ao atualizar o mapeamento",
+          "reconnectRequired": "A UniFi rejeitou todas as chaves de API guardadas. Substitua uma chave abaixo para retomar a sincronização.",
+          "alertCheckFailed": "A verificação offline falhou",
+          "saveAlertingFailed": "Falha ao guardar as definições de alertas",
+          "invalidGraceMinutes": "Introduza um número inteiro de minutos entre 0 e 1440."
+        },
+        "fields": {
+          "apiKey": "Chave de API ({{state}})",
+          "apiKeyStateSaved": "guardada",
+          "apiKeyStateRequired": "obrigatória",
+          "apiKeyPlaceholderExisting": "Chave guardada. Introduza uma nova chave para a substituir",
+          "apiKeyPlaceholderNew": "Cole a sua chave de API UniFi",
+          "connectionMode": "Modo de ligação",
+          "modeSiteManager": "Site Manager (nuvem)",
+          "modeLocal": "Controlador local",
+          "localBaseUrl": "URL do controlador",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "Site UniFi",
+          "reachedBy": "Alcançado por",
+          "mappedClient": "Cliente mapeado",
+          "defaultContact": "Contato padrão",
+          "selectContact": "Selecionar contato",
+          "autoSync": "Sincronização automática",
+          "autoSyncEnabled": "Ativada",
+          "autoSyncDisabled": "Desativada"
+        },
+        "status": {
+          "label": "Estado: ",
+          "connected": "Ligado",
+          "disconnected": "Não ligado",
+          "reconnectRequired": "Religação necessária"
+        },
+        "success": {
+          "configurationSaved": "Configuração do UniFi guardada",
+          "connectionTestSucceeded": "Ligação ao UniFi bem-sucedida",
+          "disconnected": "Integração UniFi desligada",
+          "siteSyncCompleted": "Descoberta de sites concluída: {{processed}} processados, {{created}} criados, {{updated}} atualizados",
+          "deviceSyncCompleted": "Sincronização de dispositivos concluída: {{processed}} processados, {{created}} criados, {{updated}} atualizados",
+          "alertCheckCompleted": "Verificação offline concluída",
+          "alertingSaved": "Definições de alertas guardadas"
+        },
+        "sync": {
+          "title": "Sincronização e mapeamentos de sites",
+          "description": "Descubra os sites UniFi e mapeie cada um para um cliente. Os dispositivos em sites não mapeados são ignorados.",
+          "summary": "{{mappedSites}} sites mapeados · {{devices}} dispositivos · {{activeAlerts}} alertas ativos"
+        },
+        "credentials": {
+          "columns": {
+            "label": "Chave",
+            "type": "Tipo",
+            "status": "Estado",
+            "consoles": "Consoles alcançados",
+            "lastError": "Último erro",
+            "lastChecked": "Última verificação",
+            "actions": "Ações"
+          },
+          "statusActive": "Ativa",
+          "statusReconnect": "Chave rejeitada",
+          "statusDisabled": "Desativada",
+          "noConsoles": "Ainda nenhum",
+          "unreachableTitle": "Algumas consoles estão visíveis, mas nenhuma das suas chaves consegue aceder-lhes.",
+          "unreachableAction": "Se uma consola pertencer a uma fabric, adicione uma chave criada nessa fabric. Crie-a no UniFi Site Manager com essa fabric selecionada.",
+          "firstKeyHelp": "Cole uma chave de API UniFi para ligar. Mais tarde pode adicionar mais chaves, por exemplo uma por fabric.",
+          "addHelp": "Uma chave criada em Independent alcança as suas consolas independentes. Uma chave criada numa fabric alcança apenas essa fabric, por isso adicione uma por fabric.",
+          "labelField": "Etiqueta",
+          "labelPlaceholderFirst": "Predefinida",
+          "labelPlaceholder": "Por exemplo: fabric Acme",
+          "keyField": "Chave de API",
+          "addKey": "Adicionar chave",
+          "addAnother": "Adicionar outra chave",
+          "cancel": "Cancelar",
+          "replaceKey": "Substituir chave",
+          "replaceTitle": "Substituir chave: {{label}}",
+          "replaceHelp": "A nova chave é verificada antes de substituir a guardada. A chave antiga é descartada.",
+          "replaceUrlField": "URL do controlador (deixe vazio para manter o guardado)",
+          "newKeyField": "Nova chave de API",
+          "rename": "Mudar o nome",
+          "renameTitle": "Mudar o nome da chave",
+          "remove": "Remover",
+          "actionsMenu": "Ações para {{label}}",
+          "removeTitle": "Remover chave: {{label}}",
+          "removeWarning": "Estes sites mapeados usam esta chave. Mantêm o mapeamento de cliente e os ativos, mas deixam de sincronizar até que outra chave alcance a sua consola.",
+          "added": "Chave de API adicionada",
+          "replaced": "Chave de API substituída",
+          "renamed": "Etiqueta atualizada",
+          "removed": "Chave de API removida",
+          "addFailed": "Falha ao adicionar a chave de API",
+          "replaceFailed": "Falha ao substituir a chave de API",
+          "renameFailed": "Falha ao atualizar a etiqueta",
+          "removeFailed": "Falha ao remover a chave de API"
         }
       },
       "huntress": {

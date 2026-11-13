@@ -14,6 +14,7 @@ vi.mock('@alga-psa/ui/lib/errorHandling', async (importOriginal) => ({
   }),
 }));
 
+import { UploadContentTypeError, UploadSizeLimitError } from '@alga-psa/storage/ingest/errors';
 import {
   documentActionErrorFrom,
   documentActionErrorMessage,
@@ -67,6 +68,31 @@ describe('documentActionErrorFrom', () => {
     });
 
     expect(documentActionErrorFrom(new Error('database connection lost'))).toBeNull();
+  });
+
+  it('maps ingest-pipeline rejections by their stable code', () => {
+    expect(documentActionErrorFrom(
+      new UploadContentTypeError('File content does not match the declared type image/png', 'image/png', undefined),
+    )).toEqual({
+      actionError: "This file's contents don't match its file type, so it was not uploaded. Check that you picked the right file.",
+      messageKey: 'documents:errors.upload.contentMismatch',
+    });
+
+    expect(documentActionErrorFrom(
+      new UploadContentTypeError('File type not allowed', 'application/x-msdownload', undefined),
+    )).toEqual({
+      actionError: 'This file type is not allowed.',
+      messageKey: 'documents:errors.upload.typeNotAllowed',
+    });
+
+    // A plain object with the code (e.g. an error crossing a module copy boundary) still maps.
+    expect(documentActionErrorFrom({ code: 'UPLOAD_CONTENT_TYPE_REJECTED', message: 'x' })).toMatchObject({
+      messageKey: 'documents:errors.upload.contentMismatch',
+    });
+
+    expect(documentActionErrorFrom(new UploadSizeLimitError(524288000))).toEqual({
+      actionError: 'File size exceeds limit of 524288000 bytes',
+    });
   });
 
   it('extracts messages from mapped action results', async () => {

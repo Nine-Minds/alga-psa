@@ -1,6 +1,7 @@
 'use server'
 
 import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   ITimeEntry,
@@ -19,7 +20,7 @@ import { toPlainDate } from '@alga-psa/core';
 import {
   timeSheetApprovalViewSchema,
   timeSheetCommentSchema,
-  timeEntrySchema,
+  timeEntryReadSchema,
   timeSheetViewSchema
 } from '../schemas/timeSheet.schemas';
 import { WorkItemType } from '@alga-psa/types';
@@ -414,8 +415,11 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
 
     await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
-    const timeEntries: ITimeEntry[] = await scopedDb.table('time_entries')
-      .where('time_sheet_id', timeSheetId)
+    const readScope = await resolveTimeEntryReadScope(db, tenant, user);
+    const timeEntriesQuery = scopedDb.table('time_entries');
+    readScope.apply(timeEntriesQuery);
+    const timeEntries: ITimeEntry[] = await timeEntriesQuery
+      .where('time_entries.time_sheet_id', timeSheetId)
       .select(
         'entry_id',
         'work_item_id',
@@ -450,7 +454,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
       work_timezone: entry.work_timezone
     }));
 
-    return validateArray(timeEntrySchema, formattedEntries) as ITimeEntry[];
+    return validateArray(timeEntryReadSchema, formattedEntries) as ITimeEntry[];
   } catch (error) {
     console.error('Error fetching time entries for time sheet:', error);
     const expected = timeSheetActionErrorFrom(error);

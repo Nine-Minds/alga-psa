@@ -1,0 +1,24 @@
+{
+  "actionResponses": [
+    {
+      "status": 200,
+      "url": "http://feature-security-authz-in-addticketresource.localhost:3751/msp/create-ticket"
+    }
+  ],
+  "revision": "ea8086eb4c993e208a5ca25c694ea081a4a809f6",
+  "session": {
+    "id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+    "email": "qa@emeraldcity.oz"
+  },
+  "title": "Authz Invalid Agent Browser Rollback 20261104 v5",
+  "injected": [
+    {
+      "nextAction": "7fdebe2986efbf5dbca1d5e70b487f5d8d2954cd14",
+      "contentType": "multipart/form-data; boundary=----WebKitFormBoundaryVhDielXQj2qaI5U2",
+      "bodyLength": 1366,
+      "invalidInjected": true
+    }
+  ],
+  "body": "r Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nCo-managed IT\nSettings\nSupport\nv1.6.17\nHome\nDashboard\n6d178771-ad9a-4d43-8809-83992745f8f9\nQuick Create\n48\nQT\nInbound email for review2687@localhost reported an error and may not be receiving messages.\nReview\nQuick Add Ticket\n\nPlease fill in the required fields:\n\nOne or more selected agents cannot be assigned. Choose active internal agents and try again.\nTemplate\nNone\nDescription\n\n\n\n\nSD\nSmoke Deferred 1755\nSelect contact\nNo locations for selected client\nPortal Sharing Review\nAssigned To\nDG\nDorothy Gale\nAdditional Agents\nQT\nQA Tester\nSelect category\nOpen\nSelect Status *\nOpen\nWhimsical Wish\nSelect Priority *\nWhimsical Wish\nCurious Conundrum\nEnchanted Emergency\nDue Date\nAssets\nAdd an asset...\nAttachments\nAdd files\nWatchers\nAdd watchers...\nTags\nCancel\nCreate + View Ticket\nCreate",
+  "url": "http://feature-security-authz-in-addticketresource.localhost:3751/msp/create-ticket"
+}

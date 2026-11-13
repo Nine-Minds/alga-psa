@@ -1,16 +1,7 @@
 import dns from 'node:dns/promises';
-import { BlockList, isIP } from 'node:net';
-
-const blockedAddresses = new BlockList();
-
-blockedAddresses.addSubnet('10.0.0.0', 8, 'ipv4');
-blockedAddresses.addSubnet('172.16.0.0', 12, 'ipv4');
-blockedAddresses.addSubnet('192.168.0.0', 16, 'ipv4');
-blockedAddresses.addSubnet('127.0.0.0', 8, 'ipv4');
-blockedAddresses.addSubnet('169.254.0.0', 16, 'ipv4');
-blockedAddresses.addSubnet('100.64.0.0', 10, 'ipv4');
-blockedAddresses.addAddress('::1', 'ipv6');
-blockedAddresses.addSubnet('fe80::', 10, 'ipv6');
+import { isIP } from 'node:net';
+export { isGlobalUnicastAddress } from '../net/publicAddress';
+import { isGlobalUnicastAddress } from '../net/publicAddress';
 
 export class UnsafeWebhookTargetError extends Error {
   constructor(message: string) {
@@ -48,61 +39,84 @@ function assertNotLocalhost(hostname: string): void {
   }
 }
 
-function assertSafeResolvedAddress(address: string): void {
-  const family = isIP(address);
-  if (!family) {
+export type AddressPolicy = (address: string) => boolean;
+
+export function assertSafeResolvedAddress(
+  address: string,
+  isAddressAllowed: AddressPolicy = isGlobalUnicastAddress,
+): void {
+  if (!isIP(address)) {
     throw new UnsafeWebhookTargetError(
       `Webhook target resolved to a non-IP address: ${address}`,
     );
   }
 
-  const type = family === 6 ? 'ipv6' : 'ipv4';
-  if (blockedAddresses.check(address, type)) {
+  if (!isAddressAllowed(address)) {
     throw new UnsafeWebhookTargetError(
-      `Webhook target resolved to a blocked private address: ${address}`,
+      `Webhook target resolved to a blocked non-public address: ${address}`,
     );
   }
 }
 
-async function resolveAddresses(hostname: string): Promise<string[]> {
-  if (isIP(hostname)) {
-    return [hostname];
-  }
-
-  const results = await dns.lookup(hostname, {
-    all: true,
-    verbatim: true,
-  });
-
-  return results.map((result) => result.address);
+export function isPrivateWebhookTargetAllowed(): boolean {
+  return isPrivateTargetAllowed();
 }
 
-// LEVERAGE: pattern ssrf-guard — server/src/lib/net/safeFetch.ts is the pinned-DNS equivalent for user-supplied fetch URLs; this guard validates only (check-then-fetch)
-export async function assertSafeWebhookTarget(targetUrl: string): Promise<void> {
+/**
+ * Resolve a hostname and require every returned address to pass the policy.
+ * Used both by the pre-flight check and by the connect-time lookup that pins
+ * the socket to the validated addresses.
+ */
+export async function resolveValidatedAddresses(
+  hostname: string,
+  isAddressAllowed: AddressPolicy = isGlobalUnicastAddress,
+): Promise<Array<{ address: string; family: 4 | 6 }>> {
+  const addresses = isIP(hostname)
+    ? [hostname]
+    : (await dns.lookup(hostname, { all: true, verbatim: true })).map((r) => r.address);
+
+  if (addresses.length === 0) {
+    throw new UnsafeWebhookTargetError(`Webhook target hostname ${hostname} did not resolve`);
+  }
+  for (const address of addresses) {
+    assertSafeResolvedAddress(address, isAddressAllowed);
+  }
+  return addresses.map((address) => ({ address, family: isIP(address) === 6 ? 6 : 4 }));
+}
+
+/**
+ * Synchronous checks that need no DNS: scheme, localhost names and IP-literal
+ * hosts. Node never calls `lookup` for IP literals, so this is the only gate
+ * for them and must run before every connection.
+ */
+export function assertSafeWebhookUrl(
+  target: string | URL,
+  isAddressAllowed: AddressPolicy = isGlobalUnicastAddress,
+): URL {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = typeof target === 'string' ? new URL(target) : target;
+  } catch {
+    throw new UnsafeWebhookTargetError(`Webhook target URL is invalid: ${target}`);
+  }
+
+  assertSupportedScheme(parsedUrl.protocol);
+  const hostname = normalizeHostname(parsedUrl.hostname);
+  assertNotLocalhost(hostname);
+  if (isIP(hostname)) {
+    assertSafeResolvedAddress(hostname, isAddressAllowed);
+  }
+  return parsedUrl;
+}
+
+export async function assertSafeWebhookTarget(
+  targetUrl: string,
+  isAddressAllowed: AddressPolicy = isGlobalUnicastAddress,
+): Promise<void> {
   if (isPrivateTargetAllowed()) {
     return;
   }
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(targetUrl);
-  } catch {
-    throw new UnsafeWebhookTargetError(`Webhook target URL is invalid: ${targetUrl}`);
-  }
-
-  assertSupportedScheme(parsedUrl.protocol);
-
-  const hostname = normalizeHostname(parsedUrl.hostname);
-  assertNotLocalhost(hostname);
-
-  const addresses = await resolveAddresses(hostname);
-  if (addresses.length === 0) {
-    throw new UnsafeWebhookTargetError(
-      `Webhook target hostname ${hostname} did not resolve`,
-    );
-  }
-
-  for (const address of addresses) {
-    assertSafeResolvedAddress(address);
-  }
+  const parsedUrl = assertSafeWebhookUrl(targetUrl, isAddressAllowed);
+  await resolveValidatedAddresses(normalizeHostname(parsedUrl.hostname), isAddressAllowed);
 }

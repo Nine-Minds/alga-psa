@@ -555,7 +555,16 @@
       "invalidValue": "Een van de geselecteerde rapportrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "referenceMissing": "Een van de geselecteerde rapportrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht rapportveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht rapportveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht rapportveld: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het leest {{table}}, waarvoor geen klanteigendomsregel bestaat.",
+        "raw_sql": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het is opgebouwd uit onbewerkte SQL.",
+        "unsupported_join": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het koppelt {{table}} op een manier die rijen van andere klanten behoudt.",
+        "no_client_anchor": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: geen van de gelezen gegevens hoort bij een klant.",
+        "not_client_attributable": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het leest {{table}}, dat niet aan een klant kan worden toegewezen.",
+        "unnarrowable_report": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het telt de rekeningen van alle klanten bij elkaar op."
+      },
+      "clientOutOfScope": "U hebt geen toegang tot deze klant."
     }
   }
 }

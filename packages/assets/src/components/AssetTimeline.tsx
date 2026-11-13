@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import {
   ArrowRightLeft,
   Boxes,
+  ClipboardCheck,
   History,
   PackageCheck,
   PackageOpen,
@@ -49,6 +50,8 @@ interface TimelineEvent {
   title: string;
   detail?: string;
   actor?: string;
+  /** Makes the title a link — the audit entry points at the run it came from. */
+  href?: string;
 }
 
 /** Relative age. `now` is injected so the formatter stays pure and testable. */
@@ -101,7 +104,7 @@ type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 export function describeAssetHistoryEntry(
   entry: Pick<AssetHistory, 'change_type' | 'changes'>,
   t: TranslateFn
-): { title: string; detail?: string; icon: LucideIcon; tone: BentoTone } | null {
+): { title: string; detail?: string; icon: LucideIcon; tone: BentoTone; href?: string } | null {
   const changes = (entry.changes ?? {}) as Record<string, unknown>;
   const source = typeof changes.source === 'string' ? changes.source : undefined;
   const contactName = typeof changes.contact_name === 'string' ? changes.contact_name : undefined;
@@ -197,6 +200,32 @@ export function describeAssetHistoryEntry(
           }),
       icon: Boxes,
       tone: 'info',
+    };
+  }
+
+  // Site audits: `complete` writes one row per audited asset. Without this the
+  // generic path read "Audit" with the raw payload keys beneath it ("Audit id,
+  // Result, Location id") — true, and useless.
+  if (entry.change_type === 'audit') {
+    const result = typeof changes.result === 'string' ? changes.result : null;
+    const method = typeof changes.method === 'string' ? changes.method : null;
+    const auditId = typeof changes.audit_id === 'string' ? changes.audit_id : null;
+    const present = result === 'present';
+    return {
+      title: present
+        ? t('assetTimeline.events.auditPresent', { defaultValue: 'Audit: present' })
+        : result === 'missing'
+          ? t('assetTimeline.events.auditMissing', { defaultValue: 'Audit: missing' })
+          : t('assetTimeline.events.audit', { defaultValue: 'Audit' }),
+      detail: method
+        ? t('assetTimeline.events.auditMethod', {
+            defaultValue: 'Marked by {{method}}',
+            method: t(`enums.assetAuditMethod.${method}`, { defaultValue: method }),
+          })
+        : undefined,
+      icon: ClipboardCheck,
+      tone: present ? 'good' : result === 'missing' ? 'bad' : 'neutral',
+      ...(auditId ? { href: `/msp/assets/audits/${auditId}` } : {}),
     };
   }
 
@@ -311,6 +340,7 @@ export function AssetTimeline({
         }),
         detail: described ? described.detail : changeSummary(entry.changes),
         actor: entry.changed_by_name,
+        ...(described?.href ? { href: described.href } : {}),
       });
     }
 
@@ -444,9 +474,19 @@ export function AssetTimeline({
                   <Icon className={`h-2.5 w-2.5 ${BENTO_TONE_TEXT[event.tone]}`} />
                 </span>
                 <div className="flex items-baseline gap-2 min-w-0">
-                  <span className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate min-w-0">
-                    {event.title}
-                  </span>
+                  {event.href ? (
+                    <a
+                      id={`${id}-link-${event.id}`}
+                      href={event.href}
+                      className="text-sm font-medium text-[rgb(var(--color-primary-600))] truncate min-w-0 hover:underline"
+                    >
+                      {event.title}
+                    </a>
+                  ) : (
+                    <span className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate min-w-0">
+                      {event.title}
+                    </span>
+                  )}
                   <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
                     {formatEventAge(event.at, now, i18n?.language)}
                   </span>

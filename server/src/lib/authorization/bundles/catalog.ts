@@ -1,3 +1,4 @@
+// LEVERAGE: pattern authorization-bundles-copy — server/src/lib/authorization/bundles/{catalog,service}.ts duplicate packages/authorization/src/bundles (the starter-bundle copy was removed in S21; these two still drift from the package, e.g. the resource-type catalog).
 import type { RelationshipTemplateKey } from '../kernel';
 
 export const AUTHORIZATION_TEMPLATE_CATALOG: ReadonlySet<RelationshipTemplateKey> = new Set([

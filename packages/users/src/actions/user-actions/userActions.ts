@@ -11,7 +11,7 @@ import {
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorError, isUserRoleFloorRejected, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -26,7 +26,8 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { CoManagedAdmissionError } from '@alga-psa/licensing';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -44,6 +45,13 @@ interface ActionResult {
   success: boolean;
   message?: string;
   error?: string;
+}
+
+/** The i18n key each role-floor refusal reports; see assertUserRoleFloor. */
+function userRoleFloorMessageKey(violation: UserRoleFloorViolation): string {
+  return violation === 'last_msp_admin'
+    ? 'msp/settings:errors.roles.lastMspAdmin'
+    : 'msp/settings:errors.roles.lastRole';
 }
 
 /**
@@ -64,6 +72,7 @@ export type AddUserErrorCode =
   | 'EMAIL_ALREADY_EXISTS'
   | 'LICENSE_LIMIT_REACHED'
   | 'SOLO_PLAN_LIMIT'
+  | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_CREATE_FAILED';
 
@@ -72,6 +81,7 @@ type AddUserResult =
   | { success: false; code: AddUserErrorCode; error: string };
 
 export type UpdateUserErrorCode =
+  | 'LAST_MSP_ADMIN'
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'
@@ -80,12 +90,13 @@ export type UpdateUserErrorCode =
   | 'INVALID_ACTIVE_STATE'
   | 'LICENSE_LIMIT_REACHED'
   | 'SOLO_PLAN_LIMIT'
+  | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
 export type UpdateUserResult =
   | { success: true; user: SafeApiUser | null }
-  | { success: false; code: UpdateUserErrorCode; error: string };
+  | ({ success: false; code: UpdateUserErrorCode; error: string } & ActionResultMessageKey);
 
 export type OpenWorkDisposition =
   | { action: "reassign"; assigneeId: string }
@@ -104,11 +115,11 @@ export interface UserOpenWorkCounts {
 
 export type DeactivateUserWithDispositionResult =
   | { success: true; user: SafeApiUser | null }
-  | {
+  | ({
       success: false;
       code: "PERMISSION_DENIED" | "DEACTIVATION_FAILED";
       error: string;
-    };
+    } & ActionResultMessageKey);
 
 export type RegisterClientUserErrorCode =
   | 'CONTACT_NOT_FOUND'
@@ -593,61 +604,13 @@ export const addUser = withAuth(async (
         };
       }
 
-      // Check license limits for  MSP (internal) users
+      // Admit the seat for MSP (internal) users: co-managed allocation gate or
+      // the ordinary/solo/appliance limit, in the same transaction as the insert.
       if (isLicensedUserType(newUserType)) {
-        const tenantRow = await tenantDb(trx, tenant).table('tenants')
-          .first('licensed_user_count', 'plan');
-
-        if (!tenantRow) {
-          throw new Error(`Tenant not found: ${tenant}`);
+        const admission = await admitInternalUserSeat(trx, tenant, { email: userData.email, kind: 'user' });
+        if (isInternalUserLicenseLimitRejected(admission)) {
+          return { success: false, code: admission.code, error: admission.error };
         }
-
-        const usedResult = await tenantDb(trx, tenant).table('users')
-          .where({
-            user_type: 'internal',
-            is_inactive: false,
-          })
-          .count('* as count');
-
-        const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
-        const limit = tenantRow.licensed_user_count as number | null;
-        const plan = tenantRow.plan as string | null | undefined;
-
-        if (plan === 'solo' && used >= 1) {
-          return {
-            success: false,
-            code: 'SOLO_PLAN_LIMIT',
-            error: 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.',
-          };
-        }
-
-        if (limit !== null && used >= limit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: "You've reached your MSP user license limit.",
-          };
-        }
-
-        // Appliance license seat limit — Enterprise Edition only. Resolves to a
-        // no-op stub on CE (`@enterprise` → packages/ee/src), so no appliance
-        // licensing concept ships in or runs on Community Edition.
-        const seatLimit = await (async () => {
-          try {
-            const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
-            return await checkApplianceLicenseSeatLimit(used, tenant);
-          } catch {
-            return null;
-          }
-        })();
-        if (seatLimit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license. Add seats at nineminds.com/portal, then use "Refresh license now" on the License page.`,
-          };
-        }
-
       }
 
       const [newUser] = await tenantDb(trx, tenant).table('users')
@@ -663,6 +626,10 @@ export const addUser = withAuth(async (
           contact_id: userData.contactId || undefined,
           reports_to: userData.reportsTo || undefined
         }).returning(USER_RESPONSE_FIELD_NAMES);
+
+      if (isLicensedUserType(newUserType)) {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
 
       await tenantDb(trx, tenant).table('user_roles').insert({
         user_id: newUser.user_id,
@@ -705,6 +672,9 @@ export const addUser = withAuth(async (
     return result;
   } catch (error: unknown) {
     logger.error('Error adding user:', error);
+    if (error instanceof CoManagedAdmissionError) {
+      return { success: false, code: error.code, error: error.message };
+    }
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
       return { success: false, code: 'PERMISSION_DENIED', error: message };
@@ -791,6 +761,13 @@ export const deleteUser = withAuth(async (
       const actorId = user.user_id;
       const tenantScopedTable = (table: string) => tenantDb(trx, tenantId).table(table);
 
+      // Deleting the last active MSP admin would leave the tenant unrepairable.
+      // Runs in the deletion transaction, so the refusal rolls the delete back.
+      const floor = await assertUserRoleFloor(trx, tenantId, { kind: 'delete_user', userId });
+      if (isUserRoleFloorRejected(floor)) {
+        throw new UserRoleFloorError(floor.message, floor.violation);
+      }
+
       // Citus does not enforce ON DELETE SET NULL / CASCADE on distributed
       // tables, so every FK pointing at users(tenant, user_id) must be
       // cleared explicitly here regardless of what the migration declared.
@@ -821,6 +798,7 @@ export const deleteUser = withAuth(async (
         ['project_tasks', 'assigned_to'],
         ['projects', 'assigned_to'],
         ['quote_activities', 'performed_by'],
+        ['quote_decisions', 'actor_user_id'],
         ['quote_document_template_assignments', 'created_by'],
         ['quote_items', 'created_by'],
         ['quote_items', 'updated_by'],
@@ -1007,6 +985,17 @@ export const deleteUser = withAuth(async (
   } catch (error) {
     logger.error('Error deleting user:', error);
     const message = getErrorMessage(error);
+    // Same shape (and un-localized `message`) as the other deleteUser refusals.
+    if (isUserRoleFloorError(error)) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error.message,
+        dependencies: [],
+        alternatives: []
+      };
+    }
     if (message.startsWith('Permission denied:')) {
       return {
         success: false,
@@ -1107,6 +1096,16 @@ export const updateUser = withAuth(async (
 
       // If user is being deactivated, clear default_assigned_to on boards
       if (userData.is_inactive === true) {
+        const floor = await assertUserRoleFloor(trx, tenant, { kind: 'deactivate_user', userId });
+        if (isUserRoleFloorRejected(floor)) {
+          return {
+            success: false,
+            code: 'LAST_MSP_ADMIN',
+            error: floor.message,
+            messageKey: userRoleFloorMessageKey(floor.violation),
+          };
+        }
+
         await tenantDb(trx, tenant).table('boards')
           .where({ default_assigned_to: userId })
           .update({ default_assigned_to: null });
@@ -1203,13 +1202,24 @@ export const updateUser = withAuth(async (
         && existing.is_inactive === true
         && userData.is_inactive === false
       ) {
-        const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant);
+        const licenseCheck = await admitInternalUserSeat(trx, tenant, {
+          email: existing.email,
+          kind: 'user',
+          existingUserId: userId,
+        });
         if (isInternalUserLicenseLimitRejected(licenseCheck)) {
           return { success: false, code: licenseCheck.code, error: licenseCheck.error };
         }
       }
 
       await User.update(trx, userId, normalizedUserData);
+      if (
+        existing?.user_type === 'internal'
+        && existing.is_inactive === true
+        && userData.is_inactive === false
+      ) {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
       const updatedUser = await getSafeUserWithRoles(trx, userId, tenant);
       return { success: true, user: updatedUser };
     });
@@ -1238,6 +1248,9 @@ export const updateUser = withAuth(async (
     return result;
   } catch (error) {
     logger.error(`Failed to update user with id ${userId}:`, error);
+    if (error instanceof CoManagedAdmissionError) {
+      return { success: false, code: error.code, error: error.message };
+    }
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
       return { success: false, code: 'PERMISSION_DENIED', error: message };
@@ -1360,6 +1373,19 @@ export const deactivateUserWithDisposition = withAuth(
           );
 
           await assertInteractiveUserTarget(tenant, trx, userId);
+
+          const floor = await assertUserRoleFloor(trx, tenant, {
+            kind: "deactivate_user",
+            userId,
+          });
+          if (isUserRoleFloorRejected(floor)) {
+            return {
+              success: false as const,
+              code: "DEACTIVATION_FAILED" as const,
+              error: floor.message,
+              messageKey: userRoleFloorMessageKey(floor.violation),
+            };
+          }
 
           for (const bucket of [
             disposition.tickets,
@@ -1530,6 +1556,10 @@ export const deactivateUserWithDisposition = withAuth(
         },
       );
 
+      if (result.success === false) {
+        return result;
+      }
+
       revalidatePath("/settings");
       const occurredAt = new Date().toISOString();
       try {
@@ -1582,15 +1612,26 @@ export const updateUserRoles = withAuth(async (
   { tenant },
   userId: string,
   roleIds: string[]
-): Promise<void | ActionResult> => {
+): Promise<void | (ActionResult & ActionResultMessageKey)> => {
   try {
     const {knex: db} = await createTenantKnex();
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+    const floorRejection = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throwPermissionError('update user roles');
       }
       await assertInteractiveUserTarget(tenant, trx, userId);
+
+      // The final role set decides: swapping Admin for another role on the last
+      // admin is refused, a swap that keeps Admin is not.
+      const floor = await assertUserRoleFloor(trx, tenant, { kind: 'set_roles', userId, roleIds });
+      if (isUserRoleFloorRejected(floor)) {
+        return {
+          success: false,
+          error: floor.message,
+          messageKey: userRoleFloorMessageKey(floor.violation),
+        } satisfies ActionResult & ActionResultMessageKey;
+      }
 
       // Delete existing roles
       await tenantDb(trx, tenant).table('user_roles')
@@ -1606,7 +1647,12 @@ export const updateUserRoles = withAuth(async (
         }));
         await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
       }
+      return null;
     });
+
+    if (floorRejection) {
+      return floorRejection;
+    }
 
     const occurredAt = new Date().toISOString();
     await publishNonCatalogWorkflowEvent({

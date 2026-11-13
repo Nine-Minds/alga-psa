@@ -15,9 +15,7 @@ import type {
 import {
   createAssetReadContext,
   filterReadableAssets,
-  isAssetReadAllowed,
   type AssetAuthUser,
-  type AssetReadAuthorizationContext,
 } from '../assetReadAuthorization';
 import type {
   CustodyEventInput,
@@ -29,6 +27,7 @@ import { CustodyError } from './errors';
 import { openCustody } from './openCustody';
 import { receiveEquipmentForTicket, type ReceiveEquipmentResult } from './receiveEquipment';
 import { recordCustodyEvent } from './recordCustodyEvent';
+import { assertAssetAuthorized, authorizeCustodyEpisode, closeCustodyEpisodeWithAuthorization } from './writeAuthorization';
 import { updateCustodyDetails } from './updateCustodyDetails';
 import { getOpenCustodyForAssets, listCustodyEpisodes, listCustodyQueue } from './queries';
 import { publishCustodyChanged } from './publishCustodyChanged';
@@ -37,7 +36,8 @@ import { recordRmaEvent } from '@alga-psa/shared/lib/rma/recordRmaEvent';
 import { requireWarrantyPermission } from '../warrantyAuthorization';
 import { associateAdvanceReturnWithCustody, lockAdvanceReturnsForEpisode } from './advanceWarrantyAssociation';
 export { resolveCustodyToday } from './today';
-import { loadCustody, locationNames, userNames } from './shared';
+import { locationNames, userNames } from './shared';
+export { authorizeCustodyEpisode } from './writeAuthorization';
 
 async function readableCustodyDocuments(
   trx: Knex.Transaction, tenant: string, user: AssetAuthUser, ids: string[]
@@ -67,46 +67,9 @@ async function associateCustodyDocuments(trx: Knex.Transaction, tenant: string, 
 /**
  * Transport-neutral custody services shared by the server actions and the REST controllers.
  * Callers have already checked the RBAC permission (asset:read / asset:update / asset:create); everything
- * here enforces the record-level asset check and answers "not found" for an asset the caller cannot read,
- * so existence is never revealed.
+ * here enforces the record-level asset action and answers "not found" when it is not allowed, so
+ * existence is never revealed.
  */
-
-async function assertAssetReadable(
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  ctx: AssetReadAuthorizationContext,
-  assetId: string
-): Promise<{ asset_id: string; client_id: string }> {
-  const asset = await tenantDb(knex, tenant)
-    .table('assets')
-    .where({ asset_id: assetId })
-    .select('asset_id', 'client_id')
-    .first();
-  if (!asset || !(await isAssetReadAllowed(knex, tenant, ctx, asset))) {
-    throw new CustodyError('not_found', 'Asset not found.');
-  }
-  return asset;
-}
-
-/** Resolve the episode's asset and apply the record-level check, as one "not found" for either miss. */
-export async function authorizeCustodyEpisode(
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  user: AssetAuthUser,
-  custodyId: string
-) {
-  const ctx = await createAssetReadContext(knex, tenant, user);
-  let custody;
-  try {
-    custody = await loadCustody(knex, tenant, custodyId);
-  } catch {
-    throw new CustodyError('not_found', 'Custody record not found.');
-  }
-  await assertAssetReadable(knex, tenant, ctx, custody.asset_id).catch(() => {
-    throw new CustodyError('not_found', 'Custody record not found.');
-  });
-  return custody;
-}
 
 async function publishAssetStatusChange(
   tenant: string,
@@ -134,9 +97,9 @@ async function publishAssetStatusChange(
 }
 
 export async function openCustodyService(knex: Knex, tenant: string, user: AssetAuthUser, input: OpenCustodyInput) {
-  const ctx = await createAssetReadContext(knex, tenant, user);
   const result = await knex.transaction(async (trx) => {
-    await assertAssetReadable(trx, tenant, ctx, input.asset_id);
+    const ctx = await createAssetReadContext(trx, tenant, user);
+    await assertAssetAuthorized(trx, tenant, ctx, input.asset_id, 'update');
     await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
     const opened = await openCustody(trx, tenant, user.user_id, input);
     await associateCustodyDocuments(trx, tenant, input.asset_id, input.document_ids);
@@ -167,9 +130,10 @@ export async function receiveEquipmentInTransaction(
   trx: Knex.Transaction, tenant: string, user: AssetAuthUser, input: ReceiveEquipmentInput
 ): Promise<ReceiveEquipmentResult> {
   const ctx = await createAssetReadContext(trx, tenant, user);
-  if (input.asset_id) await assertAssetReadable(trx, tenant, ctx, input.asset_id);
   await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
-  return receiveEquipmentForTicket(trx, tenant, user.user_id, input);
+  return receiveEquipmentForTicket(trx, tenant, user.user_id, input, async (assetId) => {
+    await assertAssetAuthorized(trx, tenant, ctx, assetId, 'update');
+  });
 }
 
 export async function publishEquipmentReceived(tenant: string, user: AssetAuthUser, result: ReceiveEquipmentResult): Promise<void> {
@@ -209,7 +173,7 @@ export async function recordCustodyEventService(
 export async function recordCustodyEventInTransaction(
   trx: Knex.Transaction, tenant: string, user: AssetAuthUser, custodyId: string, input: CustodyEventInput
 ) {
-  const episode = await authorizeCustodyEpisode(trx, tenant, user, custodyId);
+  const episode = await authorizeCustodyEpisode(trx, tenant, user, custodyId, 'update');
   await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
   // Exact links are authoritative. For legacy rows, an eligible unlinked claim may bind to this active
   // episode; closed episodes only match claims that predate them. Keep RMA-first locks.
@@ -279,6 +243,18 @@ export async function recordCustodyEventInTransaction(
   return result;
 }
 
+/** Transaction-taking custody closure boundary for callers outside the assets package. */
+export async function closeCustodyEpisodeInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  custodyId: string,
+  reason: Parameters<typeof closeCustodyEpisodeWithAuthorization>[4],
+  options: { note?: string | null; rmaId?: string | null; rmaNumber?: string | null } = {}
+) {
+  return closeCustodyEpisodeWithAuthorization(trx, tenant, user, custodyId, reason, options);
+}
+
 export async function publishRecordedCustodyEvent(
   tenant: string, user: AssetAuthUser, result: Awaited<ReturnType<typeof recordCustodyEventInTransaction>>
 ): Promise<void> {
@@ -299,8 +275,10 @@ export async function updateCustodyService(
   custodyId: string,
   patch: UpdateCustodyPatch
 ) {
-  await authorizeCustodyEpisode(knex, tenant, user, custodyId);
-  const result = await knex.transaction((trx) => updateCustodyDetails(trx, tenant, user.user_id, custodyId, patch));
+  const result = await knex.transaction(async (trx) => {
+    await authorizeCustodyEpisode(trx, tenant, user, custodyId, 'update');
+    return updateCustodyDetails(trx, tenant, user.user_id, custodyId, patch);
+  });
   if (result.changedFields.length > 0) {
     await publishCustodyChanged({
       tenant,
@@ -320,7 +298,7 @@ export async function getAssetCustodyService(
   assetId: string
 ): Promise<{ open: IAssetCustodyDetail | null; episodes: IAssetCustodyDetail[] }> {
   const ctx = await createAssetReadContext(knex, tenant, user);
-  await assertAssetReadable(knex, tenant, ctx, assetId);
+  await assertAssetAuthorized(knex, tenant, ctx, assetId);
   const episodes = await listCustodyEpisodes(knex, tenant, assetId);
   return { open: episodes.find((e) => e.closed_at === null) ?? null, episodes };
 }
@@ -332,7 +310,7 @@ export async function listCustodyEventsService(
   assetId: string
 ): Promise<IAssetCustodyEventDetail[]> {
   const ctx = await createAssetReadContext(knex, tenant, user);
-  await assertAssetReadable(knex, tenant, ctx, assetId);
+  await assertAssetAuthorized(knex, tenant, ctx, assetId);
   const rows = await tenantDb(knex, tenant)
     .table('asset_custody_events')
     .where({ asset_id: assetId })

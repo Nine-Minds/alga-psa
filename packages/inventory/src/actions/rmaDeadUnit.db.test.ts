@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * Advance-replacement dead-unit leg (alga-2026-0002683, real DB). The Dell advance flow through shipping the
  * dead unit to the vendor and the vendor's receipt, the guard matrix, the shared `dead_unit_owed` status told
@@ -7,13 +8,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { randomUUID } from 'node:crypto';
 import knexLib, { type Knex } from 'knex';
 
-const holder: { knex: Knex; tenant: string; userId: string; grants: Set<string> | null } = {
-  knex: undefined as never, tenant: '', userId: '', grants: null,
+// `readScope` makes the caller a client-portal user scoped to another client, so the REAL asset read check
+// (builtin same_client rule) denies the asset: no module mock has to intercept the gate.
+const holder: { knex: Knex; tenant: string; userId: string; grants: Set<string> | null; readScope: { user_type: string; clientId: string | null } } = {
+  knex: undefined as never, tenant: '', userId: '', grants: null, readScope: { user_type: 'internal', clientId: null },
 };
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: (...a: any[]) => unknown) => (...args: unknown[]) =>
-    fn({ user_id: holder.userId, tenant: holder.tenant }, { tenant: holder.tenant }, ...args),
+    fn({ user_id: holder.userId, tenant: holder.tenant, ...holder.readScope }, { tenant: holder.tenant }, ...args),
   hasPermission: async (_user: unknown, resource: string, action: string) => holder.grants === null || holder.grants.has(`${resource}:${action}`),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -43,7 +46,6 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
       (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
   };
 });
-
 import {
   approveWarrantyClaim, closeWarrantyRma, confirmVendorReceipt, openWarrantyClaim, receiveVendorReplacement,
   returnDeviceToClient, shipDeadUnitToVendor, shipToVendor, markDeviceReceived, recordVendorNonReturnCharge, listRmaCaseEvents,
@@ -87,7 +89,7 @@ beforeAll(async () => {
     { slug: 'retired', label: 'Retired', kind: 'archived', display_order: 4 },
   ].map((s) => ({ tenant: holder.tenant, ...s, is_builtin: true, is_active: true })));
 });
-beforeEach(() => { holder.grants = null; denied.assetIds.clear(); published.events.length = 0; });
+beforeEach(() => { holder.grants = null; holder.readScope = { user_type: 'internal', clientId: null }; published.events.length = 0; });
 afterAll(async () => { await knex?.destroy(); });
 
 const ok = (r: any): any => {
@@ -97,7 +99,7 @@ const ok = (r: any): any => {
 
 async function newAsset(over: Record<string, unknown> = {}) {
   const assetId = randomUUID();
-  await knex('assets').insert({
+  await insertTestAssets(knex, {
     tenant: holder.tenant, asset_id: assetId, asset_type: 'unknown', client_id: CLIENT, asset_tag: `T-${assetId.slice(0, 8)}`,
     name: 'Dell WD19 dock', serial_number: 'OLD-SERIAL', model: 'WD19', manufacturer: 'Dell', status: 'active', location: '',
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...over,
@@ -550,19 +552,19 @@ describe('advance-replacement dead-unit leg', () => {
     holder.grants = new Set(['warranty:update']);
     expect(await shipDeadUnitToVendor(rmaId, ship)).toHaveProperty('permissionError');
     holder.grants = new Set(['inventory:update', 'asset:update']);
-    denied.assetIds.add(assetId);
+    holder.readScope = { user_type: 'client', clientId: randomUUID() };
     expect(await shipDeadUnitToVendor(rmaId, ship)).toMatchObject({ messageKey: 'features/inventory:errors.rma.caseNotFound' });
     expect((await rmaRow(rmaId)).status).toBe('replaced');
     expect((await custodyRow(custody.custody_id)).state).toBe('in_office');
-    denied.assetIds.clear();
+    holder.readScope = { user_type: 'internal', clientId: null };
     ok(await shipDeadUnitToVendor(rmaId, ship));
 
     holder.grants = new Set(['warranty:update']);
     expect(await confirmVendorReceipt(rmaId, {})).toHaveProperty('permissionError');
     holder.grants = new Set(['warranty:update', 'asset:update']);
-    denied.assetIds.add(assetId);
+    holder.readScope = { user_type: 'client', clientId: randomUUID() };
     expect(await confirmVendorReceipt(rmaId, {})).toMatchObject({ messageKey: 'features/inventory:errors.rma.caseNotFound' });
-    denied.assetIds.clear();
+    holder.readScope = { user_type: 'internal', clientId: null };
     expect((await rmaRow(rmaId)).status).toBe('dead_unit_owed');
     ok(await confirmVendorReceipt(rmaId, {}));
   });

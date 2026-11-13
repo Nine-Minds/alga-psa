@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareExecutionEvidence, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileTestShards } from './lib/test-sharding.mjs';
-import { repositoryTestFiles } from './lib/test-discovery.mjs';
+import { readShardDurations } from './lib/server-unit-durations.mjs';
+import { isIntegrationTest, isWorkspaceDbTest, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 
@@ -55,8 +56,8 @@ try {
       } catch (error) { failures.push(`Shard ${index}: ${error.message}`); }
     }
     result = reconcileTestShards({ shards, suite: 'integration', revision: source.revision, mode: 'selected', total,
-      jobResult: process.env.INTEGRATION_JOB_RESULT || 'missing' });
-    const candidates = repositoryTestFiles(root).filter(file => file.startsWith('server/src/test/integration/') || file.startsWith('ee/temporal-workflows/src/__tests__/integration/'));
+      jobResult: process.env.INTEGRATION_JOB_RESULT || 'missing', weights: readShardDurations(root, 'integration')?.durationsMs ?? null });
+    const candidates = repositoryTestFiles(root).filter(isIntegrationTest);
     const manifest = JSON.parse(readFileSync(path.join(root, 'server/src/test/integration/tier1.manifest.json'), 'utf8'));
     const floor = manifest.paths.map(file => path.relative(root, path.resolve(root, 'server', file)).split(path.sep).join('/'));
     let required = candidates;
@@ -79,6 +80,7 @@ try {
             for (const entry of collected) {
               if (typeof entry.file !== 'string') throw new Error('Missing affected file identity');
               const file = path.relative(root, path.resolve(root, 'server', entry.file)).split(path.sep).join('/');
+              if (isWorkspaceDbTest(file)) continue;
               if (!candidates.includes(file)) throw new Error(`Unknown affected integration file: ${file}`);
               required.push(file);
             }

@@ -10,12 +10,15 @@ async function loadSharp() {
   }
 }
 import { fileTypeFromBuffer } from 'file-type';
+import { createHash } from 'node:crypto';
 import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
 import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
-import { StorageError } from './providers/StorageProvider';
+import { StorageError, type SeekableInput } from './providers/StorageProvider';
+import { isUploadContentTypeError, isUploadSizeLimitError } from './ingest/errors';
+import { collect, ingestToWriteSession, runPipeline } from './ingest/pipeline';
 import { renderSquareMark, type LogoCropRect } from './imageCrop';
 import fs from 'fs';
 import { stageFileUpload, deferFileUploadEvents } from './fileUploadTransaction';
@@ -26,6 +29,7 @@ import {
     getStorageConfig,
     validateFileUpload as validateFileConfig,
     validateSystemArtifact,
+    getUploadPolicy,
     type StorageArtifactOrigin,
 } from './config/storage';
 
@@ -52,14 +56,35 @@ import {
   buildMediaProcessingSucceededPayload,
 } from './workflowEventPayloads';
 
-async function streamToBuffer(stream: Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Uint8Array[] = [];
-    stream.on('data', (chunk) => chunks.push(new Uint8Array(chunk as Buffer)));
-    stream.on('error', reject);
-    stream.on('end', () => resolve(Buffer.concat(chunks as any)));
-  });
+/** Normalises the accepted inputs to a stream; a Buffer is one chunk. */
+function toSourceStream(input: Buffer | Readable): Readable {
+  return Buffer.isBuffer(input) ? Readable.from([input]) : input;
 }
+
+/** Ceiling for inputs that are buffered on purpose because sharp needs the whole image. */
+const MAX_BUFFERED_IMAGE_BYTES = 5 * 1024 * 1024;
+
+export interface UploadFileOptions {
+      mime_type?: string;
+      uploaded_by_id: string;
+      metadata?: Record<string, any>;
+      isImageAvatar?: boolean;
+      isEntityLogo?: boolean;
+      // Browser tab icon: raster input is flattened to a 32x32 PNG, SVG/ICO are
+      // stored untouched. Takes precedence over isEntityLogo.
+      isFavicon?: boolean;
+      // Square mark cut from a logo: the chosen zone (fractions of the source)
+      // rendered at avatar size. SVG sources are rasterized for this. Takes
+      // precedence over every other image branch.
+      cropRect?: LogoCropRect;
+      // Derived artifacts (e.g. preview/thumbnail regenerations) are not
+      // first-class documents. Set this to skip DOCUMENT_UPLOADED /
+      // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
+      // workflow that produced it. FILE_UPLOADED still fires (unchanged).
+      isDerivedArtifact?: boolean;
+      /** Who chose the MIME type. Defaults to `'user-upload'`. */
+      origin?: StorageArtifactOrigin;
+    }
 
 /** Square canvas every raster favicon is rendered onto. */
 const FAVICON_DIMENSION = 32;
@@ -83,6 +108,23 @@ export class StorageService {
     const provider = await StorageProviderFactory.createProvider();
     return provider.getReadStream(file.storage_path, range);
   }
+    /**
+     * Seekable location of a stored file for external tools (ffmpeg): an absolute path (local)
+     * or a short-lived presigned URL on the internal endpoint (S3/MinIO). Server-side use only.
+     */
+    static async getSeekableInput(fileId: string, ttlSeconds = 900): Promise<SeekableInput> {
+      const { knex } = await createTenantKnex();
+      const file = await FileStoreModel.findById(knex, fileId);
+      if (!file) {
+        throw new Error('File not found');
+      }
+      const provider = await StorageProviderFactory.createProvider();
+      if (!provider.getSeekableInput) {
+        throw new Error('Storage provider does not support seekable input');
+      }
+      return provider.getSeekableInput(file.storage_path, ttlSeconds);
+    }
+
     private static async getTypedProviderConfig<T>(providerType: string): Promise<T> {
         const config = await getStorageConfig();
         const providerConfig = await getProviderConfig(config.defaultProvider);
@@ -100,6 +142,7 @@ export class StorageService {
         }
     }
 
+    // LEVERAGE: pattern storage-ingest-pipeline — uploadStream trusts a declared size and creates its row before its own size check; ingestToWriteSession (src/ingest/pipeline.ts) already does counted, hashed, sniffed streaming and could replace it.
     /** Store an already-size-limited non-image stream without materialising it
      * in process memory. Large immutable import artifacts can be handed
      * directly to streaming-capable providers. */
@@ -138,31 +181,191 @@ export class StorageService {
       return file;
     }
 
+    /** Stream a non-image upload through size/type/hash stages into a provider write session. */
+    private static async ingestAndRecord(
+      tenant: string,
+      fileInput: Buffer | Readable,
+      originalName: string,
+      declaredMime: string,
+      options: UploadFileOptions,
+      uploadStartedAtMs: number
+    ): Promise<FileStore> {
+      const isSystemArtifact = (options.origin ?? 'user-upload') === 'system-artifact';
+      const policy = await getUploadPolicy();
+      if (!isSystemArtifact) {
+        // Fail on the declared type before reading a byte; the bytes are checked by sniffHead.
+        await validateUpload(options.origin, declaredMime, 0);
+      }
+      const provider = await StorageProviderFactory.createProvider();
+      const storagePath = generateStoragePath(tenant, '', originalName);
+      const fileId = uuidv4();
+      await stageFileUpload(tenant, fileId, storagePath);
+
+      const source = toSourceStream(fileInput);
+      // A failure in any stage aborts the session: no object, and no row is created below.
+      const ingested = await ingestToWriteSession(source, provider, storagePath, {
+        maxFileSize: policy.maxFileSize,
+        declaredMime,
+        allowedMimeTypes: isSystemArtifact ? null : policy.allowedMimeTypes,
+      });
+
+      return await StorageService.recordUpload(tenant, {
+        fileId,
+        storagePath,
+        uploadedPath: ingested.upload.path,
+        originalName,
+        mime: ingested.mime,
+        size: ingested.size,
+        sha256: ingested.sha256,
+      }, options, false, uploadStartedAtMs);
+    }
+
+    /** Create the file_stores row (only after the object is committed) and publish workflow events. */
+    private static async recordUpload(
+      tenant: string,
+      stored: {
+        fileId: string;
+        storagePath: string;
+        uploadedPath: string;
+        originalName: string;
+        mime: string;
+        size: number;
+        /** Null when the bytes were stored in several requests and never passed through one hash stage. */
+        sha256: string | null;
+      },
+      options: UploadFileOptions,
+      isEntityImage: boolean,
+      uploadStartedAtMs: number
+    ): Promise<FileStore> {
+      const { fileId } = stored;
+      const { knex } = await createTenantKnex(tenant);
+      const fileRecord = await FileStoreModel.create(knex, {
+        fileId,
+        file_name: stored.storagePath.split('/').pop()!,
+        original_name: stored.originalName,
+        mime_type: stored.mime,
+        file_size: stored.size,
+        content_sha256: stored.sha256,
+        storage_path: stored.uploadedPath,
+        uploaded_by_id: options.uploaded_by_id,
+        metadata: options.metadata
+      });
+
+      const publishUploaded = async () => {
+        if (!options.isDerivedArtifact) {
+          try {
+            const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+            await publishWorkflowEvent({
+              eventType: 'DOCUMENT_UPLOADED',
+              payload: buildDocumentUploadedPayload({
+                documentId: fileRecord.file_id,
+                uploadedByUserId,
+                uploadedAt: fileRecord.created_at,
+                fileName: fileRecord.original_name,
+                contentType: fileRecord.mime_type,
+                sizeBytes: fileRecord.file_size,
+                storageKey: fileRecord.storage_path,
+              }),
+              ctx: {
+                tenantId: tenant,
+                occurredAt: fileRecord.created_at,
+                actor: uploadedByUserId
+                  ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                  : { actorType: 'SYSTEM' },
+              },
+              idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+            });
+          } catch (error) {
+            console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+          }
+        }
+
+        try {
+          const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+          await publishWorkflowEvent({
+            eventType: 'FILE_UPLOADED',
+            payload: buildFileUploadedPayload({
+              fileId: fileRecord.file_id,
+              uploadedByUserId,
+              uploadedAt: fileRecord.created_at,
+              fileName: fileRecord.original_name,
+              contentType: fileRecord.mime_type,
+              sizeBytes: fileRecord.file_size,
+              storageKey: fileRecord.storage_path,
+            }),
+            ctx: {
+              tenantId: tenant,
+              occurredAt: fileRecord.created_at,
+              actor: uploadedByUserId
+                ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                : { actorType: 'SYSTEM' },
+            },
+            idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+          });
+
+          if (isEntityImage && !options.isDerivedArtifact) {
+            await publishWorkflowEvent({
+              eventType: 'MEDIA_PROCESSING_SUCCEEDED',
+              payload: buildMediaProcessingSucceededPayload({
+                fileId: fileRecord.file_id,
+                processedAt: new Date().toISOString(),
+                durationMs: Math.max(0, Date.now() - uploadStartedAtMs),
+                outputs: [
+                  {
+                    type: 'entity_image_normalized',
+                    contentType: fileRecord.mime_type,
+                    fileName: fileRecord.original_name,
+                    sizeBytes: fileRecord.file_size,
+                  },
+                ],
+              }),
+              ctx: {
+                tenantId: tenant,
+                occurredAt: new Date().toISOString(),
+                actor: uploadedByUserId
+                  ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                  : { actorType: 'SYSTEM' },
+              },
+              idempotencyKey: `media_processing_succeeded:entity_image:${fileRecord.file_id}:${fileRecord.created_at}`,
+            });
+          }
+        } catch (error) {
+          console.error('[StorageService] Failed to publish FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED workflow event', error);
+        }
+
+      };
+      if (!deferFileUploadEvents(fileId, publishUploaded)) await publishUploaded();
+      return fileRecord;
+    }
+
+    /**
+     * Record (and publish the upload events for) an object whose bytes were already committed by a
+     * provider write session, e.g. a resumable chunked upload. The caller owns validation: the size
+     * and MIME were checked while the chunks streamed in. No content hash is recorded because the
+     * bytes arrived in separate requests.
+     */
+    static async recordCommittedUpload(
+      tenant: string,
+      stored: { storagePath: string; originalName: string; mime: string; size: number },
+      options: { uploaded_by_id: string; metadata?: Record<string, any> }
+    ): Promise<FileStore> {
+      if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
+      return StorageService.recordUpload(tenant, {
+        fileId: uuidv4(),
+        storagePath: stored.storagePath,
+        uploadedPath: stored.storagePath,
+        originalName: stored.originalName,
+        mime: stored.mime,
+        size: stored.size,
+        sha256: null,
+      }, options, false, Date.now());
+    }
+
     static async uploadFile(
     tenant: string,
     fileInput: Buffer | Readable,
     originalName: string,
-    options: {
-      mime_type?: string;
-      uploaded_by_id: string;
-      metadata?: Record<string, any>;
-      isImageAvatar?: boolean;
-      isEntityLogo?: boolean;
-      // Browser tab icon: raster input is flattened to a 32x32 PNG, SVG/ICO are
-      // stored untouched. Takes precedence over isEntityLogo.
-      isFavicon?: boolean;
-      // Square mark cut from a logo: the chosen zone (fractions of the source)
-      // rendered at avatar size. SVG sources are rasterized for this. Takes
-      // precedence over every other image branch.
-      cropRect?: LogoCropRect;
-      // Derived artifacts (e.g. preview/thumbnail regenerations) are not
-      // first-class documents. Set this to skip DOCUMENT_UPLOADED /
-      // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
-      // workflow that produced it. FILE_UPLOADED still fires (unchanged).
-      isDerivedArtifact?: boolean;
-      /** Who chose the MIME type. Defaults to `'user-upload'`. */
-      origin?: StorageArtifactOrigin;
-    }
+    options: UploadFileOptions
   ) {
     try {
       if (!options.uploaded_by_id) {
@@ -171,20 +374,28 @@ export class StorageService {
 
       const uploadStartedAtMs = Date.now();
 
-      let fileBuffer: Buffer;
-      let fileSize: number;
-
-      if (fileInput instanceof Buffer) {
-        fileBuffer = fileInput;
-        fileSize = fileBuffer.length;
-      } else if (fileInput instanceof Readable) {
-        fileBuffer = await streamToBuffer(fileInput);
-        fileSize = fileBuffer.length;
-      } else {
+      if (!(fileInput instanceof Buffer) && !(fileInput instanceof Readable)) {
         throw new Error('Invalid file input type. Must be Buffer or Readable stream.');
       }
 
       const originalMimeType = options.mime_type || 'application/octet-stream';
+
+      const isEntityImage = options.isImageAvatar ||
+        (options.metadata?.context &&
+         ['user_avatar', 'contact_avatar', 'client_logo'].includes(options.metadata.context));
+
+      if (!isEntityImage) {
+        return await StorageService.ingestAndRecord(tenant, fileInput, originalName, originalMimeType, options, uploadStartedAtMs);
+      }
+
+      // Avatars, logos, favicons and crops are buffered on purpose (sharp needs the whole
+      // image), explicitly and capped, rather than by an unbounded stream read.
+      const sourceStream = toSourceStream(fileInput);
+      const collector = collect(MAX_BUFFERED_IMAGE_BYTES);
+      await runPipeline(sourceStream, collector);
+      const fileBuffer = collector.buffer();
+      const fileSize = fileBuffer.length;
+
       await validateUpload(options.origin, originalMimeType, fileSize);
 
       let processedBuffer = fileBuffer;
@@ -193,11 +404,7 @@ export class StorageService {
       let processedFileSize = fileSize;
 
       // --- Image Processing Logic ---
-      const isEntityImage = options.isImageAvatar ||
-        (options.metadata?.context &&
-         ['user_avatar', 'contact_avatar', 'client_logo'].includes(options.metadata.context));
-
-      if (isEntityImage) {
+      {
         // SVGs are text/XML-based so fileTypeFromBuffer cannot detect them.
         // Check extension and content to identify SVGs.
         const isSvg = originalName.toLowerCase().endsWith('.svg') ||
@@ -306,107 +513,22 @@ export class StorageService {
         mime_type: processedMimeType,
       });
 
-      const { knex } = await createTenantKnex(tenant);
-      const fileRecord = await FileStoreModel.create(knex, {
+      return await StorageService.recordUpload(tenant, {
         fileId,
-        file_name: storagePath.split('/').pop()!,
-        original_name: processedOriginalName,
-        mime_type: processedMimeType,
-        file_size: processedFileSize,
-        storage_path: uploadResult.path,
-        uploaded_by_id: options.uploaded_by_id,
-        metadata: options.metadata
-      });
-
-      const publishUploaded = async () => {
-        if (!options.isDerivedArtifact) {
-          try {
-            const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
-            await publishWorkflowEvent({
-              eventType: 'DOCUMENT_UPLOADED',
-              payload: buildDocumentUploadedPayload({
-                documentId: fileRecord.file_id,
-                uploadedByUserId,
-                uploadedAt: fileRecord.created_at,
-                fileName: fileRecord.original_name,
-                contentType: fileRecord.mime_type,
-                sizeBytes: fileRecord.file_size,
-                storageKey: fileRecord.storage_path,
-              }),
-              ctx: {
-                tenantId: tenant,
-                occurredAt: fileRecord.created_at,
-                actor: uploadedByUserId
-                  ? { actorType: 'USER', actorUserId: uploadedByUserId }
-                  : { actorType: 'SYSTEM' },
-              },
-              idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
-            });
-          } catch (error) {
-            console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
-          }
-        }
-
-        try {
-          const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
-          await publishWorkflowEvent({
-            eventType: 'FILE_UPLOADED',
-            payload: buildFileUploadedPayload({
-              fileId: fileRecord.file_id,
-              uploadedByUserId,
-              uploadedAt: fileRecord.created_at,
-              fileName: fileRecord.original_name,
-              contentType: fileRecord.mime_type,
-              sizeBytes: fileRecord.file_size,
-              storageKey: fileRecord.storage_path,
-            }),
-            ctx: {
-              tenantId: tenant,
-              occurredAt: fileRecord.created_at,
-              actor: uploadedByUserId
-                ? { actorType: 'USER', actorUserId: uploadedByUserId }
-                : { actorType: 'SYSTEM' },
-            },
-            idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
-          });
-
-          if (isEntityImage && !options.isDerivedArtifact) {
-            await publishWorkflowEvent({
-              eventType: 'MEDIA_PROCESSING_SUCCEEDED',
-              payload: buildMediaProcessingSucceededPayload({
-                fileId: fileRecord.file_id,
-                processedAt: new Date().toISOString(),
-                durationMs: Math.max(0, Date.now() - uploadStartedAtMs),
-                outputs: [
-                  {
-                    type: 'entity_image_normalized',
-                    contentType: fileRecord.mime_type,
-                    fileName: fileRecord.original_name,
-                    sizeBytes: fileRecord.file_size,
-                  },
-                ],
-              }),
-              ctx: {
-                tenantId: tenant,
-                occurredAt: new Date().toISOString(),
-                actor: uploadedByUserId
-                  ? { actorType: 'USER', actorUserId: uploadedByUserId }
-                  : { actorType: 'SYSTEM' },
-              },
-              idempotencyKey: `media_processing_succeeded:entity_image:${fileRecord.file_id}:${fileRecord.created_at}`,
-            });
-          }
-        } catch (error) {
-          console.error('[StorageService] Failed to publish FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED workflow event', error);
-        }
-
-      };
-      if (!deferFileUploadEvents(fileId, publishUploaded)) await publishUploaded();
-      return fileRecord;
+        storagePath,
+        uploadedPath: uploadResult.path,
+        originalName: processedOriginalName,
+        mime: processedMimeType,
+        size: processedFileSize,
+        sha256: createHash('sha256').update(processedBuffer).digest('hex'),
+      }, options, !!isEntityImage, uploadStartedAtMs);
     } catch (error) {
       console.error("Error in uploadFile:", error);
       if (error instanceof StorageError) {
         throw error; // Re-throw specific storage errors
+      }
+      if (isUploadSizeLimitError(error) || isUploadContentTypeError(error)) {
+        throw error; // Keep the stable code/status so entry points can map to 413 / 415
       }
       // Add specific error handling for sharp errors if needed
       if (error instanceof Error && error.message.includes('Input buffer contains unsupported image format')) {

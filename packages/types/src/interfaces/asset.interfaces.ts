@@ -21,7 +21,8 @@ export interface AssetRelationship {
 }
 
 // RMM Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
+// LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 export interface AssetRemoteAccessLink {
   link_id: string;
@@ -89,6 +90,10 @@ export interface Asset {
   billing_profile_id?: string | null;
   /** Profile name; read-only, joined on read. */
   billing_profile_name?: string | null;
+  /** When the last completed site audit looked for this device. */
+  last_audited_at?: string | null;
+  /** What that audit found: 'present' or 'missing'. */
+  last_audit_result?: 'present' | 'missing' | null;
   created_at: string;
   updated_at: string;
   tenant: string;
@@ -116,6 +121,8 @@ export interface Asset {
 export interface AssetClientInfo {
   client_id: string;
   client_name: string;
+  /** Attached per page by listAssets (D5); undefined on other read paths. */
+  client_logo_url?: string | null;
 }
 
 // Extension table interfaces
@@ -498,7 +505,10 @@ export interface CreateAssetRequest {
    */
   asset_type: string;
   client_id: string;
-  asset_tag: string;
+  /** Omit or leave blank to allocate from the tenant asset sequence. */
+  asset_tag?: string;
+  /** Existing durable label reservation to commit to this new asset. */
+  asset_number_reservation_id?: string;
   name: string;
   status: string;
   /** Who owns the device. Defaults to 'client' server-side. */
@@ -576,6 +586,8 @@ export interface AssetQueryParams {
   contact_name_id?: string;
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
+  /** Match any of these slugs (multi-select type filter). Mutually exclusive with `asset_type`. */
+  asset_types?: string[];
   status?: string;
   /** Filter by who owns the device. */
   ownership?: 'client' | 'msp';
@@ -588,6 +600,10 @@ export interface AssetQueryParams {
   search?: string;
   agent_status?: RmmAgentStatus;
   rmm_managed?: boolean;
+  /** Last completed site audit verdict; 'never' means never audited. */
+  last_audit_result?: 'present' | 'missing' | 'never';
+  /** Only assets not audited within this many days (never-audited included). */
+  not_audited_days?: number;
   maintenance_status?: MaintenanceStatus;
   maintenance_type?: MaintenanceType;
   sort_by?: string;
@@ -608,6 +624,8 @@ export interface AssetListResponse {
   total: number;
   page: number;
   limit: number;
+  /** Readable asset counts for the active filters, excluding asset_type and pagination. */
+  asset_type_counts: Record<string, number>;
   client_summary?: ClientSummary;
 }
 

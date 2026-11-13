@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -35,6 +36,9 @@ export default defineConfig({
       // covers the stale-source comparison, not only the server-wide glob.
       'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
+      'src/services/quoteAccessLinks.test.ts',
+      'src/services/quoteAccessLinks.revoke.test.ts',
+      'src/services/publicQuoteView.test.ts',
       'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
@@ -70,15 +74,28 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
+      // Totals-row presets are selected from the active document binding catalog
+      // and export only render-model paths that catalog publishes.
+      'src/components/invoice-designer/inspector/TotalsRowsEditorWidget.integration.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
       // Tenant logo precedence on generated documents (Settings -> Branding
       // first, own-company client record second) — listed for the same reason
       // as the branding-seam suites above.
       'src/lib/adapters/tenantPartyAdapter.test.ts',
       'src/services/pdfGenerationService.tenantClientLogo.test.ts',
+      // Server PDFs must embed the bundled Inter / JetBrains Mono rather than
+      // whatever the image's fontconfig falls through to.
+      'src/services/pdfFontEmbedding.e2e.test.ts',
+      'src/lib/pdf-fonts/pdfFonts.drift.test.ts',
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Provider/organisation scoping of sync status and health, and the
+      // resolved target's realm + Intuit environment that the invoice deep
+      // link reads — listed for the same reason as the suites above.
+      'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/accountingSyncActions.disconnectScope.test.ts',
+      'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
       'src/components/project-billing/projectBillingCurrency.test.tsx',
@@ -86,6 +103,7 @@ export default defineConfig({
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
       'src/lib/adapters/salesOrderAdapters.test.ts',
+      'src/lib/adapters/quoteAdapters.test.ts',
       'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
@@ -94,17 +112,44 @@ export default defineConfig({
       // alongside the server-wide glob.
       'src/lib/quoteTermsContent.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.childRows.test.ts',
+      'src/components/invoice-designer/inspector/widgets/BundleComponentRowsWidget.test.tsx',
+      'src/components/invoice-designer/preview/sampleScenarios.bundles.test.ts',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
+      'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/childRows.test.ts',
+      'src/lib/invoice-template-ast/bundleChildRows.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.bundleQuantities.test.ts',
+      'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
+      'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
+      // Invoice discount render model (alga0002295): unformatted-field behaviour,
+      // opt-in layout + back-compat renders, the derivation helper's call sites, and
+      // the designer's catalog / Discount Row / preview-sample coverage.
+      'src/lib/invoice-template-ast/react-renderer.unformattedField.test.tsx',
+      'src/lib/invoice-template-ast/react-renderer.invoiceDiscount.test.tsx',
+      'src/components/invoice-designer/ast/workspaceAst.discountRow.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
+      'src/components/invoice-designer/preview/previewBindings.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
+      // Designer FIELDS-panel locale copy must match the field catalog in every locale.
+      'src/components/invoice-designer/fields/fieldLocaleParity.test.ts',
       // Country-driven date shape: a document is dated the way its recipient
       // writes dates, whatever language it is written in.
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      // PDF document rendering must exercise the isolated Chromium policy, and
+      // its existing print-settings tests must remain part of the package lane.
+      'src/services/pdfGenerationService.ssrf.test.ts',
+      'src/services/pdfGenerationService.printSettings.test.ts',
+      'src/services/pdfGenerationService.locale.test.ts',
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
@@ -133,6 +178,7 @@ export default defineConfig({
       // Shared pure balance formula used by REST invoice reads and the client portal.
       'src/lib/balanceDue.test.ts',
       'src/lib/creditBalance.test.ts',
+      'src/actions/contractSimulationActions.refusals.test.ts',
     ],
     // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
     // as itself rather than as a test timeout.
@@ -192,6 +238,14 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
       },
       {
+        find: /^@alga-psa\/core\/rendering\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/rendering')}/$1.ts`,
+      },
+      {
+        find: /^@alga-psa\/core\/net\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/net')}/$1.ts`,
+      },
+      {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
@@ -213,10 +267,8 @@ export default defineConfig({
         find: /^@alga-psa\/core\/i18n\/(.*)$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
-      {
-        find: /^@alga-psa\/db\/(admin|connection|tenant|tenantDb|workDate|commentEventRegistry)$/,
-        replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
-      },
+      // Published @alga-psa/db subpaths come from its exports map (most live under src/lib).
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../db')),
       {
         find: /^@alga-psa\/auth\/sso\/entry$/,
         replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx'),

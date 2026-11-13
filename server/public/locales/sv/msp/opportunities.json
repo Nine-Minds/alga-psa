@@ -566,6 +566,17 @@
       "projectStatus": "Inledande status",
       "projectTemplate": "Skapa ett onboardingprojekt (valfritt)",
       "title": "Markera som vunnen"
+    },
+    "declare": {
+      "title": "Flytta till {{stage}}",
+      "sourceLabel": "Underlag",
+      "noSource": "Inget underlag",
+      "sourceHelp": "Valfritt. Hänvisa till en interaktion eller ett dokument i den här affären. Bifoga dokumentet till affären först om det inte visas.",
+      "submit": "Ange",
+      "source": "Källa",
+      "sourceRemoved": "Källa borttagen",
+      "interactionFallback": "Interaktion",
+      "documentFallback": "Dokument"
     }
   }
 }

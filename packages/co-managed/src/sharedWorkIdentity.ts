@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider,
@@ -9,6 +10,25 @@ export interface CoManagedHomeActor { tenant: string; userId: string }
 
 /** Authentication adapters construct this from a verified home session. */
 export interface CoManagedSessionActor extends CoManagedHomeActor { kind: 'session'; sessionId: string }
+/**
+ * Verified inbound-mail credential. An email sender has no session, so L5's inbound admission (verified
+ * `cm2:` token + sender address that is a participant) runs the writer inside this scope. Within it, and only
+ * for the exact (tenant, user, sessionId) named, the sessions-table check is replaced by the active-identity
+ * check. The sessionId is the message-derived operation id, never a real session. Outside the scope nothing changes.
+ */
+// Shared through globalThis: a bundler may load this module more than once (see isCoManagedSharedWorkError).
+type MailScope = { tenant: string; userId: string; sessionId: string };
+const mailScopeKey = Symbol.for('alga.coManaged.mailCredentialScope');
+const mailCredential: AsyncLocalStorage<MailScope> = ((globalThis as any)[mailScopeKey] ??= new AsyncLocalStorage<MailScope>());
+export function withCoManagedMailCredential<T>(credential: { tenant: string; userId: string; sessionId: string }, run: () => Promise<T>): Promise<T> {
+  if (![credential?.tenant, credential?.userId, credential?.sessionId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
+  return mailCredential.run({ ...credential }, run);
+}
+function isMailCredential(actor: { tenant: string; userId: string }, sessionId?: string): boolean {
+  const scope = mailCredential.getStore();
+  return Boolean(scope && sessionId && scope.tenant === actor.tenant && scope.userId === actor.userId && scope.sessionId === sessionId);
+}
+
 export class CoManagedSharedWorkError extends Error {
   readonly code = 'CO_MANAGED_SHARED_WORK_FORBIDDEN';
   constructor() { super('This shared resource is not available for the requested operation.'); this.name = 'CoManagedSharedWorkError'; }
@@ -42,11 +62,12 @@ async function lockCoManagedHomeIdentity(trx: Knex.Transaction, actor: CoManaged
   const home = tenantDb(trx, actor.tenant);
   const user = await home.table('users').where({ user_id: actor.userId, user_type: 'internal', is_inactive: false }).forShare().first('user_id');
   if (!user) throw new CoManagedSharedWorkError();
-  if (sessionId && !await home.table('sessions').where({ session_id: sessionId, user_id: actor.userId })
+  if (sessionId && !isMailCredential(actor, sessionId) && !await home.table('sessions').where({ session_id: sessionId, user_id: actor.userId })
     .whereNull('revoked_at').forShare().first('session_id')) throw new CoManagedSharedWorkError();
   const memberships = await home.table('team_members').where('user_id', actor.userId).forShare().select('team_id');
   const roles = await home.table('user_roles').where('user_id', actor.userId).forShare().select('role_id');
   const managed = await home.table('users').where({ reports_to: actor.userId, user_type: 'internal', is_inactive: false }).forShare().select('user_id');
+// LEVERAGE: pattern authorization-subject-resolution — co-managed home identity hand-builds a subject under share locks; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
   return { tenant: actor.tenant, userId: actor.userId, userType: 'internal', roleIds: roles.map(row => row.role_id),
     teamIds: memberships.map(row => row.team_id), managedUserIds: managed.map(row => row.user_id) };
 }
@@ -65,6 +86,10 @@ export async function lockCoManagedActiveHomeIdentity(trx: Knex.Transaction, act
   return lockCoManagedHomeIdentity(trx, actor);
 }
 export async function assertCoManagedSessionUnexpired(trx: Knex.Transaction, actor: CoManagedSessionActor): Promise<void> {
+  if (isMailCredential(actor, actor.sessionId)) {
+    if (!await tenantDb(trx, actor.tenant).table('users').where({ user_id: actor.userId, user_type: 'internal', is_inactive: false }).first('user_id')) throw new CoManagedSharedWorkError();
+    return;
+  }
   if (!await tenantDb(trx, actor.tenant).table('sessions').where({ session_id: actor.sessionId, user_id: actor.userId })
     .whereNull('revoked_at').where('expires_at', '>', trx.raw('clock_timestamp()')).first('session_id')) throw new CoManagedSharedWorkError();
 }

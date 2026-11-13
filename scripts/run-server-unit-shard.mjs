@@ -5,18 +5,24 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyFlakyPolicy, resetFlakyPublication } from './lib/flaky-policy.mjs';
 import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
+import { collectedTestsFromJournal } from './lib/vitest-progress-reporter.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
+import { readServerUnitDurations } from './lib/server-unit-durations.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { captureServerUnitSource, verifyServerUnitExecution } from './verify-server-unit-execution.mjs';
 
 // One partition of the full server unit suite with coverage. Every shard
-// collects the complete inventory, takes its modulo partition (the same
-// partitioning the enterprise unit shards use), proves the shard config selects
-// exactly that partition, then runs it with a fresh forked process per file.
+// collects the complete inventory, takes its partition (the same partitioning
+// the enterprise unit shards use), proves the shard config selects exactly
+// that partition, then runs it with a fresh forked process per file; the
+// test inventory the verifier checks comes from the run's own collection.
 // The forks run in parallel: per-file recycling keeps files from sharing
 // process state, and parallelism is what makes recycling affordable.
 // scripts/merge-server-unit-shards.mjs reunites the partitions.
 export const serverUnitSelection = ['src/test/unit', '../packages', '../shared', '../ee/packages/workflows/src/actions'];
+/** The merge step in unit-tests.yml passes these same two flags; the shard test reuses them. */
+export const coverageProviderArgs = root => ['--coverage.provider=custom',
+  `--coverage.customProviderModule=${path.join(root, 'scripts/lib/vitest-coverage-provider.mjs')}`];
 
 export function runServerUnitShard({ root, index, total, workers, env = process.env }) {
   const server = path.join(root, 'server');
@@ -58,28 +64,36 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
     const allFiles = normalized(JSON.parse(readFileSync(paths.collectedAll, 'utf8')));
     if (!allFiles.length) throw new Error('Server unit suite collected no files');
     phase = 'Partition';
-    const assigned = partitionTestFiles(allFiles, index, total);
-    writeFileSync(paths.shard, JSON.stringify({ index, total, allFiles, assigned }, null, 2) + '\n');
+    // Balanced by the committed main-run durations; the merge job reads the
+    // same file, so the partitions it verifies are the ones taken here.
+    const durations = readServerUnitDurations(root);
+    const assigned = partitionTestFiles(allFiles, index, total, durations?.durationsMs ?? null);
+    writeFileSync(paths.shard, JSON.stringify({ index, total, allFiles, assigned,
+      weights: durations ? { generatedAt: durations.generatedAt, source: durations.source } : null }, null, 2) + '\n');
     writeFileSync(paths.shardFiles, JSON.stringify(assigned.map(entry => path.relative(server, path.join(root, entry)).split(path.sep).join('/'))) + '\n');
     if (vitest(['list', ...shardArgs, '--filesOnly', `--json=${paths.collected}`]).status !== 0) throw new Error('Shard file collection failed');
     const collected = normalized(JSON.parse(readFileSync(paths.collected, 'utf8')));
     if (JSON.stringify(collected) !== JSON.stringify(assigned)) throw new Error('Shard collection differs from its assigned partition');
-    phase = 'Test collection';
-    if (vitest(['list', ...shardArgs, ...parallelForks, `--json=${paths.collectedTests}`]).status !== 0) throw new Error('Test collection failed');
     console.log(`server-unit shard ${index}/${total}: ${collected.length} of ${allFiles.length} required files`);
     phase = 'Execution';
-    // Shards render only the cheap summary; the merge job renders lcov once
-    // from the blob coverage maps.
+    // Each file reports its registrations from inside the run (the progress
+    // reporter's module-collected event), so the run is the only import of the
+    // partition; collected-tests.json is derived from the journal below.
+    // A shard remaps only the modules it loaded; scripts/lib/vitest-coverage-provider.mjs
+    // leaves the untested-file crawl and every report to the merge job's
+    // --merge-reports pass over the blob coverage maps.
     // --retry=1 on the command line, never in the shared server vitest config:
     // a fail-then-pass now leaves the shard green and lands in flaky-tests.json
     // instead of disappearing into a rerun. `it.fails` is incompatible with this:
     // Vitest inverts the result after the retry loop, so it always records a
     // retry-only pass. Assert the failure explicitly instead.
     const result = vitest(['run', ...shardArgs, ...parallelForks, '--retry=1',
-      '--coverage.enabled=true', '--coverage.reporter=text-summary',
+      '--coverage.enabled=true', ...coverageProviderArgs(root),
       '--reporter=default', '--reporter=json', '--reporter=blob', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`,
       `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`,
       `--outputFile.json=${paths.results}`, `--outputFile.blob=${paths.blob}`]);
+    phase = 'Test collection';
+    writeFileSync(paths.collectedTests, JSON.stringify(collectedTestsFromJournal(readFileSync(paths.progress, 'utf8'), { root: server })) + '\n');
     // A retry-only pass warns on a pull request and fails everywhere else, so
     // the shard's own evidence carries the verdict instead of a green log line.
     const flaky = applyFlakyPolicy({ documentPath: paths.flaky, directory: flakyUpload, eventName: env.GITHUB_EVENT_NAME });

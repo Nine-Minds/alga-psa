@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5 T024 (real DB): the RMA label view-model provider.
  */
@@ -22,6 +23,8 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
     ...actual,
     isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
       denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
+    isAssetActionAllowed: async (...args: Parameters<typeof actual.isAssetActionAllowed>) =>
+      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetActionAllowed(...args),
     filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
       (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
   };
@@ -39,7 +42,7 @@ const ctx = () => ({ tenant: holder.tenant, user: USER, baseUrl: BASE }) as any;
 
 async function newAssetCase(over: { name: string; serial: string; tag: string; rma_number: string }) {
   const assetId = randomUUID();
-  await knex('assets').insert({
+  await insertTestAssets(knex, {
     tenant: holder.tenant, asset_id: assetId, asset_type: 'unknown', client_id: CLIENT, asset_tag: over.tag,
     name: over.name, serial_number: over.serial, model: 'WD19', manufacturer: 'Dell', status: 'active', location: '',
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
