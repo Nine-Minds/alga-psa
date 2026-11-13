@@ -281,6 +281,27 @@ describeDb('co-managed seat authority is resolved from rows on every request', {
     expect(closed(await revoked.decide('billing', 'read', { id: randomUUID() }))).toBe(true);
   });
 
+  it('requires resolver membership when an invitation becomes an active seat', async () => {
+    const tenant = await sponsorWithPool();
+    const userId = await createUser(db, tenant, { user_type: 'internal' });
+    const assignmentId = randomUUID();
+    const assignment = () => db('co_managed_seat_assignments').where({ tenant, assignment_id: assignmentId });
+    await db('co_managed_seat_assignments').insert({ tenant, assignment_id: assignmentId,
+      arrangement_id: randomUUID(), user_id: null, state: 'invited' });
+    expect(await probeTenantAuthorizationScope(db, tenant)).toMatchObject({ resolverSubjects: false });
+
+    await expect(assignment().update({ user_id: userId, state: 'active' }))
+      .rejects.toMatchObject({ code: '23503', constraint: 'co_managed_seat_assignment_resolver_subject_fk' });
+    expect(await assignment().first()).toMatchObject({ user_id: null, state: 'invited' });
+
+    await db.transaction(async (trx) => {
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await assignment().transacting(trx).update({ user_id: userId, state: 'active' });
+    });
+    expect(await assignment().first()).toMatchObject({ user_id: userId, state: 'active' });
+    expect(await probeTenantAuthorizationScope(db, tenant)).toMatchObject({ resolverSubjects: true });
+  });
+
   it('rolls membership back with an unsuccessful seat assignment', async () => {
     const tenant = await sponsorWithPool();
     const userId = await createUser(db, tenant, { user_type: 'internal' });
