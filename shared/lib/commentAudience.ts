@@ -17,6 +17,10 @@ import { isCoManagedWorkspace } from '@alga-psa/db/writeAdmission';
  *      `resolveCommentAudienceForRead` / `commentAudienceSql`. There is no second predicate.
  *   3. Visibility is keyed on the reader's ORGANIZATION (`CommentAudienceReader`), not their
  *      tenant: a seat technician is an internal user of the owning tenant and still not its staff.
+ *   4. Writes go through the same organizations. Every native writer asks `nativeThreadAudience`
+ *      (new thread) or `nativeReplyAudience` (reply); both decide through
+ *      `assertCommentWriteAudience`, the write twin of `isCommentAudienceVisible`. A thread's
+ *      audience changes only through `changeThreadAudience`.
  */
 export const COMMENT_AUDIENCES = ['requester', 'shared_it', 'organization_private'] as const;
 export type CommentAudience = (typeof COMMENT_AUDIENCES)[number];
@@ -38,8 +42,21 @@ export class CoManagedAudienceRequiredError extends Error {
   }
 }
 
-/** Audiences a native (non-collaboration) command may name. Shared IT needs the co-managed command's authority. */
-export type NativeCommentAudience = Extract<CommentAudience, 'requester' | 'organization_private'>;
+/** A thread audience change that widens who can read it and was not explicitly confirmed. */
+export class CommentAudienceConfirmationRequiredError extends Error {
+  readonly code = 'COMMENT_AUDIENCE_CONFIRMATION_REQUIRED' as const;
+  constructor() {
+    super('Confirm that more people will be able to read this conversation before sharing it.');
+    this.name = 'CommentAudienceConfirmationRequiredError';
+  }
+}
+
+/**
+ * Audiences a native (non-collaboration) command may name. `shared_it` is admitted only on a
+ * ticket of a client with a live seat arrangement (`assertCommentWriteAudience`); a co-managed
+ * workspace has no such arrangement, so there it still needs the co-managed command's authority.
+ */
+export type NativeCommentAudience = CommentAudience;
 
 export function isCommentAudience(value: unknown): value is CommentAudience {
   return typeof value === 'string' && (COMMENT_AUDIENCES as readonly string[]).includes(value);
@@ -167,6 +184,77 @@ export async function resolveCommentAudienceReader(
   return { kind: 'seat', tenant, clientId: seat.client_id };
 }
 
+/** The owning organization as a WRITE sees it: the read owner plus whether its client has a live seat arrangement. */
+export interface CommentWriteOwner extends CommentAudienceOwner {
+  /** The ticket's client has an active seat arrangement. Only then does `shared_it` exist. */
+  seatArrangement?: boolean;
+}
+
+/**
+ * Write twin of `isCommentAudienceVisible`: may `author` store a native comment with this
+ * audience on a ticket of `owner`? Throws `CommentAudienceError`; never substitutes an audience.
+ *
+ *   - Nobody writes what they could not read back (the read predicate, applied to the author).
+ *     That alone refuses a seat technician `organization_private` and the legacy internal note
+ *     (internal, no audience named, which resolves private), and keeps them to their own client.
+ *   - A native write belongs to the owning tenant: another tenant's staff use the co-managed command.
+ *   - `shared_it` exists only where the ticket's client has a live seat arrangement.
+ *
+ * `audience` null is the legacy form: `requester` when public, `organization_private` when internal.
+ */
+export function assertCommentWriteAudience(
+  author: CommentAudienceReader | null | undefined,
+  owner: CommentWriteOwner,
+  write: { audience?: CommentAudience | null; isInternal: boolean },
+): CommentAudience {
+  const named = write.audience ?? null;
+  if (named != null && (!isCommentAudience(named) || write.isInternal !== audienceIsInternal(named))) throw new CommentAudienceError();
+  const audience: CommentAudience = named ?? (write.isInternal ? 'organization_private' : 'requester');
+  if (!author || author.tenant !== owner?.tenant || !isCommentAudienceVisible(audience, owner, author)) throw new CommentAudienceError();
+  if (audience === 'shared_it' && owner.seatArrangement !== true) throw new CommentAudienceError();
+  return audience;
+}
+
+/** `shared_it` is narrower than `requester` and wider than `organization_private`. */
+const AUDIENCE_REACH: Record<CommentAudience, number> = { organization_private: 0, shared_it: 1, requester: 2 };
+
+/** True when moving a thread from `from` to `to` lets someone new read it. */
+export function isCommentAudienceWidening(from: CommentAudience, to: CommentAudience): boolean {
+  return AUDIENCE_REACH[to] > AUDIENCE_REACH[from];
+}
+
+/**
+ * The owning organization of one ticket for a write: its client, and whether that client has a
+ * live (active) seat arrangement. Two indexed reads, paid only by writes that need the answer
+ * (a seat author, or `shared_it`): never by an MSP comment that names neither.
+ */
+export async function resolveCommentWriteOwner(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  ticketId: string | null | undefined,
+): Promise<CommentWriteOwner> {
+  if (!tenant || !ticketId) return { tenant };
+  const db = tenantDb(trx, tenant);
+  const ticket = await db.table('tickets').where('ticket_id', ticketId).first('client_id');
+  if (!ticket?.client_id) return { tenant };
+  const arrangement = await db.table('co_managed_seat_arrangements')
+    .where({ client_id: ticket.client_id, state: 'active' }).first('arrangement_id');
+  return { tenant, clientId: ticket.client_id, seatArrangement: !!arrangement };
+}
+
+/** Who is writing a native comment, and on which ticket. */
+export interface NativeCommentAuthor {
+  /**
+   * The author's organization (`resolveCommentAudienceReader`), resolved once per request by an
+   * entry point that admits seat principals. `null` is a principal with no live organization and
+   * writes nothing. Omitted, the author is the organization `authorType` has always implied
+   * (owning-tenant staff for `internal`), which costs no SQL.
+   */
+  author?: CommentAudienceReader | null;
+  /** The ticket written to. Required for a seat author and for `shared_it`. */
+  ticketId?: string | null;
+}
+
 /**
  * Thread audience column for a native top-level comment.
  *
@@ -177,15 +265,27 @@ export async function resolveCommentAudienceReader(
  *
  * In a co-managed workspace a staff comment the requester can read must say so: a missing
  * audience FAILS CLOSED with CO_MANAGED_AUDIENCE_REQUIRED instead of defaulting.
+ *
+ * Seat shape: a seat author, and anyone naming `shared_it`, is decided by
+ * `assertCommentWriteAudience` against the ticket's organization. Only those writes read it.
  */
 export async function nativeThreadAudience(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  input: { isInternal: boolean; authorType: string; audience?: string | null },
+  input: { isInternal: boolean; authorType: string; audience?: string | null } & NativeCommentAuthor,
 ): Promise<{ collaboration_audience?: NativeCommentAudience }> {
   const named = input.audience;
-  if (named != null && ((named !== 'requester' && named !== 'organization_private') || input.isInternal !== (named !== 'requester'))) {
+  if (named != null && (!isCommentAudience(named) || input.isInternal !== audienceIsInternal(named))) {
     throw new CommentAudienceError();
+  }
+  if (input.author !== undefined || named === 'shared_it') {
+    const author = input.author !== undefined ? input.author
+      : input.authorType === 'internal' ? { kind: 'staff' as const, tenant } : null;
+    if (!author) throw new CommentAudienceError();
+    const owner = author.kind === 'seat' || named === 'shared_it'
+      ? await resolveCommentWriteOwner(trx, tenant, input.ticketId) : { tenant };
+    assertCommentWriteAudience(author, owner, { audience: named as CommentAudience | null | undefined, isInternal: input.isInternal });
+    if (named === 'shared_it') return { collaboration_audience: 'shared_it' };
   }
   if (named == null && (input.isInternal || input.authorType !== 'internal')) return {};
   if (!(await isCoManagedWorkspace(trx, tenant))) return {};
@@ -229,6 +329,72 @@ export async function lockLabelledThreadAudience(
 }
 
 /**
+ * Audience of a native REPLY: the thread's, for every organization. Returns the labelled
+ * audience, or `null` for a legacy thread (which stores nothing and takes no lock).
+ *
+ * A named author must be able to read the thread they reply into, so a seat technician cannot
+ * reply into a private or legacy internal thread, nor on another client's ticket. A requester
+ * author keeps today's rule at the call site (a client reply to an internal thread starts a
+ * fresh public thread). With no author named and a legacy thread this is zero SQL.
+ */
+export async function nativeReplyAudience(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  thread: { thread_id: string; collaboration_audience?: unknown; is_internal?: unknown },
+  reply: { isInternal?: boolean | null; audience?: string | null } & NativeCommentAuthor,
+): Promise<CommentAudience | null> {
+  if (reply.author !== undefined && reply.author?.kind !== 'requester') {
+    const author = reply.author;
+    if (!author || author.tenant !== tenant) throw new CommentAudienceError();
+    const owner = author.kind === 'seat' ? await resolveCommentWriteOwner(trx, tenant, reply.ticketId) : { tenant };
+    if (!isCommentAudienceVisible(resolveCommentAudienceForRead(thread), owner, author)) throw new CommentAudienceError();
+  }
+  if (thread.collaboration_audience == null) return null;
+  await lockLabelledThreadAudience(trx as Knex.Transaction, tenant, thread);
+  return assertReplyAudience(thread, reply);
+}
+
+/**
+ * Changes a ticket thread's audience in place. The only way a stored audience changes.
+ *
+ *   - Only staff of the owning tenant. A seat technician, a requester and a principal with no
+ *     live organization are refused, whatever the direction.
+ *   - Widening (`isCommentAudienceWidening`) discloses every comment already in the thread, so it
+ *     needs `confirmDisclosure: true`; without it COMMENT_AUDIENCE_CONFIRMATION_REQUIRED.
+ *   - `shared_it` needs the ticket's client to have a live seat arrangement.
+ *   - A legacy (NULL) thread is labelled by its first change. A thread holding a comment that
+ *     disagrees with it, or one not yet published, is refused rather than relabelled.
+ *
+ * Runs under the thread row lock replies take (`lockLabelledThreadAudience`). Co-managed
+ * workspaces change audience through their own disclosure command, which also moves files.
+ */
+export async function changeThreadAudience(
+  trx: Knex.Transaction,
+  tenant: string,
+  input: { threadId: string; audience: string; author: CommentAudienceReader | null | undefined; confirmDisclosure?: boolean },
+): Promise<{ previous: CommentAudience; audience: CommentAudience; changed: boolean }> {
+  if (!trx.isTransaction) throw new Error('Comment audience checks require the owning transaction');
+  const { author, audience } = input;
+  if (author?.kind !== 'staff' || author.tenant !== tenant || !isCommentAudience(audience)) throw new CommentAudienceError();
+  if (await isCoManagedWorkspace(trx, tenant)) throw new CommentAudienceError();
+  const db = tenantDb(trx, tenant);
+  const thread = await db.table('comment_threads').where('thread_id', input.threadId).whereNotNull('ticket_id')
+    .forUpdate().first('thread_id', 'ticket_id', 'collaboration_audience', 'is_internal');
+  if (!thread) throw new CommentAudienceError();
+  const previous = resolveCommentAudience(thread);
+  if (previous === audience) return { previous, audience, changed: false };
+  const comments = await db.table('comments').where('thread_id', input.threadId).forUpdate().select('is_internal', 'publish_state');
+  if (comments.some(row => row.is_internal !== thread.is_internal || row.publish_state !== 'published')) throw new CommentAudienceError();
+  if (isCommentAudienceWidening(previous, audience) && input.confirmDisclosure !== true) throw new CommentAudienceConfirmationRequiredError();
+  assertCommentWriteAudience(author, await resolveCommentWriteOwner(trx, tenant, thread.ticket_id),
+    { audience, isInternal: audienceIsInternal(audience) });
+  const isInternal = audienceIsInternal(audience);
+  await db.table('comment_threads').where('thread_id', input.threadId).update({ collaboration_audience: audience, is_internal: isInternal });
+  if (isInternal !== thread.is_internal) await db.table('comments').where('thread_id', input.threadId).update({ is_internal: isInternal });
+  return { previous, audience, changed: true };
+}
+
+/**
  * A native text edit may neither relabel a labelled thread nor publish a legacy note in a
  * co-managed workspace (that would be an unaudited requester-visible comment).
  * Called only when the edit actually changes `is_internal`; unchanged edits cost nothing.
@@ -237,8 +403,10 @@ export async function assertNativeEditKeepsAudience(
   trx: Knex | Knex.Transaction,
   tenant: string,
   thread: { collaboration_audience?: unknown } | null | undefined,
-  next: { isInternal: boolean },
+  next: { isInternal: boolean; author?: CommentAudienceReader | null },
 ): Promise<void> {
+  // A seat technician can hold neither side of a legacy flip: internal would be a legacy internal note.
+  if (next.author !== undefined && next.author?.kind !== 'staff') throw new CommentAudienceError();
   if (thread?.collaboration_audience != null) throw new CommentAudienceError();
   if (!next.isInternal && await isCoManagedWorkspace(trx, tenant)) throw new CoManagedAudienceRequiredError();
 }

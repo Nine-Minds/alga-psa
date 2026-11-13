@@ -246,10 +246,15 @@ describe('workflow worker startup', () => {
       });
       const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
       expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(true);
-      expect(registerCapabilityParticipationMock).toHaveBeenCalledTimes(1);
-      expect(registerCapabilityParticipationMock).toHaveBeenCalledWith('co-managed', expect.any(Function));
-      expect(registerCapabilityEligibilityMock).toHaveBeenCalledWith('co-managed', expect.any(Function));
-      expect(registerCapabilityParticipationMock.mock.invocationCallOrder[0]).toBeLessThan(initializeWorkflowRuntimeV2Mock.mock.invocationCallOrder[0]);
+      // Both capability shapes must be ready before the runtime can process work.
+      for (const register of [registerCapabilityParticipationMock, registerCapabilityEligibilityMock]) {
+        expect(register).toHaveBeenCalledTimes(2);
+        expect(register).toHaveBeenCalledWith('co-managed', expect.any(Function));
+        expect(register).toHaveBeenCalledWith('co-managed-seat', expect.any(Function));
+        for (const callOrder of register.mock.invocationCallOrder) {
+          expect(callOrder).toBeLessThan(initializeWorkflowRuntimeV2Mock.mock.invocationCallOrder[0]);
+        }
+      }
 
       const checker = registerFeatureFlagCheckerMock.mock.calls[0]?.[0];
       await checker('sample-flag', { tenantId: 'tenant-1' });

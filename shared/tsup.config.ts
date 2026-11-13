@@ -4,6 +4,8 @@ import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 export default defineConfig({
   entry: {
     'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'lib/rma/warrantyStateMachine': 'lib/rma/warrantyStateMachine.ts',
+    'lib/rma/recordRmaEvent': 'lib/rma/recordRmaEvent.ts',
     'lib/email/sanitizeEmailHtml': 'lib/email/sanitizeEmailHtml.ts',
     'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
     'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
