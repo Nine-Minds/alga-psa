@@ -57,6 +57,20 @@
     "product": "Produkt",
     "projectPhase": "Projektphase",
     "qty": "Menge",
+    "quoteAcceptance": {
+      "title": "Angebot angenommen",
+      "signedBy": "Unterzeichnet von",
+      "email": "E-Mail",
+      "jobTitle": "Titel",
+      "acceptedOn": "Angenommen am",
+      "method": "Methode",
+      "ipAddress": "IP-Adresse",
+      "methods": {
+        "emailLink": "E-Mail-Link",
+        "portal": "Kundenportal",
+        "msp": "Vom MSP erfasst"
+      }
+    },
     "quoteNumber": "Angebot Nr.",
     "quoteTitle": "ANGEBOT",
     "rate": "Satz",
@@ -166,6 +180,7 @@
     "upload": {
       "fileRequired": "Wählen Sie vor dem Hochladen eine Datei aus.",
       "typeNotAllowed": "Dieser Dateityp ist nicht zulässig.",
+      "contentMismatch": "Der Inhalt dieser Datei passt nicht zu ihrem Dateityp, daher wurde sie nicht hochgeladen. Prüfen Sie, ob Sie die richtige Datei ausgewählt haben.",
       "sessionRequired": "Zum Hochladen von Dokumenten ist Ihre Sitzung erforderlich. Bitte melden Sie sich erneut an."
     }
   },

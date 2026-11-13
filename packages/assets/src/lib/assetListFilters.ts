@@ -27,6 +27,8 @@ export type AssetListFilterParams =
     | 'ungrouped_only'
     | 'search'
     | 'rmm_managed'
+    | 'last_audit_result'
+    | 'not_audited_days'
   > & { agent_status?: string };
 
 function tenantScopedTable(
@@ -139,6 +141,21 @@ export function applyAssetListFilters(
     }
     if (params.agent_status) {
         query.where('assets.agent_status', params.agent_status);
+    }
+    // Site audits: the verdict of the last completed run. 'never' is its own
+    // answer — a device no audit has ever looked for is not "present".
+    if (params.last_audit_result) {
+        if (params.last_audit_result === 'never') {
+            query.whereNull('assets.last_audited_at');
+        } else {
+            query.where('assets.last_audit_result', params.last_audit_result);
+        }
+    }
+    if (params.not_audited_days) {
+        const cutoff = new Date(Date.now() - params.not_audited_days * 86_400_000).toISOString();
+        query.where(function () {
+            this.whereNull('assets.last_audited_at').orWhere('assets.last_audited_at', '<', cutoff);
+        });
     }
     if (params.rmm_managed !== undefined) {
         if (params.rmm_managed) {

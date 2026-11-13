@@ -26,7 +26,7 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
 }));
 vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
   isProviderDisconnectActive: (...a: unknown[]) => isProviderDisconnectActiveMock(...a),
-  PROVIDER_QBO: 'qbo',
+  PROVIDER_QBO: 'quickbooks_online',
   PROVIDER_XERO: 'xero',
 }));
 import { accountingSyncCycleHandler } from '@/lib/jobs/handlers/accountingSyncCycleHandler';
@@ -39,6 +39,7 @@ describe('accountingSyncCycleHandler scheduled targets', () => {
     runCycleMock.mockReset();
     runCycleMock.mockResolvedValue({ ran: true, status: 'succeeded' });
     xeroConnectionsMock.mockReset();
+    xeroConnectionsMock.mockResolvedValue({});
     isProviderDisconnectActiveMock.mockReset();
     isProviderDisconnectActiveMock.mockResolvedValue(false);
     getConnectionMock.mockReset();
@@ -79,5 +80,76 @@ describe('accountingSyncCycleHandler scheduled targets', () => {
     expect(runCycleMock).toHaveBeenCalledTimes(2);
     const adapters = runCycleMock.mock.calls.map((call) => call[0].adapterType).sort();
     expect(adapters).toEqual(['quickbooks_online', 'xero']);
+  });
+
+  describe('provider-scoped disconnect eligibility', () => {
+    const blockedFor = (blocked: Record<string, boolean>) =>
+      isProviderDisconnectActiveMock.mockImplementation(async (_k: unknown, _t: string, provider: string) =>
+        Boolean(blocked[provider])
+      );
+    const ranAdapters = () => runCycleMock.mock.calls.map((c) => `${c[0].adapterType}:${c[0].targetRealm}`).sort();
+
+    it.each([
+      ['xero', 'quickbooks_online'],
+      ['quickbooks_online', 'xero'],
+    ])('a blocked %s disconnect does not stop %s', async (blocked, healthy) => {
+      blockedFor({ [blocked]: true });
+      qboCredentialsMock.mockResolvedValue({ 'realm-1': {}, 'realm-2': {} });
+      xeroConnectionsMock.mockResolvedValue({ 'conn-1': {}, 'conn-2': {} });
+      // The blocked provider's credentials are tombstoned: its getter is empty.
+      if (blocked === 'xero') xeroConnectionsMock.mockResolvedValue({});
+      else qboCredentialsMock.mockResolvedValue({});
+
+      await accountingSyncCycleHandler({ tenantId: 't1' } as any);
+
+      const expected = healthy === 'quickbooks_online' ? ['quickbooks_online:realm-1', 'quickbooks_online:realm-2'] : ['xero:conn-1', 'xero:conn-2'];
+      // tombstoned map was emptied above, so only the healthy provider's targets exist
+      expect(ranAdapters().every((r) => r.startsWith(healthy))).toBe(true);
+      expect(ranAdapters()).toEqual(expected);
+    });
+
+    it('skips a blocked provider whose credentials are still present, runs the other', async () => {
+      blockedFor({ xero: true });
+      qboCredentialsMock.mockResolvedValue({ 'realm-1': {} });
+      xeroConnectionsMock.mockResolvedValue({ 'conn-1': {} });
+      await accountingSyncCycleHandler({ tenantId: 't1' } as any);
+      expect(ranAdapters()).toEqual(['quickbooks_online:realm-1']);
+    });
+
+    it('runs neither provider when both are blocked', async () => {
+      blockedFor({ xero: true, quickbooks_online: true });
+      qboCredentialsMock.mockResolvedValue({ 'realm-1': {} });
+      xeroConnectionsMock.mockResolvedValue({ 'conn-1': {} });
+      await accountingSyncCycleHandler({ tenantId: 't1' } as any);
+      expect(runCycleMock).not.toHaveBeenCalled();
+    });
+
+    it('treats finalized/no-record (inactive) as eligible for both providers', async () => {
+      blockedFor({});
+      qboCredentialsMock.mockResolvedValue({ 'realm-1': {} });
+      xeroConnectionsMock.mockResolvedValue({ 'conn-1': {} });
+      await accountingSyncCycleHandler({ tenantId: 't1' } as any);
+      expect(ranAdapters()).toEqual(['quickbooks_online:realm-1', 'xero:conn-1']);
+    });
+
+    it('is a cheap no-op with no targets (no disconnect lookups, no cycles)', async () => {
+      await accountingSyncCycleHandler({ tenantId: 't1' } as any);
+      expect(isProviderDisconnectActiveMock).not.toHaveBeenCalled();
+      expect(runCycleMock).not.toHaveBeenCalled();
+    });
+
+    it('does nothing outside Enterprise Edition', async () => {
+      vi.stubEnv('EDITION', 'ce');
+      vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
+      qboCredentialsMock.mockResolvedValue({ 'realm-1': {} });
+      await accountingSyncCycleHandler({ tenantId: 't1' } as any);
+      expect(runCycleMock).not.toHaveBeenCalled();
+    });
+
+    it('passes the tenant and canonical provider id to the disconnect check', async () => {
+      qboCredentialsMock.mockResolvedValue({ 'realm-1': {} });
+      await accountingSyncCycleHandler({ tenantId: 'tenant-A' } as any);
+      expect(isProviderDisconnectActiveMock).toHaveBeenCalledWith({}, 'tenant-A', 'quickbooks_online');
+    });
   });
 });

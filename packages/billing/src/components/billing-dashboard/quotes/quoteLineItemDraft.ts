@@ -133,7 +133,10 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     discount_percentage: null,
     applies_to_item_id: null,
     applies_to_service_id: null,
-    is_taxable: true,
+    // A catalog service with no tax rate is non-taxable, matching how the
+    // invoice side reads the same catalog field. The server re-derives this on
+    // persistence; the draft value keeps the editor's preview honest.
+    is_taxable: item.tax_rate_id != null,
     tax_region: null,
     tax_rate: null,
     location_id: null,

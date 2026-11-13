@@ -340,6 +340,27 @@ export function AssetBentoLayout({
                     edit form's picker. */}
                 <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString()} />
                 <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString()} />
+                {/* Site audits: an instant, not a calendar day, so it is read
+                    as one. Shown only once the device has been audited. */}
+                {asset.last_audited_at ? (
+                  <BentoLabelValue
+                    id="asset-bento-last-audited"
+                    label={t('assetBento.lastAudited', { defaultValue: 'Last audited' })}
+                    value={(
+                      <span className={asset.last_audit_result === 'missing' ? BENTO_TONE_TEXT.bad : undefined}>
+                        {new Date(asset.last_audited_at).toLocaleDateString()}
+                        {asset.last_audit_result ? (
+                          <span className="text-[rgb(var(--color-text-500))]">
+                            {' · '}
+                            {t(`enums.assetAuditResult.${asset.last_audit_result}`, {
+                              defaultValue: asset.last_audit_result,
+                            })}
+                          </span>
+                        ) : null}
+                      </span>
+                    )}
+                  />
+                ) : null}
               </div>
             </BentoTile>
 

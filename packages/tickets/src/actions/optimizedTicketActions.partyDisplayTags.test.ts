@@ -103,6 +103,7 @@ const OWN_CONTACT = 'contact-own';
 function buildTrx() {
   const emptyRows: any = {
     where: () => emptyRows,
+    orderBy: () => emptyRows,
     select: () => emptyRows,
     catch: () => Promise.resolve([]),
     then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),

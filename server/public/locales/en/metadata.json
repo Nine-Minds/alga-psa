@@ -220,6 +220,10 @@
       "title": "Assets",
       "custody": {
         "title": "Equipment in custody"
+      },
+      "audits": {
+        "title": "Site audits",
+        "detailTitle": "Site audit"
       }
     },
     "billing": {
@@ -635,6 +639,9 @@
       },
       "export": {
         "title": "Export Workspace"
+      },
+      "upgrade": {
+        "title": "Upgrade to AlgaPSA"
       }
     }
   },

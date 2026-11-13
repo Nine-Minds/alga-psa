@@ -90,6 +90,14 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+// The tenant-local date helper reads tenant_settings through a real DB; these
+// suites fake the DB at a coarser grain, so pin the helper at its boundary (UTC).
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  const { Temporal } = await import('@js-temporal/polyfill');
+  return { ...actual, resolveTenantToday: async () => Temporal.Now.plainDateISO('UTC') };
+});
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>

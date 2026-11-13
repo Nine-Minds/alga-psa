@@ -7,12 +7,14 @@ import type { IRmaCase, IRmaEvent } from '@alga-psa/types';
 import { createAssetReadContext, filterReadableAssets } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { getOpenCustodyForAssets } from '@alga-psa/assets/lib/custody/queries';
 import {
-  approveWarrantyClaimCore, approveWarrantyClaimSchema, assetGate, cancelWarrantyClaimCore, cancelWarrantyClaimSchema,
-  closeWarrantyRmaCore, closeWarrantyRmaSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
-  markDeviceReceivedSchema, openWarrantyClaimCore, openWarrantyClaimSchema, publishWarrantyClaimOpened, publishRmaUpdated,
+  approveWarrantyClaimCore, approveWarrantyClaimSchema, cancelWarrantyClaimCore, cancelWarrantyClaimSchema,
+  closeWarrantyRmaCore, closeWarrantyRmaSchema, confirmVendorReceiptCore, confirmVendorReceiptSchema, shipDeadUnitToVendorCore, shipDeadUnitToVendorSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
+  markDeviceReceivedSchema, openWarrantyClaimFlow, openWarrantyClaimSchema, ticketRecordAuthorizer,
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
+  recordVendorNonReturnChargeCore, recordVendorNonReturnChargeSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
   runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, validationActionError, withWarrantyErrors, type WarrantyActionError,
+  WarrantyError,
 } from '../lib/rma';
 import { rmaCaseQuery } from '../lib/rmaCaseQuery';
 import type { z } from 'zod';
@@ -41,28 +43,35 @@ function transition<S extends z.ZodTypeAny>(
       const parsed = schema.safeParse(rawInput ?? {});
       if (!parsed.success) return validationActionError(parsed.error);
       const input = parsed.data;
-      const result = await runWarrantyTransition(user as any, tenant, (trx, authorizeAsset) =>
-        core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset })
-      );
+      const result = await runWarrantyTransition(user as any, tenant, async (trx, authorizeAsset) => {
+        // Keep the record check at this server-action boundary, before the transition core can
+        // inspect protected case state or perform any mutation. The core repeats the same gate
+        // after taking its row lock, preserving protection for direct core callers as well.
+        const row = await trx('rma_cases')
+          .where({ tenant, rma_id: rmaId })
+          .forUpdate()
+          .select('asset_id', 'client_id', 'returned_unit_id')
+          .first();
+        if (!row) throw new WarrantyError('not_found', 'RMA case not found');
+        if (!row.asset_id) {
+          if (row.returned_unit_id) throw new WarrantyError('unit_tracked', 'This RMA is for a stock unit');
+          throw new WarrantyError('not_found', 'RMA case not found');
+        }
+        await authorizeAsset(row.asset_id, row.client_id ?? null);
+        return core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset });
+      });
       return reload(tenant, rmaId, result.rma);
     })
   );
 }
 
+/**
+ * Browser-facing. Takes no `ticket_id` (the schema drops it); the only ticket that can be linked is the open custody
+ * episode's, and the core authorizes it with the real ticket record check. Linking a caller-chosen ticket is
+ * `openWarrantyClaimFromTicket` in `@alga-psa/msp-composition`.
+ */
 export const openWarrantyClaim = withAuth(async (user, { tenant }, rawInput: unknown): Promise<Result> =>
-  withWarrantyErrors(async () => {
-    await requireWarrantyPerm(user, 'create');
-    const parsed = openWarrantyClaimSchema.safeParse(rawInput);
-    if (!parsed.success) return validationActionError(parsed.error);
-    const input = parsed.data;
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) =>
-      openWarrantyClaimCore(trx, tenant, user.user_id, input, { authorizeAsset: await assetGate(trx, tenant, user as any, 'update') })
-    );
-    await publishWarrantyClaimOpened(tenant, result.rma, result.serialNumber);
-    await publishRmaUpdated(tenant, result.rma, null, ['status'], user.user_id);
-    return reload(tenant, result.rma.rma_id, result.rma);
-  })
+  openWarrantyClaimFlow(user as any, tenant, rawInput, openWarrantyClaimSchema, ticketRecordAuthorizer(user, tenant))
 );
 
 export const approveWarrantyClaim = transition(approveWarrantyClaimSchema, approveWarrantyClaimCore);
@@ -70,9 +79,12 @@ export const denyWarrantyClaim = transition(denyWarrantyClaimSchema, denyWarrant
 export const cancelWarrantyClaim = transition(cancelWarrantyClaimSchema, cancelWarrantyClaimCore);
 export const markDeviceReceived = transition(markDeviceReceivedSchema, markDeviceReceivedCore);
 export const shipToVendor = transition(shipToVendorSchema, shipToVendorCore);
+export const shipDeadUnitToVendor = transition(shipDeadUnitToVendorSchema, shipDeadUnitToVendorCore);
+export const confirmVendorReceipt = transition(confirmVendorReceiptSchema, confirmVendorReceiptCore);
 export const receiveVendorReplacement = transition(receiveVendorReplacementSchema, receiveVendorReplacementCore);
 export const recordVendorRepair = transition(recordVendorRepairSchema, recordVendorRepairCore);
 export const recordVendorCredit = transition(recordVendorCreditSchema, recordVendorCreditCore);
+export const recordVendorNonReturnCharge = transition(recordVendorNonReturnChargeSchema, recordVendorNonReturnChargeCore);
 export const returnDeviceToClient = transition(returnDeviceToClientSchema, returnDeviceToClientCore);
 export const closeWarrantyRma = transition(closeWarrantyRmaSchema, closeWarrantyRmaCore);
 

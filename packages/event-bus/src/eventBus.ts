@@ -17,6 +17,7 @@ import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
 import { enforceWorkflowEventContract } from './workflow/workflowEventContract';
 
 type EventHandler = (event: Event) => Promise<void>;
+export type EventRequestResult = { success: true } | { success: false; error: string };
 
 // Connection state tracking
 let isConnected = false;
@@ -258,6 +259,56 @@ export class EventBus {
       channelMap.set(channel, handlers);
     }
     return handlers;
+  }
+
+  /** Create a Redis-backed completion slot before publishing a correlated request. */
+  public async beginRequest(requestId: string, ttlSeconds: number): Promise<void> {
+    if (!requestId || !Number.isInteger(ttlSeconds) || ttlSeconds < 1) {
+      throw new Error('Event request requires an id and a positive integer TTL');
+    }
+    const client = await getClient();
+    const created = await client.set(`eventbus:request:${requestId}`, 'pending', {
+      EX: ttlSeconds,
+      NX: true,
+    });
+    if (created !== 'OK') {
+      throw new Error(`Event request already exists: ${requestId}`);
+    }
+  }
+
+  /** Wait until a correlated server request completes, rejecting failures and timeouts. */
+  public async waitForRequest(requestId: string, timeoutMs: number): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    const key = `eventbus:request:${requestId}`;
+    const client = await getClient();
+    try {
+      while (Date.now() < deadline) {
+        const result = await client.get(key);
+        if (result && result !== 'pending') {
+          const completion = JSON.parse(result) as EventRequestResult;
+          if (completion.success === true) return;
+          throw new Error(completion.error || 'Server execution failed');
+        }
+        await new Promise((resolve) => setTimeout(resolve, Math.min(100, Math.max(1, deadline - Date.now()))));
+      }
+      throw new Error(`Timed out waiting for server execution request ${requestId}`);
+    } finally {
+      await client.del(key);
+    }
+  }
+
+  /** Resolve a correlated request after the server-side handler has completed. */
+  public async completeRequest(requestId: string, result: EventRequestResult): Promise<void> {
+    const client = await getClient();
+    const key = `eventbus:request:${requestId}`;
+    if (await client.exists(key)) {
+      await client.set(key, JSON.stringify(result), { EX: 720 });
+    }
+  }
+
+  public async clearRequest(requestId: string): Promise<void> {
+    const client = await getClient();
+    await client.del(`eventbus:request:${requestId}`);
   }
 
   private getActiveSubscriptions(): Array<{

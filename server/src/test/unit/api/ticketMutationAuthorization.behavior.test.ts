@@ -26,6 +26,47 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
       state.seenActions.push(input.resource.action);
       return { allowed: !state.deniedActions.has(input.resource.action) };
     }),
+    // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+    authorizeMutation: vi.fn(async (input: any) => {
+      state.seenActions.push(input.resource.action);
+      return { allowed: !state.deniedActions.has('read') && !state.deniedActions.has(input.resource.action) };
+    }),
+  })),
+}));
+
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (
+    _knex: unknown,
+    input: { tenant: string; user: { user_id: string; user_type?: string; role_ids?: string[] }; apiKeyId?: string | null },
+  ) => ({
+    tenant: input.tenant,
+    userId: input.user.user_id,
+    userType: input.user.user_type === 'client' ? 'client' : input.user.user_type === 'service' ? 'service' : 'internal',
+    roleIds: input.user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    clientId: null,
+    portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
+vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
+  resolveAuthorizationSubjectForUser: vi.fn(async (
+    _knex: unknown,
+    tenant: string,
+    user: { user_id: string; user_type?: string },
+    apiKeyId?: string,
+  ) => ({
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type === 'client' ? 'client' : user.user_type === 'service' ? 'service' : 'internal',
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    clientId: null,
+    portfolioClientIds: [],
+    ...(apiKeyId ? { apiKeyId } : {}),
   })),
 }));
 
@@ -144,6 +185,35 @@ describe('ticket mutations are authorized against update/delete scope, not read'
     expect((await PUT(req('PUT', '', { title: 'x' }), ctx as any)).status).toBe(200);
     expect(svc.update).toHaveBeenCalledTimes(1);
     expect(state.seenActions).toContain('update');
+  });
+
+  it('forwards explicit historical timestamps through PUT and comment POST', async () => {
+    const entered_at = '2024-01-01T08:00:00-05:00';
+    const created_at = '2024-01-02T08:00:00-05:00';
+    expect((await PUT(req('PUT', '', { entered_at }), ctx as any)).status).toBe(200);
+    expect(svc.update).toHaveBeenCalledWith(
+      TICKET,
+      { entered_at },
+      expect.anything(),
+      { authorize: expect.any(Function) }
+    );
+    expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at }), ctx as any)).status).toBe(201);
+    expect(svc.addComment).toHaveBeenCalledWith(TICKET, expect.objectContaining({ created_at }), expect.anything());
+  });
+
+  it.each(['yesterday', '2999-01-01T00:00:00Z', null])('returns 400 for invalid timestamps %s without calling the service', async (timestamp) => {
+    expect((await PUT(req('PUT', '', { entered_at: timestamp }), ctx as any)).status).toBe(400);
+    expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at: timestamp }), ctx as any)).status).toBe(400);
+    expect(svc.update).not.toHaveBeenCalled();
+    expect(svc.addComment).not.toHaveBeenCalled();
+  });
+
+  it('denies explicit historical writes when the ticket is outside update scope', async () => {
+    state.deniedActions = new Set(['update']);
+    expect((await PUT(req('PUT', '', { entered_at: '2024-01-01T00:00:00Z' }), ctx as any)).status).toBe(403);
+    expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at: '2024-01-02T00:00:00Z' }), ctx as any)).status).toBe(403);
+    expect(svc.update).not.toHaveBeenCalled();
+    expect(svc.addComment).not.toHaveBeenCalled();
   });
 
   it('with no update rule at all the PUT and DELETE stay allowed (default unchanged)', async () => {

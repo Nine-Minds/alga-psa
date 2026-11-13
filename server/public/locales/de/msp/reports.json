@@ -66,7 +66,11 @@
     "fallbackTitle": "Bericht",
     "dateRange": {
       "lastDays": "Letzte {{count}} Tage",
-      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn"
+      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn",
+      "customRange": "{{start}} bis {{end}}",
+      "customFrom": "Von",
+      "customTo": "Bis",
+      "agingSnapshotNote": "Anzahlen und Altersgruppen zeigen die aktuell offenen Tickets. Der Zeitraum filtert nur die Liste der ältesten offenen Tickets."
     },
     "units": {
       "daysWithCount": "{{count}} Tage"
@@ -555,7 +559,22 @@
       "invalidValue": "Einer der ausgewählten Berichtsdatensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "referenceMissing": "Einer der ausgewählten Berichtsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "missingField": "Erforderliches Berichtsfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Berichtsfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Berichtsfeld fehlt: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Er liest {{table}}, und dafür gibt es keine Kundenzuordnungsregel.",
+        "raw_sql": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Er basiert auf reinem SQL.",
+        "unsupported_join": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Er verknüpft {{table}} so, dass Zeilen anderer Kunden erhalten bleiben.",
+        "no_client_anchor": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Keine der gelesenen Daten gehört zu einem Kunden.",
+        "not_client_attributable": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Er liest {{table}}, das keinem Kunden zuordenbar ist.",
+        "unnarrowable_report": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Er summiert die Konten aller Kunden."
+      },
+      "clientOutOfScope": "Sie haben keinen Zugriff auf diesen Kunden.",
+      "range": {
+        "malformed": "Der benutzerdefinierte Zeitraum konnte nicht gelesen werden. Wählen Sie beide Daten erneut aus.",
+        "backwards": "Das Enddatum liegt vor dem Startdatum.",
+        "tooLong": "Ein benutzerdefinierter Zeitraum darf höchstens {{maxDays}} Tage umfassen.",
+        "startsInFuture": "Der benutzerdefinierte Zeitraum beginnt nach heute, daher gibt es noch nichts auszuwerten."
+      }
     }
   }
 }

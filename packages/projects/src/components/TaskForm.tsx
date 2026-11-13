@@ -591,6 +591,10 @@ export default function TaskForm({
 
   // Use provided projectTreeData if available, otherwise fetch it
   useEffect(() => {
+    // The tree fetch outlives a fast unmount (and, under vitest, the jsdom
+    // window itself), so a late resolution must not reach setState.
+    let cancelled = false;
+
     const fetchProjectsData = async () => {
       // Shared mode hides Move-to/Duplicate-to, so the tree is never needed (the shared seam has none to give).
       if (screen.hidePhaseMoves) return;
@@ -602,6 +606,7 @@ export default function TaskForm({
           // Fall back to fetching the data if not provided
           try {
             const treeData = await projectSource.options.tree();
+            if (cancelled) return;
             if (isActionPermissionError(treeData)) {
               handleError(treeData.permissionError);
               setProjectTreeOptions([]);
@@ -613,6 +618,7 @@ export default function TaskForm({
               setProjectTreeOptions([]);
             }
           } catch (error) {
+            if (cancelled) return;
             handleError(error, t('taskForm.loadProjectDataFailed', 'Error loading project data. Please try again.'));
             setProjectTreeOptions([]);
           }
@@ -621,6 +627,9 @@ export default function TaskForm({
     };
 
     fetchProjectsData();
+    return () => {
+      cancelled = true;
+    };
   }, [mode, projectTreeData, t, projectSource, screen.hidePhaseMoves]);
 
   const handleTreeSelectChange = async (

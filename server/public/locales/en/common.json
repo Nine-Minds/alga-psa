@@ -56,6 +56,19 @@
     "manageLicense": "Manage License",
     "ariaLabel": "License status",
     "dismiss": "Dismiss",
+    "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.",
+    "subscriptionEndingNoDate": "Your Pro subscription has been cancelled. Resubscribe to keep Pro.",
+    "subscriptionLapsed": "You're now on the free edition. Resubscribe to restore Pro.",
+    "resubscribe": "Resubscribe",
+    "termEnds": "Your Pro access ends on {{date}}. Renew to keep Pro.",
+    "termEndsNoDate": "Your Pro term is ending. Renew to keep Pro.",
+    "paymentFailed": "Payment failed — we'll retry on {{date}}. Update your payment method to keep Pro.",
+    "paymentFailedNoRetry": "Payment failed. Update your payment method to keep Pro.",
+    "paymentFailedEndsOn": "Pro ends on {{date}} if payment keeps failing.",
+    "paymentFailedEnded": "Pro ended — payment failed. Your appliance runs Essentials.",
+    "paymentFailedEndedEnding": "Your Pro subscription ended — payment failed. Pro stays active until {{date}}. Resubscribe to keep Pro.",
+    "paymentFailedEndedEndingNoDate": "Your Pro subscription ended — payment failed. Resubscribe to keep Pro.",
+    "updatePaymentMethod": "Update payment method",
     "licenseExpiresIn_few": "License expires in {{count}} days. Renew to avoid service interruption.",
     "licenseExpiresIn_many": "License expires in {{count}} days. Renew to avoid service interruption.",
     "trialDaysRemaining_few": "Pro trial active — {{count}} days remaining.",
@@ -157,7 +170,16 @@
     "unnamedTeam": "Unnamed Team",
     "userPicker": "User Picker",
     "noUsersFound": "No users found",
-    "contactRemoteLocation": "Remote"
+    "contactRemoteLocation": "Remote",
+    "selectBoard": "Select Board",
+    "activeBoards": "Active Boards",
+    "inactiveBoards": "Inactive Boards",
+    "allBoards": "All Boards",
+    "boardPicker": "Board Picker",
+    "filterByStatus": "Filter by status",
+    "statusFilter": "Status Filter",
+    "boards": "Boards",
+    "inactiveSuffix": "(Inactive)"
   },
   "serviceTypeSelect": {
     "placeholder": "Select service type...",
@@ -302,7 +324,22 @@
       "verify": "Verify",
       "title": "Easy peasy",
       "instructions": "Enter the 6-digit code from your two-factor authenticator app.",
-      "digitsLeft": "{{count}} digits left"
+      "digitsLeft": "{{count}} digits left",
+      "enroll": {
+        "title": "Set up two-factor authentication",
+        "instructions": "Your organization requires two-factor authentication. Scan the QR code with an authenticator app, then enter the 6-digit code.",
+        "qrAlt": "QR code for your authenticator app",
+        "manualKey": "Or enter this key manually:",
+        "cancel": "Cancel",
+        "errors": {
+          "invalid_credentials": "Your email or password is no longer valid. Please sign in again.",
+          "enrollment_not_required": "Setup is not required for this account. Please sign in again.",
+          "invalid_code": "That code is not valid. Please try again.",
+          "rate_limited": "Too many attempts. Please wait a few minutes and try again.",
+          "captcha_required": "Please complete the verification on the sign-in page first.",
+          "unavailable": "Setup is unavailable right now. Please try again."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "The login handoff token is missing or invalid. Please sign in again.",
@@ -888,6 +925,7 @@
       "pending": "Pending",
       "error": "Failed to upload document",
       "fileError": "Failed to upload file",
+      "fileTooLarge": "This file is {{size}}. The current limit is {{limit}} per file.",
       "associatedEntityTypeLabel": "Associate With",
       "noAssociation": "No association",
       "selectAssociatedEntityError": "Select an associated entity before uploading.",
@@ -899,7 +937,16 @@
       "emptyDropMessage": "No files were received. Save the attachment or email to your computer, then drag the saved file here or use Browse Files.",
       "uploadInProgress": "An upload is already in progress. Wait for it to finish before adding more files.",
       "refreshFailed": "Your files were uploaded, but the document list could not refresh. Reload the page to see them.",
-      "clearResults": "Clear results"
+      "clearResults": "Clear results",
+      "typeNotAllowed": "This file type isn't allowed. Choose a different file.",
+      "permissionDenied": "You don't have permission to upload documents here.",
+      "networkFailed": "The connection was interrupted and the upload could not be resumed. Check your connection and try again.",
+      "sessionGone": "This upload expired before it finished. Start it again.",
+      "cancelled": "Cancelled",
+      "cancelUpload": "Cancel upload",
+      "tryAgain": "Try again",
+      "progress": "{{committed}} of {{total}}",
+      "progressLabel": "Upload progress for {{name}}"
     },
     "folders": {
       "root": "Root",
@@ -913,7 +960,8 @@
       "collapse": "Collapse folders",
       "allDocuments": "All Documents",
       "expand": "Show folders",
-      "deleteTitle": "Delete Folder"
+      "deleteTitle": "Delete Folder",
+      "show": "Show folders"
     },
     "folderManager": {
       "title": "Create New Folder",
@@ -975,6 +1023,28 @@
     "huduTab": {
       "documentsTabLabel": "Documents",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "User",
+    "selectOrCreate": "Select a document or create a new one.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Print",
+      "edit": "Edit",
+      "upload": "Upload",
+      "closePreview": "Close preview",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "viewMode": {
+      "grid": "Grid",
+      "list": "List"
+    },
+    "unsavedChanges": {
+      "title": "Unsaved Changes",
+      "message": "Are you sure you want to cancel? Any unsaved changes will be lost.",
+      "confirm": "Discard changes",
+      "cancel": "Continue editing"
     }
   },
   "surveys": {
@@ -1619,7 +1689,9 @@
       "ticketTitle": "Print work tags",
       "tooMany": "You can print at most {{max}} labels at a time.",
       "unnamedAsset": "Unnamed asset",
-      "useTemplate": "Use {{template}}"
+      "useTemplate": "Use {{template}}",
+      "copiesPerAsset": "Copies per asset",
+      "adjacentCopies": "Copies print together for each asset."
     }
   },
   "deleteEntity": {
@@ -1712,7 +1784,14 @@
       "assigned": "Assigned:",
       "performedBy": "by {{name}}",
       "internal": "Internal"
-    }
+    },
+    "title": "Notifications",
+    "reconnectingToServer": "Reconnecting to server...",
+    "refresh": "Refresh",
+    "markAllAsRead": "Mark all as read",
+    "markAllRead": "Mark all read",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "You're all caught up!"
   },
   "importConflicts": {
     "title": "Resolve Import Conflicts",

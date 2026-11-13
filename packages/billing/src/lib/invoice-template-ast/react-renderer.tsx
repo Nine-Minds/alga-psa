@@ -7,6 +7,8 @@ import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
+  TemplateChildRows,
+  TemplateDynamicTableNode,
   TemplateFieldBorderStyle,
   TemplateI18nText,
   TemplateNode,
@@ -306,7 +308,9 @@ interface RenderedCellLine {
  * blank lines (missing names, absent descriptions) are dropped. When a column
  * has no `lines`, or every line resolves empty, the function returns null so
  * the caller falls back to the flat `value` expression — keeping discount and
- * custom rows whose name is absent readable.
+ * custom rows whose name is absent readable. A line repeating text the cell
+ * already shows is dropped, so stacks such as the standard quote description
+ * (line `description` over `catalog_description`) print the text once.
  */
 const resolveColumnCellLines = (
   column: TemplateTableColumn,
@@ -328,6 +332,15 @@ const resolveColumnCellLines = (
     };
   };
   const nonEmpty = (entry: RenderedCellLine): boolean => entry.text.trim().length > 0;
+  const withoutRepeats = (entries: RenderedCellLine[]): RenderedCellLine[] => {
+    const seen = new Set<string>();
+    return entries.filter((entry) => {
+      const key = entry.text.trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   // Primary lines decide whether the stack replaces the flat value; a
   // supplemental line (an annotation such as an optional-row marker) only
@@ -336,12 +349,12 @@ const resolveColumnCellLines = (
   const supplemental = column.lines.filter((line) => line.supplemental).map(resolveLine).filter(nonEmpty);
 
   if (primary.length > 0) {
-    return [...primary, ...supplemental];
+    return withoutRepeats([...primary, ...supplemental]);
   }
   if (supplemental.length > 0) {
     const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
     const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
-    return [...(nonEmpty(flat) ? [flat] : []), ...supplemental];
+    return withoutRepeats([...(nonEmpty(flat) ? [flat] : []), ...supplemental]);
   }
   return null;
 };
@@ -375,6 +388,128 @@ const renderTableCellContent = (
   const value = resolveExpressionValue(column.value, evaluation, rowScope, ctx);
   const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
   return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
+};
+
+
+/**
+ * Signed quantity change shown before a child-row quantity. Null, non-numeric
+ * and zero changes render nothing; positive and negative values are signed
+ * ("+2" / "\u22121") and toned. Digits use the document locale.
+ */
+const resolveSignedChange = (
+  raw: unknown,
+  ctx: RenderContext
+): { text: string; tone: 'positive' | 'negative' } | null => {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const numeric = typeof raw === 'number' ? raw : Number(String(raw));
+  if (!Number.isFinite(numeric) || numeric === 0) return null;
+  let digits: string;
+  try {
+    digits = new Intl.NumberFormat(ctx.locale || 'en-US', { maximumFractionDigits: 4 }).format(Math.abs(numeric));
+  } catch {
+    digits = String(Math.abs(numeric));
+  }
+  return numeric > 0
+    ? { text: `+${digits}`, tone: 'positive' }
+    : { text: `\u2212${digits}`, tone: 'negative' };
+};
+
+/** Child-row numbers follow the document locale (quantities may be fractional). */
+const formatChildValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
+  // An unbound value is blank whatever the format (currency would otherwise render $0.00).
+  if (value === undefined || value === null || value === '') return '';
+  if (format === 'number' && value !== null && value !== undefined && value !== '') {
+    const numeric = typeof value === 'number' ? value : Number(String(value));
+    if (Number.isFinite(numeric)) {
+      try {
+        return new Intl.NumberFormat(ctx.locale || 'en-US', { maximumFractionDigits: 4 }).format(numeric);
+      } catch {
+        return String(numeric);
+      }
+    }
+  }
+  return formatValue(value ?? '', format, ctx);
+};
+
+const resolveChildItems = (childRows: TemplateChildRows, parentRow: UnknownRecord, parentBinding: string, scope: RenderScope): UnknownRecord[] => {
+  // The source path is written relative to the parent binding (`item.components`).
+  const prefix = `${parentBinding}.`;
+  const relative = childRows.sourcePath.startsWith(prefix) ? childRows.sourcePath.slice(prefix.length) : childRows.sourcePath;
+  const source = getPathValue(parentRow, relative);
+  if (!Array.isArray(source)) return [];
+  return source.filter(isRecord);
+};
+
+const renderChildRow = (
+  node: TemplateDynamicTableNode,
+  childRows: TemplateChildRows,
+  child: UnknownRecord,
+  parentRow: UnknownRecord,
+  key: string,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+  ctx: RenderContext
+): React.ReactNode => {
+  const childScope: RenderScope = {
+    ...scope,
+    row: child,
+    items: { ...scope.items, [node.repeat.itemBinding]: parentRow, [childRows.itemBinding]: child },
+  };
+  const { className: rowClassName, style: rowStyle } = resolveStyleRef(childRows.style);
+  return (
+    <tr key={key} className={joinClassNames('ast-child-row', rowClassName) || undefined} style={rowStyle}>
+      {node.columns.map((column, columnIndex) => {
+        const cell = childRows.cells[column.id];
+        const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+        const alignRight = column.format === 'currency' || column.format === 'number';
+        const tdStyle = { ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' as const } : {}) };
+        if (!cell) {
+          return <td key={column.id} className={colClassName || undefined} style={tdStyle} />;
+        }
+        const { className: cellClassName, style: cellStyle } = resolveStyleRef(cell.style);
+        const change = cell.change
+          ? resolveSignedChange(resolveExpressionValue(cell.change.value, evaluation, childScope, ctx), ctx)
+          : null;
+        const lineSource = cell.lines?.length
+          ? cell.lines.map((line) => {
+              const { className, style: lineStyle } = resolveStyleRef(line.style);
+              return {
+                text: formatChildValue(resolveExpressionValue(line.value, evaluation, childScope, ctx), line.format ?? cell.format, ctx),
+                className,
+                style: lineStyle,
+              };
+            }).filter((line) => line.text.trim().length > 0)
+          : [];
+        const flat = formatChildValue(resolveExpressionValue(cell.value, evaluation, childScope, ctx), cell.format, ctx);
+        const lineEntries = lineSource.length > 0 ? lineSource : flat.trim().length > 0 ? [{ text: flat, className: null as string | null, style: undefined as React.CSSProperties | undefined }] : [];
+        const isMarkerColumn = columnIndex === 0;
+        return (
+          <td
+            key={column.id}
+            className={joinClassNames(colClassName, cellClassName, isMarkerColumn ? 'ast-child-row-lead' : null) || undefined}
+            style={{ ...tdStyle, ...(cellStyle ?? {}), ...(isMarkerColumn ? { paddingLeft: '20px' } : {}) }}
+          >
+            {change ? (
+              <span className={`ast-change ast-change-${change.tone}`} style={{ color: change.tone === 'positive' ? '#15803d' : '#b91c1c', marginRight: '4px', fontWeight: 600 }}>
+                {change.text}
+              </span>
+            ) : null}
+            {lineEntries.map((line, lineIndex) => (
+              <div
+                key={`${column.id}-line-${lineIndex}`}
+                className={joinClassNames(change ? 'ast-child-inline' : 'ast-table-cell-line', line.className) || undefined}
+                style={{ ...(line.style ?? {}), ...(change ? { display: 'inline' } : {}) }}
+              >
+                {isMarkerColumn && lineIndex === 0 ? '\u2022 ' : ''}
+                {line.text}
+              </div>
+            ))}
+            {isMarkerColumn && lineEntries.length === 0 ? '\u2022' : null}
+          </td>
+        );
+      })}
+    </tr>
+  );
 };
 
 /** A totals value that has nothing to report: absent, blank, or numerically zero. */
@@ -449,6 +584,8 @@ const buildAstCss = (ast: TemplateAst): string => {
   .invoice-template-root thead { display: table-header-group; }
   .invoice-template-root tbody tr,
   .invoice-template-root .ast-node-type-totals { break-inside: avoid; }
+  /* A bundle row stays with its first component row. */
+  .invoice-template-root tbody tr.ast-has-child-rows { break-after: avoid; }
   /* A section heading never sits alone at the foot of a page: the heading
      may not end a page and whatever follows it may not start one. */
   .invoice-template-root section > h2 { break-after: avoid; }
@@ -515,6 +652,14 @@ const resolveExpressionValue = (
 
       if (parsedPath.filter === 'currency') {
         return formatValue(resolvedValue, 'currency', ctx);
+      }
+
+      if (parsedPath.filter === 'daterange') {
+        const endPath = parsedPath.path.replace(/Start$/, 'End');
+        const endValue = (scope.row ? getPathValue(scope.row, endPath) : undefined) ?? getPathValue(scope.items, endPath);
+        const start = formatValue(resolvedValue, 'date', ctx);
+        const end = endValue === undefined || endValue === null ? '' : formatValue(endValue, 'date', ctx);
+        return start && end ? `${start} \u2013 ${end}` : start;
       }
 
       return resolvedValue;
@@ -919,24 +1064,37 @@ const renderNode = (
                 <td colSpan={node.columns.length}>{displayText(node.emptyStateText) ?? ''}</td>
               </tr>
             ) : (
-              rows.map((row, index) => (
-                <tr key={`${node.id}-row-${index}`}>
-                  {node.columns.map((column) => {
-                    const rowScope = { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } };
-                    const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
-                    const alignRight = column.format === 'currency' || column.format === 'number';
-                    return (
-                      <td
-                        key={column.id}
-                        className={colClassName || undefined}
-                        style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
-                      >
-                        {renderTableCellContent(column, evaluation, rowScope, ctx)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
+              rows.map((row, index) => {
+                const childItems = node.childRows
+                  ? resolveChildItems(node.childRows, row, node.repeat.itemBinding, scope)
+                  : [];
+                const blankColumns = childItems.length > 0 ? node.childRows?.parentBlankColumns ?? [] : [];
+                return (
+                  <React.Fragment key={`${node.id}-row-${index}`}>
+                    <tr className={childItems.length > 0 ? 'ast-has-child-rows' : undefined}>
+                      {node.columns.map((column) => {
+                        const rowScope = { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } };
+                        const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+                        const alignRight = column.format === 'currency' || column.format === 'number';
+                        return (
+                          <td
+                            key={column.id}
+                            className={colClassName || undefined}
+                            style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                          >
+                            {blankColumns.includes(column.id) ? '' : renderTableCellContent(column, evaluation, rowScope, ctx)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {node.childRows
+                      ? childItems.map((child, childIndex) =>
+                          renderChildRow(node, node.childRows as TemplateChildRows, child, row, `${node.id}-row-${index}-child-${childIndex}`, evaluation, scope, ctx)
+                        )
+                      : null}
+                  </React.Fragment>
+                );
+              })
             )}
           </tbody>
         </table>

@@ -366,6 +366,10 @@
       },
       "custody": {
         "title": "Apparatuur in bewaring"
+      },
+      "audits": {
+        "title": "Locatieaudits",
+        "detailTitle": "Locatieaudit"
       }
     },
     "chat": {
@@ -553,6 +557,9 @@
       },
       "export": {
         "title": "Werkruimte exporteren"
+      },
+      "upgrade": {
+        "title": "Overstappen naar AlgaPSA"
       }
     }
   },

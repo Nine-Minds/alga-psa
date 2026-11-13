@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -61,10 +62,10 @@ export default defineConfig({
       // to resolve @alga-psa/core/server.
       { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
-      // The generic db rule below maps subpaths straight into src, but the
-      // "./tenant" export lives at src/lib/tenant.ts (mirrors the package's
-      // exports map), so it needs resolving before the catch-all.
-      { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../db/src/lib/tenant.ts') },
+      // The generic db rule below maps subpaths straight into src, but most
+      // published db subpaths live under src/lib; resolve them from the
+      // package's exports map before the catch-all.
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../db')),
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
       { find: /^@alga-psa\/types(.*)$/, replacement: path.resolve(__dirname, '../types/src$1') },
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, '../ui/src$1') },

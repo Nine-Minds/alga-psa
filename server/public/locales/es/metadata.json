@@ -374,6 +374,10 @@
       "title": "Activos",
       "custody": {
         "title": "Equipos en custodia"
+      },
+      "audits": {
+        "title": "Auditorías de sitios",
+        "detailTitle": "Auditoría de sitio"
       }
     },
     "chat": {
@@ -553,6 +557,9 @@
       },
       "export": {
         "title": "Exportar espacio de trabajo"
+      },
+      "upgrade": {
+        "title": "Cambiar a AlgaPSA"
       }
     }
   },

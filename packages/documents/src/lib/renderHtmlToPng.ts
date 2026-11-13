@@ -1,113 +1,125 @@
-import puppeteer from 'puppeteer';
-import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
+import puppeteer, { type Browser } from 'puppeteer';
+import createDOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+import {
+  configureIsolatedPage,
+  ISOLATED_RENDERER_BROWSER_ARGS,
+  prepareHtmlForIsolatedRendering,
+  type IsolatedRenderingOptions,
+} from '@alga-psa/core/rendering/isolatedRendering';
 
-export interface RenderHtmlToPngOptions {
+export {
+  applyRenderingResourcePolicy,
+  configureIsolatedPage,
+  ISOLATED_RENDERER_BROWSER_ARGS,
+  prepareHtmlForIsolatedRendering,
+  resolveRemoteAssets,
+} from '@alga-psa/core/rendering/isolatedRendering';
+
+export type RenderContent =
+  | { kind: 'text'; text: string }
+  | { kind: 'rich-html'; html: string }
+  | { kind: 'file-placeholder'; fileName: string; fileType: string; fileSize: string; icon: string };
+
+export interface RenderHtmlToPngOptions extends IsolatedRenderingOptions {
   width?: number;
   height?: number;
-  /**
-   * 'inline' (default): fetch remote http(s) images ourselves through safeFetch and embed the bytes.
-   * 'block': render without any remote asset at all.
-   */
-  remoteAssets?: 'inline' | 'block';
-  /**
-   * Resolve a remote asset URL to bytes. Defaults to safeFetch's public-only fetch.
-   * Injectable so tests can assert the rewritten HTML without the network.
-   */
-  fetchAsset?: (url: string) => Promise<{ bytes: Buffer; contentType: string }>;
 }
 
-const PLACEHOLDER_STYLE =
-  'display:inline-block;min-width:60px;min-height:30px;padding:4px;background:#e5e7eb;color:#6b7280;' +
-  'font-size:12px;border:1px solid #d1d5db;box-sizing:border-box;';
-// 1x1 transparent PNG used for blocked CSS url() references.
-const TRANSPARENT_PIXEL =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const purifier = createDOMPurify(new JSDOM('').window);
+const FAILURE_PLACEHOLDER = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64'
+);
 
-const REMOTE_URL = /^\s*https?:\/\//i;
+async function fallbackPlaceholder(): Promise<Buffer> {
+  try {
+    const sharpModule = await import('sharp');
+    const sharp = (sharpModule as any).default ?? sharpModule;
+    return await sharp(Buffer.from('<svg width="400" height="300"><rect width="100%" height="100%" fill="#e5e7eb"/><text x="20" y="150" fill="#4b5563" font-size="16">Preview unavailable</text></svg>'))
+      .png()
+      .toBuffer();
+  } catch {
+    return Buffer.from(FAILURE_PLACEHOLDER);
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-function decodeAttr(s: string): string {
-  return s.replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;|&#x27;/gi, "'");
+
+function toHtml(content: RenderContent): string {
+  if (content.kind === 'text') {
+    return `<pre>${escapeHtml(content.text)}</pre>`;
+  }
+  if (content.kind === 'rich-html') {
+    return purifier.sanitize(content.html, { USE_PROFILES: { html: true } });
+  }
+
+  return `<div style="font-family: sans-serif; padding: 20px; text-align: center; background: #f9f9f9; width: 100%; height: 100%;">
+    <div style="font-size: 64px; margin-bottom: 15px;">${escapeHtml(content.icon)}</div>
+    <div style="background: #607d8b; color: white; padding: 10px; margin-bottom: 15px;"><strong>${escapeHtml(content.fileType)}</strong></div>
+    <div style="font-size: 14px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px;">${escapeHtml(content.fileName)}</div>
+    <div style="font-size: 12px; color: #666;">${escapeHtml(content.fileSize)}</div>
+    <div style="margin-top: 15px; font-size: 12px; color: #999;">Preview not available. Download to view.</div>
+  </div>`;
 }
-function getAttr(tag: string, name: string): string | undefined {
-  const m = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag);
-  return m ? decodeAttr(m[1] ?? m[2] ?? '') : undefined;
+function isSandboxUnavailable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /no usable sandbox|failed to move to new namespace|namespace.*operation not permitted/i.test(message);
 }
 
-type AssetResolver = (url: string) => Promise<string | null>;
-
-function makeResolver(opts: RenderHtmlToPngOptions): AssetResolver {
-  const cache = new Map<string, Promise<string | null>>();
-  const fetchAsset = opts.fetchAsset ?? ((url: string) => fetchPublicBytes(url));
-  return (url) => {
-    let hit = cache.get(url);
-    if (!hit) {
-      hit = fetchAsset(url)
-        .then(({ bytes, contentType }) =>
-          /^image\//i.test(contentType) ? `data:${contentType};base64,${bytes.toString('base64')}` : null
-        )
-        .catch(() => null); // a blocked asset must never fail the preview
-      cache.set(url, hit);
-    }
-    return hit;
+async function launchBrowser(): Promise<Browser> {
+  // Retain the shared network-isolation flags while preferring Chromium's sandbox
+  // whenever this runtime supports it. The pooled PDF renderer uses the exported
+  // argument list directly for root/container compatibility.
+  const args = ISOLATED_RENDERER_BROWSER_ARGS.filter(
+    (argument) => argument !== '--no-sandbox' && argument !== '--disable-setuid-sandbox'
+  );
+  const launchOptions: any = {
+    headless: true,
+    args,
+    timeout: 10000,
   };
-}
 
-async function replaceAsync(
-  input: string,
-  re: RegExp,
-  fn: (match: RegExpExecArray) => Promise<string>
-): Promise<string> {
-  const matches = [...input.matchAll(re)] as RegExpExecArray[];
-  const replacements = await Promise.all(matches.map(fn));
-  let out = '';
-  let last = 0;
-  matches.forEach((m, i) => {
-    out += input.slice(last, m.index) + replacements[i];
-    last = m.index! + m[0].length;
-  });
-  return out + input.slice(last);
-}
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
 
-/**
- * Rewrites remote http(s) image references in `html`: `<img src>` and CSS `url(...)`.
- * With 'inline' they become data: URIs (fetched via safeFetch); anything refused, failed or
- * non-image becomes a neutral placeholder. With 'block' all remote references are replaced.
- * Other remote-loading constructs (iframe/script/link/@import) are dropped by request
- * interception in the browser; this function only decides what survives as an image.
- */
-export async function resolveRemoteAssets(
-  html: string,
-  opts: Pick<RenderHtmlToPngOptions, 'remoteAssets' | 'fetchAsset'> = {}
-): Promise<string> {
-  const mode = opts.remoteAssets ?? 'inline';
-  const resolve: AssetResolver = mode === 'inline' ? makeResolver(opts) : async () => null;
+  // Chromium cannot sandbox as root. Otherwise try Chromium's sandbox first, then use
+  // no-sandbox only for its explicit "no usable sandbox" failure (common in restricted
+  // containers without user namespaces). Request denial remains the security boundary.
+  if (typeof process.getuid === 'function' && process.getuid() === 0) {
+    return puppeteer.launch({
+      ...launchOptions,
+      args: [...args, '--no-sandbox', '--disable-setuid-sandbox'],
+    });
+  }
 
-  // <img ... src="http...">
-  let out = await replaceAsync(html, /<img\b[^>]*>/gi, async (m) => {
-    const tag = m[0];
-    const src = getAttr(tag, 'src');
-    if (src === undefined || !REMOTE_URL.test(src)) return tag;
-    const dataUri = await resolve(src.trim());
-    if (dataUri) {
-      return tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, (_m, pre: string) => pre + '"' + dataUri + '"');
-    }
-    const alt = getAttr(tag, 'alt') ?? '';
-    return `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
-  });
-
-  // srcset can also load remote images; drop it when it references remote URLs.
-  out = out.replace(/(<img\b[^>]*?)\s(?:srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '$1');
-
-  // CSS url(http...)
-  out = await replaceAsync(out, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, async (m) => {
-    const dataUri = await resolve(decodeAttr(m[2]).trim());
-    return `url("${dataUri ?? TRANSPARENT_PIXEL}")`;
-  });
-
-  return out;
+  try {
+    return await puppeteer.launch(launchOptions);
+  } catch (error) {
+    if (!isSandboxUnavailable(error)) throw error;
+    console.warn('[renderHtmlToPng] Chromium sandbox is unavailable in this runtime; retrying with network isolation only.');
+    return puppeteer.launch({
+      ...launchOptions,
+      args: [...args, '--no-sandbox', '--disable-setuid-sandbox'],
+    });
+  }
 }
 
 /**
@@ -116,51 +128,19 @@ export async function resolveRemoteAssets(
  * caller-controlled HTML cannot make the server issue requests (SSRF) or read responses back.
  * Remote images are fetched by us through safeFetch and inlined (see resolveRemoteAssets).
  */
-export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions = {}): Promise<Buffer> {
+export async function renderHtmlToPng(content: RenderContent, opts: RenderHtmlToPngOptions = {}): Promise<Buffer> {
   const width = opts.width ?? 400;
   const height = opts.height ?? 300;
-  const safeHtml = await resolveRemoteAssets(html, opts);
-
-  let browser;
+  let browser: Browser | undefined;
   try {
-    const puppeteerOptions: any = {
-      headless: true,
-      // --no-sandbox etc. are kept for the container runtime; they are unrelated to the SSRF
-      // fix and intentionally out of scope for it.
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials',
-        // Defense in depth below request interception: route everything through a dead proxy
-        // (and do not bypass it for loopback) so no socket can be opened even by Chromium's own
-        // pre-connect logic for <iframe>/<object> navigations.
-        '--proxy-server=socks5://127.0.0.1:1',
-        '--proxy-bypass-list=<-loopback>',
-      ],
-    };
-
-    // Use system chromium if available (Docker environment)
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    }
-
-    browser = await puppeteer.launch(puppeteerOptions);
+    // Escape structured values and sanitize all supported rich HTML before resolving image URLs.
+    const sanitizedHtml = toHtml(content);
+    const safeHtml = await withTimeout(prepareHtmlForIsolatedRendering(sanitizedHtml, opts), 6000, 'Asset resolution');
+    browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setViewport({ width, height });
 
-    // Deny network by default.
-    await page.setJavaScriptEnabled(false);
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const url = req.url();
-      if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) {
-        return void req.continue();
-      }
-      return void req.abort('blockedbyclient');
-    });
+    await configureIsolatedPage(page);
 
     const styledHtml = `
         <style>
@@ -178,13 +158,23 @@ export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions
         </style>
         <div>${safeHtml}</div>
       `;
-    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
-    const imageBuffer = await page.screenshot({ type: 'png' });
+    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded', timeout: 5000 });
+    // Puppeteer's default screenshot encoding is a Uint8Array. Keep that byte type
+    // explicit through the timeout wrapper so it cannot widen to unknown.
+    const screenshotBytes: Promise<Uint8Array> = page.screenshot({ type: 'png' });
+    const imageBytes = await withTimeout<Uint8Array>(screenshotBytes, 10000, 'Chromium screenshot');
 
-    return Buffer.from(imageBuffer);
+    return Buffer.from(imageBytes);
+  } catch (error) {
+    console.error('[renderHtmlToPng] Preview rendering failed; returning placeholder image:', error);
+    return await fallbackPlaceholder();
   } finally {
     if (browser) {
-      await browser.close();
+      try {
+        await withTimeout(browser.close(), 2000, 'Chromium close');
+      } catch {
+        browser.process()?.kill('SIGKILL');
+      }
     }
   }
 }

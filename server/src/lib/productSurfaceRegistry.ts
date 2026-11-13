@@ -85,6 +85,14 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
+    // The customer's own upgrade-to-PSA screen. psa stays allowed so the post-upgrade "completed" screen and its
+    // "Open AlgaPSA" button still render after the tenant flips to psa; the page's
+    // requireCapabilityForPage('co-managed', …, 'serves') keeps flag-off / no-entitlement tenants at 404.
+    group: 'msp_co_managed_upgrade',
+    staticPrefixes: ['/msp/co-management/upgrade'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
     // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
     // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
     group: 'msp_co_managed_customer_tickets',
@@ -185,6 +193,13 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
 ];
 
 export const API_RULES: readonly ApiRule[] = [
+  {
+    // Bearer-link quote review belongs to billing, outside the public v1 API.
+    group: 'api_public_quote',
+    staticPrefixes: ['/api/quote'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
   {
     // Session-authenticated workspace export download (POST streams the archive). Not part of the public v1
     // metadata surface; the co-managed capability gate in the route decides admission, so algadesk is denied.
@@ -308,6 +323,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/asset-statuses',
       '/api/v1/asset-custody',
       '/api/v1/time-entries',
+      '/api/v1/time-period-settings',
       '/api/v1/stopwatch',
       '/api/v1/workflows',
       '/api/v1/extensions',

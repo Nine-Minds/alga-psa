@@ -259,9 +259,9 @@ async function calculateTaxWithConnection(
 interface ResolvedRowTax {
   /** Tax the row carries when included in the quote (0 for discounts / external tax). */
   taxAmountIfIncluded: number;
-  /** Persisted rate, rounded to whole percent as `quote_items.tax_rate` stores it. */
+  /** Persisted rate, the exact percentage as `quote_items.tax_rate` stores it. */
   taxRate: number;
-  /** The exact percentage the engine used, which the rounded one cannot recover. */
+  /** The exact percentage the engine used, for callers that never persist it. */
   taxPercentage: number;
   taxRegion: string | null;
 }
@@ -365,7 +365,9 @@ async function resolveQuoteRowTaxes(
 
         taxAmount = taxResult.taxAmount;
         taxPercentage = Number(taxResult.taxRate ?? 0);
-        taxRate = Math.round(taxPercentage);
+        // Store the exact percentage: rounding 6.875 to 7 displayed a rate the
+        // line was never charged at. `quote_items.tax_rate` is numeric.
+        taxRate = taxPercentage;
       } else if (taxSource !== 'internal') {
         taxAmount = 0;
         taxRate = 0;

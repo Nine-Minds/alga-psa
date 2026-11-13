@@ -16,6 +16,11 @@ import { QuickAddAsset } from './QuickAddAsset';
 
 const mockCreateAsset = vi.fn();
 const mockGetAssetTypes = vi.fn();
+const mockPreviewAssetNumber = vi.fn();
+
+vi.mock('../actions/assetNumberingActions', () => ({
+  previewAssetNumber: (...args: unknown[]) => mockPreviewAssetNumber(...args),
+}));
 
 vi.mock('../actions/assetActions', () => ({
   createAsset: (...args: unknown[]) => mockCreateAsset(...args),
@@ -198,10 +203,11 @@ if (!HTMLFormElement.prototype.requestSubmit) {
   };
 }
 
-async function renderQuickAdd() {
+async function renderQuickAdd(automaticTag = false) {
   render(<QuickAddAsset clientId={CLIENT_ID} onAssetAdded={vi.fn()} defaultOpen />);
   const typeSelect = (await screen.findByLabelText('asset-type-select')) as HTMLSelectElement;
   await waitFor(() => expect(mockGetAssetTypes).toHaveBeenCalled());
+  if (!automaticTag) await userEvent.click(screen.getByLabelText('Assign automatically'));
   return { typeSelect };
 }
 
@@ -209,10 +215,50 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockGetAssetTypes.mockResolvedValue(REGISTRY);
   mockCreateAsset.mockResolvedValue({ asset_id: 'created-1' });
+  mockPreviewAssetNumber.mockResolvedValue({ tag: 'FTS00001' });
 });
 
 afterEach(() => {
   cleanup();
+});
+
+describe('Quick Add asset numbering', () => {
+  it('previews and cancels without creating an asset', async () => {
+    await renderQuickAdd(true);
+    await screen.findByText('FTS00001');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(mockCreateAsset).not.toHaveBeenCalled();
+  });
+
+  it('requests automatic tags and refreshes the preview after reopening for repeated intake', async () => {
+    const user = userEvent.setup();
+    await renderQuickAdd(true);
+    await screen.findByText('FTS00001');
+    await user.type(screen.getByLabelText('asset-name-input'), 'Equipment one');
+    await user.selectOptions(screen.getByLabelText('asset-type-select'), 'printer');
+    await user.click(screen.getByRole('button', { name: 'Create Asset' }));
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Create Asset' })).toBeNull());
+    mockPreviewAssetNumber.mockResolvedValue({ tag: 'FTS00002' });
+    await user.click(screen.getByRole('button', { name: 'Add Asset' }));
+    await screen.findByText('FTS00002');
+    expect((screen.getByLabelText('asset-name-input') as HTMLInputElement).value).toBe('');
+    await user.type(screen.getByLabelText('asset-name-input'), 'Equipment two');
+    await user.selectOptions(screen.getByLabelText('asset-type-select'), 'printer');
+    await user.click(screen.getByRole('button', { name: 'Create Asset' }));
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledTimes(2));
+    expect(mockCreateAsset.mock.calls.map(([payload]) => payload.asset_tag)).toEqual(['', '']);
+  });
+
+  it('preserves a deliberate scanned tag verbatim', async () => {
+    const user = userEvent.setup();
+    await renderQuickAdd();
+    await user.type(screen.getByLabelText('asset-name-input'), 'Existing equipment');
+    await user.type(screen.getByLabelText('asset-tag-input'), ' old-FTS-0042 ');
+    await user.selectOptions(screen.getByLabelText('asset-type-select'), 'printer');
+    await user.click(screen.getByRole('button', { name: 'Create Asset' }));
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledWith(expect.objectContaining({ asset_tag: ' old-FTS-0042 ' })));
+  });
 });
 
 describe('QuickAddAsset custom asset types', () => {

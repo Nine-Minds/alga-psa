@@ -801,7 +801,7 @@
       "id": "inactive",
       "en-term": "Inactive",
       "term": "Inactif",
-      "notes": "Pack-consistent: 49 uses across 18 namespaces (mined 2026-08-28, pending native review)."
+      "notes": "Inactif au masculin ; inactive au féminin, notamment pour une clé API. La forme féminine isolée est identique à l’anglais."
     },
     {
       "id": "industry",
@@ -2081,6 +2081,19 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "minutes",
+      "Urgent",
+      "Standard",
+      "Ticket {{number}}",
+      "Interaction",
+      "Document",
+      "Cadence",
+      "{{count}} ticket(s)",
+      "client",
+      "contact",
+      "{{actor}} • {{eventType}}",
+      "Source",
+      "Inactive",
       "1 contact",
       "Conversation",
       "{{from}} → {{to}}",
@@ -2160,6 +2173,7 @@
       "Linux",
       "m",
       "macOS",
+      "Markdown",
       "Meta",
       "Microsoft",
       "Microsoft 365",
@@ -2263,7 +2277,21 @@
       "Stable",
       "Code 128",
       "RMA {{number}} · {{status}}",
-      "Page {{page}}"
+      "Page {{page}}",
+      "Audit",
+      "Audits",
+      "ticket",
+      "tickets",
+      "RAM",
+      "Ports",
+      "Plan",
+      "Migrations",
+      "{{count}} action",
+      "{{count}} actions",
+      "Date *",
+      "Vertical",
+      "Horizontal",
+      "Direction"
     ],
     "caseInsensitive": [
       "api",

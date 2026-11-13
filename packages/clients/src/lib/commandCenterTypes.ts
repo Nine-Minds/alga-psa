@@ -164,6 +164,17 @@ export interface ClientPulseWarranty {
   trackedCount: number;
 }
 
+/**
+ * The client's most recent completed site audit. null means "never audited";
+ * absent (undefined) means the caller cannot read assets, so the tile says
+ * nothing about audits rather than implying there were none.
+ */
+export interface ClientPulseLastAudit {
+  audit_id: string;
+  completed_at: string | null;
+  missing_count: number;
+}
+
 export interface ClientPulseInstallBase {
   /** null when the caller lacks asset:read (inventory:read alone got them here). */
   managedAssetCount: number | null;
@@ -171,6 +182,7 @@ export interface ClientPulseInstallBase {
   openRmaCount: number;
   recentUnits: ClientPulseRecentUnit[];
   warranty?: ClientPulseWarranty | null;
+  lastAudit?: ClientPulseLastAudit | null;
 }
 
 export interface ClientPulseContact {
@@ -204,6 +216,11 @@ export interface ClientPulseLocation {
   is_shipping: boolean;
   /** How many contacts work here — the same count the Manage Locations cards show. */
   contact_count: number;
+  /**
+   * When this site was last audited (audits are scoped to a location). null
+   * when it never was; absent when the caller cannot read assets.
+   */
+  last_audit_at?: string | null;
 }
 
 export interface ClientPulseDocument {

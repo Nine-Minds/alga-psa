@@ -6,6 +6,7 @@ import { createTestEnvironment } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey, ApiTestClient } from './apiTestHelpers';
 import { cleanupTestContacts } from './contactTestDataFactory';
 import { setupTestUserWithPermissions } from './simpleRoleSetup';
+import { setDefaultTestRoleIds } from './userTestData';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -51,6 +52,11 @@ export async function setupE2ETestEnvironment(options: {
 
     // Setup permissions for the test user
     await setupTestUserWithPermissions(db, userId, tenantId);
+
+    // POST /api/v1/users requires a role, so the user factory needs one per
+    // user type in this tenant (alga-2026-0003292: no zero-role state).
+    const roleIds = await seedTestRoles(db, tenantId, userId);
+    setDefaultTestRoleIds(roleIds);
 
     // Create default statuses for projects and tickets
     await createDefaultStatuses(db, tenantId, userId);
@@ -154,6 +160,8 @@ export async function setupE2ETestEnvironment(options: {
         await tenantTable('client_locations').delete();
 
         // API-created clients also own billing profiles; locations can reference them.
+        // Billing cycles reference their billing profile, so remove cycles first.
+        await tenantTable('client_billing_cycles').delete();
         await tenantTable('client_billing_profiles').delete();
 
         // Ticket templates can be client-scoped (ticket_templates_client_foreign);
@@ -172,6 +180,8 @@ export async function setupE2ETestEnvironment(options: {
         console.error('Error during cleanup:', error);
         throw error;
       } finally {
+        // The seeded roles are gone with the tenant; stop handing them out.
+        setDefaultTestRoleIds(null);
         // Always destroy the database connection
         await db.destroy();
       }
@@ -338,6 +348,47 @@ export async function withDatabaseTransaction<T>(
       throw error;
     }
   });
+}
+
+/**
+ * The roles API-created users are given: the MSP role the test user already
+ * holds, plus a client portal role for client users. Neither is named "Admin",
+ * so the last-MSP-admin floor never fires on this tenant's fixtures.
+ */
+async function seedTestRoles(
+  db: Knex,
+  tenantId: string,
+  userId: string
+): Promise<{ internal: string; client: string }> {
+  const roles = () => tenantDb(db, tenantId).table('roles');
+
+  const internalRole = await tenantDb(db, tenantId).table('user_roles')
+    .where({ user_id: userId })
+    .first<{ role_id: string }>('role_id');
+  if (!internalRole?.role_id) {
+    throw new Error('E2E setup expects the test user to hold a role');
+  }
+
+  let portalRole = await roles()
+    .where({ client: true, msp: false })
+    .first<{ role_id: string }>('role_id');
+
+  if (!portalRole?.role_id) {
+    const roleId = uuidv4();
+    await roles().insert({
+      role_id: roleId,
+      tenant: tenantId,
+      role_name: 'Test Portal User',
+      description: 'Test role for client portal users',
+      msp: false,
+      client: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    portalRole = { role_id: roleId };
+  }
+
+  return { internal: internalRole.role_id, client: portalRole.role_id };
 }
 
 /**

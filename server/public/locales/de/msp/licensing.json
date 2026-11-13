@@ -266,7 +266,11 @@
         "title": "{{tier}} ist aktiv",
         "description": "Ihre kostenpflichtige Lizenz ist auf dieser Appliance aktiv.",
         "descriptionWithExpiry": "Ihre Lizenz ist bis zum {{date}} aktiv.",
-        "badge": "Lizenziert"
+        "badge": "Lizenziert",
+        "descriptionEnding": "Ihr Abonnement wurde gekündigt. Pro bleibt bis zum {{date}} aktiv.",
+        "descriptionTermEnds": "Pro ist bis zum {{date}} aktiv, dann endet die feste Laufzeit.",
+        "descriptionPaymentFailed": "Pro ist aktiv, aber die letzte Verlängerungszahlung ist fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+        "descriptionPaymentFailedEnded": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro bleibt bis zum {{date}} aktiv."
       },
       "licenseExpired": {
         "eyebrow": "Lizenz erfordert Ihre Aufmerksamkeit",
@@ -291,6 +295,12 @@
         "title": "Sie verwenden Essentials",
         "description": "Essentials ist auf dieser Appliance aktiv. Nutzen Sie weiterhin den zentralen Funktionsumfang oder starten Sie einmalig eine 15-tägige Pro-Testversion.",
         "badge": "Essentials aktiv"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement beendet",
+        "title": "Sie nutzen jetzt die kostenlose Edition",
+        "description": "Ihr Pro-Abonnement ist beendet. Ihre Daten bleiben erhalten, und die Pro-Funktionen werden mit einem neuen Abonnement wieder aktiviert.",
+        "badge": "Kostenlose Edition"
       }
     },
     "trialCta": {
@@ -356,7 +366,31 @@
       "activateLicenseKey": "Der Lizenzschlüssel konnte nicht aktiviert werden.",
       "activateClaimCode": "Der Aktivierungscode konnte nicht aktiviert werden.",
       "startTrial": "Die Testversion konnte nicht gestartet werden.",
-      "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden."
+      "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden.",
+      "credentialRevoked": "Die Lizenz-Zugangsdaten dieser Appliance wurden widerrufen. Verbinden Sie sie mit einem neuen Aktivierungscode aus dem Lizenzportal erneut.",
+      "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}.",
+      "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt.",
+      "subscriptionEnded": "Ihr Pro-Abonnement ist beendet. Diese Appliance nutzt die kostenlose Edition.",
+      "subscriptionEndingPaymentFailed": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro endet am {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen.",
+      "subscriptionEndedPaymentFailed": "Pro wurde beendet — Zahlung fehlgeschlagen. Ihre Appliance nutzt Essentials.",
+      "resubscribeAt": "Erneut abonnieren unter {{url}}.",
+      "resubscribeToRestore": "Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen."
+    },
+    "lapse": {
+      "lapsedTitle": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
+      "endingTitle": "Ihr Pro-Abonnement wurde gekündigt.",
+      "endedOn": "Pro endete am {{date}}.",
+      "endsOn": "Pro endet am {{date}}.",
+      "dataKept": "Es wird nichts gelöscht. Ihre Daten bleiben erhalten, und die Pro-Funktionen werden nach erneutem Abonnement und Aktualisierung der Lizenz wieder aktiviert.",
+      "resubscribe": "Erneut abonnieren",
+      "termEndsTitle": "Ihre Pro-Laufzeit endet bald.",
+      "paymentFailedTitle": "Zahlung fehlgeschlagen — wir versuchen es am {{date}} erneut. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+      "paymentFailedTitleNoRetry": "Zahlung fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+      "paymentFailedEndedTitle": "Pro wurde beendet — Zahlung fehlgeschlagen. Ihre Appliance läuft mit Essentials.",
+      "paymentFailedEndingTitle": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen.",
+      "paymentFailedEndsOn": "Pro endet am {{date}}, wenn die Zahlung weiterhin fehlschlägt.",
+      "updatePaymentMethod": "Zahlungsmethode aktualisieren"
     }
   },
   "errors": {
@@ -1017,6 +1051,45 @@
       "invalid": "Dieser Kommentar konnte nicht gespeichert werden.",
       "send": "Senden",
       "cancel": "Abbrechen"
+    },
+    "upgrade": {
+      "title": "Zu AlgaPSA wechseln",
+      "description": "Nutzen Sie diesen Arbeitsbereich unabhängig mit Ihrer eigenen kostenpflichtigen AlgaPSA-Lizenz.",
+      "preserved": "Ihre Tickets, Projekte, Dokumente und der Verlauf bleiben in diesem Arbeitsbereich erhalten.",
+      "trustEnds": "Mit dem Wechsel endet der aktive Zugriff Ihres MSP und die zugewiesenen Co-Managed-Sitze werden freigegeben. Ihr MSP behält das zulässige Beteiligungsarchiv.",
+      "alreadyDeparted": "Ihre MSP-Beziehung wurde bereits beendet. Das vorhandene Archiv bleibt unverändert.",
+      "seats": "Erforderliche kostenpflichtige Technikersitze: {{count}}",
+      "hosting": "Bei diesem Wechsel bleibt Ihr Hosting unverändert. Wenn Sie diese Installation verlassen möchten, sind ein separater Export und eine Wiederherstellung erforderlich.",
+      "licenseRequired": "Aktivieren Sie vor dem Wechsel eine mandantengebundene Pro-Lizenz mit ausreichend Sitzen.",
+      "subscriptionRequired": "Vor dem Wechsel ist ein aktives, bezahltes AlgaPSA-Abonnement erforderlich, das diesem Arbeitsbereich gehört.",
+      "manageLicense": "Arbeitsbereichslizenz verwalten",
+      "running": "Der Wechsel wird durchgeführt. Diese Seite wird aktualisiert, sobald er abgeschlossen ist.",
+      "failed": "Der Wechsel wurde nicht abgeschlossen. Prüfen Sie Ihre Berechtigung und versuchen Sie es erneut.",
+      "unavailable": "Der Fortschritt des Wechsels ist vorübergehend nicht verfügbar. Aktualisieren Sie die Seite, um es erneut zu prüfen.",
+      "start": "Arbeitsbereich wechseln",
+      "refresh": "Status aktualisieren",
+      "completed": "Dieser Arbeitsbereich ist jetzt ein unabhängiger AlgaPSA-Arbeitsbereich.",
+      "openPsa": "AlgaPSA öffnen",
+      "loadError": "Der Wechselstatus konnte nicht geladen werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "startError": "Der Wechsel konnte nicht gestartet werden. Sie können die Anfrage erneut senden.",
+      "confirmTitle": "Diesen Arbeitsbereich wechseln?",
+      "confirmMessage": "Dadurch wird Ihr Arbeitsbereich zu AlgaPSA umgestellt und jede aktive MSP-Beziehung beendet. Ihre eigene kostenpflichtige Berechtigung deckt diesen Arbeitsbereich ab. Das Hosting Ihrer Daten bleibt unverändert.",
+      "cancel": "Abbrechen",
+      "billingInterval": "Abrechnungszeitraum",
+      "month": "Monatlich",
+      "year": "Jährlich",
+      "paymentProcessing": "Ihre Zahlung wird verarbeitet. Aktualisieren Sie den Status oder setzen Sie den Kauf fort, um erneut nachzusehen.",
+      "purchaseScope": "Dieser Kauf gilt für diesen Arbeitsbereich. Der MSP-Zugriff endet erst, wenn Sie den Wechsel nach der Zahlung bestätigen.",
+      "paymentFailed": "Die erste Zahlung ist fehlgeschlagen. Sie können einen neuen Checkout starten, nachdem Sie diesen unbezahlten Versuch geschlossen haben.",
+      "retryPayment": "Zahlung erneut versuchen",
+      "retryTitle": "Diese Zahlung erneut versuchen?",
+      "retryMessage": "Schließen Sie diesen fehlgeschlagenen Zahlungsversuch und öffnen Sie einen neuen Checkout. MSP-Zugriff und Co-Managed-Sitze bleiben bestehen.",
+      "billingTitle": "Ihre AlgaPSA-Abrechnung",
+      "paymentMethod": "Zahlungsmethode aktualisieren",
+      "paidSeats": "Bezahlte Technikersitze",
+      "reviewSeatChange": "Sitzänderung prüfen",
+      "billingError": "Die Abrechnung konnte nicht geöffnet werden. Aktualisieren Sie den Status und versuchen Sie es erneut.",
+      "purchaseUnconfigured": "Käufe sind für diese Bereitstellung nicht konfiguriert."
     }
   },
   "common": {

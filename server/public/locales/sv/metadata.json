@@ -220,6 +220,10 @@
       "title": "Tillgångar",
       "custody": {
         "title": "Utrustning i förvar"
+      },
+      "audits": {
+        "title": "Platsgranskningar",
+        "detailTitle": "Platsgranskning"
       }
     },
     "billing": {
@@ -635,6 +639,9 @@
       },
       "export": {
         "title": "Exportera arbetsyta"
+      },
+      "upgrade": {
+        "title": "Byt till AlgaPSA"
       }
     }
   },

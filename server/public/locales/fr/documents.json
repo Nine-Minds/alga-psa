@@ -57,6 +57,20 @@
     "product": "Produit",
     "projectPhase": "Phase du projet",
     "qty": "Qté",
+    "quoteAcceptance": {
+      "title": "Devis accepté",
+      "signedBy": "Signé par",
+      "email": "E-mail",
+      "jobTitle": "Titre",
+      "acceptedOn": "Accepté le",
+      "method": "Méthode",
+      "ipAddress": "Adresse IP",
+      "methods": {
+        "emailLink": "Lien par e-mail",
+        "portal": "Portail client",
+        "msp": "Enregistré par le MSP"
+      }
+    },
     "quoteNumber": "Devis n°",
     "quoteTitle": "DEVIS",
     "rate": "Tarif",
@@ -166,6 +180,7 @@
     "upload": {
       "fileRequired": "Choisissez un fichier avant de le téléverser.",
       "typeNotAllowed": "Ce type de fichier n’est pas autorisé.",
+      "contentMismatch": "Le contenu de ce fichier ne correspond pas à son type de fichier ; il n’a donc pas été téléversé. Vérifiez que vous avez choisi le bon fichier.",
       "sessionRequired": "Votre session est requise pour téléverser des documents. Veuillez vous reconnecter."
     }
   },

@@ -125,7 +125,15 @@ jobs:
             echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           else
-            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
+            # Manual dispatches have no github.event.before. Use the fetched
+            # default-branch commit rather than letting Nx fall back to `main`
+            # as a local revision (which checkout does not create).
+            base="${{ github.event.before }}"
+            if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              git fetch --no-tags origin main
+              base="$(git rev-parse refs/remotes/origin/main^{commit})"
+            fi
+            echo "NX_BASE=${base}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           fi
 

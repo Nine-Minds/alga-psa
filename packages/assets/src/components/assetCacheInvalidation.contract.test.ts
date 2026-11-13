@@ -4,8 +4,8 @@
  * leaves its tiles on the pre-save values until a full page reload. Saving a
  * status and moving a bundle's location both did exactly that.
  *
- * Asserted at the source level because the alternative is mounting the edit
- * form and the group drawer with a live SWR provider for one call each.
+ * The form's cache invalidation is exercised at runtime in AssetForm.customTypes.test.tsx.
+ * These remaining guards cover the group and assignee writers.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -14,11 +14,6 @@ import { describe, expect, it } from 'vitest';
 const read = (file: string) => readFileSync(resolve(__dirname, file), 'utf8');
 
 describe('asset writers drop the asset cache', () => {
-  it('the edit form invalidates the saved asset', () => {
-    const source = read('AssetForm.tsx');
-    expect(source).toMatch(/mutateCache\(matchAssetCacheKeys\(\[assetId\]\)\)/);
-  });
-
   it('the group drawer invalidates the members it moved', () => {
     const source = read('groups/AssetGroupDrawer.tsx');
     expect(source).toMatch(/matchAssetCacheKeys\(\[\.\.\.memberIds, \.\.\.after\]\)/);

@@ -5,7 +5,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import {
-  CommentAudienceError, assertReplyAudience, isCommentAudience, lockLabelledThreadAudience, nativeThreadAudience,
+  CommentAudienceError, isCommentAudience, nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
@@ -134,7 +134,17 @@ const Comment = {
   },
 
   /** Owns a transaction when given a plain connection: attachment claims take row locks with the insert. */
-  insert: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext): Promise<string> => withTransaction(knexOrTrx, async (trx) => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
+    audienceAuthor?: CommentAudienceReader | null): Promise<string> =>
+    (await Comment.insertRecord(knexOrTrx, tenant, comment, collaboration, audienceAuthor)).comment_id!,
+
+  /** Return the stored, normalized row for callers that publish it in the same transaction. */
+  /**
+   * `audienceAuthor` is the author's organization when the entry point admits seat principals
+   * (see `NativeCommentAuthor`); omitted, the author is whoever `author_type` has always implied.
+   */
+  insertRecord: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
+    audienceAuthor?: CommentAudienceReader | null): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
     try {
       logger.info('Inserting comment:', comment);
 
@@ -243,14 +253,10 @@ const Comment = {
             throw new Error('Reply visibility must match the thread root visibility');
           }
           threadId = parent.thread_id;
-          // Replies inherit a labelled thread's audience; legacy threads cost nothing extra.
-          if (parent.thread_audience != null) {
-            await lockLabelledThreadAudience(trx, tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
-            assertReplyAudience(
-              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-              { isInternal: comment.is_internal, audience: requestedAudience },
-            );
-          }
+          // Replies inherit the thread's audience; legacy threads cost nothing extra.
+          await nativeReplyAudience(trx, tenant,
+            { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+            { isInternal: comment.is_internal, audience: requestedAudience, author: audienceAuthor, ticketId: comment.ticket_id });
         }
       }
 
@@ -270,6 +276,7 @@ const Comment = {
           ? collaborationThreadAudience(Boolean(comment.is_internal), requestedAudience, collaboration, tenant)
           : await nativeThreadAudience(trx, tenant, {
               isInternal: Boolean(comment.is_internal), authorType: comment.author_type, audience: requestedAudience,
+              author: audienceAuthor, ticketId: comment.ticket_id,
             });
         await tenantScopedTable(trx, 'comment_threads', tenant).insert({
           tenant,
@@ -304,7 +311,7 @@ const Comment = {
           is_system_generated: Boolean((comment as any).is_system_generated),
           markdown_content: comment.markdown_content || '[No markdown content]',
         })
-        .returning('comment_id');
+        .returning('*');
 
       const inserted = result[0] as any;
       if (!inserted || !inserted.comment_id) {
@@ -321,14 +328,14 @@ const Comment = {
       }
 
       await reconcileCommentAttachments(trx, tenant, inserted.comment_id, comment.user_id ?? collaboration?.actorUserId!);
-      return inserted.comment_id as string;
+      return inserted as IComment;
     } catch (error) {
       logger.error('Error inserting comment:', error);
       throw error;
     }
   }),
 
-  update: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
+  update: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
     try {
       // Get existing comment first
       const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
@@ -388,10 +395,13 @@ const Comment = {
         markdown_content_length: updateData.markdown_content ? updateData.markdown_content.length : 0,
       });
 
-      await tenantScopedTable<IComment>(trx, 'comments', tenant)
+      const [updated] = await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .where('comment_id', id)
-        .update(updateData);
+        .update(updateData)
+        .returning('*');
+      if (!updated) throw new Error(`Comment with id ${id} not found`);
       if (comment.note !== undefined) await reconcileCommentAttachments(trx, tenant, id, actorId || existingComment.user_id!);
+      return updated;
     } catch (error) {
       console.error(`Error updating comment with id ${id}:`, error);
       throw error;
@@ -399,16 +409,15 @@ const Comment = {
   }),
 
   delete: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
+    const existing = await Comment.get(trx, tenant, id);
+    if (existing) await Comment.deleteRecord(trx, tenant, existing);
+  }),
+
+  /** Delete a row already loaded by the command, retaining thread/attachment semantics. */
+  deleteRecord: (knexOrTrx: Knex | Knex.Transaction, tenant: string, existingComment: IComment): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
+    const id = existingComment.comment_id;
     try {
-      const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
-        .select('*')
-        .where('comment_id', id)
-        .first();
-
-      if (!existingComment) {
-        return;
-      }
-
+      if (existingComment.tenant !== tenant || !id) throw new Error('Invalid comment identity');
 
       await withdrawCommentAttachments(trx, tenant, id);
 

@@ -14,6 +14,9 @@ const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
+// The role floors have their own suite (packages/db userRoleFloor.test.ts);
+// here they allow everything unless a case says otherwise.
+const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true })));
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
@@ -49,6 +52,15 @@ vi.mock('@alga-psa/db', () => ({
     table: (t: string) => conn(t),
     unscoped: (t: string, _reason?: string) => conn(t),
   }),
+  assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
+  isUserRoleFloorRejected: (result: any) => result?.ok === false,
+  isUserRoleFloorError: (error: any) => error?.name === 'UserRoleFloorError',
+  UserRoleFloorError: class UserRoleFloorError extends Error {
+    readonly name = 'UserRoleFloorError';
+    constructor(message: string, readonly violation: string) {
+      super(message);
+    }
+  },
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -452,7 +464,7 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'contract_template_price_sets',
   'escalation_managers', 'external_files', 'external_tax_imports',
   'invoice_template_assignments', 'project_tasks', 'projects',
-  'quote_activities', 'quote_document_template_assignments', 'quote_items',
+  'quote_activities', 'quote_decisions', 'quote_document_template_assignments', 'quote_items',
   'quotes', 'service_categories', 'sla_audit_log', 'statuses', 'tag_mappings',
   'task_resources', 'ticket_resources', 'time_entries', 'time_sheets',
   'authorization_bundles', 'authorization_bundle_revisions',

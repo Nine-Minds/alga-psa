@@ -238,6 +238,7 @@ export async function importHuduAssetCore(
   const status = huduImportAssetStatus();
 
   let createdAssetId: string;
+  let createdAssetTag: string;
   try {
     const created = await createAssetRecord(
       knex,
@@ -259,6 +260,7 @@ export async function importHuduAssetCore(
       { requireCustomAttributes: false }
     );
     createdAssetId = created.asset_id;
+    createdAssetTag = created.asset_tag;
   } catch (error) {
     return { success: false, error: toErrorMessage(error), code: 'create_failed' };
   }
@@ -283,7 +285,7 @@ export async function importHuduAssetCore(
         data: {
           asset_id: createdAssetId,
           mapping_id: mappingResult.mapping.id,
-          asset_tag: assetTag,
+          asset_tag: createdAssetTag,
           asset_type: assetType,
           status,
           ...(projection.skipped.length > 0 ? { projection_skipped: projection.skipped } : {}),

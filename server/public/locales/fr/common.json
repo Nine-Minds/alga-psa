@@ -56,6 +56,19 @@
     "manageLicense": "Gérer la licence",
     "ariaLabel": "Statut de la licence",
     "dismiss": "Masquer",
+    "subscriptionEnding": "Votre abonnement Pro a été annulé. Pro prend fin le {{date}}. Réabonnez-vous pour conserver Pro.",
+    "subscriptionEndingNoDate": "Votre abonnement Pro a été annulé. Réabonnez-vous pour conserver Pro.",
+    "subscriptionLapsed": "Vous utilisez maintenant l'édition gratuite. Réabonnez-vous pour rétablir Pro.",
+    "resubscribe": "Se réabonner",
+    "termEnds": "Votre accès Pro se termine le {{date}}. Renouvelez pour conserver Pro.",
+    "termEndsNoDate": "Votre période Pro touche à sa fin. Renouvelez pour conserver Pro.",
+    "paymentFailed": "Échec du paiement — nouvelle tentative le {{date}}. Mettez à jour votre moyen de paiement pour conserver Pro.",
+    "paymentFailedNoRetry": "Échec du paiement. Mettez à jour votre moyen de paiement pour conserver Pro.",
+    "paymentFailedEndsOn": "Pro prend fin le {{date}} si le paiement échoue encore.",
+    "paymentFailedEnded": "Pro a pris fin — échec du paiement. Votre appliance fonctionne avec Essentials.",
+    "paymentFailedEndedEnding": "Votre abonnement Pro a pris fin — échec du paiement. Pro reste actif jusqu’au {{date}}. Réabonnez-vous pour conserver Pro.",
+    "paymentFailedEndedEndingNoDate": "Votre abonnement Pro a pris fin — échec du paiement. Réabonnez-vous pour conserver Pro.",
+    "updatePaymentMethod": "Mettre à jour le moyen de paiement",
     "licenseExpiresIn_few": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
     "licenseExpiresIn_many": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
     "trialDaysRemaining_few": "Essai Pro actif — {{count}} jours restants.",
@@ -741,6 +754,7 @@
       "pending": "En attente",
       "error": "Impossible de téléverser le document",
       "fileError": "Impossible de téléverser le fichier",
+      "fileTooLarge": "Ce fichier fait {{size}}. La limite actuelle est de {{limit}} par fichier.",
       "associatedEntityTypeLabel": "Associer à",
       "noAssociation": "Aucune association",
       "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser.",
@@ -752,7 +766,16 @@
       "emptyDropMessage": "Aucun fichier n'a été reçu. Enregistrez la pièce jointe ou l'e-mail sur votre ordinateur, puis glissez le fichier enregistré ici ou utilisez « Parcourir les fichiers ».",
       "uploadInProgress": "Un téléversement est déjà en cours. Attendez qu'il se termine avant d'ajouter d'autres fichiers.",
       "refreshFailed": "Vos fichiers ont été téléversés, mais la liste des documents n'a pas pu être actualisée. Rechargez la page pour les voir.",
-      "clearResults": "Effacer les résultats"
+      "clearResults": "Effacer les résultats",
+      "typeNotAllowed": "Ce type de fichier n'est pas autorisé. Choisissez un autre fichier.",
+      "permissionDenied": "Vous n'avez pas l'autorisation de téléverser des documents ici.",
+      "networkFailed": "La connexion a été interrompue et le téléversement n'a pas pu reprendre. Vérifiez votre connexion et réessayez.",
+      "sessionGone": "Ce téléversement a expiré avant d'être terminé. Relancez-le.",
+      "cancelled": "Annulé",
+      "cancelUpload": "Annuler le téléversement",
+      "tryAgain": "Réessayer",
+      "progress": "{{committed}} sur {{total}}",
+      "progressLabel": "Progression du téléversement de {{name}}"
     },
     "folders": {
       "root": "Racine",
@@ -766,7 +789,8 @@
       "collapse": "Replier les dossiers",
       "allDocuments": "Tous les documents",
       "expand": "Afficher les dossiers",
-      "deleteTitle": "Supprimer le dossier"
+      "deleteTitle": "Supprimer le dossier",
+      "show": "Afficher les dossiers"
     },
     "folderManager": {
       "title": "Créer un nouveau dossier",
@@ -828,6 +852,28 @@
     "huduTab": {
       "documentsTabLabel": "Documents",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Utilisateur",
+    "selectOrCreate": "Sélectionnez un document ou créez-en un nouveau.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimer",
+      "edit": "Modifier",
+      "upload": "Téléverser",
+      "closePreview": "Fermer l’aperçu",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement..."
+    },
+    "viewMode": {
+      "grid": "Grille",
+      "list": "Liste"
+    },
+    "unsavedChanges": {
+      "title": "Modifications non enregistrées",
+      "message": "Voulez-vous vraiment annuler ? Les modifications non enregistrées seront perdues.",
+      "confirm": "Abandonner les modifications",
+      "cancel": "Continuer la modification"
     }
   },
   "fields": {
@@ -860,7 +906,22 @@
       "verify": "Vérifier",
       "title": "Rien de plus simple",
       "instructions": "Saisissez le code à 6 chiffres de votre application d’authentification.",
-      "digitsLeft": "{{count}} chiffres restants"
+      "digitsLeft": "{{count}} chiffres restants",
+      "enroll": {
+        "title": "Configurer l’authentification à deux facteurs",
+        "instructions": "Votre organisation exige l’authentification à deux facteurs. Scannez le code QR avec une application d’authentification, puis saisissez le code à 6 chiffres.",
+        "qrAlt": "Code QR pour votre application d’authentification",
+        "manualKey": "Ou saisissez cette clé manuellement :",
+        "cancel": "Annuler",
+        "errors": {
+          "invalid_credentials": "Votre adresse e-mail ou votre mot de passe n’est plus valide. Veuillez vous reconnecter.",
+          "enrollment_not_required": "La configuration n’est pas nécessaire pour ce compte. Veuillez vous reconnecter.",
+          "invalid_code": "Ce code n’est pas valide. Veuillez réessayer.",
+          "rate_limited": "Trop de tentatives. Veuillez patienter quelques minutes et réessayer.",
+          "captcha_required": "Veuillez d’abord effectuer la vérification sur la page de connexion.",
+          "unavailable": "La configuration est indisponible pour le moment. Veuillez réessayer."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
@@ -1411,7 +1472,16 @@
     "unnamedTeam": "Équipe sans nom",
     "userPicker": "Sélecteur d’utilisateurs",
     "noUsersFound": "Aucun utilisateur trouvé",
-    "contactRemoteLocation": "À distance"
+    "contactRemoteLocation": "À distance",
+    "selectBoard": "Sélectionner un tableau",
+    "activeBoards": "Tableaux actifs",
+    "inactiveBoards": "Tableaux inactifs",
+    "allBoards": "Tous les tableaux",
+    "boardPicker": "Sélecteur de tableaux",
+    "filterByStatus": "Filtrer par statut",
+    "statusFilter": "Filtre de statut",
+    "boards": "Tableaux",
+    "inactiveSuffix": "(Inactif)"
   },
   "serviceTypeSelect": {
     "placeholder": "Sélectionner un type de service...",
@@ -1619,7 +1689,9 @@
       "ticketTitle": "Imprimer les étiquettes de travail",
       "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",
       "unnamedAsset": "Actif sans nom",
-      "useTemplate": "Utiliser {{template}}"
+      "useTemplate": "Utiliser {{template}}",
+      "copiesPerAsset": "Exemplaires par actif",
+      "adjacentCopies": "Les exemplaires de chaque actif sont imprimés ensemble."
     }
   },
   "deleteEntity": {
@@ -1712,7 +1784,14 @@
       "assigned": "Attribué :",
       "performedBy": "par {{name}}",
       "internal": "Interne"
-    }
+    },
+    "title": "Notifications",
+    "reconnectingToServer": "Reconnexion au serveur...",
+    "refresh": "Actualiser",
+    "markAllAsRead": "Tout marquer comme lu",
+    "markAllRead": "Tout marquer comme lu",
+    "emptyTitle": "Aucune notification",
+    "emptyDescription": "Vous êtes à jour !"
   },
   "importConflicts": {
     "title": "Résoudre les conflits d'import",

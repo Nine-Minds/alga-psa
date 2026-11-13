@@ -1,13 +1,13 @@
 /**
- * Quote discount allocation and the row -> allocation-input derivation live in
- * `@alga-psa/core` (the client portal and billing share them there). This
- * module re-exports them so the workflow runtime's quote conversion and
+ * Pure quote discount allocation and the row -> allocation-input derivation
+ * live in `@alga-psa/core`, which backs billing, the client portal, and shared
+ * workflow consumers. This module re-exports the single implementation so
  * existing `@alga-psa/shared/billingClients/quoteDiscountAllocation` imports
- * keep one implementation.
+ * keep their path.
  */
 export {
-  allocateIncludedQuoteDiscounts,
   allocateQuoteDiscounts,
+  allocateIncludedQuoteDiscounts,
   buildQuoteDiscountAllocationInputs,
   rowGrossAmount,
   type DiscountBaseItemInput,

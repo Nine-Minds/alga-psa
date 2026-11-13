@@ -1,13 +1,21 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
+import { currencyFractionDigits, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import type { IAssetCustody, IRmaCase, IRmaEvent } from '@alga-psa/types';
-import { recordCustodyEvent } from '@alga-psa/assets/lib/custody/recordCustodyEvent';
-import { closeCustodyEpisode } from '@alga-psa/assets/lib/custody/closeCustodyEpisode';
+import {
+  closeCustodyEpisodeWithAuthorization,
+  recordCustodyEventWithAuthorization,
+} from '@alga-psa/assets/lib/custody/writeAuthorization';
 import { loadCustody } from '@alga-psa/assets/lib/custody/shared';
+import {
+  associateAdvanceReturnWithCustody,
+  lockEpisodesForUnlinkedAdvanceReturn,
+} from '@alga-psa/assets/lib/custody/advanceWarrantyAssociation';
 import { applyWarrantyReplacement } from '@alga-psa/assets/lib/warranty/applyWarrantyReplacement';
 import { assertWarrantyTransition, isAssetTracked, RmaTransitionError, type WarrantyAction } from './stateMachine';
-import { recordRmaEvent } from './recordRmaEvent';
+import { mapRmaEventRow, recordRmaEvent } from './recordRmaEvent';
 import type {
   ApproveWarrantyClaimInput,
   CancelWarrantyClaimInput,
@@ -17,8 +25,11 @@ import type {
   OpenWarrantyClaimInput,
   ReceiveVendorReplacementInput,
   RecordVendorCreditInput,
+  RecordVendorNonReturnChargeInput,
   RecordVendorRepairInput,
+  ConfirmVendorReceiptInput,
   ReturnDeviceToClientInput,
+  ShipDeadUnitToVendorInput,
   ShipToVendorInput,
 } from './warrantySchemas';
 
@@ -28,12 +39,15 @@ import type {
  * writes exactly one `rma_events` row, and returns what the caller must publish after commit.
  *
  * HARD RULE: this module never imports or calls the stock movement primitive, never reads `rmaServiceId`, and
- * never touches `stock_units` / `stock_movements` / `stock_levels`. Custody is written only through C4's cores
- * (`recordCustodyEvent`) and the one C5 extension (`closeCustodyEpisode(..., 'disposed')`).
+ * never touches `stock_units` / `stock_movements` / `stock_levels`. Custody updates use transport-neutral
+ * authorization boundaries over C4's custody core and the C5 `closeCustodyEpisode` extension (`'disposed'` and
+ * `'returned_to_vendor'` for the advance-replacement dead-unit leg), keeping record-level authorization in the RMA
+ * transaction.
  */
 
 export type WarrantyErrorCode =
   | 'not_found'
+  | 'ticket_not_found'
   | 'unit_tracked'
   | 'stock_tracked_asset'
   | 'not_client_owned'
@@ -42,7 +56,8 @@ export type WarrantyErrorCode =
   | 'vendor_required'
   | 'location_required'
   | 'invalid_transition'
-  | 'warranty_review_close';
+  | 'warranty_review_close'
+  | 'wrong_track';
 
 export class WarrantyError extends Error {
   constructor(public readonly code: WarrantyErrorCode, message: string) {
@@ -53,7 +68,7 @@ export class WarrantyError extends Error {
 
 export interface WarrantyCustodyEffect {
   custody: IAssetCustody;
-  eventType: 'shipped' | 'received' | 'returned' | 'disposed';
+  eventType: 'shipped' | 'received' | 'returned' | 'disposed' | 'updated';
   occurredAt: string;
   assetStatusChange?: { assetId: string; before: string; after: string } | null;
 }
@@ -74,6 +89,8 @@ export interface WarrantyTransitionResult {
   assetEffect?: WarrantyAssetEffect;
   /** For the vendor-case external-link mirror and ticket display. */
   serialNumber?: string | null;
+  /** An idempotent retry: nothing was written, so the caller must not publish. */
+  noop?: boolean;
 }
 
 export interface WarrantyCoreOptions {
@@ -81,6 +98,19 @@ export interface WarrantyCoreOptions {
   authorizeAsset?: (assetId: string, clientId: string | null) => Promise<void>;
 }
 
+/**
+ * Record-level ticket check supplied by the layer that can see tickets. Throw to refuse. The open core turns ANY
+ * throw into the same "Ticket not found." refusal a missing ticket gets, so a denial reveals nothing about the ticket.
+ */
+export type AuthorizeTicket = (trx: Knex.Transaction, ticketId: string, action: 'read') => Promise<void>;
+
+export interface OpenWarrantyClaimOptions extends WarrantyCoreOptions {
+  /**
+   * REQUIRED, with no default and no no-op: whoever opens a claim must say how the ticket is authorized. Runs inside
+   * the transaction on the final resolved ticket id (open custody's ticket, else the supplied one), before any write.
+   */
+  authorizeTicket: AuthorizeTicket;
+}
 
 async function lockWarrantyRma(trx: Knex.Transaction, tenant: string, rmaId: string, options: WarrantyCoreOptions): Promise<IRmaCase> {
   const rma = (await tenantDb(trx, tenant).table('rma_cases').where({ rma_id: rmaId }).forUpdate().first()) as IRmaCase | undefined;
@@ -95,7 +125,7 @@ async function lockWarrantyRma(trx: Knex.Transaction, tenant: string, rmaId: str
 
 function guard(rma: IRmaCase, action: WarrantyAction) {
   try {
-    return assertWarrantyTransition(rma.status, action);
+    return assertWarrantyTransition(rma.status, action, rma.rma_type);
   } catch (error) {
     if (error instanceof RmaTransitionError) {
       throw new WarrantyError(error.code, error.message);
@@ -185,7 +215,7 @@ export async function openWarrantyClaimCore(
   tenant: string,
   actor: string,
   input: OpenWarrantyClaimInput,
-  options: WarrantyCoreOptions = {}
+  options: OpenWarrantyClaimOptions
 ): Promise<{ rma: IRmaCase; event: IRmaEvent; serialNumber: string | null }> {
   const db = tenantDb(trx, tenant);
   const asset = await db
@@ -204,8 +234,16 @@ export async function openWarrantyClaimCore(
   await vendorName(trx, tenant, input.vendor_id);
 
   const open = await db.table('asset_custody').where({ asset_id: input.asset_id }).whereNull('closed_at').select('custody_id', 'ticket_id').first();
+  const ticketId: string | null = open?.ticket_id ?? input.ticket_id ?? null;
+  if (ticketId) {
+    // A denied ticket must be indistinguishable from a missing one (same error, same key, no ticket data).
+    try {
+      await options.authorizeTicket(trx, ticketId, 'read');
+    } catch {
+      throw new WarrantyError('ticket_not_found', 'Ticket not found.');
+    }
+  }
   const rmaNumber = await SharedNumberingService.getNextNumber('RMA', { knex: trx, tenant });
-  const ticketId = open?.ticket_id ?? input.ticket_id ?? null;
 
   const [row] = await db
     .table('rma_cases')
@@ -323,7 +361,7 @@ export async function shipToVendorCore(
   }
   const occurredAt = input.occurred_at ?? new Date().toISOString();
   const custodyNote = [`${input.carrier} ${input.tracking_number}`, `RMA ${rma.rma_number}`, input.note].filter(Boolean).join(' · ');
-  const shipped = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+  const shipped = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
     event_type: 'shipped',
     counterparty: name ?? 'Vendor',
     occurred_at: occurredAt,
@@ -361,7 +399,7 @@ async function receiveBackIfWithVendor(
   }
   const note = [input.inbound_carrier && `${input.inbound_carrier} ${input.inbound_tracking_number ?? ''}`.trim(), `RMA ${rma.rma_number}`, input.note]
     .filter(Boolean).join(' · ');
-  const received = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+  const received = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
     event_type: 'received',
     location_id: input.location_id,
     bin: input.bin ?? null,
@@ -397,9 +435,15 @@ export async function receiveVendorReplacementCore(
     inbound_received_at: at,
     replacement_serial_number: input.replacement_serial_number,
     replacement_received_at: at,
+    // Advance track only; `cleanPatch` drops undefined, so an omitted value leaves the approval's `return_by` untouched.
+    ...(rma.rma_type === 'advance_replacement' ? { return_by: input.return_by } : {}),
   }, {
     occurredAt: at, carrier: input.inbound_carrier, trackingNumber: input.inbound_tracking_number, note: input.note,
-    payload: { before: replaced.before, after: replaced.after },
+    payload: {
+      before: replaced.before,
+      after: replaced.after,
+      ...(rma.rma_type === 'advance_replacement' && input.return_by ? { return_by: input.return_by } : {}),
+    },
   }, {
     custodyEffects,
     assetEffect: { assetId: rma.asset_id, before: replaced.before, after: replaced.after, changedPaths: replaced.changedPaths },
@@ -431,7 +475,7 @@ export async function recordVendorCreditCore(
   const custody = await loadOpenCustody(trx, tenant, rma);
   const custodyEffects: WarrantyCustodyEffect[] = [];
   if (custody) {
-    const closed = await closeCustodyEpisode(trx, tenant, actor, custody.custody_id, 'disposed', {
+    const closed = await closeCustodyEpisodeWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, 'disposed', {
       note: input.note, rmaId: rma.rma_id, rmaNumber: rma.rma_number,
     });
     custodyEffects.push({ custody: closed.custody, eventType: 'disposed', occurredAt: closed.occurredAt });
@@ -439,6 +483,71 @@ export async function recordVendorCreditCore(
   return conclude(trx, tenant, actor, rma, 'record_credit', {}, {
     occurredAt: input.occurred_at, note: input.note, payload: { custody_closed: Boolean(custody) },
   }, { custodyEffects });
+}
+
+// A late non-return charge resolves the vendor return obligation. The locked case and its append-only event
+// commit together; no shipment, receipt, custody, inventory, or client-billing event is fabricated.
+export async function recordVendorNonReturnChargeCore(
+  trx: Knex.Transaction, tenant: string, actor: string, rmaId: string, input: RecordVendorNonReturnChargeInput, options: WarrantyCoreOptions = {}
+): Promise<WarrantyTransitionResult> {
+  const rma = await lockWarrantyRma(trx, tenant, rmaId, options);
+  guard(rma, 'charge_vendor_non_return');
+  const timeZone = await resolveEffectiveTimeZone(trx, tenant, actor);
+  const todayYmd = toCalendarDateStringInTimeZone(new Date(), timeZone);
+  const overdue = await trx('rma_cases')
+    .where({ tenant, rma_id: rmaId })
+    .where('return_by', '<', todayYmd)
+    .first('rma_id');
+  if (!rma.return_by || !overdue) {
+    throw new WarrantyError('invalid_transition', 'A vendor non-return charge can only be recorded after the return deadline.');
+  }
+  // Custody is authoritative when older callers or historical data left the RMA status behind.
+  // Shipment and charge both lock the RMA first, then custody, so only one can commit.
+  let custodyRows: { custody_id: string; state: string; close_reason: string | null }[];
+  if (rma.custody_id) {
+    custodyRows = await trx('asset_custody')
+      .where({ tenant, custody_id: rma.custody_id, asset_id: rma.asset_id })
+      .forUpdate()
+      .select('custody_id', 'state', 'close_reason');
+    if (!custodyRows.length) {
+      throw new WarrantyError('invalid_transition', 'The linked custody episode is missing or does not belong to this asset.');
+    }
+  } else if (rma.asset_id) {
+    // Recovery may use the current active episode or episodes created during this claim's lifetime.
+    // A closed episode from before the claim cannot block a client-held return; multiple matches are ambiguous.
+    if (!rma.created_at) throw new WarrantyError('invalid_transition', 'The unlinked advance claim has no creation date for custody resolution.');
+    custodyRows = await lockEpisodesForUnlinkedAdvanceReturn(trx, tenant, {
+      asset_id: rma.asset_id,
+      created_at: rma.created_at,
+    });
+    if (custodyRows.length > 1) {
+      throw new WarrantyError('invalid_transition', 'Multiple custody episodes match this unlinked advance return. Resolve the association before charging.');
+    }
+    if (custodyRows[0]) {
+      const associated = await associateAdvanceReturnWithCustody(trx, tenant, rma.rma_id, custodyRows[0].custody_id);
+      if (!associated) throw new WarrantyError('invalid_transition', 'The advance warranty claim changed while its custody episode was being resolved.');
+    }
+  } else {
+    custodyRows = [];
+  }
+  const custodyIds = custodyRows.map((row: any) => row.custody_id);
+  const physicalMovement = custodyIds.length > 0
+    ? await trx('asset_custody_events')
+        .where({ tenant })
+        .whereIn('custody_id', custodyIds)
+        .whereIn('event_type', ['shipped', 'returned'])
+        .first('event_id')
+    : null;
+  if (physicalMovement || custodyRows.some((row: any) => row.state === 'with_vendor' || row.close_reason === 'returned_to_vendor' || row.close_reason === 'returned_to_client')) {
+    throw new WarrantyError('invalid_transition', 'A non-return charge cannot be recorded after the unit was shipped or returned.');
+  }
+  const digits = currencyFractionDigits(input.currency_code);
+  const amount = Number(input.amount).toFixed(digits);
+  return conclude(trx, tenant, actor, rma, 'charge_vendor_non_return', { closed_reason: 'resolved' }, {
+    occurredAt: input.occurred_at,
+    note: input.note,
+    payload: { resolution: 'vendor_non_return_charge', amount, currency_code: input.currency_code },
+  });
 }
 
 // --- 12. return to client ---------------------------------------------------------------------------------
@@ -453,7 +562,7 @@ export async function returnDeviceToClientCore(
   const custodyEffects: WarrantyCustodyEffect[] = [];
   let assetStatusChange: WarrantyCustodyEffect['assetStatusChange'] = null;
   if (custody) {
-    const returned = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+    const returned = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
       event_type: 'returned',
       counterparty: input.counterparty,
       occurred_at: input.occurred_at,
@@ -482,3 +591,121 @@ export async function closeWarrantyRmaCore(
   });
 }
 
+
+// --- 15/16. advance-replacement dead-unit leg (alga-2026-0002683 follow-up) -------------------------------------
+//
+// Which device is this? On the advance track `receive_replacement` writes the replacement's serial onto the SAME
+// asset row (applyWarrantyReplacement), while the open custody episode is keyed by that asset id and carries no
+// serial of its own. So after the replacement arrives, "the asset" is the new unit but the unit sitting in the
+// office, and the one the custody episode physically describes, is the DEAD unit. The dead unit's serial survives
+// in the `replacement_received` rma_event payload (`before.serial_number`); these cores read it from there and write
+// it into the custody event note, the RMA event payload and the custody close note, so a human reading custody
+// history sees the dead unit (old serial) go to the vendor. Nothing here reads or writes the asset row.
+
+/** The serial of the unit that was replaced, from the case's own `replacement_received` event; null if never recorded. */
+async function deadUnitSerial(trx: Knex.Transaction, tenant: string, rmaId: string): Promise<string | null> {
+  const row = await tenantDb(trx, tenant)
+    .table('rma_events')
+    .where({ rma_id: rmaId, event_type: 'replacement_received' })
+    .orderBy('recorded_at', 'desc')
+    .select('payload')
+    .first();
+  const before = row?.payload && typeof row.payload === 'object' ? (row.payload as { before?: { serial_number?: unknown } }).before : undefined;
+  const serial = typeof before?.serial_number === 'string' ? before.serial_number.trim() : '';
+  return serial || null;
+}
+
+const deadUnitLabel = (serial: string | null): string => `Dead unit S/N ${serial ?? 'not recorded'}`;
+
+export async function shipDeadUnitToVendorCore(
+  trx: Knex.Transaction, tenant: string, actor: string, rmaId: string, input: ShipDeadUnitToVendorInput, options: WarrantyCoreOptions = {}
+): Promise<WarrantyTransitionResult> {
+  const rma = await lockWarrantyRma(trx, tenant, rmaId, options);
+
+  // A retry of the same shipment (same tracking number) is a no-op, not an error and not a second shipment.
+  // Any other call from dead_unit_owed falls through to the guard below and is refused.
+  if (
+    rma.status === 'dead_unit_owed' && rma.rma_type === 'advance_replacement' &&
+    rma.outbound_tracking_number && rma.outbound_tracking_number.trim().toLowerCase() === input.tracking_number.trim().toLowerCase()
+  ) {
+    const shipped = await tenantDb(trx, tenant)
+      .table('rma_events')
+      .where({ rma_id: rma.rma_id, event_type: 'dead_unit_shipped' })
+      .orderBy('recorded_at', 'desc')
+      .first();
+    if (shipped) {
+      return { rma, previousStatus: rma.status, changedFields: [], event: mapRmaEventRow(shipped), custodyEffects: [], noop: true };
+    }
+  }
+
+  guard(rma, 'ship_dead_unit_to_vendor');
+  if (!rma.vendor_id) throw new WarrantyError('vendor_required', 'The case has no vendor to ship the dead unit to.');
+  const name = await vendorName(trx, tenant, rma.vendor_id);
+  const custody = await loadOpenCustody(trx, tenant, rma);
+  if (!custody) {
+    throw new WarrantyError('no_custody', 'The dead unit is not in custody, so it cannot be shipped. If the client holds it, they return it to the vendor directly.');
+  }
+  if (custody.state !== 'in_office') {
+    throw new WarrantyError('custody_wrong_state', 'The dead unit is already out of the office.');
+  }
+  const serial = await deadUnitSerial(trx, tenant, rma.rma_id);
+  const occurredAt = input.occurred_at ?? new Date().toISOString();
+  const custodyNote = [deadUnitLabel(serial), `${input.carrier} ${input.tracking_number}`, `RMA ${rma.rma_number}`, input.note].filter(Boolean).join(' · ');
+  const shipped = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
+    event_type: 'shipped',
+    counterparty: name ?? 'Vendor',
+    occurred_at: occurredAt,
+    note: custodyNote,
+    document_ids: [],
+  });
+  return conclude(trx, tenant, actor, rma, 'ship_dead_unit_to_vendor', {
+    custody_id: custody.custody_id,
+    outbound_carrier: input.carrier,
+    outbound_tracking_number: input.tracking_number,
+    outbound_shipped_at: occurredAt,
+    return_by: input.return_by,
+  }, {
+    occurredAt, carrier: input.carrier, trackingNumber: input.tracking_number, note: input.note,
+    payload: {
+      vendor_id: rma.vendor_id,
+      custody_id: custody.custody_id,
+      dead_unit_serial_number: serial,
+      replacement_serial_number: rma.replacement_serial_number ?? null,
+      return_by: input.return_by ?? rma.return_by ?? null,
+    },
+  }, {
+    custodyEffects: [{ custody: shipped.custody, eventType: 'shipped', occurredAt: shipped.event.occurred_at }],
+  });
+}
+
+export async function confirmVendorReceiptCore(
+  trx: Knex.Transaction, tenant: string, actor: string, rmaId: string, input: ConfirmVendorReceiptInput, options: WarrantyCoreOptions = {}
+): Promise<WarrantyTransitionResult> {
+  const rma = await lockWarrantyRma(trx, tenant, rmaId, options);
+  guard(rma, 'confirm_vendor_receipt');
+  const custody = await loadOpenCustody(trx, tenant, rma);
+  if (!custody) throw new WarrantyError('no_custody', 'The dead unit has no open custody episode to close.');
+  if (custody.state !== 'with_vendor') {
+    throw new WarrantyError('custody_wrong_state', 'The dead unit is not with the vendor, so its receipt cannot be confirmed.');
+  }
+  const shipped = await tenantDb(trx, tenant)
+    .table('rma_events')
+    .where({ rma_id: rma.rma_id, event_type: 'dead_unit_shipped' })
+    .orderBy('recorded_at', 'desc')
+    .select('payload')
+    .first();
+  const recorded = shipped?.payload && typeof shipped.payload === 'object' ? (shipped.payload as { dead_unit_serial_number?: unknown }).dead_unit_serial_number : undefined;
+  const serial = typeof recorded === 'string' && recorded ? recorded : null;
+  // Closed as returned to the VENDOR. The C4 `returned` event is never used here: it always means returned_to_client.
+  const closed = await closeCustodyEpisodeWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, 'returned_to_vendor', {
+    note: [deadUnitLabel(serial), 'received by vendor', input.note].filter(Boolean).join(' · '),
+    rmaId: rma.rma_id,
+    rmaNumber: rma.rma_number,
+  });
+  return conclude(trx, tenant, actor, rma, 'confirm_vendor_receipt', { closed_reason: 'resolved' }, {
+    occurredAt: input.occurred_at, note: input.note,
+    payload: { custody_id: custody.custody_id, close_reason: 'returned_to_vendor', dead_unit_serial_number: serial },
+  }, {
+    custodyEffects: [{ custody: closed.custody, eventType: 'updated', occurredAt: closed.occurredAt }],
+  });
+}

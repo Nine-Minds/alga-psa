@@ -1,0 +1,105 @@
+{
+  "capturedAt": "2026-11-02T17:45:56.023626+00:00",
+  "testedCommit": "83fdeb1ee11443303c7fdcda537b07de312cf546",
+  "browserChecks": {
+    "existingPane": "c8403826-ff91-488f-aa28-8447b4f96c06",
+    "freshPane": "8a6c720f-69bb-4b23-a299-12030b892f74",
+    "navigation": "local diagnostic file rendered in both panes",
+    "visiblePainting": "DOM reported visible elements; screenshots contain thousands of colors",
+    "screenshotCapture": "passed in both panes",
+    "typingAndClicking": "passed in both panes; result text reflects entered value",
+    "ownership": "both panes confirmed within project 3a1d00ee-04c2-4bad-8dfe-4d0458245c41; no host mismatch; active user space unchanged",
+    "evidencePrefix": "current-"
+  },
+  "applicationOriginProbe": "current-service-probe.json",
+  "packageChecks": [
+    {
+      "name": "assets typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck",
+        "--workspace=@alga-psa/assets"
+      ],
+      "exitStatus": 0,
+      "log": "current-assets-typecheck.txt"
+    },
+    {
+      "name": "assets build",
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--workspace=@alga-psa/assets"
+      ],
+      "exitStatus": 0,
+      "log": "current-assets-build.txt"
+    },
+    {
+      "name": "inventory typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck",
+        "--workspace=@alga-psa/inventory"
+      ],
+      "exitStatus": 0,
+      "log": "current-inventory-typecheck.txt"
+    },
+    {
+      "name": "inventory build",
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--workspace=@alga-psa/inventory"
+      ],
+      "exitStatus": 0,
+      "log": "current-inventory-build.txt"
+    }
+  ],
+  "images": [
+    {
+      "file": "current-existing-after.png",
+      "sha256": "cb596a719d56095deb5baf187ac53e96861a5612a0de0572c03e1959b5062181",
+      "format": "PNG image data, 1920 x 744, 8-bit/color RGB, non-interlaced"
+    },
+    {
+      "file": "current-fresh-after.png",
+      "sha256": "720d9bb9375096751e70cbd4d94657c574a30cba84cceac5390fbfc646c44b69",
+      "format": "PNG image data, 1920 x 1084, 8-bit/color RGB, non-interlaced"
+    }
+  ],
+  "flows": [
+    {
+      "id": 1,
+      "status": "NOT RUN"
+    },
+    {
+      "id": 2,
+      "status": "NOT RUN"
+    },
+    {
+      "id": 3,
+      "status": "NOT RUN"
+    },
+    {
+      "id": 4,
+      "status": "NOT RUN"
+    },
+    {
+      "id": 5,
+      "status": "NOT RUN"
+    },
+    {
+      "id": 6,
+      "status": "NOT RUN"
+    }
+  ],
+  "appStarted": false,
+  "limitations": [
+    "Required origin has no listener.",
+    "Original browser ERR_INSUFFICIENT_RESOURCES root cause remains unresolved.",
+    "No product flows were live-verified."
+  ]
+}

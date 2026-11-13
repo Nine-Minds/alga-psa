@@ -30,3 +30,22 @@ export function verifyAuthenticator( token: string, secret: string ): boolean {
         token: token
     });
 }
+
+export interface TotpEnrollmentMaterial {
+    /** Base32 secret; shown to the user for manual entry. */
+    secret: string;
+    otpauthUrl: string;
+    /** PNG data URL of the QR code for `otpauthUrl`. */
+    qrDataUrl: string;
+}
+
+/** Base32 secrets produced by `generateTotpEnrollment` (20 random bytes -> 32 chars). */
+export const TOTP_SECRET_PATTERN = /^[A-Z2-7]{32}$/;
+
+export async function generateTotpEnrollment(accountLabel: string, issuer = 'Alga PSA'): Promise<TotpEnrollmentMaterial> {
+    const generated = speakeasy.generateSecret({ length: 20, symbols: false, name: accountLabel, issuer });
+    const secret = generated.base32;
+    const otpauthUrl = speakeasy.otpauthURL({ secret, label: accountLabel, issuer, encoding: 'base32' });
+    const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
+    return { secret, otpauthUrl, qrDataUrl };
+}

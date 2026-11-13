@@ -19,6 +19,14 @@ interface DateRangePickerProps {
   datePickerClassName?: string;
   fromPlaceholder?: string;
   toPlaceholder?: string;
+  disabled?: boolean;
+  /** Latest selectable day for either bound (inclusive). */
+  maxDate?: Date;
+  /**
+   * Keep the span forwards: the end cannot be picked before the start, nor the
+   * start after the end. Off by default so existing callers are unchanged.
+   */
+  constrainOrder?: boolean;
 }
 
 export const DateRangePicker = ({
@@ -31,7 +39,12 @@ export const DateRangePicker = ({
   datePickerClassName = 'min-w-[160px]',
   fromPlaceholder,
   toPlaceholder,
+  disabled,
+  maxDate,
+  constrainOrder = false,
 }: DateRangePickerProps & AutomationProps) => {
+  const fromMax = constrainOrder && value.to && (!maxDate || value.to < maxDate) ? value.to : maxDate;
+  const toMin = constrainOrder ? value.from : undefined;
   const { t } = useTranslation();
   return (
     <div id={id} className={containerClassName}>
@@ -43,6 +56,8 @@ export const DateRangePicker = ({
           onChange={(date) => onChange({ ...value, from: date })}
           placeholder={fromPlaceholder ?? t('form.fromDate', { defaultValue: 'From date' })}
           className={datePickerClassName}
+          disabled={disabled}
+          maxDate={fromMax}
         />
         <DatePicker
           id={id ? `${id}-to` : undefined}
@@ -50,6 +65,9 @@ export const DateRangePicker = ({
           onChange={(date) => onChange({ ...value, to: date })}
           placeholder={toPlaceholder ?? t('form.toDate', { defaultValue: 'To date' })}
           className={datePickerClassName}
+          disabled={disabled}
+          minDate={toMin}
+          maxDate={maxDate}
         />
       </div>
     </div>

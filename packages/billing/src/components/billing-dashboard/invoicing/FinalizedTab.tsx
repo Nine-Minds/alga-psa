@@ -671,6 +671,12 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                   await loadData();
                   onRefreshNeeded();
                 }}
+                // LEVERAGE: pattern invoice-changed-refresh — onCreditApplied/onInvoiceVoided are the same
+                // "invoice changed here, reload the list" callback; one onInvoiceChanged would cover both.
+                onInvoiceVoided={async () => {
+                  await loadData();
+                  onRefreshNeeded();
+                }}
               />
             </div>
           </Panel>

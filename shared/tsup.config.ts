@@ -4,6 +4,9 @@ import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 export default defineConfig({
   entry: {
     'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'lib/rma/warrantyStateMachine': 'lib/rma/warrantyStateMachine.ts',
+    'lib/rma/recordRmaEvent': 'lib/rma/recordRmaEvent.ts',
+    'lib/email/sanitizeEmailHtml': 'lib/email/sanitizeEmailHtml.ts',
     'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
     'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
     'lib/ticketQuery/ticketQuerySchema': 'lib/ticketQuery/ticketQuerySchema.ts',
@@ -114,6 +117,7 @@ export default defineConfig({
     'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
     'billingClients/quoteDiscountAllocation': 'billingClients/quoteDiscountAllocation.ts',
     'billingClients/quoteConversionDiscounts': 'billingClients/quoteConversionDiscounts.ts',
+    'billingClients/serviceTaxTreatment': 'billingClients/serviceTaxTreatment.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the
     // exports map into dist/ rather than being transpiled from source the way

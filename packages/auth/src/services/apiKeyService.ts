@@ -15,7 +15,7 @@ interface ApiKey {
   updated_at: Date;
   last_used_at: Date | null;
   expires_at: Date | null;
-  purpose: string;
+  purpose: string | null;
   metadata: Record<string, unknown> | null;
   usage_limit: number | null;
   usage_count: number;
@@ -56,6 +56,9 @@ export class ApiKeyService {
     // Allow-list: an active internal owner passes. Any other owner type is
     // admitted only if the edition boundary approves it (the CE stub never does).
     if (user.user_type !== 'internal') {
+      // Lazy on purpose: a static import makes the auth barrel load the EE
+      // service-principals boundary (-> @alga-psa/users/actions -> withAuth from
+      // a half-loaded @alga-psa/auth), which breaks the production build.
       const { servicePrincipalKeyGate } = await import('@product/service-principals/entry');
       const approved = await servicePrincipalKeyGate({ ...user, user_id: userId, tenant });
       if (!approved) return 'owner_type_rejected';
@@ -345,7 +348,7 @@ export class ApiKeyService {
   /**
    * List all API keys across users (admin only)
    */
-  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null })[]> {
+  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null; user_type: string | null })[]> {
     const { knex, tenant } = await createTenantKnex(tenantId);
 
     if (!tenant) {
@@ -358,7 +361,12 @@ export class ApiKeyService {
       db.tenantJoin(query, 'users', 'api_keys.user_id', 'users.user_id');
 
       return await query
-        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name')
+        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name', 'users.user_type')
+        // MCP session keys are short-lived runtime credentials, not keys an admin can manage.
+        // Keep legacy NULL-purpose rows visible while excluding only the modeled session purpose.
+        .where(function () {
+          this.whereNull('api_keys.purpose').orWhereNot('api_keys.purpose', 'mcp_agent');
+        })
         .orderBy('api_keys.created_at', 'desc');
     } catch (error) {
       console.error(`Error listing API keys in tenant ${tenant}:`, error);

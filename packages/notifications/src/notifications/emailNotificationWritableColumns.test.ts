@@ -30,6 +30,7 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: { getInstance: vi.fn(), getTenantEmailSettings: vi.fn() },
   StaticTemplateProcessor: class {},
+  TenantEmailOutboundAdapter: class { send = vi.fn(); },
 }));
 
 describe('notification writes are limited to columns the UI owns', () => {

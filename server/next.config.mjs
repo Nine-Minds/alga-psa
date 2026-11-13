@@ -36,6 +36,23 @@ const usePrebuilt = truthyEnv(process.env.USE_PREBUILT);
 const prebuiltDir = (pkg) => usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`;
 const prebuiltDirAbs = (pkg) => path.join(__dirname, usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`);
 
+// Export names need not mirror the source tree (rendering/* lives in src/lib/).
+// Let the package manifest define both bundlers' targets so new exports work
+// without maintaining a second list here.
+const coreExports = Object.entries(JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../packages/core/package.json'), 'utf8')
+).exports);
+const coreSourceAliases = Object.fromEntries(coreExports.map(([subpath, entry]) => [
+  `@alga-psa/core${subpath === '.' ? '' : subpath.slice(1)}`,
+  `../packages/core/${entry.types.replace(/^\.\//, '')}`,
+]));
+const coreWebpackAliases = Object.fromEntries(coreExports.map(([subpath, entry]) => [
+  // Webpack aliases are first-match: exact keys keep the root and shorter
+  // exports from swallowing longer subpaths such as capability/server.
+  `@alga-psa/core${subpath === '.' ? '' : subpath.slice(1)}$`,
+  path.resolve(__dirname, '../packages/core', usePrebuilt ? entry.import : entry.types),
+]));
+
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = '../packages/ee/src/shims/empty.ts';
 
@@ -295,17 +312,7 @@ const nextConfig = {
       // Leaf horizontal packages (resolve to source during local dev)
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
-      '@alga-psa/core': '../packages/core/src',
-      // Any core export whose source lives under src/lib/ with no same-named
-      // mirror at the src/ root needs an explicit entry: the '@alga-psa/core/'
-      // prefix would send it to src/<name>, and the dist/ fallback is absent
-      // wherever packages/ is mounted from source (e.g. the Teams development
-      // browser lane). nextConfigCoreAliases.contract.test.ts guards this list.
-      '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
-      '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
-      '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
-      '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
-      '@alga-psa/core/net/safeFetch': '../packages/core/src/lib/net/safeFetch.ts',
+      ...coreSourceAliases,
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -646,16 +653,7 @@ const nextConfig = {
       '@alga-psa/clients/': `${prebuiltDirAbs('clients')}/`,
       '@alga-psa/types': prebuiltDirAbs('types'),
       '@alga-psa/types/': `${prebuiltDirAbs('types')}/`,
-      '@alga-psa/core': prebuiltDirAbs('core'),
-      '@alga-psa/core/rateLimit': usePrebuilt
-        ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
-        : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
-      '@alga-psa/core/fileNames': usePrebuilt
-        ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
-        : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
-      '@alga-psa/core/net/safeFetch': usePrebuilt
-        ? path.join(prebuiltDirAbs('core'), 'lib/net/safeFetch.js')
-        : path.join(__dirname, '../packages/core/src/lib/net/safeFetch.ts'),
+      ...coreWebpackAliases,
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,

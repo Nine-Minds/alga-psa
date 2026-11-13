@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import type { ZodError } from 'zod';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { requireWarrantyPermission } from '@alga-psa/assets/lib/warrantyAuthorization';
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { createAssetReadContext, isAssetActionAllowed, type AssetAuthorizationAction } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { publishCustodyChanged } from '@alga-psa/assets/lib/custody/publishCustodyChanged';
@@ -24,14 +24,11 @@ export type WarrantyActionError = ActionMessageError | ActionPermissionError;
  * can run RMAs keep working), and every write additionally needs `asset:update` because it touches a client asset.
  */
 export async function requireWarrantyPerm(user: any, action: 'create' | 'read' | 'update'): Promise<void> {
-  const ok = (await hasPermission(user, 'warranty', action)) || (await hasPermission(user, 'inventory', action));
-  if (!ok) throw new Error(`Permission denied: warranty ${action} required`);
-  if (action !== 'read' && !(await hasPermission(user, 'asset', 'update'))) {
-    throw new Error('Permission denied: asset update required');
-  }
+  return requireWarrantyPermission(user, action);
 }
 
 const CODE_MESSAGES: Record<string, [string, string]> = {
+  ticket_not_found: ['Ticket not found.', 'features/inventory:errors.rma.ticketNotFound'],
   not_found: ['RMA case not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.rma.caseNotFound'],
   unit_tracked: ['This RMA is for a stock unit. Use the stock-unit RMA actions.', 'features/inventory:errors.rma.warrantyUnitTracked'],
   stock_tracked_asset: ['This device was sold from stock. Open an RMA from its stock unit instead.', 'features/inventory:errors.rma.warrantyStockTrackedAsset'],
@@ -42,6 +39,7 @@ const CODE_MESSAGES: Record<string, [string, string]> = {
   location_required: ['Choose where the device is now so it can be received back.', 'features/inventory:errors.rma.warrantyLocationRequired'],
   invalid_transition: ['That step is not available in the RMA’s current status. Refresh and try again.', 'features/inventory:errors.rma.warrantyInvalidTransition'],
   warranty_review_close: ['Approve or deny the claim before closing it.', 'features/inventory:errors.rma.warrantyReviewClose'],
+  wrong_track: ['This step is only for advance-replacement claims.', 'features/inventory:errors.rma.warrantyWrongTrack'],
 };
 
 /**
@@ -121,6 +119,7 @@ export async function runWarrantyTransition(
 }
 
 export async function publishAfterCommit(tenant: string, actorUserId: string, result: WarrantyTransitionResult): Promise<void> {
+  if (result.noop) return;
   await publishRmaUpdated(tenant, result.rma, result.previousStatus, result.changedFields, actorUserId);
   for (const effect of result.custodyEffects) {
     await publishCustodyChanged({ tenant, actorUserId, custody: effect.custody, eventType: effect.eventType as any, occurredAt: effect.occurredAt });

@@ -266,7 +266,11 @@
         "title": "{{tier}} is actief",
         "description": "Uw betaalde licentie is actief op deze appliance.",
         "descriptionWithExpiry": "Uw licentie is actief tot en met {{date}}.",
-        "badge": "Gelicentieerd"
+        "badge": "Gelicentieerd",
+        "descriptionEnding": "Uw abonnement is opgezegd. Pro blijft actief tot {{date}}.",
+        "descriptionTermEnds": "Pro is actief tot {{date}}, wanneer de vaste looptijd eindigt.",
+        "descriptionPaymentFailed": "Pro is actief, maar de laatste verlengingsbetaling is mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+        "descriptionPaymentFailedEnded": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro blijft actief tot {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "Licentie vereist aandacht",
@@ -291,6 +295,12 @@
         "title": "U gebruikt Essentials",
         "description": "Essentials is actief op deze appliance. Blijf de belangrijkste functies gebruiken of start een eenmalige Pro-proefperiode van 15 dagen.",
         "badge": "Essentials actief"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement beëindigd",
+        "title": "U gebruikt nu de gratis editie",
+        "description": "Uw Pro-abonnement is beëindigd. Uw gegevens blijven behouden en de Pro-functies worden weer ingeschakeld zodra u opnieuw abonneert.",
+        "badge": "Gratis editie"
       }
     },
     "trialCta": {
@@ -356,7 +366,31 @@
       "activateLicenseKey": "Kan de licentiesleutel niet activeren.",
       "activateClaimCode": "Kan de activeringscode niet activeren.",
       "startTrial": "Kan de proefperiode niet starten.",
-      "refreshLicense": "Kan de licentie niet vernieuwen."
+      "refreshLicense": "Kan de licentie niet vernieuwen.",
+      "credentialRevoked": "De licentiegegevens van deze appliance zijn ingetrokken. Verbind de appliance opnieuw met een nieuwe activeringscode uit het licentieportaal.",
+      "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}.",
+      "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd.",
+      "subscriptionEnded": "Uw Pro-abonnement is beëindigd. Deze appliance gebruikt de gratis editie.",
+      "subscriptionEndingPaymentFailed": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro eindigt op {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Uw Pro-abonnement is beëindigd — betaling mislukt.",
+      "subscriptionEndedPaymentFailed": "Pro is beëindigd — betaling mislukt. Uw appliance gebruikt Essentials.",
+      "resubscribeAt": "Abonneer opnieuw via {{url}}.",
+      "resubscribeToRestore": "Abonneer opnieuw om Pro te herstellen."
+    },
+    "lapse": {
+      "lapsedTitle": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
+      "endingTitle": "Uw Pro-abonnement is opgezegd.",
+      "endedOn": "Pro eindigde op {{date}}.",
+      "endsOn": "Pro eindigt op {{date}}.",
+      "dataKept": "Er wordt niets verwijderd. Uw gegevens blijven staan en de Pro-functies worden weer ingeschakeld nadat u opnieuw abonneert en de licentie vernieuwt.",
+      "resubscribe": "Opnieuw abonneren",
+      "termEndsTitle": "Uw Pro-periode loopt af.",
+      "paymentFailedTitle": "Betaling mislukt — we proberen het opnieuw op {{date}}. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedTitleNoRetry": "Betaling mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedEndedTitle": "Pro is beëindigd — betaling mislukt. Uw appliance draait Essentials.",
+      "paymentFailedEndingTitle": "Uw Pro-abonnement is beëindigd — betaling mislukt.",
+      "paymentFailedEndsOn": "Pro eindigt op {{date}} als de betaling blijft mislukken.",
+      "updatePaymentMethod": "Betaalmethode bijwerken"
     }
   },
   "errors": {
@@ -1017,6 +1051,45 @@
       "invalid": "Deze opmerking kon niet worden opgeslagen.",
       "send": "Verzenden",
       "cancel": "Annuleren"
+    },
+    "upgrade": {
+      "title": "Overstappen naar AlgaPSA",
+      "description": "Gebruik deze werkruimte zelfstandig met uw eigen betaalde AlgaPSA-licentie.",
+      "preserved": "Uw tickets, projecten, documenten en geschiedenis blijven in deze werkruimte.",
+      "trustEnds": "De overstap beëindigt de actieve toegang van uw MSP en geeft uw co-managed seats vrij. Uw MSP behoudt het toegestane participatiearchief.",
+      "alreadyDeparted": "Uw MSP-relatie is al beëindigd. Het bestaande archief blijft ongewijzigd.",
+      "seats": "Vereiste betaalde technische seats: {{count}}",
+      "hosting": "Bij deze overstap blijft uw huidige hosting behouden. Deze installatie verlaten vereist een aparte export en herstelactie.",
+      "licenseRequired": "Activeer vóór de overstap een tenantgebonden Pro-licentie met voldoende seats.",
+      "subscriptionRequired": "Voor de overstap is een actief, betaald AlgaPSA-abonnement nodig dat bij deze werkruimte hoort.",
+      "manageLicense": "Licentie van werkruimte beheren",
+      "running": "De overstap wordt uitgevoerd. Deze pagina wordt bijgewerkt zodra deze klaar is.",
+      "failed": "De overstap is niet voltooid. Controleer uw entitlement en probeer het opnieuw.",
+      "unavailable": "De voortgang van de overstap is tijdelijk niet beschikbaar. Vernieuw de pagina om opnieuw te controleren.",
+      "start": "Werkruimte overstappen",
+      "refresh": "Status vernieuwen",
+      "completed": "Deze werkruimte is nu een zelfstandige AlgaPSA-werkruimte.",
+      "openPsa": "AlgaPSA openen",
+      "loadError": "De overstapstatus kan niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
+      "startError": "De overstap kan niet worden gestart. U kunt het verzoek opnieuw indienen.",
+      "confirmTitle": "Deze werkruimte overstappen?",
+      "confirmMessage": "Uw werkruimte wordt omgezet naar AlgaPSA en elke actieve MSP-relatie wordt beëindigd. Uw eigen betaalde entitlement geldt voor deze werkruimte. De hosting van uw gegevens verandert niet.",
+      "cancel": "Annuleren",
+      "billingInterval": "Factureringsfrequentie",
+      "month": "Maandelijks",
+      "year": "Jaarlijks",
+      "paymentProcessing": "Uw betaling wordt verwerkt. Vernieuw de status of hervat de aankoop om opnieuw te controleren.",
+      "purchaseScope": "Deze aankoop betaalt voor deze werkruimte. MSP-toegang eindigt pas wanneer u de overstap na betaling bevestigt.",
+      "paymentFailed": "De eerste betaling is mislukt. U kunt een nieuwe checkout starten nadat u deze onbetaalde poging hebt gesloten.",
+      "retryPayment": "Betaling opnieuw proberen",
+      "retryTitle": "Deze betaling opnieuw proberen?",
+      "retryMessage": "Sluit deze mislukte betaalpoging en open een nieuwe checkout. MSP-toegang en co-managed seats blijven behouden.",
+      "billingTitle": "Uw AlgaPSA-facturering",
+      "paymentMethod": "Betaalmethode bijwerken",
+      "paidSeats": "Betaalde technische seats",
+      "reviewSeatChange": "Seatwijziging bekijken",
+      "billingError": "Facturering kan niet worden geopend. Vernieuw de status en probeer het opnieuw.",
+      "purchaseUnconfigured": "Aankopen zijn niet geconfigureerd voor deze implementatie."
     }
   },
   "common": {

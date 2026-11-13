@@ -1049,7 +1049,19 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(TABLE_INSPECTOR, COMMON_INSPECTOR),
+    inspector: mergeInspectorSchemas(
+      TABLE_INSPECTOR,
+      {
+        panels: [
+          {
+            id: 'bundle-component-rows',
+            title: 'Bundle component rows',
+            fields: [{ kind: 'widget', id: 'bundleComponentRows', widget: 'bundle-component-rows' }],
+          },
+        ],
+      },
+      COMMON_INSPECTOR,
+    ),
   },
   field: {
     type: 'field',

@@ -56,6 +56,19 @@
     "manageLicense": "Licentie beheren",
     "ariaLabel": "Licentiestatus",
     "dismiss": "Sluiten",
+    "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}. Abonneer opnieuw om Pro te behouden.",
+    "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd. Abonneer opnieuw om Pro te behouden.",
+    "subscriptionLapsed": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
+    "resubscribe": "Opnieuw abonneren",
+    "termEnds": "Uw Pro-toegang eindigt op {{date}}. Verleng om Pro te behouden.",
+    "termEndsNoDate": "Uw Pro-periode loopt af. Verleng om Pro te behouden.",
+    "paymentFailed": "Betaling mislukt — we proberen het opnieuw op {{date}}. Werk uw betaalmethode bij om Pro te behouden.",
+    "paymentFailedNoRetry": "Betaling mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+    "paymentFailedEndsOn": "Pro eindigt op {{date}} als de betaling blijft mislukken.",
+    "paymentFailedEnded": "Pro is beëindigd — betaling mislukt. Uw appliance draait Essentials.",
+    "paymentFailedEndedEnding": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro blijft actief tot {{date}}. Abonneer opnieuw om Pro te behouden.",
+    "paymentFailedEndedEndingNoDate": "Uw Pro-abonnement is beëindigd — betaling mislukt. Abonneer opnieuw om Pro te behouden.",
+    "updatePaymentMethod": "Betaalmethode bijwerken",
     "licenseExpiresIn_few": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
     "licenseExpiresIn_many": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
     "trialDaysRemaining_few": "Pro-proefperiode actief — nog {{count}} dagen.",
@@ -741,6 +754,7 @@
       "pending": "In behandeling",
       "error": "Document kon niet worden geüpload",
       "fileError": "Bestand kon niet worden geüpload",
+      "fileTooLarge": "Dit bestand is {{size}}. De huidige limiet is {{limit}} per bestand.",
       "associatedEntityTypeLabel": "Koppelen aan",
       "noAssociation": "Geen koppeling",
       "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt.",
@@ -752,7 +766,16 @@
       "emptyDropMessage": "Er zijn geen bestanden ontvangen. Sla de bijlage of e-mail op uw computer op en sleep het opgeslagen bestand hierheen of gebruik ‘Bestanden bladeren’.",
       "uploadInProgress": "Er is al een upload bezig. Wacht tot deze is voltooid voordat u meer bestanden toevoegt.",
       "refreshFailed": "Uw bestanden zijn geüpload, maar de documentenlijst kon niet worden vernieuwd. Herlaad de pagina om ze te zien.",
-      "clearResults": "Resultaten wissen"
+      "clearResults": "Resultaten wissen",
+      "typeNotAllowed": "Dit bestandstype is niet toegestaan. Kies een ander bestand.",
+      "permissionDenied": "U hebt geen toestemming om hier documenten te uploaden.",
+      "networkFailed": "De verbinding is verbroken en de upload kon niet worden hervat. Controleer uw verbinding en probeer het opnieuw.",
+      "sessionGone": "Deze upload is verlopen voordat hij klaar was. Start hem opnieuw.",
+      "cancelled": "Geannuleerd",
+      "cancelUpload": "Upload annuleren",
+      "tryAgain": "Opnieuw proberen",
+      "progress": "{{committed}} van {{total}}",
+      "progressLabel": "Uploadvoortgang van {{name}}"
     },
     "folders": {
       "root": "Hoofdmap",
@@ -766,7 +789,8 @@
       "collapse": "Mappen samenvouwen",
       "allDocuments": "Alle documenten",
       "expand": "Mappen tonen",
-      "deleteTitle": "Map verwijderen"
+      "deleteTitle": "Map verwijderen",
+      "show": "Mappen tonen"
     },
     "folderManager": {
       "title": "Nieuwe map maken",
@@ -828,6 +852,28 @@
     "huduTab": {
       "documentsTabLabel": "Documenten",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Gebruiker",
+    "selectOrCreate": "Selecteer een document of maak een nieuw document aan.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Afdrukken",
+      "edit": "Bewerken",
+      "upload": "Uploaden",
+      "closePreview": "Voorbeeld sluiten",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "saving": "Bezig met opslaan..."
+    },
+    "viewMode": {
+      "grid": "Raster",
+      "list": "Lijst"
+    },
+    "unsavedChanges": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "message": "Weet u zeker dat u wilt annuleren? Alle niet-opgeslagen wijzigingen gaan verloren.",
+      "confirm": "Wijzigingen verwerpen",
+      "cancel": "Doorgaan met bewerken"
     }
   },
   "fields": {
@@ -860,7 +906,22 @@
       "verify": "Verifiëren",
       "title": "Heel eenvoudig",
       "instructions": "Voer de 6-cijferige code uit uw authenticator-app in.",
-      "digitsLeft": "Nog {{count}} cijfers"
+      "digitsLeft": "Nog {{count}} cijfers",
+      "enroll": {
+        "title": "Tweefactorauthenticatie instellen",
+        "instructions": "Uw organisatie verplicht tweefactorauthenticatie. Scan de QR-code met een authenticator-app en voer vervolgens de code van 6 cijfers in.",
+        "qrAlt": "QR-code voor uw authenticator-app",
+        "manualKey": "Of voer deze sleutel handmatig in:",
+        "cancel": "Annuleren",
+        "errors": {
+          "invalid_credentials": "Uw e-mailadres of wachtwoord is niet meer geldig. Meld u opnieuw aan.",
+          "enrollment_not_required": "Voor dit account is geen installatie nodig. Meld u opnieuw aan.",
+          "invalid_code": "Deze code is ongeldig. Probeer het opnieuw.",
+          "rate_limited": "Te veel pogingen. Wacht een paar minuten en probeer het opnieuw.",
+          "captcha_required": "Voltooi eerst de verificatie op de aanmeldpagina.",
+          "unavailable": "Instellen is momenteel niet beschikbaar. Probeer het opnieuw."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",
@@ -1411,7 +1472,16 @@
     "unnamedTeam": "Naamloos team",
     "userPicker": "Gebruikerskiezer",
     "noUsersFound": "Geen gebruikers gevonden",
-    "contactRemoteLocation": "Op afstand"
+    "contactRemoteLocation": "Op afstand",
+    "selectBoard": "Bord selecteren",
+    "activeBoards": "Actieve borden",
+    "inactiveBoards": "Inactieve borden",
+    "allBoards": "Alle borden",
+    "boardPicker": "Bordkiezer",
+    "filterByStatus": "Filteren op status",
+    "statusFilter": "Statusfilter",
+    "boards": "Borden",
+    "inactiveSuffix": "(Inactief)"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetype selecteren...",
@@ -1619,7 +1689,9 @@
       "ticketTitle": "Werklabels afdrukken",
       "tooMany": "U kunt maximaal {{max}} labels tegelijk afdrukken.",
       "unnamedAsset": "Naamloze asset",
-      "useTemplate": "{{template}} gebruiken"
+      "useTemplate": "{{template}} gebruiken",
+      "copiesPerAsset": "Exemplaren per asset",
+      "adjacentCopies": "De exemplaren van elke asset worden samen afgedrukt."
     }
   },
   "deleteEntity": {
@@ -1712,7 +1784,14 @@
       "assigned": "Toegewezen:",
       "performedBy": "door {{name}}",
       "internal": "Intern"
-    }
+    },
+    "title": "Meldingen",
+    "reconnectingToServer": "Opnieuw verbinden met de server...",
+    "refresh": "Vernieuwen",
+    "markAllAsRead": "Alles als gelezen markeren",
+    "markAllRead": "Alles als gelezen markeren",
+    "emptyTitle": "Geen meldingen",
+    "emptyDescription": "U bent helemaal op de hoogte!"
   },
   "importConflicts": {
     "title": "Importconflicten oplossen",

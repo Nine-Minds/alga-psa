@@ -42,6 +42,10 @@ describe('safeFetch URL policy', () => {
     ['::ffff:127.0.0.1', 'https://[::ffff:127.0.0.1]/a'],
     ['::ffff:7f00:1 (hex form)', 'https://[::ffff:7f00:1]/a'],
     ['fc00::1', 'https://[fc00::1]/a'],
+    ['fec0::1', 'https://[fec0::1]/a'],
+    ['100::1', 'https://[100::1]/a'],
+    ['2001::1', 'https://[2001::1]/a'],
+    ['2002:7f00:1::1', 'https://[2002:7f00:1::1]/a'],
     ['decimal-encoded loopback', 'https://2130706433/a'],
     ['userinfo', 'https://user:pw@example.com/a'],
     ['non-default port', 'https://example.com:8443/a'],
@@ -64,6 +68,45 @@ describe('safeFetch URL policy', () => {
       /private or reserved/,
     );
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['fec0::1', '100::1', '2001::1', '2002:7f00:1::1'])(
+    'rejects a hostname resolving to non-global IPv6 address %s before connecting',
+    async (address) => {
+      const fetch = okFetch();
+      await expect(
+        safeFetch('https://resolved.example.com/a', opts, {
+          lookup: async () => [{ address, family: 6 }],
+          fetch,
+        }),
+      ).rejects.toBeInstanceOf(UnsafeUrlError);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('accepts and pins a public IPv6 DNS answer', async () => {
+    const pin = { address: '2606:4700::1111', family: 6 };
+    const fetch = vi.fn(async (_url: string, _init: unknown, _pin: ResolvedAddress) => new Response('ok'));
+
+    await safeFetch('https://public-v6.example.com/a', opts, {
+      lookup: async () => [pin],
+      fetch,
+    });
+
+    expect(fetch.mock.calls[0]![2]).toEqual(pin);
+  });
+
+  it('fetches a public IPv6 literal without DNS and pins its address', async () => {
+    const pin: ResolvedAddress = { address: '2606:4700::1111', family: 6 };
+    const lookup = vi.fn(lookupPublic);
+    const fetch = vi.fn(async (_url: string, _init: unknown, _pin: ResolvedAddress) => new Response('public IPv6'));
+
+    const result = await safeFetch('https://[2606:4700::1111]/a', opts, { lookup, fetch });
+
+    expect(result.bytes.toString()).toBe('public IPv6');
+    expect(lookup).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]![2]).toEqual(pin);
   });
 
   it('fails closed when DNS resolution fails', async () => {
@@ -94,6 +137,7 @@ describe('isBlockedAddress', () => {
     '0.0.0.0', '10.0.0.1', '100.64.0.1', '127.0.0.1', '169.254.169.254', '172.16.0.1', '172.31.255.255',
     '192.0.0.1', '192.0.2.1', '192.168.1.1', '198.18.0.1', '198.51.100.1', '203.0.113.1', '224.0.0.1',
     '240.0.0.1', '255.255.255.255', '::', '::1', 'fc00::1', 'fd12::1', 'fe80::1', 'ff02::1',
+    'fec0::1', '100::1', '2001::1', '2002:7f00:1::1',
     '64:ff9b::1', '2001:db8::1', '::ffff:10.0.0.1', '::ffff:a00:1', '::127.0.0.1',
   ])('blocks %s', (address) => {
     expect(isBlockedAddress(address)).toBe(true);

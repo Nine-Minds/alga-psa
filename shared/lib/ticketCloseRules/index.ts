@@ -15,7 +15,7 @@ import {
  * client portal) that audit-log their bypass instead of evaluating gates.
  */
 
-export type CloseRuleBypassSource = 'workflow' | 'import' | 'auto_close' | 'client_portal';
+export type CloseRuleBypassSource = 'workflow' | 'import' | 'auto_close' | 'client_portal' | 'api_import';
 
 export interface BoardCloseRulesRow {
   require_resolution_comment: boolean;
@@ -68,12 +68,18 @@ export async function getBoardCloseRulesRow(
 export async function openBundleChildrenCount(
   trx: Knex.Transaction | Knex,
   tenant: string,
-  masterTicketId: string
+  masterTicketId: string,
+  /**
+   * Display-only narrowing: called with the child query, whose table is `tickets` (no alias). A screen passes
+   * the reader's ticket read scope so it never reports children the reader cannot open. The close gates never
+   * pass it: enforcement counts every child.
+   */
+  narrow?: (query: Knex.QueryBuilder) => Knex.QueryBuilder
 ): Promise<number> {
-  const [row] = await tenantScopedTable(trx, 'tickets', tenant)
+  const query = tenantScopedTable(trx, 'tickets', tenant)
     .where({ master_ticket_id: masterTicketId })
-    .whereNull('closed_at')
-    .count<{ count: string }[]>('* as count');
+    .whereNull('closed_at');
+  const [row] = await (narrow ? narrow(query) : query).count<{ count: string }[]>('* as count');
   return Number(row?.count ?? 0);
 }
 

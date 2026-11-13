@@ -30,7 +30,7 @@ import {
   type SyncNotificationService
 } from './syncNotificationService';
 import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelector';
-import { AccountingExportService } from '../accountingExportService';
+import { AccountingExportService, type AccountingExportExecutionResult } from '../accountingExportService';
 import { drainApplyCreditOps } from './creditApplicationApplier';
 import { drainVoidInvoiceOps } from './invoiceVoidApplier';
 import { drainRecordPaymentOps } from './paymentPushApplier';
@@ -387,9 +387,11 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
 
     const exportService = await AccountingExportService.createForTenant(deps.tenantId);
 
-    await exportService.executeBatch(batch.batch_id);
+    const result = await exportService.executeBatch(batch.batch_id);
+    const partition = partitionOpsByExportOutcome(pending, result);
+    const failures = [...partition.rejected, ...unreportedFailures(partition, batch.batch_id)];
 
-    for (const op of pending) {
+    for (const op of partition.delivered) {
       await deps.ops.markDone(deps.tenantId, op.op_id);
       deps.stats.opsProcessed += 1;
 
@@ -408,6 +410,17 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
         await deps.ledger.update(mapping.id, { syncStatus: MAPPING_SYNC_STATUS.synced, touchSyncedAt: true });
       }
       await deps.exceptions.resolve('accounting_sync_drift', 'invoice', op.alga_entity_id);
+    }
+
+    if (failures.length > 0) {
+      await failUndeliveredOps(deps, {
+        entityType: 'invoice',
+        contextIdKey: 'alga_invoice_id',
+        title: 'Scheduled accounting export rejected by provider',
+        batchId: batch.batch_id,
+        failures
+      });
+      await cancelScheduledBatchIfBlocking(deps, batch.batch_id, rejectionReason(failures));
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'scheduled export failed';
@@ -478,6 +491,94 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
   }
 }
 
+interface ExportOutcomePartition {
+  delivered: AccountingSyncOperation[];
+  rejected: Array<{ op: AccountingSyncOperation; message: string }>;
+  /** No outcome reported for the op's entity (not in the batch, or the adapter said nothing). */
+  unreported: AccountingSyncOperation[];
+}
+
+/**
+ * Split pending ops by what the export actually did to their entity. Shared by
+ * the invoice and vendor-bill drains. Ops in neither set are never treated as
+ * done: the caller retries them (markFailed) so a silent gap cannot read as success.
+ */
+function partitionOpsByExportOutcome(
+  ops: AccountingSyncOperation[],
+  result: AccountingExportExecutionResult | undefined
+): ExportOutcomePartition {
+  // AccountingExportService always reports per-entity outcomes. A result with
+  // none (lightweight service doubles) carries no failure information, so
+  // executeBatch returning without throwing keeps its historical meaning.
+  if (!result?.deliveredEntityIds && !result?.failedEntities) {
+    return { delivered: ops, rejected: [], unreported: [] };
+  }
+  const delivered = new Set(result.deliveredEntityIds ?? []);
+  const rejected = new Map((result.failedEntities ?? []).map((item) => [item.entityId, item.message]));
+  const partition: ExportOutcomePartition = { delivered: [], rejected: [], unreported: [] };
+  for (const op of ops) {
+    const rejection = rejected.get(op.alga_entity_id);
+    if (rejection !== undefined) partition.rejected.push({ op, message: rejection });
+    else if (delivered.has(op.alga_entity_id)) partition.delivered.push(op);
+    else partition.unreported.push(op);
+  }
+  return partition;
+}
+
+/**
+ * Fail ops the provider rejected (or never reported on) and file an export-error
+ * exception for each, so the cycle no longer reports them as synced.
+ */
+async function failUndeliveredOps(
+  deps: DrainDeps,
+  params: {
+    entityType: 'invoice' | 'vendor_bill';
+    contextIdKey: 'alga_invoice_id' | 'alga_vendor_bill_id';
+    title: string;
+    batchId: string;
+    failures: Array<{ op: AccountingSyncOperation; message: string }>;
+  }
+): Promise<void> {
+  for (const { op, message } of params.failures) {
+    await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+    deps.stats.opsFailed += 1;
+    const result = await deps.exceptions.createOrUpdate({
+      type: 'accounting_sync_export_error',
+      entityType: params.entityType,
+      entityId: op.alga_entity_id,
+      title: params.title,
+      context: {
+        [params.contextIdKey]: op.alga_entity_id,
+        batch_id: params.batchId,
+        attempts: op.attempts + 1,
+        message,
+        details: message,
+        realm: deps.targetRealm
+      }
+    });
+    if (result.created) {
+      deps.stats.exceptionsCreated += 1;
+    }
+  }
+}
+
+function unreportedFailures(partition: ExportOutcomePartition, batchId: string) {
+  return partition.unreported.map((op) => ({
+    op,
+    message: `Export batch ${batchId} reported no delivery outcome for this document; it will be retried`
+  }));
+}
+
+/**
+ * A batch left in needs_attention (partial delivery) trips the duplicate-selection
+ * guard, so release it like the catch path does. The provider messages are kept
+ * in the cancellation note; per-line errors stay on the batch.
+ */
+function rejectionReason(failures: Array<{ message: string }>): string {
+  return `Auto-cancelled by scheduled sync: ${failures.length} document(s) rejected by the provider so the batch would block retries. ${failures
+    .map((item) => item.message).slice(0, 3).join(' | ')}`;
+}
+
 type VendorBillExportRow = {
   bill_id: string;
   bill_number: string;
@@ -523,12 +624,25 @@ async function drainExportVendorBillOps(deps: DrainDeps): Promise<void> {
     batchId = batch.batch_id;
 
     const exportService = await AccountingExportService.createForTenant(deps.tenantId);
-    await exportService.executeBatch(batch.batch_id);
+    const result = await exportService.executeBatch(batch.batch_id);
+    const partition = partitionOpsByExportOutcome(remaining, result);
+    const failures = [...partition.rejected, ...unreportedFailures(partition, batch.batch_id)];
 
-    for (const op of remaining) {
+    for (const op of partition.delivered) {
       await deps.ops.markDone(deps.tenantId, op.op_id);
       deps.stats.opsProcessed += 1;
       await deps.exceptions.resolve('accounting_sync_export_error', 'vendor_bill', op.alga_entity_id);
+    }
+
+    if (failures.length > 0) {
+      await failUndeliveredOps(deps, {
+        entityType: 'vendor_bill',
+        contextIdKey: 'alga_vendor_bill_id',
+        title: 'Scheduled vendor bill export rejected by provider',
+        batchId: batch.batch_id,
+        failures
+      });
+      await cancelScheduledBatchIfBlocking(deps, batch.batch_id, rejectionReason(failures));
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'scheduled vendor bill export failed';
@@ -705,7 +819,11 @@ async function createScheduledVendorBillBatch(deps: DrainDeps, billIds: string[]
  * was cancelled. The batch (and its validation errors) stays readable in the
  * exports UI as a historical record.
  */
-async function cancelScheduledBatchIfBlocking(deps: DrainDeps, batchId: string | null): Promise<boolean> {
+async function cancelScheduledBatchIfBlocking(
+  deps: DrainDeps,
+  batchId: string | null,
+  reason = 'Auto-cancelled by scheduled sync: batch did not deliver and would block future scheduled exports'
+): Promise<boolean> {
   if (!batchId) {
     return false;
   }
@@ -722,9 +840,7 @@ async function cancelScheduledBatchIfBlocking(deps: DrainDeps, batchId: string |
       return false;
     }
 
-    await exportService.cancelBatch(batchId, {
-      reason: 'Auto-cancelled by scheduled sync: batch did not deliver and would block future scheduled exports'
-    });
+    await exportService.cancelBatch(batchId, { reason });
     return true;
   } catch (error) {
     logger.warn('[accountingSync] Failed to auto-cancel scheduled export batch', {
