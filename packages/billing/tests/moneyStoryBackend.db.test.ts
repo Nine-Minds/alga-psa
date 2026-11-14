@@ -74,41 +74,38 @@ let knex: Knex;
 let trx: Knex.Transaction;
 let TENANT: string;
 let CLIENT: string;
-let USER: string | null;
+let USER: string;
 let SERVICE_A: string;
 let SERVICE_B: string;
 let TICKET: string;
 
-beforeAll(async () => {
+beforeAll(() => {
   knex = createWorkspaceTestDbConnection();
-
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
-  const ticket = await knex('tickets')
-    .where({ tenant: TENANT })
-    .whereNotNull('client_id')
-    .select('ticket_id', 'client_id')
-    .first();
-  if (!ticket) {
-    throw new Error('money-story tests require a seeded ticket with client_id');
-  }
-  TICKET = ticket.ticket_id;
-  CLIENT = ticket.client_id;
-  USER = (await knex('users').where({ tenant: TENANT }).select('user_id').first())?.user_id ?? null;
-
-  const services = await knex('service_catalog')
-    .where({ tenant: TENANT })
-    .orderBy('service_id')
-    .limit(2)
-    .select('service_id');
-  if (services.length < 2) {
-    throw new Error('money-story tests require at least two seeded services');
-  }
-  SERVICE_A = services[0].service_id;
-  SERVICE_B = services[1].service_id;
 });
+
+// The workspace DB is migrated but not always seeded (a suite that ran earlier
+// may have rebuilt it without seeds), so each test owns the rows it reads.
+async function createTenantFixture(): Promise<void> {
+  [TENANT, CLIENT, USER, TICKET, SERVICE_A, SERVICE_B] = Array.from({ length: 6 }, () => randomUUID());
+  const serviceTypeId = randomUUID();
+
+  await trx('tenants').insert({ tenant: TENANT, client_name: 'Money story', email: `${TENANT}@example.invalid` });
+  await trx('clients').insert({ tenant: TENANT, client_id: CLIENT, client_name: 'Money story client', default_currency_code: 'USD' });
+  await trx('users').insert({
+    tenant: TENANT, user_id: USER, username: USER, email: `${USER}@example.invalid`,
+    hashed_password: 'synthetic', user_type: 'internal',
+  });
+  await trx('tickets').insert({ tenant: TENANT, ticket_id: TICKET, ticket_number: `MS-${TICKET.slice(0, 8)}`, client_id: CLIENT, title: 'Money story ticket' });
+  await trx('service_types').insert({ id: serviceTypeId, tenant: TENANT, name: 'Money story hardware' });
+  await trx('service_catalog').insert([SERVICE_A, SERVICE_B].map((serviceId, index) => ({
+    tenant: TENANT, service_id: serviceId, service_name: `Money story item ${index + 1}`,
+    billing_method: 'fixed', custom_service_type_id: serviceTypeId,
+  })));
+}
 
 beforeEach(async () => {
   trx = await knex.transaction();
+  await createTenantFixture();
   mockedTenant = TENANT;
   mockedKnex = trx;
   qboQuery.mockReset();

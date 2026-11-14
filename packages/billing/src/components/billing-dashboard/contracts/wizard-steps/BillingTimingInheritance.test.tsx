@@ -41,7 +41,7 @@ vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useFormatBillingFrequency: () => (value: string) => value,
 }));
-vi.mock('@alga-psa/core', () => ({ getCurrencySymbol: () => '$', currencyFractionDigits: () => 2 }));
+vi.mock('@alga-psa/core', () => ({ getCurrencySymbol: () => '$', displayCurrencySymbol: () => '$', currencyFractionDigits: () => 2 }));
 vi.mock('../ServiceCatalogPicker', () => ({ ServiceCatalogPicker: () => <div /> }));
 vi.mock('../BillingFrequencyOverrideSelect', () => ({ BillingFrequencyOverrideSelect: () => <div /> }));
 

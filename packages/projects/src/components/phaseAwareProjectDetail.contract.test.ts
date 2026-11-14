@@ -18,7 +18,7 @@ describe('phase-aware MSP project UI contracts', () => {
     expect(projectDetailSource).toContain('const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);');
     expect(projectDetailSource).toContain('const fetchStatusesForPhase = async () => {');
     expect(projectDetailSource).toContain(
-      'const statuses = await getProjectTaskStatuses(project.project_id, selectedPhase.phase_id);'
+      'const statuses = await projectSource.options.taskStatuses(project.project_id, selectedPhase.phase_id);'
     );
     expect(projectDetailSource).toContain('() => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status]))');
     expect(projectDetailSource).toContain('const completedTasksCount = useMemo(() => {');
@@ -49,10 +49,10 @@ describe('phase-aware MSP project UI contracts', () => {
     expect(taskStatusSelectSource).toContain('const visibleStatuses = useMemo(() =>');
     expect(taskStatusSelectSource).toContain('.filter(s => s.is_visible)');
     expect(taskStatusSelectSource).toContain('.sort((a, b) => a.display_order - b.display_order)');
-    expect(taskEditSource).toContain('getProjectTaskStatuses(phase.project_id, phase.phase_id)');
+    expect(taskEditSource).toContain('projectSource.options.taskStatuses(phase.project_id, phase.phase_id)');
     expect(taskEditSource).toContain('setSelectedPhaseStatuses(statuses);');
     expect(taskEditSource).toContain(
-      'const newProjectStatuses = await getProjectTaskStatuses(newPhase.project_id, newPhase.phase_id);'
+      'const newProjectStatuses = await projectSource.options.taskStatuses(newPhase.project_id, newPhase.phase_id);'
     );
     expect(taskEditSource).toContain('projectStatuses={selectedPhaseStatuses}');
     expect(taskQuickAddSource).toContain('projectStatuses={projectStatuses}');
@@ -63,7 +63,7 @@ describe('phase-aware MSP project UI contracts', () => {
     expect(projectPhasesSource).toContain("viewMode !== 'billing'");
     expect(projectPhasesSource).toContain('viewMode={viewMode}');
     expect(phaseListItemSource).toContain("const isBillingView = viewMode === 'billing';");
-    expect(phaseListItemSource).toContain('draggable={!isBillingView && !effectiveIsEditing}');
+    expect(phaseListItemSource).toContain('draggable={!isBillingView && !effectiveIsEditing && !phaseMovesLocked}');
     expect(phaseListItemSource).toContain('{isBillingView && billingBadge && (');
     expect(phaseListItemSource).toContain('{!isBillingView && (');
     expect(phaseListItemSource).toContain('onSelect(phase);');

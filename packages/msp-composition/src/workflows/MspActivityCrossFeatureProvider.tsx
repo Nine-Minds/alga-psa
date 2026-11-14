@@ -77,7 +77,6 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         boardOptions={d.options.board}
         priorityOptions={d.options.priority}
         initialCategories={d.categories}
-        initialClients={d.clients}
         initialLocations={d.locations}
         initialAgentSchedules={d.agentSchedules}
         currentUser={props.currentUser}

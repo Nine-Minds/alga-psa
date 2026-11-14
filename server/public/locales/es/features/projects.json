@@ -2274,5 +2274,6 @@
         "inventoryStock": "Necesita acceso al inventario para ver los niveles de stock."
       }
     }
-  }
+  },
+  "backToSharedTasks": "← Volver a tareas compartidas"
 }

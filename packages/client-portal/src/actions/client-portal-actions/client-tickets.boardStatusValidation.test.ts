@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ticketReopenedEventPayloadSchema } from '@alga-psa/event-schemas';
 
 const TICKET_1 = '00000000-0000-4000-8000-000000000001';
 
@@ -372,6 +373,46 @@ describe('client portal board-scoped ticket status validation', () => {
     expect(publishWorkflowEventMock).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'TICKET_UPDATED' })
     );
+  });
+
+  it('publishes a schema-valid reopen event with both status IDs and the portal actor', async () => {
+    const previousStatusId = '00000000-0000-4000-8000-000000000002';
+    const newStatusId = '00000000-0000-4000-8000-000000000003';
+    currentUser.user_id = '00000000-0000-4000-8000-000000000004';
+    currentUser.tenant = '00000000-0000-4000-8000-000000000005';
+    const { trx, ticketUpdates } = createClientPortalTrx({
+      ticket: { ticket_id: TICKET_1, board_id: 'board-1', status_id: previousStatusId },
+      oldStatus: { status_id: previousStatusId, is_closed: true },
+      statusForBoard: { status_id: newStatusId, is_closed: false, portal_selectable: true },
+    });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+
+    const { updateTicketStatus } = await import('./client-tickets');
+    await expect(updateTicketStatus(TICKET_1, newStatusId)).resolves.toBeUndefined();
+
+    expect(ticketUpdates[0].updateData).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+    expect(publishWorkflowEventMock).toHaveBeenCalledTimes(1);
+    const event = publishWorkflowEventMock.mock.calls[0][0];
+    expect(event).toMatchObject({
+      eventType: 'TICKET_REOPENED',
+      payload: {
+        ticketId: TICKET_1,
+        userId: currentUser.user_id,
+        reopenedByUserId: currentUser.user_id,
+        previousStatusId,
+        newStatusId,
+        reopenedAt: expect.any(String),
+      },
+      ctx: { tenantId: currentUser.tenant, actor: { actorType: 'USER', actorUserId: currentUser.user_id } },
+      fromState: previousStatusId,
+      toState: newStatusId,
+    });
+    expect(ticketReopenedEventPayloadSchema.parse({ ...event.payload, ...event.ctx, ...event.ctx.actor })).toMatchObject({
+      ticketId: TICKET_1,
+      previousStatusId,
+      newStatusId,
+      actorUserId: currentUser.user_id,
+    });
   });
 
   it('T002/T003: updateTicketStatus rejects a non-selectable status with no mutation or closure event', async () => {

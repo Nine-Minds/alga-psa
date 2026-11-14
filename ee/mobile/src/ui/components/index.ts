@@ -2,6 +2,8 @@ export { Avatar } from "./Avatar";
 export { Badge } from "./Badge";
 export { BottomSheet } from "./BottomSheet";
 export { Card } from "./Card";
+export { DisplayTagBadges } from "./DisplayTagBadges";
+export type { DisplayTag } from "./DisplayTagBadges";
 export { HeaderAddButton } from "./HeaderAddButton";
 export { IconButton } from "./IconButton";
 export { ListRow } from "./ListRow";

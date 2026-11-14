@@ -1,0 +1,24 @@
+{
+  "productRevision": "5fb6d1ebd88fbb072e5cafb18ff2cb28e219b4ce",
+  "environment": "documented .env.localtest and disposable integration databases on local test PostgreSQL",
+  "reviewDatabaseTouched": false,
+  "sharedServerDatabaseTouched": false,
+  "results": [
+    {
+      "planTest": "T003",
+      "file": "ee/server/src/__tests__/integration/T003.servicePrincipalsService.integration.test.ts",
+      "command": "vitest run --config vitest.integration.config.ts src/__tests__/integration/T003.servicePrincipalsService.integration.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "planTest": "T017",
+      "file": "ee/server/src/__tests__/integration/T017.timeEntryActAs.integration.test.ts",
+      "command": "vitest run --config vitest.integration.config.ts src/__tests__/integration/T017.timeEntryActAs.integration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0
+    }
+  ]
+}

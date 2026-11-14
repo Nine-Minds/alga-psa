@@ -24,7 +24,7 @@ import { isoWeek } from './lib/browser-metrics-retention.mjs';
 export const FLAKY_TESTS_TAB = 'flaky_tests';
 export const FLAKY_TESTS_HEADER = ['reported_at_utc', 'week', 'window_days', 'since', 'suite', 'test_id', 'jobs',
   'main_occurrences', 'pr_occurrences', 'occurrences', 'first_seen', 'last_seen', 'report_run_id', 'report_run_url',
-  'schema_version'];
+  'schema_version', 'last_error'];
 const REPORT_RUN_ID_COLUMN = 'M';
 
 const text = value => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
@@ -39,7 +39,7 @@ export function flakyTestRows(report, { env = process.env } = {}) {
   return report.tests.map(row => [reportedAt, isoWeek(Date.parse(reportedAt)), count(report.windowDays), text(report.since),
     text(row.suite), text(row.testId), (Array.isArray(row.jobs) ? row.jobs : []).join(', '),
     count(row.mainOccurrences), count(row.prOccurrences), count(row.occurrences),
-    text(row.firstSeen), text(row.lastSeen), runId, runUrl, 1]);
+    text(row.firstSeen), text(row.lastSeen), runId, runUrl, 1, text(row.lastError)]);
 }
 
 // Reads one column of the tab; a tab that does not exist yet reads as empty.

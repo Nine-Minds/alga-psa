@@ -66,6 +66,8 @@ describe('resolveSyncTarget', () => {
     expect(target?.integration.targetRealm).toBe('conn-42');
     expect(target?.adapter).toBe(xeroAdapter);
     expect(target?.refreshTokenExpiresAt).toBe('2026-10-01T00:00:00Z');
+    // Xero has no Intuit environment.
+    expect(target?.qboEnvironment).toBeNull();
     expect(getStoredQboCredentialsMap).not.toHaveBeenCalled();
   });
 
@@ -75,7 +77,7 @@ describe('resolveSyncTarget', () => {
       targetRealm: 'realm-7'
     });
     vi.mocked(getStoredQboCredentialsMap).mockResolvedValue({
-      'realm-7': { refreshTokenExpiresAt: '2026-11-01T00:00:00Z' }
+      'realm-7': { refreshTokenExpiresAt: '2026-11-01T00:00:00Z', environment: 'sandbox' }
     } as any);
 
     const target = await resolveSyncTarget({} as any, 'tenant-1');
@@ -83,7 +85,24 @@ describe('resolveSyncTarget', () => {
     expect(target?.integration.adapterType).toBe('quickbooks_online');
     expect(target?.adapter).toBe(qboAdapter);
     expect(target?.refreshTokenExpiresAt).toBe('2026-11-01T00:00:00Z');
+    // Carried off the same credential read, so callers that only need the
+    // environment for a deep link do not read the tenant secret again.
+    expect(target?.qboEnvironment).toBe('sandbox');
     expect(getStoredXeroConnections).not.toHaveBeenCalled();
+  });
+
+  it('reports no environment for a QBO connection authorized before the stamp', async () => {
+    vi.mocked(resolveConnectedAccountingIntegration).mockResolvedValue({
+      adapterType: 'quickbooks_online',
+      targetRealm: 'realm-legacy'
+    });
+    vi.mocked(getStoredQboCredentialsMap).mockResolvedValue({
+      'realm-legacy': { refreshTokenExpiresAt: '2026-11-01T00:00:00Z' }
+    } as any);
+
+    const target = await resolveSyncTarget({} as any, 'tenant-1');
+
+    expect(target?.qboEnvironment).toBeNull();
   });
 
   it('returns null when no provider is connected', async () => {

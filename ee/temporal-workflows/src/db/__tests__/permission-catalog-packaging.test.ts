@@ -42,8 +42,14 @@ describe("packaged permission catalog", () => {
       /^COPY server\/migrations\/utils\/tenantDb\.cjs .*dist\/seeds\/tenantDb\.cjs$/gm,
     ) ?? [];
 
+    // EE catalog contributions travel with the catalog they extend.
+    const contributionCopies = dockerfile.match(
+      /^COPY ee\/server\/permission-catalog .*dist\/seeds\/permissions\/contributions$/gm,
+    ) ?? [];
+
     expect(seedCopies.length).toBeGreaterThan(0);
     expect(catalogCopies).toHaveLength(seedCopies.length);
+    expect(contributionCopies).toHaveLength(seedCopies.length);
     expect(tenantDbCopies).toHaveLength(seedCopies.length);
   });
 

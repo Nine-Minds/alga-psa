@@ -6,10 +6,21 @@ const state = vi.hoisted(() => ({
   tiers: new Map<string, string>(),
   install: vi.fn(async () => ({ success: true, installId: 'installed-version' })),
 }));
-vi.mock('@alga-psa/auth', () => ({ getSession: async () => state.session }));
-vi.mock('@alga-psa/licensing', () => ({
+const tierStub = vi.hoisted(() => () => ({
   resolveTenantTier: async (tenant: string) => state.tiers.get(tenant) ?? 'essentials',
   hasActiveSoloProTrial: () => false,
+}));
+vi.mock('@alga-psa/auth', () => ({ getSession: async () => state.session }));
+// Stub only the persisted-tier lookup; the real tenant tier gate (and its
+// TierAccessError) from @alga-psa/licensing must decide the outcome.
+vi.mock('../../../../../packages/licensing/src/lib/tenant-tier', tierStub);
+vi.mock('@alga-psa/licensing', async () => ({
+  ...(await vi.importActual<object>('../../../../../packages/licensing/src/lib/tenant-tier-access')),
+  ...tierStub(),
+}));
+vi.mock('@alga-psa/core/features', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  isEnterprise: true,
 }));
 vi.mock('server/src/lib/features', () => ({ isEnterprise: true }));
 vi.mock('@ee/lib/actions/extRegistryV2Actions', () => ({ installExtensionForCurrentTenantV2: state.install }));

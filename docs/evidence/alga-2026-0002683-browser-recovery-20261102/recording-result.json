@@ -1,0 +1,24 @@
+{
+  "paneId": "376c175b-b142-46db-b907-5be706188acf",
+  "success": true,
+  "result": {
+    "outPath": "/home/robert/alga-copies/feature-alga-2026-0002683-c5-follow-up-2-advance-track-v/docs/evidence/alga-2026-0002683-browser-recovery-20261102/browser-recovery-preflight.webm",
+    "chaptersPath": "/home/robert/alga-copies/feature-alga-2026-0002683-c5-follow-up-2-advance-track-v/docs/evidence/alga-2026-0002683-browser-recovery-20261102/browser-recovery-preflight.vtt",
+    "metaPath": "/home/robert/alga-copies/feature-alga-2026-0002683-c5-follow-up-2-advance-track-v/docs/evidence/alga-2026-0002683-browser-recovery-20261102/browser-recovery-preflight.json",
+    "durationMs": 2193,
+    "bytes": 13300,
+    "frames": 3,
+    "width": 1920,
+    "height": 767,
+    "marks": [
+      {
+        "t": 2.004,
+        "label": "Fresh own-card pane and exact origin attempt 3"
+      },
+      {
+        "t": 2.173,
+        "label": "Screenshot captured; Chromium displays chrome-error page"
+      }
+    ]
+  }
+}

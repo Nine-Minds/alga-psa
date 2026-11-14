@@ -566,6 +566,17 @@
       "projectStatus": "Statut initial",
       "projectTemplate": "Créer un projet d'intégration (facultatif)",
       "title": "Marquer comme gagnée"
+    },
+    "declare": {
+      "title": "Passer à {{stage}}",
+      "sourceLabel": "Source justificative",
+      "noSource": "Aucune source",
+      "sourceHelp": "Facultatif. Citez une interaction ou un document de cette opportunité. Joignez d'abord le document à l'opportunité s'il n'apparaît pas.",
+      "submit": "Déclarer",
+      "source": "Source",
+      "sourceRemoved": "Source supprimée",
+      "interactionFallback": "Interaction",
+      "documentFallback": "Document"
     }
   }
 }

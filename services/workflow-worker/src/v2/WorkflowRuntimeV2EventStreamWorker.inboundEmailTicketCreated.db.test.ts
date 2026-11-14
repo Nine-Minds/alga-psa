@@ -4,6 +4,7 @@ import path from 'node:path';
 import knex, { type Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient } from 'redis';
+import { createTestEnvironment } from '../../../../server/test-utils/testDataFactory';
 
 // End-to-end acceptance test for alga-2026-0002379: a TICKET_CREATED workflow must start for a ticket
 // created from inbound email.
@@ -17,7 +18,8 @@ import { createClient } from 'redis';
 // processInboundEmailInApp derives, not a raw message) and the Temporal start (the run row is real,
 // the Temporal workflow start is not).
 //
-// Needs a migrated AND seeded database plus the local-test Redis. Plain `npm test` skips it without
+// Needs a migrated database plus Redis; tenant-owned ticket fixtures are created by this suite.
+// Plain `npm test` skips it without
 // TEST_DB_NAME; with REQUIRE_DB=1 or vitest.db.config.ts a missing TEST_DB_NAME or a stubbed `redis` throws.
 //
 // Ports: Postgres 127.0.0.1:5472 (the instance server/test-utils/dbConfig.ts bootstraps against; 5474 is a
@@ -32,8 +34,8 @@ import { createClient } from 'redis';
 //   2. Run this test through the DB config (forces the real node-redis client by setting REAL_REDIS=1):
 //        cd services/workflow-worker && TEST_DB_NAME=alga2379_wfw_test \
 //          npx vitest run --config vitest.db.config.ts src/v2/WorkflowRuntimeV2EventStreamWorker.inboundEmailTicketCreated.db.test.ts
-//   A migrated-but-unseeded DB fails with `Expected seeded tenant`. The test cleans up what it creates
-//   (tickets, outbox rows, runtime events, the workflow definition, its stream entries), so it can be rerun.
+//   Shared dev seeds are not required: earlier workspace DB suites may recreate the database without
+//   them. Each run creates its own tenant and cleans up its tickets, workflow and stream entries.
 
 const requireInfra = process.env.REQUIRE_DB === '1' || process.env.DB_TEST_CONFIG === '1';
 const dbConfigured = Boolean(process.env.TEST_DB_NAME);
@@ -140,15 +142,25 @@ describe.skipIf(!dbConfigured)('inbound email -> TICKET_CREATED workflow launch 
     });
     state.db = db;
 
-    const tenant = await db('tenants').first('tenant');
-    if (!tenant?.tenant) throw new Error('Expected seeded tenant');
-    tenantId = state.tenantId = tenant.tenant;
-    clientId = (await db('clients').where({ tenant: tenantId }).first('client_id')).client_id;
-    const status = await db('statuses').where({ tenant: tenantId, status_type: 'ticket', is_default: true }).whereNotNull('board_id').first('status_id', 'board_id');
-    statusId = status.status_id;
-    boardId = status.board_id;
-    priorityId = (await db('priorities').where({ tenant: tenantId }).first('priority_id')).priority_id;
-    userId = state.userId = (await db('users').where({ tenant: tenantId }).first('user_id')).user_id;
+    // Never discover an arbitrary tenant from a previous suite: it may have no clients, users or
+    // ticket configuration. Build the complete fixture in one transaction and retain its identities.
+    const fixture = await db.transaction(async (trx) => {
+      const identity = await createTestEnvironment(trx);
+      const boardId = uuidv4(), statusId = uuidv4(), priorityId = uuidv4();
+      await trx('boards').insert({ tenant: identity.tenantId, board_id: boardId,
+        board_name: 'Inbound email', is_default: true, is_inactive: false });
+      await trx('statuses').insert({ tenant: identity.tenantId, status_id: statusId, board_id: boardId,
+        name: 'Open', status_type: 'ticket', is_default: true, is_closed: false, order_number: 1 });
+      await trx('priorities').insert({ tenant: identity.tenantId, priority_id: priorityId,
+        priority_name: 'Normal', item_type: 'ticket', order_number: 1 });
+      return { ...identity, boardId, statusId, priorityId };
+    });
+    tenantId = state.tenantId = fixture.tenantId;
+    clientId = fixture.clientId;
+    userId = state.userId = fixture.userId;
+    boardId = fixture.boardId;
+    statusId = fixture.statusId;
+    priorityId = fixture.priorityId;
     getCurrentUserMock.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] });
     startRunMock.mockResolvedValue({ workflowId: 'workflow-runtime-v2:run:e2e', firstExecutionRunId: 'temporal-e2e' });
 
@@ -254,6 +266,8 @@ describe.skipIf(!dbConfigured)('inbound email -> TICKET_CREATED workflow launch 
       );
     });
     ticketIds.push(ticket.ticket_id);
+    expect(await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).first())
+      .toMatchObject({ client_id: clientId, board_id: boardId, status_id: statusId, priority_id: priorityId });
 
     const outboxRow = await db('inbound_email_outbox').where({ tenant: tenantId, inbox_id: inbox.inbox_id, event_type: 'TICKET_CREATED' }).first();
     expect(outboxRow).toBeTruthy();
@@ -296,7 +310,7 @@ describe.skipIf(!dbConfigured)('inbound email -> TICKET_CREATED workflow launch 
   // Production still saw rejects after the producer-side stamps shipped: every rejected payload had the
   // pre-actor-fields key set (source,userId,board_id,tenantId,ticketId,client_id,priority_id) and no
   // occurredAt, i.e. it was written to the stream by a producer that predates the stamps. This builds the
-  // legacy key set from the same seeded ids and puts it on the real
+  // legacy key set from the same fixture ids and puts it on the real
   // stream, so the consumer boundary is exercised exactly as production exercised it.
   it('starts the workflow when a stale producer puts a payload without occurredAt on the stream', async () => {
     const legacy = { tenantId, ticketId: uuidv4(), userId, source: 'email', board_id: boardId, priority_id: priorityId, client_id: clientId };

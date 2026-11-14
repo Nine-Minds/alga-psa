@@ -7,7 +7,7 @@ import {
   type LabelViewModelProvider,
 } from '@alga-psa/types';
 
-import { createAssetReadContext, isAssetReadAllowed } from './assetReadAuthorization';
+import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from './assetReadAuthorization';
 
 /**
  * Asset identity label data. Read-only; no side effects.
@@ -30,7 +30,7 @@ export const assetLabelViewModelProvider: LabelViewModelProvider = {
       return ids.map(() => null);
     }
     const { knex } = await createTenantKnex(context.tenant);
-    const authContext = await createAssetReadContext(knex, context.tenant, context.user);
+    const authContext = await createAssetReadContext(knex, context.tenant, context.user as AssetAuthUser);
 
     return Promise.all(
       ids.map(async (assetId): Promise<LabelViewModel | null> => {

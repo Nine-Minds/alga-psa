@@ -35,6 +35,7 @@ import {
   ClientContractServiceConfigurationService,
   type ClientContractServiceConfigDetails,
 } from "@alga-psa/billing/services/clientContractServiceConfigurationService";
+import { loadContractBillingTrace } from "@alga-psa/shared/billingClients/contractBillingTrace";
 import { assumptionKey } from "./syntheticActivity";
 
 const DEFAULT_HORIZON_PERIOD_COUNT = 6;
@@ -538,7 +539,7 @@ export async function snapshotContractToScenario(
     ? []
     : await loadScenarioDiscounts(db, params.contractId);
 
-  const { clientBinding, contractStartDate, contractEndDate, invoiceSchedule } =
+  const { clientBinding, contractStartDate, contractEndDate, invoiceSchedule, billingIdentitySource } =
     await resolveClientBinding(
       knex,
       db,
@@ -570,6 +571,14 @@ export async function snapshotContractToScenario(
     contract_id: contract.contract_id,
     is_system_managed_default: Boolean(contract.is_system_managed_default),
     client_binding: clientBinding,
+    // Display only: names the profile and terms the live binding resolves to.
+    // Pricing below does not read it.
+    billing_identity: billingIdentitySource
+      ? await loadContractBillingTrace(knex, tenant, {
+          contractId: params.contractId,
+          clientContractId: billingIdentitySource.clientContractId,
+        })
+      : null,
     invoice_schedule: invoiceSchedule,
     billing_frequency: contract.billing_frequency,
     contract_start_date: contractStartDate,
@@ -1237,6 +1246,8 @@ async function resolveClientBinding(
   contractStartDate: ISO8601String | null;
   contractEndDate: ISO8601String | null;
   invoiceSchedule: ScenarioBillingSchedule;
+  /** Which live binding the billing trace describes; null when no live assignment was resolved. */
+  billingIdentitySource: { clientContractId?: string } | null;
 }> {
   if (params.clientContractId) {
     const clientContract = await db
@@ -1290,6 +1301,7 @@ async function resolveClientBinding(
         tenant,
         client.client_id,
       ),
+      billingIdentitySource: { clientContractId: params.clientContractId },
     };
   }
 
@@ -1317,6 +1329,7 @@ async function resolveClientBinding(
         tenant,
         client.client_id,
       ),
+      billingIdentitySource: null,
     };
   }
 
@@ -1330,6 +1343,7 @@ async function resolveClientBinding(
       contractStartDate: null,
       contractEndDate: null,
       invoiceSchedule: buildDefaultInvoiceSchedule(contract.billing_frequency),
+      billingIdentitySource: null,
     };
   }
 
@@ -1358,6 +1372,7 @@ async function resolveClientBinding(
         tenant,
         client.client_id,
       ),
+      billingIdentitySource: {},
     };
   }
 
@@ -1372,6 +1387,7 @@ async function resolveClientBinding(
     contractStartDate: null,
     contractEndDate: null,
     invoiceSchedule: buildDefaultInvoiceSchedule(contract.billing_frequency),
+    billingIdentitySource: null,
   };
 }
 

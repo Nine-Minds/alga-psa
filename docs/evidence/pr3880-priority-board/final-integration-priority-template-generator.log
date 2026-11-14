@@ -1,0 +1,21 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/server
+      Running tests with seed "1793754108231"
+
+Environment file path: /home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/.env.localtest
+ ✓ |node| src/test/integration/recurringTicketGenerator.integration.test.ts (21 tests) 4475ms 69 MB heap used
+Warning: A vi.mock("next-auth/next") call in "/home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/server/test-utils/testMocks.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock("@/app/api/auth/[...nextauth]/options") call in "/home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/server/test-utils/testMocks.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock("next/cache") call in "/home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/server/test-utils/testMocks.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+ ✓ |node| src/test/integration/priorityBoardType.integration.test.ts (12 tests) 678ms 132 MB heap used
+ ✓ |node| src/test/integration/recurringTicketTemplates.integration.test.ts (15 tests) 4796ms 131 MB heap used
+
+ Test Files  3 passed (3)
+      Tests  48 passed (48)
+   Start at  01:01:55
+   Duration  24.24s (transform 9.58s, setup 260ms, import 13.62s, tests 9.95s, environment 0ms)
+

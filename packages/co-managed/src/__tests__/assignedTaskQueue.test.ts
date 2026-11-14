@@ -6,7 +6,7 @@ const state = vi.hoisted(() => ({ references: [] as any[], redactedFields: [] as
 vi.mock('@alga-psa/db', () => ({
   withTransaction: async (_db: any, work: any) => work({}),
   tenantDb: () => ({ table: () => {
-    const builder: any = { where: () => builder, orderBy: () => builder, limit: () => builder, select: async () => state.references };
+    const builder: any = { where: () => builder, orderBy: () => builder, limit: () => builder, select: async () => state.references, first: async () => ({ client_name: 'Acme' }) };
     return builder;
   } }),
 }));
@@ -23,7 +23,7 @@ vi.mock('../sharedWork', async () => {
   } };
 });
 
-import { listCoManagedAssignedTasks } from '../projectTaskQueue';
+import { listCoManagedAssignedTasks, readCoManagedCustomerOrganizationName } from '../projectTaskQueue';
 
 const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const actor: any = { tenant: U(1), userId: U(2) };
@@ -59,5 +59,15 @@ describe('listCoManagedAssignedTasks redaction', () => {
   it('still drops a denied row', async () => {
     state.denied.add(U(201));
     expect((await listCoManagedAssignedTasks({} as any, actor)).rows.map(r => r.taskId)).toEqual([U(202)]);
+  });
+  // Hand-fed redactedFields; organizationNameRedaction.behaviour.test.ts derives them through the real admission wrapper.
+  it.each(['organization_name', 'values.organization_name', 'client_name', 'organizationName', 'tenants'])('a redacted %s hides the organization name on the queue row and the live read', async field => {
+    state.redactedFields = [field];
+    const [row] = (await listCoManagedAssignedTasks({} as any, actor)).rows;
+    expect(row).toMatchObject({ taskName: 'Task 1', projectName: 'Rollout', organizationName: null, assigneeName: 'Alex' });
+    expect(await readCoManagedCustomerOrganizationName({} as any, U(3), state.redactedFields)).toBe('');
+  });
+  it('with nothing redacted the live read returns the real organization name', async () => {
+    expect(await readCoManagedCustomerOrganizationName({} as any, U(3), [])).toBe('Acme');
   });
 });

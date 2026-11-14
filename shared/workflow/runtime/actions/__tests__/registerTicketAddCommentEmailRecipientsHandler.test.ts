@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useNativeCoManagedVerdict } from './helpers/nativeCoManagedVerdict';
 
 /**
  * Behaviour of the `tickets.add_comment` handler around one-off Cc/Bcc: what
@@ -46,6 +47,7 @@ async function addCommentAction() {
 const ctx = { tenantId: 'tenant-1', runId: 'run-1', stepPath: 'step-1' } as never;
 
 describe('tickets.add_comment one-off recipients', () => {
+  useNativeCoManagedVerdict();
   beforeEach(() => {
     createCommentMock.mockClear();
   });

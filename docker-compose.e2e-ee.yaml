@@ -1,6 +1,8 @@
 # Layer over the isolated fresh-install stack to test the actual EE image and
 # migrated EE schema and background workflow storage registration.
 services:
+  runtime-permissions:
+    image: alga-e2e-test_server_ee_local:latest
   server:
     image: alga-e2e-test_server_ee_local:latest
     environment:

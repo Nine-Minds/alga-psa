@@ -161,7 +161,7 @@ const lines = (count: number, fontPx: number, lineHeight: number) => ({
 });
 
 const identifier = (id: string, fontPx: number): Node =>
-  text(id, 'identifier', { fontSize: `${fontPx}px`, fontWeight: 800, fontFamily: 'monospace', lineHeight: 1.1 });
+  text(id, 'identifier', { fontSize: `${fontPx}px`, fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', lineHeight: 1.1 });
 
 const buildTicketWorkTag = (): TemplateAst =>
   label(
@@ -175,8 +175,8 @@ const buildTicketWorkTag = (): TemplateAst =>
       // Held client equipment (custody): one line each, collapsing when empty so a tag with no equipment is unchanged.
       text('custody-location', 'custodyLocation', { ...lines(1, 10, 1.2), fontWeight: 700 }),
       text('next-action', 'nextAction', { ...lines(1, 9, 1.2), color: '#374151' }),
-      text('asset', 'assetLine', { fontSize: '10px', lineHeight: 1.2, fontFamily: 'monospace' }),
-      text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
+      text('asset', 'assetLine', { fontSize: '10px', lineHeight: 1.2, fontFamily: '"JetBrains Mono", monospace' }),
+      text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: '"JetBrains Mono", monospace' }),
     ],
     // Logo above the QR (like the asset label) so the worst-case text column keeps its full height.
     [logo('logo', 6, { objectPosition: 'center' }), qr('qr', '34mm')],
@@ -207,7 +207,7 @@ const buildStockUnitLabel = (): TemplateAst =>
       brandLine(),
       text('product', 'title', { ...lines(2, 13, 1.2), fontWeight: 700 }),
       identifier('unit-code', 18),
-      text('serial', 'serialSuffix', { ...lines(1, 11, 1.2), fontFamily: 'monospace' }),
+      text('serial', 'serialSuffix', { ...lines(1, 11, 1.2), fontFamily: '"JetBrains Mono", monospace' }),
       text('detail', 'detail', { ...lines(2, 10, 1.2), color: '#374151' }),
     ],
     [qr('qr', '34mm')],
@@ -248,9 +248,9 @@ const buildRmaLabel = (): TemplateAst =>
       text('vendor', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
       text('status', 'rmaStatus', { ...lines(1, 10, 1.2), fontWeight: 700 }),
       text('return-by', 'rmaReturnBy', { ...lines(1, 9, 1.2), color: '#374151' }),
-      text('shipping', 'rmaShipping', { ...lines(1, 9, 1.2), fontFamily: 'monospace' }),
-      text('asset', 'assetLine', { ...lines(1, 9, 1.2), fontFamily: 'monospace' }),
-      text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
+      text('shipping', 'rmaShipping', { ...lines(1, 9, 1.2), fontFamily: '"JetBrains Mono", monospace' }),
+      text('asset', 'assetLine', { ...lines(1, 9, 1.2), fontFamily: '"JetBrains Mono", monospace' }),
+      text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: '"JetBrains Mono", monospace' }),
       text('ticket', 'rmaTicket', { ...lines(1, 9, 1.2), color: '#4b5563' }),
     ],
     [logo('logo', 6, { objectPosition: 'center' }), qr('qr', '34mm')],

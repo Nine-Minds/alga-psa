@@ -253,6 +253,7 @@ describe('activateClientContractAssignment', () => {
       startDate: '2099-10-22',
       message: 'Contract is already active and starts on 2099-10-22; there is nothing to activate.',
     });
+    expect(updateContract).not.toHaveBeenCalled();
     expect(updateAssignment).not.toHaveBeenCalled();
   });
 });

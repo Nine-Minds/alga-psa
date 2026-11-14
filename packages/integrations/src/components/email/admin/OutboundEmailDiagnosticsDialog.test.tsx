@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OutboundEmailDiagnosticsDialog } from './OutboundEmailDiagnosticsDialog';
 
@@ -201,6 +201,53 @@ describe('OutboundEmailDiagnosticsDialog', () => {
     expect(writeText).toHaveBeenCalledWith(JSON.stringify(makeReport().supportBundle, null, 2));
     expect(writeText.mock.calls[0][0]).not.toContain('sender@example.com');
     expect(runOutboundEmailDiagnosticsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the copy confirmation after its display interval', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    const view = render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
+    const button = await screen.findByRole('button', { name: 'Copy report' });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await act(async () => { fireEvent.click(button); });
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(1499); });
+      expect(screen.getByText('Report copied to clipboard.')).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(screen.getByRole('button', { name: 'Copy report' })).toBeInTheDocument();
+      expect(screen.queryByText('Report copied to clipboard.')).not.toBeInTheDocument();
+    } finally {
+      view.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(['unmount', 'close', 'rerun'] as const)('cancels pending copy feedback on %s', async (transition) => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    const view = render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
+    const button = await screen.findByRole('button', { name: 'Copy report' });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await act(async () => { fireEvent.click(button); });
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+      expect(vi.getTimerCount()).toBe(1);
+
+      if (transition === 'unmount') view.unmount();
+      else if (transition === 'close') view.rerender(<OutboundEmailDiagnosticsDialog isOpen={false} onClose={() => {}} />);
+      else await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Check again' })); });
+
+      // No deferred state update may outlive the feedback it belongs to.
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      view.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it('copies on HTTP installations without the Clipboard API and removes the temporary field', async () => {

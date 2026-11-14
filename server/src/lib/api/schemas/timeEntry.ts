@@ -14,7 +14,8 @@ import {
 } from './common';
 
 // Work item type schema
-export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction']);
+export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction', 'co_managed']);
+// 'co_managed' is a contributed type: a write is accepted only when a registered time source owns it (TimeEntryService.assertNativeWorkItemType).
 
 // Approval status schema
 export const approvalStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);

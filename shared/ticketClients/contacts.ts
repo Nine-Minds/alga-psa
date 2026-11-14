@@ -3,6 +3,12 @@ import { tenantDb } from '@alga-psa/db';
 import type { IContact } from '@alga-psa/types';
 import type { ContactFilterStatus } from './types';
 import { ContactModel } from '../models/contactModel';
+import { attachContactLocations } from '../models/contactLocation';
+
+/** ANDs the caller's row restriction onto the contact query (alias `contacts`), before rows are read. */
+export interface ContactReadOptions {
+  narrowQuery?: (query: Knex.QueryBuilder) => void;
+}
 
 type ContactSortBy = 'full_name' | 'created_at' | 'email' | 'phone_number';
 
@@ -44,13 +50,27 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
+/**
+ * Attaches `locations` and `primaryLocation` in one batched read, the same pass the display tags
+ * take, so a picker page costs one extra query rather than one per row.
+ */
+function withLocations<T extends { contact_name_id: string }>(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  contacts: T[],
+): Promise<T[]> {
+  return attachContactLocations(knexOrTrx, tenant, contacts, (contact) => contact.contact_name_id) as Promise<T[]>;
+}
+
 export async function getContactByContactNameId(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  contactNameId: string
+  contactNameId: string,
+  options: ContactReadOptions = {}
 ): Promise<IContact | null> {
   const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name');
+  options.narrowQuery?.(query);
   tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
   const baseContact = await query
     .where({
@@ -61,7 +81,8 @@ export async function getContactByContactNameId(
   if (!baseContact) return null;
 
   const [contact] = await ContactModel.hydrateContactsWithPhoneNumbers([baseContact as any], tenant, knexOrTrx as Knex.Transaction);
-  return { ...contact, avatarUrl: (contact as any).avatarUrl ?? null } as IContact;
+  const [withLocation] = await withLocations(knexOrTrx, tenant, [contact as any]);
+  return { ...withLocation, avatarUrl: (contact as any).avatarUrl ?? null } as IContact;
 }
 
 export async function getContactsByClient(
@@ -70,7 +91,8 @@ export async function getContactsByClient(
   clientId: string,
   status: ContactFilterStatus = 'active',
   sortBy: ContactSortBy = 'full_name',
-  sortDirection: 'asc' | 'desc' = 'asc'
+  sortDirection: 'asc' | 'desc' = 'asc',
+  options: ContactReadOptions = {}
 ): Promise<IContact[]> {
   const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name')
@@ -81,9 +103,11 @@ export async function getContactsByClient(
       }
     })
     .orderBy('contacts.full_name', 'asc');
+  options.narrowQuery?.(query);
   tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
 
-  const contacts = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
+  const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
+  const contacts = await withLocations(knexOrTrx, tenant, hydrated as Array<IContact & { contact_name_id: string }>);
   return sortContacts(contacts, sortBy, sortDirection)
     .map((contact) => ({ ...contact, avatarUrl: (contact as any).avatarUrl ?? null } as IContact));
 }
@@ -91,14 +115,17 @@ export async function getContactsByClient(
 export async function getAllActiveContacts(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  sortDirection: 'asc' | 'desc' = 'asc'
+  sortDirection: 'asc' | 'desc' = 'asc',
+  options: ContactReadOptions = {}
 ): Promise<IContact[]> {
   const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name')
     .andWhere('contacts.is_inactive', false)
     .orderBy('contacts.full_name', sortDirection);
+  options.narrowQuery?.(query);
   tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
-  const contacts = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
+  const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
+  const contacts = await withLocations(knexOrTrx, tenant, hydrated as Array<IContact & { contact_name_id: string }>);
 
   return contacts.map((c) => ({ ...c, avatarUrl: (c as any).avatarUrl ?? null } as IContact));
 }

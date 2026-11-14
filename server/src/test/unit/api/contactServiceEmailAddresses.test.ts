@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }), permits: async () => true }) }));
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOriginal) => ({ ...(await importOriginal<any>()), assertRecordCreateAllowed: async () => undefined }));
+
 const withTransactionMock = vi.fn();
 const createContactMock = vi.fn();
 const getContactByIdMock = vi.fn();
@@ -12,6 +16,12 @@ vi.mock('@alga-psa/db', async () => {
     withTransaction: (...args: any[]) => withTransactionMock(...args),
   };
 });
+
+// A new collaborator of the service: this suite is about email-field forwarding, and the fake
+// transaction here is not a knex connection.
+vi.mock('@alga-psa/shared/models/contactLocation', () => ({
+  getContactLocationsForContacts: vi.fn(async () => new Map()),
+}));
 
 vi.mock('@alga-psa/shared/models/contactModel', () => ({
   ContactModel: {

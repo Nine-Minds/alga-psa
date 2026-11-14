@@ -2,7 +2,7 @@
 // TODO: Hook return type issues with useResponsiveColumns
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
@@ -19,6 +19,7 @@ import {
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskDocumentUpload from './TaskDocumentUpload';
+import { RequesterTaskConversation } from './RequesterTaskConversation';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -80,11 +81,14 @@ interface TaskDependency {
 }
 
 interface ClientTaskListViewProps {
+  projectId: string;
   phases: Phase[];
   tasks: Task[];
   config: IClientPortalConfig;
   loading?: boolean;
   taskDependencies?: { [taskId: string]: { predecessors: TaskDependency[]; successors: TaskDependency[] } };
+  /** A taskId already authorized by ProjectDetailView's requester shared-work lookup. */
+  linkedTaskId?: string | null;
 }
 
 // Progress bar component
@@ -100,11 +104,13 @@ function ProgressBar({ percentage }: { percentage: number }) {
 }
 
 export default function ClientTaskListView({
+  projectId,
   phases,
   tasks,
   config,
   loading = false,
-  taskDependencies
+  taskDependencies,
+  linkedTaskId = null
 }: ClientTaskListViewProps) {
   const { t, i18n } = useTranslation('features/projects');
   const dateLocale = getDateFnsLocale(i18n.language);
@@ -112,6 +118,7 @@ export default function ClientTaskListView({
     new Set(phases.map(p => p.phase_id))
   );
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
+  const expandedLinkedTaskRef = useRef<string | null>(null);
 
   const showPhases = config.show_phases ?? false;
   const showTasks = config.show_tasks ?? false;
@@ -244,6 +251,21 @@ export default function ClientTaskListView({
     });
     setExpandedStatuses(statusesWithTasks);
   }, [phaseGroups]);
+
+  // Consume an eligible deep link once its task has a phase and status group. This is a
+  // one-shot expansion so later user collapse choices are not overridden by rerenders.
+  useEffect(() => {
+    if (!linkedTaskId || expandedLinkedTaskRef.current === linkedTaskId) return;
+    const containingGroup = phaseGroups.find(group => group.statusGroups.some(statusGroup =>
+      statusGroup.tasks.some(task => task.task_id === linkedTaskId)));
+    const taskStatusGroup = containingGroup?.statusGroups.find(statusGroup =>
+      statusGroup.tasks.some(task => task.task_id === linkedTaskId));
+    if (!containingGroup || !taskStatusGroup) return;
+
+    expandedLinkedTaskRef.current = linkedTaskId;
+    setExpandedPhases(previous => new Set(previous).add(containingGroup.phase.phase_id));
+    setExpandedStatuses(previous => new Set(previous).add(`${containingGroup.phase.phase_id}:${taskStatusGroup.status_name}`));
+  }, [linkedTaskId, phaseGroups]);
 
   const togglePhase = (phaseId: string) => {
     setExpandedPhases(prev => {
@@ -503,6 +525,7 @@ export default function ClientTaskListView({
                                       <div className="pl-6 truncate">
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium text-gray-900">{task.task_name}</span>
+                                          <RequesterTaskConversation projectId={projectId} taskId={task.task_id} />
                                           {visibleFields.includes('priority') && task.priority_name && (
                                             <Tooltip content={`${t('tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
                                               <div

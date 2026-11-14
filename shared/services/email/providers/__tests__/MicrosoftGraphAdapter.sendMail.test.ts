@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { MicrosoftGraphAdapter } from '../MicrosoftGraphAdapter';
+
+const unauthorized = (config: InternalAxiosRequestConfig) => new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null,
+  { status: 401, statusText: 'Unauthorized', headers: {}, config,
+    data: { error: { code: 'InvalidAuthenticationToken', message: 'Access token is expired or invalid' } } });
 
 function makeAdapter() {
   return new MicrosoftGraphAdapter({
@@ -67,17 +72,36 @@ describe('MicrosoftGraphAdapter.sendMail', () => {
 
   it('refreshes and retries exactly once after a 401', async () => {
     const adapter = makeAdapter();
-    const unauthorized = Object.assign(new Error('Unauthorized'), { response: { status: 401 } });
-    const post = vi.fn()
-      .mockRejectedValueOnce(unauthorized)
-      .mockResolvedValueOnce({ headers: { 'request-id': 'request-2' } });
-    const refresh = vi.spyOn(adapter as any, 'refreshAccessToken').mockResolvedValue(undefined);
-    (adapter as any).httpClient = { post };
+    const sends: string[] = [];
+    // Through the real client: the refresh-and-replay is its response interceptor.
+    (adapter as any).httpClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      sends.push(String(config.headers.Authorization));
+      if (sends.length === 1) throw unauthorized(config);
+      return { data: {}, status: 202, statusText: 'Accepted', headers: { 'request-id': 'request-2' }, config };
+    };
+    const refresh = vi.spyOn(adapter as any, 'refreshAccessToken').mockImplementation(async () => {
+      (adapter as any).accessToken = 'refreshed-token';
+    });
 
     await expect(adapter.sendMail({ kind: 'json', message: { subject: 'Retry' } }))
       .resolves.toEqual({ requestId: 'request-2' });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(post).toHaveBeenCalledTimes(2);
+    expect(sends).toEqual(['Bearer access-token', 'Bearer refreshed-token']);
+  });
+
+  it('surfaces a 401 that survives the refreshed replay without refreshing again', async () => {
+    const adapter = makeAdapter();
+    let sends = 0;
+    (adapter as any).httpClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      sends += 1;
+      throw unauthorized(config);
+    };
+    const refresh = vi.spyOn(adapter as any, 'refreshAccessToken').mockResolvedValue(undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(adapter.sendMail({ kind: 'json', message: { subject: 'Dead' } })).rejects.toMatchObject({ status: 401 });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(sends).toBe(2);
   });
 
   it('sends MIME content with the Graph-required content type', async () => {

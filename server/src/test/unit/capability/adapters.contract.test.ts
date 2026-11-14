@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const nf = vi.hoisted(() => vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }));
 vi.mock('next/navigation', () => ({ notFound: nf }));
-vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: vi.fn(async () => true) }));
 const sql = vi.hoisted(() => ({ createTenantKnex: vi.fn(), getAdminConnection: vi.fn(), tenantDb: vi.fn() }));
 vi.mock('@alga-psa/db', () => sql);
 vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: sql.getAdminConnection }));
@@ -11,6 +10,7 @@ vi.mock('@alga-psa/core/logger', () => ({
   default: { info: logInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import {
   activityServesCapability,
   filterCapabilityServed,
@@ -31,7 +31,7 @@ import { handleApiError, NotFoundError } from '../../../lib/api/middleware/apiMi
 
 function open(on: boolean) {
   registerCapabilityEligibility('co-managed', async () => on);
-  registerCapabilityParticipation('co-managed', async (ctx: any) => (on ? [...ctx.tenantIds] : []));
+  registerCapabilityParticipation('co-managed', async ({ tenantIds }) => (on ? [...tenantIds] : []));
   clearCapabilityCache();
 }
 
@@ -39,11 +39,17 @@ describe('capability adapters', () => {
   afterEach(() => {
     // The gate registry is process-global; leave no resolvers for the next file.
     resetCapabilityRegistry();
+    delete (globalThis as Record<symbol, unknown>)[Symbol.for('alga.core.featureFlagChecker')];
+    vi.unstubAllEnvs();
   });
 
   beforeEach(() => {
-    delete process.env.FORCE_CAPABILITIES;
+    vi.stubEnv('FORCE_CAPABILITIES', '');
+    vi.stubEnv('FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE', undefined);
+    vi.stubEnv('NEXT_PUBLIC_DISABLE_FEATURE_FLAGS', 'false');
+    vi.stubEnv('DISABLE_FEATURE_FLAGS', 'false');
     vi.clearAllMocks();
+    registerFeatureFlagChecker(async () => true);
     open(false);
   });
 

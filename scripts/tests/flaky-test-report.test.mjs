@@ -4,8 +4,10 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { aggregateFlakyTests, renderFlakyTestReport } from '../lib/flaky-test-report.mjs';
-import { collectFlakyArtifacts, FlakyCollectionError, readFlakyDocumentZip, runFlakyTestCollection } from '../collect-flaky-tests.mjs';
+import { collectFlakyArtifacts, FLAKY_ARTIFACT_NAMES, FlakyCollectionError, readFlakyDocumentZip, runFlakyTestCollection } from '../collect-flaky-tests.mjs';
+import { load as loadYaml } from 'js-yaml';
 import { flakyPlaywrightTests } from '../lib/playwright-execution-evidence.mjs';
 import VitestFlakyReporter from '../lib/vitest-flaky-reporter.mjs';
 
@@ -26,9 +28,10 @@ const artifact = (over = {}) => ({ artifactName: 'flaky-tests-browser-community'
   createdAt: days(1), document: browserDocument(), ...over });
 
 test('aggregates browser and unit flakes, most frequent first', () => {
+  const errored = (tests, error) => tests.map(entry => ({ ...entry, error }));
   const report = aggregateFlakyTests([
-    artifact({ runId: '100', createdAt: days(6) }),
-    artifact({ runId: '101', createdAt: days(2) }),
+    artifact({ runId: '100', createdAt: days(6), document: browserDocument(errored(browserDocument().tests, 'Timeout 30000ms exceeded (old)')) }),
+    artifact({ runId: '101', createdAt: days(2), document: browserDocument(errored(browserDocument().tests, 'Timeout 30000ms exceeded')) }),
     artifact({ artifactName: 'flaky-tests-browser-enterprise', runId: '101', createdAt: days(2),
       document: { ...browserDocument(), job: 'production-browser (enterprise)', edition: 'enterprise' } }),
     artifact({ artifactName: 'flaky-tests-unit-shard-2', runId: '101', createdAt: days(3), document: unitDocument() }),
@@ -43,12 +46,18 @@ test('aggregates browser and unit flakes, most frequent first', () => {
   assert.deepEqual(report.tests[0].artifactNames, ['flaky-tests-browser-community', 'flaky-tests-browser-enterprise']);
   assert.equal(report.tests[0].firstSeen, days(6));
   assert.deepEqual(report.tests[1].jobs, ['server-unit shard 2/4']);
+  // The newest recorded first-attempt error stands for the row; a lane that
+  // recorded none leaves it null rather than absent.
+  assert.equal(report.tests[0].lastError, 'Timeout 30000ms exceeded');
+  assert.equal(report.tests[1].lastError, null);
+  assert.equal('lastErrorAt' in report.tests[0], false);
   assert.equal(report.sources.length, 5);
 
   const markdown = renderFlakyTestReport(report);
   assert.match(markdown, /## Flaky tests \(last 7 days\)/);
   assert.match(markdown, /2 flaky tests across 5 artifacts from 2 runs \(0 artifacts rejected\)\./);
-  assert.match(markdown, /\| Test \| Suite \| Job \| Main \| PR \| Count \| Last seen \|/);
+  assert.match(markdown, /\| Test \| Suite \| Job \| Main \| PR \| Count \| Last seen \| Last error \|/);
+  assert.match(markdown, / \| Timeout 30000ms exceeded \|\n/);
   assert.match(markdown, /\| e2e-tests\/tests\/invoice\.spec\.ts > invoice > retains balance \[community\] \| production-browser \| production-browser \(community\), production-browser \(enterprise\) \| 0 \| 3 \| 3 \| /);
   assert.equal(markdown.split('\n').filter(line => line.startsWith('| ')).length, 4);
 });
@@ -106,25 +115,25 @@ test('clean runs still report, with their empty documents counted', () => {
 
 test('a partly inspected window never reads as a clean one', () => {
   const complete = aggregateFlakyTests([artifact()], { generatedAt,
-    coverage: { runsInspected: 351, complete: true, limits: [] } });
-  assert.deepEqual(complete.coverage, { runsInspected: 351, complete: true, limits: [] });
-  assert.match(renderFlakyTestReport(complete), /Inspected every flaky-reporting workflow run in the window \(351\)\./);
+    coverage: { artifactsListed: 35, namesInspected: 13, complete: true, limits: [] } });
+  assert.deepEqual(complete.coverage, { artifactsListed: 35, namesInspected: 13, complete: true, limits: [] });
+  assert.match(renderFlakyTestReport(complete), /Inspected every flaky artifact published in the window: 35 flaky artifact\(s\) listed under 13 lane name\(s\)\./);
 
-  // Any run or artifact the collector could not read makes an absent test
+  // Any name or artifact the collector could not read makes an absent test
   // meaningless, so the summary has to say the window was only partly covered.
   const partial = aggregateFlakyTests([artifact({ document: browserDocument([]) })], { generatedAt,
-    coverage: { runsInspected: 600, complete: true, limits: ['deadline-exceeded', 'run-limit-reached', 'deadline-exceeded'] } });
-  assert.deepEqual(partial.coverage, { runsInspected: 600, complete: false, limits: ['deadline-exceeded', 'run-limit-reached'] });
+    coverage: { artifactsListed: 20, namesInspected: 13, complete: true, limits: ['deadline-exceeded', 'page-limit-reached', 'deadline-exceeded'] } });
+  assert.deepEqual(partial.coverage, { artifactsListed: 20, namesInspected: 13, complete: false, limits: ['deadline-exceeded', 'page-limit-reached'] });
   const markdown = renderFlakyTestReport(partial);
-  assert.match(markdown, /\*\*Partial coverage\*\* — 600 workflow run\(s\) inspected \(`deadline-exceeded`, `run-limit-reached`\)\./);
+  assert.match(markdown, /\*\*Partial coverage\*\* — 20 flaky artifact\(s\) listed under 13 lane name\(s\) \(`deadline-exceeded`, `page-limit-reached`\)\./);
   assert.match(markdown, /not evidence that it is stable/);
   assert.match(markdown, /No retry-only pass was recorded in this window\./);
 
   // An unreported or nonsensical coverage claim is never rendered as a promise.
   assert.equal(aggregateFlakyTests([artifact()], { generatedAt }).coverage, null);
   assert.equal(renderFlakyTestReport(aggregateFlakyTests([artifact()], { generatedAt })).includes('Inspected every'), false);
-  assert.deepEqual(aggregateFlakyTests([artifact()], { generatedAt, coverage: { runsInspected: -1, complete: 'yes' } }).coverage,
-    { runsInspected: null, complete: false, limits: [] });
+  assert.deepEqual(aggregateFlakyTests([artifact()], { generatedAt, coverage: { artifactsListed: -1, namesInspected: 'all', complete: 'yes' } }).coverage,
+    { artifactsListed: null, namesInspected: null, complete: false, limits: [] });
 });
 
 test('malformed, foreign and stale artifacts are rejected with local codes only', () => {
@@ -150,6 +159,8 @@ test('malformed, foreign and stale artifacts are rejected with local codes only'
     ['invalid-test-identity', { document: browserDocument([
       { testId: 'x', file: 'a.spec.ts', name: 'x' }, { testId: 'x', file: 'a.spec.ts', name: 'x' }]) }],
     ['invalid-retry-count', { document: browserDocument([{ testId: 'x', file: 'a.spec.ts', name: 'x', retryCount: -1 }]) }],
+    ['invalid-error', { document: browserDocument([{ testId: 'x', file: 'a.spec.ts', name: 'x', error: 'x'.repeat(401) }]) }],
+    ['invalid-error', { document: browserDocument([{ testId: 'x', file: 'a.spec.ts', name: 'x', error: { message: 'x' } }]) }],
   ];
   for (const [code, over] of cases) {
     const report = aggregateFlakyTests([artifact(over)], { generatedAt });
@@ -253,7 +264,10 @@ test('only the fixed member of a bounded archive is read', async () => {
   await assert.rejects(readFlakyDocumentZip(Buffer.from('not a zip archive')));
 });
 
-function github({ runs, integrationRuns = [], artifacts, archives }) {
+// `listings` maps an artifact name to its newest-first entries, the shape the
+// repository artifact listing answers for `?name=`; a name that is absent lists
+// nothing, a name mapped to `null` answers 500.
+function github({ listings, archives }) {
   const calls = [];
   const request = async (input, options) => {
     const url = new URL(input);
@@ -261,20 +275,14 @@ function github({ runs, integrationRuns = [], artifacts, archives }) {
     assert.equal(options.method, 'GET');
     if (url.hostname === 'api.github.com') assert.equal(options.headers.authorization, 'Bearer github-secret');
     const json = data => new Response(JSON.stringify(data), { status: 200 });
-    // Both workflows that publish flaky artifacts are inventoried: the
-    // regression umbrella and standalone integration-tests runs.
-    const workflow = /\/actions\/workflows\/([^/]+)\/runs$/.exec(url.pathname);
-    if (workflow) {
-      assert.ok(['production-regression.yml', 'integration-tests.yml'].includes(workflow[1]), workflow[1]);
-      assert.equal(url.searchParams.get('created'), `>=2026-09-21`);
-      const list = workflow[1] === 'production-regression.yml' ? runs : integrationRuns;
-      return json({ total_count: list.length, workflow_runs: list });
-    }
-    const inventory = /\/actions\/runs\/(\d+)\/artifacts$/.exec(url.pathname);
-    if (inventory) {
-      const list = artifacts[inventory[1]];
-      if (!list) return new Response('nope', { status: 500 });
-      return json({ total_count: list.length, artifacts: list });
+    if (url.pathname.endsWith('/actions/artifacts')) {
+      const name = url.searchParams.get('name');
+      assert.ok(FLAKY_ARTIFACT_NAMES.includes(name), name);
+      assert.equal(url.searchParams.get('per_page'), '100');
+      const list = name in listings ? listings[name] : [];
+      if (list === null) return new Response('nope', { status: 500 });
+      const page = Number(url.searchParams.get('page'));
+      return json({ total_count: list.length, artifacts: list.slice((page - 1) * 100, page * 100) });
     }
     const download = /\/actions\/artifacts\/(\d+)\/zip$/.exec(url.pathname);
     if (download) {
@@ -288,58 +296,65 @@ function github({ runs, integrationRuns = [], artifacts, archives }) {
   return { request, calls };
 }
 
-test('the collector reads only flaky artifacts of recent regression runs', async () => {
-  // A standalone integration-tests run is where a schedule-event flake on main
-  // usually surfaces, so its own workflow has to be inventoried too.
+const listing = (id, name, runId, { created = days(1), ...over } = {}, archives = {}) =>
+  ({ id, name, expired: false, size_in_bytes: archives[id]?.length ?? 64, created_at: created, workflow_run: { id: runId }, ...over });
+
+test('the collector lists each lane name once and downloads only the window\'s unexpired evidence', async () => {
   const integrationDocument = { schemaVersion: 1, suite: 'integration', job: 'integration shard 2/4',
     shard: { index: 2, total: 4 }, revision: 'a'.repeat(40), runId: '200', runAttempt: 1,
     eventName: 'schedule', branch: 'main', tests: [{ testId: 'src/test/integration/redis.test.ts > reconnects',
       file: 'src/test/integration/redis.test.ts', name: 'reconnects', retryCount: 1 }] };
   const archives = { 1: zipped(browserDocument()), 2: zipped(unitDocument()), 6: zipped(integrationDocument),
     9: zipped(browserDocument()) };
-  const entry = (id, name) => ({ id, name, expired: false, size_in_bytes: archives[id]?.length ?? 64, created_at: days(1) });
   const { request, calls } = github({
-    runs: [{ id: 100, run_attempt: 1, created_at: days(1) }, { id: 101, run_attempt: 2, created_at: days(2) }],
-    integrationRuns: [{ id: 200, run_attempt: 1, created_at: days(3) }],
-    artifacts: {
-      100: [entry(1, 'flaky-tests-browser-community'), entry(2, 'flaky-tests-unit-shard-2'),
-        { ...entry(3, 'server-unit-shard-2'), size_in_bytes: 10 },
-        { ...entry(4, 'flaky-tests-browser-enterprise'), expired: true },
-        { ...entry(5, 'flaky-tests-unit-shard-3'), size_in_bytes: 0 }],
-      101: [],
-      200: [entry(6, 'flaky-tests-integration-shard-2')],
+    listings: {
+      'flaky-tests-browser-community': [listing(1, 'flaky-tests-browser-community', 100, {}, archives),
+        // Newest first: the first entry older than the window ends the name, so
+        // the still-valid archive behind it is never listed or downloaded.
+        listing(9, 'flaky-tests-browser-community', 90, { created: days(8) }, archives),
+        listing(10, 'flaky-tests-browser-community', 80, { created: days(2) }, archives)],
+      'flaky-tests-unit-shard-2': [listing(2, 'flaky-tests-unit-shard-2', 100, {}, archives)],
+      'flaky-tests-unit-shard-3': [listing(5, 'flaky-tests-unit-shard-3', 100, { size_in_bytes: 0 })],
+      'flaky-tests-browser-enterprise': [listing(4, 'flaky-tests-browser-enterprise', 100, { expired: true })],
+      'flaky-tests-integration-shard-2': [listing(6, 'flaky-tests-integration-shard-2', 200, { created: days(3) }, archives)],
     },
     archives,
   });
   const collected = await collectFlakyArtifacts({ repository: 'Nine-Minds/alga-psa', githubToken: 'github-secret',
     request, now: Date.parse(generatedAt) });
-  assert.deepEqual(collected.artifacts.map(item => [item.artifactName, item.runId, item.document.suite]),
-    [['flaky-tests-browser-community', '100', 'production-browser'], ['flaky-tests-unit-shard-2', '100', 'server-unit'],
-      ['flaky-tests-integration-shard-2', '200', 'integration']]);
-  assert.deepEqual(collected.diagnostics, [{ scope: 'artifact', runId: '100', code: 'artifact-expired' },
-    { scope: 'artifact', runId: '100', code: 'artifact-unreadable' }]);
-  assert.equal(collected.runsInspected, 3);
-  // The non-flaky artifact is never downloaded.
-  assert.equal(calls.filter(url => url.pathname.includes('/artifacts/3/')).length, 0);
+  assert.deepEqual(collected.artifacts.map(item => [item.artifactName, item.runId, item.runAttempt, item.document.suite]),
+    [['flaky-tests-unit-shard-2', '100', 1, 'server-unit'], ['flaky-tests-integration-shard-2', '200', 1, 'integration'],
+      ['flaky-tests-browser-community', '100', 1, 'production-browser']]);
+  assert.deepEqual(collected.diagnostics, [
+    { scope: 'artifact', artifactName: 'flaky-tests-unit-shard-3', runId: '100', code: 'artifact-unreadable' },
+    { scope: 'artifact', artifactName: 'flaky-tests-browser-enterprise', runId: '100', code: 'artifact-expired' }]);
+  // Listed counts what the window held, the expired entry included; it is the
+  // denominator the partial-coverage line reports against.
+  assert.deepEqual([collected.artifactsListed, collected.namesInspected], [5, FLAKY_ARTIFACT_NAMES.length]);
+  // One listing request per name, whatever the week's run count.
+  const listings = calls.filter(url => url.pathname.endsWith('/actions/artifacts'));
+  assert.equal(listings.length, FLAKY_ARTIFACT_NAMES.length);
+  assert.deepEqual([...new Set(listings.map(url => url.searchParams.get('name')))].sort(), [...FLAKY_ARTIFACT_NAMES].sort());
+  assert.equal(calls.filter(url => /\/artifacts\/(9|10)\//.test(url.pathname)).length, 0);
   const report = aggregateFlakyTests(collected.artifacts, { generatedAt });
   assert.equal(report.summary.flakyTests, 3);
-  assert.deepEqual(report.tests.map(row => [row.suite, row.prOccurrences, row.mainOccurrences]),
+  assert.deepEqual(report.tests.map(row => [row.suite, row.prOccurrences, row.mainOccurrences]).sort(),
     [['integration', 0, 1], ['production-browser', 1, 0], ['server-unit', 0, 1]]);
 });
 
-test('an unreachable artifact inventory degrades that run only', async (t) => {
+test('a listing the API will not answer degrades that lane name only', async (t) => {
   const archives = { 1: zipped(browserDocument()) };
   const { request } = github({
-    runs: [{ id: 100, run_attempt: 1, created_at: days(1) }, { id: 102, run_attempt: 1, created_at: days(1) }],
-    artifacts: { 100: [{ id: 1, name: 'flaky-tests-browser-community', expired: false, size_in_bytes: archives[1].length, created_at: days(1) }] },
+    listings: { 'flaky-tests-browser-community': [listing(1, 'flaky-tests-browser-community', 100, {}, archives)],
+      'flaky-tests-unit-shard-1': null },
     archives,
   });
   const collected = await collectFlakyArtifacts({ repository: 'Nine-Minds/alga-psa', githubToken: 'github-secret',
     request, now: Date.parse(generatedAt) });
   assert.equal(collected.artifacts.length, 1);
-  assert.deepEqual(collected.diagnostics, [{ scope: 'artifacts', runId: '102', code: 'artifact-inventory-unavailable' }]);
+  assert.deepEqual(collected.diagnostics, [{ scope: 'artifacts', artifactName: 'flaky-tests-unit-shard-1', code: 'artifact-listing-unavailable' }]);
 
-  // And the run it could not read is reported as partial coverage, not skipped
+  // And the name it could not read is reported as partial coverage, not skipped
   // quietly: the table below it is no longer the whole week.
   const root = mkdtempSync(path.join(tmpdir(), 'alga-flaky-partial-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -348,23 +363,66 @@ test('an unreachable artifact inventory degrades that run only', async (t) => {
   await runFlakyTestCollection({ directory: path.join(root, 'out'), request, now: Date.parse(generatedAt),
     env: { GITHUB_REPOSITORY: 'Nine-Minds/alga-psa', GITHUB_TOKEN: 'github-secret', GITHUB_STEP_SUMMARY: summary } });
   assert.deepEqual(JSON.parse(readFileSync(path.join(root, 'out/report.json'), 'utf8')).coverage,
-    { runsInspected: 2, complete: false, limits: ['artifact-inventory-unavailable'] });
-  assert.match(readFileSync(summary, 'utf8'), /\*\*Partial coverage\*\* — 2 workflow run\(s\) inspected \(`artifact-inventory-unavailable`\)\./);
+    { artifactsListed: 1, namesInspected: FLAKY_ARTIFACT_NAMES.length, complete: false, limits: ['artifact-listing-unavailable'] });
+  assert.match(readFileSync(summary, 'utf8'),
+    new RegExp(`\\*\\*Partial coverage\\*\\* — 1 flaky artifact\\(s\\) listed under ${FLAKY_ARTIFACT_NAMES.length} lane name\\(s\\) \\(\`artifact-listing-unavailable\`\\)\\.`));
 });
 
-test('configuration and run inventory failures are reported as codes, never as upstream text', async () => {
+test('a long-lived name pages until the window closes, never past the page cap', async () => {
+  const archives = { 1: zipped(browserDocument()) };
+  const many = Array.from({ length: 250 }, (_, position) => listing(1000 + position, 'flaky-tests-unit-shard-1', 100,
+    { created: days(position < 230 ? 1 : 9), size_in_bytes: 0 }));
+  const { request, calls } = github({ listings: { 'flaky-tests-unit-shard-1': many }, archives });
+  const collected = await collectFlakyArtifacts({ repository: 'Nine-Minds/alga-psa', githubToken: 'github-secret',
+    request, now: Date.parse(generatedAt), names: ['flaky-tests-unit-shard-1'], maxPages: 2 });
+  // Two pages were allowed: 200 listed, the third page (where the window would
+  // have closed) is reported as a cap, and every listed archive was attempted.
+  assert.equal(calls.filter(url => url.pathname.endsWith('/actions/artifacts')).length, 2);
+  assert.equal(collected.artifactsListed, 200);
+  assert.equal(collected.diagnostics.filter(entry => entry.code === 'page-limit-reached').length, 1);
+  assert.equal(collected.diagnostics.filter(entry => entry.code === 'artifact-unreadable').length, 200);
+});
+
+test('configuration failures and refused listings are reported as codes, never as upstream text', async () => {
   for (const [code, options] of [
     ['invalid-repository', { repository: 'not-a-repository' }],
     ['github-token-missing', { githubToken: '' }],
     ['invalid-window', { windowDays: 0 }],
+    ['invalid-artifact-names', { names: ['server-unit-shard-1'] }],
+    ['invalid-artifact-names', { names: [] }],
   ]) {
     await assert.rejects(() => collectFlakyArtifacts({ repository: 'Nine-Minds/alga-psa', githubToken: 'github-secret',
       request: async () => new Response('{}', { status: 200 }), ...options }),
     error => error instanceof FlakyCollectionError && error.diagnostic.code === code);
   }
-  await assert.rejects(() => collectFlakyArtifacts({ repository: 'Nine-Minds/alga-psa', githubToken: 'github-secret',
-    request: async () => new Response('sorry: token 1234', { status: 403 }) }),
-  error => error.diagnostic.code === 'run-inventory-unavailable' && !/1234/.test(error.message));
+  const refused = await collectFlakyArtifacts({ repository: 'Nine-Minds/alga-psa', githubToken: 'github-secret',
+    request: async () => new Response('sorry: token 1234', { status: 403 }) });
+  assert.deepEqual(refused.artifacts, []);
+  assert.equal(refused.diagnostics.length, FLAKY_ARTIFACT_NAMES.length);
+  assert.ok(refused.diagnostics.every(entry => entry.code === 'artifact-listing-unavailable' && !/1234/.test(JSON.stringify(entry))));
+});
+
+test('the collector\'s name list is the one the workflow matrices publish', () => {
+  // A lane growing a shard, or a new lane, has to land here too; otherwise its
+  // evidence would silently never reach the weekly report.
+  const workflows = fileURLToPath(new URL('../../.github/workflows/', import.meta.url));
+  const published = new Set();
+  for (const file of ['unit-tests.yml', 'integration-tests.yml', 'e2e-fresh-install-tests.yaml']) {
+    const document = loadYaml(readFileSync(path.join(workflows, file), 'utf8'));
+    for (const job of Object.values(document.jobs)) {
+      const names = (job.steps ?? []).map(step => step.with?.name).filter(name => typeof name === 'string' && name.startsWith('flaky-tests-'));
+      for (const name of names) {
+        const [, lane, key] = /^flaky-tests-([\w-]+)-\$\{\{ matrix\.(\w+) \}\}$/.exec(name) ?? [];
+        assert.ok(key, `${file}: unexpected artifact name ${name}`);
+        const axis = job.strategy.matrix[key];
+        // A literal list, or a fromJSON expression whose longest array literal is the full lane.
+        const values = Array.isArray(axis) ? axis
+          : JSON.parse([...String(axis).matchAll(/'(\[[^\]]*\])'/g)].map(match => match[1]).sort((a, b) => b.length - a.length)[0]);
+        for (const value of values) published.add(`flaky-tests-${lane}-${value}`);
+      }
+    }
+  }
+  assert.deepEqual([...FLAKY_ARTIFACT_NAMES].sort(), [...published].sort());
 });
 
 test('the CLI writes the report, the diagnostics and the step summary', async (t) => {
@@ -372,8 +430,7 @@ test('the CLI writes the report, the diagnostics and the step summary', async (t
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const archives = { 1: zipped(browserDocument()) };
   const { request } = github({
-    runs: [{ id: 100, run_attempt: 1, created_at: days(1) }],
-    artifacts: { 100: [{ id: 1, name: 'flaky-tests-browser-community', expired: false, size_in_bytes: archives[1].length, created_at: days(1) }] },
+    listings: { 'flaky-tests-browser-community': [listing(1, 'flaky-tests-browser-community', 100, {}, archives)] },
     archives,
   });
   const directory = path.join(root, 'test-results/flaky-tests');
@@ -388,9 +445,10 @@ test('the CLI writes the report, the diagnostics and the step summary', async (t
   assert.equal(report.tests.length, 1);
   assert.deepEqual(JSON.parse(readFileSync(path.join(directory, 'collection.json'), 'utf8')).summary, report.summary);
   // The collector's own diagnostics decide the coverage claim in the summary.
-  assert.deepEqual(report.coverage, { runsInspected: 1, complete: true, limits: [] });
+  assert.deepEqual(report.coverage, { artifactsListed: 1, namesInspected: FLAKY_ARTIFACT_NAMES.length, complete: true, limits: [] });
   assert.match(readFileSync(summary, 'utf8'), /retains balance \[community\] \| production-browser \|/);
-  assert.match(readFileSync(summary, 'utf8'), /Inspected every flaky-reporting workflow run in the window \(1\)\./);
+  assert.match(readFileSync(summary, 'utf8'),
+    new RegExp(`Inspected every flaky artifact published in the window: 1 flaky artifact\\(s\\) listed under ${FLAKY_ARTIFACT_NAMES.length} lane name\\(s\\)\\.`));
 
   // A failed collection still leaves diagnostics and a visible summary behind.
   mkdirSync(directory, { recursive: true });

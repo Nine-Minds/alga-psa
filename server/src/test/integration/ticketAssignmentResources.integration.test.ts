@@ -19,6 +19,7 @@ const dbRef = vi.hoisted(() => ({
 
 const userRef = vi.hoisted(() => ({ user: null as any }));
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+const authorizeTicketRecordAccessMock = vi.hoisted(() => vi.fn(async () => ({})));
 const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -38,6 +39,9 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 vi.mock('@alga-psa/auth/actions', () => ({ getTicketAttributes: vi.fn(async () => ({})) }));
+vi.mock('../../../../packages/tickets/src/lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccess: authorizeTicketRecordAccessMock,
+}));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
@@ -74,11 +78,18 @@ import {
   getTicketResourcesCore,
   removeTicketResourceCore,
 } from '../../../../shared/services/tickets/ticketResourceCore';
+
+const creationAuthorization = (ticketId: string) => ({ kind: 'creation' as const, ticketId });
 import {
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
 } from '../../../../shared/services/tickets/teamAssignmentCore';
 import { updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
+import {
+  addTicketResource,
+  getTicketResources,
+  removeTicketResource,
+} from '../../../../packages/tickets/src/actions/ticketResourceActions';
 
 const HOOK_TIMEOUT = 300_000;
 
@@ -248,6 +259,8 @@ describe('ticket assignment and additional agents', () => {
     hasPermissionMock.mockResolvedValue(true);
     publishEventMock.mockClear();
     publishWorkflowEventMock.mockClear();
+    authorizeTicketRecordAccessMock.mockReset();
+    authorizeTicketRecordAccessMock.mockResolvedValue({});
 
     await scoped('ticket_resources').where({ assigned_to: userA }).delete();
     ticketId = await insertTicket(tenantId, clientId, userA);
@@ -445,7 +458,7 @@ describe('ticket assignment and additional agents', () => {
   describe('ticket resource core', () => {
     it('adds an additional agent keyed to the current primary assignee', async () => {
       const { resource, event } = await withTransaction(db, (trx) =>
-        addTicketResourceCore(trx, tenantId, actorId, ticketId, userB, 'support')
+        addTicketResourceCore(trx, tenantId, actorId, ticketId, userB, 'support', creationAuthorization(ticketId))
       );
 
       expect(resource).toMatchObject({ ticket_id: ticketId, assigned_to: userA, additional_user_id: userB });
@@ -478,7 +491,7 @@ describe('ticket assignment and additional agents', () => {
       const unassigned = await insertTicket(tenantId, clientId, null);
 
       const { resource, event } = await withTransaction(db, (trx) =>
-        addTicketResourceCore(trx, tenantId, actorId, unassigned, userB, 'support')
+        addTicketResourceCore(trx, tenantId, actorId, unassigned, userB, 'support', creationAuthorization(unassigned))
       );
 
       expect(resource).toBeNull();
@@ -491,7 +504,7 @@ describe('ticket assignment and additional agents', () => {
       await addResource(tenantId, ticketId, userA, userB);
 
       const error = await withTransaction(db, (trx) =>
-        addTicketResourceCore(trx, tenantId, actorId, ticketId, userB, 'support')
+        addTicketResourceCore(trx, tenantId, actorId, ticketId, userB, 'support', creationAuthorization(ticketId))
       ).catch((thrown) => thrown);
 
       expect(error).toMatchObject({ name: 'TicketResourceError', kind: 'conflict' });
@@ -500,7 +513,7 @@ describe('ticket assignment and additional agents', () => {
     it('reports a missing ticket as not found', async () => {
       await expect(
         withTransaction(db, (trx) =>
-          addTicketResourceCore(trx, tenantId, actorId, uuidv4(), userB, 'support')
+          addTicketResourceCore(trx, tenantId, actorId, uuidv4(), userB, 'support', { kind: 'system' })
         )
       ).rejects.toMatchObject({ kind: 'not_found' });
     });
@@ -513,7 +526,7 @@ describe('ticket assignment and additional agents', () => {
       await addResource(tenantId, other, userA, userB);
 
       const resources = await withTransaction(db, (trx) =>
-        getTicketResourcesCore(trx, tenantId, ticketId)
+        getTicketResourcesCore(trx, tenantId, ticketId, creationAuthorization(ticketId))
       );
 
       expect(resources.map((row) => row.additional_user_id)).toEqual([userC, userB]);
@@ -522,7 +535,7 @@ describe('ticket assignment and additional agents', () => {
     it('removes an assignment row and reports unknown ones', async () => {
       const assignmentId = await addResource(tenantId, ticketId, userA, userB);
 
-      await withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, actorId, assignmentId));
+      await withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, actorId, assignmentId, creationAuthorization(ticketId)));
       expect(await resourcesFor(ticketId)).toHaveLength(0);
 
       const audit = await scoped('ticket_audit_logs')
@@ -533,8 +546,122 @@ describe('ticket assignment and additional agents', () => {
       expect(audit[0].details).toMatchObject({ additional_agent_id: userB });
 
       await expect(
-        withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, actorId, uuidv4()))
+        withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, actorId, uuidv4(), { kind: 'system' }))
       ).rejects.toMatchObject({ kind: 'not_found' });
+    });
+
+    it('denies resource enumeration and mutations for an inaccessible ticket, including a known assignment id', async () => {
+      const assignmentId = await addResource(tenantId, ticketId, userA, userB);
+      const deny = {
+        kind: 'user' as const,
+        authorizeTicket: async () => { throw new Error('Permission denied: Cannot access ticket'); },
+      };
+      const beforeActivities = await scoped('ticket_audit_logs')
+        .where({ ticket_id: ticketId })
+        .count('* as count')
+        .first();
+
+      await expect(withTransaction(db, (trx) =>
+        getTicketResourcesCore(trx, tenantId, ticketId, deny)
+      )).rejects.toThrow('Permission denied');
+      await expect(withTransaction(db, (trx) =>
+        addTicketResourceCore(trx, tenantId, actorId, ticketId, userC, 'support', deny)
+      )).rejects.toThrow('Permission denied');
+      await expect(withTransaction(db, (trx) =>
+        removeTicketResourceCore(trx, tenantId, actorId, assignmentId, deny)
+      )).rejects.toThrow('Permission denied');
+
+      expect((await scoped('tickets').where({ ticket_id: ticketId }).first()).assigned_to).toBe(userA);
+      expect(await resourcesFor(ticketId)).toHaveLength(1);
+      expect((await resourcesFor(ticketId))[0].assignment_id).toBe(assignmentId);
+      const afterActivities = await scoped('ticket_audit_logs')
+        .where({ ticket_id: ticketId })
+        .count('* as count')
+        .first();
+      expect(Number(afterActivities?.count)).toBe(Number(beforeActivities?.count));
+      expect(publishEventMock).not.toHaveBeenCalled();
+      expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps server actions inert when record authorization denies despite tenant-wide permission', async () => {
+      const assignmentId = await addResource(tenantId, ticketId, userA, userB);
+      const beforeActivities = await scoped('ticket_audit_logs')
+        .where({ ticket_id: ticketId })
+        .count('* as count')
+        .first();
+      authorizeTicketRecordAccessMock.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+
+      const listed = await getTicketResources(ticketId);
+      const added = await addTicketResource(ticketId, userC, 'support');
+      const removed = await removeTicketResource(assignmentId);
+
+      expect(listed).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+      expect(added).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+      expect(removed).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+      expect(hasPermissionMock).toHaveBeenCalled();
+      expect(authorizeTicketRecordAccessMock).toHaveBeenCalledTimes(3);
+      expect((await scoped('tickets').where({ ticket_id: ticketId }).first()).assigned_to).toBe(userA);
+      expect((await resourcesFor(ticketId)).map((row: any) => row.assignment_id)).toEqual([assignmentId]);
+      const afterActivities = await scoped('ticket_audit_logs')
+        .where({ ticket_id: ticketId })
+        .count('* as count')
+        .first();
+      expect(Number(afterActivities?.count)).toBe(Number(beforeActivities?.count));
+      expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    });
+
+    it('persists an authorized server-action add before publishing its assignment event', async () => {
+      const added = await addTicketResource(ticketId, userC, 'support');
+
+      expect(added).toMatchObject({ ticket_id: ticketId, additional_user_id: userC });
+      expect(await resourcesFor(ticketId)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ ticket_id: ticketId, additional_user_id: userC }),
+      ]));
+      expect(authorizeTicketRecordAccessMock).toHaveBeenCalledWith(expect.objectContaining({
+        ticketId,
+        action: 'update',
+      }));
+      expect(publishWorkflowEventMock).toHaveBeenCalledTimes(1);
+      expect(publishWorkflowEventMock).toHaveBeenCalledWith(expect.objectContaining({
+        eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+        payload: expect.objectContaining({ ticketId, additionalAgentId: userC }),
+      }));
+    });
+
+    it('requires explicit authorization context and permits matching creation-scoped writes', async () => {
+      await expect(withTransaction(db, (trx) =>
+        getTicketResourcesCore(trx, tenantId, ticketId, undefined as any)
+      )).rejects.toThrow('explicit authorization context');
+
+      const result = await withTransaction(db, (trx) =>
+        addTicketResourceCore(trx, tenantId, actorId, ticketId, userB, 'support', creationAuthorization(ticketId))
+      );
+      expect(result.resource).toMatchObject({ ticket_id: ticketId, additional_user_id: userB });
+      expect(await resourcesFor(ticketId)).toHaveLength(1);
+    });
+
+    it('persists creation-scoped staffing when later update authorization is denied', async () => {
+      const createdTicketId = await insertTicket(tenantId, clientId, userA);
+      hasPermissionMock.mockResolvedValue(true);
+      authorizeTicketRecordAccessMock.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+
+      // This is the same creation-scoped core operation used by addTicket before its
+      // transaction commits. A later standalone resource action remains record-authorized.
+      await withTransaction(db, async (trx) => {
+        await addTicketResourceCore(
+          trx, tenantId, actorId, createdTicketId, userC, 'support', creationAuthorization(createdTicketId),
+        );
+      });
+      const assignmentsBeforeDeniedUpdate = await resourcesFor(createdTicketId);
+      const auditBeforeDeniedUpdate = await scoped('ticket_audit_logs')
+        .where({ ticket_id: createdTicketId, event_type: 'TICKET_ASSIGNED' }).select('*');
+      const laterAttempt = await addTicketResource(createdTicketId, userB, 'support');
+
+      expect(laterAttempt).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+      expect((await resourcesFor(createdTicketId)).map((row: any) => row.additional_user_id)).toEqual([userC]);
+      expect(await resourcesFor(createdTicketId)).toEqual(assignmentsBeforeDeniedUpdate);
+      expect(await scoped('ticket_audit_logs').where({ ticket_id: createdTicketId, event_type: 'TICKET_ASSIGNED' }).select('*'))
+        .toEqual(auditBeforeDeniedUpdate);
     });
   });
 });

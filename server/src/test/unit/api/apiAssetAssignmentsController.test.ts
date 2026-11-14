@@ -15,6 +15,9 @@ const serviceState = vi.hoisted(() => ({
 
 vi.mock('@/lib/api/services/AssetService', () => ({
   AssetService: class {
+    async getAuthorizationRecord() {
+      return serviceState.asset;
+    }
     async getById(id: string, context: { tenant: string }) {
       serviceState.getByIdCalls.push({ id, tenant: context.tenant });
       return serviceState.asset;
@@ -32,6 +35,10 @@ vi.mock('@/lib/productAccess', () => ({
 
 vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
+}));
+
+vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
+  authorizeApiResource: vi.fn(async () => true),
 }));
 
 vi.mock('@/lib/db/db', () => ({

@@ -230,6 +230,39 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
     }))).rejects.toThrow('Fixed-plan allocation totals do not match');
   });
 
+  // alga-2026-0003122: tax delegated to the accounting system leaves both levels
+  // at zero, and a disagreement has to say which side is wrong.
+  it('validates a pending_external fixed-plan parent whose allocations carry no tax', async () => {
+    const state = baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, is_manual: false, net_amount: 93_000, tax_amount: 0 }],
+      fixedDetails: [
+        { item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 25_000, tax_amount: 0 },
+        { item_id: 'charge-1', item_detail_id: 'detail-2', service_id: 'svc-2', allocated_amount: 68_000, tax_amount: 0 },
+      ],
+      invoices: [{ invoice_id: 'inv-1', invoice_number: 'INV-000013', client_id: 'client-1', tax_source: 'pending_external' }],
+      services: [
+        { service_id: 'svc-1', service_name: 'Managed Backup' },
+        { service_id: 'svc-2', service_name: 'Monitoring' },
+      ],
+    });
+    const { repo, resolver } = await run(state);
+
+    expect(repo.errors).toEqual([]);
+    expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'ready' });
+    expect(resolver.resolveServiceMapping.mock.calls.map(([args]: any[]) => args.serviceId)).toEqual(['svc-1', 'svc-2']);
+  });
+
+  it('names the invoice and both tax sums when a fixed-plan parent disagrees with its allocations', async () => {
+    await expect(run(baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, is_manual: false, net_amount: 25_000, tax_amount: 0 }],
+      fixedDetails: [{ item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 25_000, tax_amount: 2_500 }],
+      invoices: [{ invoice_id: 'inv-1', invoice_number: 'INV-000013', client_id: 'client-1', tax_source: 'pending_external' }],
+    }))).rejects.toThrow(
+      'Fixed-plan allocation totals do not match charge charge-1 on invoice INV-000013: '
+      + 'parent net 25000 / tax 0, allocations net 25000 / tax 2500; repair the invoice before export.'
+    );
+  });
+
   it('flags charges that have no associated service', async () => {
     const state = baseState({
       charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, description: 'Old manual charge', tax_region: null }],

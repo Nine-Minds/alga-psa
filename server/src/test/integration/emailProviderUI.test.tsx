@@ -118,6 +118,11 @@ vi.mock('@alga-psa/core/secrets', async (importOriginal) => {
 let actionsDb: Knex | undefined;
 let actionsTenant: string | undefined;
 
+// Opt in to the allow-by-default '@alga-psa/auth/rbac' mock (not global on purpose;
+// see ../helpers/allowAllRbac.ts). Fixture tenants here don't seed role_permissions.
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) =>
+  (await import('../helpers/allowAllRbac')).allowAllRbac(importOriginal as any));
+
 vi.mock('../../lib/db', () => ({
   getCurrentTenantId: () => actionsTenant,
   createTenantKnex: vi.fn(async () => ({ knex: actionsDb, tenant: actionsTenant })),
@@ -365,7 +370,10 @@ describe('Email Provider UI Integration', () => {
       : JSON.parse(updatedConfig?.label_filters ?? '[]');
 
     expect(updatedFilters).toEqual(['INBOX', 'Escalations']);
-    expect(updatedConfig?.client_id).toBeNull();
+    // A settings save keeps the issuing OAuth client the callback recorded
+    // (refresh detects a later tenant client change from it); it still clears
+    // the legacy per-row secret.
+    expect(updatedConfig?.client_id).toBe('existing-client.apps.googleusercontent.com');
     expect(updatedConfig?.client_secret).toBeNull();
     expect(updatedConfig?.project_id).toBe('test-project');
   });

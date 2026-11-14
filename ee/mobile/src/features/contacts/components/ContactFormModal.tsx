@@ -5,7 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../../api/client";
 import type { ApiError } from "../../../api/types";
-import { listClients, type ClientListItem } from "../../../api/clients";
+import { getClientLocations, listClients, type ClientListItem, type ClientLocation } from "../../../api/clients";
 import {
   buildContactAvatarUri,
   createContact,
@@ -50,6 +50,9 @@ import {
   type ContactPhoneRow,
   type ContactPhoneType,
 } from "../contactForm";
+import type { ContactWorkArrangement } from "../../../api/contacts";
+
+const WORK_ARRANGEMENTS: ContactWorkArrangement[] = ["on_site", "hybrid", "remote"];
 
 export type ContactFormClient = { id: string; name: string };
 
@@ -107,6 +110,10 @@ export function ContactFormModal({
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [phoneTypeIndex, setPhoneTypeIndex] = useState<number | null>(null);
   const [emailTypeIndex, setEmailTypeIndex] = useState<number | null>(null);
+  const [locations, setLocations] = useState<ClientLocation[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [locationsError, setLocationsError] = useState<string | null>(null);
+  const [arrangementOpen, setArrangementOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
@@ -137,6 +144,31 @@ export function ContactFormModal({
       canceled = true;
     };
   }, [apiKey, client, initial, mode, visible]);
+
+  // The locations a contact may be linked to are its client's, so the list follows the picker. A
+  // client change also drops the selection: a link cannot cross clients.
+  useEffect(() => {
+    if (!visible || !client || !apiKey || !values.clientId) {
+      setLocations([]);
+      return;
+    }
+    let canceled = false;
+    setLocationsLoading(true);
+    setLocationsError(null);
+    void getClientLocations(client, { apiKey, clientId: values.clientId }).then((result) => {
+      if (canceled) return;
+      setLocationsLoading(false);
+      if (!result.ok) {
+        setLocations([]);
+        setLocationsError(t("form.locationsUnavailable", { defaultValue: "Unable to load locations." }));
+        return;
+      }
+      setLocations(result.data.data.filter((location) => location.is_active !== false));
+    });
+    return () => {
+      canceled = true;
+    };
+  }, [apiKey, client, t, values.clientId, visible]);
 
   const set = useCallback(<K extends keyof ContactFormValues>(key: K, value: ContactFormValues[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -199,6 +231,28 @@ export function ContactFormModal({
     setValues((current) => ({ ...current, additionalEmails: current.additionalEmails.filter((_, i) => i !== index) }));
   }, []);
 
+  const toggleLocation = useCallback((locationId: string) => {
+    setValues((current) => {
+      const picked = current.locations.some((location) => location.location_id === locationId);
+      const next = picked
+        ? current.locations.filter((location) => location.location_id !== locationId)
+        : [...current.locations, { location_id: locationId, is_primary: current.locations.length === 0 }];
+      return { ...current, locations: next };
+    });
+    setCheck((current) => ({ ...current, errors: { ...current.errors, locations: undefined } }));
+  }, []);
+
+  const markPrimaryLocation = useCallback((locationId: string) => {
+    setValues((current) => ({
+      ...current,
+      locations: current.locations.some((location) => location.location_id === locationId)
+        ? current.locations.map((location) => ({ ...location, is_primary: location.location_id === locationId }))
+        : [...current.locations, { location_id: locationId, is_primary: true }]
+          .map((location) => ({ ...location, is_primary: location.location_id === locationId })),
+    }));
+    setCheck((current) => ({ ...current, errors: { ...current.errors, locations: undefined } }));
+  }, []);
+
   const loadClients = useCallback(async (search?: string) => {
     if (!client || !apiKey) return;
     setClientsLoading(true);
@@ -221,6 +275,13 @@ export function ContactFormModal({
     })),
     [baseUrl, clients],
   );
+
+  const arrangementLabel = useCallback((arrangement: ContactWorkArrangement) => t(
+    arrangement === "on_site"
+      ? "form.workArrangementOnSite"
+      : arrangement === "hybrid" ? "form.workArrangementHybrid" : "form.workArrangementRemote",
+    { defaultValue: arrangement === "on_site" ? "On site" : arrangement === "hybrid" ? "Hybrid" : "Remote" },
+  ), [t]);
 
   const typeLabel = useCallback((type: string, custom: string) => {
     if (type === CUSTOM_TYPE) return custom.trim() || t("detail.types.custom");
@@ -419,6 +480,84 @@ export function ContactFormModal({
           error={errors.role}
           helperText={warnings.role}
         />
+
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text style={{ ...theme.typography.subtitle, color: theme.colors.text }}>{t("form.locations", { defaultValue: "Locations" })}</Text>
+          <PickerField
+            testID="contact-form-work-arrangement"
+            label={t("form.workArrangement", { defaultValue: "Work arrangement" })}
+            value={values.workArrangement ? arrangementLabel(values.workArrangement) : null}
+            placeholder={t("form.workArrangementUnset", { defaultValue: "Not set" })}
+            onPress={() => setArrangementOpen(true)}
+            disabled={submitting}
+          />
+          {!values.clientId ? (
+            <Text testID="contact-form-locations-hint" style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {t("form.locationsChooseClient", { defaultValue: "Choose a client first to pick its locations." })}
+            </Text>
+          ) : locationsLoading ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {t("form.locationsLoading", { defaultValue: "Loading locations…" })}
+            </Text>
+          ) : locationsError ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.danger }}>{locationsError}</Text>
+          ) : locations.length === 0 ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {t("form.locationsNone", { defaultValue: "This client has no locations yet." })}
+            </Text>
+          ) : (
+            locations.map((location) => {
+              const picked = values.locations.find((row) => row.location_id === location.location_id);
+              return (
+                <View key={location.location_id} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                  <Pressable
+                    testID={`contact-form-location-${location.location_id}`}
+                    onPress={() => toggleLocation(location.location_id)}
+                    disabled={submitting}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: Boolean(picked) }}
+                    accessibilityLabel={location.location_name ?? location.address_line1 ?? location.location_id}
+                    style={{ flexDirection: "row", alignItems: "center", flex: 1, paddingVertical: theme.spacing.xs }}
+                  >
+                    <Feather
+                      name={picked ? "check-square" : "square"}
+                      size={18}
+                      color={picked ? theme.colors.primary : theme.colors.textSecondary}
+                    />
+                    <Text style={{ ...theme.typography.body, color: theme.colors.text, marginLeft: theme.spacing.xs }}>
+                      {location.location_name || location.address_line1 || location.location_id}
+                    </Text>
+                  </Pressable>
+                  {picked ? (
+                    <Pressable
+                      testID={`contact-form-location-primary-${location.location_id}`}
+                      onPress={() => markPrimaryLocation(location.location_id)}
+                      disabled={submitting}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: Boolean(picked.is_primary) }}
+                      accessibilityLabel={t("form.primaryLocation", { defaultValue: "Primary" })}
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <Feather
+                        name={picked.is_primary ? "check-circle" : "circle"}
+                        size={18}
+                        color={picked.is_primary ? theme.colors.primary : theme.colors.textSecondary}
+                      />
+                      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginLeft: theme.spacing.xs }}>
+                        {t("form.primaryLocation", { defaultValue: "Primary" })}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })
+          )}
+          {errors.locations ? (
+            <Text testID="contact-form-locations-error" style={{ ...theme.typography.caption, color: theme.colors.danger }}>
+              {errors.locations}
+            </Text>
+          ) : null}
+        </View>
 
         <View style={{ gap: theme.spacing.md }}>
           <Text style={{ ...theme.typography.subtitle, color: theme.colors.text }}>{t("form.phones")}</Text>
@@ -647,7 +786,13 @@ export function ContactFormModal({
         authToken={apiKey}
         onSearch={(query) => void loadClients(query)}
         onSelect={(id, label) => {
-          setValues((current) => ({ ...current, clientId: id, clientName: label }));
+          setValues((current) => ({
+            ...current,
+            clientId: id,
+            clientName: label,
+            // Locations belong to a client, so they cannot follow the contact to another one.
+            locations: id === current.clientId ? current.locations : [],
+          }));
           setClientPickerOpen(false);
         }}
         onClose={() => setClientPickerOpen(false)}
@@ -671,6 +816,17 @@ export function ContactFormModal({
           if (emailTypeIndex !== null) setEmailRow(emailTypeIndex, { type: next });
         }}
         options={emailTypeOptions.map((value) => ({ value, label: t(`detail.types.${value}`, { defaultValue: value }) }))}
+      />
+      <Select<ContactWorkArrangement | "unset">
+        visible={arrangementOpen}
+        onClose={() => setArrangementOpen(false)}
+        title={t("form.workArrangement", { defaultValue: "Work arrangement" })}
+        value={values.workArrangement ?? "unset"}
+        onSelect={(next) => set("workArrangement", next === "unset" ? null : next)}
+        options={[
+          { value: "unset" as const, label: t("form.workArrangementUnset", { defaultValue: "Not set" }) },
+          ...WORK_ARRANGEMENTS.map((value) => ({ value, label: arrangementLabel(value) })),
+        ]}
       />
       <Select<"camera" | "library" | "remove">
         visible={photoMenuOpen}

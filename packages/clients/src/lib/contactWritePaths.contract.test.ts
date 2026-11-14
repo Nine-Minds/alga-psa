@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { productionSourceFiles } from '../../../../scripts/lib/production-source-files.mjs';
 
 /**
  * Coverage ledger for every `contacts` write path. Each writer either publishes
@@ -45,41 +46,24 @@ const SILENT_WRITERS: Record<string, string> = {
   'packages/clients/src/actions/inboundTicketDestinationActions.ts': 'inbound_ticket_defaults_id is email-routing configuration, not a contact attribute',
   'packages/integrations/src/actions/email-actions/inboundTicketDefaultsActions.ts': 'detaches routing defaults from contacts when a defaults row is deleted (configuration cleanup)',
   'packages/marketing/src/lib/sequences.ts': 'read-only lookup of the contact (update targets marketing_sequence_enrollments)',
+  'packages/co-managed/src/requesterTaskConversation.ts': 'read-only FOR SHARE lookup of the authoring contact (insert targets project_task_comments)',
 };
 
 const WRITE_VERB = /\.(insert|update|del|delete|upsert)\(/;
 const MODEL_WRITE = /ContactModel\.(createContact|updateContact)\(/;
-const SKIP = /^(node_modules|dist|migrations|generated|__tests__|test|tests|test-utils|seeds)$|^\.next/;
-
-function walk(dir: string, out: string[]): void {
-  for (const name of readdirSync(dir)) {
-    if (SKIP.test(name)) continue;
-    const full = path.join(dir, name);
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, out);
-    else if (/\.(ts|tsx)$/.test(name) && !/\.(test|d)\.tsx?$/.test(name)) out.push(full);
-  }
-}
 
 function writersOfContacts(): string[] {
-  const files: string[] = [];
-  for (const base of ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/packages', 'ee/temporal-workflows/src']) {
-    const abs = path.join(root, base);
-    try {
-      if (statSync(abs).isDirectory()) walk(abs, files);
-    } catch {
-      /* optional tree */
-    }
-  }
+  const files = productionSourceFiles(root, ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/packages', 'ee/temporal-workflows/src'])
+    .filter((file: string) => !/(^|\/)(migrations|seeds)\//.test(file));
   const writers: string[] = [];
   for (const file of files) {
-    const lines = readFileSync(file, 'utf8').split('\n');
+    const lines = read(file).split('\n');
     const writes = lines.some(
       (line, i) =>
         MODEL_WRITE.test(line) ||
         (/['"]contacts['"]/.test(line) && WRITE_VERB.test(lines.slice(i, i + 9).join(' ')))
     );
-    if (writes) writers.push(path.relative(root, file));
+    if (writes) writers.push(file);
   }
   return writers.sort();
 }

@@ -48,8 +48,8 @@ describe('client bundle guard', () => {
     expect(specs).toEqual(['zod', './ticketTitleTokens']);
   });
 
-  it('ticketTitleTokens.ts has no runtime imports, so the client bundle can use it', () => {
+  it('ticketTitleTokens.ts imports only the shared pure token engine, so the client bundle can use it', () => {
     const specs = runtimeImports(readFileSync(path.resolve(src, 'lib/ticketTitleTokens.ts'), 'utf8'));
-    expect(specs).toEqual([]);
+    expect(specs).toEqual(['./titleTokens']);
   });
 });

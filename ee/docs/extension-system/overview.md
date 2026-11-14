@@ -84,7 +84,7 @@ Runner-related configuration (host environment):
 - `EXT_GATEWAY_TIMEOUT_MS`: gateway → runner request timeout
 - `SIGNING_TRUST_BUNDLE`: path or inline bundle of trusted public keys/certificates for signature verification
 - `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_STREAM_PREFIX`, `RUNNER_DEBUG_REDIS_MAXLEN`: enable Redis-backed debug streaming
-- `UI_PROXY_BASE_URL`, `UI_PROXY_AUTH_KEY`, `UI_PROXY_TIMEOUT_MS`: configure the runner-side UI proxy capability
+- `UI_PROXY_BASE_URL`, `UI_PROXY_TIMEOUT_MS`: configure the runner-side UI proxy capability (UI proxy calls authenticate with the extension's own `api_key` secret, not a shared runner key)
 
 See detailed Runner doc: [runner.md](runner.md)
 

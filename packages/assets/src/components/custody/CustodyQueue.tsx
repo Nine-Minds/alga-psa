@@ -10,7 +10,6 @@ import {
   type CustodyQueueTab,
   type ICustodyQueueFilters,
   type ICustodyQueueRow,
-  type IClient,
 } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -23,7 +22,6 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCalendarDate, getCurrentDateInUserTimeZone } from '@alga-psa/core';
 import { listCustodyQueue } from '../../actions/assetCustodyActions';
-import { getAllClientsForAssets } from '../../actions/clientLookupActions';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
 import { formatCustodyPlace, isFollowUpOverdue } from '../../lib/custodyDisplay';
 import { custodyOutcome, useCustodyLocations, useCustodyUsers } from './custodyClient';
@@ -52,14 +50,6 @@ export function CustodyQueue() {
   const [action, setAction] = useState<{ kind: CustodyDialogKind; row: ICustodyQueueRow } | null>(null);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-
-  const { data: clients } = useSWR(['custody', 'queue', 'clients'], async () => {
-    try {
-      return (await getAllClientsForAssets(true)) as IClient[];
-    } catch {
-      return [] as IClient[];
-    }
-  });
 
   const filters = useMemo<ICustodyQueueFilters>(
     () => ({
@@ -272,7 +262,6 @@ export function CustodyQueue() {
       <div className="flex flex-wrap items-center gap-2">
         <ClientPicker
           id="custody-client-filter"
-          clients={clients ?? []}
           selectedClientId={clientId}
           onSelect={(id) => {
             setClientId(id);

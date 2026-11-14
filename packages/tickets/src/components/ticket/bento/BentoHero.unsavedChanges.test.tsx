@@ -400,6 +400,36 @@ describe('BentoHero unsaved change model', () => {
     });
   });
 
+  it('cross-family board switch lists the destination family priorities and not the old family', async () => {
+    renderHero({
+      priorityOptions: [
+        { value: 'priority-high', label: 'High', is_from_itil_standard: false },
+        { value: 'priority-low', label: 'Low', is_from_itil_standard: false },
+        { value: 'priority-p1', label: 'P1 - Critical', is_from_itil_standard: true },
+        { value: 'priority-p2', label: 'P2 - High', is_from_itil_standard: true },
+      ] as any,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Support category' })).toBeInTheDocument();
+    });
+    const optionLabels = () =>
+      Array.from(screen.getByTestId('bento-hero-priority-select').querySelectorAll('option'))
+        .map((option) => (option as HTMLOptionElement).value)
+        .filter(Boolean);
+
+    // Unchanged (custom) board: only the custom family.
+    expect(optionLabels()).toEqual(['priority-high', 'priority-low']);
+
+    // board-b is ITIL: the stale custom priority is staged to null, so the picker
+    // offers the ITIL family only.
+    fireEvent.change(screen.getByTestId('bento-hero-board-select'), { target: { value: 'board-b' } });
+    await waitFor(() => {
+      expect(optionLabels()).toEqual(['priority-p1', 'priority-p2']);
+    });
+    expect(screen.getByTestId('bento-hero-priority-select')).toHaveValue('');
+  });
+
   it('re-selecting the original board clears the staged board-scoped nulls (no unsaveable diff)', async () => {
     const onBatchSelectChange = vi.fn().mockResolvedValue(true);
     const onLiveDirtyFieldsChange = vi.fn();

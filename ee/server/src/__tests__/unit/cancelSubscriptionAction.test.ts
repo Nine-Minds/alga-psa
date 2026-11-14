@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   checkAccountManagementPermission: vi.fn(),
+  checkAccountManagementDeletePermission: vi.fn(),
   getConnection: vi.fn(),
   getSession: vi.fn(),
   getStripeService: vi.fn(),
@@ -20,6 +21,8 @@ vi.mock('../../lib/license/get-license-usage', () => ({ getLicenseUsage: vi.fn()
 vi.mock('@alga-psa/auth', () => ({ getSession: mocks.getSession }));
 vi.mock('@alga-psa/auth/actions', () => ({
   checkAccountManagementPermission: mocks.checkAccountManagementPermission,
+  checkAccountManagementUpdatePermission: vi.fn(),
+  checkAccountManagementDeletePermission: mocks.checkAccountManagementDeletePermission,
 }));
 vi.mock('../../lib/stripe/StripeService', () => ({
   AppleIapBillingError: class AppleIapBillingError extends Error {},
@@ -93,6 +96,7 @@ describe('cancelSubscriptionAction cancellation request email', () => {
     mocks.tenantRow.current = { email: 'owner@example.test', client_name: 'Acme Corp' };
     mocks.getSession.mockResolvedValue({ user: { tenant: 'tenant-1', email: 'session@example.test' } });
     mocks.checkAccountManagementPermission.mockResolvedValue(true);
+    mocks.checkAccountManagementDeletePermission.mockResolvedValue(true);
     mocks.getConnection.mockResolvedValue({ fn: { now: () => 'now' } });
     mocks.sendCancellationRequestEmail.mockResolvedValue(undefined);
     mocks.getStripeService.mockReturnValue({

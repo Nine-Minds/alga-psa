@@ -24,4 +24,11 @@ describe('serverProductRouteGuard', () => {
 
     expect(result).toEqual({ productCode: 'psa', behavior: 'allowed' });
   });
+
+  it.each([['co_managed', 'allowed'], ['psa', 'allowed'], ['algadesk', 'upgrade_boundary']])('resolves %s on /client-portal/projects as %s', async (product, behavior) => {
+    getCurrentTenantProductMock.mockResolvedValue(product);
+    const mod = await import('@/lib/serverProductRouteGuard');
+
+    expect(await mod.resolveServerProductRouteBehavior({ pathname: '/client-portal/projects' })).toEqual({ productCode: product, behavior });
+  });
 });

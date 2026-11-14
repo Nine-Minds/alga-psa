@@ -19,6 +19,7 @@ const CLIENT_ID = '22222222-2222-2222-2222-222222222222';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+const assignmentRows = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>>, timezone: null as string | null }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: unknown[]) =>
@@ -36,6 +37,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   withTransaction: async (db: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(db),
+  tenantDb: (db: any, tenant: string) => ({ table: (name: string) => db(name).where({ tenant }) }),
 }));
 
 vi.mock('../lib/documentsHelpers', () => ({
@@ -90,7 +92,10 @@ const clientRow = {
 };
 
 const defaultRespond = (sql: string): Rows =>
-  sql.includes('from "clients" as "c"') ? [clientRow] : [];
+  sql.includes('from "clients" as "c"') ? [clientRow]
+    : sql.includes('from "tenant_settings"') ? [{ settings: assignmentRows.timezone ? { timezone: assignmentRows.timezone } : {} }]
+      : sql.includes('from "client_contracts" as "cc"') ? assignmentRows.rows
+        : [];
 
 const findStatement = (statements: string[], fragment: string): string => {
   const match = statements.find((sql) => sql.includes(fragment));
@@ -102,6 +107,8 @@ describe('getClientPulse', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hasPermissionMock.mockResolvedValue(true);
+    assignmentRows.rows = [];
+    assignmentRows.timezone = null;
   });
 
   it('joins the completed-payments aggregate on the tenant distribution key', async () => {
@@ -160,5 +167,26 @@ describe('getClientPulse', () => {
     const result = await getClientPulse(CLIENT_ID) as any;
 
     expect(result.actionError).toBe('Client not found');
+  });
+
+  it('counts only distinct assignments that resolve to Active using tenant-local today', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-01T01:00:00.000Z'));
+    assignmentRows.timezone = 'America/Los_Angeles'; // tenant today is Apr 30 while UTC today is May 1
+    assignmentRows.rows = [
+      { contract_id: 'future', is_active: true, start_date: '2026-05-01', end_date: null, contract_status: 'active' },
+      { contract_id: 'arrived', is_active: true, start_date: '2026-04-30', end_date: null, contract_status: 'active' },
+      { contract_id: 'arrived', is_active: true, start_date: '2026-04-30', end_date: null, contract_status: 'active' },
+      { contract_id: 'draft', is_active: true, start_date: '2026-04-01', end_date: null, contract_status: 'draft' },
+    ];
+    const { knex } = recordingKnex(defaultRespond);
+    createTenantKnexMock.mockResolvedValue({ knex });
+
+    try {
+      const pulse = await getClientPulse(CLIENT_ID) as any;
+      expect(pulse.money.activeContractCount).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

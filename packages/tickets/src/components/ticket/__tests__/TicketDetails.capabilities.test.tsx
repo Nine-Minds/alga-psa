@@ -111,7 +111,36 @@ vi.mock('../TicketCredentialsSection', () => ({ TicketCredentialsSection: () => 
 vi.mock('../TicketExternalLinksSection', () => ({ TicketExternalLinksSection: () => <div data-testid="external-links-section" /> }));
 vi.mock('../TicketDocumentsSection', () => ({ default: () => <div data-testid="ticket-documents" /> }));
 vi.mock('../TicketEmailNotifications', () => ({ default: () => <div data-testid="ticket-email-notifications" /> }));
-vi.mock('../TicketConversation', () => ({ default: () => <div data-testid="ticket-conversation" /> }));
+const { lastConversationMaps, lastGridMaps } = vi.hoisted(() => ({
+  lastConversationMaps: { current: null as null | { userMap: Record<string, unknown>; contactMap: Record<string, unknown> } },
+  lastGridMaps: { current: null as null | { userMap: Record<string, unknown>; contactMap: Record<string, unknown> } },
+}));
+vi.mock('../TicketConversation', async () => {
+  const React = await import('react');
+  const { default: CommentItem } = await import('../CommentItem');
+  return { default: (props: any) => {
+    lastConversationMaps.current = { userMap: props.userMap, contactMap: props.contactMap };
+    const comment = props.conversations[0];
+    return comment ? React.createElement(CommentItem, {
+      conversation: comment, currentUserId: null, isEditing: false, currentComment: null,
+      ticketId: props.ticket.ticket_id, userMap: props.userMap, contactMap: props.contactMap,
+      onContentChange: () => {}, onSave: () => {}, onClose: () => {}, onEdit: () => {}, onDelete: () => {},
+    }) : React.createElement('div', { 'data-testid': 'ticket-conversation' });
+  } };
+});
+vi.mock('../bento/TicketBentoLayout', async () => {
+  const React = await import('react');
+  const { default: CommentItem } = await import('../CommentItem');
+  return { default: (props: any) => {
+    lastGridMaps.current = { userMap: props.userMap, contactMap: props.contactMap };
+    const comment = props.conversations[0];
+    return comment ? React.createElement(CommentItem, {
+      variant: 'compact', conversation: comment, currentUserId: null, isEditing: false, currentComment: null,
+      ticketId: props.ticket.ticket_id, userMap: props.userMap, contactMap: props.contactMap,
+      onContentChange: () => {}, onSave: () => {}, onClose: () => {}, onEdit: () => {}, onDelete: () => {},
+    }) : React.createElement('div', { 'data-testid': 'ticket-bento-layout' });
+  } };
+});
 vi.mock('../AgentScheduleDrawer', () => ({ default: () => <div data-testid="agent-schedule" /> }));
 vi.mock('../TicketNavigation', () => ({ default: () => <div data-testid="ticket-navigation" /> }));
 vi.mock('../../TicketOriginBadge', () => ({ default: () => <div data-testid="ticket-origin" /> }));
@@ -367,5 +396,48 @@ describe('T002 TicketDetails Entry layout capability gates (mounted)', () => {
       expect(present(), `${probeKey} with ${key} off`).toBe(probeKey !== key);
     }
     cleanup();
+  });
+});
+
+describe('TicketDetails refreshed conversation attribution', () => {
+  const newAuthorMap = {
+    'posting-user': { user_id: 'posting-user', first_name: 'Ada', last_name: 'Technician', user_type: 'internal', avatarUrl: null },
+  };
+
+  beforeEach(() => {
+    lastConversationMaps.current = null;
+    lastGridMaps.current = null;
+  });
+
+  it.each([
+    ['Entry', entryLayoutBootstrap, () => lastConversationMaps.current],
+    ['Grid', { ...entryLayoutBootstrap, layoutPreference: { layout: 'grid', timelineOrder: 'asc' } }, () => lastGridMaps.current],
+  ] as const)('updates the displayed author immediately in the mounted %s ticket conversation', (_layout, bootstrap, getMaps) => {
+    const dataSource = composeTicketDataSource(nativeTicketDataSource, {
+      screen: { liveConversationAuthors: true },
+    });
+    const props = {
+      bootstrap: bootstrap as any,
+      initialTicket: ticket as any,
+      initialComments: [{ comment_id: 'comment-new', user_id: 'posting-user', author_type: 'internal', note: '[{"type":"paragraph","content":[{"type":"text","text":"reply"}]}]', created_at: new Date().toISOString() }] as any,
+      liveUserMap: {},
+      liveContactMap: {},
+    };
+    const view = render(
+      <TicketDataSourceProvider dataSource={dataSource}>
+        <TicketDetails {...props} />
+      </TicketDataSourceProvider>,
+    );
+
+    expect(screen.getByText('Unknown User')).toBeInTheDocument();
+    view.rerender(
+      <TicketDataSourceProvider dataSource={dataSource}>
+        <TicketDetails {...props} liveUserMap={newAuthorMap} />
+      </TicketDataSourceProvider>,
+    );
+
+    expect(getMaps()?.userMap['posting-user']).toEqual(newAuthorMap['posting-user']);
+    expect(screen.getByText('Ada Technician')).toBeInTheDocument();
+    expect(screen.queryByText('Unknown User')).not.toBeInTheDocument();
   });
 });

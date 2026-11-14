@@ -66,7 +66,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
       action(
-        { user_id: TEST_USER_ID, tenant: tenantId, roles: [{ role_name: 'Admin' }] } as any,
+        { user_id: TEST_USER_ID, tenant: tenantId, user_type: 'internal', roles: [{ role_name: 'Admin' }] } as any,
         { tenant: tenantId },
         ...args,
       ),

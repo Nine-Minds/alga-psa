@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { productionSourceFiles } from '../../../../scripts/lib/production-source-files.mjs';
 
 /**
  * Coverage ledger for every production writer that sets `clients.is_inactive` (direct `clients` table
@@ -50,43 +51,20 @@ const SERVICE_MARKERS = ['CLIENT_ARCHIVED', 'CLIENT_UPDATED', 'CLIENT_CREATED'];
 
 const WRITE_VERB = /\.(insert|update|del|delete|upsert)\(/;
 const MODEL_WRITE = /ClientModel\.(createClient|updateClient)\(/;
-const SKIP = /^(node_modules|dist|generated|__tests__|test|tests|test-utils|seeds)$|^\.next/;
-
-function walk(dir: string, out: string[]): void {
-  for (const name of readdirSync(dir)) {
-    if (SKIP.test(name)) continue;
-    const full = path.join(dir, name);
-    let st;
-    try {
-      st = statSync(full);
-    } catch {
-      continue; // dangling symlink (e.g. generated build scratch): not a source file
-    }
-    if (st.isDirectory()) walk(full, out);
-    else if (/\.(ts|tsx)$/.test(name) && !/\.(test|d)\.tsx?$/.test(name)) out.push(full);
-  }
-}
 
 function writersOfClientIsInactive(): string[] {
-  const files: string[] = [];
-  for (const base of ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/packages', 'ee/temporal-workflows/src']) {
-    const abs = path.join(root, base);
-    try {
-      if (statSync(abs).isDirectory()) walk(abs, files);
-    } catch {
-      /* optional tree */
-    }
-  }
+  const files = productionSourceFiles(root, ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/packages', 'ee/temporal-workflows/src'])
+    .filter((file: string) => !/(^|\/)seeds\//.test(file));
   const writers: string[] = [];
   for (const file of files) {
-    const lines = readFileSync(file, 'utf8').split('\n');
+    const lines = read(file).split('\n');
     const writes = lines.some((line, i) => {
       if (MODEL_WRITE.test(line)) return true;
       if (!/['"]clients['"]/.test(line)) return false;
       const window = lines.slice(i, i + 9).join(' ');
       return WRITE_VERB.test(window) && /\bis_inactive\b/.test(window);
     });
-    if (writes) writers.push(path.relative(root, file));
+    if (writes) writers.push(file);
   }
   return writers.sort();
 }

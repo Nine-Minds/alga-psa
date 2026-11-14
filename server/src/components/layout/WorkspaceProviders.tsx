@@ -20,6 +20,7 @@ import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers
 import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets/MspAssetCrossFeatureProvider';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
+import CoManagedProjectEffortProvider from '@/components/co-managed/CoManagedProjectEffortProvider';
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows/MspActivityCrossFeatureProvider';
 
 interface WorkspaceProvidersProps {
@@ -57,8 +58,10 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
                     <MspSchedulingCrossFeatureProvider>
                       <MspActivityCrossFeatureProvider>
                         <QuickAddClientProviderWithCallbacks>
-                          {children}
-                          <DrawerOutlet />
+                          <CoManagedProjectEffortProvider>
+                            {children}
+                            <DrawerOutlet />
+                          </CoManagedProjectEffortProvider>
                         </QuickAddClientProviderWithCallbacks>
                       </MspActivityCrossFeatureProvider>
                     </MspSchedulingCrossFeatureProvider>

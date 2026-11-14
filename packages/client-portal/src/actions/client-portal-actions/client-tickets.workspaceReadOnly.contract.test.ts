@@ -36,6 +36,6 @@ describe('shared-workspace tickets are read-only in the portal', () => {
     expect(conversationSource).toContain('readOnly = false,');
     expect(conversationSource).toContain('{!showEditor && !readOnly && (');
     expect(conversationSource).toContain('onReply={readOnly ? undefined :');
-    expect(conversationSource).toContain('onEdit={readOnly ? undefined :');
+    expect(conversationSource).toContain('onEdit={readOnly || !dataSource.capabilities.commentOwnEdit ? undefined :');
   });
 });

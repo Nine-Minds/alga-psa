@@ -77,6 +77,32 @@ export function dattoTimestampToIso(value: DattoTimestamp | undefined): string |
 }
 
 /**
+ * Datto's `warrantyDate` is a plain `YYYY-MM-DD` calendar date, not a
+ * timestamp, so it is validated by shape and calendar validity here rather
+ * than through dattoTimestampToMs, whose numeric-string branch would read the
+ * digits as epoch milliseconds. Returns the calendar date unchanged, or null
+ * for absent or unparseable input.
+ */
+export function dattoWarrantyDateToIsoDate(value: string | null | undefined): string | null {
+  const text = cleanString(value);
+  if (!text) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const parsed = new Date(`${text}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  // Date rolls 2026-02-31 forward into March; reject rather than shift.
+  if (
+    parsed.getUTCFullYear() !== Number(year)
+    || parsed.getUTCMonth() + 1 !== Number(month)
+    || parsed.getUTCDate() !== Number(day)
+  ) {
+    return null;
+  }
+  return text;
+}
+
+/**
  * Asset type from `deviceClass` first (printers, ESXi hosts and network
  * devices are classes, not categories), then `deviceType.category`/`type`.
  */
@@ -269,6 +295,8 @@ export function mapDattoDeviceToSnapshot(
     assetType: mapDattoDeviceAssetType(device),
     displayName: cleanString(device.hostname) ?? cleanString(device.description) ?? device.uid,
     serialNumber: hardware?.serialNumber ?? null,
+    // Promoted out of systemInfo so ingestion can fill assets.warranty_end_date.
+    warrantyEndDate: dattoWarrantyDateToIsoDate(device.warrantyDate),
     status: online && lifecycleState === 'active' ? 'active' : 'inactive',
     assetTag: `${DATTO_RMM_PROVIDER}:${device.uid}`,
     agentStatus: dattoAgentStatusFor(device),

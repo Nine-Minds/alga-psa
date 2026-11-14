@@ -77,6 +77,19 @@
  *   guarantee (see draftSummary for the per-provider header-survival findings
  *   this fallback exists to cover).
  *
+ * Tier 3 — thread-header self-automated (`detectThreadHeaderSelfAutomatedLoop`).
+ *   A board notification can be addressed to a plain distribution list that
+ *   expands into a connected inbound mailbox. The redelivered copy carries no
+ *   usable reply token (board address notifications are sent with
+ *   `issueReplyToken:false`) and its recipient is the list, not the mailbox,
+ *   so the ledger correlations above cannot see it; it arrives threaded to the
+ *   ticket via In-Reply-To/References. It is a redelivery, not a reply, when
+ *   the sender is an address this tenant has sent notifications for THIS
+ *   ticket from AND the message carries an RFC 3834 automated-message signal.
+ *   Both are required: the From address alone also matches a human replying
+ *   from a staffed shared mailbox, and the header alone also matches a client's
+ *   out-of-office.
+ *
  * Neither tier ever suppresses on: a bare sender-address match, a bare
  * Auto-Submitted header alone, thread-header (In-Reply-To/References)
  * membership alone, or reply-token presence alone — each of those is
@@ -89,7 +102,10 @@ import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 import { detectAutomatedInboundMessage, type AutomatedMessageSignal } from '../../lib/email/automatedMessage';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 
-export type NotificationLoopTier = 'reply_token_ledger' | 'automated_header_ledger_fallback';
+export type NotificationLoopTier =
+  | 'reply_token_ledger'
+  | 'automated_header_ledger_fallback'
+  | 'thread_header_self_automated';
 
 export interface NotificationLoopEvidence {
   conversationTokenPresent: boolean;
@@ -373,6 +389,81 @@ export async function detectOutboundNotificationLoop(params: {
     matchedLogId: fallbackRow.id,
     matchedEntityType: fallbackRow.entity_type,
     matchedEntityId: fallbackRow.entity_id,
+    evidence,
+  };
+}
+
+/**
+ * Tier 3 (see module doc). Called only for messages matched to a ticket by
+ * thread headers, before the thread-header sender check and before any change
+ * to the ticket. The automated-message test runs first because it needs no
+ * query; the ledger lookup only runs for automated messages.
+ */
+export async function detectThreadHeaderSelfAutomatedLoop(params: {
+  tenantId: string;
+  ticketId: string;
+  emailData: EmailMessageDetails;
+  senderEmail: string | null;
+}): Promise<NotificationLoopDetectionResult> {
+  const automated = detectAutomatedInboundMessage(params.emailData);
+  const senderEmail = params.senderEmail ? normalizeEmailAddress(params.senderEmail) : null;
+
+  const evidence: NotificationLoopEvidence = {
+    conversationTokenPresent: false,
+    tokenHashLookupAttempted: false,
+    tokenHashMatched: false,
+    fallbackLookupAttempted: false,
+    fallbackLookupMatched: false,
+    recipientMatchedLoggedSend: false,
+    senderMatchesLoggedFromAddress: false,
+    subjectMatchedLoggedSend: false,
+    automated,
+  };
+  const notLoop = (): NotificationLoopDetectionResult => ({
+    isLoop: false,
+    tier: null,
+    matchedLogId: null,
+    matchedEntityType: null,
+    matchedEntityId: null,
+    evidence,
+  });
+
+  if (!automated.isAutomated || !senderEmail) {
+    return notLoop();
+  }
+
+  evidence.fallbackLookupAttempted = true;
+  let row: EmailSendingLogRow | null = null;
+  try {
+    row = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+      const found = await db
+        .table('email_sending_logs')
+        .select(...LOG_COLUMNS)
+        .where({ entity_type: 'ticket', entity_id: params.ticketId })
+        .andWhereRaw('lower(from_address) = ?', [senderEmail])
+        .orderBy('created_at', 'desc')
+        .first();
+      return (found ?? null) as EmailSendingLogRow | null;
+    });
+  } catch (error) {
+    console.warn('notificationLoopDetection: thread-header ledger lookup failed (continuing)', {
+      tenantId: params.tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  if (!row) {
+    return notLoop();
+  }
+
+  evidence.fallbackLookupMatched = true;
+  evidence.senderMatchesLoggedFromAddress = true; // enforced by the query's from_address filter
+  return {
+    isLoop: true,
+    tier: 'thread_header_self_automated',
+    matchedLogId: row.id,
+    matchedEntityType: row.entity_type,
+    matchedEntityId: row.entity_id,
     evidence,
   };
 }

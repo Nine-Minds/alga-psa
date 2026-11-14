@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => {
   const tokenPost = vi.fn();
   const dbUpdate = vi.fn().mockResolvedValue(1);
   const client = {
-    interceptors: { request: { use: requestUse } },
+    interceptors: { request: { use: requestUse }, response: { use: vi.fn() } },
     get: vi.fn(),
     post: vi.fn(),
     patch: vi.fn(),

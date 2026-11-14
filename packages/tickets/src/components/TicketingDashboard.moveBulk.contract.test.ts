@@ -36,6 +36,12 @@ describe('ticketing dashboard bulk move wiring contract', () => {
     expect(source).toContain('Move Selected Tickets');
   });
 
+  it('hides inactive boards from the destination board options', () => {
+    const source = read('./TicketingDashboard.tsx');
+
+    expect(source).toContain('.filter((board) => !board.is_inactive)');
+  });
+
   it('T004: reloads destination statuses on board change and uses status options', () => {
     const source = read('./TicketingDashboard.tsx');
 

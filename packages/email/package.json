@@ -17,6 +17,11 @@
       "import": "./dist/providerConfig.js",
       "require": "./dist/providerConfig.cjs"
     },
+    "./providerSecrets": {
+      "types": "./src/providerSecrets.ts",
+      "import": "./dist/providerSecrets.js",
+      "require": "./dist/providerSecrets.cjs"
+    },
     "./branding": {
       "types": "./src/branding/index.ts",
       "import": "./dist/branding/index.js",

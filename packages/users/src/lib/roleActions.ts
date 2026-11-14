@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
@@ -15,6 +15,15 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 export type UserRoleActionError = ActionMessageError | ActionPermissionError;
+
+function userRoleFloorActionError(
+    violation: 'last_msp_admin' | 'last_role',
+    message: string
+): ActionMessageError {
+    return violation === 'last_msp_admin'
+        ? actionError(message, 'msp/settings:errors.roles.lastMspAdmin')
+        : actionError(message, 'msp/settings:errors.roles.lastRole');
+}
 
 function userRoleActionErrorFrom(error: unknown): UserRoleActionError | null {
     if (error instanceof Error) {
@@ -148,6 +157,12 @@ export const removeRoleFromUser = withAuth(async (
 
             if (!role) {
                 return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
+            }
+
+            // LEVERAGE: pattern user-role-floor — the same guard runs in policyActions.removeRoleFromUser and every other role/user write path
+            const floor = await assertUserRoleFloor(trx, tenant, { kind: 'remove_roles', userId, roleIds: [roleId] });
+            if (isUserRoleFloorRejected(floor)) {
+                return userRoleFloorActionError(floor.violation, floor.message);
             }
 
             await tenantDb(trx, tenant).table('user_roles').where({ user_id: userId, role_id: roleId }).del();

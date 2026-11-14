@@ -15,6 +15,7 @@ const runtimeFiles = [
   'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
   'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
   'server/migrations/__tests__/coManagedMeetingCreationOperationsMigration.integration.test.ts',
+  'server/migrations/__tests__/timeSheetUniquenessMigrationDistribution.integration.test.ts',
 ];
 const tenantFiles = [
   'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts',

@@ -1,0 +1,118 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: transition table guard matrix, track restriction, full advance walk",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: schemas for ship and confirm",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: panel buttons, standard-track absence, overdue badge; list label",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB: full Dell advance flow with custody returned_to_vendor, history, no stock writes",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F006",
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB: guard matrix, standard-track refusal, custody state refusals",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB: same-tracking idempotence and different-tracking refusal",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB: generic close leaves custody with vendor; return_to_client refused",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB: permissions and record-level gate on both actions",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB: stock entry points refuse warranty cases, warranty cores refuse stock cases, report excludes warranty",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB regression: existing warranty, stock-unit and report suites unchanged",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "i18n: warranty locale test",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: overdue badge truth table (replaced past due shows 'not yet shipped'; replaced not due hides; dead_unit_owed shipped on time hides even when today > return_by; shipped late shows 'shipped late'; standard track and missing return_by never show)",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit + DB: receive_replacement on the advance track accepts optional return_by and persists it; omitted return_by leaves the approval-time value untouched",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  }
+]

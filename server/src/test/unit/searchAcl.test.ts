@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { aclPredicateSql, verifyResultVisibility } from '@alga-psa/search/acl';
+import { aclPredicateSql, STRICT_CLIENT_SCOPE_OBJECT_TYPES, verifyResultVisibility } from '@alga-psa/search/acl';
+
+import { ownershipQuery, withClientPaths } from '../helpers/clientOwnershipKnex';
 
 describe('search ACL SQL predicate', () => {
   it('T105 filters required_permission through the user permission set', () => {
@@ -72,8 +74,28 @@ describe('search ACL SQL predicate', () => {
       clientAccess: { mode: 'scoped', clientIds },
     });
 
-    expect(fragment.sql).toContain('(client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))');
-    expect(fragment.bindings[5]).toEqual(clientIds);
+    expect(fragment.sql).toContain('client_scope_id = ANY(?::uuid[])');
+    expect(fragment.bindings[6]).toEqual(clientIds);
+  });
+
+  it('T111c scoped principals do not get NULL-scope admission for strict-scope (client-owned) types', () => {
+    const clientIds = ['10000000-0000-0000-0000-000000000001'];
+    const fragment = aclPredicateSql({
+      userId: '00000000-0000-0000-0000-000000000001',
+      permissions: ['ticket:read'],
+      clientAccess: { mode: 'scoped', clientIds },
+    });
+
+    expect(fragment.sql).toContain(
+      '((client_scope_id IS NULL AND NOT (object_type = ANY(?::text[]))) OR client_scope_id = ANY(?::uuid[]))',
+    );
+    expect(fragment.bindings[5]).toEqual([...STRICT_CLIENT_SCOPE_OBJECT_TYPES]);
+    // Tickets and their comments, and every type indexed from the manifest's client declarations:
+    // a NULL scope on any of them is an unknown owner, not tenant-wide.
+    expect([...fragment.bindings[5] as string[]].sort()).toEqual(
+      ['client', 'contact', 'document', 'interaction', 'ticket', 'ticket_comment', 'time_entry'],
+    );
+    expect(fragment.bindings[6]).toEqual(clientIds);
   });
 
   it('T111b bypasses the client_scope_id predicate for unrestricted (mode: all) principals', () => {
@@ -423,30 +445,60 @@ describe('search ACL SQL predicate', () => {
       };
       return query;
     };
-    const documentQuery = makeQuery({ document_id: 'document-1' });
-    const associationQuery = makeQuery({ entity_id: 'client-x' });
-    const knex = vi.fn((table: string) => {
-      if (table === 'documents') return documentQuery;
-      if (table === 'document_associations') return associationQuery;
-      throw new Error(`Unexpected table ${table}`);
-    });
+    // The document's associations, read through the manifest's document_entity resolver.
+    const visibility = async (
+      associations: Array<{ discriminator: string; id: string }>,
+      clientIds: string[],
+    ) => {
+      const documentQuery = makeQuery({ document_id: 'document-1' });
+      const associationQuery = ownershipQuery(associations.map((a) => ({ key: 'document-1', ...a })));
+      const associationLookup = vi.fn(() => associationQuery);
+      const associationRoot = { where: vi.fn(() => associationRoot), whereIn: associationLookup };
+      const knex = vi.fn((table: string) => {
+        if (table === 'documents') return documentQuery;
+        if (table.startsWith('document_associations')) return associationRoot;
+        throw new Error(`Unexpected table ${table}`);
+      });
+      withClientPaths(knex, {
+        clients: [{ id: 'client-x', client_id: 'client-x' }, { id: 'client-a', client_id: 'client-a' }],
+        tickets: [{ id: 'ticket-a', client_id: 'client-a' }],
+      });
+      const visible = await verifyResultVisibility(
+        knex as never,
+        {
+          userId: '00000000-0000-0000-0000-000000000001',
+          tenant: 'tenant-1',
+          permissions: ['document:read'],
+          isInternal: true,
+          clientAccess: { mode: 'scoped', clientIds },
+        },
+        [{ type: 'document' as const, id: 'document-1' }],
+      );
+      return { visible, documentQuery, associationRoot, associationLookup };
+    };
 
-    await expect(verifyResultVisibility(
-      knex as never,
-      {
-        userId: '00000000-0000-0000-0000-000000000001',
-        tenant: 'tenant-1',
-        permissions: ['document:read'],
-        isInternal: true,
-        clientAccess: { mode: 'scoped', clientIds: ['client-a'] },
-      },
-      [{ type: 'document' as const, id: 'document-1' }],
-    )).resolves.toEqual([]);
+    // Linked to another client: hidden.
+    const other = await visibility([{ discriminator: 'client', id: 'client-x' }], ['client-a']);
+    expect(other.visible).toEqual([]);
+    expect(other.documentQuery.where).toHaveBeenCalledWith('documents.tenant', 'tenant-1');
+    expect(other.documentQuery.where).toHaveBeenCalledWith('document_id', 'document-1');
+    expect(other.associationRoot.where).toHaveBeenCalledWith('document_associations.tenant', 'tenant-1');
+    expect(other.associationLookup).toHaveBeenCalledWith('document_id', ['document-1']);
 
-    expect(documentQuery.where).toHaveBeenCalledWith('documents.tenant', 'tenant-1');
-    expect(documentQuery.where).toHaveBeenCalledWith('document_id', 'document-1');
-    expect(associationQuery.where).toHaveBeenCalledWith('document_associations.tenant', 'tenant-1');
-    expect(associationQuery.andWhere).toHaveBeenCalledWith('entity_type', 'client');
+    // Linked to the user's client, directly or through its ticket: shown.
+    await expect(visibility([{ discriminator: 'client', id: 'client-a' }], ['client-a']))
+      .resolves.toMatchObject({ visible: [{ type: 'document', id: 'document-1' }] });
+    await expect(visibility([{ discriminator: 'ticket', id: 'ticket-a' }], ['client-a']))
+      .resolves.toMatchObject({ visible: [{ type: 'document', id: 'document-1' }] });
+
+    // Linked to the user's client and another client: ambiguous owner, hidden.
+    await expect(visibility(
+      [{ discriminator: 'client', id: 'client-a' }, { discriminator: 'client', id: 'client-x' }],
+      ['client-a'],
+    )).resolves.toMatchObject({ visible: [] });
+
+    // Linked to nothing that reaches a client: unknown owner, hidden from a narrowed user.
+    await expect(visibility([], ['client-a'])).resolves.toMatchObject({ visible: [] });
   });
 
   it('T194 emits zero acl_drift for rows whose SQL and record-level ACL agree', async () => {
@@ -466,15 +518,17 @@ describe('search ACL SQL predicate', () => {
       };
       return query;
     };
-    const ticketQuery = makeQuery({ ticket_id: 'ticket-1' });
+    const ticketQuery = makeQuery({ ticket_id: 'ticket-1', client_id: 'client-1' });
     const documentQuery = makeQuery({ document_id: 'document-1' });
-    const associationQuery = makeQuery({ entity_id: 'client-1' });
+    const associationQuery = ownershipQuery([{ key: 'document-1', discriminator: 'client', id: 'client-1' }]);
+    const associationRoot = { where: vi.fn(() => associationRoot), whereIn: vi.fn(() => associationQuery) };
     const knex = vi.fn((table: string) => {
       if (table === 'tickets') return ticketQuery;
       if (table === 'documents') return documentQuery;
-      if (table === 'document_associations') return associationQuery;
+      if (table.startsWith('document_associations')) return associationRoot;
       throw new Error(`Unexpected table ${table}`);
     });
+    withClientPaths(knex, { clients: [{ id: 'client-1', client_id: 'client-1' }] });
     const rows = [
       { type: 'ticket' as const, id: 'ticket-1' },
       { type: 'document' as const, id: 'document-1' },
@@ -497,5 +551,61 @@ describe('search ACL SQL predicate', () => {
     } finally {
       (globalThis as { Sentry?: unknown }).Sentry = previousSentry;
     }
+  });
+
+  describe('ticket client-scope verifier (alga-2026-0002976)', () => {
+    const OWN = '10000000-0000-4000-8000-000000000001';
+    const OTHER = '20000000-0000-4000-8000-000000000002';
+    const portalUser = (clientIds: string[] = [OWN]) => ({
+      userId: '00000000-0000-0000-0000-000000000002',
+      tenant: 'tenant-1',
+      permissions: ['ticket:read'],
+      isInternal: false,
+      clientAccess: { mode: 'scoped' as const, clientIds },
+    });
+    const makeQuery = (row: unknown) => {
+      const q: any = {
+        select: () => q, where: () => q, whereNull: () => q, first: () => q, join: () => q, leftJoin: () => q,
+        then: (res: any, rej: any) => Promise.resolve(row).then(res, rej),
+      };
+      return q;
+    };
+    const ticketKnex = (ticketClientId: string | null) => {
+      const knex: any = vi.fn((table: string) => {
+        if (table === 'comments') return makeQuery({ ticket_id: 'ticket-1', is_internal: false });
+        if (table === 'comments as c') return makeQuery({ audience: 'requester' });
+        if (table === 'tickets') return makeQuery({ ticket_id: 'ticket-1', client_id: ticketClientId });
+        throw new Error(`Unexpected table ${table}`);
+      });
+      knex.raw = vi.fn((sql: string) => ({ sql }));
+      return knex;
+    };
+    const ticketRows = [{ type: 'ticket' as const, id: 'ticket-1' }];
+    const commentRows = [{ type: 'ticket_comment' as const, id: 'comment-1' }];
+
+    it('drops another client ticket even when the legacy index row has NULL client_scope_id', async () => {
+      expect(await verifyResultVisibility(ticketKnex(OTHER), portalUser(), ticketRows)).toEqual([]);
+    });
+
+    it('drops another client requester-audience comment', async () => {
+      expect(await verifyResultVisibility(ticketKnex(OTHER), portalUser(), commentRows)).toEqual([]);
+    });
+
+    it('denies a scoped principal a ticket / comment whose ticket has null client_id', async () => {
+      expect(await verifyResultVisibility(ticketKnex(null), portalUser(), ticketRows)).toEqual([]);
+      expect(await verifyResultVisibility(ticketKnex(null), portalUser(), commentRows)).toEqual([]);
+    });
+
+    it("keeps the principal's own client ticket and requester comment", async () => {
+      expect(await verifyResultVisibility(ticketKnex(OWN), portalUser(), ticketRows)).toHaveLength(1);
+      expect(await verifyResultVisibility(ticketKnex(OWN), portalUser(), commentRows)).toHaveLength(1);
+    });
+
+    it('lets an internal (mode: all) user see every ticket, including null-client ones', async () => {
+      const internal = { ...internalUser, clientAccess: { mode: 'all' as const } };
+      expect(await verifyResultVisibility(ticketKnex(OTHER), internal, ticketRows)).toHaveLength(1);
+      expect(await verifyResultVisibility(ticketKnex(null), internal, ticketRows)).toHaveLength(1);
+      expect(await verifyResultVisibility(ticketKnex(OTHER), internal, commentRows)).toHaveLength(1);
+    });
   });
 });

@@ -1,32 +1,15 @@
 /**
- * Provision the `credential:audit` permission for every tenant.
+ * CE no-op placeholder.
  *
- * The permission is declared in the unified catalog
- * (server/migrations/utils/permissions/catalog.cjs) — the single source of
- * truth — together with its default-role grants (msp:Admin on both products,
- * msp:Manager on PSA). This migration reconciles every existing tenant against
- * that catalog so databases provisioned before the catalog entry existed gain
- * the permission and its grants. On a fresh database the earlier
- * reconciliation migrations already run against the current catalog, so this
- * writes nothing.
- *
- * Additive only: it inserts the missing permission and default-role grants and
- * never deletes. A tenant whose own shape blocks reconciliation is reported
- * and skipped, never fatal. See ./utils/permissions/reconcileTenants.cjs.
+ * The real migration lives in ee/server/migrations/20260828120000_add_credential_audit_permission.cjs
+ * (credentials is an EE-only feature). This file exists only so CE databases
+ * that already recorded this name in knex_migrations pass knex's "migration
+ * directory is corrupt / files are missing" validation. It performs no DDL.
+ * EE builds overlay the real file over this one (see server/scripts/run-ee-migrations.js).
  */
 
-const { reconcileAllTenants } = require('./utils/permissions/reconcileTenants.cjs');
+exports.up = async function up() {};
 
-exports.up = async function up(knex) {
-  await reconcileAllTenants(knex, { label: 'add_credential_audit_permission' });
-};
-
-exports.down = async function down() {
-  throw new Error(
-    'add_credential_audit_permission is irreversible. Removing the permission and its grants would delete '
-    + 'state tenants may have assigned to custom roles since. Retiring a permission requires its own reviewed '
-    + 'migration — see server/migrations/utils/permissions/README.md.',
-  );
-};
+exports.down = async function down() {};
 
 exports.config = { transaction: false };

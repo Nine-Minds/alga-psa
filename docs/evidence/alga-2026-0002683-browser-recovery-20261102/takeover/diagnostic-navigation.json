@@ -1,0 +1,7 @@
+{
+  "capturedAt": "2026-11-02T17:34:18.338942+00:00",
+  "command": "browser-navigate to data: document from diagnostic.html, own-card visible pane",
+  "exitStatus": 0,
+  "stdout": "{\"paneId\":\"c8403826-ff91-488f-aa28-8447b4f96c06\",\"success\":true,\"result\":{\"url\":\"data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E\"}}\n",
+  "stderr": ""
+}

@@ -9,6 +9,12 @@ import { DesignerSchemaInspector } from './DesignerSchemaInspector';
 import { DesignCanvas } from '../canvas/DesignCanvas';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerNode } from '../state/designerStore';
+import { buildInvoiceTemplateBindings } from '../../../lib/invoice-template-ast/standardTemplates';
+import { buildQuoteTemplateBindings } from '../../../lib/quote-template-ast/bindings';
+import { buildSalesOrderTemplateBindings } from '../../../lib/sales-order-template-ast/bindings';
+import { exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
+import { listNodesByType } from '../ast/workspaceAst.roundtrip.helpers';
+import type { DesignerDocumentKind } from '../utils/documentKind';
 
 const noop = () => {};
 
@@ -28,7 +34,19 @@ const groupedPurpleStyle = {
   inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' },
 };
 
-const mountTotalsInspectorAndCanvas = ({ rows }: { rows: RowFixture[] }) => {
+const bindingsForKind = (documentKind: DesignerDocumentKind) => {
+  if (documentKind === 'quote') return buildQuoteTemplateBindings();
+  if (documentKind === 'sales-order') return buildSalesOrderTemplateBindings();
+  return buildInvoiceTemplateBindings();
+};
+
+const mountTotalsInspectorAndCanvas = ({
+  rows,
+  documentKind = 'invoice',
+}: {
+  rows: RowFixture[];
+  documentKind?: DesignerDocumentKind;
+}) => {
   act(() => {
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -39,7 +57,7 @@ const mountTotalsInspectorAndCanvas = ({ rows }: { rows: RowFixture[] }) => {
           type: 'document',
           props: {
             name: 'Document',
-            metadata: {},
+            metadata: { __astBindingCatalog: bindingsForKind(documentKind) },
             layout: { display: 'flex', flexDirection: 'column' },
             style: { width: '816px', height: '1056px' },
           },
@@ -373,5 +391,56 @@ describe('TotalsRowsEditorWidget (schema widget integration)', () => {
     expect(restored.find((row) => row.id === 'monthly-total')?.style?.inline?.color).toBe('#ffffff');
     expect(restored.find((row) => row.id === 'onetime-total')?.style?.inline?.color).toBe('#ffffff');
     expect(restored.find((row) => row.id === 'monthly-total')?.style?.inline?.backgroundColor).toBe('#7c45d3');
+  });
+
+  it('offers document catalog totals presets and exports only resolvable render paths', () => {
+    for (const documentKind of ['invoice', 'quote', 'sales-order'] as const) {
+      cleanup();
+      useInvoiceDesignerStore.getState().resetWorkspace();
+      mountTotalsInspectorAndCanvas({ rows: [], documentKind });
+
+      const catalog = bindingsForKind(documentKind).values ?? {};
+      const availableIds = ['subtotal', 'tax', 'total', 'grossSubtotal', 'discountTotal'].filter(
+        (id) => Object.prototype.hasOwnProperty.call(catalog, id)
+      );
+      for (const id of availableIds) {
+        const presetButton = document.getElementById(`designer-totals-add-row-${id}`);
+        if (!presetButton) throw new Error(`Expected ${documentKind} preset ${id}`);
+        fireEvent.click(presetButton);
+      }
+      for (const id of ['grossSubtotal', 'discountTotal']) {
+        if (!availableIds.includes(id)) {
+          expect(document.getElementById(`designer-totals-add-row-${id}`)).toBeNull();
+        }
+      }
+
+      const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+      const totals = listNodesByType(ast.layout, 'totals')[0];
+      if (!totals || totals.type !== 'totals') throw new Error('Expected exported totals node');
+      const allowedRenderPaths = new Set(Object.values(catalog).map((binding) => binding.path));
+      for (const row of totals.rows) {
+        expect(row.value.type).toBe('path');
+        if (row.value.type === 'path') expect(allowedRenderPaths.has(row.value.path)).toBe(true);
+      }
+
+      const exportedDiscount = totals.rows.find((row) => row.id === 'discountTotal');
+      if (documentKind === 'invoice') {
+        expect(exportedDiscount).toMatchObject({
+          value: { type: 'path', path: 'discountTotal' },
+          hideWhenZero: true,
+        });
+        expect(totals.rows.find((row) => row.id === 'grossSubtotal')?.value).toEqual({
+          type: 'path',
+          path: 'grossSubtotal',
+        });
+      } else if (documentKind === 'quote') {
+        expect(exportedDiscount).toMatchObject({ value: { type: 'path', path: 'discount_total' }, hideWhenZero: true });
+        expect(totals.rows.some((row) => row.id === 'grossSubtotal')).toBe(false);
+        expect(totals.rows.find((row) => row.id === 'total')?.value).toEqual({ type: 'path', path: 'total_amount' });
+      } else {
+        expect(exportedDiscount).toBeUndefined();
+        expect(totals.rows.some((row) => row.id === 'grossSubtotal')).toBe(false);
+      }
+    }
   });
 });

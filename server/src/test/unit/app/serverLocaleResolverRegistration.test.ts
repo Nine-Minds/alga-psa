@@ -60,4 +60,13 @@ describe('server locale resolver registration', () => {
     // a hardcoded lang would mask a broken resolver in any visual check.
     expect(layout).toMatch(/<html\s+lang=\{locale\}/);
   });
+
+  it("registers the public quote route locale at module scope, so <html lang> follows the recipient", () => {
+    // Same layer reasoning as above: registering from the page module would not
+    // be guaranteed to run before the root layout reads the locale.
+    const callIndex = layout.indexOf('registerPublicQuoteRouteLocale();');
+    expect(callIndex).toBeGreaterThan(-1);
+    const lineStart = layout.lastIndexOf('\n', callIndex) + 1;
+    expect(layout.slice(lineStart, callIndex)).toBe('');
+  });
 });

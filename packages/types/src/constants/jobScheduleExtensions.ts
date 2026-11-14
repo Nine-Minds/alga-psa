@@ -1,15 +1,16 @@
 /**
  * Registry of maintenance fan-out schedule rows contributed outside the native
- * catalog. `defineJob({ schedule })` in `@alga-psa/jobs` registers here; nothing
- * else needs to edit a shared file.
+ * catalog. Job descriptors normally register through `defineJob({ schedule })`;
+ * a scheduler-only process can also register shared schedule data directly.
  *
  * Dependency-free like `maintenanceFanoutSchedules.ts`, so both schedulers can
  * read it: the EE Temporal worker (`setupSchedules.ts`, via
  * `listMaintenanceFanoutSchedules()`, which is EE-only and appends
  * `listExtensionMaintenanceSchedules('ee')`) and the CE pg-boss converger (via
  * `resolveCeMaintenanceSchedules`, which appends `listExtensionMaintenanceSchedules('ce')`).
- * A scheduler only sees rows registered in its own process, so the module that
- * calls `defineJob` must be loaded by both the server and the scheduling process.
+ * A scheduler only sees rows registered in its own process. The server loads
+ * descriptors for execution; independent scheduler processes register their
+ * schedule data in their own registry.
  *
  * Empty by default: every listing is element-for-element the native catalog.
  */

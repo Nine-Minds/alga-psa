@@ -54,6 +54,22 @@
       "closed": "Gesloten",
       "warranty_review": "Garantiebeoordeling",
       "repaired": "Gerepareerd"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In uitvoering",
+      "completed": "Voltooid",
+      "cancelled": "Geannuleerd"
+    },
+    "assetAuditResult": {
+      "expected": "Verwacht",
+      "present": "Aanwezig",
+      "missing": "Ontbrekend",
+      "unexpected": "Onverwacht"
+    },
+    "assetAuditMethod": {
+      "scan": "Scan",
+      "manual": "Handmatig",
+      "register": "Op locatie geregistreerd"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Elke bewaring",
         "inCustody": "In bewaring bij MSP",
         "notInCustody": "Niet in bewaring bij MSP"
+      },
+      "audit": {
+        "any": "Alle controleresultaten",
+        "present": "Laatste controle: aanwezig",
+        "missing": "Laatste controle: ontbrekend",
+        "never": "Nooit gecontroleerd",
+        "stale": "Niet gecontroleerd in de afgelopen 90 dagen"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Locatie",
       "purchaseDate": "Aankoopdatum",
       "warrantyEnd": "Einde garantie",
-      "notProvided": "Niet voorzien"
+      "notProvided": "Niet voorzien",
+      "lastAudited": "Laatst gecontroleerd",
+      "neverAudited": "Nooit gecontroleerd"
     },
     "info": {
       "client": "Klant",
@@ -739,6 +764,14 @@
     "ownership": {
       "client": "Eigendom van klant",
       "msp": "Eigendom van MSP"
+    },
+    "create": {
+      "success": "Asset {{tag}} aangemaakt",
+      "autoTag": "Volgende automatische label toewijzen",
+      "preview": "Voorbeeld van het volgende label: {{tag}} (het voorbeeld reserveert geen nummer)",
+      "selectClient": "Selecteer een klant voor het voorbeeld",
+      "addAnother": "Opslaan en nog een toevoegen",
+      "submit": "Asset aanmaken"
     }
   },
   "assetFormClient": {
@@ -842,24 +875,6 @@
     "links": {
       "title": "Koppelingen voor toegang op afstand",
       "description": "Configureer URL-sjablonen voor ScreenConnect en andere tools voor toegang op afstand.",
-      "errors": {
-        "load": "Laden van koppelingen voor toegang op afstand is mislukt.",
-        "save": "Opslaan van de koppeling voor toegang op afstand is mislukt.",
-        "delete": "Verwijderen van de koppeling voor toegang op afstand is mislukt.",
-        "templateHttp": "Het sjabloon moet beginnen met http:// of https:// en een letterlijke hostnaam.",
-        "templatePlaceholder": "Het sjabloon bevat een niet-ondersteunde placeholder.",
-        "templateUrl": "Het sjabloon moet een geldige http- of https-URL opleveren.",
-        "required": "Een knoptekst en URL-sjabloon zijn vereist.",
-        "partialDelete": "Kon {{count}} geselecteerde koppeling(en) niet verwijderen."
-      },
-      "noneAvailable": "Er zijn geen opties voor toegang op afstand beschikbaar.",
-      "confirmDeleteTitle": "Koppeling voor toegang op afstand verwijderen?",
-      "confirmDeleteMessage": "Weet u zeker dat u “{{label}}” wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
-      "openMenu": "Menu openen",
-      "selectLabel": "{{label}} selecteren",
-      "confirmBulkDeleteTitle": "Geselecteerde koppelingen verwijderen?",
-      "confirmBulkDeleteMessage": "{{count}} geselecteerde koppeling(en) voor toegang op afstand verwijderen?",
-      "selectedCount": "{{count}} geselecteerd",
       "add": "Koppeling toevoegen",
       "empty": "Er zijn geen koppelingen voor toegang op afstand ingesteld.",
       "edit": "Bewerken",
@@ -872,10 +887,28 @@
       "template": "URL-sjabloon",
       "ninjaExample": "Voorbeeld van het NinjaOne-apparaatdashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Vervang de host door uw NinjaOne-regio: app, eu, ca, oc of us2 .ninjarmm.com.",
       "tokens": "Gebruik {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} en {field.<key>} met aangepaste veldsleutels uit Instellingen → Assets → Assettypen.",
+      "errors": {
+        "load": "Laden van koppelingen voor toegang op afstand is mislukt.",
+        "save": "Opslaan van de koppeling voor toegang op afstand is mislukt.",
+        "delete": "Verwijderen van de koppeling voor toegang op afstand is mislukt.",
+        "templateHttp": "Het sjabloon moet beginnen met http:// of https:// en een letterlijke hostnaam.",
+        "templatePlaceholder": "Het sjabloon bevat een niet-ondersteunde placeholder.",
+        "templateUrl": "Het sjabloon moet een geldige http- of https-URL opleveren.",
+        "required": "Een knoptekst en URL-sjabloon zijn vereist.",
+        "partialDelete": "Kon {{count}} geselecteerde koppeling(en) niet verwijderen."
+      },
       "loading": "Opties voor toegang op afstand laden…",
+      "noneAvailable": "Er zijn geen opties voor toegang op afstand beschikbaar.",
       "unavailable": "Niet beschikbaar voor dit asset",
+      "confirmDeleteTitle": "Koppeling voor toegang op afstand verwijderen?",
+      "confirmDeleteMessage": "Weet u zeker dat u “{{label}}” wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
       "actions": "Acties",
-      "selectAll": "Alle koppelingen selecteren"
+      "openMenu": "Menu openen",
+      "selectLabel": "{{label}} selecteren",
+      "selectAll": "Alle koppelingen selecteren",
+      "confirmBulkDeleteTitle": "Geselecteerde koppelingen verwijderen?",
+      "confirmBulkDeleteMessage": "{{count}} geselecteerde koppeling(en) voor toegang op afstand verwijderen?",
+      "selectedCount": "{{count}} geselecteerd"
     }
   },
   "assetListErrors": {
@@ -1058,7 +1091,10 @@
       "vendor": "Leverancier",
       "purchaseCost": "Aanschafkosten",
       "orderNumber": "Ordernr.",
-      "ownership": "Eigendom"
+      "ownership": "Eigendom",
+      "autoAssetTag": "Automatisch toewijzen",
+      "assetTagPreviewLoading": "Selecteer een klant om het volgende label te bekijken",
+      "previewNotReserved": "Alleen voorbeeld; toegewezen bij opslaan"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -1447,7 +1483,182 @@
   "maintenanceCommandCenter": {
     "title": "Onderhoudscontrolecentrum",
     "description": "De volgende vervaldatum wordt berekend vanaf de werkelijke voltooiingsdatum.",
-    "assetsLink": "Assets"
+    "assetsLink": "Assets",
+    "notRecorded": "Niet vastgelegd",
+    "system": "Systeem",
+    "checklist": {
+      "complete": "Voltooid",
+      "incomplete": "Onvoltooid"
+    },
+    "weekdays": {
+      "0": "zo",
+      "1": "ma",
+      "2": "di",
+      "3": "wo",
+      "4": "do",
+      "5": "vr",
+      "6": "za"
+    },
+    "cadence": {
+      "custom": "Aangepast",
+      "customSchedule": "Aangepast schema",
+      "everyUnit": "Elke {{unit}}",
+      "everyCountUnit": "Elke {{count}} {{unit}}",
+      "onDays": "{{base}} op {{days}}",
+      "onDatesOfMonth": "{{base}} op de {{dates}}",
+      "frequency": {
+        "daily": "Dagelijks",
+        "weekly": "Wekelijks",
+        "monthly": "Maandelijks",
+        "quarterly": "Driemaandelijks",
+        "yearly": "Jaarlijks"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} d achterstallig",
+      "dueToday": "vandaag gepland",
+      "inDays": "over {{count}} d"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "refresh": "Vernieuwen",
+      "newPlan": "Nieuw onderhoudsplan",
+      "skip": "Overslaan",
+      "skipTooltip": "Overslaan met een verplichte reden — het plan gaat door naar het volgende onderhoudsmoment",
+      "complete": "Onderhoud voltooien",
+      "createTicket": "Ticket aanmaken",
+      "openTicket": "Ticket openen ↗",
+      "pausePlan": "Plan pauzeren"
+    },
+    "assetPicker": {
+      "title": "Selecteer een asset",
+      "searchPlaceholder": "Zoek op naam, label of serienummer",
+      "loading": "Assets laden…",
+      "loadFailed": "Assets kunnen niet worden geladen.",
+      "empty": "Geen assets gevonden.",
+      "showingFirst": "De eerste {{shown}} van {{total}} worden getoond — verfijn uw zoekopdracht."
+    },
+    "kpi": {
+      "overdue": "Achterstallig",
+      "dueToday": "Vandaag gepland",
+      "upcoming7d": "Komende 7 dagen",
+      "openTickets": "Open tickets",
+      "compliance90d": "Naleving over 90 dagen",
+      "clickToFilter": "klik om te filteren",
+      "allClear": "alles in orde",
+      "quietWeek": "rustige week in het vooruitzicht",
+      "linkedToOccurrences": "gekoppeld aan onderhoudsmomenten",
+      "onTimeCompletion": "tijdige voltooiing"
+    },
+    "tabs": {
+      "queue": "Werkwachtrij",
+      "plans": "Planwachtrij",
+      "history": "Geschiedenis"
+    },
+    "filters": {
+      "searchPlaceholder": "Zoek plannen, assets of klanten",
+      "actionable": "Actie vereist",
+      "allStatuses": "Alle statussen",
+      "completed": "Voltooid",
+      "skipped": "Overgeslagen",
+      "button": "Filters",
+      "allClients": "Alle klanten",
+      "allAssetTypes": "Alle assettypen",
+      "allPlanTypes": "Alle plantypen",
+      "due": "Onderhoudsdatum",
+      "clearAll": "Alles wissen",
+      "done": "Klaar",
+      "clientChip": "Klant"
+    },
+    "viewMode": {
+      "list": "Lijst",
+      "calendar": "Kalender"
+    },
+    "queue": {
+      "actionableTitle": "Onderhoudsmomenten die actie vereisen",
+      "plansTitle": "Actieve planwachtrij (op basis van onderhoudsmomenten)",
+      "loading": "Onderhoud laden…",
+      "empty": "Er zijn geen onderhoudsmomenten die aan deze filters voldoen.",
+      "emptyFiltered": "Er zijn geen onderhoudsmomenten die aan deze filters voldoen. Wis een filter of verruim het datumbereik.",
+      "emptyHistory": "Voltooide en overgeslagen onderhoudsmomenten verschijnen hier zodra het onderhoud is afgesloten.",
+      "emptyPlans": "Openstaande onderhoudsmomenten van plannen verschijnen hier zodra de schema's werk genereren.",
+      "clearBeyond": "Naast deze {{count}} zijn er geen andere onderhoudsmomenten in de wachtrij — verruim het datumbereik of bekijk de planwachtrij.",
+      "allCaughtUp": "Alles afgehandeld",
+      "nextDueIn": "— volgend onderhoud over {{count}} d",
+      "shownCount": "{{shown}} getoond · {{open}} open ·",
+      "inHistory": "{{count}} in de geschiedenis",
+      "itemCount_one": "· {{count}} item",
+      "itemCount_other": "· {{count}} items",
+      "overdueCount": "{{count}} achterstallig",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} in één oogopslag",
+      "overdue": "achterstallig",
+      "today": "vandaag",
+      "upcoming": "binnenkort"
+    },
+    "calendar": {
+      "dueCount": "{{count}} gepland",
+      "today": "Vandaag",
+      "moreCount": "+{{count}} meer",
+      "legend": "Legenda",
+      "scheduled": "Gepland"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Type",
+      "cadence": "Herhalingspatroon",
+      "nextDue": "Volgende onderhoudsdatum",
+      "lastDone": "Laatst uitgevoerd",
+      "assignee": "Toegewezen aan",
+      "createdBy": "Aangemaakt door",
+      "linkedTicket": "Gekoppeld ticket"
+    },
+    "detail": {
+      "noSelection": "Geen onderhoudsmoment geselecteerd",
+      "noSelectionHint": "Selecteer een onderhoudsmoment uit de wachtrij om de asset, het plan, het gekoppelde ticket en de uitvoeringsacties te bekijken — of wis de filters om meer werk te zien.",
+      "unassignedClient": "Geen klant toegewezen",
+      "dueSuffix": "· gepland voor {{date}}",
+      "nextDueTooltip": "De volgende onderhoudsdatum wordt berekend vanaf de werkelijke voltooiingsdatum.",
+      "never": "Nooit",
+      "unassigned": "Niet toegewezen",
+      "assignViaTicket": "Toewijzen via ticket",
+      "ticketClosed": "Gesloten",
+      "ticketOpen": "Open",
+      "noTicketYet": "Nog geen",
+      "execution": "Uitvoering",
+      "noChecklistPrefix": "Dit plan heeft geen controlelijst —",
+      "addStepsLink": "voeg stappen toe aan de asset",
+      "noChecklistSuffix": "om technici te begeleiden.",
+      "timeline": "Tijdlijn"
+    },
+    "timeline": {
+      "created": "Onderhoudsmoment aangemaakt",
+      "ticketLinked": "Ticket gekoppeld — {{ticket}}",
+      "dueRepeats": "Gepland — herhaalt zich {{cadence}}",
+      "completedBy": "Voltooid door {{name}}{{notes}}",
+      "skippedBy": "Overgeslagen door {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Bewijs van voltooiing",
+      "performed": "Uitgevoerd:",
+      "performedBy": "Uitgevoerd door:",
+      "notes": "Notities:",
+      "checklist": "Controlelijst:",
+      "skipTitle": "Verantwoording voor overslaan",
+      "reason": "Reden:",
+      "closedBy": "Afgesloten door:",
+      "closed": "Afgesloten:"
+    },
+    "skip": {
+      "title": "Onderhoud overslaan",
+      "reason": "Reden"
+    },
+    "ticket": {
+      "title": "Onderhoud: {{plan}}",
+      "description": "{{type}}-onderhoud gepland voor {{date}}. Onderhoudsmoment: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
@@ -1653,7 +1864,8 @@
     "assignDialogTitle": "Dit asset toewijzen",
     "sharedWorkspace": "Gedeelde werkplek",
     "sharedWorkspaceValue": "{{name}} · {{count}} personen",
-    "billingProfile": "Factureringsprofiel"
+    "billingProfile": "Factureringsprofiel",
+    "lastAudited": "Laatst gecontroleerd"
   },
   "assetTimeline": {
     "title": "Tijdlijn",
@@ -1683,7 +1895,11 @@
       "aGroup": "een groep",
       "autoAssignedFrom": "Automatisch toegewezen aan {{contact}} via {{provider}}",
       "groupLocationMoved": "Met {{group}} verplaatst naar {{location}}",
-      "groupLocationCleared": "Locatie gewist met {{group}}"
+      "groupLocationCleared": "Locatie gewist met {{group}}",
+      "audit": "Controle",
+      "auditPresent": "Controle: aanwezig",
+      "auditMissing": "Controle: ontbrekend",
+      "auditMethod": "Gemarkeerd via {{method}}"
     },
     "changeTypes": {
       "created": "Aangemaakt",
@@ -1776,6 +1992,7 @@
       "updateAssets": "Toegang geweigerd: assets kunnen niet worden bijgewerkt"
     },
     "asset": {
+      "tagAlreadyExists": "Deze assettag is al in gebruik of gereserveerd. Scan de tag om de bestaande asset te vinden of voer een andere tag in.",
       "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "clientNotFound": "Klant niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "maintenanceNotFound": "Onderhoudsplanning niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
@@ -2146,5 +2363,132 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "assetAudits": {
+    "title": "Controles op locatie",
+    "startAudit": "Controle starten",
+    "noLocation": "Geen locatie",
+    "loading": "Controles laden…",
+    "empty": "Er zijn nog geen controles op locatie die overeenkomen met deze weergave.",
+    "columns": {
+      "audit": "Controle",
+      "client": "Klant",
+      "location": "Locatie",
+      "status": "Status",
+      "startedBy": "Gestart door",
+      "started": "Gestart",
+      "completed": "Voltooid",
+      "expected": "Verwacht",
+      "present": "Aanwezig",
+      "missing": "Ontbrekend",
+      "unexpected": "Onverwacht"
+    },
+    "filters": {
+      "client": "Klant",
+      "allLocations": "Alle locaties",
+      "allStatuses": "Alle statussen",
+      "started": "Gestart"
+    },
+    "stats": {
+      "expected": "verwacht",
+      "present": "aanwezig",
+      "missing": "ontbrekend",
+      "remaining": "resterend",
+      "unexpected": "onverwacht"
+    },
+    "segments": {
+      "remaining": "Resterend",
+      "present": "Aanwezig",
+      "missing": "Ontbrekend",
+      "unexpected": "Onverwacht",
+      "all": "Alle"
+    },
+    "start": {
+      "title": "Controle op locatie starten",
+      "client": "Klant",
+      "clientPlaceholder": "Selecteer een klant",
+      "location": "Locatie",
+      "locationHint": "Met \"Geen locatie\" controleert u de apparaten van de klant waarvoor geen locatie is vastgelegd.",
+      "statuses": "Te controleren assetstatussen",
+      "statusesHint": "Als u geen status selecteert, worden alle statussen gecontroleerd.",
+      "statusesLoading": "Statussen laden…",
+      "notes": "Notities",
+      "notesPlaceholder": "Doel van deze controleronde (optioneel)",
+      "pickClient": "Selecteer een klant om te zien welke apparaten worden gecontroleerd.",
+      "counting": "Te controleren apparaten tellen…",
+      "countUnavailable": "Het aantal apparaten is momenteel niet beschikbaar.",
+      "expected_one": "1 apparaat verwacht binnen deze selectie",
+      "expected_other": "{{count}} apparaten verwacht binnen deze selectie",
+      "submit": "Controle starten",
+      "starting": "Starten…"
+    },
+    "detail": {
+      "reference": "Controle",
+      "untitledClient": "Klant",
+      "location": "Locatie",
+      "startedBy": "Gestart door",
+      "started": "Gestart",
+      "completed": "Voltooid",
+      "scopeStatuses": "Statussen in deze controle",
+      "allStatuses": "Alle statussen",
+      "notes": "Notities",
+      "exportCsv": "CSV exporteren",
+      "exportStarted": "CSV-export gestart.",
+      "exportEmpty": "Er is niets te exporteren in deze weergave.",
+      "addUnexpected": "Onverwachte asset toevoegen",
+      "addUnexpectedHint": "Een apparaat dat op locatie wordt gevonden maar buiten de selectie van deze controle valt, wordt als onverwacht geregistreerd, nooit als verwacht.",
+      "addUnexpectedPlaceholder": "Zoek een asset…",
+      "addUnexpectedEmpty": "Geen andere assets voor deze klant.",
+      "complete": "Controle voltooien",
+      "completeConfirm_one": "1 ongemarkeerd apparaat wordt als ontbrekend geregistreerd.",
+      "completeConfirm_other": "{{count}} ongemarkeerde apparaten worden als ontbrekend geregistreerd.",
+      "cancelAudit": "Controle annuleren",
+      "cancelConfirm": "De controle wordt afgebroken en er wordt niets bij de assets vastgelegd. Dit kan niet ongedaan worden gemaakt.",
+      "keepAudit": "Doorgaan met controleren"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Type",
+        "serial": "Serienummer / label",
+        "result": "Resultaat",
+        "method": "Methode",
+        "markedBy": "Gemarkeerd door",
+        "markedAt": "Gemarkeerd op",
+        "actions": "Acties"
+      },
+      "searchPlaceholder": "Zoeken op naam, label of serienummer",
+      "empty": "Geen assets in deze weergave.",
+      "markPresent": "Als aanwezig markeren",
+      "undoMark": "Ongedaan maken",
+      "createTicket": "Ticket aanmaken",
+      "ticketTitle": "Ontbreekt bij controle op locatie: {{asset}}",
+      "ticketDescription": "Niet gevonden tijdens de controle op locatie die op {{date}} is gestart."
+    }
+  },
+  "scanLookup": {
+    "title": "Assetlabel scannen",
+    "input": "Scan of voer een label in",
+    "loading": "Bezig met zoeken…",
+    "find": "Asset zoeken",
+    "ambiguous": "Meerdere zichtbare assets hebben dit label. Vraag een beheerder om de dubbele labels op te lossen.",
+    "notFound": "Geen zichtbare asset komt exact overeen met dit label.",
+    "failed": "Dit label kon niet worden opgezocht. Controleer uw toegangsrechten en probeer het opnieuw."
+  },
+  "fullIntake": {
+    "title": "Asset toevoegen",
+    "description": "Kies een tenantnummer of behoud een bestaand afgedrukt label.",
+    "back": "Terug naar assets"
+  },
+  "labelFirstIntake": {
+    "start": "Inname met vooraf gedrukt label",
+    "title": "Inname met vooraf gedrukt label starten",
+    "help": "Maak een blijvend assetrecord met de minimale gegevens en druk twee exemplaren van het label af. Scan later een van de exemplaren om hetzelfde record aan te vullen.",
+    "client": "Klant",
+    "clientRequired": "Kies een klant om door te gaan.",
+    "createFailed": "Het innamerecord kon niet worden gemaakt.",
+    "name": "Korte beschrijving (optioneel)",
+    "creating": "Bezig met aanmaken…",
+    "createPrint": "Aanmaken en paar afdrukken"
   }
 }

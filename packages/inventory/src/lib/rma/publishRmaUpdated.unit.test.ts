@@ -28,6 +28,7 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
 vi.mock('@alga-psa/assets/lib/assetReadAuthorization', () => ({
   createAssetReadContext: vi.fn(async () => ({})),
   isAssetReadAllowed: vi.fn(async () => true),
+  isAssetActionAllowed: vi.fn(async () => true),
 }));
 vi.mock('@alga-psa/assets/lib/custody/publishCustodyChanged', () => ({ publishCustodyChanged: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/assets/lib/custody/errors', () => ({ isCustodyError: () => false }));

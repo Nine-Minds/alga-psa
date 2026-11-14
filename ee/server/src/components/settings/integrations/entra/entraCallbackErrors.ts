@@ -16,6 +16,19 @@ export const buildEntraCallbackErrorKey = (errorCode: string | null | undefined)
     // and the message must not send the operator to the permissions screen.
     case 'validation_failed':
       return 'integrations.entra.settings.connection.callbackErrors.validationFailed';
+    // Microsoft rejections (AADSTS codes) mapped by the callback route.
+    case 'aadsts_50194_single_tenant':
+      return 'integrations.entra.settings.connection.callbackErrors.singleTenantApp';
+    case 'aadsts_700016_app_not_found':
+      return 'integrations.entra.settings.connection.callbackErrors.appNotInDirectory';
+    case 'aadsts_50020_wrong_directory':
+      return 'integrations.entra.settings.connection.callbackErrors.wrongDirectory';
+    case 'aadsts_50011_redirect_uri':
+      return 'integrations.entra.settings.connection.callbackErrors.redirectUriMismatch';
+    case 'aadsts_7000215_invalid_secret':
+      return 'integrations.entra.settings.connection.callbackErrors.invalidClientSecret';
+    case 'aadsts_7000222_expired_secret':
+      return 'integrations.entra.settings.connection.callbackErrors.expiredClientSecret';
     case 'expired_state':
     case 'session_expired':
       return 'integrations.entra.settings.connection.callbackErrors.expired';

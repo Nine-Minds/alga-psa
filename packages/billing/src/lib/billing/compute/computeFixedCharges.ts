@@ -19,6 +19,7 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
+import { formatCurrencyWithSymbol } from "@alga-psa/core/formatters";
 
 /**
  * Fixed-charge math extracted from BillingEngine.calculateFixedPriceCharges.
@@ -407,11 +408,8 @@ export function applyFixedChargeCoverageSettlement(
 }
 
 function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode || "USD",
   // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-  }).format(cents / 100);
+  return formatCurrencyWithSymbol(cents / 100, "en-US", currencyCode || "USD");
 }
 
 export type FixedFeeAllocationBasis = "stored_rates" | "quantity" | "even_split";
@@ -587,9 +585,16 @@ export function computeFixedCharges(
       service.service_quantity ??
       service.quantity ??
       1;
+    // Presentation-only: the configured quantity before the `|| 1` clamp.
+    const rawConfiguredQuantity =
+      service.configuration_quantity ?? service.service_quantity ?? service.quantity;
     return {
       ...service,
       quantity: Number(quantityValue ?? 1) || 1,
+      raw_quantity:
+        rawConfiguredQuantity == null || !Number.isFinite(Number(rawConfiguredQuantity))
+          ? null
+          : Number(rawConfiguredQuantity),
     };
   });
 
@@ -720,6 +725,8 @@ export function computeFixedCharges(
         serviceId: service.service_id,
         serviceName: service.service_name,
         quantity,
+        raw_quantity: quantity,
+        pricing_basis: 'unit',
         rate,
         total,
         type: "fixed",
@@ -1100,6 +1107,8 @@ export function computeFixedCharges(
         serviceId: allocation.serviceId,
         serviceName: allocation.serviceName,
         quantity,
+        raw_quantity: planService.raw_quantity ?? null,
+        pricing_basis: 'bundle',
         rate: allocation.allocatedAmount,
         total: allocation.allocatedAmount,
         tax_amount: allocation.taxAmount,

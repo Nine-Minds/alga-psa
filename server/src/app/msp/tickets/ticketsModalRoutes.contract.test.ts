@@ -232,8 +232,9 @@ describe('tickets modal route infrastructure', () => {
       const dialog = read(dialogPath);
 
       expect(dialog).toContain('TicketNotificationSuppressionControl');
-      expect(dialog).toContain('suppressContactNotifications: false');
-      expect(dialog).toContain('setNotificationSuppression');
+      expect(dialog).toContain('useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression)');
+      expect(dialog).toContain('const defaultNotificationSuppression = useDefaultNotificationSuppression();');
+      expect(dialog).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     }
 
     const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
@@ -301,7 +302,8 @@ describe('tickets modal route infrastructure', () => {
     }
     expect(bulkActions).toContain('{ tenant }');
     expect(bulkActions).toContain('updateTicketInTransaction(trx, user as IUserWithRoles, tenant');
-    expect(bulkActions).toContain("createTagsForEntityWithTransaction(trx, tenant, ticketId, 'ticket'");
+    // Bulk tagging's tenant and transaction boundaries are exercised at runtime
+    // in ticketActions.moveToBoard.test.ts, independent of the tag helper used.
 
     expect(importActions).toContain('export const importTickets = withAuth(async (');
     expect(importActions).toContain('CreateTicketInput');

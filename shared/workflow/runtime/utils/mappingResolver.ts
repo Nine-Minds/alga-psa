@@ -10,7 +10,7 @@
 import type { Expr, MappingValue, InputMapping } from '../types';
 import { isExpr, isSecretRef, isLiteralValue } from '../types';
 import type { ExpressionContext } from '../expressionEngine';
-import { compileExpression } from '../expressionEngine';
+import { EvaluationBusyError, compileExpression, evaluateWorkflowExpression } from '../expressionEngine';
 
 /**
  * Interface for resolving tenant secrets.
@@ -81,8 +81,9 @@ export async function resolveMappingValue(
   if (isExpr(value)) {
     const compiled = compileExpression(value);
     try {
-      return await compiled.evaluate(options.expressionContext);
+      return await evaluateWorkflowExpression(compiled, options.expressionContext);
     } catch (error) {
+      if (error instanceof EvaluationBusyError) throw error;
       throw {
         category: 'ExpressionError',
         message: error instanceof Error ? error.message : String(error),

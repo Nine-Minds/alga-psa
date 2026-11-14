@@ -3,6 +3,7 @@ import type { CadenceOwner } from "./recurringTiming.interfaces";
 import type { ChargeExplanation } from "./billingCompute.interfaces";
 import type { BillingCycleType } from "./billing.interfaces";
 import type { FixedPricingBasis } from "./contractLineServiceConfiguration.interfaces";
+import type { ContractBillingTrace } from "./contract.interfaces";
 import type { WasmInvoiceViewModel } from "../lib/invoice-renderer/types";
 
 /**
@@ -258,6 +259,41 @@ export interface SimulationHorizon {
   period_count: number;
 }
 
+/**
+ * Hard upper bound on the invoice periods one simulation may span. Scenarios
+ * over it are rejected (never clamped) at the action boundary and again in the
+ * EE simulator.
+ */
+export const MAX_SIMULATION_PERIODS = 120;
+
+/** Thrown when a simulation horizon exceeds MAX_SIMULATION_PERIODS. */
+export class ContractSimulationBoundsError extends Error {
+  public readonly code = "CONTRACT_SIMULATION_HORIZON_TOO_LONG";
+  public readonly maxPeriods = MAX_SIMULATION_PERIODS;
+  public readonly requestedPeriods: unknown;
+
+  constructor(requestedPeriods: unknown) {
+    super(
+      Number.isInteger(requestedPeriods)
+        ? `A simulation can span at most ${MAX_SIMULATION_PERIODS} billing periods; got ${requestedPeriods}. Choose a shorter horizon.`
+        : `A simulation horizon must be a whole number of billing periods (at most ${MAX_SIMULATION_PERIODS}). Choose a valid horizon.`,
+    );
+    this.name = "ContractSimulationBoundsError";
+    this.requestedPeriods = requestedPeriods;
+  }
+}
+
+/**
+ * Throws ContractSimulationBoundsError unless `periodCount` is an integer no
+ * greater than the limit. Values below 1 are left to the simulator's own
+ * "positive integer" refusal.
+ */
+export function assertSimulationPeriodCountWithinBounds(periodCount: unknown): void {
+  if (!Number.isInteger(periodCount) || (periodCount as number) > MAX_SIMULATION_PERIODS) {
+    throw new ContractSimulationBoundsError(periodCount);
+  }
+}
+
 export interface ScenarioAssumptionPrefill {
   assumptions: Record<string, ScenarioAssumption>;
   horizon?: SimulationHorizon;
@@ -305,6 +341,13 @@ export interface ContractScenario {
   contract_id: string | null;
   is_system_managed_default: boolean;
   client_binding: ScenarioClientBinding;
+  /**
+   * Which billing profile(s) and terms the live contract resolved to when the
+   * scenario was snapshotted. Display only: simulated pricing does not read it
+   * (tax still uses the client-level exemption). Absent on scenarios persisted
+   * before this field existed; null for drafts and template-only scenarios.
+   */
+  billing_identity?: ContractBillingTrace | null;
   invoice_schedule: ScenarioBillingSchedule;
   billing_frequency: string;
   contract_start_date: ISO8601String | null;
@@ -354,6 +397,10 @@ export interface ContractWizardFixedLine {
   source_template_line_id?: string;
   contract_line_name?: string;
   description?: string | null;
+  /** Invoice title for the bundle row; blank falls back to the line name. */
+  invoice_line_description?: string | null;
+  /** Muted line under the bundle title on invoices. */
+  invoice_line_subtitle?: string | null;
   location_id?: string | null;
   /** Falls back to the contract billing_frequency. */
   billing_frequency?: string;

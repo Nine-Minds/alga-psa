@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
-import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
+import { clientOutOfScopeError, reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 
 // Define the schema for the input parameters
@@ -35,7 +35,7 @@ export interface UsageMetricResult {
  * @returns A promise that resolves to an array of usage metrics.
  */
 export const getUsageDataMetrics = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: z.infer<typeof InputSchema>
 ): Promise<UsageMetricResult[] | ReportingActionError> => {
@@ -47,6 +47,10 @@ export const getUsageDataMetrics = withAuth(async (
   const { clientId, startDate, endDate } = validationResult.data;
 
   const { knex } = await createTenantKnex();
+
+  // A client-restricted user gets no report about a client outside their scope.
+  const outOfScope = await clientOutOfScopeError(knex, tenant, user, clientId);
+  if (outOfScope) return outOfScope;
 
   console.log(`Fetching usage metrics for client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 

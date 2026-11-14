@@ -352,6 +352,24 @@ describe('businessHoursCalculator', () => {
   });
 
   describe('calculateDeadline', () => {
+    it('preserves fractional SLA minutes for exact percentage thresholds', () => {
+      const schedule = create24x7Schedule();
+      const start = new Date('2026-11-04T12:00:00.000Z');
+
+      expect(calculateDeadline(schedule, start, 1.4).toISOString())
+        .toBe('2026-11-04T12:01:24.000Z');
+      expect(calculateDeadline(schedule, start, 1.8).toISOString())
+        .toBe('2026-11-04T12:01:48.000Z');
+    });
+
+    it('carries fractional SLA time across the end of business hours', () => {
+      const schedule = createStandardSchedule('UTC');
+      const start = new Date('2024-01-15T16:59:30.000Z');
+
+      expect(calculateDeadline(schedule, start, 1).toISOString())
+        .toBe('2024-01-16T09:00:30.000Z');
+    });
+
     describe('with standard business hours', () => {
       let schedule: IBusinessHoursScheduleWithEntries;
 

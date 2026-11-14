@@ -22,6 +22,13 @@ interface UseUserPreferenceReturn<T> {
   error: Error | null;
   isUserLoggedIn: boolean;
   hasLoadedInitial: boolean;
+  /**
+   * The authoritative value has settled: the server fetch finished (success or failure, or
+   * there was no user to fetch for), or it was skipped. Latches true and never goes back.
+   * `hasLoadedInitial` only reports the earlier localStorage stage, so callers that must not
+   * act on a value that is about to be overwritten should wait for this instead.
+   */
+  hasResolved: boolean;
 }
 
 export function useUserPreference<T>(
@@ -50,6 +57,7 @@ export function useUserPreference<T>(
 
   const [isHydrated, setIsHydrated] = useState(false);
   const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
+  const [hasResolved, setHasResolved] = useState(false);
 
   // Mark as hydrated and load any persisted local value after mount.
   useEffect(() => {
@@ -75,6 +83,7 @@ export function useUserPreference<T>(
     // Skip server fetch if requested - use localStorage/defaults only
     if (skipServerFetch) {
       setIsLoading(false);
+      setHasResolved(true);
       return;
     }
 
@@ -131,6 +140,9 @@ export function useUserPreference<T>(
       } finally {
         if (!abortControllerRef.current?.signal.aborted) {
           setIsLoading(false);
+          // Resolved either way: on failure (or with no user) the state still holds the
+          // localStorage/default value, so waiting callers must not be left hanging.
+          setHasResolved(true);
         }
       }
     };
@@ -231,6 +243,7 @@ export function useUserPreference<T>(
     isLoading,
     error,
     isUserLoggedIn,
-    hasLoadedInitial
+    hasLoadedInitial,
+    hasResolved
   };
 }

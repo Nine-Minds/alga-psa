@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const readActionSource = () => readFileSync(path.resolve(__dirname, 'assetActions.ts'), 'utf8');
+const readActionSource = () => readFileSync(path.resolve(__dirname, 'assetActions.ts'), 'utf8').replace(/\r\n/g, '\n');
 
 describe('asset authorization kernel contracts', () => {
   const source = readActionSource();
@@ -15,22 +15,27 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const getAsset = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams)');
-    expect(source).toContain('buildAuthorizationAwarePage<any>({');
-    expect(source).toContain('const buildAssetListQuery = () => {');
+    expect(source).toContain('buildAuthorizationAwarePage<AssetListScanRow>({');
+    expect(source).toContain('const listQuery = requiresRecordAuthorization');
+    // A registered built-in rule resolver restricts the list like a bundle does.
+    expect(source).toMatch(/requiresRecordAuthorization = [^;]*builtinResolversRestrict\(\{ subject: context\.subject, resource: \{ type: 'asset', action: 'read' \} \}\)/);
+    expect(source).toContain(': applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);');
+    expect(source).toContain('const countRow = await listQuery.clone()');
     expect(source).toContain(".count<{ count: string }>('assets.asset_id as count')");
-    expect(source).toContain('authorizeRecord: async (asset) => {');
-    expect(source).toContain('total: Number(countRow?.count || 0),');
+    // List authorization, batching, pagination and redaction are exercised against the real kernel
+    // and database in server/src/test/integration/assetTypeCounts.integration.test.ts.
+    expect(source).toContain('resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,');
+    expect(source).toContain('const sourceTotal = Number(countRow.count);');
     expect(source).toContain('total: authorizedPage.total,');
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(source).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
     expect(source).toContain('return await resolveBundleNarrowingRulesForEvaluation(trx, input);');
-    expect(source).toContain('record: assetRecords.get(asset.asset_id),');
   });
 
   it('T016: applies asset-level read authorization to relationship, maintenance, history, linked-ticket, entity-list, and summary-metric surfaces', () => {
     expect(source).toContain('async function resolveAssetAuthorizationInputById(');
     expect(source).toContain('async function assertAssetReadAllowedById(');
-    expect(source).toContain('async function createAuthorizedAssetReadContextForUser(');
+    expect(source).toContain('async function createAuthorizedAssetContextForUser(');
     expect(source).toContain('export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset_id: string)');
@@ -38,7 +43,6 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const getAssetLinkedTickets = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: string, entity_type: \'ticket\' | \'project\')');
     expect(source).toContain('export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id: string)');
-    expect(source).toContain('await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);');
     expect(source).toContain('const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);');
     expect(source).toContain('const authorizedAssetIds = await getAuthorizedAssetIdsForClient(trx, tenant, context, client_id);');
     expect(source).toContain('async function countAssetsForClient(');
@@ -48,7 +52,8 @@ describe('asset authorization kernel contracts', () => {
   });
 
   it('T017: enforces asset-level authorization across update/delete, relationship, association, and maintenance mutations', () => {
-    expect(source).toContain('export const updateAsset = withAuth(async (\n    user,\n    { tenant },\n    asset_id: string,\n    data: UpdateAssetRequest,');
+    expect(source).toContain('export const updateAsset = withAuth(async (');
+    expect(source).toContain('asset_id: string,\n    data: UpdateAssetRequest,');
     expect(source).toContain('export const deleteAsset = withAuth(async (');
     expect(source).toContain('export const createAssetRelationship = withAuth(async (user, { tenant }, data: CreateAssetRelationshipRequest)');
     expect(source).toContain('export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_asset_id: string, child_asset_id: string)');
@@ -58,11 +63,53 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const updateMaintenanceSchedule = withAuth(async (');
     expect(source).toContain('export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, schedule_id: string)');
     expect(source).toContain('export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: CreateMaintenanceHistoryRequest)');
-    expect(source).toContain('await assertAssetReadAllowedById(trx, tenant, context, validated.parent_asset_id);');
-    expect(source).toContain('await assertAssetReadAllowedById(trx, tenant, context, validated.child_asset_id);');
     expect(source).toContain('if (!await hasPermission(user, \'asset\', \'delete\')) {');
-    expect(source).toContain('await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);');
     expect(source).toContain('if (schedule.asset_id !== validatedData.asset_id) {');
+  });
+
+  it('requires record-level update authorization for maintenance mutations', () => {
+    const updateGuard = source.slice(
+      source.indexOf('async function createAuthorizedAssetUpdateContextForUser('),
+      source.indexOf('async function getAuthorizedAssetIdsForClient(')
+    );
+    expect(updateGuard).toContain('isSharedAssetReadAllowed(trx, tenant, context, asset)');
+    expect(updateGuard).toContain("isSharedAssetActionAllowed(trx, tenant, context, asset, 'update')");
+
+    const occurrenceGuard = source.slice(
+      source.indexOf('async function getOccurrenceForMutation('),
+      source.indexOf('/** Tenant-wide work queue.')
+    );
+    expect(occurrenceGuard).toContain('createAuthorizedAssetUpdateContextForUser');
+
+    for (const action of [
+      'createMaintenanceSchedule',
+      'updateMaintenanceSchedule',
+      'deleteMaintenanceSchedule',
+      'setSchedulePaused',
+      'setOccurrenceTicketAssignee',
+      'recordMaintenanceHistory',
+    ]) {
+      const start = source.indexOf(`export const ${action} = withAuth(`);
+      expect(start, action).toBeGreaterThan(-1);
+      const end = source.indexOf('export const ', start + 1);
+      expect(source.slice(start, end === -1 ? undefined : end), action)
+        .toContain('createAuthorizedAssetUpdateContextForUser');
+    }
+  });
+
+  it('returns read denials as permission errors instead of letting them escape the action catch', () => {
+    // An unawaited `return withTransaction(...)` inside `try` lets the rejection skip the
+    // catch that maps it to a permissionError; the asset page then showed its generic
+    // "An error occurred" instead of the denial.
+    const actionStarts = [...source.matchAll(/^export const (\w+) = withAuth\(/gm)];
+    expect(actionStarts.length).toBeGreaterThan(0);
+    const offenders = actionStarts.flatMap((match, index) => {
+      const body = source.slice(match.index, actionStarts[index + 1]?.index ?? source.length);
+      const mapsCaughtErrors = /try \{/.test(body) && body.includes('expectedAssetActionError(error)');
+      return mapsCaughtErrors && /^\s*return withTransaction\(/m.test(body) ? [match[1]] : [];
+    });
+    expect(offenders).toEqual([]);
+    expect(source).toContain('return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {');
   });
 
   it('T018: enforces linked-child intersection semantics in asset detail bundles for linked ticket/document payloads', () => {

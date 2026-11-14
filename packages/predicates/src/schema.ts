@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PREDICATE_OPERATORS, operatorTakesList, operatorTakesValue } from './types';
+import { COMPLEMENTS, PREDICATE_OPERATORS, operatorTakesList, operatorTakesValue, operatorTakesText } from './types';
 import type { PredicateClause, PredicateGroup } from './types';
 
 const literalSchema = z.union([z.string(), z.number().finite(), z.boolean(), z.null()]);
@@ -29,6 +29,11 @@ export const predicateClauseSchema: z.ZodType<PredicateClause> = z
         path: ['value'],
         message: operatorTakesList(operator) ? `${operator} requires a list` : `${operator} requires a single value`,
       });
+      return;
+    }
+    // A negative text operator is `NOT <positive>`: its needle is a string, never null or a number.
+    if (COMPLEMENTS[operator] && operatorTakesText(operator) && typeof value !== 'string') {
+      ctx.addIssue({ code: 'custom', path: ['value'], message: `${operator} requires a string value` });
     }
   }) as z.ZodType<PredicateClause>;
 

@@ -51,4 +51,19 @@ describe("capabilities api", () => {
     });
     expect(parseFeatureCapabilities(undefined)).toEqual(EMPTY_FEATURE_CAPABILITIES);
   });
+
+  it("T004 defaults assets and assetAudit to false on an older server and ignores non-booleans", () => {
+    expect(parseFeatureCapabilities({ inventory: true })).toMatchObject({
+      assets: false,
+      assetAudit: false,
+    });
+    expect(parseFeatureCapabilities({ assets: "yes", assetAudit: 1 })).toMatchObject({
+      assets: false,
+      assetAudit: false,
+    });
+    expect(parseFeatureCapabilities({ assets: true, assetAudit: true })).toMatchObject({
+      assets: true,
+      assetAudit: true,
+    });
+  });
 });

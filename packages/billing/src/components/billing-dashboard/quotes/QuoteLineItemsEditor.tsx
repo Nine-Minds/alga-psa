@@ -591,6 +591,13 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 />
               ) : null}
               <Checkbox
+                id={`quote-line-taxable-${item.local_id}`}
+                checked={item.is_taxable !== false}
+                label={t('quoteLineItems.labels.taxable', { defaultValue: 'Taxable' })}
+                disabled={disabled}
+                onChange={(event) => updateItem(item.local_id, { is_taxable: event.target.checked })}
+              />
+              <Checkbox
                 id={`quote-line-recurring-${item.local_id}`}
                 checked={item.is_recurring}
                 label={t('quoteLineItems.labels.recurring', { defaultValue: 'Recurring' })}

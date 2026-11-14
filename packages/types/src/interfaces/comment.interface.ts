@@ -82,6 +82,9 @@ export interface IComment extends TenantEntity {
   audience?: CommentAudience;
   is_resolution?: boolean;
   is_system_generated?: boolean;
+  /** Principal the author's request came through (EE); `via_principal_name` is its display name. */
+  created_via_principal_id?: string | null;
+  via_principal_name?: string | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;

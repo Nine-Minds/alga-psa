@@ -61,6 +61,11 @@ const CONTACT = {
   },
 };
 
+const withLocations = (locations: unknown[], workArrangement: string | null = "on_site") => ({
+  ...CONTACT,
+  data: { data: { ...CONTACT.data.data, locations, work_arrangement: workArrangement } },
+});
+
 async function renderScreen(): Promise<ReactTestRenderer> {
   let renderer!: ReactTestRenderer;
   await act(async () => {
@@ -102,11 +107,74 @@ describe("ContactDetailScreen calls", () => {
     });
   });
 
+  it("T080: lists the contact's locations with the primary marked and hands the address to maps", async () => {
+    const { Linking } = await import("react-native");
+    const openUrl = vi.spyOn(Linking, "openURL").mockResolvedValue(undefined as never);
+    getContactMock.mockResolvedValue(withLocations([
+      {
+        location_id: "loc-1",
+        location_name: "Warehouse",
+        is_primary: true,
+        address_line1: "9 Dock Rd",
+        city: "Springfield",
+        state_province: "IL",
+        postal_code: "62701",
+        country_name: "United States",
+      },
+      { location_id: "loc-2", location_name: "Head office", is_primary: false },
+    ]));
+
+    const renderer = await renderScreen();
+    expect(texts(renderer)).toEqual(expect.arrayContaining(["Warehouse • detail.primaryLocation", "Head office"]));
+
+    const links = renderer.root.findAll(
+      (n) => n.props?.accessibilityLabel === "detail.openInMaps" && String(n.type) === "Pressable",
+    );
+    expect(links).toHaveLength(2);
+    act(() => links[0].props.onPress());
+    expect(openUrl.mock.calls[0][0]).toMatch(/^(maps|geo):0,0\?q=9%20Dock%20Rd%2C%20Springfield%2C%20IL%2C%2062701%2C%20United%20States$/);
+
+    // No address lines: the name is the best query there is.
+    act(() => links[1].props.onPress());
+    expect(openUrl.mock.calls[1][0]).toMatch(/^(maps|geo):0,0\?q=Head%20office$/);
+  });
+
+  it("T081: marks a remote contact and shows no section when there is nothing to show", async () => {
+    getContactMock.mockResolvedValue(withLocations([], "remote"));
+    expect(texts(await renderScreen())).toEqual(expect.arrayContaining(["detail.remote"]));
+
+    getContactMock.mockResolvedValue(withLocations([], null));
+    expect(texts(await renderScreen())).not.toEqual(expect.arrayContaining(["detail.locations"]));
+  });
+
   it("hosts the log-this-call prompt for calls placed from this contact", async () => {
     const renderer = await renderScreen();
 
     const host = renderer.root.find((n) => String(n.type) === "MockCallPromptHost");
     expect(host.props).toMatchObject({ origin: { kind: "contact", id: "contact-1" }, apiKey: "api-key", userId: "user-1" });
     expect(host.props.client).toBeTruthy();
+  });
+});
+
+describe("ContactDetailScreen display tags", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows the chip tags the server picked by the tenant's display rules under the name", async () => {
+    getContactMock.mockResolvedValue({
+      ...CONTACT,
+      data: { data: { ...CONTACT.data.data, display_tags: [{ tag_id: "d1", tag_text: "VIP" }, { tag_id: "d2", tag_text: "POC" }] } },
+    });
+    const renderer = await renderScreen();
+
+    expect(texts(renderer)).toEqual(expect.arrayContaining(["VIP", "POC"]));
+  });
+
+  it("renders no chip row when the contact has none", async () => {
+    getContactMock.mockResolvedValue(CONTACT);
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findAll((n) => n.props?.testID === "display-tag-badges")).toHaveLength(0);
   });
 });

@@ -99,6 +99,8 @@ export interface IProject extends TenantEntity, ITaggable {
   created_at: Date;
   updated_at: Date;
   client_name?: string;
+  /** Logo of the project's client; attached per list by project list actions (D5). */
+  client_logo_url?: string | null;
   wbs_code: string;
   is_inactive: boolean;
   status: string;

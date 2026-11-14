@@ -15,7 +15,7 @@ describe('manual invoices client creation wiring contract', () => {
 
     expect(source).toContain('onAddNew={() => setIsQuickAddClientOpen(true)}');
     expect(source).toContain('open: isQuickAddClientOpen,');
-    expect(source).toContain('setClientOptions(prev => [...prev, newClient]);');
+    expect(source).toContain('primeLookedUpClient(newClient);');
     expect(source).toContain('setSelectedClient(newClient.client_id);');
   });
 });

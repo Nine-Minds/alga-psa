@@ -7,9 +7,11 @@ export interface AuthorizationReason {
   stage: AuthorizationDecisionStage;
   code: string;
   message: string;
-  sourceType?: 'builtin' | 'bundle' | 'system';
+  sourceType?: 'builtin' | 'bundle' | 'system' | 'resolver';
   sourceId?: string;
   metadata?: Record<string, unknown>;
+  /** Set only on joint (two-subject) evaluations: whose evaluation produced this reason. */
+  subjectUserId?: string;
 }
 
 export interface AuthorizationSubject {
@@ -27,6 +29,12 @@ export interface AuthorizationSubject {
   // enforced via the agent's backing internal user (so userId/roleIds still apply).
   agentId?: string | null;
   subjectType?: 'user' | 'agent';
+  /**
+   * Facts loaded for this request by registered built-in rule resolvers, keyed by resolver id (see
+   * `BuiltinResolverFactSource`). Absent when no resolver's fact source applies to the tenant. Loaded with the
+   * subject on every request and never cached across requests.
+   */
+  resolverFacts?: Record<string, unknown>;
 }
 
 export interface AuthorizationResourceRef {
@@ -87,10 +95,19 @@ export type ContactVisibilityScope = TicketVisibilityScope;
 export interface AuthorizationEvaluationInput {
   contactVisibility?: ContactVisibilityScope | null;
   subject: AuthorizationSubject;
+  /**
+   * Optional second subject authorized together with `subject`. The call is
+   * allowed only if both subjects are allowed; each subject is evaluated
+   * (RBAC, record-level rules, narrowing, mutation guards) independently and the
+   * scopes are intersected. Omitted, evaluation is exactly the single-subject path.
+   */
+  jointSubject?: AuthorizationSubject;
   resource: AuthorizationResourceRef;
   record?: AuthorizationRecord;
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
+  /** Record ids the `selected_records` template admits; set per rule by the provider, like the two above. */
+  selectedRecordIds?: string[];
   selectedTeamIds?: string[];
   mutation?: AuthorizationMutationInput;
   requestCache?: AuthorizationRequestCache;
@@ -128,6 +145,7 @@ export type RelationshipTemplateKey =
   | 'selected_clients'
   | 'same_team'
   | 'selected_boards'
+  | 'selected_records'
   | 'contact_visibility';
 
 export interface RelationshipRule {

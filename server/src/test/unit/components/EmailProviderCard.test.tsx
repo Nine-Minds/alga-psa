@@ -7,9 +7,9 @@ import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { renderWithProviders } from '../../utils/testWrapper';
 import { EmailProviderCard } from '@alga-psa/integrations/components/email/EmailProviderCard';
-import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
+import type { PublicEmailProvider } from '@alga-psa/integrations/components/email/types';
 
-function microsoftProvider(deliveryMode: 'webhook' | 'polling'): EmailProvider {
+function microsoftProvider(deliveryMode: 'webhook' | 'polling'): PublicEmailProvider {
   const now = new Date().toISOString();
   return {
     id: '11111111-1111-4111-8111-111111111111',
@@ -26,7 +26,10 @@ function microsoftProvider(deliveryMode: 'webhook' | 'polling'): EmailProvider {
       email_provider_id: '11111111-1111-4111-8111-111111111111',
       tenant: '22222222-2222-4222-8222-222222222222',
       client_id: null,
-      client_secret: null,
+      has_client_secret: false,
+      has_access_token: false,
+      has_refresh_token: false,
+      has_webhook_verification_token: false,
       tenant_id: 'common',
       redirect_uri: 'https://example.test/api/auth/microsoft/callback',
       auto_process_emails: true,
@@ -39,7 +42,7 @@ function microsoftProvider(deliveryMode: 'webhook' | 'polling'): EmailProvider {
   };
 }
 
-function renderCard(provider: EmailProvider, onTogglePause = vi.fn()) {
+function renderCard(provider: PublicEmailProvider, onTogglePause = vi.fn()) {
   renderWithProviders(
     <EmailProviderCard
       provider={provider}

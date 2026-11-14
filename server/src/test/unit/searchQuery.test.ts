@@ -5,6 +5,7 @@ import {
   decodeSearchCursor,
   encodeSearchCursor,
   parseQuery,
+  runSearchPage,
   runSearchQuery,
   sanitizeHeadline,
   SearchQueryError,
@@ -565,5 +566,82 @@ describe('search query parsing', () => {
     expect(sql).toContain('from "app_search_index" where "app_search_index"."tenant" = ?');
     expect(sql).not.toContain('WHERE s.tenant = ?::uuid');
     expect(bindings[5]).toBe('00000000-0000-4000-8000-000000000123');
+  });
+
+  describe('runSearchPage', () => {
+    const tenant = '00000000-0000-4000-8000-000000000123';
+
+    it('reads the page and the per-type counts in one statement over one matched relation', async () => {
+      const knex = createSearchKnex(async () => ({
+        rows: [{
+          hits: [{
+            object_type: 'ticket',
+            object_id: 'ticket-1',
+            parent_type: null,
+            parent_id: null,
+            title: 'Printer jam',
+            subtitle: null,
+            url: '/msp/tickets/ticket-1',
+            score: 0.5,
+            source_updated_at: '2026-05-13T12:00:00.123456+00:00',
+            metadata: { identifier: 'TIC-1' },
+            snippet: 'a __SEARCH_MARK_START__printer__SEARCH_MARK_STOP__ jam',
+          }],
+          counts: [{ object_type: 'ticket', total: 7 }, { object_type: 'client', total: 2 }],
+        }],
+      }));
+
+      const page = await runSearchPage({
+        knex: knex as never,
+        tenant,
+        query: 'printer',
+        allowedTypes: ['client', 'ticket'],
+        limit: 1,
+      });
+
+      expect(knex.raw).toHaveBeenCalledTimes(1);
+      const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
+      // One matched relation, read by both the ranked page and the counts.
+      expect(sql.match(/matched AS NOT MATERIALIZED/g)).toHaveLength(1);
+      expect(sql).toContain('FROM matched s');
+      expect(sql).toMatch(/counts AS \(\s*SELECT object_type, count\(\*\)::bigint AS total\s*FROM matched\s*GROUP BY object_type/);
+      expect(sql).toContain('json_agg(page ORDER BY score DESC, source_updated_at DESC, object_id ASC)');
+      expect(sql).toContain('from "app_search_index" where "app_search_index"."tenant" = ?');
+      expect(bindings[5]).toBe(tenant);
+      // The page limit binds the page only; the counts are over every match.
+      expect(bindings.at(-2)).toBe(1);
+
+      expect(page.countsByType).toEqual({ ticket: 7, client: 2 });
+      expect(page.hits).toEqual([{
+        type: 'ticket',
+        id: 'ticket-1',
+        parentType: undefined,
+        parentId: undefined,
+        title: 'Printer jam',
+        subtitle: undefined,
+        url: '/msp/tickets/ticket-1',
+        score: 0.5,
+        updatedAt: new Date('2026-05-13T12:00:00.123Z'),
+        metadata: { identifier: 'TIC-1' },
+        snippet: 'a <mark>printer</mark> jam',
+      }]);
+    });
+
+    it('accepts json columns delivered as text and an empty match set', async () => {
+      const knex = createSearchKnex(async () => ({ rows: [{ hits: '[]', counts: '[]' }] }));
+
+      await expect(runSearchPage({ knex: knex as never, tenant, query: 'printer', allowedTypes: ['ticket'] }))
+        .resolves.toEqual({ hits: [], countsByType: {} });
+    });
+
+    it('issues no statement when no type is allowed, and still rejects a bad cursor first', async () => {
+      const knex = createSearchKnex();
+
+      await expect(runSearchPage({ knex: knex as never, tenant, query: 'printer', allowedTypes: [] }))
+        .resolves.toEqual({ hits: [], countsByType: {} });
+      await expect(runSearchPage({ knex: knex as never, tenant, query: 'printer', allowedTypes: [], cursor: 'not-a-cursor' }))
+        .rejects.toMatchObject({ code: 'invalid_cursor' });
+      expect(knex.raw).not.toHaveBeenCalled();
+    });
   });
 });

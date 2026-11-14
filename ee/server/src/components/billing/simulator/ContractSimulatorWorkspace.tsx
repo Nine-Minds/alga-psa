@@ -58,6 +58,7 @@ import SimulationTimeline from "./SimulationTimeline";
 import SimulatedInvoiceDetail from "./SimulatedInvoiceDetail";
 import ChargeExplanationPanel from "./ChargeExplanationPanel";
 import { compareSimulations } from "@ee/lib/billing/simulator/compareSimulations";
+import { BillingTermsSection } from "@alga-psa/billing/components/billing-dashboard/contracts/BillingTermsSection";
 import { getInvoiceTemplates } from "@alga-psa/billing/actions/invoiceTemplates";
 
 interface ContractSimulatorWorkspaceProps {
@@ -660,6 +661,10 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     <div className="relative overflow-hidden">
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[390px_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
+          {/* Absent on scenarios persisted before billing_identity existed. */}
+          {working.billing_identity && (
+            <BillingTermsSection trace={working.billing_identity} variant="simulation" />
+          )}
           <AssumptionsPanel
             scenario={working}
             periodCount={horizonCount}

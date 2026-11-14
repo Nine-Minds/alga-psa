@@ -74,6 +74,7 @@ export async function resolveUserTimeZone(
   return normalizeIanaTimeZone(row?.timezone ?? null);
 }
 
+// LEVERAGE: pattern effective-timezone-resolver — duplicated in packages/db/src/lib/workDate.ts; consolidate into one implementation
 /**
  * Resolve the effective timezone for a user within a tenant.
  * Resolution chain: user timezone -> tenant timezone -> UTC.

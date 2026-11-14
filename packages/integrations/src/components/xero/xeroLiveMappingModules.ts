@@ -35,8 +35,13 @@ import {
 } from '../../lib/xero/xeroServiceMappingTarget';
 import {
   AUTOMATIC_DISCOUNT_MAPPING_ID,
-  DISCOUNT_MAPPING_ENTITY_TYPE
+  DISCOUNT_MAPPING_ENTITY_TYPE,
+  isSharedMappingTarget
 } from '@alga-psa/types';
+
+/** Shared-policy answer for a Xero target kind (item = exclusive, account = shareable). */
+const xeroKindIsShareable = (kindId: string) =>
+  isSharedMappingTarget('xero', 'service', { [XERO_TARGET_KIND_METADATA_KEY]: kindId });
 
 const ADAPTER_TYPE = 'xero';
 
@@ -216,8 +221,8 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
           readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item',
           mapping.external_entity_id
         ),
-      // Items are one-to-one; revenue accounts are shareable (partial idx_unique_external_mapping).
-      isExclusiveKind: (kindId) => kindId === 'item',
+      // Items are one-to-one; revenue accounts are shareable (shared mapping policy).
+      isExclusiveKind: (kindId) => !xeroKindIsShareable(kindId),
       invalidNotice:
         'This mapping no longer matches a usable record in the connected Xero organisation. Pick a valid Xero Item, or explicitly switch it to a Xero Revenue Account — it will not convert automatically.'
     },
@@ -346,8 +351,8 @@ function createDiscountModule(tabLabel: string): AccountingMappingModule {
       kindForMapping: (mapping) => readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item',
       optionIdForMapping: (mapping) =>
         toOptionId(readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item', mapping.external_entity_id),
-      // Items are one-to-one; revenue accounts are shareable (partial idx_unique_external_mapping).
-      isExclusiveKind: (kindId) => kindId === 'item',
+      // Items are one-to-one; revenue accounts are shareable (shared mapping policy).
+      isExclusiveKind: (kindId) => !xeroKindIsShareable(kindId),
       invalidNotice:
         'This mapping no longer matches a usable record in the connected Xero organisation. Pick a valid Xero Item or Revenue Account.'
     },

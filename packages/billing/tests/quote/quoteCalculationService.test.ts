@@ -228,6 +228,49 @@ describe('quoteCalculationService – recalculateQuoteFinancials', () => {
     expect(itemUpdate.tax_rate).toBe(10);
   });
 
+  // alga-2026-0002902: a 6.875% rate was stored (and shown) as 7 while the
+  // amount was charged at 6.875.
+  it('T207b: persists a fractional tax rate unrounded', async () => {
+    const { knex, getUpdatedQuote, getUpdatedItems } = buildMockKnex({
+      quote: { quote_id: quoteId, client_id: 'c-1', quote_date: '2026-01-01', currency_code: 'USD', tax_source: 'internal' },
+      items: [
+        { quote_item_id: 'i1', quantity: 1, unit_price: 10000, is_discount: false, is_optional: false, is_taxable: true },
+      ],
+      client: { region_code: 'US-MN' },
+      taxRates: [{ tax_percentage: 6.875 }],
+    });
+
+    await recalculateQuoteFinancials(knex, tenantStub, quoteId);
+
+    const itemUpdate = getUpdatedItems().get('i1')!;
+    expect(itemUpdate.tax_rate).toBe(6.875);
+    expect(itemUpdate.tax_amount).toBe(688);
+    expect(getUpdatedQuote()!.tax).toBe(688);
+  });
+
+  it('T207c: a non-taxable row carries no tax even when the client has a region rate', async () => {
+    const { knex, getUpdatedQuote, getUpdatedItems } = buildMockKnex({
+      quote: { quote_id: quoteId, client_id: 'c-1', quote_date: '2026-01-01', currency_code: 'USD', tax_source: 'internal' },
+      items: [
+        { quote_item_id: 'i1', quantity: 1, unit_price: 10000, is_discount: false, is_optional: false, is_taxable: false },
+        { quote_item_id: 'i2', quantity: 1, unit_price: 10000, is_discount: false, is_optional: false, is_taxable: true },
+      ],
+      client: { region_code: 'US-MN' },
+      taxRates: [{ tax_percentage: 6.875 }],
+    });
+
+    await recalculateQuoteFinancials(knex, tenantStub, quoteId);
+
+    expect(getUpdatedItems().get('i1')!.tax_amount).toBe(0);
+    expect(getUpdatedItems().get('i1')!.tax_rate).toBe(0);
+    expect(getUpdatedItems().get('i2')!.tax_amount).toBe(688);
+
+    const q = getUpdatedQuote()!;
+    expect(q.subtotal).toBe(20000);
+    expect(q.tax).toBe(688);
+    expect(q.total_amount).toBe(20688);
+  });
+
   it('T208: skips tax calculation when tax_source is external', async () => {
     const { knex, getUpdatedQuote, getUpdatedItems, queriedTables } = buildMockKnex({
       quote: { quote_id: quoteId, client_id: 'c-1', quote_date: '2026-01-01', currency_code: 'USD', tax_source: 'external' },

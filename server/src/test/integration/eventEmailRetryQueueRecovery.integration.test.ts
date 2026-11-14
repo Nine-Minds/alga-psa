@@ -75,4 +75,58 @@ describe('event email retry processing leases (Redis)', () => {
       expect(await redis.zCard(`${prefix}processing`)).toBe(0);
     });
   });
+
+  it('keeps worktree retry queues separate under invocation-owned prefixes', async () => {
+    const invocationId = randomUUID();
+    const defaultStreamPrefix = `default-worktree-test:${invocationId}:`;
+    const cardStreamPrefix = `card-worktree-test:${invocationId}:`;
+    const defaultPrefix = `${defaultStreamPrefix}event-email-retry:`;
+    const cardPrefix = `${cardStreamPrefix}event-email-retry:`;
+    const params = (to: string) => ({ tenantId: randomUUID(), to, template: 'ticket-comment-added', context: {}, mailClass: 'ticket' as const });
+    const defaultRecipient = `default-${invocationId}@example.test`;
+    const cardRecipient = `card-${invocationId}@example.test`;
+    vi.stubEnv('REDIS_EVENT_STREAM_PREFIX', defaultStreamPrefix);
+    const defaultQueue = new (EventEmailRetryQueue as any)({ checkIntervalMs: 1_000_000 });
+    vi.stubEnv('REDIS_EVENT_STREAM_PREFIX', cardStreamPrefix);
+    const cardQueue = new (EventEmailRetryQueue as any)({ checkIntervalMs: 1_000_000 });
+    let defaultId: string | undefined;
+    let cardId: string | undefined;
+    try {
+      await defaultQueue.initialize(async () => redis);
+      await cardQueue.initialize(async () => redis);
+      await defaultQueue.enqueue(params(defaultRecipient));
+      await cardQueue.enqueue(params(cardRecipient));
+
+      for (const id of await redis.zRange(`${defaultPrefix}queue`, 0, -1)) {
+        if ((await redis.get(`${defaultPrefix}data:${id}`))?.includes(defaultRecipient)) {
+          defaultId = id;
+          break;
+        }
+      }
+      for (const id of await redis.zRange(`${cardPrefix}queue`, 0, -1)) {
+        if ((await redis.get(`${cardPrefix}data:${id}`))?.includes(cardRecipient)) {
+          cardId = id;
+          break;
+        }
+      }
+      expect(defaultId).toBeTruthy();
+      expect(cardId).toBeTruthy();
+      expect(await redis.get(`${defaultPrefix}data:${defaultId}`)).toContain(defaultRecipient);
+      expect(await redis.get(`${cardPrefix}data:${cardId}`)).toContain(cardRecipient);
+      expect(await redis.zRange(`${defaultPrefix}queue`, 0, -1)).not.toContain(cardId);
+      expect(await redis.zRange(`${cardPrefix}queue`, 0, -1)).not.toContain(defaultId);
+    } finally {
+      await cardQueue.shutdown();
+      await defaultQueue.shutdown();
+      if (defaultId) {
+        await redis.zRem(`${defaultPrefix}queue`, defaultId);
+        await redis.del(`${defaultPrefix}data:${defaultId}`);
+      }
+      if (cardId) {
+        await redis.zRem(`${cardPrefix}queue`, cardId);
+        await redis.del(`${cardPrefix}data:${cardId}`);
+      }
+      vi.unstubAllEnvs();
+    }
+  });
 });

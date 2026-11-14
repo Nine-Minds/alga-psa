@@ -87,6 +87,20 @@ export function evaluateCoManagedAccess(facts: CoManagedAccessFacts): CoManagedA
   return { read, write, delegate: write, layers, deniedBy: failed ? { layer: failed, reason: layers[failed].reason! } : undefined };
 }
 
+/**
+ * The relationship-level half of the write decision: every layer of
+ * `evaluateCoManagedAccess(...).write` except the per-resource Collaborate grant,
+ * which the caller decides per row (explicit escalation grant, else board scope in
+ * board_scope mode). The grant is passed as granted so `write` reduces to the other
+ * layers; combine the result with the row's own grant. There is no second
+ * definition of "may write" - this only fixes one input of the single evaluator.
+ */
+export function coManagedRelationshipAllowsWrite(facts: Omit<CoManagedAccessFacts, 'grant'> & { visibilityMode: CoManagedVisibilityMode }): boolean {
+  const { visibilityMode, ...layers } = facts;
+  return evaluateCoManagedAccess({ ...layers,
+    grant: { visibilityMode, scope: { canCollaborate: true }, explicit: { canCollaborate: true } } }).write;
+}
+
 // ===========================================================================
 // Policy administration (customer grants and MSP staff assignments)
 // ===========================================================================
@@ -332,6 +346,26 @@ export async function listCoManagedLiveSponsoredRelationships(db: Knex, actor: C
         .where({ relationship_id: operation.relationship_id, sponsor_tenant: actor.tenant, state: 'active' }).whereNull('ended_at').first('relationship_id');
       const owner = relationship ? await customer.table('tenants').whereNull('suspended_at').where({ product_code: 'co_managed' }).first('client_name') : null;
       if (owner) result.push({ relationshipId: operation.relationship_id, customerTenant: operation.customer_tenant, name: owner.client_name ?? '' });
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  });
+}
+
+/** Every live relationship this customer holds with a sponsor, for its own administration. The customer-side twin of
+ * `listCoManagedLiveSponsoredRelationships`: it needs the actor's `co_management:read` or `:manage` (current rows), and the
+ * gate runs before any relationship or sponsor row is read, so an unauthorized actor causes no cross-tenant read. */
+export async function listCoManagedLiveCustomerRelationships(db: Knex, actor: CoManagedHomeActor): Promise<{ relationshipId: string; sponsorTenant: string; name: string }[]> {
+  if (![actor.tenant, actor.userId].every(isCoManagedUuid)) throw new CoManagedPolicyError('INVALID_POLICY');
+  return withTransaction(db, async trx => {
+    await requireCoManagedPolicyReader(trx, actor);
+    const home = tenantDb(trx, actor.tenant);
+    if (!await home.table('tenants').where({ product_code: 'co_managed' }).whereNull('suspended_at').first('tenant')) throw new CoManagedPolicyError('FORBIDDEN');
+    const rows = await home.table('co_management_relationships').where({ state: 'active' }).whereNull('ended_at').select('relationship_id', 'sponsor_tenant');
+    const result: { relationshipId: string; sponsorTenant: string; name: string }[] = [];
+    for (const row of rows) {
+      if (!isCoManagedUuid(row.sponsor_tenant)) continue;
+      const sponsor = await tenantDb(trx, row.sponsor_tenant as string).table('tenants').first('client_name');
+      result.push({ relationshipId: row.relationship_id, sponsorTenant: row.sponsor_tenant, name: sponsor?.client_name ?? '' });
     }
     return result.sort((a, b) => a.name.localeCompare(b.name));
   });

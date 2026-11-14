@@ -40,3 +40,29 @@ describe('mapUniqueViolation', () => {
     ).toBe('msp/integrations:errors.mappings.duplicate');
   });
 });
+
+describe('mapUniqueViolation: shared QBO item guard index', () => {
+  const row = { integration_type: 'quickbooks_online', alga_entity_type: 'client' };
+  const pg = (constraint: string) => ({ code: '23505', constraint });
+
+  it.each([
+    'idx_unique_external_mapping',
+    'idx_unique_external_mapping_102345',
+    'idx_unique_external_mapping_qbo_guard',
+    'idx_unique_external_mapping_qbo_guard_102345',
+  ])('reports %s as a target conflict', (constraint) => {
+    expect(mapUniqueViolation(pg(constraint), row)?.messageKey).toBe(
+      'msp/integrations:errors.mappings.duplicateTarget'
+    );
+  });
+
+  it('reports the Alga-side index as an entity conflict and never swallows other 23505s', () => {
+    expect(mapUniqueViolation(pg('idx_unique_alga_mapping_102345'), row)?.messageKey).toBe(
+      'msp/integrations:errors.mappings.duplicate'
+    );
+    expect(mapUniqueViolation(pg('some_other_constraint'), row)?.messageKey).toBe(
+      'msp/integrations:errors.mappings.duplicate'
+    );
+    expect(mapUniqueViolation({ code: '23503' }, row)).toBeNull();
+  });
+});

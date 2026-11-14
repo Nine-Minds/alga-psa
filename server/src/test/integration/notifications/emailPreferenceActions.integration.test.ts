@@ -24,11 +24,6 @@ vi.mock('@alga-psa/db', async importOriginal => ({
   getConnection: vi.fn(async () => testDb),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-const mail = vi.hoisted(() => ({ send: vi.fn() }));
-vi.mock('@alga-psa/email', () => ({
-  TenantEmailService: { getInstance: () => ({ sendEmail: mail.send }) },
-  StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text: string) {} },
-}));
 vi.mock('../../../../../packages/notifications/src/notifications/emailLocaleResolver', () => ({ resolveEmailLocale: async () => 'en' }));
 
 import * as actions from '../../../../../packages/notifications/src/actions/notification-actions/notificationActions';
@@ -216,25 +211,29 @@ describe('authenticated personal email preferences with real database transactio
     });
     await new Promise<void>(resolve => smtp.listen(0, '127.0.0.1', resolve));
     const transport = nodemailer.createTransport({ host: '127.0.0.1', port: (smtp as any).server.address().port, secure: false, ignoreTLS: true });
-    mail.send.mockImplementation(async ({ to, templateProcessor }) => {
-      await transport.sendMail({ from: 'sender@example.test', to, subject: templateProcessor.subject, text: templateProcessor.text });
-      return { success: true };
+    const service = new EmailNotificationService({
+      async send(message) {
+        await transport.sendMail({ from: 'sender@example.test', to: message.to, subject: message.subject, text: message.text });
+        return { status: 'sent' };
+      },
     });
-    const service = new EmailNotificationService();
     vi.spyOn(service, 'getEffectiveTemplate').mockResolvedValue({ subject: 'Synthetic preference check', html_content: '<p>Local delivery</p>' } as any);
     const send = (subtypeId = subtypeA) => service.sendNotification({ mailClass: 'general', tenant, userId, subtypeId, emailAddress: 'recipient@example.test', templateName: 'synthetic', data: {} });
     try {
-      await send(); // absent preference delivers
+      expect(await send()).toMatchObject({ status: 'sent' }); // absent preference delivers
       expect(received).toHaveLength(1);
-      await actions.updateUserEmailSubtypePreferenceAction(subtypeA, false); await send();
+      await actions.updateUserEmailSubtypePreferenceAction(subtypeA, false);
+      expect(await send()).toMatchObject({ status: 'skipped' });
       expect(received).toHaveLength(1);
-      await actions.updateUserEmailSubtypePreferenceAction(subtypeA, true); await send();
+      await actions.updateUserEmailSubtypePreferenceAction(subtypeA, true);
+      expect(await send()).toMatchObject({ status: 'sent' });
       expect(received).toHaveLength(2);
       await testDb('user_notification_preferences').insert([{ tenant, user_id: userId, subtype_id: disabledSubtype, is_enabled: true }, { tenant, user_id: userId, subtype_id: disabledCategorySubtype, is_enabled: true }]);
-      await send(disabledSubtype); await send(disabledCategorySubtype);
+      expect(await send(disabledSubtype)).toMatchObject({ status: 'skipped' });
+      expect(await send(disabledCategorySubtype)).toMatchObject({ status: 'skipped' });
       expect(received).toHaveLength(2);
       await testDb('notification_settings').where({ tenant }).update({ is_enabled: false });
-      await expect(send()).rejects.toThrow('disabled for this tenant');
+      expect(await send()).toMatchObject({ status: 'skipped', reason: 'Notifications are disabled for this tenant' });
       expect(received).toHaveLength(2);
     } finally {
       transport.close();

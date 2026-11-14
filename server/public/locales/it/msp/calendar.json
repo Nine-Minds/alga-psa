@@ -243,6 +243,23 @@
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"
+        },
+        "setup": {
+          "title": "Prima di connettere",
+          "intro": "Nella registrazione dell'app Microsoft Entra, aggiungi questo URI di reindirizzamento e concedi queste autorizzazioni delegate.",
+          "redirectUri": "URI di reindirizzamento",
+          "copy": "Copia",
+          "copied": "Copiato",
+          "copyFailed": "Impossibile copiare",
+          "unavailable": "Non disponibile",
+          "permissions": "Autorizzazioni delegate (Microsoft Graph)",
+          "tenancy": "L'app può essere a tenant singolo o multi-tenant. L'accesso segue l'ID directory (tenant) del profilo Microsoft associato a Calendar.",
+          "openProviders": "Apri le impostazioni dei provider Microsoft"
+        },
+        "adminConsentPending": {
+          "title": "L'approvazione dell'amministratore è in sospeso.",
+          "body": "Un amministratore di Microsoft 365 deve ancora approvare la registrazione dell'app associata a Calendar. Chiedigli di concedere il consenso amministratore per le autorizzazioni elencate di seguito, poi torna qui per connettere Outlook Calendar.",
+          "openSettings": "Apri le impostazioni dei provider Microsoft"
         }
       }
     }

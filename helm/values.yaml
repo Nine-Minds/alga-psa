@@ -82,8 +82,12 @@ server:
     tag: "4023e8f"
   hostNetwork: false
   verify_email: true
-  # Maximum body size for Next.js server actions (e.g., extension uploads)
-  serverActionsBodyLimit: "200mb"
+  # Maximum body size for Next.js server actions. NOT a file-size limit (that is
+  # config.storage.providers.*.max_file_size, reached via the chunked upload session API).
+  # 26mb = measured largest non-file action body (3.7 MB) plus the 25 MiB co-managed attachment
+  # action; see the comment in server/next.config.mjs. Extension bundle installs (EE) still ride a
+  # server action: a bundle over this limit is refused with a 413 and needs this raised.
+  serverActionsBodyLimit: "26mb"
   # App-wide search live indexing gate. Keep false during migration/backfill;
   # set true after search:backfill completes so event subscribers write updates.
   searchIndexLive: false
@@ -112,6 +116,10 @@ hocuspocus:
     tag: "latest"
   pullPolicy: Always
   replicaCount: 1
+  # The hocuspocus image starts as root and drops to its own user, so it does
+  # not take the chart-wide non-root defaults. Left empty on purpose.
+  podSecurityContext: {}
+  securityContext: {}
   service:
     type: "ClusterIP"
     port: 1234
@@ -144,22 +152,49 @@ correlationPathsJson: ""
 # Development Pod Configuration
 devPod:
   enabled: false
+  # The dev pod image runs as root and writes into /app, so it does not take the
+  # chart-wide non-root defaults.
+  podSecurityContext: {}
+  securityContext: {}
 
 podLabels: {}
 
 podAnnotations:
   sidecar.istio.io/proxyMemory: "4Gi"
 
-podSecurityContext: {}
-  # fsGroup: 2000
+# The server, setup and worker images run as uid 1000 (`node`). fsGroup applies
+# to PVC-backed volumes; hostPath and local-path volumes ignore it, so use
+# `fixPermissions` below for those. Override per environment if the image user
+# differs (set runAsUser explicitly and keep runAsNonRoot: true).
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
   # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+
+# Optional root init container that hands the writable volumes (files PVC and
+# tenant-secret mounts) to the application uid. Needed on hostPath and
+# local-path volumes, where kubelet does not apply fsGroup. Runs the
+# `alga-runtime-permissions` script shipped in the server image, with only the
+# capabilities it needs.
+fixPermissions:
+  enabled: false
+  # Defaults to the server image when empty.
+  image:
+    name: ""
+    tag: ""
+  uid: 1000
+  gid: 1000
 
 
 resources: {}
@@ -221,8 +256,10 @@ config:
       local:
         enabled: true
         base_path: '/data/files'  # Base path for file storage
-        # Storage quotas and limits
-        max_file_size: 104857600  # 100MB in bytes
+        # Per-file upload limit, in bytes. Rendered into STORAGE_LOCAL_MAX_FILE_SIZE, the only thing
+        # that reads it (code default: DEFAULT_MAX_FILE_SIZE_BYTES in packages/storage/src/config/storage.ts).
+        # Quoted: helm renders an unquoted number this large in scientific notation (5.24288e+08).
+        max_file_size: "524288000"  # 500MB in bytes
         allowed_mime_types:
           - '*/*'  # Allow all file types
         retention_days: 30  # Number of days to retain files
@@ -238,29 +275,11 @@ config:
         access_key: ''  # AWS access key
         secret_key: ''  # AWS secret key
         endpoint: ''    # Optional custom endpoint for S3-compatible services
-        # Storage quotas and limits
-        max_file_size: 524288000  # 500MB in bytes
+        # Per-file upload limit, in bytes. Rendered into STORAGE_S3_MAX_FILE_SIZE (see local above).
+        max_file_size: "524288000"  # 500MB in bytes
         allowed_mime_types:
           - '*/*'  # Allow all file types
         retention_days: 30  # Number of days to retain files
-    # Storage locations configuration
-    locations:
-      documents:  # Default location for document storage
-        name: "Documents"
-        path: "/documents"
-        provider: "local"  # References the provider config above
-        max_file_size: 104857600  # 100MB in bytes
-        allowed_mime_types:
-          - '*/*'  # Allow all file types
-      avatars:  # Location for user avatars
-        name: "User Avatars"
-        path: "/avatars"
-        provider: "local"
-        max_file_size: 5242880  # 5MB in bytes
-        allowed_mime_types:
-          - 'image/jpeg'
-          - 'image/png'
-          - 'image/gif'
     # File upload settings
     upload:
       temp_dir: '/tmp/uploads'
@@ -278,6 +297,12 @@ config:
 runner:
   # Internal URL for the Knative runner service (used for execute + debug stream)
   baseUrl: ""
+  # Execution backend: "knative" (server default when unset) or "docker" for a
+  # plain HTTP runner Service at baseUrl. Rendered as RUNNER_BACKEND.
+  backend: ""
+  # Path the app proxies extension UI assets through (e.g. "/runner").
+  # Rendered as RUNNER_PUBLIC_BASE.
+  publicBase: ""
   # Optional literal token for authenticating runner calls. Prefer using an existing
   # Kubernetes secret via serviceTokenSecret when running in production.
   serviceToken: ""
@@ -298,6 +323,10 @@ redis:
   image:
     repository: redis
     tag: latest
+  # The official image's own `redis` user. Redis here takes its password from a
+  # Kubernetes Secret, so it does not need the app's uid.
+  runAsUser: 999
+  runAsGroup: 999
   service:
     port: 6379
   persistence:

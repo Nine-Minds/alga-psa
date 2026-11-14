@@ -19,7 +19,7 @@ const getQuoteConversionPreviewMock = vi.fn();
 const convertQuoteToSalesOrderMock = vi.fn();
 const listQuoteVersionsMock = vi.fn();
 const getQuoteApprovalSettingsMock = vi.fn();
-const getAllClientsForBillingMock = vi.fn();
+const getClientByIdForBillingMock = vi.fn();
 const getAllContactsMock = vi.fn();
 const markQuoteAcceptedMock = vi.fn();
 const requestQuoteApprovalChangesMock = vi.fn();
@@ -46,6 +46,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useFormatters: () => ({
     formatCurrency: (amount: number) => `$${Number(amount).toFixed(2)}`,
     formatDate: (date: unknown) => String(date),
+    formatCalendarDate: (date: unknown) => String(date),
     formatNumber: (value: number) => String(value),
   }),
 }));
@@ -89,7 +90,7 @@ vi.mock('../../src/components/billing-dashboard/quotes/QuoteStatusBadge', () => 
 }));
 
 vi.mock('../../src/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: (...args: any[]) => getAllClientsForBillingMock(...args),
+  getClientByIdForBilling: (...args: any[]) => getClientByIdForBillingMock(...args),
 }));
 
 vi.mock('@alga-psa/user-composition/actions/contactQueryActions', () => ({
@@ -222,9 +223,7 @@ describe('QuoteDetail accepted optional item review state', () => {
     });
     listQuoteVersionsMock.mockResolvedValue([]);
     getQuoteApprovalSettingsMock.mockResolvedValue({ approvalRequired: false });
-    getAllClientsForBillingMock.mockResolvedValue([
-      { client_id: 'client-1', client_name: 'Acme Co' },
-    ]);
+    getClientByIdForBillingMock.mockResolvedValue({ client_id: 'client-1', client_name: 'Acme Co' });
     getAllContactsMock.mockResolvedValue([
       { contact_name_id: 'contact-1', full_name: 'Taylor Client', email: 'taylor@example.com' },
     ]);
@@ -429,7 +428,7 @@ describe('QuoteDetail approval + mark-accepted workflow', () => {
     vi.clearAllMocks();
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     listQuoteVersionsMock.mockResolvedValue([]);
-    getAllClientsForBillingMock.mockResolvedValue([{ client_id: 'client-1', client_name: 'Acme Co' }]);
+    getClientByIdForBillingMock.mockResolvedValue({ client_id: 'client-1', client_name: 'Acme Co' });
     getAllContactsMock.mockResolvedValue([]);
   });
 

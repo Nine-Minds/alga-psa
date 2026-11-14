@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "title": "Priority validation recovery walkthrough",
+  "paneId": "3c471de2-b8db-4889-a0d8-9fed53c26374",
+  "startedAt": "2026-11-04T00:34:06.893Z",
+  "finishedAt": "2026-11-04T00:35:27.711Z",
+  "durationMs": 48460,
+  "width": 988,
+  "height": 557,
+  "bytes": 1447655,
+  "frames": 741,
+  "marks": [
+    {
+      "t": 5.196,
+      "label": "Legacy template warning and refused save"
+    },
+    {
+      "t": 13.098,
+      "label": "Attempted c05 URL returned template not found"
+    },
+    {
+      "t": 48.437,
+      "label": "Template remains unmodified after refusal; legacy value remains visible"
+    }
+  ],
+  "files": {
+    "video": "current-priority-walkthrough-2026-11-04.webm",
+    "chapters": "current-priority-walkthrough-2026-11-04.vtt"
+  }
+}

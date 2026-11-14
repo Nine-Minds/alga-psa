@@ -15,7 +15,8 @@ export interface QuickAddContactRenderProps {
   isOpen: boolean;
   onClose: () => void;
   onContactAdded: (contact: IContact) => void;
-  clients: IClient[];
+  /** @deprecated Ignored. QuickAddContact searches clients on the server; kept optional so existing callers compile. */
+  clients?: IClient[];
   selectedClientId?: string | null;
 }
 

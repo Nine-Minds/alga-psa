@@ -49,6 +49,12 @@ import ChecklistRuleMatchers from '../../../components/settings/general/Checklis
 const P = 'ticketing.checklistTemplates.predicate';
 const tag = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
+const warehouse = '33333333-3333-4333-8333-333333333333';
+const headOffice = '44444444-4444-4444-8444-444444444444';
+const locations = [
+  { location_id: warehouse, location_name: 'Warehouse', client_name: 'Acme' },
+  { location_id: headOffice, location_name: 'Head office', client_name: 'Acme' },
+];
 const props = (where: PredicateGroup = { join: 'and', clauses: [] }) => ({
   rule: { apply_rule_id: 'rule', template_id: 'template', where, where_version: 1, is_enabled: false },
   index: 0,
@@ -124,6 +130,48 @@ describe('descriptor-driven checklist rule editor', () => {
     expect((screen.getByLabelText(`${P}.operator`) as HTMLSelectElement).disabled).toBe(true);
     expect(screen.queryByText('Pick client')).toBeNull();
     expect(screen.getByText('Emerald City')).toBeTruthy();
+  });
+
+  // The Field select offers both location paths, so picking one must render a working control: the
+  // generalised descriptor options are `{ tags }` *or* `{ locations }`, and reading the wrong one
+  // used to blank the whole panel.
+  it.each([
+    ['location_id', 'Location'],
+    ['contact.locations', 'Requester location'],
+  ])('offers %s with the location control and in/not_in', (path, fieldLabel) => {
+    const input = props();
+    render(<ChecklistRuleMatchers {...input} locations={locations} />);
+    fireEvent.click(screen.getByText(`${P}.add`));
+    const field = screen.getByLabelText(`${P}.field`) as HTMLSelectElement;
+    expect([...field.options].map((option) => option.textContent)).toContain(fieldLabel);
+    fireEvent.change(field, { target: { value: path } });
+    expect([...(screen.getByLabelText(`${P}.operator`) as HTMLSelectElement).options].map((o) => o.value))
+      .toEqual([`${P}.operators.in`, `${P}.operators.not_in`].map((key) => key.split('.').pop()));
+    const list = screen.getByLabelText(`${P}.value`) as HTMLSelectElement;
+    expect([...list.options].map((option) => option.textContent))
+      .toEqual(['Acme · Warehouse', 'Acme · Head office']);
+    list.options[0].selected = true;
+    fireEvent.change(list);
+    fireEvent.change(screen.getByLabelText(`${P}.operator`), { target: { value: 'not_in' } });
+    fireEvent.click(screen.getByText(`${P}.save`));
+    expect(input.onChange).toHaveBeenCalledWith({
+      join: 'and',
+      clauses: [{ path, operator: 'not_in', value: [warehouse] }],
+    });
+  });
+
+  it('keeps a saved location id that is no longer offered', () => {
+    const input = props({ join: 'and', clauses: [{ path: 'location_id', operator: 'in', value: [other] }] });
+    render(<ChecklistRuleMatchers {...input} locations={locations} />);
+    const list = screen.getByLabelText(`${P}.value`) as HTMLSelectElement;
+    expect(list.selectedOptions[0].value).toBe(other);
+    list.options[0].selected = true;
+    fireEvent.change(list);
+    fireEvent.click(screen.getByText(`${P}.save`));
+    expect(input.onChange).toHaveBeenCalledWith({
+      join: 'and',
+      clauses: [{ path: 'location_id', operator: 'in', value: [warehouse, other] }],
+    });
   });
 
   it('preserves unavailable tag ids when another tag is selected', () => {

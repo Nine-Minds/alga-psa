@@ -7,21 +7,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const h = vi.hoisted(() => ({
   native: { findCommentsByTicketId: vi.fn(), createComment: vi.fn(), addTicketCommentWithCache: vi.fn(), addTicketCommentWithCacheForCurrentUser: vi.fn() },
   session: { load: vi.fn(), comments: vi.fn(), writeAudiences: vi.fn(), write: vi.fn(), audienceOf: vi.fn() },
-  resource: vi.fn(),
+  resource: vi.fn(), filesProps: null as any,
 }));
 
+vi.mock('@/components/co-managed/CoManagedConversationFiles', () => ({ default: (props: any) => { h.filesProps = props; return null; } }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));
-vi.mock('@alga-psa/tickets/lib/nativeTicketDataSource', () => ({ nativeTicketDataSource: { kind: 'native', conversation: {}, comments: h.native } }));
+vi.mock('@alga-psa/tickets/lib/nativeTicketDataSource', async () => {
+  const real = await vi.importActual<any>('@alga-psa/tickets/lib/ticketDataSource');
+  return { nativeTicketDataSource: { kind: 'native', capabilities: real.NATIVE_TICKET_CAPABILITIES, screen: { backHref: '/msp/tickets' }, conversation: {}, comments: h.native } };
+});
 vi.mock('@/lib/actions/coManagedLocalTicketActions', () => ({ getCoManagedLocalTicketResourceAction: h.resource }));
 vi.mock('@/components/co-managed/sharedConversationSession', () => ({ createSharedConversationSession: () => h.session }));
 
 import { useTicketDataSource } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
+import { NATIVE_TICKET_CAPABILITIES, TICKET_WRITE_ACTION_CAPABILITIES, TICKET_SCREEN_FIELDS, resolveTicketFrozenFields } from '@alga-psa/tickets/lib/ticketDataSource';
 import { CoManagedLocalTicketDataSourceProvider } from '@/components/co-managed/CoManagedLocalTicketDataSourceProvider';
 
 let source: any;
 function Probe() { source = useTicketDataSource(); return <span data-testid="audiences">{(source.conversation.audiences ?? []).join(',')}</span>; }
 
-async function mount() {
+async function mount(readOnly = false) {
   h.resource.mockResolvedValue({ tenant: 'cust', relationshipId: 'r', kind: 'ticket', id: 'tk1' });
   h.session.load.mockResolvedValue(undefined);
   h.session.writeAudiences.mockReturnValue(['requester', 'shared_it', 'organization_private']);
@@ -31,7 +36,7 @@ async function mount() {
   h.native.findCommentsByTicketId.mockResolvedValue([{ comment_id: 'l1', audience: 'organization_private', created_at: '2026-01-01' }]);
   h.native.addTicketCommentWithCacheForCurrentUser.mockResolvedValue({ comment_id: 'native' });
   h.native.createComment.mockResolvedValue('native-reply');
-  render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1"><Probe /></CoManagedLocalTicketDataSourceProvider>);
+  render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1" readOnly={readOnly}><Probe /></CoManagedLocalTicketDataSourceProvider>);
   await waitFor(() => expect(screen.getByTestId('audiences')).toHaveTextContent('requester,organization_private,shared_it'));
 }
 
@@ -69,6 +74,21 @@ describe('CoManagedLocalTicketDataSourceProvider', () => {
     expect(h.native.createComment).toHaveBeenCalledTimes(1);
   });
 
+  it('offers a comments-changed signal that fires on an explicit publish and never on a session load', async () => {
+    await mount();
+    const listener = vi.fn();
+    const off = source.screen.subscribeCommentsChanged(listener);
+    await source.comments.findCommentsByTicketId('tk1'); // calls session.load()
+    await h.session.load();
+    expect(h.session.load).toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
+    h.filesProps.onCommentsChanged(); // CoManagedDraftRestore onPublished, via CoManagedConversationFiles
+    expect(listener).toHaveBeenCalledTimes(1);
+    off();
+    h.filesProps.onCommentsChanged();
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps native audiences when the workspace has no relationship', async () => {
     h.resource.mockResolvedValue(null);
     render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1"><Probe /></CoManagedLocalTicketDataSourceProvider>);
@@ -76,4 +96,66 @@ describe('CoManagedLocalTicketDataSourceProvider', () => {
     expect(screen.getByTestId('audiences')).toHaveTextContent('requester,organization_private');
     expect(screen.getByTestId('audiences')).not.toHaveTextContent('shared_it');
   });
+
+  it('read-only: freezes the screen and removes every pure-write action, keeping the native screen fields', async () => {
+    h.resource.mockResolvedValue(null);
+    render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1" readOnly><Probe /></CoManagedLocalTicketDataSourceProvider>);
+    await waitFor(() => expect(h.resource).toHaveBeenCalled());
+    expect(source.screen.readOnly).toBe(true);
+    expect(source.screen.backHref).toBe('/msp/tickets');
+    for (const key of TICKET_WRITE_ACTION_CAPABILITIES) expect(source.capabilities[key]).toBe(false);
+    expect(resolveTicketFrozenFields(source.screen)).toEqual(expect.arrayContaining([...TICKET_SCREEN_FIELDS]));
+    expect(screen.getByTestId('audiences')).toHaveTextContent('');
+    // Display-only sections are untouched.
+    expect(source.capabilities.documents).toBe(true);
+  });
+
+  it('writable: screen and capabilities are identical to native', async () => {
+    await mount(false);
+    expect(source.screen).toMatchObject({ backHref: '/msp/tickets' });
+    expect(source.screen.readOnly).toBeUndefined();
+    expect(source.screen.onComposerCancel).toEqual(expect.any(Function));
+    expect(source.screen.subscribeCommentsChanged).toEqual(expect.any(Function));
+    expect(source.capabilities).toEqual(NATIVE_TICKET_CAPABILITIES);
+  });
+
+  it('read-only: the rendered surface offers no field edit and no delete / duplicate control', async () => {
+    h.resource.mockResolvedValue(null);
+    function Surface() {
+      const ds = useTicketDataSource();
+      const frozen = resolveTicketFrozenFields(ds.screen);
+      return (
+        <div>
+          {!frozen.includes('title') && <input data-testid="edit-title" />}
+          {ds.capabilities.delete && <button data-testid="delete">Delete</button>}
+          {ds.capabilities.duplicate && <button data-testid="duplicate">Duplicate</button>}
+        </div>
+      );
+    }
+    render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1" readOnly><Surface /></CoManagedLocalTicketDataSourceProvider>);
+    await waitFor(() => expect(h.resource).toHaveBeenCalled());
+    expect(screen.queryByTestId('edit-title')).toBeNull();
+    expect(screen.queryByTestId('delete')).toBeNull();
+    expect(screen.queryByTestId('duplicate')).toBeNull();
+    cleanup();
+    render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1"><Surface /></CoManagedLocalTicketDataSourceProvider>);
+    await waitFor(() => expect(screen.getByTestId('delete')).toBeInTheDocument());
+    expect(screen.getByTestId('edit-title')).toBeInTheDocument();
+  });
+
+  it.each(['timerStart', 'timeEntryCreate', 'locationEdit', 'assetAdd', 'commentOwnEdit', 'reactionToggle'] as const)(
+    '%s: offered when writable, withheld when read-only',
+    async (key) => {
+      h.resource.mockResolvedValue(null);
+      function Cap() {
+        return <>{useTicketDataSource().capabilities[key] && <button data-testid="cap" />}</>;
+      }
+      render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1" readOnly><Cap /></CoManagedLocalTicketDataSourceProvider>);
+      await waitFor(() => expect(h.resource).toHaveBeenCalled());
+      expect(screen.queryByTestId('cap')).toBeNull();
+      cleanup();
+      render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1"><Cap /></CoManagedLocalTicketDataSourceProvider>);
+      await waitFor(() => expect(screen.getByTestId('cap')).toBeInTheDocument());
+    },
+  );
 });

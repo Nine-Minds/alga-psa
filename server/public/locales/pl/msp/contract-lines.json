@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Opis pozycji faktury",
         "invoiceLineDescriptionPlaceholder": "np. Miesięczna konserwacja systemu telefonicznego zgodnie z umową z 2019 r.",
         "nameLabel": "Nazwa linii kontraktu *",
-        "namePlaceholder": "np. Zarządzane wsparcie — złoto"
+        "namePlaceholder": "np. Zarządzane wsparcie — złoto",
+        "invoiceLineSubtitleLabel": "Podtytuł pozycji faktury",
+        "invoiceLineSubtitlePlaceholder": "np. Zarządzane stacje końcowe i kopie zapasowe",
+        "invoiceLineSubtitleHelp": "Wyświetlany jako przyciemniona druga linia pod tytułem, gdy ta pozycja stała pojawia się na fakturze."
       },
       "cardTitle": "Edytuj linię kontraktu: {{name}} (naprawiono)",
       "errors": {

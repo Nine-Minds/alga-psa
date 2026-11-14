@@ -74,9 +74,11 @@ export {
 // Escalation service
 export {
   escalateTicket,
+  ensureEscalationManagerOnTicket,
   getEscalationManagerForTicket,
   checkEscalationNeeded,
-  type EscalationResult
+  type EscalationResult,
+  type EscalationManagerTicketResourceResult
 } from './escalationService';
 
 // SLA backend interface and factory

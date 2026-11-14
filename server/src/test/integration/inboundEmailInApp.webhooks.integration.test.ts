@@ -30,6 +30,41 @@ const enqueueUnifiedInboundEmailQueueJobMock = vi.fn(async () => ({
   queueDepth: 1,
 }));
 let storageUploadMock = vi.fn(async (_buffer: Buffer, storagePath: string) => ({ path: storagePath }));
+/**
+ * In-memory provider. Inbound artifacts are written through the ingest pipeline's write session
+ * (beginWrite / writePart / completeWrite), so the session collects the parts and hands the whole
+ * body to `storageUploadMock` on complete, keeping the assertions written against `upload`.
+ */
+function fakeStorageProvider() {
+  const sessions = new Map<string, { path: string; mime?: string; parts: Map<number, Buffer> }>();
+  const toBuffer = async (part: any): Promise<Buffer> => {
+    if (Buffer.isBuffer(part)) return part;
+    const chunks: Buffer[] = [];
+    for await (const chunk of part) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks);
+  };
+  return {
+    upload: (...args: any[]) => storageUploadMock(...args),
+    beginWrite: async (path: string, options: { mimeType?: string } = {}) => {
+      const uploadId = `fake-${sessions.size + 1}-${path}`;
+      sessions.set(uploadId, { path, mime: options.mimeType, parts: new Map() });
+      return { provider: 'fake', path, uploadId };
+    },
+    writePart: async (handle: { uploadId: string }, partNumber: number, part: any, size: number) => {
+      sessions.get(handle.uploadId)!.parts.set(partNumber, await toBuffer(part));
+      return { partNumber, etag: `p${partNumber}`, size };
+    },
+    completeWrite: async (handle: { uploadId: string }) => {
+      const session = sessions.get(handle.uploadId)!;
+      sessions.delete(handle.uploadId);
+      const body = Buffer.concat([...session.parts.entries()].sort(([a], [b]) => a - b).map(([, b]) => b));
+      return storageUploadMock(body, session.path, { mime_type: session.mime });
+    },
+    abortWrite: async (handle: { uploadId: string }) => {
+      sessions.delete(handle.uploadId);
+    },
+  };
+}
 let inboundReplyAckDeciderDecideMock = vi.fn(async () => ({
   decision: 'NOT_ACK',
   source: 'default',
@@ -148,9 +183,7 @@ vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
 
 vi.mock('@alga-psa/storage', () => ({
   StorageProviderFactory: {
-    createProvider: vi.fn(async () => ({
-      upload: (...args: any[]) => storageUploadMock(...args),
-    })),
+    createProvider: vi.fn(async () => fakeStorageProvider()),
   },
   generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
 }));
@@ -158,9 +191,7 @@ vi.mock('@alga-psa/storage', () => ({
 // The artifact orchestrator imports the subpath directly.
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: {
-    createProvider: vi.fn(async () => ({
-      upload: (...args: any[]) => storageUploadMock(...args),
-    })),
+    createProvider: vi.fn(async () => fakeStorageProvider()),
   },
   generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
 }));
@@ -1492,6 +1523,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -2670,6 +2702,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -3122,6 +3155,187 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  // alga-2026-0003119: an MSP technician forwarding a customer chain onto an existing
+  // ticket from the same Microsoft 365 organization as the helpdesk mailbox. Intra-tenant
+  // Exchange delivery carries no Authentication-Results, so before the fix the internal
+  // identity was dropped and the thread-header gate quarantined the message silently.
+  async function seedIntraOrgThreadFixture(params: {
+    internalEmail: string;
+  }): Promise<{ internalUserId: string; ticketId: string; originalMessageId: string }> {
+    const internalUserId = uuidv4();
+    await tenantTable('users').insert({
+      user_id: internalUserId,
+      tenant: tenantId,
+      username: `intraorg-tech-${internalUserId.slice(0, 8)}`,
+      email: params.internalEmail,
+      first_name: 'Intra-Org',
+      last_name: 'Technician',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('users').where({ user_id: internalUserId }).delete();
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-intraorg-${uuidv4()}@mail`;
+    await tenantTable('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `INTRAORG-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Forwarded customer chain',
+      client_id: clientId,
+      status_id: statusId,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-intraorg-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
+    });
+
+    return { internalUserId, ticketId, originalMessageId };
+  }
+
+  it('Internal reply (Microsoft intra-org): same-org technician with no Authentication-Results comments on the threaded ticket', async () => {
+    const providerId = uuidv4();
+    const mailbox = `helpdesk-intraorg-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+    cleanup.push(async () => {
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const internalEmail = `intraorg-tech-${uuidv4().slice(0, 6)}@example.com`;
+    const { internalUserId, ticketId, originalMessageId } = await seedIntraOrgThreadFixture({ internalEmail });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-intraorg-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalEmail, name: 'Intra-Org Technician' },
+        to: [{ email: mailbox, name: 'Helpdesk' }],
+        subject: 'FW: Forwarded customer chain',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Forwarding the rest of the customer chain.', html: undefined },
+        attachments: [],
+        // Intra-tenant Exchange delivery: no Authentication-Results, only the org stamp.
+        headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(result.outcome === 'replied' ? result.ticketId : null).toBe(ticketId);
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+    expect(comments[0].author_type).toBe('internal');
+    expect(comments[0].user_id).toBe(internalUserId);
+    expect(comments[0].contact_id ?? null).toBeNull();
+  });
+
+  it('Internal reply (Google): a forged Exchange internal-auth stamp stays quarantined on the thread-header path', async () => {
+    const providerId = uuidv4();
+    const mailbox = `helpdesk-g-stamp-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+    cleanup.push(async () => {
+      await tenantTable('gmail_processed_history').where({ provider_id: providerId }).delete();
+      await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const internalEmail = `g-stamp-tech-${uuidv4().slice(0, 6)}@example.com`;
+    const { ticketId, originalMessageId } = await seedIntraOrgThreadFixture({ internalEmail });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-g-stamp-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalEmail, name: 'Intra-Org Technician' },
+        to: [{ email: mailbox, name: 'Helpdesk' }],
+        subject: 'FW: Forwarded customer chain',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Header injected by an external sender.', html: undefined },
+        attachments: [],
+        headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+      } as any,
+    });
+
+    expect(result.outcome).toBe('quarantined');
+    expect(result.outcome === 'quarantined' ? result.reason : null).toBe('unauthorized_thread_header_sender');
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticketId });
+    expect(comments).toHaveLength(0);
+  });
+
+  it('Internal reply (Microsoft): a verified list rewrite alone does not grant an internal identity', async () => {
+    const providerId = uuidv4();
+    const mailbox = `helpdesk-rewrite-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+    cleanup.push(async () => {
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const internalEmail = `rewrite-tech-${uuidv4().slice(0, 6)}@example.com`;
+    const { ticketId, originalMessageId } = await seedIntraOrgThreadFixture({ internalEmail });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-rewrite-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalEmail, name: 'Intra-Org Technician' },
+        to: [{ email: mailbox, name: 'Helpdesk' }],
+        subject: 'FW: Forwarded customer chain',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Relayed through a verified list.', html: undefined },
+        attachments: [],
+        headers: { 'x-resolved-original-sender': internalEmail },
+      } as any,
+    });
+
+    expect(result.outcome).toBe('quarantined');
+    expect(result.outcome === 'quarantined' ? result.reason : null).toBe('unauthorized_thread_header_sender');
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticketId });
+    expect(comments).toHaveLength(0);
+  });
+
   it('Contact reply match: reply-token threading stores contact-authored comment when sender has no user', async () => {
     const providerId = uuidv4();
     const mailbox = `support-ms-contact-reply-${uuidv4().slice(0, 6)}@example.com`;
@@ -3179,6 +3393,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -4426,6 +4641,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -4505,6 +4721,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();

@@ -10,7 +10,11 @@ import type {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { parseCalendarDateTime } from '@alga-psa/core';
-import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
+import {
+  convertRecurrenceLinesToPattern,
+  convertRecurrencePatternToRRULE,
+  isUnsupportedRecurrence,
+} from './recurrenceConverter';
 
 export async function mapScheduleEntryToExternalEvent(
   entry: IScheduleEntry,
@@ -203,6 +207,28 @@ function restoreCalendarNotes(notes: string | undefined, provider: 'google' | 'm
   return decodeHtmlText(text);
 }
 
+/**
+ * The notes Alga stores for a provider event: the outbound mapper appends an
+ * `[Alga calendar: <name>]` line for group calendars, so a raw provider
+ * description is never comparable with `schedule_entries.notes` directly.
+ * Exported so callers that compare the two baselines (series instance vs. its
+ * stored master) use exactly this pipeline.
+ */
+export function externalEventNotes(
+  event: ExternalCalendarEvent,
+  provider: 'google' | 'microsoft',
+): string | undefined {
+  return restoreCalendarNotes(
+    stripCalendarMarker(
+      event.description,
+      event.extendedProperties?.private?.[CALENDAR_MARKER_NAME_PROPERTY],
+      Number.parseInt(event.extendedProperties?.private?.[CALENDAR_MARKER_NOTE_COUNT_PROPERTY] ?? '', 10)
+    ),
+    provider,
+    event.extendedProperties?.private?.[CALENDAR_MARKER_NOTES_FORMAT_PROPERTY]
+  );
+}
+
 export async function mapExternalEventToScheduleEntry(
   event: ExternalCalendarEvent,
   tenant: string,
@@ -294,8 +320,23 @@ export async function mapExternalEventToScheduleEntry(
   let recurrencePattern: IRecurrencePattern | null = null;
   if (event.recurrence && event.recurrence.length > 0) {
     try {
-      const { convertRRULEToRecurrencePattern } = await import('./recurrenceConverter');
-      recurrencePattern = convertRRULEToRecurrencePattern(event.recurrence[0], startDate);
+      // The whole recurrence[] array matters: Google ships EXDATE/RDATE lines
+      // alongside the RRULE, and the series' own zone keeps local time stable
+      // across DST. recurrenceTimeZone comes first because Graph reports
+      // start.timeZone as UTC while the rule itself is anchored elsewhere.
+      const conversion = convertRecurrenceLinesToPattern(
+        event.recurrence,
+        startDate,
+        event.recurrenceTimeZone || event.start.timeZone || event.originalStartTime?.timeZone
+      );
+      if (conversion && !isUnsupportedRecurrence(conversion)) {
+        recurrencePattern = conversion.pattern;
+      } else if (conversion && isUnsupportedRecurrence(conversion)) {
+        console.warn('[eventMapping] Unsupported recurrence rule; importing without a pattern', {
+          eventId: event.id,
+          reason: conversion.reason,
+        });
+      }
     } catch (error) {
       console.error('Failed to convert RRULE to recurrence pattern:', error);
     }
@@ -305,15 +346,7 @@ export async function mapExternalEventToScheduleEntry(
     ...(algaEntryId ? { entry_id: algaEntryId } : {}),
     tenant,
     title: event.title,
-    notes: restoreCalendarNotes(
-      stripCalendarMarker(
-        event.description,
-        event.extendedProperties?.private?.[CALENDAR_MARKER_NAME_PROPERTY],
-        Number.parseInt(event.extendedProperties?.private?.[CALENDAR_MARKER_NOTE_COUNT_PROPERTY] ?? '', 10)
-      ),
-      provider,
-      event.extendedProperties?.private?.[CALENDAR_MARKER_NOTES_FORMAT_PROPERTY]
-    ),
+    notes: externalEventNotes(event, provider),
     scheduled_start: startDate,
     scheduled_end: endDate,
     is_all_day: !!event.start.date && !event.start.dateTime && !!event.end.date && !event.end.dateTime,

@@ -74,4 +74,27 @@ describe('buildRequest (T004 — query/body placement + read/mutation classifica
     expect(req.isMutation).toBe(true);
     expect(req.body).toBeUndefined(); // DELETE drops the body per chat parity
   });
+
+  it('sends the body on a DELETE whose entry documents one (bulk deletes)', () => {
+    const e = entry({
+      id: 'contract-lines.bulk-delete',
+      method: 'delete',
+      path: '/api/v1/contract-lines/bulk/delete',
+      requestBodySchema: { type: 'object', properties: { contract_line_ids: { type: 'array' } } },
+    });
+    const req = buildRequest(e, { body: { contract_line_ids: ['c1'] } });
+    expect(req.method).toBe('DELETE');
+    expect(req.body).toBe('{"contract_line_ids":["c1"]}');
+  });
+
+  it('keeps a bodyless DELETE bodyless when the entry declares no body', () => {
+    const e = entry({
+      id: 'tickets.delete',
+      method: 'delete',
+      path: '/api/v1/tickets/{id}',
+      parameters: [{ name: 'id', in: 'path', required: true }],
+    });
+    const req = buildRequest(e, { path: { id: '7' }, body: { x: 1 } });
+    expect(req.body).toBeUndefined();
+  });
 });

@@ -1,0 +1,138 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration widens custody close_reason CHECK with returned_to_vendor and rma_events event_type CHECK with dead_unit_shipped, vendor_receipt_confirmed; reversible",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "CustodyCloseReason and ClosableCustodyReason accept returned_to_vendor",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "WARRANTY_TRANSITIONS has ship_dead_unit_to_vendor (replaced/repaired -> dead_unit_owed), advance track only",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "WARRANTY_TRANSITIONS has confirm_vendor_receipt (dead_unit_owed -> closed/resolved), advance track only",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Generic close accepts dead_unit_owed and leaves custody untouched",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "shipDeadUnitToVendor core records carrier, tracking, optional return_by; moves custody to with_vendor with dead-unit serial note",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Same-tracking re-ship is a no-op; different tracking from dead_unit_owed is refused",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "confirmVendorReceipt core closes custody as returned_to_vendor and the case as resolved",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Server actions shipDeadUnitToVendor and confirmVendorReceipt with existing warranty permissions and record-level gate",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Stock-track entry points refuse warranty cases; warranty cores refuse stock cases",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Dead-units-owed report and dashboard exclude warranty dead_unit_owed cases",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "RMA detail: Ship dead unit to vendor action on replaced/repaired advance cases",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "RMA detail: Vendor received dead unit action on dead_unit_owed",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Overdue badge per PRD \u00a72.4: replaced/repaired with today > return_by (not yet shipped), dead_unit_owed with outbound_shipped_at day > return_by (shipped late); never for on-time shipments awaiting receipt; nothing automatic",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "RMA list shows Dead unit to vendor label for warranty dead_unit_owed",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Locale strings in all languages and pseudo-locales",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "receive_replacement on the advance track accepts an optional return_by (vendor ship-by date anchored on replacement delivery) and stores it on rma_cases.return_by; Return by field in the receive-replacement form",
+    "implemented": true,
+    "prdRefs": [
+      "\u00a72.4"
+    ]
+  }
+]

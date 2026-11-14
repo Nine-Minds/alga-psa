@@ -19,6 +19,12 @@ export default defineConfig({
       // alias scheduling and billing already use.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      // The client-scope narrowing reads the authorization kernel and the tenant table manifest from source,
+      // for the same reason: their exports maps point at dist/.
+      { find: /^@alga-psa\/authorization\/kernel$/, replacement: path.resolve(__dirname, '../authorization/src/kernel/index.ts') },
+      { find: /^@alga-psa\/authorization\/(.*)$/, replacement: path.resolve(__dirname, '../authorization/src/$1') },
+      { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
+      { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/lib/$1') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
       // Same reason for the UI lib helpers the action error shapes come from:
       // their exports map points at ui/dist, which this lane never builds.

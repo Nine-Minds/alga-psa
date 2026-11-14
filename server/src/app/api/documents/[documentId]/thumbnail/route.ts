@@ -6,6 +6,7 @@ import { StorageError, StorageProviderFactory } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
+import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 
 /**
  * GET /api/documents/[documentId]/thumbnail
@@ -70,11 +71,15 @@ export async function GET(
     const provider = await StorageProviderFactory.createProvider();
     const buffer = await provider.download(fileRecord.storage_path);
 
-    // Do not cache protected bytes across permission changes.
     const headers = new Headers();
-    headers.set('Content-Type', fileRecord.mime_type || 'image/jpeg');
+    // Derived bytes may render inline only for the established raster allowlist.
+    // Legacy rows that point at an upload are neutralized by the shared policy.
+    for (const [name, value] of Object.entries(buildDocumentPreviewHeaders(fileRecord.mime_type))) {
+      headers.set(name, value);
+    }
     headers.set('Content-Length', buffer.length.toString());
 
+    // Do not cache protected bytes across permission changes.
     headers.set('Cache-Control', 'private, no-store');
 
     // ETag based on file ID for cache validation

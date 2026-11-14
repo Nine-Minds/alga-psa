@@ -54,8 +54,9 @@ function normalizeRecord(value: unknown): Record<string, unknown> {
  *
  * Faithful to the EE chat assistant's request construction (path-param
  * substitution with layered fallbacks, query/header collection, JSON body for
- * non-GET/DELETE), minus transport concerns. Fails fast on unresolved path
- * parameters per repo standards.
+ * anything but a read — DELETE included when the entry documents one), minus
+ * transport concerns. Fails fast on unresolved path parameters per repo
+ * standards.
  */
 export function buildRequest(
   entry: ChatApiRegistryEntry,
@@ -128,7 +129,12 @@ export function buildRequest(
 
   let body: string | undefined;
   const bodyValue = args.body ?? args.data ?? args.payload ?? genericParameters.body ?? undefined;
-  if (bodyValue !== undefined && method !== 'GET' && method !== 'DELETE') {
+  // Only GET/HEAD never carry a body. A DELETE does when the endpoint documents
+  // one — the bulk deletes take their ids there, and stripping it turned every
+  // such call into a 400/500 (alga-2026-0002902).
+  const bodyAllowed = !READ_METHODS.has(method)
+    && (method !== 'DELETE' || entry.requestBodySchema !== undefined);
+  if (bodyValue !== undefined && bodyAllowed) {
     body = typeof bodyValue === 'string' ? bodyValue : JSON.stringify(bodyValue);
   }
 

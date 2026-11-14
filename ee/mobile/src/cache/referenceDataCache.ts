@@ -22,3 +22,13 @@ export function setCachedTicketPriorities(key: string, value: unknown): void {
   ticketPrioritiesCache.set(key, value);
 }
 
+const ticketCategoriesCache = new TtlCache<unknown>({ defaultTtlMs: TEN_MIN_MS });
+
+export function getCachedTicketCategories(key: string): unknown | null {
+  return ticketCategoriesCache.get(key);
+}
+
+export function setCachedTicketCategories(key: string, value: unknown): void {
+  ticketCategoriesCache.set(key, value);
+}
+

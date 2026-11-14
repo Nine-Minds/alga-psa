@@ -28,9 +28,9 @@ vi.mock('@alga-psa/user-composition/hooks', () => ({
   useUserPreference: (key: string, opts: any) => {
     if (key === 'activitiesTableFilters') {
       mocks.filterPrefInstances += 1;
-      return { value: opts.defaultValue, setValue: mocks.setSavedFilters, hasLoadedInitial: true };
+      return { value: opts.defaultValue, setValue: mocks.setSavedFilters, hasLoadedInitial: true, hasResolved: true };
     }
-    return { value: 'cards', setValue: mocks.setViewMode, hasLoadedInitial: true };
+    return { value: 'cards', setValue: mocks.setViewMode, hasLoadedInitial: true, hasResolved: true };
   },
 }));
 vi.mock('@alga-psa/ui/components/ViewSwitcher', () => ({

@@ -4,12 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../ThemeContext";
 import { Avatar } from "./Avatar";
+import { DisplayTagBadges, type DisplayTag } from "./DisplayTagBadges";
 
 export type EntityPickerItem = {
   id: string;
   label: string;
   subtitle?: string | null;
   imageUri?: string | null;
+  /** Chip tags shown after the label (e.g. a client's or contact's VIP badge). */
+  tags?: readonly DisplayTag[] | null;
 };
 
 export function EntityPickerModal({
@@ -22,6 +25,7 @@ export function EntityPickerModal({
   error,
   searchable = true,
   selectedId,
+  selectedIds,
   authToken = undefined,
   onSearch,
   onSelect,
@@ -38,6 +42,11 @@ export function EntityPickerModal({
   error: string | null;
   searchable?: boolean;
   selectedId?: string | null;
+  /**
+   * Multi-select: every id here is ticked and the sheet stays open on a tap, so
+   * `onSelect` toggles instead of choosing. Takes precedence over `selectedId`.
+   */
+  selectedIds?: string[] | null;
   authToken?: string;
   onSearch?: (query: string) => void;
   onSelect: (id: string, label: string) => void;
@@ -92,8 +101,10 @@ export function EntityPickerModal({
       <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: spacing.xl, maxHeight: "70%" }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, paddingBottom: spacing.sm }}>
           <Text style={{ ...typography.title, color: colors.text }}>{title}</Text>
-          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("close")} hitSlop={12}>
-            <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>{t("close")}</Text>
+          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={selectedIds ? t("done") : t("close")} hitSlop={12}>
+            <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>
+              {selectedIds ? t("done") : t("close")}
+            </Text>
           </Pressable>
         </View>
 
@@ -164,7 +175,7 @@ export function EntityPickerModal({
               </Text>
             ) : null}
             {filtered.map((item, idx) => {
-              const isSelected = selectedId === item.id;
+              const isSelected = selectedIds ? selectedIds.includes(item.id) : selectedId === item.id;
               return (
                 <Pressable
                   key={`${item.id}-${idx}`}
@@ -190,9 +201,12 @@ export function EntityPickerModal({
                     </View>
                   ) : null}
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.body, color: colors.text }}>
-                      {item.label}{isSelected ? " \u2713" : ""}
-                    </Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
+                      <Text style={{ ...typography.body, color: colors.text }}>
+                        {item.label}{isSelected ? " \u2713" : ""}
+                      </Text>
+                      <DisplayTagBadges tags={item.tags} />
+                    </View>
                     {item.subtitle ? (
                       <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
                         {item.subtitle}

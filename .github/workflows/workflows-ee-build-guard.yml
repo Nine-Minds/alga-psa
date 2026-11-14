@@ -39,7 +39,13 @@ concurrency:
 jobs:
   ee-workflows-build-guard:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The single-worker EE webpack compile (see NODE_BUILD_CPUS below) has been
+    # observed taking 10.7-18.1 min on main and crept past 23 min once the
+    # ticket-template REST/MCP surface added its share of routes, schemas and
+    # generated registry entries. 30 min left ~0 slack after "Collecting build
+    # traces"; 40 min restores the headroom the rest of this job's history
+    # (memory bumps, CPU serialization) already shows this build needs.
+    timeout-minutes: 40
 
     steps:
       - name: Checkout

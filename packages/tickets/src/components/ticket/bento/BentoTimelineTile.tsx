@@ -1,5 +1,6 @@
 'use client';
 
+import { toast } from 'react-hot-toast';
 import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from '../CommentAudienceControl';
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -55,6 +56,7 @@ import { BentoTile, BentoTileEmpty, BentoTileEmptyScope } from '@alga-psa/ui/com
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
+import { useDefaultNotificationSuppression } from '../../../lib/notificationSuppressionDefaults';
 import { dateToWallTimeString, getUserTimeZone, workedMinutes, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -149,11 +151,6 @@ interface BentoTimelineTileProps {
 }
 
 const NO_STATUS_CHANGE = '__no_status_change__';
-
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
 
 type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 
@@ -507,6 +504,7 @@ export function BentoTimelineTile({
   const scheduleIsValid = !isClientComposer || !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [hasDraft, setHasDraft] = useState(false);
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
     defaultNotificationSuppression
   );
@@ -563,6 +561,9 @@ export function BentoTimelineTile({
       onNewCommentContentChange(DEFAULT_BLOCK);
       setHasDraft(false); setComposeHasContent(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
       setIsResolutionToggle(false);
+      // onDiscard runs only on a real discard (not on submit, not on "Continue editing"), so the host
+      // can drop staged state (e.g. co-managed attach-picker files) that must not outlive a cancelled draft.
+      dataSource.screen.onComposerCancel?.();
     },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
@@ -619,7 +620,13 @@ export function BentoTimelineTile({
   const handleToggleReaction = useCallback(
     async (commentId: string, emoji: string) => {
       try {
-        const { added } = await toggleCommentReaction(commentId, emoji);
+        const reactionResult = await toggleCommentReaction(commentId, emoji);
+      // A refused write (e.g. read-only workspace) comes back as a returned action error, not `{ added }`.
+      if (isActionMessageError(reactionResult) || isActionPermissionError(reactionResult)) {
+        toast.error(getErrorMessage(reactionResult));
+        return;
+      }
+      const { added } = reactionResult;
         if (added && currentUser?.id && currentUser.name) {
           setReactionUserNames((prev) =>
             prev[currentUser.id] ? prev : { ...prev, [currentUser.id]: currentUser.name },
@@ -877,8 +884,8 @@ export function BentoTimelineTile({
           onContentChange={onContentChange}
           onSave={updates => { if (!editUploadSession.isUploading) onSaveComment(updates); }}
           onClose={editUploadSession.requestDiscard}
-          onEdit={() => onEditComment(comment)}
-          onDelete={onDeleteComment}
+          onEdit={dataSource.capabilities.commentOwnEdit ? () => onEditComment(comment) : undefined}
+          onDelete={dataSource.capabilities.commentOwnEdit ? onDeleteComment : undefined}
           onReply={
             !readOnly && onAddReplyComment && commentId
               ? () => setReplyingToCommentId(commentId)
@@ -886,7 +893,7 @@ export function BentoTimelineTile({
           }
           uploadFile={editUploadSession.uploadFile}
           reactions={reactionsMap[commentId] || []}
-          onToggleReaction={handleToggleReaction}
+          onToggleReaction={dataSource.capabilities.reactionToggle ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
         />

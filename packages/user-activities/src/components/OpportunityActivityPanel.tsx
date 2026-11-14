@@ -10,10 +10,11 @@ import type { IOpportunityDetail } from '@alga-psa/types';
 // Targeted import (not the /actions barrel) so only this action module lands in
 // the route's server-reference manifest.
 import { getOpportunity } from '@alga-psa/opportunities/actions/opportunityActions';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 function formatCents(cents: number, currency: string): string {
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format((cents || 0) / 100);
+    return formatCurrencyWithSymbol((cents || 0) / 100, undefined, currency);
   } catch {
     return `${((cents || 0) / 100).toFixed(2)} ${currency}`;
   }

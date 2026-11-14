@@ -31,6 +31,7 @@ import {
   ServiceCard,
 } from './PulseCards';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -191,11 +192,9 @@ export default function ClientCommandCenter({
   const currencyCode = pulse?.money?.currencyCode ?? 'USD';
   const formatMoney = useCallback((cents: number) => {
     try {
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: currencyCode,
+      return formatCurrencyWithSymbol(cents / 100, undefined, currencyCode, {
         maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-      }).format(cents / 100);
+      });
     } catch {
       return money(cents);
     }
@@ -407,6 +406,9 @@ export default function ClientCommandCenter({
               // Only when Equipment holds the header action — otherwise the
               // header already opens Assets and the footer link would duplicate it.
               onOpenAssetList={tabIds.has('equipment') ? focusOpener('assets') : null}
+              // Only when the Audits tab is registered — it is gated on
+              // asset:read, so without it the link would lead to a refusal.
+              onOpenAudits={tabIds.has('audits') ? focusOpener('audits') : null}
               onOpenAsset={(assetId) => router.push(`/msp/assets/${assetId}`)}
               className={SPAN_HALF}
               t={t}

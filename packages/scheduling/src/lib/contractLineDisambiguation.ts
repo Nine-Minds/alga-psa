@@ -4,7 +4,9 @@ import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
+import { delegateToTimeSource } from './timeSource';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 import {
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionOptions,
@@ -252,6 +254,7 @@ export async function getEligibleContractLines(
   });
 }
 
+// LEVERAGE: pattern eligible-contract-lines-for-ui — three near-identical copies of this lookup (packages/billing/src/lib, packages/scheduling/src/lib, server/src/lib/utils); the guard is shared (@alga-psa/auth/lib/commercialAccess), the body is not. A package-direction-safe shared implementation would remove two.
 export async function getEligibleContractLinesForUI(
   clientId: string,
   serviceId: string,
@@ -272,6 +275,7 @@ export async function getEligibleContractLinesForUI(
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
+  await assertCommercialReadPermission(currentUser);
   const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
@@ -334,6 +338,10 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
       const result = await db.table('interactions').where({ interaction_id: workItemId }).first('client_id');
       return result?.client_id || null;
     }
+    // Time-source seam: a registered provider answers for the work item types native does not know; native misses.
+    const delegated = await delegateToTimeSource({ tenant, userId: currentUser.user_id, workItemType, workItemId },
+      (source, ctx) => source.work.billingContext(ctx, db, workItemType, workItemId));
+    if (delegated.handled) return delegated.value.clientId;
     return null;
   } catch (error) {
     console.error('Error getting client ID for work item:', error);

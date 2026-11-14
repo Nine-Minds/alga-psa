@@ -203,7 +203,11 @@ describe('msgraph emulator', { shuffle: false }, () => {
 
     const rejected = await exchange(basic(clientId, 'wrong-secret'));
     expect(rejected.status).toBe(401);
-    expect(await rejected.json()).toMatchObject({ error: 'invalid_client' });
+    const rejectedBody = await rejected.json();
+    expect(rejectedBody).toMatchObject({ error: 'invalid_client', error_codes: [7000215] });
+    expect(rejectedBody.error_description).toContain(
+      `AADSTS7000215: Invalid client secret provided. Ensure the secret being sent in the request is the client secret value, not the client secret ID, for a secret added to app '${clientId}'.`,
+    );
 
     const granted = await exchange(basic(clientId, clientSecret));
     expect(granted.status).toBe(200);

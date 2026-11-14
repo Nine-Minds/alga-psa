@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import type { ITicketResource } from '@alga-psa/types';
@@ -94,6 +95,40 @@ export type TicketResourceNotificationSuppression = {
   suppressInternalNotifications?: boolean;
 };
 
+/** Authorization contract required by user initiated resource operations. */
+export type TicketResourceAuthorizationContext =
+  | {
+      kind: 'user';
+      authorizeTicket: (ticketId: string, action: 'read' | 'update') => Promise<unknown>;
+    }
+  | { kind: 'system' }
+  | { kind: 'creation'; ticketId: string };
+
+async function authorizeResourceOperation(
+  authorization: TicketResourceAuthorizationContext | undefined,
+  ticketId: string,
+  action: 'read' | 'update',
+): Promise<void> {
+  if (!authorization) throw new Error('Ticket resource operations require explicit authorization context');
+  switch (authorization.kind) {
+    case 'user':
+      if (typeof authorization.authorizeTicket !== 'function') {
+        throw new Error('User ticket resource operations require a ticket authorization function');
+      }
+      await authorization.authorizeTicket(ticketId, action);
+      return;
+    case 'creation':
+      if (authorization.ticketId !== ticketId) {
+        throw new Error('Ticket creation authorization cannot be used for a different ticket');
+      }
+      return;
+    case 'system':
+      return;
+    default:
+      throw new Error('Invalid ticket resource authorization context');
+  }
+}
+
 /** Publish what `addTicketResourceCore` returned, once its transaction commits. */
 export async function publishTicketResourceEvent(event: TicketResourceEvent): Promise<void> {
   const ctx = {
@@ -126,9 +161,11 @@ export async function addTicketResourceCore(
   ticketId: string,
   additionalUserId: string,
   role: string,
+  authorization: TicketResourceAuthorizationContext,
   notificationSuppression: TicketResourceNotificationSuppression = {},
   source: string = TICKET_ACTIVITY_SOURCE.UI,
 ): Promise<AddTicketResourceResult> {
+  await authorizeResourceOperation(authorization, ticketId, 'update');
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: ticketId })
     .first();
@@ -154,6 +191,9 @@ export async function addTicketResourceCore(
     if (!updatedTicket) {
       throw new Error(`Primary assignment update for ticket ${ticketId} completed without returning the updated ticket.`);
     }
+
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, ticketId);
 
     await writeAdditionalAgentActivity(
       trx, tenant, actorUserId, ticketId, TICKET_ACTIVITY_EVENT.ASSIGNED, additionalUserId,
@@ -228,6 +268,7 @@ export async function removeTicketResourceCore(
   tenant: string,
   actorUserId: string | null,
   assignmentId: string,
+  authorization: TicketResourceAuthorizationContext,
   source: string = TICKET_ACTIVITY_SOURCE.UI,
 ): Promise<void> {
   const resource = await tenantScopedTable(trx, 'ticket_resources', tenant)
@@ -237,6 +278,8 @@ export async function removeTicketResourceCore(
   if (!resource) {
     throw new TicketResourceError(`Ticket resource not found in tenant ${tenant}`, 'not_found');
   }
+
+  await authorizeResourceOperation(authorization, resource.ticket_id, 'update');
 
   await tenantScopedTable(trx, 'ticket_resources', tenant)
     .where({ assignment_id: assignmentId })
@@ -251,8 +294,10 @@ export async function removeTicketResourceCore(
 export async function getTicketResourcesCore(
   trx: Knex.Transaction,
   tenant: string,
-  ticketId: string
+  ticketId: string,
+  authorization: TicketResourceAuthorizationContext,
 ): Promise<ITicketResource[]> {
+  await authorizeResourceOperation(authorization, ticketId, 'read');
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: ticketId })
     .first();

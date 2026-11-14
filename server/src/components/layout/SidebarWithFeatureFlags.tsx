@@ -27,6 +27,8 @@ import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const CO_MANAGED_ADMINISTRATION_HREF = '/msp/co-management/administration';
+/** Menu rows that exist only while the co-managed capability is served. */
+export const CO_MANAGED_GATED_HREFS: ReadonlySet<string> = new Set([CO_MANAGED_ADMINISTRATION_HREF, '/msp/tickets/customer']);
 
 export function filterNavigationSectionsBySelfHost(
   sections: readonly NavigationSection[],
@@ -226,9 +228,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
-        .filter((item) => coManagedServed || item.href !== CO_MANAGED_ADMINISTRATION_HREF)
-        .map((item) => (!coManagedServed && item.subItems?.some((sub) => sub.href === CO_MANAGED_ADMINISTRATION_HREF)
-          ? { ...item, subItems: item.subItems.filter((sub) => sub.href !== CO_MANAGED_ADMINISTRATION_HREF) }
+        .filter((item) => coManagedServed || !item.href || !CO_MANAGED_GATED_HREFS.has(item.href))
+        .map((item) => (!coManagedServed && item.subItems?.some((sub) => sub.href && CO_MANAGED_GATED_HREFS.has(sub.href))
+          ? { ...item, subItems: item.subItems.filter((sub) => !sub.href || !CO_MANAGED_GATED_HREFS.has(sub.href)) }
           : item))
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)

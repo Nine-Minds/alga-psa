@@ -1,0 +1,58 @@
+captured_at_utc=2026-11-03T23:05:25Z
+product_revision=605341a1b06c379b4144e27dbb260beb77fef417
+ALGA_PROJECT_ID=408b0ddd-de45-4ef6-bf35-b88251c8515c
+ALGA_CLI_SOCKET=/tmp/ghostty-pane-ide/agent-cli.sock
+
+$ ALGA_PROJECT_ID=... ALGA_CLI_SOCKET=... alga-dev browser-get-url --paneId=f9b1c96a-95c0-46ea-b8af-e0deaa1b6039 --pretty
+Error: Pane f9b1c96a-95c0-46ea-b8af-e0deaa1b6039 belongs to a different host
+exit=1
+
+$ ALGA_PROJECT_ID=... ALGA_CLI_SOCKET=... alga-dev list-pane-tabs --paneId=f9b1c96a-95c0-46ea-b8af-e0deaa1b6039 --pretty
+Error: Pane not found: f9b1c96a-95c0-46ea-b8af-e0deaa1b6039
+exit=1
+
+app_port_checks:
+3835 curl: (7) Failed to connect to 127.0.0.1 port 3835 after 0 ms: Could not connect to server
+http=000
+23835 curl: (7) Failed to connect to 127.0.0.1 port 23835 after 0 ms: Could not connect to server
+http=000
+
+
+current_inventory_control_at_utc=2026-11-03T23:08:47Z
+
+$ ALGA_PROJECT_ID=... ALGA_CLI_SOCKET=... alga-dev list-browsers --allTabs --pretty
+{
+  "browsers": [
+    {
+      "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+      "url": "https://example.com/",
+      "title": "Example Domain",
+      "isLoading": false,
+      "canGoBack": true,
+      "canGoForward": false
+    }
+  ]
+}
+
+$ browser-get-url/list-pane-tabs/browser-navigate for inventory pane 363aee64-8363-4f73-a507-21e87b473299
+{
+  "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+  "success": true,
+  "result": {
+    "url": "https://example.com/",
+    "title": "Example Domain"
+  }
+}
+{
+  "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+  "success": true,
+  "tabs": [
+    {
+      "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+      "type": "browser",
+      "active": true
+    }
+  ],
+  "scopedTo": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"
+}
+{"paneId":"363aee64-8363-4f73-a507-21e87b473299","success":true,"result":{"url":"https://example.com"}}

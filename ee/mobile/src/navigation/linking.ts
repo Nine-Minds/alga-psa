@@ -28,9 +28,12 @@ export function normalizeHostedRecordUrl(rawUrl: string): string {
       return `alga://ticket/${id}`;
     case "asset":
       return `alga://asset/${id}`;
+    case "project":
+      return `alga://project/${id}`;
     case "stock_unit":
       return `alga://stock-unit/${id}`;
     case "project_task":
+      // A project URL carrying a taskId means the task, not the project.
       return match.projectId && UUID_RE.test(match.projectId) ? `alga://project-task/${id}` : rawUrl;
     default:
       return rawUrl;
@@ -51,6 +54,8 @@ function isAllowedPath(path: string): boolean {
   if (ticketMatch) return UUID_RE.test(ticketMatch[1] ?? "");
   const taskMatch = /^project-task\/(.+)$/.exec(path);
   if (taskMatch) return UUID_RE.test(taskMatch[1] ?? "");
+  const projectMatch = /^project\/(.+)$/.exec(path);
+  if (projectMatch) return UUID_RE.test(projectMatch[1] ?? "");
   const assetMatch = /^asset\/(.+)$/.exec(path);
   if (assetMatch) return UUID_RE.test(assetMatch[1] ?? "");
   const unitMatch = /^stock-unit\/(.+)$/.exec(path);
@@ -102,9 +107,18 @@ function requiresSession(url: string): boolean {
   return (
     url.startsWith("alga://ticket/") ||
     url.startsWith("alga://project-task/") ||
+    url.startsWith("alga://project/") ||
     url.startsWith("alga://asset/") ||
     url.startsWith("alga://stock-unit/")
   );
+}
+
+/**
+ * Synchronous view of the held link, for callers that run after boot (a fresh
+ * sign-in) and cannot await the cold-start URL.
+ */
+export function hasHeldDeepLink(): boolean {
+  return pendingUrl !== null;
 }
 
 function rejectUrl(url: string, message: string): void {
@@ -158,6 +172,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AuthCallback: "auth/callback",
       TicketDetail: "ticket/:ticketId",
       ProjectTaskDetail: "project-task/:taskId",
+      ProjectDetail: "project/:projectId",
       AssetDetail: "asset/:assetId",
       StockUnitDetail: "stock-unit/:unitId",
       Tabs: {

@@ -11,6 +11,7 @@ import {
   assignServiceTaxRate,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
@@ -24,7 +25,6 @@ import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpe
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 
 function tenantTable<Row extends object = Record<string, unknown>>(
@@ -119,7 +119,6 @@ describe('journey: contract wizard → monthly invoice', () => {
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, userId: 'journey-test-user', permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
@@ -262,7 +261,7 @@ describe('journey: contract wizard → monthly invoice', () => {
     });
 
     // Seam 3: the January invoice picks the wizard's line up.
-    const invoice = await generateInvoice(januaryCycleId);
+    const invoice = await generateInvoiceForCycle(januaryCycleId);
     expect(invoice).toBeTruthy();
     expect(invoice).not.toHaveProperty('error');
     expect(invoice?.invoice_id).toBeDefined();

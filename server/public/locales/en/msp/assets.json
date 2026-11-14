@@ -54,6 +54,22 @@
       "closed": "Closed",
       "warranty_review": "Warranty review",
       "repaired": "Repaired"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "assetAuditResult": {
+      "expected": "Expected",
+      "present": "Present",
+      "missing": "Missing",
+      "unexpected": "Unexpected"
+    },
+    "assetAuditMethod": {
+      "scan": "Scan",
+      "manual": "Manual",
+      "register": "Registered on site"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Any custody",
         "inCustody": "In MSP custody",
         "notInCustody": "Not in MSP custody"
+      },
+      "audit": {
+        "any": "Any audit result",
+        "present": "Last audit: present",
+        "missing": "Last audit: missing",
+        "never": "Never audited",
+        "stale": "Not audited in 90 days"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Location",
       "purchaseDate": "Purchase date",
       "warrantyEnd": "Warranty end",
-      "notProvided": "Not provided"
+      "notProvided": "Not provided",
+      "lastAudited": "Last audited",
+      "neverAudited": "Never audited"
     },
     "info": {
       "client": "Client",
@@ -739,6 +764,14 @@
     "ownership": {
       "client": "Client-owned",
       "msp": "MSP-owned"
+    },
+    "create": {
+      "success": "Asset {{tag}} created",
+      "autoTag": "Assign next automatic tag",
+      "preview": "Next tag preview: {{tag}} (preview does not reserve a number)",
+      "selectClient": "Select a client to preview",
+      "addAnother": "Save and add another",
+      "submit": "Create asset"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1091,10 @@
       "vendor": "Vendor",
       "purchaseCost": "Purchase cost",
       "orderNumber": "Order no.",
-      "ownership": "Ownership"
+      "ownership": "Ownership",
+      "autoAssetTag": "Assign automatically",
+      "assetTagPreviewLoading": "Select a client to preview the next tag",
+      "previewNotReserved": "Preview only; assigned on save"
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -1447,7 +1483,182 @@
   "maintenanceCommandCenter": {
     "title": "Maintenance",
     "description": "Command center for preventive work across all client assets.",
-    "assetsLink": "Assets"
+    "assetsLink": "Assets",
+    "notRecorded": "Not recorded",
+    "system": "System",
+    "checklist": {
+      "complete": "Complete",
+      "incomplete": "Incomplete"
+    },
+    "weekdays": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    },
+    "cadence": {
+      "custom": "Custom",
+      "customSchedule": "Custom schedule",
+      "everyUnit": "Every {{unit}}",
+      "everyCountUnit": "Every {{count}} {{unit}}",
+      "onDays": "{{base}} on {{days}}",
+      "onDatesOfMonth": "{{base}} on the {{dates}}",
+      "frequency": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "yearly": "Yearly"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}}d overdue",
+      "dueToday": "due today",
+      "inDays": "in {{count}}d"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "refresh": "Refresh",
+      "newPlan": "New maintenance plan",
+      "skip": "Skip",
+      "skipTooltip": "Skip with a required reason — the plan advances to its next occurrence",
+      "complete": "Complete maintenance",
+      "createTicket": "Create ticket",
+      "openTicket": "Open ticket ↗",
+      "pausePlan": "Pause plan"
+    },
+    "assetPicker": {
+      "title": "Select an asset",
+      "searchPlaceholder": "Search by name, tag, or serial number",
+      "loading": "Loading assets…",
+      "loadFailed": "Unable to load assets.",
+      "empty": "No assets found.",
+      "showingFirst": "Showing first {{shown}} of {{total}} — refine your search."
+    },
+    "kpi": {
+      "overdue": "Overdue",
+      "dueToday": "Due today",
+      "upcoming7d": "Upcoming 7d",
+      "openTickets": "Open tickets",
+      "compliance90d": "Compliance 90d",
+      "clickToFilter": "click to filter",
+      "allClear": "all clear",
+      "quietWeek": "quiet week ahead",
+      "linkedToOccurrences": "linked to occurrences",
+      "onTimeCompletion": "on-time completion"
+    },
+    "tabs": {
+      "queue": "Work queue",
+      "plans": "Plan queue",
+      "history": "History"
+    },
+    "filters": {
+      "searchPlaceholder": "Search plans, assets, or clients",
+      "actionable": "Actionable",
+      "allStatuses": "All statuses",
+      "completed": "Completed",
+      "skipped": "Skipped",
+      "button": "Filters",
+      "allClients": "All clients",
+      "allAssetTypes": "All asset types",
+      "allPlanTypes": "All plan types",
+      "due": "Due",
+      "clearAll": "Clear all",
+      "done": "Done",
+      "clientChip": "Client"
+    },
+    "viewMode": {
+      "list": "List",
+      "calendar": "Calendar"
+    },
+    "queue": {
+      "actionableTitle": "Actionable occurrences",
+      "plansTitle": "Active plan queue (occurrence-backed)",
+      "loading": "Loading maintenance…",
+      "empty": "No maintenance occurrences match these filters.",
+      "emptyFiltered": "No maintenance occurrences match these filters. Clear a filter or widen the due-date range.",
+      "emptyHistory": "Completed and skipped occurrences will appear here once maintenance is closed out.",
+      "emptyPlans": "Open plan occurrences will appear here as schedules generate work.",
+      "clearBeyond": "Queue is clear beyond these {{count}} — widen the due range or check the plan queue.",
+      "allCaughtUp": "All caught up",
+      "nextDueIn": "— next due in {{count}}d",
+      "shownCount": "{{shown}} shown · {{open}} open ·",
+      "inHistory": "{{count}} in history",
+      "itemCount_one": "· {{count}} item",
+      "itemCount_other": "· {{count}} items",
+      "overdueCount": "{{count}} overdue",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} at a glance",
+      "overdue": "overdue",
+      "today": "today",
+      "upcoming": "upcoming"
+    },
+    "calendar": {
+      "dueCount": "{{count}} due",
+      "today": "Today",
+      "moreCount": "+{{count}} more",
+      "legend": "Legend",
+      "scheduled": "Scheduled"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Type",
+      "cadence": "Cadence",
+      "nextDue": "Next due",
+      "lastDone": "Last done",
+      "assignee": "Assignee",
+      "createdBy": "Created by",
+      "linkedTicket": "Linked ticket"
+    },
+    "detail": {
+      "noSelection": "No occurrence selected",
+      "noSelectionHint": "Select an occurrence from the queue to see its asset, plan, linked ticket, and execution actions — or clear the filters to see more work.",
+      "unassignedClient": "Unassigned client",
+      "dueSuffix": "· due {{date}}",
+      "nextDueTooltip": "Next due advances from the actual completion date.",
+      "never": "Never",
+      "unassigned": "Unassigned",
+      "assignViaTicket": "Assign via ticket",
+      "ticketClosed": "Closed",
+      "ticketOpen": "Open",
+      "noTicketYet": "None yet",
+      "execution": "Execution",
+      "noChecklistPrefix": "No checklist on this plan —",
+      "addStepsLink": "add steps on the asset",
+      "noChecklistSuffix": "to guide technicians.",
+      "timeline": "Timeline"
+    },
+    "timeline": {
+      "created": "Occurrence created",
+      "ticketLinked": "Ticket linked — {{ticket}}",
+      "dueRepeats": "Due — repeats {{cadence}}",
+      "completedBy": "Completed by {{name}}{{notes}}",
+      "skippedBy": "Skipped by {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Completion evidence",
+      "performed": "Performed:",
+      "performedBy": "Performed by:",
+      "notes": "Notes:",
+      "checklist": "Checklist:",
+      "skipTitle": "Skip evidence",
+      "reason": "Reason:",
+      "closedBy": "Closed by:",
+      "closed": "Closed:"
+    },
+    "skip": {
+      "title": "Skip maintenance",
+      "reason": "Reason"
+    },
+    "ticket": {
+      "title": "Maintenance: {{plan}}",
+      "description": "{{type}} maintenance due {{date}}. Occurrence: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
@@ -1653,7 +1864,8 @@
     "assignDialogTitle": "Assign this asset",
     "sharedWorkspace": "Shared workspace",
     "sharedWorkspaceValue": "{{name}} · {{count}} people",
-    "billingProfile": "Billing profile"
+    "billingProfile": "Billing profile",
+    "lastAudited": "Last audited"
   },
   "assetTimeline": {
     "title": "Timeline",
@@ -1683,7 +1895,11 @@
       "aGroup": "a group",
       "autoAssignedFrom": "Auto-assigned to {{contact}} from {{provider}}",
       "groupLocationMoved": "Moved to {{location}} with {{group}}",
-      "groupLocationCleared": "Location cleared with {{group}}"
+      "groupLocationCleared": "Location cleared with {{group}}",
+      "audit": "Audit",
+      "auditPresent": "Audit: present",
+      "auditMissing": "Audit: missing",
+      "auditMethod": "Marked by {{method}}"
     },
     "changeTypes": {
       "created": "Created",
@@ -1776,6 +1992,7 @@
       "updateAssets": "Permission denied: Cannot update assets"
     },
     "asset": {
+      "tagAlreadyExists": "This asset tag is already in use or reserved. Scan it to find the existing asset, or enter a different tag.",
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
       "clientNotFound": "Client not found. It may have been deleted. Please refresh and try again.",
       "maintenanceNotFound": "Maintenance schedule not found. It may have been deleted. Please refresh and try again.",
@@ -2146,5 +2363,132 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "assetAudits": {
+    "title": "Site audits",
+    "startAudit": "Start audit",
+    "noLocation": "No location",
+    "loading": "Loading audits…",
+    "empty": "No site audits match this view yet.",
+    "columns": {
+      "audit": "Audit",
+      "client": "Client",
+      "location": "Location",
+      "status": "Status",
+      "startedBy": "Started by",
+      "started": "Started",
+      "completed": "Completed",
+      "expected": "Expected",
+      "present": "Present",
+      "missing": "Missing",
+      "unexpected": "Unexpected"
+    },
+    "filters": {
+      "client": "Client",
+      "allLocations": "All locations",
+      "allStatuses": "All statuses",
+      "started": "Started"
+    },
+    "stats": {
+      "expected": "expected",
+      "present": "present",
+      "missing": "missing",
+      "remaining": "remaining",
+      "unexpected": "unexpected"
+    },
+    "segments": {
+      "remaining": "Remaining",
+      "present": "Present",
+      "missing": "Missing",
+      "unexpected": "Unexpected",
+      "all": "All"
+    },
+    "start": {
+      "title": "Start site audit",
+      "client": "Client",
+      "clientPlaceholder": "Select a client",
+      "location": "Location",
+      "locationHint": "\"No location\" audits the client devices that have no location on record.",
+      "statuses": "Asset statuses in scope",
+      "statusesHint": "No status selected audits every status.",
+      "statusesLoading": "Loading statuses…",
+      "notes": "Notes",
+      "notesPlaceholder": "What this walk is for (optional)",
+      "pickClient": "Pick a client to see what is in scope.",
+      "counting": "Counting the devices in scope…",
+      "countUnavailable": "The device count is unavailable right now.",
+      "expected_one": "1 device expected in this scope",
+      "expected_other": "{{count}} devices expected in this scope",
+      "submit": "Start audit",
+      "starting": "Starting…"
+    },
+    "detail": {
+      "reference": "Audit",
+      "untitledClient": "Client",
+      "location": "Location",
+      "startedBy": "Started by",
+      "started": "Started",
+      "completed": "Completed",
+      "scopeStatuses": "Statuses in scope",
+      "allStatuses": "Every status",
+      "notes": "Notes",
+      "exportCsv": "Export CSV",
+      "exportStarted": "CSV export started.",
+      "exportEmpty": "There is nothing to export in this view.",
+      "addUnexpected": "Add unexpected asset",
+      "addUnexpectedHint": "A device found on site but outside this audit scope is recorded as unexpected, never as expected.",
+      "addUnexpectedPlaceholder": "Find an asset…",
+      "addUnexpectedEmpty": "No other assets for this client.",
+      "complete": "Complete audit",
+      "completeConfirm_one": "1 unmarked device will be recorded as missing.",
+      "completeConfirm_other": "{{count}} unmarked devices will be recorded as missing.",
+      "cancelAudit": "Cancel audit",
+      "cancelConfirm": "The run is abandoned and nothing is written to the assets. This cannot be undone.",
+      "keepAudit": "Keep auditing"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Type",
+        "serial": "Serial / tag",
+        "result": "Result",
+        "method": "Method",
+        "markedBy": "Marked by",
+        "markedAt": "Marked at",
+        "actions": "Actions"
+      },
+      "searchPlaceholder": "Search by name, tag or serial",
+      "empty": "No assets in this view.",
+      "markPresent": "Mark present",
+      "undoMark": "Undo",
+      "createTicket": "Create ticket",
+      "ticketTitle": "Missing at site audit: {{asset}}",
+      "ticketDescription": "Not found during the site audit started on {{date}}."
+    }
+  },
+  "scanLookup": {
+    "title": "Scan asset tag",
+    "input": "Scan or enter a tag",
+    "loading": "Looking up…",
+    "find": "Find asset",
+    "ambiguous": "More than one visible asset has this tag. Ask an administrator to reconcile the duplicate tags.",
+    "notFound": "No visible asset matches this exact tag.",
+    "failed": "Could not look up this tag. Check your access and try again."
+  },
+  "fullIntake": {
+    "title": "Add asset",
+    "description": "Choose a tenant number or keep an existing printed tag.",
+    "back": "Back to assets"
+  },
+  "labelFirstIntake": {
+    "start": "Label-first intake",
+    "title": "Start label-first intake",
+    "help": "Create a minimal durable asset record, then print two copies of its tag. Scan either copy later to finish this same record.",
+    "client": "Client",
+    "clientRequired": "Choose a client to continue.",
+    "createFailed": "Could not create the intake record.",
+    "name": "Short description (optional)",
+    "creating": "Creating…",
+    "createPrint": "Create and print pair"
   }
 }

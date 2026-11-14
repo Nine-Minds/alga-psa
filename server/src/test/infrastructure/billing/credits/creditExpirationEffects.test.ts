@@ -4,10 +4,10 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import {
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
 } from '../../../../../test-utils/billingTestHelpers';
 import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';

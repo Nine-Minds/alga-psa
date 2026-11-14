@@ -16,7 +16,7 @@ describe('development launch wiring', () => {
   function runDevScript(
     scriptName: 'dev' | 'dev:turbo',
     callerDistDir?: string,
-  ): string[] {
+  ): { args: string[]; cwd: string; distDir: string | null; turbopack: string | null }[] {
     const pkg = JSON.parse(
       readFileSync(path.join(serverDir, 'package.json'), 'utf8'),
     ) as { scripts: Record<string, string> };
@@ -24,12 +24,20 @@ describe('development launch wiring', () => {
     const fakeNpx = path.join(fixtureDir, 'npx');
     writeFileSync(
       fakeNpx,
-      '#!/bin/sh\nif [ "$1" = nx ]; then printf "build-deps:%s\\n" "${NEXT_DIST_DIR-<unset>}"; exit 0; fi\nprintf "app:%s\\n" "${NEXT_DIST_DIR-<unset>}"\n',
+      `#!/usr/bin/env node
+console.log(JSON.stringify({
+  args: process.argv.slice(2),
+  cwd: process.cwd(),
+  distDir: process.env.NEXT_DIST_DIR ?? null,
+  turbopack: process.env.DEV_TURBOPACK ?? null,
+}));
+`,
     );
     chmodSync(fakeNpx, 0o755);
 
     const env = { ...process.env, PATH: `${fixtureDir}:${process.env.PATH ?? ''}` };
     delete env.NEXT_DIST_DIR;
+    delete env.DEV_TURBOPACK;
     if (callerDistDir !== undefined) env.NEXT_DIST_DIR = callerDistDir;
 
     try {
@@ -39,7 +47,7 @@ describe('development launch wiring', () => {
         encoding: 'utf8',
       });
       expect(result.status, result.stderr).toBe(0);
-      return result.stdout.trim().split(/\r?\n/);
+      return result.stdout.trim().split(/\r?\n/).map((line) => JSON.parse(line));
     } finally {
       rmSync(fixtureDir, { recursive: true, force: true });
     }
@@ -70,39 +78,30 @@ describe('development launch wiring', () => {
     return JSON.parse(output!.slice('__NEXT_CONFIG_RESULT__'.length)) as string | null;
   }
 
-  it('runs the custom dev entrypoint instead of nx next:dev', () => {
-    const pkg = JSON.parse(
-      readFileSync(path.join(serverDir, 'package.json'), 'utf8'),
-    ) as { scripts: Record<string, string> };
-
-    expect(pkg.scripts.dev).toContain('dev-server.ts');
-    expect(pkg.scripts.dev).not.toContain('next:dev');
-    expect(pkg.scripts.dev).toContain('NEXT_DIST_DIR="${NEXT_DIST_DIR:-.next-dev}"');
+  describe.each(['dev', 'dev:turbo'] as const)('%s', (scriptName) => {
+    it.each([undefined, '', '.next-isolated output'])(
+      'launches the custom server with NEXT_DIST_DIR=%j',
+      (callerDistDir) => {
+        // Plain dev resolves workspace sources directly and skips build-deps.
+        // Turbo still builds dependencies before launching the same entrypoint.
+        const dependencyBuild = scriptName === 'dev:turbo' ? [{
+          args: ['nx', 'build-deps', 'server'],
+          cwd: repoRoot,
+          distDir: callerDistDir ?? null,
+          turbopack: null,
+        }] : [];
+        expect(runDevScript(scriptName, callerDistDir)).toEqual([
+          ...dependencyBuild,
+          {
+            args: ['tsx', 'dev-server.ts'],
+            cwd: serverDir,
+            distDir: callerDistDir || '.next-dev',
+            turbopack: scriptName === 'dev:turbo' ? '1' : null,
+          },
+        ]);
+      },
+    );
   });
-
-  it('routes dev:turbo through the custom dev entrypoint too', () => {
-    const pkg = JSON.parse(
-      readFileSync(path.join(serverDir, 'package.json'), 'utf8'),
-    ) as { scripts: Record<string, string> };
-
-    expect(pkg.scripts['dev:turbo']).toContain('dev-server.ts');
-    expect(pkg.scripts['dev:turbo']).not.toContain('next:dev');
-    expect(pkg.scripts['dev:turbo']).toContain('NEXT_DIST_DIR="${NEXT_DIST_DIR:-.next-dev}"');
-  });
-
-  it.each(['dev', 'dev:turbo'] as const)(
-    '%s defaults only the app process output and preserves a caller override',
-    (scriptName) => {
-      expect(runDevScript(scriptName)).toEqual([
-        'build-deps:<unset>',
-        'app:.next-dev',
-      ]);
-      expect(runDevScript(scriptName, '.next-isolated')).toEqual([
-        'build-deps:.next-isolated',
-        'app:.next-isolated',
-      ]);
-    },
-  );
 
   it('keeps production Next output at its default unless explicitly overridden', () => {
     expect(loadNextConfigDistDir()).toBeNull();

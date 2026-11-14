@@ -2274,5 +2274,6 @@
         "inventoryStock": "Du behöver lagertillgång för att se lagernivåer."
       }
     }
-  }
+  },
+  "backToSharedTasks": "← Tillbaka till delade uppgifter"
 }

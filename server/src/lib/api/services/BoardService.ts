@@ -5,6 +5,10 @@
 
 import { IBoard } from '@alga-psa/types';
 import { BaseService, ServiceContext, ListResult, ListOptions } from '@alga-psa/db';
+import {
+  createBoardInputSchema,
+  updateBoardInputSchema,
+} from '@alga-psa/tickets/actions/board-actions/boardInputSchema';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export class BoardService extends BaseService<IBoard> {
@@ -19,8 +23,36 @@ export class BoardService extends BaseService<IBoard> {
     });
   }
 
+  /**
+   * Project caller data onto the writable columns shared with the board server
+   * actions. Unknown keys (tenant, board_id, made-up columns) are rejected here
+   * too, so a direct service caller cannot mass-assign past the controller schema.
+   */
+  private parseWritable<T extends typeof createBoardInputSchema | typeof updateBoardInputSchema>(
+    schema: T,
+    data: unknown
+  ): Record<string, unknown> {
+    const parsed = schema.safeParse(data);
+    if (!parsed.success) {
+      const detail = parsed.error.issues
+        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        .join('; ');
+      throw new Error(`Invalid board input: ${detail}`);
+    }
+    return Object.fromEntries(Object.entries(parsed.data).filter(([, value]) => value !== undefined));
+  }
+
   async create(data: Partial<IBoard>, context: ServiceContext): Promise<IBoard> {
-    const board = await super.create(data, context);
+    const writable = this.parseWritable(createBoardInputSchema, data);
+    const board = await this.mutationTransaction(context, async (trx) => {
+      // At most one default board per tenant: claiming it releases the previous one.
+      if (writable.is_default === true) {
+        await this.buildTenantScopedQuery(trx, context).where({ is_default: true }).update({ is_default: false });
+      }
+      const audited = await this.addCreateAuditFields(trx, writable, context);
+      const [row] = await this.buildTenantScopedQuery(trx, context).insert(audited).returning('*');
+      return row as IBoard;
+    });
     if (!board.board_id) {
       throw new Error('Created board is missing board_id');
     }
@@ -40,7 +72,24 @@ export class BoardService extends BaseService<IBoard> {
   }
 
   async update(id: string, data: Partial<IBoard>, context: ServiceContext): Promise<IBoard> {
-    const board = await super.update(id, data, context);
+    const writable = this.parseWritable(updateBoardInputSchema, data);
+    const board = await this.mutationTransaction(context, async (trx) => {
+      if (writable.is_default === true) {
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ is_default: true })
+          .whereNot({ board_id: id })
+          .update({ is_default: false });
+      }
+      const audited = await this.addUpdateAuditFields(trx, writable, context);
+      const [row] = await this.buildTenantScopedQuery(trx, context)
+        .where(this.primaryKey, id)
+        .update(audited)
+        .returning('*');
+      if (!row) {
+        throw new Error('Resource not found or permission denied');
+      }
+      return row as IBoard;
+    });
 
     await publishEvent({
       eventType: 'BOARD_UPDATED',

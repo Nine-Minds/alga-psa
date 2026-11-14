@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import { previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -15,7 +15,8 @@ import {
   addServiceToFixedPlan,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -217,7 +218,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         detailBaseRateCents: 15000
       });
 
-      // generateInvoice refuses a window with no recurring service period, and
+      // generateInvoiceForCycle refuses a window with no recurring service period, and
       // the fixture only materializes on request. Run it after the extra
       // service so the line is complete.
       await materializeRecurringServicePeriods(context, planId);
@@ -232,7 +233,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       }, 'billing_cycle_id');
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Fixed plans create a single consolidated invoice item
       expect(result).not.toBeNull();
@@ -279,7 +280,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       }, 'billing_cycle_id');
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Tax should be calculated on the fixed plan amount
       expect(result).not.toBeNull();
@@ -345,7 +346,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       expect(preview.success).toBe(true);
       if (!preview.success) throw new Error('unreachable');
 
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
       expect(result).not.toBeNull();
       const row = await tenantDb(context.db, context.tenantId).table('invoices')
         .where({ invoice_id: result!.invoice_id })
@@ -398,7 +399,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       // Create billing cycle. The window has to be a whole monthly period —
-      // generateInvoice matches recurring_service_periods on the exact
+      // generateInvoiceForCycle matches recurring_service_periods on the exact
       // invoice_window pair, and a Jan 1 - Jan 31 window matches none of them.
       // Arrears: the Feb window bills the January service period, which is
       // where the time entry below sits.
@@ -448,7 +449,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
       expect(result).not.toBeNull();
 
       // Assert - Time entries should be billed

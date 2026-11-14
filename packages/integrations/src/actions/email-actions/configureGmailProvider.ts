@@ -6,6 +6,9 @@ import { GmailWebhookService } from '../../services/email/GmailWebhookService';
 import type { GoogleEmailProviderConfig } from '../../components/email/types';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { getGmailPubSubNames } from '../../utils/email/gmailPubSub';
+import { isActionableGoogleOAuthMessage } from '@alga-psa/shared/services/email/providers/googleMailboxOAuthClient';
+
+const RECONCILE_FAILED_PREFIX = 'Gmail reconnected but';
 
 interface ConfigureGmailProviderOptions {
   tenant: string;
@@ -64,6 +67,11 @@ export async function configureGmailProvider({
   // started. The lifecycle recovery owns that row's status, so the honest-status
   // write below must stay out of its way.
   let pausedForAuthFailure = false;
+  // Whether the provider was in `status='error'` (and not auth-paused) when the
+  // call started. A successful call then reconciles the mail the outage missed.
+  let recoveringFromError = false;
+  let savedHistoryId: string | null = null;
+  let outageSince = new Date();
 
   try {
     await runWithTenant(tenant, async () => {
@@ -73,13 +81,17 @@ export async function configureGmailProvider({
       const { knex: boundaryKnex } = await createTenantKnex(tenant);
       const boundaryDb = tenantDb(boundaryKnex, tenant);
       const [boundaryProvider, boundaryGoogleConfig] = await Promise.all([
-        boundaryDb.table('email_providers').where({ id: providerId }).first('inbound_paused_at', 'inbound_pause_reason'),
+        boundaryDb.table('email_providers').where({ id: providerId }).first('inbound_paused_at', 'inbound_pause_reason', 'status', 'last_sync_at', 'created_at'),
         boundaryDb.table('google_email_provider_config').where({ email_provider_id: providerId }).first('history_id'),
       ]);
-      const savedHistoryId = boundaryGoogleConfig?.history_id ? String(boundaryGoogleConfig.history_id) : null;
+      savedHistoryId = boundaryGoogleConfig?.history_id ? String(boundaryGoogleConfig.history_id) : null;
       pausedForAuthFailure = Boolean(
         boundaryProvider?.inbound_paused_at && boundaryProvider.inbound_pause_reason === 'auth_failure'
       );
+      recoveringFromError = !pausedForAuthFailure && boundaryProvider?.status === 'error';
+      // Last time delivery was known good: the lower bound of the reconciler's
+      // time-query fallback. Read before the success path advances last_sync_at.
+      outageSince = new Date(boundaryProvider?.last_sync_at ?? boundaryProvider?.created_at ?? Date.now());
 
       // There is deliberately no "configured recently, skip it" shortcut here.
       // Claiming a working watch without checking is what let broken Gmail
@@ -214,6 +226,46 @@ export async function configureGmailProvider({
           throw new Error(watchResult.error || 'Gmail watch registration failed.');
         }
 
+        // Recovering from `status='error'`: the watch is re-established at a
+        // fresh cursor, so everything between the outage start and now would be
+        // skipped. Reconcile it from the pre-watch cursor first, through the
+        // same durable, idempotent reconciler the auth-pause recovery uses.
+        // last_sync_at only advances once that succeeds, so a failed attempt is
+        // retried over the same window by the next renewal run.
+        if (recoveringFromError) {
+          try {
+            const { EmailProviderLifecycleService } = await import(
+              '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+            );
+            const reconciliation = await new EmailProviderLifecycleService().reconcileGoogleDeliveryGap({
+              providerId,
+              tenant,
+              since: outageSince,
+              savedHistoryId,
+            });
+            console.info('Gmail error-recovery reconciliation completed', {
+              tenant,
+              providerId,
+              queuedMessages: reconciliation.queuedMessages,
+              usedFallbackQuery: reconciliation.usedFallbackQuery,
+            });
+          } catch (reconcileError) {
+            // The new watch already replaced history_id with its fresh cursor.
+            // Put the pre-watch cursor back so the retry reconciles the same gap,
+            // and clear watch_expiration so renew-google-gmail-watch (which only
+            // selects null/near-expiry watches) picks this provider up on its
+            // next run instead of ~6.75 days from now.
+            await db.table('google_email_provider_config')
+              .where('email_provider_id', providerId)
+              .update({
+                ...(savedHistoryId ? { history_id: savedHistoryId } : {}),
+                watch_expiration: null,
+              });
+            const reason = reconcileError instanceof Error ? reconcileError.message : String(reconcileError);
+            throw new Error(`${RECONCILE_FAILED_PREFIX} mail received during the outage could not be recovered yet; it will be retried automatically. Details: ${reason}`);
+          }
+        }
+
         // Update the main provider's last_sync_at to reflect successful configuration
         await db.table('email_providers')
           .where('id', providerId)
@@ -285,7 +337,9 @@ export async function configureGmailProvider({
         // administrator can retry — but the call reports what it is.
         result.watchRegistered = false;
         result.success = false;
-        result.error = pausedForAuthFailure
+        result.error = isActionableGoogleOAuthMessage(errorMessage) || errorMessage.startsWith(RECONCILE_FAILED_PREFIX)
+          ? errorMessage
+          : pausedForAuthFailure
           ? `Gmail reconnection failed. Reconnect the mailbox and try again. Google reported: ${errorMessage}`
           : `Gmail watch registration failed, so no mail will be delivered. Verify the mailbox's Google authorization and the Pub/Sub topic permissions, then retry. Google reported: ${errorMessage}`;
         if (pausedForAuthFailure) {

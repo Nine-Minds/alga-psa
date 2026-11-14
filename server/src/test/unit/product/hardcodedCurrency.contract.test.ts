@@ -72,6 +72,10 @@ const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
       count: 1,
       why: "deliberate: documents regex replacement tokens ($1, $$), not currency",
     },
+    "packages/billing/src/lib/pdf-fonts/fontFaceCss.generated.ts": {
+      count: 1,
+      why: "deliberate: the whole file is one string literal of base64 woff2 binary data (opaque, not text) for the embedded PDF @font-face rules; the ZAR/SEK heuristic (R or kr immediately before a digit) coincidentally matches noise in that payload, not currency",
+    },
     "packages/client-portal/src/components/account/ServicesSection.tsx": {
       count: 3,
       why: "REPORTED GAP: sample catalog tiles hardcode USD prices (locale twins in client-portal.json) — product call pending",

@@ -807,9 +807,35 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: async (trx, options) => {
           // Every save writes an 'updated' row; only real history (sent, status
           // changes, conversions...) should block a hard delete of a draft.
-          const result = await tenantScopedTable(trx, options.tenant, 'quote_activities')
+          const query = tenantScopedTable(trx, options.tenant, 'quote_activities')
             .where({ quote_id: options.entityId })
-            .whereNotIn('activity_type', ['created', 'updated'])
+            .whereNotIn('activity_type', ['created', 'updated']);
+
+          const quote = await tenantScopedTable(trx, options.tenant, 'quotes')
+            .select('status')
+            .where({ quote_id: options.entityId })
+            .first();
+
+          // A quote still sitting in draft may have been round-tripped through
+          // approval (draft -> pending_approval -> draft). Those rows describe
+          // the draft's own editing history, not business history that must
+          // outlive it, so they must not refuse the delete the way a `sent` or
+          // `converted` transition does (alga-2026-0002902). Unrecognised
+          // metadata keeps blocking: coalesce makes a null next_status fail the
+          // match rather than silently dropping the row from the count.
+          if (quote?.status === 'draft') {
+            query
+              .whereNot('activity_type', 'approval_changes_requested')
+              .whereNot(function (this: Knex.QueryBuilder) {
+                this.where('activity_type', 'status_changed')
+                  .whereRaw("coalesce(quote_activities.metadata->>'next_status', '') in (?, ?)", [
+                    'draft',
+                    'pending_approval',
+                  ]);
+              });
+          }
+
+          const result = await query
             .count<{ count: string }>('* as count')
             .first();
           return Number(result?.count ?? 0);

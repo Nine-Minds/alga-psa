@@ -33,11 +33,13 @@ vi.mock('@alga-psa/db', () => ({
 
 const entitlement = vi.hoisted(() => ({ state: { capacity: 5, allocated: 1, available: 4, canGrow: true, isReadOnly: false, graceEndsAt: null as string | null } }));
 vi.mock('./co-managed-entitlements', () => ({
+  GRACE_MS: 30 * 86_400_000,
   getCoManagedEntitlementState: async () => { sql.log.push('entitlement-state'); return entitlement.state; },
 }));
 
 import {
   coManagedLifecycleProvider,
+  readCoManagedLifecycleLockFree,
   getCoManagedOperationalState,
   isCoManagedAwaitingAcceptance,
   isCoManagedAwaitingAcceptanceLazily,
@@ -180,5 +182,54 @@ describe('readState', () => {
     seed('co_managed', 'active');
     sql.tables.co_managed_allocations = [];
     expect(await getCoManagedOperationalState(db, customer)).toMatchObject({ state: 'read_only', canWrite: false });
+  });
+});
+
+describe('licence lapse state machine (CM L7a, injected clock)', () => {
+  const DAY = 86_400_000;
+  const start = new Date('2026-10-01T00:00:00Z');
+
+  it('is healthy without a lapse, then grace, then read-only at the durable deadline', async () => {
+    const { resolveCoManagedLapse, coManagedStateForLapse, coManagedGraceDeadline } = await import('./co-managed-lifecycle');
+    expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: null, now: start })).state).toBe('active');
+    const during = coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: start, now: new Date(start.getTime() + 29 * DAY) }));
+    expect(during).toMatchObject({ state: 'grace', canWrite: true });
+    const deadline = coManagedGraceDeadline(start);
+    expect(deadline.getTime()).toBe(start.getTime() + 30 * DAY);
+    const at = coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: start, now: deadline }));
+    expect(at).toMatchObject({ state: 'read_only', canWrite: false, graceEndsAt: deadline.toISOString() });
+  });
+
+  it('renewal (lapse cleared) restores writes', async () => {
+    const { resolveCoManagedLapse, coManagedStateForLapse } = await import('./co-managed-lifecycle');
+    const late = new Date(start.getTime() + 60 * DAY);
+    expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: start, now: late })).canWrite).toBe(false);
+    expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: null, now: late }))).toMatchObject({ state: 'active', canWrite: true });
+  });
+});
+
+describe('lock-free reader (the default L0c reader)', () => {
+  it.each(['provisioning', 'pending_acceptance'])('admits writes while the relationship is %s, as main did', async (state) => {
+    seed('co_managed', state);
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ canWrite: true });
+  });
+
+  it('keeps refusing a terminated or ended relationship', async () => {
+    seed('co_managed', 'terminated');
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'terminated', canWrite: false });
+    seed('co_managed', 'active');
+    sql.tables.co_management_relationships[0].ended_at = new Date();
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'terminated', canWrite: false });
+  });
+
+  it('keeps refusing an active relationship with no allocation, and one lapsed past grace', async () => {
+    seed('co_managed', 'active');
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'active', canWrite: true });
+    sql.tables.co_managed_entitlements[0].lapse_started_at = new Date(Date.now() - 31 * 86_400_000);
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'read_only', canWrite: false });
+    sql.tables.co_managed_entitlements[0].lapse_started_at = new Date(Date.now() - 86_400_000);
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'grace', canWrite: true });
+    sql.tables.co_managed_allocations = [];
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'read_only', canWrite: false });
   });
 });

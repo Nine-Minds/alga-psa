@@ -1,0 +1,239 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+
+/**
+ * PUT /api/v1/tickets/{id}/assignment must ask the authorization kernel for an `update`
+ * decision on the ticket (not only `read`), and enforce it inside TicketService.update's
+ * transaction. The spy test pins the original defect: only a `read` decision was made.
+ */
+
+const TENANT = '11111111-1111-1111-1111-111111111111';
+const IN_SCOPE = '22222222-2222-2222-2222-222222222222';
+const OUT_OF_SCOPE = '33333333-3333-3333-3333-333333333333';
+
+const state = vi.hoisted(() => ({
+  tickets: {} as Record<string, Record<string, unknown>>,
+  lockedTickets: {} as Record<string, Record<string, unknown>>,
+  // Bundle simulation: `update` is narrowed to this board (relation X); read is unrestricted unless listed.
+  updateBoards: new Set<string>(),
+  readDenied: new Set<string>(),
+  writes: [] as string[],
+}));
+
+const authorizeResourceMock = vi.hoisted(() =>
+  vi.fn(async ({ resource, record }: { resource: { type: string; action: string }; record: { id: string; boardId?: string } }) => {
+    if (resource.action === 'update') {
+      return { allowed: state.updateBoards.has(record.boardId ?? '') };
+    }
+    if (resource.action === 'read') {
+      return { allowed: !state.readDenied.has(record.id) };
+    }
+    return { allowed: false };
+  })
+);
+
+const serviceUpdateMock = vi.hoisted(() =>
+  vi.fn(async (id: string, data: Record<string, unknown>, _ctx: unknown, options?: { authorize?: (t: any, trx: any) => Promise<void> }) => {
+    const row = state.lockedTickets[id] ?? state.tickets[id];
+    if (options?.authorize) await options.authorize(row, {});
+    state.writes.push(id);
+    return { ...row, ...data };
+  })
+);
+
+const removeTicketAgentMock = vi.hoisted(() => vi.fn(async () => undefined));
+const addWatcherMock = vi.hoisted(() => vi.fn(async () => []));
+
+vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
+  ApiKeyServiceForApi: {
+    validateApiKeyAnyTenant: vi.fn(async () => ({ tenant: TENANT, user_id: 'user-1', api_key_id: 'key-1' })),
+    validateApiKeyForTenant: vi.fn(async () => ({ tenant: TENANT, user_id: 'user-1', api_key_id: 'key-1' })),
+  },
+}));
+vi.mock('@alga-psa/users/actions', () => ({
+  findUserByIdForApi: vi.fn(async () => ({ user_id: 'user-1', user_type: 'internal', tenant: TENANT })),
+}));
+vi.mock('@/lib/db', () => ({
+  runWithTenant: vi.fn(async (_t: string, cb: () => Promise<any>) => cb()),
+  runWithApiKeyUser: vi.fn(async (_u: unknown, cb: () => Promise<any>) => cb()),
+}));
+vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
+vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@/lib/api/rateLimit/enforce', () => ({
+  enforceApiRateLimit: vi.fn(async () => null),
+  shouldBypassRateLimit: vi.fn(() => false),
+}));
+vi.mock('@/lib/productAccess', () => ({ getTenantProduct: vi.fn(async () => 'psa') }));
+vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.fn(() => 'allowed') }));
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: authorizeResourceMock,
+    // LEVERAGE: pattern fake-kernel-mutation — hand-written kernel fakes re-model 'mutation = read, then action'; a shared test kernel built from a decision function would keep them in step with the engine.
+    // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+    authorizeMutation: async (input: any) => {
+      const read = await authorizeResourceMock({ ...input, resource: { ...input.resource, action: 'read' } });
+      return read.allowed ? authorizeResourceMock(input) : read;
+    },
+  })),
+}));
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (
+    _knex: unknown,
+    input: { tenant: string; user: { user_id: string; user_type?: string; role_ids?: string[] }; apiKeyId?: string | null },
+  ) => ({
+    tenant: input.tenant,
+    userId: input.user.user_id,
+    userType: input.user.user_type === 'client' ? 'client' : input.user.user_type === 'service' ? 'service' : 'internal',
+    roleIds: input.user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    clientId: null,
+    portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
+vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
+  resolveAuthorizationSubjectForUser: vi.fn(async (_knex, tenant, user, apiKeyId) => ({
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds: user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    portfolioClientIds: [],
+    ...(apiKeyId ? { apiKeyId } : {}),
+  })),
+}));
+vi.mock('../../../lib/api/services/TicketService', () => ({
+  TicketService: class {
+    getById = vi.fn(async (id: string) => state.tickets[id] ?? null);
+    update = serviceUpdateMock;
+    removeTicketAgent = removeTicketAgentMock;
+    addWatcher = addWatcherMock;
+  },
+}));
+
+import { PUT } from '../../../app/api/v1/tickets/[id]/assignment/route';
+import { POST as POST_WATCHER } from '../../../app/api/v1/tickets/[id]/watchers/route';
+import { DELETE as DELETE_AGENT } from '../../../app/api/v1/tickets/[id]/agents/[userId]/route';
+
+const AGENT_USER = '55555555-5555-4555-8555-555555555555';
+const deleteAgent = (ticketId: string) =>
+  DELETE_AGENT(
+    new NextRequest(`http://localhost/api/v1/tickets/${ticketId}/agents/${AGENT_USER}`, {
+      method: 'DELETE',
+      headers: { 'x-api-key': 'k' },
+    }),
+    { params: Promise.resolve({ id: ticketId, userId: AGENT_USER }) } as any
+  );
+
+const put = (ticketId: string) =>
+  PUT(
+    new NextRequest(`http://localhost/api/v1/tickets/${ticketId}/assignment`, {
+      method: 'PUT',
+      headers: { 'x-api-key': 'k', 'content-type': 'application/json' },
+      body: JSON.stringify({ assigned_to: '44444444-4444-4444-4444-444444444444' }),
+    }),
+    { params: Promise.resolve({ id: ticketId }) } as any
+  );
+
+const actionsRequested = () =>
+  authorizeResourceMock.mock.calls.map(([a]) => `${a.resource.type}:${a.resource.action}`);
+
+describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
+  beforeEach(() => {
+    state.tickets = {
+      [IN_SCOPE]: { ticket_id: IN_SCOPE, board_id: 'board-x', client_id: 'c1', assigned_to: null, status_id: 's1' },
+      [OUT_OF_SCOPE]: { ticket_id: OUT_OF_SCOPE, board_id: 'board-y', client_id: 'c1', assigned_to: null, status_id: 's1' },
+    };
+    state.updateBoards = new Set(['board-x']);
+    state.lockedTickets = {};
+    state.readDenied = new Set();
+    state.writes = [];
+    authorizeResourceMock.mockClear();
+    serviceUpdateMock.mockClear();
+  });
+
+  it('makes a ticket `update` decision in the kernel, not only `read`', async () => {
+    const res = await put(IN_SCOPE);
+    expect(res.status).toBe(200);
+    expect(authorizeResourceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: { type: 'ticket', action: 'update' },
+        record: expect.objectContaining({ id: IN_SCOPE }),
+      })
+    );
+  });
+
+  it('403s and writes nothing for a readable ticket outside the update scope', async () => {
+    const res = await put(OUT_OF_SCOPE);
+    expect(res.status).toBe(403);
+    expect(state.writes).toEqual([]);
+  });
+
+  it('200s for a ticket inside the update scope', async () => {
+    const res = await put(IN_SCOPE);
+    expect(res.status).toBe(200);
+    expect(state.writes).toEqual([IN_SCOPE]);
+  });
+
+  it('403s when update is allowed but read is denied (no record disclosure)', async () => {
+    state.readDenied = new Set([IN_SCOPE]);
+    const res = await put(IN_SCOPE);
+    expect(res.status).toBe(403);
+    expect(state.writes).toEqual([]);
+    // The kernel refuses at the read prerequisite and never reaches the update rules.
+    expect(actionsRequested()).toEqual(['ticket:read']);
+  });
+
+  it('denies a ticket that moves outside update scope between the pre-check and the row lock', async () => {
+    // The pre-check still sees board-x; only the transaction sees the changed row.
+    state.lockedTickets[IN_SCOPE] = { ...state.tickets[IN_SCOPE], board_id: 'board-y' };
+    const res = await put(IN_SCOPE);
+    expect(res.status).toBe(403);
+    expect(serviceUpdateMock).toHaveBeenCalledTimes(1);
+    expect(state.writes).toEqual([]);
+    expect(authorizeResourceMock.mock.calls
+      .filter(([input]) => input.resource.action === 'update')
+      .map(([input]) => input.record.boardId)).toEqual(['board-x', 'board-y']);
+  });
+
+  describe('Read is required for every ticket mutation, whether or not the response discloses the ticket', () => {
+    beforeEach(() => {
+      // Caller holds ticket:update scope on this ticket but no ticket:read scope.
+      state.readDenied = new Set([IN_SCOPE]);
+      removeTicketAgentMock.mockClear();
+      addWatcherMock.mockClear();
+    });
+
+    it('(a) an update-allowed / read-denied caller gets 403 on an acknowledgement-only mutation (DELETE agents/{userId}) and nothing is removed', async () => {
+      const res = await deleteAgent(IN_SCOPE);
+      expect(res.status).toBe(403);
+      expect(removeTicketAgentMock).not.toHaveBeenCalled();
+      expect(actionsRequested()).toEqual(['ticket:read']);
+    });
+
+    it('(b) the same caller gets 403 on PUT assignment (response discloses the ticket) and nothing is written', async () => {
+      const res = await put(IN_SCOPE);
+      expect(res.status).toBe(403);
+      expect(serviceUpdateMock).not.toHaveBeenCalled();
+      expect(state.writes).toEqual([]);
+      expect(actionsRequested()).toContain('ticket:read');
+    });
+
+    it('(c) the same caller gets 403 on POST watchers (response returns the watcher list) and addWatcher is not called', async () => {
+      const res = await POST_WATCHER(
+        new NextRequest(`http://localhost/api/v1/tickets/${IN_SCOPE}/watchers`, {
+          method: 'POST',
+          headers: { 'x-api-key': 'k', 'content-type': 'application/json' },
+          body: JSON.stringify({ email: 'throwaway@example.com' }),
+        }),
+        { params: Promise.resolve({ id: IN_SCOPE }) } as any
+      );
+      expect(res.status).toBe(403);
+      expect(addWatcherMock).not.toHaveBeenCalled();
+      expect(actionsRequested()).toContain('ticket:read');
+    });
+  });
+});

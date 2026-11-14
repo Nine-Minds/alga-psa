@@ -9,7 +9,7 @@ import type {
   ITimeEntry,
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
-import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
+import { clientOutOfScopeError, reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -40,7 +40,7 @@ export interface HoursByServiceResult {
  * @returns A promise that resolves to an array of aggregated hours by service.
  */
 export const getHoursByServiceType = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: z.infer<typeof InputSchema>
 ): Promise<HoursByServiceResult[] | ReportingActionError> => {
@@ -52,6 +52,10 @@ export const getHoursByServiceType = withAuth(async (
   const { clientId, startDate, endDate, groupByServiceType } = validationResult.data;
 
   const { knex } = await createTenantKnex();
+
+  // A client-restricted user gets no report about a client outside their scope.
+  const outOfScope = await clientOutOfScopeError(knex, tenant, user, clientId);
+  if (outOfScope) return outOfScope;
 
   console.log(`Fetching hours by service for client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 

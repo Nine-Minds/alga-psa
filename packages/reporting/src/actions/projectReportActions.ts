@@ -1,7 +1,8 @@
 'use server';
 
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
+import { clientScopedTenantDb } from '../lib/reports/clientScope';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
@@ -95,7 +96,7 @@ export const getProjectHoursReport = withAuth(
     try {
       const { knex } = await createTenantKnex();
       await assertCanReadReports(user, knex);
-      const scopedDb = tenantDb(knex, tenant);
+      const scopedDb = await clientScopedTenantDb(knex, tenant, user, { reportId: 'project.hours', passthrough: [] });
 
       // A task is closed when the status it maps to says so. Tenant mappings
       // point at `statuses`, seeded ones at the global `standard_statuses`, so

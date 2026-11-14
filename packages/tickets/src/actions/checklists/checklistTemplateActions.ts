@@ -2,13 +2,16 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { z } from 'zod';
 import { predicateGroupSchema } from '@alga-psa/predicates';
 import type { PredicateGroup } from '@alga-psa/predicates';
+import { isMspPrincipalUserType, type IUserWithRoles } from '@alga-psa/types';
 import { readChecklistWhere, checklistWhereForOwner, checklistWhereTagIds, CHECKLIST_RULE_WHERE_VERSION } from '@alga-psa/shared/lib/ticketChecklists';
 import { replaceTagReferences, deleteTagReferences } from '@alga-psa/tags/lib/tagReferences';
 import { TEMPLATE_CLIENT_INVALID, checklistActionErrorFrom, type ChecklistActionError } from './checklistActionErrors';
+import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 
 /**
  * Admin-managed checklist templates, their items, and auto-apply predicate
@@ -49,8 +52,8 @@ export interface ChecklistTemplateInput {
   name: string;
   description?: string | null;
   is_active?: boolean;
-  /** Optional client scope; null/undefined on create = tenant-wide. */
-  client_id?: string | null;
+  /** Explicit scope: null means tenant-wide. Omission is rejected on create. */
+  client_id: string | null;
 }
 
 export interface ChecklistTemplateItemInput {
@@ -69,7 +72,17 @@ const ruleInputSchema = z.object({
   where: predicateGroupSchema,
   where_version: z.number().default(CHECKLIST_RULE_WHERE_VERSION),
   is_enabled: z.boolean().default(true),
-}).strict();
+}).strict().superRefine(({ where }, context) => {
+  const rejectEmptyConjunctions = (group: PredicateGroup, path: Array<string | number> = []): void => {
+    if (group.join === 'and' && group.clauses.length === 0) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: 'Checklist apply rules cannot contain an empty AND group.', path: ['where', ...path] });
+    }
+    group.clauses.forEach((clause, index) => {
+      if ('join' in clause) rejectEmptyConjunctions(clause, [...path, 'clauses', index]);
+    });
+  };
+  rejectEmptyConjunctions(where);
+});
 
 function applyRulePredicateColumns(input: ChecklistTemplateApplyRuleInput, owner: string | null) {
   const parsed = ruleInputSchema.parse(input);
@@ -79,9 +92,16 @@ function applyRulePredicateColumns(input: ChecklistTemplateApplyRuleInput, owner
 
 const RULE_TAG_REFERRER = 'checklist_template_apply_rule';
 
-async function requireSettingsPermission(user: Parameters<Parameters<typeof withAuth>[0]>[0]) {
-  if (!(await hasPermission(user, 'ticket', 'update'))) {
+async function requireSettingsPermission(user: IUserWithRoles) {
+  if (!isMspPrincipalUserType(user.user_type) || !(await hasPermission(user, 'ticket_settings', 'update'))) {
     throw new Error('Permission denied: Cannot manage checklist templates');
+  }
+}
+
+async function requireSettingsReadPermission(user: IUserWithRoles) {
+  await requireSettingsPermission(user);
+  if (!(await hasPermission(user, 'ticket_settings', 'read'))) {
+    throw new Error('Permission denied: Cannot view checklist template settings');
   }
 }
 
@@ -119,61 +139,129 @@ async function narrowRuleClientsToOwner(
 
 export interface GetChecklistTemplatesOptions {
   includeInactive?: boolean;
-  /**
-   * Ticket-aware mode for the "apply checklist" picker: only templates with no client or the
-   * ticket's client are returned. Omit for the (unfiltered) settings list.
-   */
-  forTicketId?: string;
   /** Settings list filter: only templates scoped to this client. */
   clientId?: string;
 }
 
-export const getChecklistTemplates = withAuth(
-  async (_user, { tenant }, opts?: GetChecklistTemplatesOptions): Promise<IChecklistTemplate[]> => {
-    const { knex: db } = await createTenantKnex();
-
-    let ticketClientId: string | null | undefined;
-    if (opts?.forTicketId) {
-      const ticket = await tenantScopedTable(db, 'tickets', tenant)
-        .where({ ticket_id: opts.forTicketId })
-        .first('client_id');
-      if (!ticket) throw new Error('Ticket not found');
-      ticketClientId = ticket.client_id;
-    }
-
-    const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
+async function loadChecklistTemplates(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  options: {
+    includeInactive?: boolean;
+    clientId?: string;
+    ticketClientId?: string | null;
+    visibleClientId?: string | null;
+  } = {}
+): Promise<IChecklistTemplate[]> {
+  const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
       .modify((qb) => {
-        if (!opts?.includeInactive) qb.where('is_active', true);
-        if (opts?.forTicketId) {
+        if (!options.includeInactive) qb.where('is_active', true);
+        // LEVERAGE: pattern checklist-template-client-scope — full lists and editor options share this scope predicate.
+        if (options.visibleClientId !== undefined) {
           qb.where((scope) => {
             scope.whereNull('client_id');
-            if (ticketClientId) scope.orWhere('client_id', ticketClientId);
+            if (options.visibleClientId) scope.orWhere('client_id', options.visibleClientId);
           });
         }
-        if (opts?.clientId) qb.where('client_id', opts.clientId);
+        if (options.ticketClientId !== undefined) {
+          qb.where((scope) => {
+            scope.whereNull('client_id');
+            if (options.ticketClientId) scope.orWhere('client_id', options.ticketClientId);
+          });
+        }
+        if (options.clientId) qb.where('client_id', options.clientId);
       })
       .orderBy('name', 'asc') as Array<IChecklistTemplate>;
 
-    if (!templates.length) return [];
+  if (!templates.length) return [];
 
-    const items = await tenantScopedTable(db, 'checklist_template_items', tenant)
+  const items = await tenantScopedTable(db, 'checklist_template_items', tenant)
       .whereIn('template_id', templates.map((t: { template_id: string }) => t.template_id))
       .orderBy('order_number', 'asc') as IChecklistTemplateItem[];
 
-    const clientIds = Array.from(new Set(templates.map((t) => t.client_id).filter((id): id is string => Boolean(id))));
-    const clientRows: { client_id: string; client_name: string }[] = clientIds.length
+  const clientIds = Array.from(new Set(templates.map((t) => t.client_id).filter((id): id is string => Boolean(id))));
+  const clientRows: { client_id: string; client_name: string }[] = clientIds.length
       ? await tenantScopedTable(db, 'clients', tenant).whereIn('client_id', clientIds).select('client_id', 'client_name')
       : [];
-    const clientNames = new Map(clientRows.map((c) => [c.client_id, c.client_name]));
+  const clientNames = new Map(clientRows.map((c) => [c.client_id, c.client_name]));
 
-    return templates.map((t) => ({
-      template_id: t.template_id,
-      name: t.name,
-      description: t.description,
-      is_active: t.is_active,
-      client_id: t.client_id ?? null,
-      client_name: t.client_id ? clientNames.get(t.client_id) ?? null : null,
-      items: items.filter((i) => i.template_id === t.template_id),
+  return templates.map((t) => ({
+    template_id: t.template_id,
+    name: t.name,
+    description: t.description,
+    is_active: t.is_active,
+    client_id: t.client_id ?? null,
+    client_name: t.client_id ? clientNames.get(t.client_id) ?? null : null,
+    items: items.filter((i) => i.template_id === t.template_id),
+  }));
+}
+
+export const getChecklistTemplates = withAuth(
+  async (user, { tenant }, opts?: GetChecklistTemplatesOptions): Promise<IChecklistTemplate[]> => {
+    await requireSettingsReadPermission(user);
+    const { knex: db } = await createTenantKnex();
+    return loadChecklistTemplates(db, tenant, opts);
+  }
+);
+
+/** Ticket picker read: authorize the specific ticket before returning its in-scope templates. */
+export const getChecklistTemplatesForTicket = withAuth(
+  async (user, { tenant }, ticketId: string): Promise<IChecklistTemplate[]> => {
+    if (!(await hasPermission(user, 'ticket', 'read'))) {
+      throw new Error('Permission denied: Cannot read ticket checklist templates');
+    }
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const ticket = await authorizeTicketRecordAccessConcealed({
+        trx,
+        tenant,
+        user,
+        ticketId,
+        action: 'read',
+      });
+      return loadChecklistTemplates(trx, tenant, {
+        ticketClientId: ticket.client_id,
+        visibleClientId: isClientUserType(user.user_type) ? user.clientId ?? null : undefined,
+      });
+    });
+  }
+);
+
+export interface ChecklistTemplateOption {
+  template_id: string;
+  name: string;
+  client_id: string | null;
+  client_name: string | null;
+}
+
+const editorScopeSchema = z.object({
+  resource: z.enum(['ticket_template', 'recurring_ticket']),
+  clientId: z.string().uuid().nullable(),
+}).strict();
+
+/** Reference choices for editors without a ticket yet; never exposes settings or rule data. */
+export const getChecklistTemplateOptionsForEditor = withAuth(
+  async (user, { tenant }, input: z.infer<typeof editorScopeSchema>): Promise<ChecklistTemplateOption[]> => {
+    const { resource, clientId } = editorScopeSchema.parse(input);
+    if (!isMspPrincipalUserType(user.user_type) || !(await hasPermission(user, resource, 'read'))) {
+      throw new Error('Permission denied: Cannot read checklist template options');
+    }
+    const { knex: db } = await createTenantKnex();
+    if (clientId !== null) await assertClientBelongsToTenant(db, tenant, clientId);
+    const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
+      .where('is_active', true)
+      // LEVERAGE: pattern checklist-template-client-scope — full lists and editor options share this scope predicate.
+      .where((scope) => {
+        scope.whereNull('client_id');
+        if (clientId !== null) scope.orWhere('client_id', clientId);
+      })
+      .select('template_id', 'name', 'client_id')
+      .orderBy('name', 'asc') as Array<Omit<ChecklistTemplateOption, 'client_name'>>;
+    const client = clientId === null ? null : await tenantScopedTable(db, 'clients', tenant)
+      .where('client_id', clientId).first('client_name');
+    return templates.map((template) => ({
+      ...template,
+      client_name: template.client_id ? client?.client_name ?? null : null,
     }));
   }
 );
@@ -184,8 +272,9 @@ export const createChecklistTemplate = withAuth(
       await requireSettingsPermission(user);
       if (!input.name?.trim()) throw new Error('Template name is required');
 
+      if (input.client_id === undefined || input.client_id === '') throw new Error(TEMPLATE_CLIENT_INVALID);
       const { knex: db } = await createTenantKnex();
-      if (input.client_id) await assertClientBelongsToTenant(db, tenant, input.client_id);
+      if (input.client_id !== null) await assertClientBelongsToTenant(db, tenant, input.client_id);
       const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
         .insert({
           tenant,
@@ -455,7 +544,8 @@ export const reorderChecklistTemplateItems = withAuth(
 );
 
 export const getChecklistTemplateApplyRules = withAuth(
-  async (_user, { tenant }, templateId?: string): Promise<IChecklistTemplateApplyRule[]> => {
+  async (user, { tenant }, templateId?: string): Promise<IChecklistTemplateApplyRule[]> => {
+    await requireSettingsReadPermission(user);
     const { knex: db } = await createTenantKnex();
     const rows = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant)
       .modify((qb) => { if (templateId) qb.where('template_id', templateId); })
@@ -569,7 +659,7 @@ export interface ChecklistRuleServiceRequestDefinitionOption {
 export const getChecklistRuleServiceRequestDefinitions = withAuth(
   async (user, { tenant }): Promise<ChecklistRuleServiceRequestDefinitionOption[] | ChecklistActionError> => {
     try {
-      await requireSettingsPermission(user);
+      await requireSettingsReadPermission(user);
       const { knex: db } = await createTenantKnex();
       return await tenantScopedTable(db, 'service_request_definitions', tenant)
         .whereNot({ lifecycle_state: 'archived' })
@@ -587,7 +677,7 @@ export const getChecklistRuleServiceRequestDefinitions = withAuth(
 export const getChecklistRuleClientNames = withAuth(
   async (user, { tenant }, clientIds: string[]): Promise<Array<{ client_id: string; client_name: string }> | ChecklistActionError> => {
     try {
-      await requireSettingsPermission(user);
+      await requireSettingsReadPermission(user);
       if (!clientIds?.length) return [];
       const { knex: db } = await createTenantKnex();
       return await tenantScopedTable(db, 'clients', tenant)

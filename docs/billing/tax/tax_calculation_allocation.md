@@ -11,13 +11,14 @@ During invoice generation, each invoice item is first grouped by its applicable 
 ## Identification of Item Types
 The system distinguishes between three types of invoice items:
 - **Charge Items:** These are positive invoice amounts representing actual billable services.
-- **Discount Items:** These are negative line items marked with `is_discount: true` and explicitly marked as non-taxable (`is_taxable: false`). They represent promotional discounts, coupons, or other reductions that do NOT affect the taxable base.
-- **Credit Items:** These are negative line items that are NOT marked with `is_discount: true`. They represent actual reductions to the services provided (like returns or adjustments) and DO reduce the taxable base.
+- **Discount Items:** These are negative line items marked with `is_discount: true` (contract discounts, manual discounts, and manual negative/credit lines authored on the invoice). The row itself is non-taxable (`is_taxable: false`, `tax_amount` 0), but it **reduces the taxable base of the lines it applies to, before tax is computed**.
+- **Credit Items:** Negative lines that are NOT marked `is_discount` (for example automatic contract true-up credits). They are handled as before and are not part of the discount allocation.
+- **Applied client credit and prepayments** are post-tax settlements. They never change the tax base.
   
 ## Calculation of Taxable Base per Region
 For each tax region group, the **taxable base** is computed differently depending on the item types:
 
-1. **For Discounts:** The taxable base is the sum of all positive, taxable invoice items within that region, WITHOUT reduction for discounts. Discount items do not reduce the taxable base, ensuring tax is calculated on the full pre-discount charge amounts.
+1. **For Discounts:** Each discount is first allocated onto the positive non-discount lines (and, for consolidated fixed plans, onto their `invoice_charge_fixed_details` entities) by `allocateDiscountsBeforeTax` (`shared/billingClients/discountAllocationBeforeTax.ts`). A discount with a target (`applies_to_item_id`, `applies_to_service_id`, a client contract, or the exact per-charge allocations stored by the automatic-discount evaluator) is spread only over its target lines. An untargeted (invoice-wide) discount is spread over every positive non-discount line, taxable **and exempt**, in proportion to net amount; only the share that lands on taxable lines reduces the taxable base. The allocation works in integer minor units with largest-remainder rounding (ties broken deterministically), every line is capped at its own amount with the leftover redistributed, and the base floors at 0. The regional taxable base is then the sum of the reduced amounts and tax is never negative.
 
 2. **For Credits:** The taxable base is the sum of all positive, taxable invoice items MINUS the sum of all credit items. Credits do reduce the taxable base since they represent actual reductions to the services provided.
 
@@ -52,14 +53,15 @@ To maintain consistency and avoid discrepancies due to fractional cents:
 Discount items are handled as follows:
 - They are recorded separately on the invoice with negative net amounts.
 - They are explicitly marked as non-taxable (i.e., `is_taxable: false` and `is_discount: true`).
-- They do not impact the taxable base, ensuring that tax calculation is performed on the full, pre-discount charge amounts.
+- They reduce the taxable base of the lines they apply to before tax is computed; the discount row itself carries no tax.
+- The allocated share is derived at calculation time (no extra column). Automatic contract discounts persist their per-charge allocations in `manual_line_metadata.allocations` so a scoped discount keeps its target.
 
 ### Credit Items
 Credit items are handled as follows:
 - They are recorded separately on the invoice with negative net amounts.
 - They are not marked as discounts (i.e., `is_discount: false`).
 - They may be marked as taxable, but no tax is applied due to their negative amount.
-- They do reduce the taxable base, as they represent actual reductions to the services provided.
+- The regional taxable base is built from the positive lines (after discount allocation); non-discount credit rows are not subtracted from it.
 
 ## Example Scenarios
 
@@ -101,8 +103,9 @@ Consider an invoice consisting of:
 
 ## Conclusion
 The tax calculation and allocation process ensures that:
-- **Discounts Do Not Reduce Taxable Base:** Tax is computed on the full pre-discount charge amounts.
-- **Credits Do Reduce Taxable Base:** Tax is computed on the net amount after credits are applied.
+- **Discounts Reduce the Taxable Base:** Tax is computed on the discounted amounts (invoices, billing preview, quotes, and the invoice converted from a quote).
+- **Manual Credits Reduce the Taxable Base:** Manual negative lines act like a discount in their own region and target.
+- **Going Forward Only:** Finalized invoices keep their stored tax; nothing is recalculated or backfilled.
 - **Accurate Regional Tax Application:** Each tax region's specific rate is applied precisely to the appropriate taxable base.
 - **Proportional Distribution:** Tax amounts are fairly distributed among invoice items based on their individual contributions.
 - **Clear Separation of Item Types:** Discount items and credit items are handled differently for tax calculation purposes.

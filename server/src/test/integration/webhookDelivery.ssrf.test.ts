@@ -42,6 +42,7 @@ describe('webhookDelivery SSRF guard at the delivery seam (T031)', () => {
     });
 
     expect(undiciState.fetchMock).not.toHaveBeenCalled();
+    expect(result.response_body).toBeUndefined();
     expect(result.success).toBe(false);
     expect(result.error_type).toBe('ssrf');
   });
@@ -68,7 +69,7 @@ describe('webhookDelivery SSRF guard at the delivery seam (T031)', () => {
 
     expect(undiciState.fetchMock).toHaveBeenCalledTimes(1);
     const [calledUrl] = undiciState.fetchMock.mock.calls[0];
-    expect(calledUrl).toBe('http://127.0.0.1');
+    expect(calledUrl).toBe('http://127.0.0.1/');
     expect(result.success).toBe(true);
     expect(result.status_code).toBe(200);
   });

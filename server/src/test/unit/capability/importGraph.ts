@@ -4,16 +4,18 @@ import ts from 'typescript';
 
 export const REPO = resolve(__dirname, '../../../../..');
 
-// Every closure walks a large shared subgraph; parsing each file once per run (not once per entry) keeps the walk cheap
-// enough to stay inside the test timeout on loaded CI runners. Keyed on the exact source so injected sources still win.
-const parsedImports = new Map<string, { source: string; imports: string[] }>();
+// Every closure walks a large shared subgraph; each file is read and parsed once per process, not once per entry or
+// per test. A cache hit must not touch the disk: on a loaded CI runner the re-read of ~1,100 files that a verifying
+// compare needs took longer than the parse itself (run 41148754710, shard 1: the warm Rule D retry still spent 39 s
+// in I/O behind four forks writing coverage). An injected source still wins, keyed on the exact text.
+const parsedImports = new Map<string, { source: string; imports: string[]; fromDisk: boolean }>();
 
 export function importsOf(file: string, source?: string): string[] {
-  const text = source ?? readFileSync(file, 'utf8');
   const hit = parsedImports.get(file);
-  if (hit && hit.source === text) return hit.imports;
+  if (hit && (source === undefined ? hit.fromDisk : hit.source === source)) return hit.imports;
+  const text = source ?? readFileSync(file, 'utf8');
   const imports = parseImports(file, text);
-  parsedImports.set(file, { source: text, imports });
+  parsedImports.set(file, { source: text, imports, fromDisk: source === undefined });
   return imports;
 }
 

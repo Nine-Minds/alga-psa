@@ -1,15 +1,42 @@
-import { initializeScheduler, scheduleQuoteAutoExpirationJob, scheduleDateTriggerScanJob, scheduleGenerateRecurringTicketsJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
+import { initializeScheduler, scheduleQuoteAutoExpirationJob, scheduleDateTriggerScanJob, scheduleGenerateRecurringTicketsJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleSearchClientScopeReindexJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import { scheduleMarketingJobsForTenant } from './marketingScheduleCutover';
 import { initializeJobRunner } from './initializeJobRunner';
 import { convergeCeMaintenanceSchedules } from './convergeCeMaintenanceSchedules';
+import { forcedValue } from '@alga-psa/core/capability';
 
 const isEnterpriseWorkflowEdition = (): boolean =>
   process.env.EDITION === 'enterprise'
   || process.env.EDITION === 'ee'
   || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+/** Every non-suspended tenant, read once per boot and shared by each per-tenant step below. */
+async function listActiveTenants(): Promise<string[]> {
+  const knex = await getConnection(null);
+  const rows = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
+    .unscoped('tenants', 'scheduler enumerates all tenants to register per-tenant jobs')
+    .whereNull('suspended_at')
+    .select('tenant');
+  return rows.map((row: { tenant: string }) => row.tenant);
+}
+
+/**
+ * Deploy-time, both editions: queue the per-tenant client-scope re-index of existing search rows.
+ * Every boot of a new release enqueues it; the job only reads index rows that still have no client
+ * scope, so a repeat finds nothing to change. A tenant that fails to enqueue does not stop boot.
+ */
+async function enqueueSearchClientScopeReindex(tenantIds: readonly string[]): Promise<void> {
+  for (const tenant of tenantIds) {
+    try {
+      const jobId = await scheduleSearchClientScopeReindexJob(tenant);
+      logger.info('Search client-scope re-index queued', { tenantId: tenant, jobId });
+    } catch (error) {
+      logger.error(`Failed to queue search client-scope re-index for tenant ${tenant}`, error);
+    }
+  }
+}
 
 /**
  * Initialize all scheduled jobs for the application.
@@ -26,7 +53,28 @@ export async function initializeScheduledJobs(): Promise<void> {
     await initializeScheduler();
     logger.info('Job scheduler initialized');
 
+    // Load the production descriptor before either edition builds its durable
+    // recurring schedules. Keep the import guarded so FORCE_CAPABILITIES off
+    // does not load co-managed restore code during scheduler boot.
+    try {
+      const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
+      if (forced !== 'off' && forced !== 'malformed') {
+        const { registerPortableRestoreJobs } = await import('./portableRestoreJobs');
+        await registerPortableRestoreJobs(isEnterpriseWorkflowEdition() ? 'ee' : 'ce');
+      }
+    } catch (error) {
+      logger.warn('Portable restore maintenance registration failed; continuing native scheduler setup', {
+        error: error instanceof Error ? error.message : 'unknown registration failure',
+      });
+    }
+
     if (isEnterpriseWorkflowEdition()) {
+      // EE has no per-tenant pg-boss schedules, so a failed enumeration only skips the re-index.
+      try {
+        await enqueueSearchClientScopeReindex(await listActiveTenants());
+      } catch (error) {
+        logger.error('Failed to enumerate tenants for search client-scope re-index', error);
+      }
       logger.info('Skipping server-side recurring schedule convergence (Temporal owns recurring schedules in EE)');
       return;
     }
@@ -36,19 +84,14 @@ export async function initializeScheduledJobs(): Promise<void> {
     // firing, so new tenants are covered without a restart.
     await convergeCeMaintenanceSchedules(await initializeJobRunner());
 
-    // Get all tenants using root connection
-    const knex = await getConnection(null);
-    const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
-      .unscoped('tenants', 'scheduler enumerates all tenants to register recurring jobs')
-      .whereNull('suspended_at')
-      .select('tenant');
-    logger.info(`Preparing to schedule jobs for ${tenants.length} tenants`);
+    const tenantIds = await listActiveTenants();
+    logger.info(`Preparing to schedule jobs for ${tenantIds.length} tenants`);
+
+    await enqueueSearchClientScopeReindex(tenantIds);
     
     // LEVERAGE: pattern ce-per-tenant-runner-schedules — the jobs below still schedule one pg-boss cron per tenant (queues, pollers and `jobs` rows grow with jobs x tenants); they belong on the global maintenance-fanout schedules.
     // Remaining per-tenant runner-path schedules
-    for (const tenantRecord of tenants) {
-      const tenantId = tenantRecord.tenant;
-
+    for (const tenantId of tenantIds) {
       try {
         const disciplineJobId = await scheduleOpportunityDisciplineJob(tenantId, '0 7 * * *');
         logger.info('Opportunity discipline schedule converged', { tenantId, disciplineJobId });

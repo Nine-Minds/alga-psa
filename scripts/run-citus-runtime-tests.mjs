@@ -16,6 +16,7 @@ const files = [
   'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
   'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
   'server/migrations/__tests__/coManagedMeetingCreationOperationsMigration.integration.test.ts',
+  'server/migrations/__tests__/timeSheetUniquenessMigrationDistribution.integration.test.ts',
 ];
 const output = path.join(root, 'test-results/citus-runtime');
 mkdirSync(output, { recursive: true });

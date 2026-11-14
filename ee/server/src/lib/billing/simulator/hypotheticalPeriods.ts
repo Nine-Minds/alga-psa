@@ -15,7 +15,6 @@
  * end boundary — arrears bills after the covered period closes).
  */
 
-import { Temporal } from '@js-temporal/polyfill';
 import type {
   IPersistedRecurringObligationRef,
   IRecurringServicePeriodRecord,
@@ -24,6 +23,7 @@ import type {
   ScenarioLine,
   SimulationHorizon,
 } from '@alga-psa/types';
+import { assertSimulationPeriodCountWithinBounds } from '@alga-psa/types';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import { generateClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/clientCadenceServicePeriods';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
@@ -117,6 +117,7 @@ export function buildInvoicePeriods(
       `Simulation horizon requires a positive integer period_count; got ${horizon.period_count}. Choose a number of billing periods to simulate.`,
     );
   }
+  assertSimulationPeriodCountWithinBounds(horizon.period_count);
   if (!horizon.start_date) {
     throw simulationRefusal(
       "CONTRACT_SIMULATION_SCENARIO_INVALID",
@@ -160,6 +161,7 @@ export function listInvoiceWindows(
   from: string,
   count: number,
 ): Array<{ start: string; end: string }> {
+  assertSimulationPeriodCountWithinBounds(count);
   const historicalCycles = scheduleHistoricalCycles(schedule);
   const earliestHistory = historicalCycles
     .map((cycle) => toISODate(toPlainDate(cycle.start)))
@@ -331,24 +333,40 @@ export function assignServicePeriodsToInvoicePeriods(
 ): ServicePeriodAssignment[] {
   const assignments: ServicePeriodAssignment[] = [];
 
+  // Invoice windows are contiguous and non-overlapping, so index them once by
+  // start date and binary-search each boundary: O((n + m) log n) rather than a
+  // scan of every window per service period.
+  const windows = invoicePeriods
+    .map((candidate) => ({
+      index: candidate.index,
+      start: toISODate(toPlainDate(candidate.startDate)),
+      end: toISODate(toPlainDate(candidate.endDateExclusive)),
+    }))
+    .sort((left, right) => (left.start < right.start ? -1 : left.start > right.start ? 1 : 0));
+
   for (const record of records) {
-    const boundary =
+    const boundary = toISODate(
       record.duePosition === 'advance'
         ? toPlainDate(record.servicePeriod.start)
-        : toPlainDate(record.servicePeriod.end);
-
-    const period = invoicePeriods.find(
-      (candidate) =>
-        Temporal.PlainDate.compare(toPlainDate(candidate.startDate), boundary) <=
-          0 &&
-        Temporal.PlainDate.compare(
-          boundary,
-          toPlainDate(candidate.endDateExclusive),
-        ) < 0,
+        : toPlainDate(record.servicePeriod.end),
     );
 
-    if (period) {
-      assignments.push({ periodIndex: period.index, record });
+    // Last window starting on or before the boundary.
+    let low = 0;
+    let high = windows.length - 1;
+    let found = -1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (windows[mid].start <= boundary) {
+        found = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    if (found >= 0 && boundary < windows[found].end) {
+      assignments.push({ periodIndex: windows[found].index, record });
     }
   }
 

@@ -2,7 +2,7 @@ import type { IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { checkMultiplePermissions } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
+import { canAccessAttachmentTicket, canWriteAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
 
 /** Byte-serving routes already load a document before authorization. Embed the
  * customer product restriction in that existing read instead of adding a
@@ -90,5 +90,5 @@ export async function canUploadDocument(user: IUser, target: DocumentUploadTarge
   if (!grants.scoped || !target.ticketId || target.clientId || target.contactNameId || target.assetId ||
       target.projectTaskId || target.contractId || target.opportunityId || target.parentDocumentId) return false;
   const { knex } = await createTenantKnex(user.tenant);
-  return canAccessAttachmentTicket(knex, user.tenant, user.user_id, target.ticketId);
+  return canWriteAttachmentTicket(knex, user.tenant, user.user_id, target.ticketId);
 }

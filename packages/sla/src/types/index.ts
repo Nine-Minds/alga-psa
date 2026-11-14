@@ -49,11 +49,11 @@ export interface ISlaPolicyTarget {
   response_time_minutes?: number | null;
   /** Maximum resolution time in minutes (null = no target) */
   resolution_time_minutes?: number | null;
-  /** Percentage of time elapsed before first escalation (0-100) */
+  /** Percentage of time elapsed before first escalation (may exceed 100) */
   escalation_1_percent: number;
-  /** Percentage of time elapsed before second escalation (0-100) */
+  /** Percentage of time elapsed before second escalation (may exceed 100) */
   escalation_2_percent: number;
-  /** Percentage of time elapsed before third escalation (0-100) */
+  /** Percentage of time elapsed before third escalation (may exceed 100) */
   escalation_3_percent: number;
   /** Whether this target uses 24x7 hours instead of business hours */
   is_24x7: boolean;

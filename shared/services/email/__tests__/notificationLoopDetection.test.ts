@@ -323,3 +323,63 @@ describe('detectOutboundNotificationLoop', () => {
     expect(result.evidence.tokenHashMatched).toBe(false);
   });
 });
+
+describe('detectThreadHeaderSelfAutomatedLoop', () => {
+  const ticketLog = (overrides: Partial<FakeLogRow> = {}): FakeLogRow => ({
+    id: 10,
+    tenant: 'tenant-1',
+    status: 'sent',
+    from_address: 'support@msp.test',
+    to_addresses: ['queue-dl@msp.test'],
+    entity_type: 'ticket',
+    entity_id: 'ticket-1',
+    subject: 'New Ticket: TK-1',
+    created_at: '2026-02-10T00:00:00.000Z',
+    reply_token_hash: null,
+    ...overrides,
+  });
+  const automatedHeaders = { 'auto-submitted': 'auto-generated' };
+  const run = async (emailOverrides: Partial<EmailMessageDetails>, senderEmail: string | null = 'support@msp.test', ticketId = 'ticket-1') => {
+    const { detectThreadHeaderSelfAutomatedLoop } = await import('../notificationLoopDetection');
+    return detectThreadHeaderSelfAutomatedLoop({
+      tenantId: 'tenant-1',
+      ticketId,
+      emailData: buildEmailData({ from: { email: 'support@msp.test' }, ...emailOverrides }),
+      senderEmail,
+    });
+  };
+
+  beforeEach(() => {
+    seededRows = [];
+  });
+
+  it('flags an automated message from an address that sent notifications for this ticket', async () => {
+    seededRows = [ticketLog()];
+    const result = await run({ headers: automatedHeaders });
+    expect(result.isLoop).toBe(true);
+    expect(result.tier).toBe('thread_header_self_automated');
+    expect(result.matchedEntityId).toBe('ticket-1');
+  });
+
+  it('does not flag a human reply from the same address (no automated signal), without querying the ledger', async () => {
+    seededRows = [ticketLog()];
+    const result = await run({ subject: 'Re: New Ticket: TK-1' });
+    expect(result.isLoop).toBe(false);
+    expect(result.evidence.fallbackLookupAttempted).toBe(false);
+  });
+
+  it('does not flag an automated message (e.g. out-of-office) from an address we never sent this ticket from', async () => {
+    seededRows = [ticketLog({ from_address: 'other-sender@msp.test' })];
+    expect((await run({ headers: automatedHeaders })).isLoop).toBe(false);
+  });
+
+  it('does not use a send for a different ticket or another tenant', async () => {
+    seededRows = [ticketLog({ entity_id: 'ticket-2' }), ticketLog({ id: 11, tenant: 'tenant-2' })];
+    expect((await run({ headers: automatedHeaders })).isLoop).toBe(false);
+  });
+
+  it('does not flag when the sender is unknown', async () => {
+    seededRows = [ticketLog()];
+    expect((await run({ headers: automatedHeaders }, null)).isLoop).toBe(false);
+  });
+});

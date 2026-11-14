@@ -279,13 +279,16 @@ export class TokenBucketRateLimiter {
    * @param tenantId - The tenant ID
    * @param subjectId - Optional subject ID for per-subject rate limiting
    * @param tokens - Number of tokens to consume (default: 1)
+   * @param configOverride - Optional caller-resolved bucket config; when set it is used
+   *   instead of the namespace config getter. Omitted, behavior is unchanged.
    * @returns RateLimitResult indicating if the request is allowed
    */
   async tryConsume(
     namespace: string,
     tenantId: string,
     subjectId?: string,
-    tokens: number = 1
+    tokens: number = 1,
+    configOverride?: BucketConfig
   ): Promise<RateLimitResult> {
     if (!this.redis) {
       // If Redis is not available, fail open (allow the request)
@@ -294,7 +297,7 @@ export class TokenBucketRateLimiter {
     }
 
     const bucketKey = this.getBucketKey(namespace, tenantId, subjectId);
-    const config = await this.getBucketConfig(namespace, tenantId, subjectId);
+    const config = configOverride ?? await this.getBucketConfig(namespace, tenantId, subjectId);
     const now = Date.now();
 
     try {

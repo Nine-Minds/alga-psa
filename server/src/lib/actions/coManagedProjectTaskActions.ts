@@ -5,7 +5,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import {
   assignCoManagedProjectTask, editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, isCoManagedSharedWorkError,
-  listCoManagedAssignedTasks, listCoManagedProjectTaskHistory, listCoManagedProjectTaskStatusOptions, listCoManagedSharedProjects, listCoManagedSharedProjectTasks, CoManagedTaskEditError,
+  getCoManagedSharedProjectScreen, locateCoManagedSharedTask, listCoManagedAssignedTasks, listCoManagedProjectTaskHistory, listCoManagedProjectTaskStatusOptions, listCoManagedSharedProjects, listCoManagedSharedProjectTasks, CoManagedTaskEditError,
   type CoManagedTaskAssignmentRequest, type CoManagedTaskEditRequest, type CoManagedTaskSnapshot,
 } from '@alga-psa/co-managed';
 import { searchSharedProjects } from '@alga-psa/search/projectSearchAccess';
@@ -60,6 +60,26 @@ export const listCoManagedSharedProjectTasksAction = withAuth(async (user, { ten
     const actor = await coManagedBrowserActor(user, tenant);
     const { knex } = await createTenantKnex(tenant);
     return listCoManagedSharedProjectTasks(knex, actor, { customerTenant, relationshipId, projectId }, input ?? {});
+  });
+});
+
+/** Everything the native project screen needs for ONE admitted shared project (L3d). Opaque null when not served/admitted. */
+export const getCoManagedSharedProjectScreenAction = withAuth(async (user, { tenant }, customerTenant: string, relationshipId: string, projectId: string) => {
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  return denyAsNull(async () => {
+    const actor = await coManagedBrowserActor(user, tenant);
+    const { knex } = await createTenantKnex(tenant);
+    return getCoManagedSharedProjectScreen(knex, actor, { customerTenant, relationshipId, projectId });
+  });
+});
+
+/** Which project a shared task belongs to, through task-read admission; lets a task link reach the native project screen. */
+export const locateCoManagedSharedTaskAction = withAuth(async (user, { tenant }, customerTenant: string, relationshipId: string, taskId: string) => {
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  return denyAsNull(async () => {
+    const actor = await coManagedBrowserActor(user, tenant);
+    const { knex } = await createTenantKnex(tenant);
+    return locateCoManagedSharedTask(knex, actor, taskResource(customerTenant, relationshipId, taskId));
   });
 });
 

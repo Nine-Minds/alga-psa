@@ -5,7 +5,7 @@
 // than echoed into the report.
 export const FLAKY_SUITES = ['production-browser', 'server-unit', 'integration', 'infrastructure'];
 const LIMITS = { tests: 500, rows: 500, runIds: 50, jobs: 20, testId: 512, text: 400, artifactName: 120,
-  events: 10, branches: 20, eventName: 60, branch: 255 };
+  events: 10, branches: 20, eventName: 60, branch: 255, error: 400 };
 // Artifacts written before this card carry neither field, and they stay
 // aggregatable for their thirty-day retention rather than being rejected.
 const UNKNOWN_EVENT = 'unknown';
@@ -28,6 +28,7 @@ function readDocument(document) {
     if (!text(entry.testId, LIMITS.testId) || seen.has(entry.testId)) return 'invalid-test-identity';
     if (!text(entry.file, LIMITS.text) || !text(entry.name, LIMITS.text)) return 'invalid-test-entry';
     if (entry.retryCount !== undefined && !count(entry.retryCount, 1000)) return 'invalid-retry-count';
+    if (!absent(entry.error) && !text(entry.error, LIMITS.error)) return 'invalid-error';
     seen.add(entry.testId);
   }
   return null;
@@ -40,7 +41,8 @@ function readCoverage(coverage) {
   if (coverage === null || coverage === undefined) return null;
   const limits = Array.isArray(coverage.limits) ? coverage.limits.filter(code => text(code, 60)) : [];
   return {
-    runsInspected: count(coverage.runsInspected, 1_000_000) ? coverage.runsInspected : null,
+    artifactsListed: count(coverage.artifactsListed, 1_000_000) ? coverage.artifactsListed : null,
+    namesInspected: count(coverage.namesInspected, 1_000) ? coverage.namesInspected : null,
     complete: coverage.complete === true && limits.length === 0,
     limits: [...new Set(limits)].sort().slice(0, 10),
   };
@@ -80,6 +82,11 @@ export function aggregateFlakyTests(artifacts, { windowDays = 7, generatedAt = n
         firstSeen: observedAt, lastSeen: observedAt, runIds: [] };
       row.occurrences++;
       if (eventName === 'pull_request') row.prOccurrences++; else row.mainOccurrences++;
+      // The newest recorded first-attempt error stands for the row; older
+      // artifacts, and lanes that have not caught it yet, leave it as it was.
+      if (!absent(entry.error) && (row.lastError === undefined || observedAt >= row.lastErrorAt)) {
+        row.lastError = entry.error; row.lastErrorAt = observedAt;
+      }
       if (row.events[eventName] !== undefined || Object.keys(row.events).length < LIMITS.events) {
         row.events[eventName] = (row.events[eventName] ?? 0) + 1;
       }
@@ -93,8 +100,8 @@ export function aggregateFlakyTests(artifacts, { windowDays = 7, generatedAt = n
     }
   }
   const ordered = [...rows.values()]
-    .map(row => ({ ...row, jobs: [...row.jobs].sort(), artifactNames: [...row.artifactNames].sort(),
-      runIds: [...row.runIds].sort(), branches: [...row.branches].sort(),
+    .map(({ lastErrorAt, ...row }) => ({ ...row, jobs: [...row.jobs].sort(), artifactNames: [...row.artifactNames].sort(),
+      runIds: [...row.runIds].sort(), branches: [...row.branches].sort(), lastError: row.lastError ?? null,
       events: Object.fromEntries(Object.entries(row.events).sort(([a], [b]) => a.localeCompare(b))) }))
     .sort((a, b) => b.occurrences - a.occurrences || b.lastSeen.localeCompare(a.lastSeen)
       || a.suite.localeCompare(b.suite) || a.testId.localeCompare(b.testId));
@@ -116,11 +123,12 @@ export function renderFlakyTestReport(report) {
     `${summary.flakyTests} flaky test${summary.flakyTests === 1 ? '' : 's'} across `
     + `${summary.artifactsAccepted} artifact${summary.artifactsAccepted === 1 ? '' : 's'} from ${summary.runsObserved} run${summary.runsObserved === 1 ? '' : 's'}`
     + ` (${summary.artifactsRejected} artifact${summary.artifactsRejected === 1 ? '' : 's'} rejected).`, ''];
-  const runs = report.coverage?.runsInspected;
   if (report.coverage) {
+    const { artifactsListed: listed, namesInspected: names } = report.coverage;
+    const scope = `${listed === null ? 'an unknown number of' : listed} flaky artifact(s) listed under ${names === null ? 'the' : names} lane name(s)`;
     lines.push(report.coverage.complete
-      ? `Inspected every flaky-reporting workflow run in the window (${runs === null ? 'count unavailable' : runs}).`
-      : `**Partial coverage** — ${runs === null ? 'an unknown number of' : runs} workflow run(s) inspected`
+      ? `Inspected every flaky artifact published in the window: ${scope}.`
+      : `**Partial coverage** — ${scope}`
         + `${report.coverage.limits.length ? ` (${report.coverage.limits.map(code => `\`${cell(code)}\``).join(', ')})` : ''}.`
         + ' An absent test below is not evidence that it is stable.', '');
   }
@@ -129,10 +137,10 @@ export function renderFlakyTestReport(report) {
   } else {
     // Main and PR are split out: a test that only flakes on pull requests is a
     // different problem from one that flakes on a merged revision.
-    lines.push('| Test | Suite | Job | Main | PR | Count | Last seen |', '| --- | --- | --- | --- | --- | --- | --- |');
+    lines.push('| Test | Suite | Job | Main | PR | Count | Last seen | Last error |', '| --- | --- | --- | --- | --- | --- | --- | --- |');
     for (const row of report.tests) {
       lines.push(`| ${cell(row.testId)} | ${cell(row.suite)} | ${cell(row.jobs.join(', '))} `
-        + `| ${row.mainOccurrences} | ${row.prOccurrences} | ${row.occurrences} | ${cell(row.lastSeen)} |`);
+        + `| ${row.mainOccurrences} | ${row.prOccurrences} | ${row.occurrences} | ${cell(row.lastSeen)} | ${cell(row.lastError ?? '')} |`);
     }
     lines.push('');
     if (summary.truncated) lines.push(`Only the first ${report.tests.length} tests are listed.`, '');

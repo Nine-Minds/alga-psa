@@ -1,4 +1,4 @@
-import type { Knex } from 'knex';
+import knex, { type Knex } from 'knex';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Worker boot safety (capability gate, A6): the email-service entry must finish
@@ -126,6 +126,20 @@ describe('email-service boot with a failing capability gate', () => {
     vi.unstubAllEnvs();
   });
 
+  it('supports tenant-scoped admission reads without loading the database connection barrel', async () => {
+    const { tenantDb } = await import('@alga-psa/db/tenantDb');
+    const db = knex({ client: 'pg' });
+    try {
+      const query = tenantDb(db, 'tenant-boot').table('co_management_relationships')
+        .whereNull('ended_at').first('sponsor_tenant').toSQL();
+      expect(query.sql).toBe('select "sponsor_tenant" from "co_management_relationships" where "co_management_relationships"."tenant" = ? and "ended_at" is null limit ?');
+      expect(query.bindings).toEqual(['tenant-boot', 1]);
+      expect(m.gate).not.toHaveBeenCalled();
+    } finally {
+      await db.destroy();
+    }
+  });
+
   it.each(['', 'co-managed:off'])('starts and installs working admission without consulting the gate (force=%j)', async (force) => {
     vi.stubEnv('FORCE_CAPABILITIES', force);
     const onSpy = vi.spyOn(process, 'on').mockReturnValue(process);
@@ -133,6 +147,7 @@ describe('email-service boot with a failing capability gate', () => {
     try {
       await import('./index');
       await vi.waitFor(() => expect(m.info).toHaveBeenCalledWith('[IMAP] IMAP service started'));
+      expect(m.error).not.toHaveBeenCalled();
       const { admitTenantWrite, hasWriteAdmissionResolver } = await import('@alga-psa/db/writeAdmission');
       expect(hasWriteAdmissionResolver()).toBe(true);
       const lookup = {

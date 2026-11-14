@@ -13,6 +13,7 @@ import type {
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
 import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
+import { formatCurrencyWithSymbol } from "@alga-psa/core/formatters";
 
 /**
  * A persisted bucket_usage row, or its in-memory simulator equivalent.
@@ -173,11 +174,8 @@ function numberOrZero(value: number | string | null | undefined): number {
 }
 
 function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode || "USD",
   // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-  }).format(cents / 100);
+  return formatCurrencyWithSymbol(cents / 100, "en-US", currencyCode || "USD");
 }
 
 function formatQuantity(quantity: number): string {

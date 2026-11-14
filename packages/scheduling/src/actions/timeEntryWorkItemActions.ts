@@ -1,6 +1,7 @@
 'use server'
 
 import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -29,6 +30,21 @@ function normalizeNonBillableWorkItemId(workItemId: string | null | undefined): 
   return workItemId || NON_BILLABLE_FALLBACK_WORK_ITEM_ID;
 }
 
+/**
+ * Whether the time-entry drawer may save time on this work item without a service. The answer comes only from a
+ * registered time source; native (and every tenant no source serves) answers false, so "service required" stands.
+ */
+export const isServiceOptionalForWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemType: string,
+  workItemId: string
+): Promise<boolean> => {
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType, workItemId },
+    (source, ctx) => source.work.serviceOptional(ctx, workItemType, workItemId));
+  return delegated.handled ? delegated.value === true : false;
+});
+
 export const fetchWorkItemsForTimeSheet = withAuth(async (
   user,
   { tenant },
@@ -45,6 +61,14 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entry work items');
   }
+
+  // Work items listed here are the ones this sheet's entries point at; entries of clients the reader may not see do not count.
+  const readScope = await resolveTimeEntryReadScope(db, tenant, user);
+  const timeEntriesInScope = () => {
+    const query = scopedDb.table('time_entries');
+    readScope.apply(query);
+    return query;
+  };
 
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
@@ -64,7 +88,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const ticketsQuery = scopedDb.table('tickets')
     .whereIn(
       'tickets.ticket_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ticket',
@@ -72,6 +96,9 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
         })
     );
   scopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 'tickets.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+  // Not narrowed by ticket read scope here: the time sheet grid has one row per work item returned, so a time entry
+  // whose ticket is dropped would stay in the totals and submission with no row to show it. Narrowing this list
+  // belongs with the time entry list authorization (S10), which must drop the entries and the work items together.
   const tickets = await ticketsQuery
     .select(
       'tickets.ticket_id as work_item_id',
@@ -87,7 +114,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const projectTasksQuery = scopedDb.table('project_tasks')
     .whereIn(
       'task_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'project_task',
@@ -120,7 +147,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const adHocEntries = await scopedDb.table('schedule_entries')
     .whereIn(
       'entry_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ad_hoc',
@@ -138,7 +165,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const interactionsQuery = scopedDb.table('interactions')
     .whereIn(
       'interaction_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'interaction',
@@ -159,7 +186,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
       db.raw("'interaction' as type")
     );
 
-  const nonBillableEntries = await scopedDb.table('time_entries')
+  const nonBillableEntries = await timeEntriesInScope()
     .where({
       'time_entries.work_item_type': 'non_billable_category',
       'time_entries.time_sheet_id': validatedParams.timeSheetId
@@ -183,10 +210,15 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     }, new Map<string, Pick<IWorkItem, 'work_item_id' | 'name' | 'description' | 'type'>>()).values()
   );
 
-  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems].map((item): IExtendedWorkItem => ({
+  // Time-source seam: a registered provider lists the work items it owns on this sheet; native misses (0 statements).
+  const contributed = await delegateToTimeSource({ tenant, userId: user.user_id },
+    (source, ctx) => source.work.listSheetItems(ctx, db, validatedParams.timeSheetId));
+  const providerItems = contributed.handled ? contributed.value : [];
+
+  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems, ...(providerItems as any[])].map((item): IExtendedWorkItem => ({
     ...item,
     is_billable: item.type !== 'non_billable_category',
-    ticket_number: item.type === 'ticket' ? item.ticket_number : undefined
+    ticket_number: item.type === 'ticket' || providerItems.includes(item) ? item.ticket_number : undefined
   }));
   } catch (error) {
     const expected = timeSheetActionErrorFrom(error);

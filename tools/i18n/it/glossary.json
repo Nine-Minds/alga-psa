@@ -2207,6 +2207,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Layout",
+      "1 asset",
       "Offline",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
@@ -2224,6 +2226,7 @@
       "App Store (iOS)",
       "Asia",
       "Asset",
+      "Audit",
       "Australia",
       "Authorization: Bearer abc123\nX-Source: alga-psa",
       "Budget",
@@ -2321,6 +2324,7 @@
       "Test",
       "Ticket",
       "Trigger",
+      "Trigger:",
       "Try/Catch",
       "URL",
       "UUID",
@@ -2370,7 +2374,15 @@
       "Code 128",
       "Asset: {{name}}",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Markdown",
+      "ticket",
+      "Firmware",
+      "No",
+      "team",
+      "{{actor}} • {{eventType}}",
+      "Standard",
+      "Ticket {{number}}"
     ],
     "caseInsensitive": [
       "account",

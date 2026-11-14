@@ -6,7 +6,8 @@
  */
 
 // Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
+// LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmSyncStatus = 'pending' | 'syncing' | 'completed' | 'error';
 export type RmmAlertSeverity = 'critical' | 'major' | 'moderate' | 'minor' | 'none';
 export type RmmAlertStatus = 'active' | 'acknowledged' | 'resolved' | 'auto_resolved';
@@ -333,6 +334,10 @@ export interface RmmSyncResult {
   items_deleted?: number;
   items_failed: number;
   errors?: string[];
+  /** UniFi multi-key: per-credential outcome (labels only, never key material). */
+  credentials?: Array<{ label: string; status: string; consolesReached: number }>;
+  /** UniFi multi-key: consoles no configured key can reach. */
+  unreachableConsoles?: Array<{ hostId: string; name: string; suggestedAction: string }>;
 }
 
 // Connection status for UI

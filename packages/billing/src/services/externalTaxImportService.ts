@@ -9,6 +9,7 @@ import {
 } from '@alga-psa/types';
 import { QuickBooksOnlineAdapter } from '../adapters/accounting/quickBooksOnlineAdapter';
 import { XeroAdapter } from '../adapters/accounting/xeroAdapter';
+import { distributeExternalTaxToFixedDetails } from './delegatedFixedDetailTax';
 
 /**
  * Result of a single invoice tax import operation
@@ -220,6 +221,29 @@ export class ExternalTaxImportService {
           tax_source: 'external' as TaxSource,
           updated_at: knex.fn.now()
         });
+
+      // 8b. The import does not re-run calculateAndDistributeTax, so settle the
+      // charge rows here on the same basis the header totals below use: the
+      // imported amount becomes the charge tax, and a fixed-plan parent's share
+      // is pushed onto its allocation rows so accounting export expansion can
+      // reconcile detail tax against the parent.
+      const settledCharges = await db.table('invoice_charges')
+        .where({ invoice_id: invoiceId })
+        .select('item_id', 'net_amount', 'tax_amount', 'external_tax_amount');
+
+      for (const charge of settledCharges) {
+        const chargeTax = Number(charge.external_tax_amount ?? charge.tax_amount ?? 0);
+        const netAmount = Number(charge.net_amount ?? 0);
+        await db.table('invoice_charges')
+          .where({ item_id: charge.item_id })
+          .update({
+            tax_amount: chargeTax,
+            total_price: netAmount + chargeTax,
+            updated_at: knex.fn.now()
+          });
+      }
+
+      await distributeExternalTaxToFixedDetails(knex, tenant, invoiceId);
 
       // 9. Recalculate invoice total
       const newTotals = await db.table('invoice_charges')

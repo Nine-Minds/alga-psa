@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -34,10 +34,10 @@ import {
 
 const RECORD_LIMIT = 200;
 
-const ACTION_BADGES: Record<MigrationOutcomeRecord['action'], { label: string; variant: 'success' | 'default-muted' | 'error' }> = {
-  created: { label: 'Created', variant: 'success' },
-  skipped: { label: 'Skipped', variant: 'default-muted' },
-  failed: { label: 'Failed', variant: 'error' },
+const ACTION_BADGES: Record<MigrationOutcomeRecord['action'], { labelKey: string; defaultValue: string; variant: 'success' | 'default-muted' | 'error' }> = {
+  created: { labelKey: 'importExport.migration.results.actions.created', defaultValue: 'Created', variant: 'success' },
+  skipped: { labelKey: 'importExport.migration.results.actions.skipped', defaultValue: 'Skipped', variant: 'default-muted' },
+  failed: { labelKey: 'importExport.migration.results.actions.failed', defaultValue: 'Failed', variant: 'error' },
 };
 
 interface MigrationResultsPanelProps {
@@ -50,6 +50,10 @@ interface MigrationResultsPanelProps {
  */
 const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Loaders read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [summary, setSummary] = useState<MigrationOutcomeSummary[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -76,7 +80,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       })
       .catch((error) => {
         if (!cancelled) {
-          setSummaryError(migrationErrorMessage(error, 'Failed to load the outcome summary.'));
+          setSummaryError(migrationErrorMessage(error, tRef.current('importExport.migration.results.errors.loadSummary', { defaultValue: 'Failed to load the outcome summary.' })));
         }
       })
       .finally(() => {
@@ -126,7 +130,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       })
       .catch((error) => {
         if (!cancelled) {
-          setRecordsError(migrationErrorMessage(error, 'Failed to load outcome records.'));
+          setRecordsError(migrationErrorMessage(error, tRef.current('importExport.migration.results.errors.loadRecords', { defaultValue: 'Failed to load outcome records.' })));
         }
       })
       .finally(() => {
@@ -147,11 +151,11 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       const csv = await getMigrationReportCsv(details.migrationJobId, 'outcome');
       downloadTextFile(`migration-outcome-${details.migrationJobId}.csv`, csv, 'text/csv');
     } catch (error) {
-      setDownloadError(migrationErrorMessage(error, 'Failed to download the outcome CSV.'));
+      setDownloadError(migrationErrorMessage(error, t('importExport.migration.results.errors.downloadCsv', { defaultValue: 'Failed to download the outcome CSV.' })));
     } finally {
       setIsDownloading(false);
     }
-  }, [details.migrationJobId]);
+  }, [details.migrationJobId, t]);
 
   const entityFilterOptions = useMemo(
     () =>
@@ -164,11 +168,11 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
 
   const actionFilterOptions = useMemo(
     () => [
-      { value: 'created', label: 'Created' },
-      { value: 'skipped', label: 'Skipped' },
-      { value: 'failed', label: 'Failed' },
+      { value: 'created', label: t('importExport.migration.results.actions.created', { defaultValue: 'Created' }) },
+      { value: 'skipped', label: t('importExport.migration.results.actions.skipped', { defaultValue: 'Skipped' }) },
+      { value: 'failed', label: t('importExport.migration.results.actions.failed', { defaultValue: 'Failed' }) },
     ],
-    []
+    [t]
   );
 
   const createdNothing = migrationCreatedNothing(details.state, details.entityCounts);
@@ -178,11 +182,11 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Results</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('importExport.migration.results.title', { defaultValue: 'Results' })}</h3>
           <p className="text-sm text-muted-foreground">
             {details.completedAt
-              ? `Finished ${formatMigrationTimestamp(details.completedAt)}.`
-              : 'The job is no longer running.'}{' '}
+              ? t('importExport.migration.results.finishedAt', { defaultValue: 'Finished {{timestamp}}.', timestamp: formatMigrationTimestamp(details.completedAt) })
+              : t('importExport.migration.results.noLongerRunning', { defaultValue: 'The job is no longer running.' })}{' '}
             {skipSentence ?? ''}
           </p>
         </div>
@@ -196,10 +200,10 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
           {isDownloading ? (
             <span className="flex items-center gap-2">
               <Spinner size="sm" />
-              Preparing…
+              {t('importExport.migration.results.preparing', { defaultValue: 'Preparing…' })}
             </span>
           ) : (
-            'Download outcome CSV'
+            t('importExport.migration.results.downloadCsv', { defaultValue: 'Download outcome CSV' })
           )}
         </Button>
       </div>
@@ -207,7 +211,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       {details.state === 'failed' && details.error && (
         <Alert variant="destructive">
           <AlertDescription>
-            <span className="font-medium">The migration failed:</span>{' '}
+            <span className="font-medium">{t('importExport.migration.results.failedLabel', { defaultValue: 'The migration failed:' })}</span>{' '}
             <span className="break-words">{details.error}</span>
           </AlertDescription>
         </Alert>
@@ -215,8 +219,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       {details.state === 'cancelled' && (
         <Alert>
           <AlertDescription>
-            The migration was cancelled at a checkpoint. Records applied before the cancellation
-            remain and are listed below.
+            {t('importExport.migration.results.cancelled', { defaultValue: 'The migration was cancelled at a checkpoint. Records applied before the cancellation remain and are listed below.' })}
           </AlertDescription>
         </Alert>
       )}
@@ -252,7 +255,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
         </div>
       ) : summary.length === 0 ? (
         <p className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No outcome records were written for this job.
+          {t('importExport.migration.results.noRecordsWritten', { defaultValue: 'No outcome records were written for this job.' })}
         </p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -263,13 +266,13 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
               </p>
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                 <span className="text-foreground">
-                  <span className="text-lg font-semibold tabular-nums">{row.created}</span> created
+                  <span className="text-lg font-semibold tabular-nums">{row.created}</span> {t('importExport.migration.results.counts.created', { defaultValue: 'created' })}
                 </span>
                 <span className="text-muted-foreground">
-                  <span className="text-lg font-semibold tabular-nums">{row.skipped}</span> skipped
+                  <span className="text-lg font-semibold tabular-nums">{row.skipped}</span> {t('importExport.migration.results.counts.skipped', { defaultValue: 'skipped' })}
                 </span>
                 <span className={row.failed > 0 ? 'text-destructive' : 'text-muted-foreground'}>
-                  <span className="text-lg font-semibold tabular-nums">{row.failed}</span> failed
+                  <span className="text-lg font-semibold tabular-nums">{row.failed}</span> {t('importExport.migration.results.counts.failed', { defaultValue: 'failed' })}
                 </span>
               </div>
             </div>
@@ -280,24 +283,24 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       <div className="space-y-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="w-full space-y-2 md:w-56">
-            <Label htmlFor="amp-outcome-entity-filter">Entity</Label>
+            <Label htmlFor="amp-outcome-entity-filter">{t('importExport.migration.results.columns.entity', { defaultValue: 'Entity' })}</Label>
             <CustomSelect
               id="amp-outcome-entity-filter"
               options={entityFilterOptions}
               value={entityFilter}
               onValueChange={setEntityFilter}
-              placeholder="All entities"
+              placeholder={t('importExport.migration.results.filters.allEntities', { defaultValue: 'All entities' })}
               allowClear
             />
           </div>
           <div className="w-full space-y-2 md:w-56">
-            <Label htmlFor="amp-outcome-action-filter">Action</Label>
+            <Label htmlFor="amp-outcome-action-filter">{t('importExport.migration.results.columns.action', { defaultValue: 'Action' })}</Label>
             <CustomSelect
               id="amp-outcome-action-filter"
               options={actionFilterOptions}
               value={actionFilter}
               onValueChange={setActionFilter}
-              placeholder="All actions"
+              placeholder={t('importExport.migration.results.filters.allActions', { defaultValue: 'All actions' })}
               allowClear
             />
           </div>
@@ -317,18 +320,18 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Source record</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Result</TableHead>
-                    <TableHead className="text-right">At</TableHead>
+                    <TableHead>{t('importExport.migration.results.columns.entity', { defaultValue: 'Entity' })}</TableHead>
+                    <TableHead>{t('importExport.migration.results.columns.sourceRecord', { defaultValue: 'Source record' })}</TableHead>
+                    <TableHead>{t('importExport.migration.results.columns.action', { defaultValue: 'Action' })}</TableHead>
+                    <TableHead>{t('importExport.migration.results.columns.result', { defaultValue: 'Result' })}</TableHead>
+                    <TableHead className="text-right">{t('importExport.migration.results.columns.at', { defaultValue: 'At' })}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {records.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
-                        No outcome records match these filters.
+                        {t('importExport.migration.results.noRecordsMatch', { defaultValue: 'No outcome records match these filters.' })}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -342,13 +345,13 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
                           </TableCell>
                           <TableCell>
                             <Badge variant={actionBadge.variant} size="sm">
-                              {actionBadge.label}
+                              {t(actionBadge.labelKey, { defaultValue: actionBadge.defaultValue })}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             {record.action === 'failed' ? (
                               <span className="break-words text-sm text-destructive">
-                                {record.errors.length > 0 ? record.errors.join('; ') : 'Unknown error'}
+                                {record.errors.length > 0 ? record.errors.join('; ') : t('importExport.migration.results.unknownError', { defaultValue: 'Unknown error' })}
                               </span>
                             ) : record.action === 'created' && record.targetEntityId ? (
                               <span className="break-all font-mono text-xs text-foreground">
@@ -375,8 +378,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
             </div>
             {records.length >= RECORD_LIMIT && (
               <p className="text-xs text-muted-foreground">
-                Showing the first {RECORD_LIMIT} matching records. Download the outcome CSV for the
-                complete list.
+                {t('importExport.migration.results.recordLimitNotice', { defaultValue: 'Showing the first {{count}} matching records. Download the outcome CSV for the complete list.', count: RECORD_LIMIT })}
               </p>
             )}
           </>

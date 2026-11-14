@@ -22,15 +22,10 @@ import { reconcileHostedCoManagedEntitlement } from '../../../../packages/licens
 import { isCoManagedPurchaseSurfaceOpen } from '../../../../packages/licensing/src/lib/co-managed-purchase-surface';
 import { hasCoManagedEntitlement } from '../../../../packages/co-managed/src/capability';
 import { admits } from '../../../../packages/core/src/lib/capability';
+import { registerFeatureFlagChecker } from '../../../../packages/core/src/lib/features';
 import { StripeService } from '@ee/lib/stripe/StripeService';
 
-const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true }));
-// The release flag is the only thing replaced: entitlement eligibility, the kill switch and the
-// capability gate all run for real.
-vi.mock('../../../../packages/core/src/lib/features', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  isFeatureFlagEnabled: async () => holder.flag,
-}));
+const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true as boolean | 'unavailable' }));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => holder.db }));
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => holder.db,
@@ -52,6 +47,7 @@ const require = createRequire(import.meta.url);
 const previousProductMigration = require('../../../migrations/20260505140000_add_tenant_product_code.cjs');
 const foundationMigration = require('../../../migrations/20261028130000_create_co_management_foundation.cjs');
 const purchaseMigration = require('../../../migrations/20261029120000_create_co_managed_purchase_operations.cjs');
+const allocationKindMigration = require('../../../migrations/20261111100000_add_co_managed_allocation_kind.cjs');
 const subscriptionItemMigration = require('../../../migrations/20261027090100_add_stripe_subscription_item_id.cjs');
 const stripeMigrations = [
   '20251014120000_create_stripe_integration_tables.cjs',
@@ -89,6 +85,11 @@ async function state(view: string): Promise<any[]> {
 }
 
 beforeAll(async () => {
+  // Replace the provider at its registration boundary so both the boolean purchase-surface
+  // check and the status-aware capability gate exercise the real feature-flag API.
+  registerFeatureFlagChecker(async () => holder.flag === 'unavailable'
+    ? { status: 'unavailable', enabled: false }
+    : holder.flag);
   const connection = {
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT || 5432),
@@ -96,6 +97,20 @@ beforeAll(async () => {
     password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN'),
   };
   admin = knex({ client: 'pg', connection: { ...connection, database: 'postgres' } });
+  // The Stripe migrations below GRANT to DB_USER_SERVER, and roles are
+  // cluster-wide: this suite only passed when some earlier suite happened to
+  // create the role first. Create it here, as the other self-bootstrapping
+  // suites do, so migrations succeed whatever order the files run in. Never
+  // ALTER an existing role — a concurrent suite may rely on its password.
+  const appUser = process.env.DB_USER_SERVER || 'app_user';
+  const appPassword = process.env.DB_PASSWORD_SERVER || connection.password;
+  await admin.raw(`DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser.replace(/'/g, "''")}') THEN
+        CREATE ROLE "${appUser.replace(/"/g, '""')}" WITH LOGIN PASSWORD '${appPassword.replace(/'/g, "''")}';
+      END IF;
+    END;
+  $$;`);
   await admin.raw('CREATE DATABASE ??', [databaseName]);
   created = true;
   db = knex({ client: 'pg', connection: { ...connection, database: databaseName }, pool: { min: 0, max: 6 } });
@@ -126,6 +141,8 @@ beforeAll(async () => {
   }
   await foundationMigration.up(db);
   await purchaseMigration.up(db);
+  // The pool is read per allocation kind, so this hand-picked schema needs the kind column too.
+  await allocationKindMigration.up(db);
 
   host = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
   const started = await host.start();
@@ -228,8 +245,15 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await hasCoManagedEntitlement(tenant, db)).toBe(true);
     expect(await admits('co-managed', tenant)).toMatchObject({ admitted: true, reasons: { admitted: 'open' } });
     holder.flag = false;
-    expect((await admits('co-managed', tenant)).admitted).toBe(false); // entitlement alone is not enough
+    expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(false);
+    expect(await admits('co-managed', tenant)).toMatchObject({ admitted: false, reasons: { admitted: 'flag-off' } });
+    holder.flag = 'unavailable';
+    expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(false);
+    expect(await admits('co-managed', tenant)).toMatchObject({ admitted: false, reasons: { admitted: 'flag-unavailable' } });
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 3, available: 3 });
     holder.flag = true;
+    expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(true);
+    expect(await admits('co-managed', tenant)).toMatchObject({ admitted: true, reasons: { admitted: 'open' } });
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     expect((await admits('co-managed', tenant)).admitted).toBe(true);
     delete process.env.FORCE_CAPABILITIES;

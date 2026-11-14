@@ -81,6 +81,7 @@ vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () =>
   }); })
 }));
 
+import { formatMicrosoftOAuthFailureForMailboxFlow } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { syncCalendarProviderImpl } from '@alga-psa/ee-calendar/lib/actions/integrations/calendarActions';
 
 const authUser = { user_id: 'user-1', tenant: 'tenant-1', user_type: 'internal' } as any;
@@ -303,6 +304,61 @@ describe('syncCalendarProvider manual flows', () => {
       expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
     }
   );
+
+  it.each([
+    ['7000215', 'invalid_client_secret'],
+    ['7000222', 'expired_client_secret'],
+  ] as const)('stores the mapped AADSTS%s message verbatim when the sync throws', async (_code, kind) => {
+    const mapped = formatMicrosoftOAuthFailureForMailboxFlow(kind);
+    setupKnex([{ schedule_entry_id: 'entry-1', external_event_id: 'ext-1' }]);
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-1', tenant: 'tenant-1', user_id: 'user-1', provider_type: 'microsoft',
+      sync_direction: 'bidirectional',
+      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+    });
+    mockSyncExternalEventToSchedule.mockRejectedValue(
+      Object.assign(new Error(mapped), { microsoftOAuthFailureKind: kind })
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-1');
+    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalledWith(
+      'provider-1', { status: 'error', errorMessage: mapped }
+    ));
+  });
+
+  it('recognises a mapped message by its code prefix even without the kind property', async () => {
+    setupKnex([{ schedule_entry_id: 'entry-1', external_event_id: 'ext-1' }]);
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-1', tenant: 'tenant-1', user_id: 'user-1', provider_type: 'microsoft',
+      sync_direction: 'bidirectional',
+      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+    });
+    const mapped = 'aadsts_7000222_expired_secret: Microsoft rejected the client secret.';
+    mockSyncExternalEventToSchedule.mockRejectedValue(new Error(mapped));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-1');
+    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalledWith(
+      'provider-1', { status: 'error', errorMessage: mapped }
+    ));
+  });
+
+  it('still falls back to the generic message for an unrecognised error', async () => {
+    setupKnex([{ schedule_entry_id: 'entry-1', external_event_id: 'ext-1' }]);
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-1', tenant: 'tenant-1', user_id: 'user-1', provider_type: 'microsoft',
+      sync_direction: 'bidirectional',
+      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+    });
+    mockSyncExternalEventToSchedule.mockRejectedValue(new Error('aadsts_unknown_code: something odd'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-1');
+    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalledWith(
+      'provider-1', { status: 'error', errorMessage: 'Failed to sync calendar provider.' }
+    ));
+  });
 
   it('only pulls external events when provider direction is from_external', async () => {
     setupKnex([{ schedule_entry_id: 'entry-2', external_event_id: 'ext-2' }]);

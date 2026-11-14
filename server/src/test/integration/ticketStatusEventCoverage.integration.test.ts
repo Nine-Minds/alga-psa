@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useNativeCoManagedVerdict } from '../../../../shared/workflow/runtime/actions/__tests__/helpers/nativeCoManagedVerdict';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -185,6 +186,7 @@ describe('TICKET_STATUS_CHANGED coverage across status write sites (integration)
   }
 
   describe('workflow actions', () => {
+    useNativeCoManagedVerdict();
     it('tickets.update_fields publishes one TICKET_STATUS_CHANGED, stamped with the run as correlation id', async () => {
       const ticketId = await insertTicket();
       await runAction('tickets.update_fields', { ticket_id: ticketId, patch: { status_id: statusProgress } });

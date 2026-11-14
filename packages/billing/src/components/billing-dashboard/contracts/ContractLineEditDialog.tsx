@@ -28,6 +28,8 @@ interface ContractLineEditDialogProps {
     contract_line_type?: string | null;
     /** Verbatim invoice line text; falls back to the line name when null. */
     invoice_line_description?: string | null;
+    /** Muted second line under the bundle title (Fixed lines only). */
+    invoice_line_subtitle?: string | null;
   };
   /** Currency of the contract or template being edited; shown as the input symbol. */
   currencyCode?: string | null;
@@ -42,6 +44,8 @@ interface ContractLineEditDialogProps {
     rateCents: number,
     billingTiming: 'arrears' | 'advance',
     invoiceLineDescription: string | null,
+    /** Fixed lines only; undefined leaves the stored subtitle untouched. */
+    invoiceLineSubtitle?: string | null,
   ) => Promise<void>;
 }
 
@@ -64,6 +68,8 @@ export function ContractLineEditDialog({ line, currencyCode, exactMinorUnits, on
   const [invoiceLineDescription, setInvoiceLineDescription] = useState<string>(
     line.invoice_line_description ?? ''
   );
+  const isFixed = line.contract_line_type === 'Fixed';
+  const [invoiceSubtitle, setInvoiceSubtitle] = useState(line.invoice_line_subtitle ?? '');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -89,6 +95,7 @@ export function ContractLineEditDialog({ line, currencyCode, exactMinorUnits, on
         rateCents,
         resolveEffectiveBillingTiming(line.contract_line_type, billingTiming),
         invoiceLineDescription.trim() || null,
+        isFixed ? invoiceSubtitle.trim() || null : undefined,
       );
     } catch (err) {
       console.error('Failed to save contract line:', err);
@@ -204,6 +211,25 @@ export function ContractLineEditDialog({ line, currencyCode, exactMinorUnits, on
                 })}
               </p>
             </div>
+
+            {isFixed && (
+              <div>
+                <Label htmlFor="contract-line-invoice-subtitle">
+                  {t('contractLineEdit.fields.invoiceSubtitle', { defaultValue: 'Invoice subtitle' })}
+                </Label>
+                <Input
+                  id="contract-line-invoice-subtitle"
+                  type="text"
+                  value={invoiceSubtitle}
+                  onChange={(e) => setInvoiceSubtitle(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('contractLineEdit.fields.invoiceSubtitleHelp', {
+                    defaultValue: 'A muted second line under the invoice line text.',
+                  })}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Billing Timing Section */}

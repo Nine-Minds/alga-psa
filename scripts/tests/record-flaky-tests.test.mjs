@@ -10,7 +10,8 @@ const REPORT = {
   since: '2026-09-28T07:00:12.000Z',
   tests: [
     { testId: 'src/test/unit/a.test.ts > a > flakes', suite: 'server-unit', jobs: ['server-unit shard 2/4'],
-      mainOccurrences: 2, prOccurrences: 1, occurrences: 3, firstSeen: '2026-09-29T10:00:00.000Z', lastSeen: '2026-10-03T10:00:00.000Z' },
+      mainOccurrences: 2, prOccurrences: 1, occurrences: 3, firstSeen: '2026-09-29T10:00:00.000Z', lastSeen: '2026-10-03T10:00:00.000Z',
+      lastError: 'expected 2 to be 3 // Object.is equality' },
     { testId: 'journeys/login.spec.ts > signs in [community]', suite: 'production-browser', jobs: ['production-browser (community)'],
       mainOccurrences: 0, prOccurrences: 1, occurrences: 1, firstSeen: '2026-10-01T10:00:00.000Z', lastSeen: '2026-10-01T10:00:00.000Z' },
   ],
@@ -37,9 +38,12 @@ test('one row per test, carrying the report window and the split main/PR counts'
   assert.equal(rows[0].length, FLAKY_TESTS_HEADER.length);
   assert.deepEqual(rows[0], ['2026-10-05T07:00:12.000Z', '2026-W41', 7, '2026-09-28T07:00:12.000Z', 'server-unit',
     'src/test/unit/a.test.ts > a > flakes', 'server-unit shard 2/4', 2, 1, 3,
-    '2026-09-29T10:00:00.000Z', '2026-10-03T10:00:00.000Z', '777', 'https://github.com/Nine-Minds/alga-psa/actions/runs/777', 1]);
+    '2026-09-29T10:00:00.000Z', '2026-10-03T10:00:00.000Z', '777', 'https://github.com/Nine-Minds/alga-psa/actions/runs/777', 1,
+    'expected 2 to be 3 // Object.is equality']);
   assert.deepEqual(rows[1].slice(4, 10), ['production-browser', 'journeys/login.spec.ts > signs in [community]',
     'production-browser (community)', 0, 1, 1]);
+  // Reports written before the error was recorded leave the column empty.
+  assert.equal(rows[1].at(-1), '');
 });
 
 test('appends the rows to flaky_tests, creating the tab on first use', async () => {

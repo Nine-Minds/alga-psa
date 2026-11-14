@@ -1,4 +1,4 @@
-import type { IScheduleEntry, IHoliday } from '@alga-psa/types';
+import type { IScheduleEntry, IHoliday, IRecurrencePattern } from '@alga-psa/types';
 import * as rrulePkg from 'rrule';
 import type { Frequency, Weekday } from 'rrule';
 import { toCalendarDateString } from '@alga-psa/core';
@@ -60,6 +60,198 @@ export function isHolidayDate(date: Date, holidays: HolidayDateInput[], utc = fa
   });
 }
 
+/** Pattern day numbering: Monday = 0 … Sunday = 6 (matches the schedule UI). */
+const WEEKDAY_KEYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as const;
+
+/**
+ * byweekday for a pattern, carrying the nth-weekday ordinal when the pattern
+ * has one ("first Thursday of each month" → TH.nth(1)).
+ */
+function buildByWeekday(pattern: IRecurrencePattern): Weekday[] | undefined {
+  if (!pattern.daysOfWeek || pattern.daysOfWeek.length === 0) return undefined;
+  return pattern.daysOfWeek.map((day): Weekday => {
+    const key = WEEKDAY_KEYS[day];
+    if (!key) {
+      console.error('[generateOccurrences] Invalid day of week:', day);
+      return RRule.MO;
+    }
+    const weekday = RRule[key] as Weekday;
+    return pattern.weekOfMonth ? weekday.nth(pattern.weekOfMonth) : weekday;
+  });
+}
+
+interface ZoneParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+const zoneFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function zoneFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = zoneFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    zoneFormatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
+/** Wall-clock fields of an instant in an IANA zone. Pure: Intl only, no deps. */
+function zoneParts(date: Date, timeZone: string): ZoneParts {
+  const parts = zoneFormatter(timeZone).formatToParts(date);
+  const read = (type: string): number => Number(parts.find((part) => part.type === type)?.value ?? '0');
+  return {
+    year: read('year'),
+    month: read('month'),
+    day: read('day'),
+    hour: read('hour') % 24,
+    minute: read('minute'),
+    second: read('second'),
+  };
+}
+
+function zoneOffsetMs(timeZone: string, at: Date): number {
+  const parts = zoneParts(at, timeZone);
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+  return asUtc - Math.floor(at.getTime() / 1000) * 1000;
+}
+
+/** The instant whose wall clock in `timeZone` is exactly these fields. */
+function instantFromZoneParts(parts: ZoneParts, timeZone: string, ms = 0): Date {
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second, ms);
+  let instant = asUtc - zoneOffsetMs(timeZone, new Date(asUtc));
+  // The offset at the guess can differ from the offset at the naive instant
+  // (DST boundary); one refinement settles every real zone.
+  instant = asUtc - zoneOffsetMs(timeZone, new Date(instant));
+  return new Date(instant);
+}
+
+function isSupportedTimeZone(timeZone: string): boolean {
+  try {
+    zoneFormatter(timeZone);
+    return true;
+  } catch {
+    console.error('[generateOccurrences] Unknown time zone, falling back to UTC expansion:', timeZone);
+    return false;
+  }
+}
+
+function utcDateKey(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+/** Floating (UTC-field) date rrule should expand from, for a zone-local day. */
+function floatingDay(parts: ZoneParts, endOfDay = false): Date {
+  return endOfDay
+    ? new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 23, 59, 59, 999))
+    : new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0));
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Expand a series anchored in an IANA zone: the local wall-clock time is held
+ * constant so a 10:15 America/New_York series stays 10:15 across DST (14:15Z in
+ * summer, 15:15Z in winter) instead of drifting with UTC arithmetic.
+ */
+function generateZonedOccurrences(
+  entry: IScheduleEntry,
+  pattern: IRecurrencePattern,
+  start: Date,
+  end: Date,
+  timeZone: string,
+  options?: GenerateOccurrencesOptions
+): Date[] {
+  const masterStart = new Date(entry.scheduled_start);
+  const localMaster = zoneParts(masterStart, timeZone);
+  const localPatternStart = zoneParts(new Date(pattern.startDate), timeZone);
+
+  const freqKey = pattern.frequency.toUpperCase() as keyof typeof RRule;
+  if (!(freqKey in RRule)) {
+    console.error('[generateOccurrences] Invalid frequency:', pattern.frequency);
+    return [masterStart];
+  }
+
+  const rrule = new RRule({
+    freq: RRule[freqKey] as Frequency,
+    interval: pattern.interval,
+    dtstart: floatingDay(localPatternStart),
+    until: pattern.endDate ? floatingDay(zoneParts(new Date(pattern.endDate), timeZone), true) : undefined,
+    byweekday: buildByWeekday(pattern),
+    bymonthday: pattern.dayOfMonth,
+    bymonth: pattern.monthOfYear,
+    count: pattern.count,
+  });
+
+  // Expand with a day of slack on each edge: the local day a UTC instant lands
+  // on can differ from its UTC day.
+  const windowStartParts = zoneParts(new Date(start), timeZone);
+  const windowEndParts = zoneParts(new Date(end), timeZone);
+  const floatingFrom = new Date(floatingDay(windowStartParts).getTime() - DAY_MS);
+  const floatingTo = new Date(floatingDay(windowEndParts, true).getTime() + DAY_MS);
+
+  const rangeStartInstant = instantFromZoneParts(
+    { ...windowStartParts, hour: 0, minute: 0, second: 0 },
+    timeZone
+  );
+  const rangeEndInstant = instantFromZoneParts(
+    { ...windowEndParts, hour: 23, minute: 59, second: 59 },
+    timeZone,
+    999
+  );
+
+  const masterLocalDay = `${localMaster.year}-${String(localMaster.month).padStart(2, '0')}-${String(localMaster.day).padStart(2, '0')}`;
+
+  const exceptionKeys = new Set(
+    (pattern.exceptions ?? [])
+      .map((value): string | null => {
+        const date = value instanceof Date ? value : new Date(value);
+        return isNaN(date.getTime()) ? null : utcDateKey(date);
+      })
+      .filter((key): key is string => key !== null)
+  );
+
+  const occurrences = rrule
+    .between(floatingFrom, floatingTo, true)
+    .filter((floating): boolean => {
+      const day = utcDateKey(floating);
+      return options?.includeMaster === true || day !== masterLocalDay;
+    })
+    .map((floating): Date =>
+      instantFromZoneParts(
+        {
+          year: floating.getUTCFullYear(),
+          month: floating.getUTCMonth() + 1,
+          day: floating.getUTCDate(),
+          hour: localMaster.hour,
+          minute: localMaster.minute,
+          second: localMaster.second,
+        },
+        timeZone
+      )
+    )
+    .filter((instant): boolean => instant >= rangeStartInstant && instant <= rangeEndInstant)
+    .filter((instant): boolean => !exceptionKeys.has(utcDateKey(instant)));
+
+  if (options?.holidays && options.holidays.length > 0) {
+    return occurrences.filter((date): boolean => !isHolidayDate(date, options.holidays!, false));
+  }
+  return occurrences;
+}
+
 export interface GenerateOccurrencesOptions {
   /** Holidays to exclude from generated occurrences */
   holidays?: IHoliday[];
@@ -80,6 +272,15 @@ export function generateOccurrences(
     }
     const pattern = entry.recurrence_pattern;
     const allDay = entry.is_all_day === true;
+
+    // A timed series imported from an external calendar carries the zone it is
+    // anchored in; all-day series are date-only, so a zone adds nothing.
+    if (!allDay && pattern.timeZone && isSupportedTimeZone(pattern.timeZone)) {
+      const masterStart = new Date(entry.scheduled_start);
+      if (!isNaN(new Date(pattern.startDate).getTime()) && !isNaN(masterStart.getTime())) {
+        return generateZonedOccurrences(entry, pattern, start, end, pattern.timeZone, options);
+      }
+    }
 
     // Validate and normalize start date
     const dtstart = new Date(pattern.startDate);
@@ -113,14 +314,7 @@ export function generateOccurrences(
       interval: pattern.interval,
       dtstart,
       until,
-      byweekday: pattern.daysOfWeek?.map((day): Weekday => {
-        const days = 'MO TU WE TH FR SA SU'.split(' ');
-        if (day < 0 || day >= days.length) {
-          console.error('[generateOccurrences] Invalid day of week:', day);
-          return RRule.MO;
-        }
-        return RRule[days[day] as keyof typeof RRule] as Weekday;
-      }),
+      byweekday: buildByWeekday(pattern),
       bymonthday: pattern.dayOfMonth,
       bymonth: pattern.monthOfYear,
       count: pattern.count

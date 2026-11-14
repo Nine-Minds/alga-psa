@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Zgłoszenia",
-      "documents": "Dokumenty",
-      "time": "Czas",
-      "projects": "Projekty",
-      "assets": "Zasoby",
-      "billing": "Rozliczenia"
-    },
     "targetTypes": {
       "role": "Rola",
       "team": "Zespół",
@@ -453,11 +445,13 @@
         "custom": "Niestandardowy"
       },
       "badges": {
-        "starter": "Startowy"
+        "starter": "Startowy",
+        "closed": "Zamknięty"
       },
       "descriptions": {
         "systemStarter": "Systemowy pakiet startowy.",
-        "customBundle": "Niestandardowy pakiet zawężania dla przypisań ról, zespołów, użytkowników lub kluczy API."
+        "customBundle": "Niestandardowy pakiet zawężania dla przypisań ról, zespołów, użytkowników lub kluczy API.",
+        "closed": "Zamknięty: odmawia wszystkiego, czego nie wymienia."
       },
       "effectiveSummary": "Aktywne podsumowanie: pakiet {{status}} z {{count}} aktywnymi przypisaniami.",
       "empty": "Nie znaleziono pakietów autoryzacji.",
@@ -542,6 +536,17 @@
         "label": "Zredagowane pola",
         "placeholder": "internal_cost, margin",
         "helper": "Oddzielone przecinkami nazwy pól do zredagowania, gdy ta reguła zezwala na dostęp."
+      },
+      "baseline": {
+        "title": "Pakiet zamknięty",
+        "explanation": "Pakiet zamknięty odmawia każdego typu rekordu i działania, których nie wymienia. Pakiet otwarty ogranicza tylko te, które wymienia.",
+        "closedToggle": "Opublikuj jako zamknięty",
+        "openBadge": "Otwarty",
+        "previewTitle": "Ten zamknięty pakiet odmówi",
+        "previewIntro": "Użytkownicy z tym pakietem nie będą mieli dostępu do tych typów rekordów i działań, ponieważ pakiet nie ma dla nich reguły.",
+        "previewNothing": "Pakiet wymienia wszystkie typy rekordów i działania, więc nie odmawia niczego poza własnymi regułami.",
+        "deniedAll": "Wszystkie działania",
+        "deniedActions": "Odmowa: {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Rekord",
       "useSynthetic": "Użyj syntetycznego scenariusza rekordu",
       "syntheticOwnerPlaceholder": "ID użytkownika właściciela (opcjonalnie)",
-      "syntheticClientPlaceholder": "ID klienta (opcjonalnie)",
+      "syntheticClientPlaceholder": "Klient (opcjonalnie)",
       "syntheticBoardPlaceholder": "ID tablicy (opcjonalnie)",
       "clientVisible": "Widoczne dla klienta",
       "run": "Uruchom symulację",
@@ -584,7 +589,18 @@
       "publishedRevision": "Opublikowana wersja",
       "allowed": "Dozwolone",
       "denied": "Odmówione",
-      "empty": "Uruchom symulację, aby porównać zachowanie wersji roboczej i opublikowanej."
+      "empty": "Uruchom symulację, aby porównać zachowanie wersji roboczej i opublikowanej.",
+      "explanations": {
+        "closedBaseline": "Pakiet jest zamknięty i nie ma reguły dla działania {{action}} na {{resource}}, więc dostęp jest odmówiony.",
+        "clientPortfolio": "Rekord należy do klienta spoza portfela klientów tego użytkownika, więc reguła portfela go odrzuca.",
+        "createOutOfScope": "Tworzenie {{resource}} dla tego klienta jest odmówione: klient jest poza zakresem tego użytkownika.",
+        "readRequired": "Działanie {{action}} na {{resource}} wymaga także dostępu do odczytu rekordu, a reguły odczytu go odmawiają.",
+        "templateDenied": "Reguła w pakiecie ogranicza działanie {{action}} na {{resource}} do rekordów, do których ten użytkownik nie pasuje.",
+        "clientVisibleOnly": "Pakiet zezwala na {{action}} na {{resource}} tylko wtedy, gdy rekord jest widoczny dla klienta.",
+        "notSelfApprover": "Użytkownicy nie mogą zatwierdzać własnych rekordów.",
+        "rulesUnavailable": "Nie udało się wczytać reguł pakietu, więc dostęp jest odmówiony.",
+        "rbacDenied": "Rola użytkownika nie przyznaje działania {{action}} na {{resource}}."
+      }
     },
     "createDialog": {
       "title": "Utwórz pakiet autoryzacji",
@@ -622,9 +638,47 @@
       "selectRecord": "Wybierz rekord przed uruchomieniem symulacji.",
       "runSimulation": "Nie udało się uruchomić symulacji.",
       "simulator": {
-        "unsupportedAction": "Symulator obecnie obsługuje tylko sprawdzenia Odczyt i Zatwierdź. Wybierz jedną z tych akcji i spróbuj ponownie.",
+        "unsupportedAction": "Symulator obsługuje sprawdzanie działań Odczyt, Tworzenie, Aktualizacja, Usuwanie i Zatwierdzanie. Wybierz jedno z nich i spróbuj ponownie.",
         "unsupportedResource": "Ten typ rekordu nie jest jeszcze dostępny w symulatorze. Wybierz obsługiwany typ rekordu i spróbuj ponownie.",
-        "clientTicketNotSupported": "Sprawdzenia zgłoszeń dla użytkowników klienta nie są jeszcze dostępne w symulatorze, ponieważ widoczność tablicy zgłoszeń nie jest uwzględniona. Spróbuj z użytkownikiem wewnętrznym lub zweryfikuj dostęp klienta do zgłoszeń w aplikacji."
+        "clientTicketNotSupported": "Sprawdzenia zgłoszeń dla użytkowników klienta nie są jeszcze dostępne w symulatorze, ponieważ widoczność tablicy zgłoszeń nie jest uwzględniona. Spróbuj z użytkownikiem wewnętrznym lub zweryfikuj dostęp klienta do zgłoszeń w aplikacji.",
+        "syntheticRecordRequired": "Ten typ rekordu nie ma zapisanych rekordów do wyboru. Użyj scenariusza rekordu syntetycznego i spróbuj ponownie."
+      },
+      "saveBaseline": "Nie udało się zmienić ustawienia pakietu zamkniętego."
+    },
+    "resourceTypes": {
+      "ticket": "Zgłoszenia",
+      "document": "Dokumenty",
+      "time_entry": "Czas",
+      "project": "Projekty",
+      "asset": "Zasoby",
+      "billing": "Rozliczenia",
+      "tag": "Tagi",
+      "client": "Klienci",
+      "contact": "Kontakty",
+      "interaction": "Interakcje",
+      "schedule_entry": "Wpisy harmonogramu"
+    },
+    "actions": {
+      "read": "Odczyt",
+      "create": "Tworzenie",
+      "update": "Aktualizacja",
+      "delete": "Usuwanie",
+      "approve": "Zatwierdzanie"
+    },
+    "portfolio": {
+      "title": "Portfel klientów",
+      "description": "Klienci, dla których pracuje ten użytkownik. Pakiety z regułą portfela klientów ograniczają użytkownika do tych klientów.",
+      "addClient": "Dodaj klienta",
+      "loading": "Wczytywanie portfela klientów...",
+      "empty": "Brak klientów. Użytkownikowi z pustym portfelem odmawia się wszystkiego, co obejmuje reguła portfela klientów.",
+      "removeClient": "Usuń {{client}}",
+      "save": "Zapisz portfel",
+      "saving": "Zapisywanie...",
+      "saved": "Portfel klientów zapisany.",
+      "errors": {
+        "load": "Nie udało się wczytać portfela klientów.",
+        "lookup": "Nie udało się wyszukać klienta.",
+        "save": "Nie udało się zapisać portfela klientów."
       }
     }
   },

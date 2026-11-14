@@ -243,6 +243,23 @@
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"
+        },
+        "setup": {
+          "title": "Antes de conectar",
+          "intro": "En el registro de su aplicación de Microsoft Entra, agregue este URI de redirección y conceda estos permisos delegados.",
+          "redirectUri": "URI de redirección",
+          "copy": "Copiar",
+          "copied": "Copiado",
+          "copyFailed": "No se pudo copiar",
+          "unavailable": "No disponible",
+          "permissions": "Permisos delegados (Microsoft Graph)",
+          "tenancy": "La aplicación puede ser de un solo inquilino o multiinquilino. El inicio de sesión sigue el ID de directorio (inquilino) del perfil de Microsoft vinculado a Calendar.",
+          "openProviders": "Abrir la configuración de proveedores de Microsoft"
+        },
+        "adminConsentPending": {
+          "title": "La aprobación del administrador está pendiente.",
+          "body": "Un administrador de Microsoft 365 aún debe aprobar el registro de aplicación vinculado a Calendar. Pídale que otorgue el consentimiento de administrador para los permisos que se indican a continuación y vuelva aquí para conectar Outlook Calendar.",
+          "openSettings": "Abrir la configuración de proveedores de Microsoft"
         }
       }
     }

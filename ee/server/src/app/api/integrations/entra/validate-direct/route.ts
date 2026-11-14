@@ -3,6 +3,8 @@ import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraAccess } from '../_guards';
 import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
 import { refreshEntraDirectToken } from '@ee/lib/integrations/entra/auth/refreshDirectToken';
+import { isEntraOperatorError } from '@ee/lib/integrations/entra/entraOperatorError';
+import { isMappedMicrosoftOAuthMessage } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { ENTRA_DIRECT_SECRET_KEYS } from '@ee/lib/integrations/entra/secrets';
 import { updateEntraConnectionValidation } from '@ee/lib/integrations/entra/connectionRepository';
 import {
@@ -51,18 +53,24 @@ export async function POST(): Promise<Response> {
     try {
       const refreshed = await refreshEntraDirectToken(tenantId);
       accessToken = refreshed.accessToken;
-    } catch {
+    } catch (refreshError) {
+      // A mapped AADSTS rejection (e.g. a bad client secret) is already the
+      // operator-facing `<code>: <message>`; anything else stays generic.
+      const message =
+        isEntraOperatorError(refreshError) && isMappedMicrosoftOAuthMessage(refreshError.message)
+          ? refreshError.message
+          : 'Direct Entra token is not configured or refresh failed.';
       await updateEntraConnectionValidation({
         tenant: tenantId,
         connectionType: 'direct',
         status: 'validation_failed',
         snapshot: {
-          message: 'Direct Entra token is not configured or refresh failed.',
+          message,
           code: 'refresh_failed',
           checkedAt: new Date().toISOString(),
         },
       });
-      return badRequest('Direct Entra token is not configured or refresh failed.');
+      return badRequest(message);
     }
   }
 

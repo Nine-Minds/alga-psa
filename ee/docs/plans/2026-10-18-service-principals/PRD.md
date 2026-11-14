@@ -3,6 +3,7 @@
 - Slug: `service-principals`
 - Date: `2026-10-18`
 - Status: Draft — open questions resolved 2026-10-18
+- Policy amended: `2026-11-08` — immediate cutoff below Pro replaces grandfathering (R6.0a).
 
 ## Summary
 
@@ -128,7 +129,7 @@ Personas: MSP admin (sets up integrations); integration developer (writes agains
 
 1. **Create an API service principal.** The admin opens Settings → Security → Service principals (EE only) and clicks "New service principal".
    - They enter a name and description, assign MSP roles, and optionally turn on "Allow act-as".
-   - On a tenant below Pro, the tab shows the standard upgrade notice (`TierGate` / `FeatureUpgradeNotice`) instead of the list, and the server refuses creation.
+   - On a tenant below Pro, the tab shows the standard upgrade notice (`TierGate` / `FeatureUpgradeNotice`), preserves existing rows for cleanup with blocked-access copy, and the server refuses creation.
    - On Pro, the service-principal limit is checked first. If the tenant is at its limit, the dialog shows the limit and blocks creation.
    - On save the admin issues an API key owned by the principal. The key is shown once, using the existing key-reveal UI pattern.
 2. **Create an MCP agent.** This works as it does today in Settings → MCP server, but the agent is now a service principal of kind `mcp_agent`.
@@ -169,6 +170,7 @@ Never show raw ids in tables; show the principal name. All of the components bel
   - A DataTable with columns: Name, Kind badge (API, MCP agent), Roles, Act-as (Yes/No), Status, Keys, Last used, and Created by (as a display name).
   - Row actions: Edit, Manage keys, Deactivate/Activate, Delete or Archive.
   - The header shows "3 of 10 service principals" and a short note that service principals don't use seats.
+  - Below Pro, existing principals remain visible for cleanup, with an explicit notice that their API and MCP access is blocked by the plan. Only Deactivate and Delete/Archive are available; no copy describes them as grandfathered or still working.
 - **Create/Edit dialog.** Fields:
   - Name
   - Description
@@ -180,6 +182,7 @@ Never show raw ids in tables; show the principal name. All of the components bel
   - revoke a key
   - rotate a key, where the old key gets a grace period through `expireApiKeyAfter`
 - **MCP server settings.** The agent list and create flow stay. Behind them is the service-principal backend, and the create flow shows the shared limit.
+  - Below Pro, show the standard upgrade notice and state that existing agents cannot authenticate or dispatch tools. Keep existing agents visible for cleanup.
 - **Settings → Users** (CE).
   - Users with non-interactive types never appear in either tab.
   - The user detail page refuses to load one.
@@ -299,6 +302,7 @@ These checks are enforced in the auth layer, independent of the password. They a
 - **R4.5** (EE) The MCP `jsonRpcServer` loopback forwards `act_as_user_id` as `X-Alga-Act-As` and records it in `mcp_agent_audit.act_as_user_id`.
 - **R4.6** (EE) `resolveServicePrincipalApiContext`:
   - confirms the owner is an active, non-archived service principal
+  - requires the tenant's current tier to allow service principals (R6.0a), including when acting as a licensed human; `servicePrincipalKeyGate` enforces the same entitlement for every service-owned key
   - applies R5.1 act-as validation
   - sets `principal`, `actAsUserId`, `effectiveUserId` and `viaPrincipalUserId`
   - sets `rateLimitSubjectId = sp:<user_id>` and `rateLimitConfig` (R6.4)
@@ -365,10 +369,14 @@ These checks are enforced in the auth layer, independent of the password. They a
     - turning on `allow_act_as`
   - Below Pro, these return the existing `TIER_ACCESS_DENIED` (403).
   - Solo is defunct and needs no special handling: it ranks below Pro and is gated out like `essentials`.
-- **R6.0a Existing principals below Pro are grandfathered.**
-  - A non-Pro tenant keeps its existing principals working: their keys authenticate and their MCP tokens resolve.
-  - It cannot create principals, reactivate them or issue keys until it is on Pro.
-  - The same applies when a Pro tenant drops below Pro. Nothing is deactivated or deleted; only new work is blocked.
+- **R6.0a Immediate cutoff below Pro; no grandfathering or grace period.**
+  - Pro is required to use either kind of service principal, including principals that existed before this release and principals created while the tenant was on Pro. The same rule applies to hosted and appliance tenants.
+  - Once the tenant resolves below Pro, the next authentication or dispatch must fail. Existing API keys, MCP IdP tokens and already-minted MCP session keys grant no continued access, even if otherwise valid or non-expiring. Act-as does not bypass the tier check.
+  - Enforce the current entitlement at the EE API context/key boundary and at MCP agent resolution/session-key minting. Key gates deny access; contexts and MCP entry points that report tier errors use the existing `403 TIER_ACCESS_DENIED`. Tier lookup errors fail closed.
+  - Existing below-Pro tenants are cut off when this policy ships. Later Pro downgrades are cut off as soon as the lower tier takes effect. There is no migration exemption, token-lifetime allowance or scheduled grace window.
+  - Preserve principal records, credentials and historical attribution; the tier block does not itself delete, archive or change the principal's active flag. Admins may still deactivate or delete/archive existing principals below Pro. Creation, reactivation, key issuance/rotation and enabling act-as remain blocked by R6.0.
+  - If the tenant returns to Pro, an otherwise active, non-archived principal may authenticate again using an unexpired, unrevoked credential. Upgrading never revives credentials or principals that an admin deactivated, revoked, expired or archived.
+  - **Decision rationale (2026-11-08).** Service-principal use is a Pro entitlement. Preserving indefinite access below Pro, including after a downgrade, undermines that boundary. The immediate cutoff supersedes the earlier compatibility exception for existing MCP agents.
 - **R6.1** `SERVICE_PRINCIPAL_ENTITLEMENT` (Pro) in `ee/server/src/lib/service-principals/entitlements.ts` holds:
   - `maxPrincipals: 10`, a flat number that does not scale with seats
   - the default per-principal rate limit and ceiling: `maxTokens: 120`, `refillPerMin: 60`, which matches today's per-key API default, so an integration moving off a human's key sees no change
@@ -397,10 +405,10 @@ These checks are enforced in the auth layer, independent of the password. They a
 - **R7.1** `getServicePrincipalUsage(tenant)` returns `{ limit, used, remaining }`.
 - **R7.2** The EE `ServicePrincipalUsageRow` sits beside seats on the account page (`AccountManagement.tsx`) and on the appliance `LicenseManagementPage`.
   - It reads "Service principals don't use seats" and links to the settings tab.
-  - Below Pro it reads "Available on Pro", plus the count of any grandfathered principals.
+  - Below Pro it reads "Available on Pro", plus the count of any existing principals labeled as blocked by the plan, not as grandfathered or in use. Retain the seat-use note and settings link.
 - **R7.3** On Pro, the header of the Service principals tab shows the same usage and disables "New" at the limit.
   - Below Pro, the tab and the MCP agent create flow render the standard `TierGate` / `FeatureUpgradeNotice`, driven by `useTierFeature(TIER_FEATURES.SERVICE_PRINCIPALS)`.
-  - Grandfathered principals stay listed. They can be deactivated or deleted, but not created, reactivated or given new keys.
+  - Existing principals stay listed for cleanup, with an explicit notice that API and MCP access is blocked below Pro immediately. They can be deactivated or deleted/archived, but not edited, created, reactivated or given new keys. MCP settings gives the same explanation for existing agents.
 
 #### R8 — Lifecycle and the gaps that exist today
 
@@ -441,7 +449,7 @@ These checks are enforced in the auth layer, independent of the password. They a
   - insert a `service_principals` row with kind `mcp_agent`
 
   The migration is idempotent. It skips, and logs, any backing user that is missing or no longer `internal`.
-- **R9.3** The migration never deactivates or deletes anything to fit the new tier gate or limit. Non-Pro tenants with agents, and Pro tenants over the limit, keep their principals working (R6.0a). Only new creation is blocked.
+- **R9.3** The migration never deactivates or deletes anything to fit the new tier gate or limit. Existing agents on tenants below Pro are migrated with their records and attribution preserved, but immediately lose API and MCP access under R6.0a. Pro tenants over the count limit keep their existing principals working; new creation and reactivation remain limit-checked.
 - **R9.4** Historical rows that point at a former agent user as an assignee, schedule resource or time owner are left alone. A pre-flight count query is in the SCRATCHPAD runbook. The R5.3 guard applies only when such a field is next changed.
 
 ### Non-functional Requirements
@@ -501,7 +509,7 @@ Nothing new beyond the attribution and audit columns above. Existing rate-limit 
 - **Seat and billing effect.** Tenants with MCP agents see their seat count drop by their agent count. On hosted Stripe tenants, the next quantity sync lowers the billed seat quantity to match. That is correct, but it is a billing change, so tell support and finance in advance.
 - No feature flag. The change only tightens behavior (login, assignment) and corrects counts, and the new UI ships with it.
 - **CE.** The CE schema and behavior for `internal` and `client` users are unchanged, apart from the edition-neutral hardening (R2, R3, R5.3, R8.4–R8.6).
-- **Tier change for MCP agents.** On EE tenants below Pro (essentials appliances), existing agents keep working but new ones need Pro. Hosted tenants with a null plan resolve to Pro and see no change. Put this in the release notes.
+- **Tier change for existing principals and MCP agents.** This is a breaking change for EE tenants below Pro, including Essentials appliances: existing API integrations and MCP agents lose access immediately when this policy ships, and future downgrades have no grace period. Tell affected operators in the release notes that continued use requires Pro. Hosted tenants with a null plan resolve to Pro and see no change.
 - **Cross-service dependency: alga-license.**
   - Appliance licenses need a new signed `service_principals` claim, issued next to `seats` by the alga-license service. The appliance console (`algaLicenseAdminClient.ts`) and the Stripe-backed appliance subscription flows pass it through.
   - Until a license carrying the claim is issued, Pro appliances get the Pro default of 10. This plan ships safely before the issuer change.
@@ -509,12 +517,12 @@ Nothing new beyond the attribution and audit columns above. Existing rate-limit 
 
 ## Open Questions
 
-None remain. All were resolved by Robert on 2026-10-18:
+None remain. The original decisions were resolved by Robert on 2026-10-18. On 2026-11-08, Robert replaced grandfathering with the immediate cutoff in R6.0a:
 
 | Question | Decision | Where |
 |---|---|---|
 | Edition and tier | EE only, implemented under `ee/`; Pro only, for both kinds | *Edition placement*, R6.0 |
-| Principals on a tenant that is below Pro | Grandfathered: they keep working, but nothing new can be added | R6.0a |
+| Principals on a tenant that is below Pro | API and MCP access stops immediately, including existing principals and future downgrades; no grandfathering or grace period | R6.0a |
 | Pro principal limit | A flat 10; it does not scale with seats | R6.1 |
 | Default per-principal rate limit | 120 burst / 60 per minute, the same as today's per-key default | R6.1 |
 | Where an appliance's limit comes from | The signed `service_principals` claim only. The tenants override is ignored, and a missing claim means the Pro default. | R6.2 |
@@ -527,7 +535,7 @@ None remain. All were resolved by Robert on 2026-10-18:
 
 1. **EE schema and migration.** On EE, `users.user_type` accepts `service`. MCP agents and API principals are created as `service` users with `service_principals` rows, and existing agent users are migrated.
 2. **CE stays clean.** On CE the schema still rejects `service`, and the build contains no service-principal functionality. The static guard passes.
-3. **Seats and limits.** Seat usage, the seat guard, the Stripe quantity and the appliance seat guard exclude service users without any new special case. Creating or reactivating a principal of either kind requires Pro, then checks the service-principal limit instead of seats. Existing principals below Pro keep working.
+3. **Seats and limits.** Seat usage, the seat guard, the Stripe quantity and the appliance seat guard exclude service users without any new special case. Creating or reactivating a principal of either kind requires Pro, then checks the service-principal limit instead of seats. Below Pro, existing and newly migrated principals cannot authenticate or dispatch through API or MCP, with no grandfathering or grace period.
 4. **No sessions.** A non-interactive user cannot get a session through any of:
    - credentials or any SSO provider
    - mobile: handoff, OTT, refresh, Apple or IAP
@@ -535,11 +543,11 @@ None remain. All were resolved by Robert on 2026-10-18:
    - password reset or invite
 
    An admin cannot set its password. Each path is covered by a test that does not rely on the locked password.
-5. **API access.** A service principal can call `/api/v1` with its key, under its MSP roles, and is rate-limited per principal across MCP's rotating keys.
+5. **API access.** On Pro, a service principal can call `/api/v1` with its key, under its MSP roles, and is rate-limited per principal across MCP's rotating keys. A downgrade below Pro denies the next API authentication or MCP dispatch, including act-as and credentials issued before the downgrade. Pro restoration permits otherwise valid credentials without reviving revoked or expired keys or deactivated/archived principals. Human-owned API keys and human MCP access are unaffected by this service-principal gate.
 6. **No human work.** A service principal can never be stored as a ticket assignee or resource, schedule assignee, time-entry or time-sheet owner, approver, project-task assignee or interaction owner, whether through UI, REST, workflow or MCP. Writes that would default to it fail with `ACT_AS_REQUIRED`.
 7. **Comments.** A principal's own ticket comments are always internal. Asking for a public one without act-as fails with `ACT_AS_REQUIRED`.
 8. **Act-as attribution.** With act-as enabled and a valid target, human-work writes record the human as the actor and the principal in the via column and the activity log. RBAC is the intersection of both.
 9. **Deactivate and delete.** Deactivating a principal immediately stops all its keys, including MCP session keys, and frees its slot. Deleting a used principal archives it and keeps the audit trail.
 10. **User management.** Settings → Users never lists a non-interactive user, and no password, reset, invite or delete action can target one. `user_type` cannot be changed to or from `service` through user management.
-11. **Usage display.** On Pro, the license and account page and the Service principals tab show `used of limit`. Below Pro, they show the standard upgrade notice.
+11. **Usage display.** On Pro, the license and account page and the Service principals tab show `used of limit`. Below Pro, the account/license rows read "Available on Pro", and the settings tab and MCP create flow show the standard upgrade notice. Existing principals remain visible for cleanup with clear blocked-access copy; no grandfathering or continued-use claim remains. All new copy is translated.
 12. **Audit complete.** All 66 `!== 'client'` sites and the REST-reachable `=== 'internal'` requirements are converted to named predicates, and the SCRATCHPAD inventory is marked complete.

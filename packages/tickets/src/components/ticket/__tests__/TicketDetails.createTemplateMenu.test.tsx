@@ -8,6 +8,15 @@ import userEvent from '@testing-library/user-event';
 import TicketDetails from '../TicketDetails';
 import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
+vi.mock('../BatchDuplicateTicketDialog', () => ({
+  default: ({ sourceTicketId, onClose }: { sourceTicketId: string; onClose: () => void }) => (
+    <div role="dialog" aria-label="Batch duplicate">
+      <span>{sourceTicketId}</span>
+      <button onClick={onClose}>Close batch</button>
+    </div>
+  ),
+}));
+
 const checkTicketClosureMock = vi.fn();
 const updateCommentMock = vi.fn();
 const findCommentByIdMock = vi.fn();
@@ -453,6 +462,24 @@ describe('TicketDetails "Create template from ticket" menu', () => {
 
     await userEvent.click(item);
     expect(pushMock).toHaveBeenCalledWith('/msp/tickets/templates/new?fromTicket=ticket-1');
+  });
+
+  it('opens batch duplication from the shared menu while retaining template creation', async () => {
+    templatePermsRef.current = { read: true, create: true, update: true, delete: true, loaded: true };
+    const view = renderDetails();
+    await waitFor(() => expect(moreButton()).not.toBeNull());
+    await userEvent.click(moreButton() as HTMLElement);
+    const batchItem = await waitFor(() => {
+      const el = document.querySelector('[id$="-batch-duplicate-menu-item"]') as HTMLElement | null;
+      if (!el) throw new Error('batch menu item not rendered');
+      return el;
+    });
+    expect(document.querySelector('[id$="-create-template-menu-item"]')).not.toBeNull();
+    await userEvent.click(batchItem);
+    expect(view.getByRole('dialog', { name: 'Batch duplicate' })).toHaveTextContent('ticket-1');
+    expect(pushMock).not.toHaveBeenCalled();
+    await userEvent.click(view.getByText('Close batch'));
+    expect(view.queryByRole('dialog', { name: 'Batch duplicate' })).toBeNull();
   });
 
   it.each([

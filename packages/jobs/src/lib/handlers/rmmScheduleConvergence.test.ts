@@ -72,6 +72,16 @@ describe('convergeSchedule', () => {
     expect(outcome).toEqual({ ensured: 1, cancelled: 0 });
   });
 
+  it('creates a schedule for a unifi integration the same way', async () => {
+    const data = { ...baseArgs.data, provider: 'unifi' };
+    const outcome = await convergeSchedule(asRunner(runner), adminKnex, { ...baseArgs, provider: 'unifi', data }, none);
+
+    expect(runner.scheduleRecurringJob).toHaveBeenCalledWith(RMM_DEVICE_SYNC_JOB, data, '0 * * * *', {
+      singletonKey: baseArgs.singletonKey,
+    });
+    expect(outcome).toEqual({ ensured: 1, cancelled: 0 });
+  });
+
   it('does nothing when an identical schedule already exists', async () => {
     // Converged: the reconciler runs every few minutes, so churning here would
     // tear down and recreate every schedule on every pass.

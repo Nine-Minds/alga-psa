@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { CategoryService } from '../services/CategoryService';
@@ -36,9 +37,6 @@ import {
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
 import {
   AuthenticatedApiRequest,
   UnauthorizedError,
@@ -88,7 +86,7 @@ export class ApiCategoryController extends ApiBaseController {
     }
 
     const knex = await getConnection(req.context.tenant);
-    const hasAccess = await hasPermission(req.context.user, resource, action, knex);
+    const hasAccess = await hasApiContextPermission(req.context, resource, action, knex);
     if (!hasAccess) {
       const resourceLabel = resource.replace('_', ' ');
       throw new ForbiddenError(`Permission denied: Cannot ${action} ${resourceLabel}`);

@@ -51,7 +51,7 @@ function buildMicrosoftStatus(overrides: Record<string, unknown> = {}) {
     },
     scopes: {
       email: ['Mail.Read', 'Mail.Send', 'offline_access'],
-      calendar: ['Calendars.ReadWrite', 'offline_access'],
+      calendar: ['Calendars.ReadWrite', 'MailboxSettings.ReadWrite', 'offline_access'],
       sso: ['openid', 'profile', 'email'],
       teams: ['openid', 'profile', 'email', 'offline_access'],
     },

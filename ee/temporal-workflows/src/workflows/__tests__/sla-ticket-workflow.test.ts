@@ -1,6 +1,8 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
+import { temporal } from '@temporalio/proto';
 import { Worker } from '@temporalio/worker';
 import { slaTicketWorkflow } from '../sla-ticket-workflow.js';
 
@@ -19,6 +21,9 @@ const target = {
   priority_id: 'priority-1',
   response_time_minutes: 100,
   resolution_time_minutes: 200,
+  escalation_1_percent: 70,
+  escalation_2_percent: 90,
+  escalation_3_percent: 110,
   is_24x7: true,
 };
 
@@ -56,6 +61,20 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
 }
 
 describe('slaTicketWorkflow', () => {
+  it('replays a pre-exact-threshold history using its legacy activity sequence', async () => {
+    const historyJson = JSON.parse(fs.readFileSync(
+      path.resolve(__dirname, './fixtures/sla-ticket-workflow-pre-exact-thresholds.history.json'),
+      'utf8'
+    ));
+    const history = temporal.api.history.v1.History.fromObject(historyJson);
+
+    await Worker.runReplayHistory(
+      { workflowsPath: path.resolve(__dirname, '../sla-ticket-workflow.ts') },
+      history,
+      'sla-ticket-legacy-history-fixture'
+    );
+  });
+
   it('initializes with correct input parameters', async () => {
     const { env, worker, taskQueue } = await setupWorkflowTest();
     try {
@@ -131,6 +150,140 @@ describe('slaTicketWorkflow', () => {
       expect(targetMinutes).toContain(75);
       expect(targetMinutes).toContain(90);
       expect(targetMinutes).toContain(100);
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('executes L1 at 84 seconds and keeps L2 pending until 108 seconds', async () => {
+    const escalations: Array<{ thresholdPercent: number; at: number }> = [];
+    const scheduledTargets: number[] = [];
+    let workflowStartMs: number | undefined;
+    let firstScheduleReady!: () => void;
+    const firstSchedule = new Promise<void>((resolve) => { firstScheduleReady = resolve; });
+    const { env, worker, taskQueue } = await setupWorkflowTest({
+      calculateNextWakeTime: async ({ currentTime, targetMinutes }: { currentTime: string; targetMinutes: number }) => {
+        workflowStartMs ??= new Date(currentTime).getTime();
+        scheduledTargets.push(targetMinutes);
+        firstScheduleReady();
+        return new Date(workflowStartMs + targetMinutes * 60_000).toISOString();
+      },
+      checkAndEscalate: async ({ thresholdPercent }: { thresholdPercent: number }) => {
+        escalations.push({ thresholdPercent, at: await env.currentTimeMs() });
+      },
+    });
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-escalation-normal-timing',
+            tenantId: 'tenant-timing',
+            policyTargets: [{
+              ...target,
+              response_time_minutes: 2,
+              resolution_time_minutes: null,
+              escalation_1_percent: 70,
+              escalation_2_percent: 90,
+              escalation_3_percent: 0,
+            }],
+            businessHoursSchedule: schedule24x7,
+            notificationThresholds: [50, 75],
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-escalation-normal-timing',
+        });
+
+        await firstSchedule;
+        await expect.poll(() => scheduledTargets.length).toBeGreaterThanOrEqual(1);
+        expect(workflowStartMs).toBeDefined();
+        const nowMs = await env.currentTimeMs();
+        await env.sleep(Math.max(0, 83_999 - (nowMs - workflowStartMs!)));
+        expect(escalations.some(({ thresholdPercent }) => thresholdPercent === 70)).toBe(false);
+        expect(escalations.some(({ thresholdPercent }) => thresholdPercent === 90)).toBe(false);
+
+        await env.sleep(Math.max(0, 84_000 - ((await env.currentTimeMs()) - workflowStartMs!)));
+        await expect.poll(() => escalations.some(({ thresholdPercent }) => thresholdPercent === 70)).toBe(true);
+        await expect.poll(() => scheduledTargets.length).toBeGreaterThanOrEqual(3);
+        expect(scheduledTargets.slice(0, 3)).toEqual([1, 1.4, 1.5]);
+        const l1Elapsed = escalations.find(({ thresholdPercent }) => thresholdPercent === 70)!.at - workflowStartMs!;
+        expect(l1Elapsed).toBeGreaterThanOrEqual(84_000);
+        expect(l1Elapsed).toBeLessThan(84_100);
+        expect(escalations.some(({ thresholdPercent }) => thresholdPercent === 90)).toBe(false);
+
+        await env.sleep(Math.max(0, 107_999 - ((await env.currentTimeMs()) - workflowStartMs!)));
+        expect(escalations.some(({ thresholdPercent }) => thresholdPercent === 90)).toBe(false);
+        await env.sleep(Math.max(0, 108_000 - ((await env.currentTimeMs()) - workflowStartMs!)));
+        await expect.poll(() => escalations.some(({ thresholdPercent }) => thresholdPercent === 90)).toBe(true);
+        const l2Elapsed = escalations.find(({ thresholdPercent }) => thresholdPercent === 90)!.at - workflowStartMs!;
+        expect(l2Elapsed).toBeGreaterThanOrEqual(108_000);
+        expect(l2Elapsed).toBeLessThan(108_100);
+
+        await handle.signal('cancel');
+        await handle.result();
+      });
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('catches up after a late wake without shifting later thresholds', async () => {
+    const escalations: Array<{ thresholdPercent: number; at: number }> = [];
+    let workflowStartMs: number | undefined;
+    let firstScheduleReady!: () => void;
+    const firstSchedule = new Promise<void>((resolve) => { firstScheduleReady = resolve; });
+    let delayFirstWake = true;
+    const { env, worker, taskQueue } = await setupWorkflowTest({
+      calculateNextWakeTime: async ({ currentTime, targetMinutes }: { currentTime: string; targetMinutes: number }) => {
+        workflowStartMs ??= new Date(currentTime).getTime();
+        firstScheduleReady();
+        const lateOffsetMs = delayFirstWake ? 30_000 : 0;
+        delayFirstWake = false;
+        return new Date(workflowStartMs + targetMinutes * 60_000 + lateOffsetMs).toISOString();
+      },
+      checkAndEscalate: async ({ thresholdPercent }: { thresholdPercent: number }) => {
+        escalations.push({ thresholdPercent, at: await env.currentTimeMs() });
+      },
+    });
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-escalation-late-timing',
+            tenantId: 'tenant-late-timing',
+            policyTargets: [{
+              ...target,
+              response_time_minutes: 2,
+              resolution_time_minutes: null,
+              escalation_1_percent: 70,
+              escalation_2_percent: 90,
+              escalation_3_percent: 0,
+            }],
+            businessHoursSchedule: schedule24x7,
+            notificationThresholds: [50, 75],
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-escalation-late-timing',
+        });
+
+        await firstSchedule;
+        await env.sleep(Math.max(0, 90_000 - ((await env.currentTimeMs()) - workflowStartMs!)));
+        await expect.poll(() => escalations.some(({ thresholdPercent }) => thresholdPercent === 70)).toBe(true);
+        const l1At = escalations.find(({ thresholdPercent }) => thresholdPercent === 70)!.at;
+        expect(l1At - workflowStartMs!).toBeGreaterThanOrEqual(90_000);
+        expect(l1At - workflowStartMs!).toBeLessThan(108_000);
+        expect(escalations.some(({ thresholdPercent }) => thresholdPercent === 90)).toBe(false);
+
+        await env.sleep(Math.max(0, 107_999 - ((await env.currentTimeMs()) - workflowStartMs!)));
+        expect(escalations.some(({ thresholdPercent }) => thresholdPercent === 90)).toBe(false);
+        await env.sleep(Math.max(0, 108_000 - ((await env.currentTimeMs()) - workflowStartMs!)));
+        await expect.poll(() => escalations.some(({ thresholdPercent }) => thresholdPercent === 90)).toBe(true);
+        const l2Elapsed = escalations.find(({ thresholdPercent }) => thresholdPercent === 90)!.at - workflowStartMs!;
+        expect(l2Elapsed).toBeGreaterThanOrEqual(108_000);
+        expect(l2Elapsed).toBeLessThan(108_100);
+
+        await handle.signal('cancel');
+        await handle.result();
+      });
     } finally {
       await env.teardown();
     }

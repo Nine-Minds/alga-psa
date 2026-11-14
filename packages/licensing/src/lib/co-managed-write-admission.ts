@@ -11,21 +11,76 @@
  *   admits every write, so the kill switch needs no deploy.
  * - The state read is lock-free. The lock-ordered path stays with the write-admission
  *   PROVIDER and `withCoManagedOperationalTransaction`; this never takes `FOR UPDATE`.
- * - The real lifecycle answers (`read_only`, `terminated`, `pending_acceptance`) belong
- *   to L7a, which passes its reader to `installCoManagedWriteAdmission`. Until then the
- *   default reader says `independent`, so installing this refuses nothing.
+ * - The real lifecycle answers (`grace`, `read_only`, `terminated`, `pending_acceptance`) come
+ *   from L7a's lock-free reader, the default for `installCoManagedWriteAdmission`. It is imported
+ *   lazily and only ever invoked for a `co_managed` tenant (L0c's negative set keeps every other
+ *   tenant away), so a plain PSA tenant pays nothing and a worker image whose lifecycle module
+ *   does not resolve still boots; a failed import fails open to `independent`.
  *
  * Dependency-light on purpose: workers (email-service, workflow-worker, temporal) import
  * this subpath directly and must boot when the co-managed package does not resolve.
  */
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { invalidateWriteAdmission, registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db/writeAdmission';
-import { forcedValue } from '@alga-psa/core/capability';
+import { admits, forcedValue } from '@alga-psa/core/capability';
+import { resolveFlagTargeting } from '@alga-psa/core/features';
 import { CoManagedLifecycleError, type CoManagedOperationalState } from './co-managed-lifecycle-error';
 
 export type CoManagedLifecycleReader = (db: Knex | Knex.Transaction, tenant: string) => Promise<CoManagedOperationalState>;
 
 const INDEPENDENT: CoManagedOperationalState = { state: 'independent', canWrite: true, graceEndsAt: null };
+
+async function lifecycleModule() {
+  let lifecycle: typeof import('./co-managed-lifecycle');
+  try {
+    lifecycle = await import('./co-managed-lifecycle');
+  } catch {
+    // The lifecycle module pulls in the DB barrel; a worker image where it does not load fails open.
+    return null;
+  }
+  return lifecycle;
+}
+
+/** Durable participant check shared by the worker-safe and server lifecycle readers. */
+async function lifecycleSponsor(db: Knex | Knex.Transaction, tenant: string): Promise<string | null> {
+  // Workers share this reader and must never evaluate PostHog. An explicit tenant targeting
+  // decision can still close the rollout; otherwise durable relationship participation plus the
+  // sponsor's entitlement row decides whether lifecycle admission applies. The entitlement row is
+  // deliberately retained through lapse, so checker outages cannot reopen writes for an ended or
+  // lapsed workspace.
+  const customer = tenantDb(db, tenant);
+  const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first('sponsor_tenant')
+    ?? await customer.table('co_management_relationships').orderBy('ended_at', 'desc').first('sponsor_tenant');
+  const forced = forcedValue(typeof process !== 'undefined' ? process.env.FORCE_CAPABILITIES : undefined, 'co-managed');
+  if (!relationship?.sponsor_tenant || forced === 'off' || forced === 'malformed' ||
+      (forced !== 'on' && resolveFlagTargeting('release-v2-0-feature', relationship.sponsor_tenant) === false)) return null;
+  const entitlement = await tenantDb(db, relationship.sponsor_tenant).table('co_managed_entitlements').first('tenant');
+  if (!entitlement) return null;
+  return relationship.sponsor_tenant;
+}
+
+/** L0c worker/default reader: lifecycle decisions use durable participation only, never PostHog. */
+const lifecycleReader: CoManagedLifecycleReader = async (db, tenant) => {
+  const lifecycle = await lifecycleModule();
+  if (!lifecycle) return INDEPENDENT;
+  if (!await lifecycleSponsor(db, tenant)) return INDEPENDENT;
+  return lifecycle.readCoManagedLifecycleLockFree(db as Knex, tenant);
+};
+
+/** Server composition applies the release gate when it is available. A known flag-off or missing
+ * entitlement preserves baseline behavior; an unavailable flag/eligibility check falls back to
+ * the same durable lifecycle enforcement used in workers. */
+export const readCoManagedLifecycleForServer: CoManagedLifecycleReader = async (db, tenant) => {
+  const lifecycle = await lifecycleModule();
+  if (!lifecycle) return INDEPENDENT;
+  const sponsor = await lifecycleSponsor(db, tenant);
+  if (!sponsor) return INDEPENDENT;
+  const admission = await admits('co-managed', sponsor);
+  if (admission.reasons.admitted === 'flag-off' || admission.reasons.admitted === 'not-eligible' ||
+      admission.reasons.admitted === 'resolver-unregistered') return INDEPENDENT;
+  return lifecycle.readCoManagedLifecycleLockFree(db as Knex, tenant);
+};
 
 /** Process composition supplied before server bootstrap by an isolated review launcher. */
 export interface CoManagedReviewReader {
@@ -54,7 +109,7 @@ export function isCoManagedKillSwitchEngaged(): boolean {
 }
 
 export function createCoManagedWriteAdmissionResolver(
-  readState: CoManagedLifecycleReader = async () => INDEPENDENT,
+  readState: CoManagedLifecycleReader = lifecycleReader,
 ): WriteAdmissionResolver {
   const resolver: WriteAdmissionResolver = async (db, tenant) => {
     if (isCoManagedKillSwitchEngaged()) return { canWrite: true };
@@ -67,7 +122,7 @@ export function createCoManagedWriteAdmissionResolver(
 }
 
 export interface InstallCoManagedWriteAdmissionOptions {
-  /** The real lifecycle reader (L7a). Defaults to "independent", which refuses nothing. */
+  /** Override the lifecycle reader. Defaults to L7a's lock-free reader. */
   readState?: CoManagedLifecycleReader;
   /**
    * DEV/TEST ONLY: force a lifecycle state for specific tenant ids, so a read-only or
@@ -124,7 +179,7 @@ export function resolveInstalledReader(options: InstallCoManagedWriteAdmissionOp
   }
   // A session that still says "psa" for this tenant must not seed the negative set first.
   for (const tenant of Object.keys(forced)) invalidateWriteAdmission(tenant);
-  return withDevForcedStates(options.readState ?? (async () => INDEPENDENT), forced);
+  return withDevForcedStates(options.readState ?? lifecycleReader, forced);
 }
 
 /** Register the co-managed resolver with `@alga-psa/db`. Safe to call more than once. */

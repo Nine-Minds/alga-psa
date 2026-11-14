@@ -21,9 +21,7 @@ import { Plus, AlertTriangle, Info, MoreVertical, Package } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { createUsageRecord, deleteUsageRecord, getEligibleContractLinesForUI, getUsageRecords, updateUsageRecord } from '../../actions/usageActions';
-import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -131,7 +129,6 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [usageRecords, setUsageRecords] = useState<IUsageRecord[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [selectedClient, setSelectedClient] = useState<string | null>(initialClientId ?? null);
   const [selectedService, setSelectedService] = useState<string>(initialServiceId ?? '');
   const [editingUsage, setEditingUsage] = useState<IUsageRecord | null>(null);
@@ -199,12 +196,6 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
     [initialServices],
   );
 
-  // Reuse the loaded clients array (already enriched with logoUrl) to key logos by client_id.
-  const clientLogoById = useMemo(
-    () => new Map(clients.map((client) => [client.client_id, client.logoUrl ?? null])),
-    [clients],
-  );
-
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -216,10 +207,6 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
     id: 'usage-tracking',
     label: 'Usage Tracking'
   });
-
-  useEffect(() => {
-    loadClients();
-  }, []);
 
   // Deep-link prefills can arrive after mount: the billing dashboard renders
   // this tab from a server-side query snapshot first and swaps to the live URL
@@ -319,28 +306,6 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
 
     loadEligibleContractLines();
   }, [newUsage.client_id, newUsage.service_id]);
-
-  const loadClients = async () => {
-    try {
-      const fetchedClients = await getAllClientsForBilling();
-      if (isReturnedActionError(fetchedClients)) {
-        setClients([]);
-        toast({
-          title: t('common.error', { defaultValue: 'Error' }),
-          description: getErrorMessage(fetchedClients),
-          variant: "destructive",
-        });
-        return;
-      }
-      setClients(fetchedClients);
-    } catch (error) {
-      toast({
-        title: t('common.error', { defaultValue: 'Error' }),
-        description: t('usage.toast.loadClientsError', { defaultValue: 'Failed to load clients' }),
-        variant: "destructive",
-      });
-    }
-  };
 
   const loadBucketUsageForClient = async (clientId: string) => {
     const request = ++bucketRequest.current;
@@ -542,7 +507,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
     {
       title: t('usage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
-      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={clientLogoById.get(record.client_id) ?? null} />,
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.client_logo_url ?? null} />,
     },
     {
       title: t('usage.table.service', { defaultValue: 'Service' }),
@@ -704,19 +669,30 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
             <div className="flex items-center space-x-2 mb-4">
               <div className="flex-1">
                 <Label htmlFor="client-filter">{t('usage.filters.client', { defaultValue: 'Client' })}</Label>
-                <CustomSelect
-                  id="client-filter"
-                  value={selectedClient || 'all_clients'}
-                  onValueChange={value => setSelectedClient(value === 'all_clients' ? null : value)}
-                  placeholder={t('usage.filters.clientPlaceholder', { defaultValue: 'Filter by client' })}
-                  options={[
-                    { value: 'all_clients', label: t('usage.filters.allClients', { defaultValue: 'All Clients' }) },
-                    ...clients.map(client => ({
-                      value: client.client_id,
-                      label: client.client_name
-                    }))
-                  ]}
-                />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <ClientPicker
+                      id="client-filter"
+                      selectedClientId={selectedClient && selectedClient !== 'all_clients' ? selectedClient : null}
+                      onSelect={(id) => setSelectedClient(id || null)}
+                      filterState={filterState}
+                      onFilterStateChange={setFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
+                      placeholder={t('usage.filters.allClients', { defaultValue: 'All Clients' })}
+                    />
+                  </div>
+                  {selectedClient && selectedClient !== 'all_clients' && (
+                    <Button
+                      id="clear-client-filter-button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedClient(null)}
+                    >
+                      {t('usage.filters.allClients', { defaultValue: 'All Clients' })}
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="flex-1">
                 <Label htmlFor="service-filter">{t('usage.filters.service', { defaultValue: 'Service' })}</Label>
@@ -841,7 +817,6 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
               <Label htmlFor="client-select">{t('usage.dialog.fields.client', { defaultValue: 'Client' })}</Label>
               <ClientPicker
                 id="client-select"
-                clients={clients}
                 selectedClientId={newUsage.client_id}
                 onSelect={(id) => setNewUsage({ ...newUsage, client_id: id || '' })}
                 filterState={filterState}

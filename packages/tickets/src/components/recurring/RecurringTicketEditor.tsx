@@ -174,7 +174,7 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
   const { t, i18n } = useTranslation('features/tickets');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const reference = useTicketFieldReferenceData();
+  const reference = useTicketFieldReferenceData('recurring_ticket');
   const permissions = useRecurringTicketPermissions();
   const templatePermissions = useTicketTemplatePermissions();
   const isNew = definitionId === 'new';

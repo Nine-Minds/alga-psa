@@ -157,12 +157,27 @@ const quickCreateOptions: QuickCreateOption[] = [
 
 type HeaderTranslator = (key: string, options?: Record<string, unknown>) => string;
 
-export const getMenuItemNameByPath = (
+export interface BreadcrumbTrailItem {
+  name: string;
+  /** Absent for section rows that are nav groups rather than pages. */
+  href?: string;
+}
+
+/**
+ * Walks the menu tree for `path` and returns the deepest match preceded by its
+ * parent sections, so a collapsed-nav user still reads where they are
+ * ("Assets > Equipment in custody" rather than a bare leaf label).
+ */
+export const getBreadcrumbTrailByPath = (
   path: string | null | undefined,
   t: HeaderTranslator,
-): string => {
+): BreadcrumbTrailItem[] => {
+  const label = (item: MenuItem): string =>
+    item.translationKey ? t(item.translationKey, { defaultValue: item.name }) : item.name;
+  const fallback = [{ name: t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' }) }];
+
   if (!path) {
-    return t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
+    return fallback;
   }
 
   const allMenuItems = [
@@ -176,22 +191,37 @@ export const getMenuItemNameByPath = (
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';
 
-  const matchingItems = (items: MenuItem[]): MenuItem[] => items.flatMap((item) => {
+  type MenuMatch = { item: MenuItem; parents: MenuItem[] };
+
+  const matchingItems = (items: MenuItem[], parents: MenuItem[] = []): MenuMatch[] => items.flatMap((item) => {
     const matchesPath = item.href === path
       || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)))
       || (item.relatedPaths?.some((relatedPath) => path.startsWith(relatedPath)) ?? false);
     return [
-      ...(matchesPath ? [item] : []),
-      ...(item.subItems ? matchingItems(item.subItems) : []),
+      ...(matchesPath ? [{ item, parents }] : []),
+      ...(item.subItems ? matchingItems(item.subItems, [...parents, item]) : []),
     ];
   });
 
-  const item = matchingItems(allMenuItems)
-    .sort((left, right) => (right.href?.length ?? 0) - (left.href?.length ?? 0))[0];
+  const match = matchingItems(allMenuItems)
+    .sort((left, right) => (right.item.href?.length ?? 0) - (left.item.href?.length ?? 0))[0];
 
-  return item
-    ? (item.translationKey ? t(item.translationKey, { defaultValue: item.name }) : item.name)
-    : t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
+  if (!match) {
+    return fallback;
+  }
+
+  return [
+    ...match.parents.map((parent) => ({ name: label(parent), href: parent.href })),
+    { name: label(match.item), href: match.item.href },
+  ];
+};
+
+export const getMenuItemNameByPath = (
+  path: string | null | undefined,
+  t: HeaderTranslator,
+): string => {
+  const trail = getBreadcrumbTrailByPath(path, t);
+  return trail[trail.length - 1].name;
 };
 
 const TenantBadge: React.FC<{
@@ -524,11 +554,14 @@ export default function Header({
     ];
 
     if (path && path !== '/') {
-      const menuName = getMenuItemNameByPath(path, t);
-      breadcrumbs.push({
-        name: menuName,
-        href: '#'
-      });
+      // Parent sections first, then the page itself; a group with no page of its
+      // own becomes plain text ('#').
+      for (const crumb of getBreadcrumbTrailByPath(path, t)) {
+        breadcrumbs.push({
+          name: crumb.name,
+          href: crumb.href ?? '#'
+        });
+      }
     }
 
     return breadcrumbs;
@@ -573,6 +606,9 @@ export default function Header({
                   <span className="text-xl font-semibold text-main-800">
                     {item.name}
                   </span>
+                ) : item.href === '#' ? (
+                  // A nav group with no page of its own: context, not a link.
+                  <span className="text-md text-gray-500">{item.name}</span>
                 ) : (
                   <Link
                     prefetch={false}

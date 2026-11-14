@@ -70,9 +70,8 @@ describe('multi-active remaining checklist wiring coverage', () => {
   });
 
   it('T069: activation/reactivation logic remains free of sibling-active singleton blockers', () => {
-    const contractActionsSource = readRepo('packages/billing/src/actions/contractActions.ts');
     const sharedContractsSource = readRepo('shared/billingClients/contracts.ts');
-    expect(contractActionsSource).toContain("Cannot manually change the status of an expired contract. To reactivate, extend the contract end date.");
+    // Expired-status behavior is exercised in contractLifecycle.behavior.test.ts.
     expect(sharedContractsSource).not.toContain('hasActiveContractForClient');
     expect(sharedContractsSource).not.toContain('another active contract');
   });

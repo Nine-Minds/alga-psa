@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NormalizedRmmAlertEvent } from '../contracts';
 
 const h = vi.hoisted(() => {
   const state = {
     statusIsClosed: true,
+    alertStatus: 'active',
     afterCommit: [] as Array<{ fn: () => Promise<unknown>; label: string }>,
     updates: [] as Array<{ table: string; patch: Record<string, unknown> }>,
   };
@@ -22,14 +24,16 @@ vi.mock('@alga-psa/db', () => ({
     table: (name: string) => {
       const qb: any = {
         where: () => qb,
+        forUpdate: () => qb,
         update: async (patch: Record<string, unknown>) => {
           h.state.updates.push({ table: name, patch });
+          if (name === 'rmm_alerts' && typeof patch.status === 'string') h.state.alertStatus = patch.status;
           return 1;
         },
         first: async () => {
           switch (name) {
             case 'rmm_alerts':
-              return { alert_id: 'alert-1', status: 'active', ticket_id: TICKET_ID, matched_rule_id: RULE_ID, asset_id: null };
+              return { alert_id: 'alert-1', status: h.state.alertStatus, ticket_id: TICKET_ID, matched_rule_id: RULE_ID, asset_id: null };
             case 'tickets':
               return { ticket_id: TICKET_ID };
             case 'rmm_alert_rules':
@@ -65,14 +69,16 @@ vi.mock('../../../lib/tickets/ticketUpdateStamp', () => ({ ticketUpdateStamp: ()
 
 import { processRmmAlertEvent } from '../processRmmAlertEvent';
 
-const event = {
+const event: NormalizedRmmAlertEvent = {
   kind: 'reset',
   tenantId: 'tenant-1',
   integrationId: 'int-1',
   provider: 'ninjaone',
   externalAlertId: 'ext-1',
+  severity: 'critical',
   occurredAt: '2026-10-16T00:00:00.000Z',
-} as any;
+  raw: {},
+};
 
 async function run() {
   const result = await processRmmAlertEvent({ knex: {} as any }, event);
@@ -85,6 +91,7 @@ async function run() {
 describe('processReset autoResolveTicket → TICKET_CLOSED', () => {
   beforeEach(() => {
     h.state.statusIsClosed = true;
+    h.state.alertStatus = 'active';
     h.state.afterCommit = [];
     h.state.updates = [];
     h.publishWorkflowEvent.mockClear();
@@ -107,5 +114,19 @@ describe('processReset autoResolveTicket → TICKET_CLOSED', () => {
     await run();
     expect(h.state.afterCommit).toHaveLength(0);
     expect(h.publishWorkflowEvent).not.toHaveBeenCalled();
+  });
+
+  it('skips a repeated reset without closing or publishing the ticket twice', async () => {
+    await run();
+    expect(h.state.alertStatus).toBe('auto_resolved');
+    const updatesAfterReset = [...h.state.updates];
+    const hooksAfterReset = [...h.state.afterCommit];
+
+    const result = await processRmmAlertEvent({ knex: {} as any }, event);
+
+    expect(result).toMatchObject({ outcome: 'skipped', alertId: 'alert-1' });
+    expect(h.state.updates).toEqual(updatesAfterReset);
+    expect(h.state.afterCommit).toEqual(hooksAfterReset);
+    expect(h.publishWorkflowEvent).toHaveBeenCalledTimes(1);
   });
 });

@@ -287,7 +287,7 @@ export function renderLayout(layout: LayoutElement): RenderOutput {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* Example default styles */
-body { font-family: sans-serif; line-height: 1.5; }
+body { font-family: Inter, sans-serif; line-height: 1.5; }
 .Row { display: flex; margin-bottom: 1rem; } /* Example: Flexbox for rows */
 .Column { flex: 1; padding: 0 0.5rem; } /* Example: Basic column styling */
 .Column:first-child { padding-left: 0; }

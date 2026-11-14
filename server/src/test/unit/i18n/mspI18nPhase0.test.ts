@@ -154,6 +154,7 @@ describe('MSP i18n Phase 0 - config', () => {
     expect(ROUTE_NAMESPACES['/msp/tickets']).toEqual([
       'common',
       'msp/core',
+      'msp/settings',
       'features/tickets',
       'msp/time-entry',
       'msp/user-activities',

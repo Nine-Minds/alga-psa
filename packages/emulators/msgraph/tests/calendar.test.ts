@@ -295,20 +295,166 @@ it('invalidates old delta state on reset and permits a fresh synchronization', a
 it.each([
   '/me/calendarView/delta',
   '/me/calendarView/delta?startDateTime=invalid&endDateTime=2026-09-20T12:00:00Z',
-  `${deltaWindow}&$select=id`,
   `${deltaWindow}&$deltatoken=invalid`,
 ])('rejects an invalid or unsupported delta query: %s', async path => {
   expect((await graph(path)).status).toBe(400);
 });
 
+// A client has to ask for type/seriesMasterId/originalStart: Graph leaves them
+// out of the default projection, and without them an expanded occurrence looks
+// exactly like a standalone event.
+it('projects $select on the delta window and carries it into the delta link', async () => {
+  const created = await createEvent({ subject: 'Selected fields only' });
+  const selected = `${deltaWindow}&$select=id,type,seriesMasterId`;
+  const page = await delta(`${base}/v1.0${selected}`);
+  expect(page.value).toEqual([{ id: created.id, type: 'singleInstance', seriesMasterId: null }]);
+  const link = new URL(page['@odata.deltaLink']);
+  expect(link.searchParams.get('$select')).toBe('id,type,seriesMasterId');
+  expect((await delta(link.toString())).value).toEqual([]);
+  // Unprojected, the same round carries the whole event.
+  expect((await delta()).value).toEqual([expect.objectContaining({ id: created.id, subject: 'Selected fields only' })]);
+});
+
 it.each([
-  { recurrence: { pattern: { type: 'daily', interval: 1 } } },
-  { start: { dateTime: '2026-09-20T10:00:00', timeZone: 'Pacific Standard Time' } },
-])('rejects unmodeled delta expansion or timezone behavior: %j', async input => {
+  { recurrence: { pattern: { type: 'everySecondTuesdayOfALeapYear', interval: 1 }, range: { type: 'noEnd' } } },
+  { recurrence: { pattern: { type: 'weekly', interval: 1 }, range: { type: 'noEnd' } } },
+])('rejects an unmodeled recurrence pattern: %j', async input => {
   await createEvent(input);
   const response = await graph(deltaWindow);
   expect(response.status).toBe(400);
   expect((await response.json()).error.code).toBe('Request_UnsupportedQuery');
+});
+
+it('rejects an unmodeled timezone', async () => {
+  await createEvent({ start: { dateTime: '2026-09-20T10:00:00', timeZone: 'Pacific Standard Time' } });
+  const response = await graph(deltaWindow);
+  expect(response.status).toBe(400);
+  expect((await response.json()).error.code).toBe('Request_UnsupportedQuery');
+});
+
+// calendarView/delta returns expanded occurrences of a series, never the
+// master: an integration that keys on the returned ids creates one entry per
+// occurrence unless it resolves them through seriesMasterId.
+const seriesWindow = '/me/calendarView/delta?startDateTime=2026-09-20T00:00:00Z&endDateTime=2026-10-31T00:00:00Z';
+
+async function createSeries(recurrence: Record<string, unknown>, input: Record<string, unknown> = {}) {
+  return createEvent({ subject: 'Advisories @alga', recurrence, ...input });
+}
+
+it('expands a weekly series into occurrences carrying type and seriesMasterId', async () => {
+  const master = await createSeries({
+    pattern: { type: 'weekly', interval: 1, daysOfWeek: ['sunday'] },
+    range: { type: 'noEnd', startDate: '2026-09-20' },
+  });
+  expect(master.type).toBe('seriesMaster');
+
+  const items = (await delta(`${base}/v1.0${seriesWindow}`)).value;
+
+  expect(items.length).toBeGreaterThan(5);
+  expect(items.every((item: any) => item.type === 'occurrence')).toBe(true);
+  expect(items.every((item: any) => item.seriesMasterId === master.id)).toBe(true);
+  expect(items.every((item: any) => item.recurrence === null)).toBe(true);
+  expect(items.map((item: any) => item.start.dateTime).slice(0, 3)).toEqual([
+    '2026-09-20T10:00:00.000Z',
+    '2026-09-27T10:00:00.000Z',
+    '2026-10-04T10:00:00.000Z',
+  ]);
+  // The master itself is never part of calendarView.
+  expect(items.some((item: any) => item.id === master.id)).toBe(false);
+});
+
+it('expands a relative-monthly series on the nth weekday and serves the master with its recurrence', async () => {
+  const master = await createSeries({
+    pattern: { type: 'relativeMonthly', interval: 1, daysOfWeek: ['thursday'], index: 'first' },
+    range: { type: 'noEnd', startDate: '2026-10-01' },
+  }, { start: { dateTime: '2026-10-01T14:15:00', timeZone: 'UTC' }, end: { dateTime: '2026-10-01T14:45:00', timeZone: 'UTC' } });
+
+  const items = (await delta(`${base}/v1.0/me/calendarView/delta?startDateTime=2026-10-01T00:00:00Z&endDateTime=2027-01-31T00:00:00Z`)).value;
+  expect(items.map((item: any) => item.start.dateTime)).toEqual([
+    '2026-10-01T14:15:00.000Z',
+    '2026-11-05T14:15:00.000Z',
+    '2026-12-03T14:15:00.000Z',
+    '2027-01-07T14:15:00.000Z',
+  ]);
+
+  // Both master shapes resolve, with the native recurrence object intact.
+  for (const path of [`/me/events/${master.id}`, `/me/calendar/events/${master.id}`]) {
+    const fetched = await (await graph(path)).json();
+    expect(fetched.type).toBe('seriesMaster');
+    expect(fetched.recurrence.pattern).toMatchObject({ type: 'relativeMonthly', index: 'first' });
+  }
+});
+
+it('honours COUNT and UNTIL ranges', async () => {
+  const counted = await createSeries({
+    pattern: { type: 'daily', interval: 1 },
+    range: { type: 'numbered', startDate: '2026-09-20', numberOfOccurrences: 3 },
+  });
+  expect((await delta(`${base}/v1.0${seriesWindow}`)).value).toHaveLength(3);
+  expect((await graph(`/me/calendar/events/${counted.id}`, 'DELETE')).status).toBe(204);
+
+  await createSeries({
+    pattern: { type: 'daily', interval: 1 },
+    range: { type: 'endDate', startDate: '2026-09-20', endDate: '2026-09-22' },
+  });
+  expect((await delta(`${base}/v1.0${seriesWindow}`)).value).toHaveLength(3);
+});
+
+it('serves an occurrence by id until it is cancelled, which is when it 404s', async () => {
+  const master = await createSeries({
+    pattern: { type: 'daily', interval: 1 },
+    range: { type: 'numbered', startDate: '2026-09-20', numberOfOccurrences: 3 },
+  });
+  const items = (await delta(`${base}/v1.0${seriesWindow}`)).value;
+
+  const fetched = await (await graph(`/me/events/${items[1].id}`)).json();
+  expect(fetched).toMatchObject({ id: items[1].id, type: 'occurrence', seriesMasterId: master.id, originalStart: items[1].originalStart });
+
+  // Deleting one occurrence cancels that slot; the master survives, and the
+  // occurrence id stops resolving — exactly what a client sees after @removed.
+  expect((await graph(`/me/calendar/events/${items[1].id}`, 'DELETE')).status).toBe(204);
+  expect((await graph(`/me/events/${items[1].id}`)).status).toBe(404);
+  expect((await graph(`/me/calendar/events/${master.id}`)).status).toBe(200);
+  expect((await delta(`${base}/v1.0${seriesWindow}`)).value).toHaveLength(2);
+});
+
+it('reports a cancelled occurrence as @removed and an overridden one as an exception', async () => {
+  const master = await createSeries({
+    pattern: { type: 'daily', interval: 1 },
+    range: { type: 'numbered', startDate: '2026-09-20', numberOfOccurrences: 3 },
+  });
+  const first = await delta(`${base}/v1.0${seriesWindow}`);
+  expect(first.value).toHaveLength(3);
+  const cancelledId = first.value[1].id;
+  const overriddenSlot = first.value[2].originalStart;
+
+  await controlPost('seed/calendar-occurrence', {
+    action: 'cancel', seriesMasterId: master.id, originalStart: first.value[1].originalStart,
+  });
+  await controlPost('seed/calendar-occurrence', {
+    action: 'override',
+    seriesMasterId: master.id,
+    originalStart: overriddenSlot,
+    event: {
+      subject: 'Advisories (moved) @alga',
+      start: { dateTime: '2026-09-23T15:00:00Z', timeZone: 'UTC' },
+      end: { dateTime: '2026-09-23T16:00:00Z', timeZone: 'UTC' },
+    },
+  });
+
+  const next = await delta(first['@odata.deltaLink']);
+  expect(next.value).toEqual(expect.arrayContaining([
+    { id: cancelledId, '@removed': { reason: 'deleted' } },
+    expect.objectContaining({
+      type: 'exception',
+      seriesMasterId: master.id,
+      originalStart: overriddenSlot,
+      subject: 'Advisories (moved) @alga',
+      start: { dateTime: '2026-09-23T15:00:00.000Z', timeZone: 'UTC' },
+    }),
+  ]));
+  // The series master survives both.
+  expect((await graph(`/me/calendar/events/${master.id}`)).status).toBe(200);
 });
 
 async function subscribe(path: string, resource: string, changeType = 'created,updated,deleted', expired = false) {

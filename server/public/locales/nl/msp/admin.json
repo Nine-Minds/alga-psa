@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Tickets",
-      "documents": "Documenten",
-      "time": "Tijd",
-      "projects": "Projecten",
-      "assets": "Assets",
-      "billing": "Facturatie"
-    },
     "targetTypes": {
       "role": "Rol",
       "team": "Team",
@@ -453,11 +445,13 @@
         "custom": "Aangepast"
       },
       "badges": {
-        "starter": "Starterspakket"
+        "starter": "Starterspakket",
+        "closed": "Gesloten"
       },
       "descriptions": {
         "systemStarter": "Systeem-starterbundel.",
-        "customBundle": "Aangepaste beperkingsbundel voor toewijzingen aan rollen, teams, gebruikers of API-sleutels."
+        "customBundle": "Aangepaste beperkingsbundel voor toewijzingen aan rollen, teams, gebruikers of API-sleutels.",
+        "closed": "Gesloten: weigert alles wat niet genoemd wordt."
       },
       "effectiveSummary": "Effectief overzicht: {{status}} bundel met {{count}} actieve toewijzing(en).",
       "empty": "Geen autorisatiebundels gevonden.",
@@ -542,6 +536,17 @@
         "label": "Geredigeerde velden",
         "placeholder": "internal_cost, margin",
         "helper": "Door komma's gescheiden veldnamen die geredigeerd moeten worden wanneer deze regel toegang verleent."
+      },
+      "baseline": {
+        "title": "Gesloten bundel",
+        "explanation": "Een gesloten bundel weigert elk recordtype en elke actie die niet genoemd wordt. Een open bundel beperkt alleen wat wel genoemd wordt.",
+        "closedToggle": "Publiceren als gesloten",
+        "openBadge": "Open",
+        "previewTitle": "Deze gesloten bundel weigert",
+        "previewIntro": "Gebruikers met deze bundel krijgen deze recordtypen en acties geweigerd, omdat de bundel er geen regel voor heeft.",
+        "previewNothing": "De bundel noemt elk recordtype en elke actie en weigert dus niets buiten zijn eigen regels.",
+        "deniedAll": "Alle acties",
+        "deniedActions": "Geweigerd: {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Record",
       "useSynthetic": "Synthetisch recordscenario gebruiken",
       "syntheticOwnerPlaceholder": "Eigenaar gebruikers-ID (optioneel)",
-      "syntheticClientPlaceholder": "Klant-ID (optioneel)",
+      "syntheticClientPlaceholder": "Klant (optioneel)",
       "syntheticBoardPlaceholder": "Bord-ID (optioneel)",
       "clientVisible": "Zichtbaar voor klant",
       "run": "Simulatie uitvoeren",
@@ -584,7 +589,18 @@
       "publishedRevision": "Gepubliceerde revisie",
       "allowed": "Toegestaan",
       "denied": "Geweigerd",
-      "empty": "Voer een simulatie uit om concept- en gepubliceerd gedrag te vergelijken."
+      "empty": "Voer een simulatie uit om concept- en gepubliceerd gedrag te vergelijken.",
+      "explanations": {
+        "closedBaseline": "De bundel is gesloten en heeft geen regel voor {{action}} op {{resource}}, dus de toegang wordt geweigerd.",
+        "clientPortfolio": "Het record hoort bij een klant buiten het klantenportfolio van deze gebruiker, dus de portfolioregel weigert het.",
+        "createOutOfScope": "Het aanmaken van {{resource}} voor deze klant wordt geweigerd: de klant valt buiten het bereik van deze gebruiker.",
+        "readRequired": "{{action}} op {{resource}} vereist ook leestoegang tot het record, en de leesregels weigeren dat.",
+        "templateDenied": "Een regel in de bundel beperkt {{action}} op {{resource}} tot records waarmee deze gebruiker niet overeenkomt.",
+        "clientVisibleOnly": "De bundel staat {{action}} op {{resource}} alleen toe als het record zichtbaar is voor de klant.",
+        "notSelfApprover": "Gebruikers kunnen hun eigen records niet goedkeuren.",
+        "rulesUnavailable": "De regels van de bundel konden niet worden geladen, dus de toegang wordt geweigerd.",
+        "rbacDenied": "De rol van de gebruiker geeft geen {{action}} op {{resource}}."
+      }
     },
     "createDialog": {
       "title": "Autorisatiebundel aanmaken",
@@ -622,9 +638,47 @@
       "selectRecord": "Selecteer een record voordat u een simulatie uitvoert.",
       "runSimulation": "Kan simulatie niet uitvoeren.",
       "simulator": {
-        "unsupportedAction": "De simulator ondersteunt momenteel alleen Lezen- en Goedkeuren-controles. Kies een van deze acties en probeer het opnieuw.",
+        "unsupportedAction": "De simulator ondersteunt controles voor Lezen, Aanmaken, Bijwerken, Verwijderen en Goedkeuren. Kies een van die acties en probeer het opnieuw.",
         "unsupportedResource": "Dit recordtype is nog niet beschikbaar in de simulator. Kies een ondersteund recordtype en probeer het opnieuw.",
-        "clientTicketNotSupported": "Ticketcontroles voor klantgebruikers zijn nog niet beschikbaar in de simulator, omdat de zichtbaarheid van ticketborden ontbreekt. Probeer een interne gebruiker of controleer de tickettoegang voor klanten in de app."
+        "clientTicketNotSupported": "Ticketcontroles voor klantgebruikers zijn nog niet beschikbaar in de simulator, omdat de zichtbaarheid van ticketborden ontbreekt. Probeer een interne gebruiker of controleer de tickettoegang voor klanten in de app.",
+        "syntheticRecordRequired": "Dit recordtype heeft geen opgeslagen records om te kiezen. Gebruik een synthetisch recordscenario en probeer het opnieuw."
+      },
+      "saveBaseline": "Kan niet wijzigen of de bundel gesloten is."
+    },
+    "resourceTypes": {
+      "ticket": "Tickets",
+      "document": "Documenten",
+      "time_entry": "Tijd",
+      "project": "Projecten",
+      "asset": "Assets",
+      "billing": "Facturatie",
+      "tag": "Labels",
+      "client": "Klanten",
+      "contact": "Contactpersonen",
+      "interaction": "Interacties",
+      "schedule_entry": "Agenda-items"
+    },
+    "actions": {
+      "read": "Lezen",
+      "create": "Aanmaken",
+      "update": "Bijwerken",
+      "delete": "Verwijderen",
+      "approve": "Goedkeuren"
+    },
+    "portfolio": {
+      "title": "Klantenportfolio",
+      "description": "De klanten waarvoor deze gebruiker werkt. Bundels met een klantenportfolioregel beperken de gebruiker tot deze klanten.",
+      "addClient": "Klant toevoegen",
+      "loading": "Klantenportfolio laden...",
+      "empty": "Geen klanten. Een gebruiker met een leeg portfolio krijgt alles geweigerd wat een klantenportfolioregel dekt.",
+      "removeClient": "{{client}} verwijderen",
+      "save": "Portfolio opslaan",
+      "saving": "Opslaan...",
+      "saved": "Klantenportfolio opgeslagen.",
+      "errors": {
+        "load": "Kan het klantenportfolio niet laden.",
+        "lookup": "Kan de klant niet opzoeken.",
+        "save": "Kan het klantenportfolio niet opslaan."
       }
     }
   },

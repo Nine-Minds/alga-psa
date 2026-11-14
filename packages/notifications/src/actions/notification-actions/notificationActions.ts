@@ -2,6 +2,7 @@
 
 import { readUserEmailPreferenceState, saveUserEmailPreferences } from '../../notifications/userEmailPreferences';
 import { getEmailNotificationService } from "../../notifications/email";
+import { readDontNotifyCustomerDefault } from "../../notifications/notificationPolicy";
 import { revalidatePath } from "next/cache";
 import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -25,28 +26,109 @@ function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant:
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
-export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
+/**
+ * Templates and notification settings are tenant-owned outbound mail: every
+ * entry point here takes its tenant from the session and is gated on the
+ * settings permission, never on an argument the caller could name.
+ */
+async function requireSettingsRead(user: any, trx: Knex.Transaction): Promise<void> {
+  const { hasPermission } = await import('@alga-psa/auth');
+  if (!(await hasPermission(user, 'settings', 'read', trx))) {
+    throw new Error('Permission denied: Cannot read settings');
+  }
+}
+
+async function requireSettingsUpdate(user: any, trx: Knex.Transaction): Promise<void> {
+  const { hasPermission } = await import('@alga-psa/auth');
+  if (!(await hasPermission(user, 'settings', 'update', trx))) {
+    throw new Error('Permission denied: Cannot update settings');
+  }
+}
+
+export type NotificationSettingsUpdate = Partial<Pick<NotificationSettings, 'is_enabled' | 'default_dont_notify_customer'>>;
+
+const UPDATABLE_NOTIFICATION_SETTINGS = ['is_enabled', 'default_dont_notify_customer'] as const;
+
+export const getNotificationSettingsAction = withAuth(async (
+  user,
+  { tenant },
+): Promise<NotificationSettings> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsRead(user, trx));
+
   const notificationService = getEmailNotificationService();
   return notificationService.getSettings(tenant);
-}
+});
 
-export async function updateNotificationSettingsAction(
-  tenant: string, 
-  settings: Partial<NotificationSettings>
-): Promise<NotificationSettings> {
+export const updateNotificationSettingsAction = withAuth(async (
+  user,
+  { tenant },
+  settings: NotificationSettingsUpdate
+): Promise<NotificationSettings> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
+
+  if (!settings || typeof settings !== 'object') {
+    throw new Error('Notification settings update must be an object');
+  }
+
+  const unknownKeys = Object.keys(settings).filter(
+    (key) => !(UPDATABLE_NOTIFICATION_SETTINGS as readonly string[]).includes(key)
+  );
+  if (unknownKeys.length > 0) {
+    throw new Error(`Notification settings cannot update: ${unknownKeys.join(', ')}`);
+  }
+
+  const update: NotificationSettingsUpdate = {};
+  for (const key of UPDATABLE_NOTIFICATION_SETTINGS) {
+    const value = settings[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'boolean') {
+      throw new Error(`${key} must be a boolean`);
+    }
+    update[key] = value;
+  }
+  if (Object.keys(update).length === 0) {
+    throw new Error('Notification settings update has no changes');
+  }
+
   const notificationService = getEmailNotificationService();
-  const updated = await notificationService.updateSettings(tenant, settings);
+  // Creates the tenant row on first use so the update below always lands.
+  await notificationService.getSettings(tenant);
+  const updated = await notificationService.updateSettings(tenant, update);
   revalidatePath("/msp/settings/notifications");
+  // Ticket screens receive the default from the MSP layout.
+  revalidatePath("/msp", "layout");
   return updated;
-}
+});
 
-export async function getTemplatesAction(tenant: string): Promise<{
+/**
+ * The tenant's "Don't notify the customer" default for ticket screens. Any
+ * signed-in internal user may read it: agents need the policy, not settings
+ * access.
+ */
+export const getDontNotifyCustomerDefaultAction = withAuth(async (
+  user,
+  { tenant }
+): Promise<boolean> => {
+  if (user.user_type !== 'internal') {
+    return false;
+  }
+  const { knex } = await createTenantKnex();
+  return readDontNotifyCustomerDefault(knex, tenant);
+});
+
+export const getTemplatesAction = withAuth(async (
+  user,
+  { tenant },
+): Promise<{
   systemTemplates: (SystemEmailTemplate & { category: string })[];
   tenantTemplates: TenantEmailTemplate[];
-}> {
-  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
+}> => {
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await requireSettingsRead(user, trx);
     const db = tenantDb(trx, tenant);
     let systemTemplatesQuery = tenantScopedTable(trx, "system_email_templates as t", tenant)
       .select(
@@ -62,26 +144,33 @@ export async function getTemplatesAction(tenant: string): Promise<{
       
     return { systemTemplates, tenantTemplates };
   });
-}
+});
 
-export async function createTenantTemplateAction(
-  tenant: string,
+export const createTenantTemplateAction = withAuth(async (
+  user,
+  { tenant },
   template: Omit<TenantEmailTemplate, "id" | "created_at" | "updated_at">
-): Promise<TenantEmailTemplate> {
+): Promise<TenantEmailTemplate> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
+
   const notificationService = getEmailNotificationService();
   const created = await notificationService.createTenantTemplate(tenant, template);
   revalidatePath("/msp/settings/notifications");
   return created;
-}
+});
 
-export async function cloneSystemTemplateAction(
-  tenant: string,
+export const cloneSystemTemplateAction = withAuth(async (
+  user,
+  { tenant },
   systemTemplateId: number
-): Promise<TenantEmailTemplate | NotificationActionError> {
-  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
-  
+): Promise<TenantEmailTemplate | NotificationActionError> => {
+  const { knex } = await createTenantKnex();
+
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await requireSettingsUpdate(user, trx);
+
       // Get the system template
       const systemTemplate = await tenantScopedTable(trx, "system_email_templates", tenant)
         .where({ id: systemTemplateId })
@@ -112,33 +201,39 @@ export async function cloneSystemTemplateAction(
     if (expected) return expected;
     throw error;
   }
-}
+});
 
-export async function updateTenantTemplateAction(
-  tenant: string,
+export const updateTenantTemplateAction = withAuth(async (
+  user,
+  { tenant },
   id: number,
   template: Partial<TenantEmailTemplate>
-): Promise<TenantEmailTemplate> {
+): Promise<TenantEmailTemplate> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
+
   const notificationService = getEmailNotificationService();
   const updated = await notificationService.updateTenantTemplate(tenant, id, template);
   revalidatePath("/msp/settings/notifications");
   return updated;
-}
+});
 
-export async function deactivateTenantTemplateAction(
-  tenant: string,
+export const deactivateTenantTemplateAction = withAuth(async (
+  user,
+  { tenant },
   name: string
-): Promise<void> {
-  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
-  
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
+
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await requireSettingsUpdate(user, trx);
     await tenantScopedTable(trx, "tenant_email_templates", tenant)
       .where({ name })
       .del();
   });
-    
+
   revalidatePath("/msp/settings/notifications");
-}
+});
 
 export const getCategoriesAction = withAuth(async (_user, { tenant }): Promise<NotificationCategory[]> => {
   const { knex } = await createTenantKnex();

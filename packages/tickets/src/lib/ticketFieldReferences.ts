@@ -36,6 +36,108 @@ export interface TicketFieldReferenceTargets {
   schedule?: boolean;
 }
 
+interface PriorityBoardTypeBoard {
+  board_name: string;
+  priority_type?: string | null;
+}
+interface PriorityBoardTypePriority {
+  priority_name: string;
+  is_from_itil_standard?: boolean | null;
+}
+
+export interface PriorityBoardTypeProblem {
+  /** The composed English message (names included), shown as-is when no translation applies. */
+  message: string;
+  messageKey: string;
+  messageParams: { priority: string; board: string };
+}
+
+/**
+ * Thrown by manual ticket create/update. `ticketActionErrorFrom` turns it into a returned
+ * `actionError(message, messageKey, messageParams)`, so the refusal reaches the user instead of
+ * being redacted as an unrecognised server error.
+ */
+export class PriorityBoardTypeError extends Error {
+  readonly messageKey: string;
+  readonly messageParams: PriorityBoardTypeProblem['messageParams'];
+  constructor(problem: PriorityBoardTypeProblem) {
+    super(problem.message);
+    this.name = 'PriorityBoardTypeError';
+    this.messageKey = problem.messageKey;
+    this.messageParams = problem.messageParams;
+  }
+}
+
+/** A null `priority_type` is `custom` (as in boardActions); a null `is_from_itil_standard` is custom. */
+function describePriorityBoardTypeMismatch(
+  board: PriorityBoardTypeBoard,
+  priority: PriorityBoardTypePriority,
+  schedule?: boolean
+): PriorityBoardTypeProblem | null {
+  const boardIsItil = (board.priority_type ?? 'custom') === 'itil';
+  const priorityIsItil = Boolean(priority.is_from_itil_standard);
+  if (boardIsItil === priorityIsItil) return null;
+  const suffix = schedule ? '; edit the schedule' : '';
+  const message = priorityIsItil
+    ? `Priority ‘${priority.priority_name}’ is an ITIL priority but board ‘${board.board_name}’ uses custom priorities${suffix}`
+    : `Priority ‘${priority.priority_name}’ is a custom priority but board ‘${board.board_name}’ uses ITIL priorities${suffix}`;
+  return {
+    message,
+    messageKey: priorityIsItil
+      ? 'features/tickets:errors.ticket.priorityItilBoardCustom'
+      : 'features/tickets:errors.ticket.priorityCustomBoardItil',
+    messageParams: { priority: priority.priority_name, board: board.board_name },
+  };
+}
+
+/**
+ * Returns a message when the priority's family (ITIL or custom) does not match the board's
+ * `priority_type`, otherwise null. Also null when either row does not exist: the existence problems are
+ * reported elsewhere. Used by manual ticket create/update; the shared validator applies the same rule on
+ * the rows it has already fetched.
+ */
+export async function findPriorityBoardTypeProblem(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string,
+  priorityId: string
+): Promise<PriorityBoardTypeProblem | null> {
+  const db = tenantDb(conn, tenant);
+  const board = await db.table('boards').where({ board_id: boardId }).first('board_name', 'priority_type');
+  if (!board) return null;
+  const priority = await db
+    .table('priorities')
+    .where({ priority_id: priorityId, item_type: 'ticket' })
+    .first('priority_name', 'is_from_itil_standard');
+  if (!priority) return null;
+  return describePriorityBoardTypeMismatch(board, priority);
+}
+
+/**
+ * The ticket-update flavour of {@link findPriorityBoardTypeProblem}. Decides by key presence: a key that is
+ * in the patch (and not `undefined`) replaces the stored value, including an explicit `null`. Only a patch
+ * that changes `priority_id` or `board_id` is checked, against the effective pair (a key absent from the
+ * patch comes from the existing ticket), so an unrelated update, or one that re-sends the stored values,
+ * keeps working on a legacy ticket whose pair already mismatches. A null effective board or priority
+ * (e.g. a board move that clears the priority) has nothing to check.
+ */
+export async function findTicketUpdatePriorityBoardTypeProblem(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  current: { board_id?: string | null; priority_id?: string | null },
+  patch: { board_id?: string | null; priority_id?: string | null }
+): Promise<PriorityBoardTypeProblem | null> {
+  const hasBoard = 'board_id' in patch && patch.board_id !== undefined;
+  const hasPriority = 'priority_id' in patch && patch.priority_id !== undefined;
+  const boardChanged = hasBoard && (patch.board_id ?? null) !== (current.board_id ?? null);
+  const priorityChanged = hasPriority && (patch.priority_id ?? null) !== (current.priority_id ?? null);
+  if (!boardChanged && !priorityChanged) return null;
+  const boardId = hasBoard ? patch.board_id : current.board_id;
+  const priorityId = hasPriority ? patch.priority_id : current.priority_id;
+  if (!boardId || !priorityId) return null;
+  return findPriorityBoardTypeProblem(conn, tenant, boardId, priorityId);
+}
+
 /**
  * Checks that everything a ticket will reference still exists and is coherent: the board is active, the
  * status and category belong to that board, assignees are active, and the contact, location and assets
@@ -51,9 +153,12 @@ export async function findTicketFieldReferenceProblems(
   const additionalAgentIds = [...(fields.additional_agent_ids ?? [])];
   const problems: TicketFieldReferenceProblem[] = [];
 
-  let board: { board_id: string; board_name: string; is_inactive: boolean } | undefined;
+  let board: { board_id: string; board_name: string; is_inactive: boolean; priority_type?: string | null } | undefined;
   if (fields.board_id) {
-    board = await db.table('boards').where({ board_id: fields.board_id }).first('board_id', 'board_name', 'is_inactive');
+    board = await db
+      .table('boards')
+      .where({ board_id: fields.board_id })
+      .first('board_id', 'board_name', 'is_inactive', 'priority_type');
     if (!board) {
       problems.push({ field: 'board_id', message: 'The selected board no longer exists' });
     } else if (board.is_inactive) {
@@ -82,8 +187,13 @@ export async function findTicketFieldReferenceProblems(
     const priority = await db
       .table('priorities')
       .where({ priority_id: fields.priority_id, item_type: 'ticket' })
-      .first('priority_id');
-    if (!priority) problems.push({ field: 'priority_id', message: 'The selected priority no longer exists' });
+      .first('priority_id', 'priority_name', 'is_from_itil_standard');
+    if (!priority) {
+      problems.push({ field: 'priority_id', message: 'The selected priority no longer exists' });
+    } else if (board) {
+      const mismatch = describePriorityBoardTypeMismatch(board, priority, targets.schedule);
+      if (mismatch) problems.push({ field: 'priority_id', message: mismatch.message });
+    }
   } else if (targets.schedule) {
     problems.push({ field: 'priority_id', message: 'A priority is required: choose one on the template or override it for this schedule' });
   }

@@ -111,8 +111,25 @@ describe('document binding catalog generation', () => {
       expect(invoiceOptions.has(shipped)).toBe(true);
     }
 
+    // alga0002295: the legacy `invoice.discount` key stays absent (no alias); the new
+    // opt-in discount bindings are present.
     expect(invoiceOptions.has('invoice.discount')).toBe(false);
     expect(getTemplateFieldDefinition('invoice.discount')).toBeNull();
+    expect(invoiceOptions.has('invoice.discountTotal')).toBe(true);
+    expect(invoiceOptions.has('invoice.grossSubtotal')).toBe(true);
+  });
+
+  it('publishes numeric discountTotal / grossSubtotal bindings and a corrected subtotal description', () => {
+    const fields = getDocumentBindingFields('invoice');
+    const byPath = new Map(fields.map((field) => [field.path, field]));
+    expect(byPath.get('invoice.discountTotal')).toMatchObject({ valueType: 'number', renderPath: 'discountTotal' });
+    expect(byPath.get('invoice.grossSubtotal')).toMatchObject({ valueType: 'number', renderPath: 'grossSubtotal' });
+    // Display path resolution must not alias the legacy key.
+    expect(resolveDocumentRenderPath('invoice', 'invoice.discount')).not.toBe('discountTotal');
+    expect(getTemplateFieldDefinition('invoice.subtotal')?.description).toBe(
+      'The invoice subtotal after discounts and credits, before tax.'
+    );
+    expect(getTemplateFieldDefinition('invoice.discountTotal')?.label).toBe('Discounts');
   });
 
   it('offers a picker option for every value binding a document type publishes', () => {

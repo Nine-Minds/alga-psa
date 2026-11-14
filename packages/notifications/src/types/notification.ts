@@ -3,6 +3,8 @@ export interface NotificationSettings {
   tenant: string;
   is_enabled: boolean;
   rate_limit_per_minute: number;
+  /** Ticket "Don't notify the customer" checkboxes start ticked. */
+  default_dont_notify_customer: boolean;
   created_at: string;
   updated_at: string;
 }

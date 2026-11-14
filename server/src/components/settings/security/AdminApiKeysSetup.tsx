@@ -22,6 +22,7 @@ import {
   type ApiRateLimitSettingsValue,
   type ApiRateLimitSettingsView,
 } from '@/lib/actions/apiKeyRateLimitActions';
+import { ApiKeyPrincipalCell } from '@enterprise/components/service-principals/ApiKeyPrincipalCell';
 import { Search, RotateCcw } from 'lucide-react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -36,6 +37,8 @@ export interface AdminApiKey {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  /** Owner's user type; `service` marks a service principal (EE renders it with a badge). */
+  user_type?: string | null;
   created_at: Date;
   last_used_at: Date | null;
   expires_at: Date | null;
@@ -300,7 +303,14 @@ export default function AdminApiKeysSetup() {
       width: '15%',
       render: (_: string, record: AdminApiKey) => {
         const name = [record.first_name, record.last_name].filter(Boolean).join(' ');
-        return name || record.username;
+        const displayName = name || record.username;
+        return (
+          <ApiKeyPrincipalCell
+            userType={record.user_type}
+            displayName={displayName}
+            fallback={displayName}
+          />
+        );
       },
     },
     {

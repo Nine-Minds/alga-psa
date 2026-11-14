@@ -2,16 +2,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
   locals: [] as Array<{ external_alert_id: string; metadata: unknown }>,
+  conditions: [] as Array<{ current_external_alert_id: string }>,
+  transitions: [] as Array<{ external_alert_id: string }>,
   processed: [] as Array<{ kind: string; externalAlertId: string }>,
 }));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({
-    table: () => {
+    table: (name: string) => {
       const qb: any = {
         where: () => qb,
         whereIn: () => qb,
-        select: async () => h.locals,
+        select: async () => {
+          switch (name) {
+            case 'rmm_alerts': return h.locals;
+            case 'rmm_condition_states': return h.conditions;
+            case 'rmm_condition_transitions': return h.transitions;
+            default: throw new Error(`Unexpected table: ${name}`);
+          }
+        },
       };
       return qb;
     },
@@ -37,6 +46,8 @@ const args = { tenantId: 't1', integrationId: 'i1', provider: 'held-test' };
 describe('runRmmAlertReconciliation with held alerts', () => {
   beforeEach(() => {
     h.locals = [];
+    h.conditions = [];
+    h.transitions = [];
     h.processed = [];
   });
 
@@ -60,6 +71,21 @@ describe('runRmmAlertReconciliation with held alerts', () => {
     const result = await runRmmAlertReconciliation({ knex: {} as any }, args);
 
     expect(h.processed).toEqual([{ kind: 'reset', externalAlertId: 'gone-1' }]);
+    expect(result.resetsSynthesized).toBe(1);
+  });
+
+  it('keeps current and pending condition outages open when a snapshot omits them', async () => {
+    h.locals = [pollerIngested('current-1'), pollerIngested('pending-1'), pollerIngested('cleared-1')];
+    h.conditions = [{ current_external_alert_id: 'current-1' }];
+    h.transitions = [{ external_alert_id: 'pending-1' }];
+    registerRmmAlertFetcher('held-test', {
+      fetchActiveAlerts: async () => [],
+      fetchActiveAlertSnapshot: async () => ({ events: [], heldExternalAlertIds: [] }),
+    });
+
+    const result = await runRmmAlertReconciliation({ knex: {} as any }, args);
+
+    expect(h.processed).toEqual([{ kind: 'reset', externalAlertId: 'cleared-1' }]);
     expect(result.resetsSynthesized).toBe(1);
   });
 });

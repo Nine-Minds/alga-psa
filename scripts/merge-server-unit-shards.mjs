@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareExecutionEvidence, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileTestShards } from './lib/test-sharding.mjs';
+import { readServerUnitDurations } from './lib/server-unit-durations.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 // Reunites the server unit shards into the single full-selection bundle that
@@ -52,7 +53,8 @@ export function mergeServerUnitShards({ root, input, total, jobResult, revision 
       shards.push(evidence);
     }
   } catch (error) { failures.push(`Cannot read server unit shard reports: ${error.message}`); }
-  const aggregate = reconcileTestShards({ shards, suite, revision, mode: 'full', total, jobResult });
+  const aggregate = reconcileTestShards({ shards, suite, revision, mode: 'full', total, jobResult,
+    weights: readServerUnitDurations(root)?.durationsMs ?? null });
   aggregate.failures.push(...failures);
   aggregate.status = aggregate.failures.length ? 'failed' : 'passed';
   // The same layout a single full run leaves behind, so the existing

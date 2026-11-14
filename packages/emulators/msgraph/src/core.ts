@@ -3,6 +3,70 @@ import { Temporal } from '@js-temporal/polyfill';
 import { signEntraIdToken } from './entraOidc';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
+/** Microsoft identity platform sign-in audience of an app registration. */
+export type SignInAudience = 'AzureADMyOrg' | 'AzureADMultipleOrgs' | 'AzureADandPersonalMicrosoftAccount';
+
+/**
+ * Tenancy of a registered OAuth client. Leave everything unset for the legacy
+ * behaviour: multi-tenant, any redirect URI accepted, no authority policing.
+ */
+export interface ClientTenancyOptions {
+  displayName?: string;
+  /** Default AzureADMultipleOrgs. */
+  signInAudience?: SignInAudience;
+  /** Directory the app registration lives in (tid of single-tenant tokens). */
+  homeTenantId?: string;
+  /** Registered redirect URIs (exact match). Unset: any redirect URI is accepted. */
+  redirectUris?: string[];
+  /**
+   * Directories holding a service principal for the app besides the home one.
+   * Unset: a multi-tenant app is available in every directory.
+   */
+  servicePrincipalTenants?: string[];
+}
+
+interface RegisteredClient extends ClientTenancyOptions {
+  secret: string;
+  appRoles: string[];
+}
+
+/** Authority path segments that are not a specific directory. */
+const GENERIC_AUTHORITIES = new Set(['common', 'organizations', 'consumers']);
+/** Cut-off date Microsoft quotes in AADSTS50194. */
+const MULTITENANT_CUTOFF = '10/15/2018';
+
+/**
+ * An AADSTS error from the login surface. /authorize renders or redirects it;
+ * /token serialises `body` as the JSON error response (HTTP 400).
+ */
+export class OAuthError extends Error {
+  constructor(
+    readonly aadsts: number,
+    readonly error: string,
+    /** "AADSTSnnnnn: ..." without the Trace ID / Correlation ID / Timestamp suffix. */
+    readonly description: string,
+    readonly ids: { traceId: string; correlationId: string; timestamp: string },
+  ) {
+    super(description);
+    this.name = 'OAuthError';
+  }
+
+  /** Microsoft answers a bad client secret (invalid_client) with 401, everything else with 400. */
+  get status(): number { return this.error === 'invalid_client' ? 401 : 400; }
+
+  get body() {
+    const suffix = `\r\nTrace ID: ${this.ids.traceId}\r\nCorrelation ID: ${this.ids.correlationId}\r\nTimestamp: ${this.ids.timestamp}`;
+    return {
+      error: this.error,
+      error_description: `${this.description}${suffix}`,
+      error_codes: [this.aadsts],
+      timestamp: this.ids.timestamp,
+      trace_id: this.ids.traceId,
+      correlation_id: this.ids.correlationId,
+    };
+  }
+}
+
 /** Vendor-shaped error the wire shell turns into an HTTP response. */
 export class GraphApiError extends Error {
   constructor(public readonly status: number, public readonly body: unknown) {
@@ -132,6 +196,12 @@ export interface GraphCalendarEvent {
   lastModifiedDateTime?: string;
   recurrence?: unknown;
   categories?: string[];
+  /** Graph event type; expanded instances carry occurrence/exception. */
+  type?: 'singleInstance' | 'occurrence' | 'exception' | 'seriesMaster';
+  /** Set on an expanded instance: the id of the series master it came from. */
+  seriesMasterId?: string | null;
+  /** Set on an expanded instance: the slot it was generated for. */
+  originalStart?: string;
 }
 
 type CalendarDeltaItem = GraphCalendarEvent | { id: string; '@removed': { reason: 'deleted' } };
@@ -264,6 +334,8 @@ export interface SignedInUser {
   mail: string;
   userPrincipalName: string;
   displayName?: string;
+  /** Directory (tenant) the account belongs to. Defaults to EMULATED_TENANT_ID. */
+  tenantId?: string;
 }
 
 /** Defaults for inbound activity injection; tune with the `configure` action. */
@@ -423,17 +495,18 @@ const DEFAULT_BOT_CONFIG: BotConfig = {
  * expires access tokens and subscriptions exactly like real elapsed time.
  */
 export class MsGraphCore implements EmulatorCore {
-  private readonly clients = new Map<string, { secret: string; appRoles: string[] }>();
+  private readonly clients = new Map<string, RegisteredClient>();
   private readonly codes = new Map<string, {
     clientId: string;
     redirectUri: string;
     nonce?: string;
     scope?: string;
+    userTenantId: string;
     codeChallenge?: string;
     authorityTenant?: string;
     user: SignedInUser;
   }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string; userTenantId: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; tenantId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
@@ -449,6 +522,10 @@ export class MsGraphCore implements EmulatorCore {
   readonly calendarEvents = new Map<string, GraphCalendarEvent>();
   private readonly calendarDeltaSnapshots = new Map<string, CalendarDeltaSnapshot>();
   private readonly calendarDeltaPages = new Map<string, CalendarDeltaPage>();
+  /** masterId -> cancelled occurrence slots (ISO instants of originalStart). */
+  private readonly calendarSeriesCancellations = new Map<string, Set<string>>();
+  /** masterId -> slot -> the override fields Outlook stores for that instance. */
+  private readonly calendarSeriesOverrides = new Map<string, Map<string, Record<string, unknown>>>();
   readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
   /** Keyed by meeting id; holds both recordings and transcripts. */
   readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
@@ -545,20 +622,110 @@ export class MsGraphCore implements EmulatorCore {
    * into the `roles` claim of an app-only token. Empty (the default) emulates
    * an app registration whose permissions were never consented.
    */
-  registerClient(clientId: string, clientSecret: string, appRoles: string[] = []): void {
-    this.clients.set(clientId, { secret: clientSecret, appRoles: [...appRoles] });
+  registerClient(clientId: string, clientSecret: string, appRoles: string[] = [], tenancy: ClientTenancyOptions = {}): void {
+    const defined = Object.fromEntries(Object.entries(tenancy).filter(([, value]) => value !== undefined));
+    this.clients.set(clientId, { secret: clientSecret, appRoles: [...appRoles], ...defined });
   }
 
+  private oauthError(aadsts: number, error: string, description: string): OAuthError {
+    return new OAuthError(aadsts, error, `AADSTS${aadsts}: ${description}`, {
+      traceId: this.newId('trace'),
+      correlationId: this.newId('correlation'),
+      timestamp: new Date(this.nowMs()).toISOString().replace('T', ' ').replace(/\.\d+Z$/, 'Z'),
+    });
+  }
+
+  private userTenantId(): string {
+    return this.signedInUser.tenantId || EMULATED_TENANT_ID;
+  }
+
+  private tenantLabel(tenantId: string): string {
+    return this.organizations.get(tenantId)?.displayName ?? tenantId;
+  }
+
+  private appName(clientId: string): string {
+    return this.clients.get(clientId)?.displayName
+      ?? [...this.applications.values()].find((application) => application.appId === clientId)?.displayName
+      ?? clientId;
+  }
+
+  /** A client is tenancy-aware once it states an audience or home tenant. */
+  private isTenancyAware(client: RegisteredClient): boolean {
+    return client.signInAudience !== undefined || client.homeTenantId !== undefined;
+  }
+
+  /**
+   * Audience and authority policing shared by /authorize and /token. `user`
+   * is the directory of the signing-in account (absent for app-only grants).
+   * Assumed: all four checks fire at /authorize; /token repeats them.
+   */
+  checkAuthority(clientId: string, authority: string | undefined, userTenantId?: string): void {
+    const client = this.clients.get(clientId);
+    if (!client || authority === undefined || !this.isTenancyAware(client)) return;
+    const audience = client.signInAudience ?? 'AzureADMultipleOrgs';
+    const normalized = authority.toLowerCase();
+    const generic = GENERIC_AUTHORITIES.has(normalized);
+    const appName = this.appName(clientId);
+    if (audience === 'AzureADMyOrg') {
+      if (normalized === 'common' || normalized === 'organizations') {
+        throw this.oauthError(50194, 'invalid_request',
+          `Application '${clientId}'(${appName}) isn't configured as a multitenant application. Usage of the /common endpoint isn't supported for such applications created after '${MULTITENANT_CUTOFF}'. Use a tenant-specific endpoint or configure the application to be multitenant.`);
+      }
+      if (!generic && client.homeTenantId && normalized !== client.homeTenantId.toLowerCase()) {
+        throw this.oauthError(700016, 'unauthorized_client', this.notFoundInDirectory(clientId, authority));
+      }
+    } else if (!generic && client.homeTenantId && normalized !== client.homeTenantId.toLowerCase()
+      && client.servicePrincipalTenants && !client.servicePrincipalTenants.some((id) => id.toLowerCase() === normalized)) {
+      throw this.oauthError(700016, 'unauthorized_client', this.notFoundInDirectory(clientId, authority));
+    }
+    if (userTenantId !== undefined && !generic && normalized !== userTenantId.toLowerCase()) {
+      // Single-tenant app: the user is foreign to the (home) tenant. Multi-tenant
+      // app: the authority names a directory the user does not belong to.
+      throw this.oauthError(50020, 'invalid_grant',
+        `User account '${this.signedInUser.userPrincipalName}' from identity provider 'https://sts.windows.net/${userTenantId}/' does not exist in tenant '${this.tenantLabel(authority)}' and cannot access the application '${clientId}'(${appName}) in that tenant. The account needs to be added as an external user in the tenant first. Sign out and sign in again with a different Azure Active Directory user account.`);
+    }
+  }
+
+  private notFoundInDirectory(clientId: string, authority: string): string {
+    return `Application with identifier '${clientId}' was not found in the directory '${this.tenantLabel(authority)}'. This can happen if the application has not been installed by the administrator of the tenant or consented to by any user in the tenant. You may have sent your authentication request to the wrong tenant.`;
+  }
+
+  /** The `tid` of tokens issued to this client. */
+  private resolveTenantId(clientId: string, authority: string | undefined, userTenantId?: string): string {
+    const client = this.clients.get(clientId);
+    const specific = authority && !GENERIC_AUTHORITIES.has(authority.toLowerCase()) ? authority : undefined;
+    if (client && this.isTenancyAware(client)) {
+      if (client.signInAudience === 'AzureADMyOrg') return client.homeTenantId ?? specific ?? EMULATED_TENANT_ID;
+      return userTenantId ?? specific ?? client.homeTenantId ?? EMULATED_TENANT_ID;
+    }
+    return specific ?? userTenantId ?? EMULATED_TENANT_ID;
+  }
+
+  /**
+   * Returns the authorization code. `authorityTenant` is the `/:tenant/` path
+   * segment; when omitted only the redirect URI is validated.
+   * Throws OAuthError(50011) for an unregistered redirect URI (Microsoft
+   * renders that as a hosted error page, never a redirect).
+   */
   authorize(clientId: string, redirectUri: string, input?: { nonce?: string; scope?: string; codeChallenge?: string; codeChallengeMethod?: string; authorityTenant?: string }): string {
-    if (!this.clients.has(clientId)) {
+    const client = this.clients.get(clientId);
+    if (!client) {
       throw new GraphApiError(400, { error: 'invalid_client' });
+    }
+    if (client.redirectUris && !client.redirectUris.includes(redirectUri)) {
+      throw this.oauthError(50011,
+        'invalid_request',
+        `The redirect URI '${redirectUri}' specified in the request does not match the redirect URIs configured for the application '${clientId}'. Make sure the redirect URI sent in the request matches one added to your application in the Azure portal. Navigate to https://aka.ms/redirectUriMismatchError to learn more about how to fix this.`);
     }
     if (input?.codeChallenge && (input.codeChallengeMethod !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(input.codeChallenge))) {
       throw new GraphApiError(400, { error: 'invalid_request' });
     }
+    this.checkAuthority(clientId, input?.authorityTenant, this.userTenantId());
     const code = this.newId('code');
-    this.codes.set(code, { clientId, redirectUri, nonce: input?.nonce, scope: input?.scope,
-      codeChallenge: input?.codeChallenge, authorityTenant: input?.authorityTenant, user: { ...this.signedInUser } });
+    this.codes.set(code, {
+      clientId, redirectUri, nonce: input?.nonce, scope: input?.scope, userTenantId: this.userTenantId(),
+      codeChallenge: input?.codeChallenge, authorityTenant: input?.authorityTenant, user: { ...this.signedInUser },
+    });
     return code;
   }
 
@@ -571,12 +738,18 @@ export class MsGraphCore implements EmulatorCore {
     id_token?: string;
   } {
     if (this.clients.get(String(input.client_id))?.secret !== String(input.client_secret)) {
-      throw new GraphApiError(401, { error: 'invalid_client' });
+      throw this.oauthError(7000215,
+        'invalid_client',
+        `Invalid client secret provided. Ensure the secret being sent in the request is the client secret value, not the client secret ID, for a secret added to app '${String(input.client_id)}'.`);
     }
     if (input.grant_type === 'authorization_code') {
       const code = this.codes.get(String(input.code));
-      if (!code || code.clientId !== input.client_id || code.redirectUri !== input.redirect_uri
-        || (code.authorityTenant && code.authorityTenant !== input.authorityTenant)) {
+      if (!code || code.clientId !== input.client_id || code.redirectUri !== input.redirect_uri) {
+        throw new GraphApiError(400, { error: 'invalid_grant' });
+      }
+      // Audience/authority policing first so AADSTS errors win over the generic mismatch.
+      this.checkAuthority(String(input.client_id), input.authorityTenant, code.userTenantId);
+      if (code.authorityTenant && code.authorityTenant !== input.authorityTenant) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
       if (code.codeChallenge && (!input.code_verifier || !/^[A-Za-z0-9._~-]{43,128}$/.test(input.code_verifier)
@@ -587,7 +760,8 @@ export class MsGraphCore implements EmulatorCore {
       return this.issueTokens(String(input.client_id), undefined, {
         nonce: code.nonce,
         scope: code.scope || input.scope,
-        tenantId: input.authorityTenant,
+        authorityTenant: input.authorityTenant,
+        userTenantId: code.userTenantId,
         oidcIssuer: input.oidcIssuer,
         user: code.user,
       });
@@ -597,19 +771,22 @@ export class MsGraphCore implements EmulatorCore {
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
+      this.checkAuthority(String(input.client_id), input.authorityTenant, refresh.userTenantId);
       return this.issueTokens(String(input.client_id), String(input.refresh_token), {
         scope: refresh.scope,
-        tenantId: input.authorityTenant,
+        authorityTenant: input.authorityTenant,
+        userTenantId: refresh.userTenantId,
       });
     }
     if (input.grant_type === 'client_credentials') {
       // App-only flow used by the Teams bot connector
       // (scope https://api.botframework.com/.default) and by Graph
       // app tokens. No user, so no refresh token is issued.
+      this.checkAuthority(String(input.client_id), input.authorityTenant);
       return this.issueTokens(
         String(input.client_id),
         undefined,
-        { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true },
+        { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true, authorityTenant: input.authorityTenant },
       );
     }
     throw new GraphApiError(400, { error: 'unsupported_grant_type' });
@@ -624,10 +801,10 @@ export class MsGraphCore implements EmulatorCore {
   private issueTokens(
     clientId: string,
     existingRefreshToken?: string,
-    claims?: { nonce?: string; scope?: string; appOnly?: boolean; tenantId?: string; oidcIssuer?: string; user?: SignedInUser }
+    claims?: { nonce?: string; scope?: string; appOnly?: boolean; authorityTenant?: string; userTenantId?: string; oidcIssuer?: string; user?: SignedInUser }
   ) {
-    const tenantId = claims?.tenantId && !['common', 'organizations'].includes(claims.tenantId)
-      ? claims.tenantId : EMULATED_TENANT_ID;
+    const tenantId = this.resolveTenantId(clientId, claims?.authorityTenant, claims?.userTenantId);
+    const specificAuthority = Boolean(claims?.authorityTenant && !GENERIC_AUTHORITIES.has(claims.authorityTenant.toLowerCase()));
     const user = claims?.user ?? this.signedInUser;
     // OAuth requests accept resource-qualified Graph scopes; Graph access
     // tokens expose permission names in scp, which the application validates.
@@ -661,9 +838,9 @@ export class MsGraphCore implements EmulatorCore {
       tenantId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
-    if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
+    if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope, userTenantId: claims?.userTenantId ?? this.userTenantId() });
     if (existingRefreshToken && existingRefreshToken !== refreshToken &&
-        (!claims?.tenantId || ['common', 'organizations'].includes(claims.tenantId))) {
+        !specificAuthority) {
       this.refreshTokens.delete(existingRefreshToken);
     }
     return {
@@ -1101,6 +1278,8 @@ export class MsGraphCore implements EmulatorCore {
       singleValueExtendedProperties: body.singleValueExtendedProperties,
       ...(transactionId ? { transactionId } : {}),
       recurrence: body.recurrence,
+      type: body.recurrence ? 'seriesMaster' : 'singleInstance',
+      seriesMasterId: null,
       categories: Array.isArray(body.categories) ? body.categories.map(String) : [],
       lastModifiedDateTime: this.env.clock.now().toISOString(),
       createdDateTime: this.env.clock.now().toISOString(),
@@ -1110,11 +1289,31 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   getCalendarEvent(eventId: string): GraphCalendarEvent {
-    const event = this.calendarEvents.get(eventId);
+    const event = this.calendarEvents.get(eventId) ?? this.resolveCalendarOccurrence(eventId);
     if (!event) {
       throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
     }
     return event;
+  }
+
+  /**
+   * Resolve one expanded occurrence by id. Graph serves an occurrence or an
+   * exception through GET even though no item is stored for it, and answers 404
+   * once that occurrence is cancelled — the pair of behaviours a client has to
+   * tell apart to turn a removal into a series exception.
+   */
+  private resolveCalendarOccurrence(eventId: string): GraphCalendarEvent | undefined {
+    const match = /^(.+)_(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(eventId);
+    const master = match ? this.calendarEvents.get(match[1]) : undefined;
+    if (!master?.recurrence) return undefined;
+    const [, , year, month, day, hour, minute, second] = match!;
+    const slot = Date.parse(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+    if (!Number.isFinite(slot)) return undefined;
+    // An exception may sit well away from its slot, so expand around it and
+    // match on the id rather than on the instance's own times.
+    const year_ms = 370 * 24 * 60 * 60 * 1000;
+    return this.expandCalendarSeries(master, slot - year_ms, slot + year_ms)
+      .find((instance) => instance.id === eventId);
   }
 
   updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
@@ -1129,6 +1328,7 @@ export class MsGraphCore implements EmulatorCore {
     for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties', 'recurrence'] as const) {
       if (patch[key] !== undefined) event[key] = patch[key];
     }
+    if (patch.recurrence !== undefined) event.type = patch.recurrence ? 'seriesMaster' : 'singleInstance';
     event.lastModifiedDateTime = this.env.clock.now().toISOString();
     return event;
   }
@@ -1150,11 +1350,90 @@ export class MsGraphCore implements EmulatorCore {
 
   deleteCalendarEvent(eventId: string): void {
     const event = this.getCalendarEvent(eventId);
+    // Deleting one expanded occurrence cancels that slot, as Outlook's
+    // "this occurrence" does; the series master stays.
+    if (event.seriesMasterId && !this.calendarEvents.has(eventId)) {
+      this.cancelCalendarOccurrence(event.seriesMasterId, String(event.originalStart));
+      return;
+    }
     this.calendarEvents.delete(eventId);
     if (event.onlineMeetingId) {
       this.onlineMeetings.delete(event.onlineMeetingId);
       this.meetingArtifacts.delete(event.onlineMeetingId);
     }
+  }
+
+  /**
+   * Cancel one occurrence of a series. Graph reports it as an @removed delta
+   * item for the occurrence id and stops expanding that slot.
+   */
+  cancelCalendarOccurrence(masterId: string, originalStart: string): void {
+    this.getCalendarEvent(masterId);
+    const slot = normalizeSeriesSlot(originalStart);
+    const cancellations = this.calendarSeriesCancellations.get(masterId) ?? new Set<string>();
+    cancellations.add(slot);
+    this.calendarSeriesCancellations.set(masterId, cancellations);
+    this.touchCalendarEvent(masterId);
+  }
+
+  /**
+   * Override one occurrence of a series (moved or renamed). Graph then expands
+   * that slot as `type: 'exception'` carrying the override's own fields.
+   */
+  overrideCalendarOccurrence(masterId: string, originalStart: string, patch: Record<string, unknown>): void {
+    this.getCalendarEvent(masterId);
+    const slot = normalizeSeriesSlot(originalStart);
+    const overrides = this.calendarSeriesOverrides.get(masterId) ?? new Map<string, Record<string, unknown>>();
+    overrides.set(slot, { ...(overrides.get(slot) ?? {}), ...patch });
+    this.calendarSeriesOverrides.set(masterId, overrides);
+    this.touchCalendarEvent(masterId);
+  }
+
+  private touchCalendarEvent(eventId: string): void {
+    const event = this.calendarEvents.get(eventId);
+    if (event) event.lastModifiedDateTime = this.env.clock.now().toISOString();
+  }
+
+  /**
+   * Expand a series master into the occurrences overlapping [start, end), the
+   * way calendarView/delta does. Instances are synthetic: Graph never returns
+   * the master itself from calendarView.
+   */
+  private expandCalendarSeries(master: GraphCalendarEvent, start: number, end: number): GraphCalendarEvent[] {
+    const rule = graphRecurrenceToRule(master.recurrence);
+    if (!rule) {
+      throw new GraphApiError(400, {
+        error: { code: 'Request_UnsupportedQuery', message: 'Recurrence pattern is not modeled' },
+      });
+    }
+    const masterStart = instantOfGraphDate(master.start);
+    const masterEnd = instantOfGraphDate(master.end);
+    if (masterStart === null || masterEnd === null) return [];
+    const duration = masterEnd - masterStart;
+    const cancellations = this.calendarSeriesCancellations.get(master.id) ?? new Set<string>();
+    const overrides = this.calendarSeriesOverrides.get(master.id) ?? new Map<string, Record<string, unknown>>();
+
+    const instances: GraphCalendarEvent[] = [];
+    for (const slotStart of expandSeriesSlots(rule, masterStart, start, end, duration)) {
+      const slot = new Date(slotStart).toISOString();
+      if (cancellations.has(slot)) continue;
+      const override = overrides.get(slot);
+      const instanceStart = override?.start ? instantOfGraphDate(override.start) ?? slotStart : slotStart;
+      const instanceEnd = override?.end ? instantOfGraphDate(override.end) ?? instanceStart + duration : instanceStart + duration;
+      if (instanceStart >= end || instanceEnd <= start) continue;
+      instances.push({
+        ...structuredClone(master),
+        ...(override ?? {}),
+        id: `${master.id}_${slot.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`,
+        type: override ? 'exception' : 'occurrence',
+        seriesMasterId: master.id,
+        originalStart: slot,
+        recurrence: null,
+        start: { dateTime: new Date(instanceStart).toISOString(), timeZone: 'UTC' },
+        end: { dateTime: new Date(instanceEnd).toISOString(), timeZone: 'UTC' },
+      });
+    }
+    return instances;
   }
 
   /** Primary-calendar, single-instance UTC delta model. Tokens are per-run and
@@ -1211,7 +1490,15 @@ export class MsGraphCore implements EmulatorCore {
     const items: CalendarDeltaItem[] = [];
     for (const event of this.calendarEvents.values()) {
       if (event.organizerUserId !== organizerUserId) continue;
-      if (event.recurrence) throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Recurring calendar delta is not modeled' } });
+      // calendarView returns expanded occurrences of a series, never the master.
+      if (event.recurrence) {
+        for (const instance of this.expandCalendarSeries(event, start, end)) {
+          const fingerprint = JSON.stringify(instance);
+          fingerprints.set(instance.id, fingerprint);
+          if (previous?.fingerprints.get(instance.id) !== fingerprint) items.push(structuredClone(instance));
+        }
+        continue;
+      }
       // calendarView includes events overlapping its window, not only those
       // entirely contained in it.
       const eventStart = eventTime(event.start);
@@ -1225,6 +1512,8 @@ export class MsGraphCore implements EmulatorCore {
         // vendor state intact so token comparisons track actual source edits.
         start: { dateTime: new Date(eventStart).toISOString(), timeZone: 'UTC' },
         end: { dateTime: new Date(eventEnd).toISOString(), timeZone: 'UTC' },
+        type: 'singleInstance',
+        seriesMasterId: null,
       });
     }
     for (const id of previous?.fingerprints.keys() ?? []) {
@@ -1537,7 +1826,8 @@ export class MsGraphCore implements EmulatorCore {
 
     this.clients.clear();
     for (const row of Array.isArray(snapshot.clients) ? snapshot.clients : []) {
-      this.registerClient(String(row.clientId), String(row.secret), Array.isArray(row.appRoles) ? row.appRoles : []);
+      const { clientId, secret, appRoles, ...tenancy } = row;
+      this.registerClient(String(clientId), String(secret), Array.isArray(appRoles) ? appRoles : [], tenancy);
     }
     load(this.messages, snapshot.messages, (row) => row.id);
     load(this.subscriptions, snapshot.subscriptions, (row) => row.id);
@@ -1655,4 +1945,160 @@ export function publicEvent(event: GraphCalendarEvent): Omit<GraphCalendarEvent,
 export function publicOnlineMeeting(meeting: GraphOnlineMeeting): Omit<GraphOnlineMeeting, 'organizerUserId'> {
   const { organizerUserId: _organizer, ...rest } = meeting;
   return rest;
+}
+
+/** The ISO instant form used as a series slot key. */
+function normalizeSeriesSlot(value: string): string {
+  const instant = Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`);
+  if (!Number.isFinite(instant)) {
+    throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Invalid occurrence start' } });
+  }
+  return new Date(instant).toISOString();
+}
+
+function instantOfGraphDate(value: unknown): number | null {
+  const date = value as { dateTime?: string; timeZone?: string } | null | undefined;
+  const text = date?.dateTime;
+  if (!text) return null;
+  const instant = Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(text) ? text : `${text}Z`);
+  return Number.isFinite(instant) ? instant : null;
+}
+
+const GRAPH_WEEKDAY_INDEX: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+};
+const GRAPH_INDEX_ORDINAL: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, last: -1 };
+
+interface SeriesRule {
+  type: string;
+  interval: number;
+  weekdays: number[];
+  dayOfMonth?: number;
+  month?: number;
+  ordinal?: number;
+  until?: number;
+  count?: number;
+}
+
+/**
+ * Normalize a Graph recurrence object into the subset the emulator expands.
+ * Returns null for a pattern it does not model, so callers can answer 400.
+ */
+function graphRecurrenceToRule(recurrence: unknown): SeriesRule | null {
+  const value = recurrence as { pattern?: any; range?: any } | null | undefined;
+  const pattern = value?.pattern;
+  if (!pattern?.type) return null;
+  const type = String(pattern.type).toLowerCase();
+  const interval = Number.isInteger(pattern.interval) && pattern.interval > 0 ? Number(pattern.interval) : 1;
+  const weekdays = (Array.isArray(pattern.daysOfWeek) ? pattern.daysOfWeek : [])
+    .map((day: unknown) => GRAPH_WEEKDAY_INDEX[String(day).toLowerCase()])
+    .filter((day: number | undefined) => day !== undefined) as number[];
+  const ordinal = pattern.index ? GRAPH_INDEX_ORDINAL[String(pattern.index).toLowerCase()] : undefined;
+
+  if (!['daily', 'weekly', 'absolutemonthly', 'relativemonthly', 'absoluteyearly', 'relativeyearly'].includes(type)) return null;
+  if (type === 'weekly' && weekdays.length === 0) return null;
+  if (type.startsWith('relative') && (weekdays.length === 0 || ordinal === undefined)) return null;
+
+  const range = value?.range ?? {};
+  const rangeType = range.type ? String(range.type).toLowerCase() : 'noend';
+  const until = rangeType === 'enddate' && range.endDate
+    ? Date.parse(`${range.endDate}T23:59:59Z`)
+    : undefined;
+  const count = rangeType === 'numbered' && Number.isInteger(range.numberOfOccurrences)
+    ? Number(range.numberOfOccurrences)
+    : undefined;
+
+  return {
+    type,
+    interval,
+    weekdays,
+    ...(Number.isInteger(pattern.dayOfMonth) ? { dayOfMonth: Number(pattern.dayOfMonth) } : {}),
+    ...(Number.isInteger(pattern.month) ? { month: Number(pattern.month) } : {}),
+    ...(ordinal === undefined ? {} : { ordinal }),
+    ...(until === undefined || !Number.isFinite(until) ? {} : { until }),
+    ...(count === undefined ? {} : { count }),
+  };
+}
+
+/** Nth (or last) weekday of a month, in UTC. */
+function nthWeekdayOfMonth(year: number, month: number, weekday: number, ordinal: number): number | null {
+  if (ordinal === -1) {
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    for (let day = lastDay; day >= 1; day -= 1) {
+      if (new Date(Date.UTC(year, month, day)).getUTCDay() === weekday) return day;
+    }
+    return null;
+  }
+  const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const day = 1 + ((weekday - firstWeekday + 7) % 7) + (ordinal - 1) * 7;
+  return day <= new Date(Date.UTC(year, month + 1, 0)).getUTCDate() ? day : null;
+}
+
+/**
+ * Occurrence starts of a series overlapping [windowStart, windowEnd), expanded
+ * from the master's own start (UTC wall clock, like the rest of the model).
+ */
+function expandSeriesSlots(
+  rule: SeriesRule,
+  masterStart: number,
+  windowStart: number,
+  windowEnd: number,
+  duration: number,
+): number[] {
+  const anchor = new Date(masterStart);
+  const timeOfDay = masterStart - Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate());
+  const slots: number[] = [];
+  const horizon = Math.min(windowEnd, rule.until ?? windowEnd);
+  const pushDay = (year: number, month: number, day: number) => {
+    const slot = Date.UTC(year, month, day) + timeOfDay;
+    if (slot < masterStart) return;
+    if (rule.until !== undefined && slot > rule.until) return;
+    if (rule.count !== undefined && slots.length >= rule.count) return;
+    if (slot + duration <= windowStart || slot >= horizon) return;
+    slots.push(slot);
+  };
+  // Hard ceiling: an unbounded series must never spin, even for a wide window.
+  const MAX_SLOTS = 2000;
+
+  if (rule.type === 'daily' || rule.type === 'weekly') {
+    const stepDays = rule.type === 'daily' ? rule.interval : 1;
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const dayMs = 24 * 60 * 60 * 1000;
+    let cursor = Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate());
+    const weekAnchor = cursor - ((new Date(cursor).getUTCDay() + 6) % 7) * dayMs;
+    for (let guard = 0; guard < MAX_SLOTS && cursor + timeOfDay < horizon; guard += 1) {
+      const date = new Date(cursor);
+      const inInterval = rule.type === 'daily'
+        ? true
+        : rule.weekdays.includes(date.getUTCDay())
+          && Math.round((cursor - ((date.getUTCDay() + 6) % 7) * dayMs - weekAnchor) / weekMs) % rule.interval === 0;
+      if (inInterval) pushDay(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+      if (rule.count !== undefined && slots.length >= rule.count) break;
+      cursor += stepDays * dayMs;
+    }
+    return slots;
+  }
+
+  const monthlyStep = rule.type.endsWith('yearly') ? 12 * rule.interval : rule.interval;
+  let year = anchor.getUTCFullYear();
+  let month = rule.type.endsWith('yearly') && rule.month ? rule.month - 1 : anchor.getUTCMonth();
+  if (rule.type.endsWith('yearly') && rule.month && month < anchor.getUTCMonth()) year += 1;
+  for (let guard = 0; guard < MAX_SLOTS; guard += 1) {
+    const monthStart = Date.UTC(year, month, 1);
+    if (monthStart >= horizon) break;
+    if (rule.type === 'absolutemonthly' || rule.type === 'absoluteyearly') {
+      const day = rule.dayOfMonth ?? anchor.getUTCDate();
+      if (day <= new Date(Date.UTC(year, month + 1, 0)).getUTCDate()) pushDay(year, month, day);
+    } else {
+      for (const weekday of rule.weekdays) {
+        const day = nthWeekdayOfMonth(year, month, weekday, rule.ordinal!);
+        if (day !== null) pushDay(year, month, day);
+      }
+    }
+    if (rule.count !== undefined && slots.length >= rule.count) break;
+    month += monthlyStep;
+    year += Math.floor(month / 12);
+    month = ((month % 12) + 12) % 12;
+  }
+  return slots.sort((left, right) => left - right);
 }

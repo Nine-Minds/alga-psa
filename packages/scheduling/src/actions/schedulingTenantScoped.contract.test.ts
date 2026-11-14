@@ -4,6 +4,7 @@ import { resolve } from 'path';
 
 const timePeriodSource = readFileSync(resolve(__dirname, '../models/timePeriod.ts'), 'utf8');
 const timePeriodSettingsSource = readFileSync(resolve(__dirname, './time-period-settings-actions/timePeriodSettingsActions.ts'), 'utf8');
+const timePeriodSettingsModelSource = readFileSync(resolve(__dirname, '../models/timePeriodSettings.ts'), 'utf8');
 const projectTaskLookupSource = readFileSync(resolve(__dirname, './projectTaskLookupActions.ts'), 'utf8');
 const capacityThresholdSource = readFileSync(resolve(__dirname, '../lib/capacityThresholdWorkflowEvents.ts'), 'utf8');
 const timeSheetOperationsSource = readFileSync(resolve(__dirname, './timeSheetOperations.ts'), 'utf8');
@@ -16,8 +17,11 @@ describe('scheduling tenant-scoped query contract', () => {
     expect(timePeriodSource).toContain("tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)");
     expect(timePeriodSource).toContain("tenantScopedTable(knexOrTrx, 'time_sheets', tenant)");
     expect(timePeriodSettingsSource).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
-    expect(timePeriodSettingsSource).toContain("tenantScopedTable<ITimePeriodSettings>(trx, 'time_period_settings', tenant)");
-    expect(timePeriodSettingsSource).toContain("tenantScopedTable<ITimePeriodSettings>(db, 'time_period_settings', settings.tenant)");
+    expect(timePeriodSettingsSource).toContain("tenantDb(trx, tenant).table<ITimePeriodSettings>('time_period_settings')");
+    // Writes and overlap validation live in the shared model, which the REST API also uses.
+    expect(timePeriodSettingsModelSource).toContain("tenantDb(conn, tenant).table<TimePeriodSettingsRow>('time_period_settings')");
+    expect(timePeriodSettingsModelSource).toContain("tenantDb(db, settings.tenant).table<ITimePeriodSettings>('time_period_settings')");
+    expect(timePeriodSettingsModelSource).not.toMatch(/knex\('time_period_settings'\)|trx\('time_period_settings'\)/);
   });
 
   it('uses tenantDb roots and joins for scheduling project task lookups', () => {

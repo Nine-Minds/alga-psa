@@ -384,6 +384,7 @@ export default defineConfig({
       // Emulator packages live under packages/emulators/* and are not linked
       // into node_modules; their smoke tests import each other by name.
       { find: /^@alga-psa\/emulator-host$/, replacement: path.resolve(__dirname, '../packages/emulators/host/src/index.ts') },
+      { find: /^@alga-psa\/emulator-google-calendar$/, replacement: path.resolve(__dirname, '../packages/emulators/google-calendar/src/index.ts') },
       { find: /^@alga-psa\/emulator-msgraph$/, replacement: path.resolve(__dirname, '../packages/emulators/msgraph/src/index.ts') },
       { find: /^@alga-psa\/emulator-qbo$/, replacement: path.resolve(__dirname, '../packages/emulators/qbo/src/index.ts') },
       { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },
@@ -456,6 +457,7 @@ export default defineConfig({
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: '@product/mcp/entry', replacement: path.resolve(__dirname, '../packages/product-mcp/oss/entry.ts') },
+      { find: '@product/service-principals/entry', replacement: path.resolve(__dirname, '../packages/product-service-principals/oss/entry.ts') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },

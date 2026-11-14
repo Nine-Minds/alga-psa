@@ -304,4 +304,34 @@ describe('QboSimulator — QBO semantics the sync engine depends on', () => {
     expect(firstPage.map((code) => code.Id)).toEqual(['tc-0', 'tc-1']);
     expect(secondPage.map((code) => code.Id)).toEqual(['tc-2', 'tc-3']);
   });
+
+  it('pages the Item name catalog the Live QuickBooks mapping picker queries', async () => {
+    const sim = new QboSimulator();
+    const seeded = Array.from({ length: 5 }, (_unused, index) =>
+      sim.seedItem({ name: `Service ${index}`, type: 'Service' })
+    );
+
+    const firstPage = await sim.client.query<any>('SELECT Id, Name FROM Item STARTPOSITION 1 MAXRESULTS 2');
+    const secondPage = await sim.client.query<any>('SELECT Id, Name FROM Item STARTPOSITION 3 MAXRESULTS 2');
+
+    expect(firstPage).toEqual([
+      { Id: seeded[0].Id, Name: 'Service 0' },
+      { Id: seeded[1].Id, Name: 'Service 1' }
+    ]);
+    expect(secondPage).toEqual([
+      { Id: seeded[2].Id, Name: 'Service 2' },
+      { Id: seeded[3].Id, Name: 'Service 3' }
+    ]);
+  });
+
+  it('still serves the bare Item name catalog query with no pagination suffix', async () => {
+    const sim = new QboSimulator();
+    sim.seedItem({ name: 'Managed Services', type: 'Service' });
+    sim.seedItem({ name: 'Retired Add-on', type: 'Service', active: false });
+
+    const rows = await sim.client.query<any>('SELECT Id, Name FROM Item');
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].Name).toBe('Managed Services');
+  });
 });

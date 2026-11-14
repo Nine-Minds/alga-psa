@@ -192,7 +192,13 @@ export const createProjectTaskSchema = z.object({
   tags: z.array(z.string()).optional()
 });
 
-export const updateProjectTaskSchema = createUpdateSchema(createProjectTaskSchema);
+// Assignment, due date and priority are clearable on update (mobile's task
+// detail offers Unassign and Clear), so these three accept an explicit null.
+export const updateProjectTaskSchema = createUpdateSchema(createProjectTaskSchema).extend({
+  assigned_to: uuidSchema.nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  priority_id: uuidSchema.nullable().optional()
+});
 
 export const projectTaskResponseSchema = z.object({
   task_id: uuidSchema,

@@ -7,7 +7,6 @@ import type {
   IProjectPhase,
   IUserWithRoles,
   IUser,
-  IClient,
   ProjectPaymentWarning,
 } from '@alga-psa/types';
 import type {
@@ -52,7 +51,6 @@ export interface ProjectMetadata {
   users: IUserWithRoles[];
   contact?: { full_name: string };
   assignedUser: IUserWithRoles | null;
-  clients: IClient[];
 }
 
 // ── Callback interface ──────────────────────────────────────────────────

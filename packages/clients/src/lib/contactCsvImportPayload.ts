@@ -1,5 +1,6 @@
 import type {
   ContactEmailAddressInput,
+  ContactWorkArrangement,
   ICSVColumnMapping,
   IContact,
   MappableField,
@@ -13,10 +14,14 @@ import {
 export type ContactCsvRecord = Partial<Record<MappableField, string>>;
 
 /** The row shape `importContactsFromCSV` receives. */
-export type ContactCsvImportData = Omit<Partial<IContact>, 'additional_email_addresses' | 'primary_email_type'> & {
+export type ContactCsvImportData = Omit<Partial<IContact>, 'additional_email_addresses' | 'primary_email_type' | 'locations'> & {
   additional_email_addresses?: ContactEmailAddressInput[];
   primary_email_custom_type?: string | null;
   tags?: string;
+  /** "Warehouse; Head office" as written in the CSV; resolved to ids by name during the import. */
+  location_names?: string[];
+  /** The name in the primary_location column, which must also appear in location_names. */
+  primary_location_name?: string | null;
 };
 
 /**
@@ -34,6 +39,7 @@ export function buildContactCsvImportRows(
   clients: { client_id: string; client_name: string }[],
 ): ContactCsvImportData[] {
   const tagsMapped = columnMappings.some((mapping) => mapping.contactField === 'tags');
+  const locationsMapped = columnMappings.some((mapping) => mapping.contactField === 'locations');
 
   return records.map((record): ContactCsvImportData => {
     const client = clients.find((c) => c.client_name === record.client);
@@ -55,6 +61,29 @@ export function buildContactCsvImportRows(
       primary_email_canonical_type: parsedPrimaryEmailType.canonicalType,
       additional_email_addresses: parsedAdditionalEmailRows,
     };
+
+    if (record.work_arrangement !== undefined) {
+      const arrangement = record.work_arrangement.trim().toLowerCase().replace(/[\s-]+/g, '_');
+      contactData.work_arrangement = arrangement === '' ? null : (arrangement as ContactWorkArrangement);
+    }
+
+    // A blank Locations cell is "no opinion" (the key is absent, so links are left alone); a
+    // mapped, non-blank cell states the whole set. Names are resolved against the contact's own
+    // client during the import, where an unknown one fails that row by name.
+    if (locationsMapped) {
+      const names = (record.locations ?? '').split(';').map((name) => name.trim()).filter(Boolean);
+      if (names.length > 0 || (record.locations ?? '').trim() !== '') {
+        contactData.location_names = names;
+      }
+    }
+    const primaryLocation = record.primary_location?.trim();
+    if (primaryLocation) {
+      contactData.primary_location_name = primaryLocation;
+      if (contactData.location_names === undefined) contactData.location_names = [primaryLocation];
+      else if (!contactData.location_names.includes(primaryLocation)) {
+        contactData.location_names = [...contactData.location_names, primaryLocation];
+      }
+    }
 
     if (parsedPrimaryEmailType.customType !== undefined) {
       contactData.primary_email_custom_type = parsedPrimaryEmailType.customType;

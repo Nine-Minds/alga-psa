@@ -55,3 +55,34 @@ export function createProjectListViewAdapter(context: {
     }),
   });
 }
+
+/** The client ids that saved views reference in their filters (distinct). */
+export function collectViewClientIds(
+  views: ReadonlyArray<{ settings: { filters?: { clientId?: string } | null } }>,
+): string[] {
+  const ids = new Set<string>();
+  for (const view of views) {
+    const clientId = view.settings.filters?.clientId;
+    if (clientId) ids.add(clientId);
+  }
+  return Array.from(ids);
+}
+
+/**
+ * Checks only the referenced client ids (never the whole client table) and returns the
+ * set that `known.clientIds` should hold. A referenced client that no longer exists is
+ * absent, so the adapter drops that filter. If the lookup itself fails, every
+ * referenced id is kept: an unverifiable reference is not evidence of deletion.
+ */
+export async function resolveKnownClientIds(
+  referencedIds: readonly string[],
+  getExistingClientIds: (clientIds: string[]) => Promise<string[]>,
+): Promise<Set<string>> {
+  if (referencedIds.length === 0) return new Set();
+  try {
+    return new Set(await getExistingClientIds([...referencedIds]));
+  } catch (error) {
+    console.error('[projects] failed to verify saved-view clients', error);
+    return new Set(referencedIds);
+  }
+}

@@ -19,6 +19,7 @@ import { PhaseStatusScopeChip } from './status-columns';
 import { phaseBadgeClasses, timeEntryServiceChoices, type PhaseBillingBadge, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import styles from './ProjectDetail.module.css';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 interface PhaseListItemProps {
   viewMode: 'kanban' | 'list' | 'billing';
@@ -109,6 +110,10 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   customStatusCount,
 }) => {
   const { t } = useTranslation('features/projects');
+  const projectSource = useProjectDataSource();
+  // A non-native source admits no phase edits, deletes, completion or moves.
+  const phaseStructureLocked = projectSource.kind !== 'native' || projectSource.screen.readOnly;
+  const phaseMovesLocked = phaseStructureLocked || projectSource.screen.hidePhaseMoves;
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const { money, symbol } = useCurrencyFormat();
@@ -300,7 +305,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   return (
     <li
       ref={itemRef}
-      draggable={!isBillingView && !effectiveIsEditing}
+      draggable={!isBillingView && !effectiveIsEditing && !phaseMovesLocked}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group
@@ -489,7 +494,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 type="button"
                 id={`phase-complete-nudge-${phase.phase_id}`}
                 onClick={(e) => { e.stopPropagation(); onMarkComplete?.(phase); }}
-                disabled={!canCompletePhase}
+                disabled={!canCompletePhase || phaseStructureLocked}
                 className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:cursor-default disabled:hover:bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300"
               >
                 <CheckCircle2 className="h-3 w-3" />
@@ -518,7 +523,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
           </div>
           {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
-          {!isBillingView && (
+          {!isBillingView && !phaseStructureLocked && (
             <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
               {canCompletePhase && (isCompleted ? (
                 <button

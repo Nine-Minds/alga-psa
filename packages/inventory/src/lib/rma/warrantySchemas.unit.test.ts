@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   approveWarrantyClaimSchema, cancelWarrantyClaimSchema, closeWarrantyRmaSchema, denyWarrantyClaimSchema,
   openWarrantyClaimSchema, receiveVendorReplacementSchema, shipToVendorSchema,
+  confirmVendorReceiptSchema, shipDeadUnitToVendorSchema,
+  openWarrantyClaimForTicketSchema,
+  recordVendorNonReturnChargeSchema,
 } from './warrantySchemas';
 
 const id = '3f1c6a1e-8f0e-4a0b-9d3a-2f5b0c1d2e3f';
@@ -10,6 +13,17 @@ describe('warranty schemas', () => {
   it('open requires a reason and defaults the provisional track to standard', () => {
     expect(openWarrantyClaimSchema.safeParse({ asset_id: id, reason: '  ' }).success).toBe(false);
     expect(openWarrantyClaimSchema.parse({ asset_id: id, reason: ' dock dead ' })).toMatchObject({ reason: 'dock dead', rma_type: 'standard', vendor_id: null });
+  });
+  it('the browser-facing open schema never carries a ticket_id', () => {
+    const ticket = '4f1c6a1e-8f0e-4a0b-9d3a-2f5b0c1d2e3f';
+    const parsed = openWarrantyClaimSchema.parse({ asset_id: id, reason: 'x', ticket_id: ticket });
+    expect(parsed).not.toHaveProperty('ticket_id');
+    expect(JSON.stringify(parsed)).not.toContain(ticket);
+  });
+  it('the ticket-aware open schema requires a real ticket_id', () => {
+    expect(openWarrantyClaimForTicketSchema.safeParse({ asset_id: id, reason: 'x' }).success).toBe(false);
+    expect(openWarrantyClaimForTicketSchema.safeParse({ asset_id: id, reason: 'x', ticket_id: 'nope' }).success).toBe(false);
+    expect(openWarrantyClaimForTicketSchema.parse({ asset_id: id, reason: 'x', ticket_id: id }).ticket_id).toBe(id);
   });
   it('deny requires a non-empty reason', () => {
     expect(denyWarrantyClaimSchema.safeParse({}).success).toBe(false);
@@ -40,5 +54,49 @@ describe('warranty schemas', () => {
   it('close leaves the reason to the status default and refuses warranty_denied', () => {
     expect(closeWarrantyRmaSchema.parse({}).reason).toBeUndefined();
     expect(closeWarrantyRmaSchema.safeParse({ reason: 'warranty_denied' }).success).toBe(false);
+  });
+  it('ship dead unit requires carrier and tracking; return-by is optional but must be a real date', () => {
+    expect(shipDeadUnitToVendorSchema.safeParse({ carrier: 'UPS' }).success).toBe(false);
+    expect(shipDeadUnitToVendorSchema.safeParse({ tracking_number: '1Z' }).success).toBe(false);
+    expect(shipDeadUnitToVendorSchema.parse({ carrier: ' UPS ', tracking_number: ' 1Z ', return_by: null })).toMatchObject({ carrier: 'UPS', tracking_number: '1Z', return_by: undefined });
+    expect(shipDeadUnitToVendorSchema.parse({ carrier: 'UPS', tracking_number: '1Z', return_by: '2026-11-30' }).return_by).toBe('2026-11-30');
+    expect(shipDeadUnitToVendorSchema.safeParse({ carrier: 'UPS', tracking_number: '1Z', return_by: '2026-02-31' }).success).toBe(false);
+  });
+  it('receive replacement takes an optional, real return-by date (T013)', () => {
+    const base = { replacement_serial_number: 'N1' };
+    expect(receiveVendorReplacementSchema.parse(base).return_by).toBeUndefined();
+    expect(receiveVendorReplacementSchema.parse({ ...base, return_by: null }).return_by).toBeUndefined();
+    expect(receiveVendorReplacementSchema.parse({ ...base, return_by: '2026-11-30' }).return_by).toBe('2026-11-30');
+    expect(receiveVendorReplacementSchema.safeParse({ ...base, return_by: '2026-02-31' }).success).toBe(false);
+    expect(receiveVendorReplacementSchema.safeParse({ ...base, return_by: '30/11/2026' }).success).toBe(false);
+  });
+  it('confirm vendor receipt takes only the common fields', () => {
+    expect(confirmVendorReceiptSchema.safeParse({}).success).toBe(true);
+  });
+  it('validates positive vendor non-return amounts, supported currencies and currency precision', () => {
+    expect(recordVendorNonReturnChargeSchema.parse({ amount: '125.50', currency_code: 'usd' })).toMatchObject({ amount: '125.50', currency_code: 'USD' });
+    for (const amount of ['', '0', '-1', 'Infinity', 'NaN', '1e3', '1.001', '1000000000001']) {
+      expect(recordVendorNonReturnChargeSchema.safeParse({ amount, currency_code: 'USD' }).success).toBe(false);
+    }
+    expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '1.0', currency_code: 'XXX' }).success).toBe(false);
+    expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '10.01', currency_code: 'JPY' }).success).toBe(false);
+    expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '10', currency_code: 'JPY' }).success).toBe(true);
+  });
+  it.each([
+    ['USD', '125.50', '125.501', 2],
+    ['EUR', '125.50', '125.501', 2],
+    ['JPY', '125', '125.1', 0],
+  ])('validates %s charges using the currency precision', (currency, valid, invalid, digits) => {
+    expect(recordVendorNonReturnChargeSchema.parse({
+      amount: ` ${valid} `, currency_code: ` ${currency.toLowerCase()} `,
+    })).toMatchObject({ amount: valid, currency_code: currency });
+
+    const result = recordVendorNonReturnChargeSchema.safeParse({ amount: invalid, currency_code: currency });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual([expect.objectContaining({
+        path: ['amount'], message: `Amount supports at most ${digits} decimal places for ${currency}`,
+      })]);
+    }
   });
 });

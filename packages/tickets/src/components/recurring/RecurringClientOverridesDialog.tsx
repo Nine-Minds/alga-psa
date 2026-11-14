@@ -114,7 +114,6 @@ export function RecurringClientOverridesDialog({
   isOpen, onClose, definitionId, definitionClientId, onSaved,
 }: RecurringClientOverridesDialogProps) {
   const { t } = useTranslation('features/tickets');
-  const reference = useTicketFieldReferenceData();
   const { renderAssetPicker } = useRecurringTicketsCrossFeature();
   const [detail, setDetail] = useState<RecurringDefinitionDetail | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -125,6 +124,7 @@ export function RecurringClientOverridesDialog({
   const [saving, setSaving] = useState(false);
 
   const client = detail?.clients.find((candidate) => candidate.definition_client_id === definitionClientId) ?? null;
+  const reference = useTicketFieldReferenceData('recurring_ticket', client?.client_id ?? null);
   const idPrefix = 'recurring-client-overrides';
 
   useEffect(() => {
@@ -309,7 +309,19 @@ export function RecurringClientOverridesDialog({
                   clientId={client.client_id}
                   buttonWidth="full"
                   placeholder={t('recurring.overrides.contactPlaceholder', 'No contact')}
-                  onValueChange={(contactId) => setDraft({ ...draft, contactId })}
+                  onValueChange={(contactId) => {
+                    // An empty Location is a question nobody answered, so the chosen person's own
+                    // site answers it. A location already picked here is left alone.
+                    const picked = contacts.find((contact) => contact.contact_name_id === contactId);
+                    const links = picked?.locations ?? [];
+                    const primary = links.find((link) => link.is_primary)
+                      ?? (links.length === 1 ? links[0] : null);
+                    setDraft({
+                      ...draft,
+                      contactId,
+                      locationId: draft.locationId || (primary?.location_id ?? ''),
+                    });
+                  }}
                 />
               </div>
               <div>

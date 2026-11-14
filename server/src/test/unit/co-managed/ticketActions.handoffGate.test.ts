@@ -23,7 +23,6 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'u', user_type: 'internal' }, { tenant: session.tenant }, ...args),
 }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex, tenantDb: vi.fn(), withTransaction: vi.fn() }));
-vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag }));
 vi.mock('@alga-psa/co-managed', async () => new Proxy({
   escalateCoManagedTicket: engine.escalate,
   handBackCoManagedTicket: engine.handBack,
@@ -35,6 +34,7 @@ vi.mock('@alga-psa/co-managed', async () => new Proxy({
 vi.mock('@alga-psa/licensing/lifecycle', () => ({ isCoManagedLifecycleError: (e: unknown) => e instanceof errors.LifecycleError }));
 vi.mock('../../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: async (_u: any, tenant: string) => ({ kind: 'session', tenant, userId: 'u', sessionId: 's' }) }));
 
+import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import { registerCapabilityGate, registerCapabilityEligibility, registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import { escalateSharedTicketAction, handBackSharedTicketAction, revokeSharedTicketGrantAction } from '@/lib/actions/coManagedSharedWorkActions';
@@ -46,17 +46,27 @@ const refused = (code: string) => ({ ok: false, code });
 
 describe('side-aware handoff gate', () => {
   beforeEach(() => {
+    vi.stubEnv('FORCE_CAPABILITIES', '');
+    vi.stubEnv('FEATURE_FLAG_TENANTS__CO_MANAGED_IT', undefined);
+    vi.stubEnv('NEXT_PUBLIC_DISABLE_FEATURE_FLAGS', 'false');
+    vi.stubEnv('DISABLE_FEATURE_FLAGS', 'false');
     resetCapabilityRegistry(); clearCapabilityCache();
     registerCapabilityGate({ capability: 'co-managed', featureFlag: 'co-managed-it' });
     // Flag on. Nobody holds an entitlement (the customer never does); both tenants participate in a relationship.
     flag.mockResolvedValue(true);
+    registerFeatureFlagChecker(flag);
     registerCapabilityEligibility('co-managed', async () => false);
     registerCapabilityParticipation('co-managed', async ({ tenantIds }) => tenantIds);
     createTenantKnex.mockResolvedValue({ knex: {} });
     engine.escalate.mockResolvedValue({ ok: 'escalated' });
     engine.handBack.mockResolvedValue({ ok: 'handed_back' });
   });
-  afterEach(() => { delete process.env.FORCE_CAPABILITIES; vi.clearAllMocks(); });
+  afterEach(() => {
+    resetCapabilityRegistry();
+    delete (globalThis as Record<symbol, unknown>)[Symbol.for('alga.core.featureFlagChecker')];
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+  });
 
   it('customer escalate succeeds with the flag on and no customer entitlement', async () => {
     session.tenant = CUSTOMER;

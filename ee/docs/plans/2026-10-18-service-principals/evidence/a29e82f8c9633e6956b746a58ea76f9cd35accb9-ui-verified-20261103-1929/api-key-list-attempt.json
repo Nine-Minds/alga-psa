@@ -1,0 +1,5 @@
+{
+  "url": "/api/v1/mcp/agents",
+  "httpStatus": 401,
+  "reason": "This route authenticates MCP admin through the user session; the act-as API key is not a session credential. No body or credential stored."
+}

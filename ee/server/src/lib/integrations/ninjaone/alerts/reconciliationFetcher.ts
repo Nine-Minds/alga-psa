@@ -32,7 +32,7 @@ export const ninjaOneAlertFetcher: RmmActiveAlertFetcher = {
   },
 };
 
-function mapAlertToEvent(alert: NinjaOneAlert, tenantId: string, integrationId: string): NormalizedRmmAlertEvent {
+export function mapAlertToEvent(alert: NinjaOneAlert, tenantId: string, integrationId: string): NormalizedRmmAlertEvent {
   const data = (alert.data ?? {}) as Record<string, unknown>;
   const statusCode = typeof data.statusCode === 'string' ? data.statusCode : null;
   return {
@@ -48,6 +48,10 @@ function mapAlertToEvent(alert: NinjaOneAlert, tenantId: string, integrationId: 
     sourceType: alert.sourceType ? String(alert.sourceType).toLowerCase() : 'condition',
     severity: mapAlertSeverity((alert.severity || 'NONE') as NinjaOneAlertSeverity) as NormalizedRmmAlertSeverity,
     message: alert.message ?? alert.sourceName ?? null,
+    // The NinjaOne alerts-list contract exposes message and opaque provider
+    // data, but no subject/details field. Unlike activity webhooks (subject),
+    // reconciliation has no documented long-form body to map here.
+    details: null,
     deviceName: alert.device?.displayName || alert.device?.systemName || null,
     externalOrganizationId:
       alert.device?.organizationId != null ? String(alert.device.organizationId) : null,

@@ -129,6 +129,8 @@ describe('board notification rules: inbound email durable path (integration)', (
 
   const RULE_TEMPLATE = 'ticket-board-created';
   const mailbox = 'support@board-notif.example.com';
+  // A plain distribution list on the create rule. Not a user, contact or connected mailbox.
+  const DL_ADDRESS = 'queue-dl@board-notif.example.com';
 
   beforeAll(async () => {
     process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
@@ -170,6 +172,7 @@ describe('board notification rules: inbound email durable path (integration)', (
       { tenant, rule_id: ruleId, recipient_type: 'user', user_id: users.techA },
       { tenant, rule_id: ruleId, recipient_type: 'user', user_id: users.techB },
       { tenant, rule_id: ruleId, recipient_type: 'team', team_id: ruleTeamId },
+      { tenant, rule_id: ruleId, recipient_type: 'email', email: DL_ADDRESS },
     ]);
 
     // Reply-reopen scenario: a closed status, and a second rule triggered by entering the open
@@ -349,6 +352,8 @@ describe('board notification rules: inbound email durable path (integration)', (
     'm1@board-notif.example.com',
     'm2@board-notif.example.com',
   ];
+  // The create rule also carries the DL address; the status-entered rule does not.
+  const expectedCreateEmails = [...expectedEmails, DL_ADDRESS].sort();
 
   it('new email ticket: exactly one email and one in-app notification per rule recipient; no assignment or watch-list change; redelivery does not duplicate', async () => {
     const messageId = `board-rule-${uuidv4()}@acme-customer.example.com`;
@@ -361,7 +366,7 @@ describe('board notification rules: inbound email durable path (integration)', (
     await dispatchOutbox(inboxId);
     expect(await deliverPublishedTicketCreated()).toBe(1);
 
-    expect(ruleEmails()).toEqual(expectedEmails);
+    expect(ruleEmails()).toEqual(expectedCreateEmails);
     expect(await ruleInApp()).toEqual([users.techA, users.techB, users.member1, users.member2].sort());
 
     const ticket = await scoped.table('tickets').where({ ticket_id: result.ticketId }).first();
@@ -377,7 +382,7 @@ describe('board notification rules: inbound email durable path (integration)', (
     const redelivered = { id: original.outbox_id, eventType: 'TICKET_CREATED', timestamp: new Date().toISOString(), payload: original.payload };
     await runWithTenant(tenant, () => emailHandler(redelivered));
     await runWithTenant(tenant, () => inAppHandler(redelivered));
-    expect(ruleEmails()).toEqual(expectedEmails);
+    expect(ruleEmails()).toEqual(expectedCreateEmails);
     expect(await ruleInApp()).toHaveLength(4);
   }, 120_000);
 
@@ -388,7 +393,7 @@ describe('board notification rules: inbound email durable path (integration)', (
 
     await dispatchOutbox(inboxId);
     expect(await deliverPublishedTicketCreated()).toBe(1);
-    expect(ruleEmails()).toEqual(expectedEmails);
+    expect(ruleEmails()).toEqual(expectedCreateEmails);
     expect(await ruleInApp()).toHaveLength(4);
 
     // Recovery sweeper path: same outbox_id, force=true, twice.
@@ -398,7 +403,7 @@ describe('board notification rules: inbound email durable path (integration)', (
       expect(await deliverPublishedTicketCreated()).toBe(1);
     }
 
-    expect(ruleEmails()).toEqual(expectedEmails);
+    expect(ruleEmails()).toEqual(expectedCreateEmails);
     expect(await ruleInApp()).toEqual([users.techA, users.techB, users.member1, users.member2].sort());
     const ticketRows = await scoped.table('tickets').where({ ticket_id: result.ticketId });
     expect(ticketRows).toHaveLength(1);
@@ -482,4 +487,102 @@ describe('board notification rules: inbound email durable path (integration)', (
     expect(statusEmails()).toEqual(expectedEmails);
     expect(await statusInApp()).toEqual(expectedUsers);
   }, 120_000);
+  describe('plain-address (DL) recipient on inbound email', () => {
+    const FROM_ADDRESS = 'noreply@board-notif.example.com';
+
+    async function seedOpenTicket(): Promise<{ ticketId: string; originalMessageId: string }> {
+      const originalMessageId = `dl-orig-${uuidv4()}@board-notif.example.com`;
+      const ticketId = uuidv4();
+      await scoped.table('tickets').insert({
+        tenant,
+        ticket_id: ticketId,
+        ticket_number: `DL-${uuidv4().slice(0, 6)}`,
+        title: 'DL thread ticket',
+        client_id: clientId,
+        status_id: statusId,
+        priority_id: priorityId,
+        board_id: boardId,
+        entered_by: users.techA,
+        is_closed: false,
+        ticket_origin: 'inbound_email',
+        email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+        entered_at: testDb.fn.now(),
+        updated_at: testDb.fn.now(),
+      });
+      return { ticketId, originalMessageId };
+    }
+
+    const replyFrom = (senderEmail: string, originalMessageId: string, extra: Record<string, unknown> = {}) => {
+      const domain = senderEmail.split('@')[1];
+      return {
+        ...buildEmail(`dl-reply-${uuidv4()}@${domain}`, 'Re: DL thread ticket'),
+        from: { email: senderEmail, name: 'Sender' },
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${domain}; dmarc=pass header.from=${domain}`,
+          ...((extra.headers as Record<string, string>) ?? {}),
+        },
+      };
+    };
+
+    const commentCount = async (ticketId: string) => (await scoped.table('comments').where({ ticket_id: ticketId })).length;
+    const watchEmails = async (ticketId: string) => {
+      const ticket = await scoped.table('tickets').where({ ticket_id: ticketId }).first();
+      return ((ticket.attributes?.watch_list ?? []) as Array<{ email?: string }>).map((entry) => entry.email);
+    };
+
+    it('a new inbound ticket notifies the DL once, with no in-app notification and no watcher entry', async () => {
+      const { inboxId, result } = await processDurably(buildEmail(`dl-new-${uuidv4()}@acme-customer.example.com`, `DL new ${uuidv4().slice(0, 6)}`));
+      expect(result.outcome).toBe('created');
+      await dispatchOutbox(inboxId);
+      expect(await deliverPublishedTicketCreated()).toBe(1);
+
+      expect(ruleEmails().filter((to) => to === DL_ADDRESS)).toHaveLength(1);
+      expect(await watchEmails(result.ticketId)).not.toContain(DL_ADDRESS);
+      const inApp = await ruleInApp();
+      expect(inApp).toHaveLength(4); // users only: the DL has no in-app notification
+    }, 120_000);
+
+    it('a thread-header reply from an unknown sender is quarantined: no comment, no watcher', async () => {
+      const { ticketId, originalMessageId } = await seedOpenTicket();
+      const { result } = await processDurably(replyFrom('stranger@unknown-domain.example.org', originalMessageId));
+      expect(result.outcome).toBe('quarantined');
+      expect(await commentCount(ticketId)).toBe(0);
+      expect(await watchEmails(ticketId)).not.toContain('stranger@unknown-domain.example.org');
+    }, 120_000);
+
+    it('a reply from an internal user who is a DL member is threaded as a comment', async () => {
+      const { ticketId, originalMessageId } = await seedOpenTicket();
+      const { result } = await processDurably(replyFrom('m1@board-notif.example.com', originalMessageId));
+      expect(result.outcome).toBe('replied');
+      expect(result.ticketId).toBe(ticketId);
+      expect(await commentCount(ticketId)).toBe(1);
+    }, 120_000);
+
+    it('a redelivery of our own automated notification via the DL is skipped as notification_loop', async () => {
+      const { ticketId, originalMessageId } = await seedOpenTicket();
+      await scoped.table('email_sending_logs').insert({
+        tenant,
+        message_id: `<sent-${uuidv4()}@board-notif.example.com>`,
+        provider_id: providerId,
+        provider_type: 'google',
+        from_address: FROM_ADDRESS,
+        to_addresses: JSON.stringify([DL_ADDRESS]),
+        status: 'sent',
+        sent_at: testDb.fn.now(),
+        entity_type: 'ticket',
+        entity_id: ticketId,
+        created_at: testDb.fn.now(),
+        updated_at: testDb.fn.now(),
+      });
+      const { result } = await processDurably(
+        replyFrom(FROM_ADDRESS, originalMessageId, { headers: { 'auto-submitted': 'auto-generated' } })
+      );
+      expect(result.outcome).toBe('skipped');
+      expect(result.reason).toBe('notification_loop');
+      expect(await commentCount(ticketId)).toBe(0);
+      expect(await watchEmails(ticketId)).not.toContain(FROM_ADDRESS);
+    }, 120_000);
+  });
 });

@@ -129,11 +129,14 @@ describe('an event trigger on a date source catalog row', () => {
     id: 'wf', version: 1, name: 'Catalog trap', payloadSchemaRef: 'payload.TicketStatusAge.v1', trigger: { type: 'event', eventName }, steps: [],
   }) as any;
 
-  it('is rejected at publish, pointing at the date trigger', () => {
-    const errors = validateWorkflowDefinition(eventDefinition('TICKET_STATUS_AGE')).errors;
+  it.each([
+    ['TICKET_STATUS_AGE', 'ticket.status_age'],
+    ['ASSET_MAINTENANCE_DUE', 'asset.maintenance_due'],
+  ])('%s is rejected at publish, pointing at its date trigger', (eventType, source) => {
+    const errors = validateWorkflowDefinition(eventDefinition(eventType)).errors;
     const found = errors.find((e) => e.code === 'EVENT_TRIGGER_IS_DATE_SOURCE');
     expect(found?.message).toContain('date trigger');
-    expect(found?.message).toContain('ticket.status_age');
+    expect(found?.message).toContain(source);
   });
 
   it('does not reject real events, including ones a date source also emits', () => {

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "title": "Priority validation final verification",
+  "paneId": "ef4da143-4a06-4461-a21a-cea2e1fde3fb",
+  "startedAt": "2026-11-04T01:30:58.710Z",
+  "finishedAt": "2026-11-04T01:38:05.698Z",
+  "durationMs": 351586,
+  "width": 988,
+  "height": 557,
+  "bytes": 20080331,
+  "frames": 8966,
+  "marks": [
+    {
+      "t": 69.602,
+      "label": "Current ticket priority options follow the board"
+    },
+    {
+      "t": 133.311,
+      "label": "Client board override refuses inherited ITIL priority"
+    },
+    {
+      "t": 199.546,
+      "label": "Real maintenance event: created and failed client outcomes"
+    },
+    {
+      "t": 214.336,
+      "label": "Definition mismatch fails; client priority repair creates a ticket"
+    },
+    {
+      "t": 338.567,
+      "label": "Moving a ticket to a custom board clears the ITIL priority"
+    }
+  ],
+  "files": {
+    "video": "pr3880-takeover-final.webm",
+    "chapters": "pr3880-takeover-final.vtt"
+  }
+}

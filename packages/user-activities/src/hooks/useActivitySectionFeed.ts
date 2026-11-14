@@ -22,14 +22,20 @@ export interface ActivitySectionFeed<T extends Activity> {
  *
  * No `sortBy` is sent, so the server's default sort (priority, then due date, then newest) —
  * the table's default — applies.
+ *
+ * `options.enabled` is the gate for late-resolving filters: while false nothing is requested
+ * and `loading` stays true, so the section never queries with provisional filters and then
+ * refetches. Kept out of the request shape on purpose.
  */
 export function useActivitySectionFeed<T extends Activity>(
   type: ActivityType,
   filters: ActivityFilters,
   targetUserId: string,
   limit: number,
-  extra?: Pick<ActivityFilters, 'collapseRecurringSeries'>
+  extra?: Pick<ActivityFilters, 'collapseRecurringSeries'>,
+  options?: { enabled?: boolean }
 ): ActivitySectionFeed<T> {
+  const enabled = options?.enabled ?? true;
   const { getActivities, invalidateCache } = useActivitiesCache();
   const [activities, setActivities] = useState<T[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -74,8 +80,9 @@ export function useActivitySectionFeed<T extends Activity>(
   }, [requestKey, limit, type]);
 
   useEffect(() => {
+    if (!enabled) return;
     void load();
-  }, [load]);
+  }, [load, enabled]);
 
   const refresh = useCallback(() => {
     latest.current.invalidateCache();
@@ -88,9 +95,12 @@ export function useActivitySectionFeed<T extends Activity>(
   const lastHandledInvalidationVersion = useRef(invalidationVersion);
   useEffect(() => {
     if (invalidationVersion === lastHandledInvalidationVersion.current) return;
+    // Record it even while disabled: the first enabled load is already fresh, so a bump that
+    // arrived in the meantime must not fire a second request once the gate opens.
     lastHandledInvalidationVersion.current = invalidationVersion;
+    if (!enabled) return;
     refresh();
-  }, [invalidationVersion, refresh]);
+  }, [invalidationVersion, refresh, enabled]);
 
   // Unmount: any in-flight response must not commit.
   useEffect(() => () => { requestIdRef.current += 1; }, []);

@@ -270,9 +270,9 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const BulkInvoiceOperationBody = registry.registerSchema(
     'FinancialBulkInvoiceOperationBody',
     zOpenApi.object({
-      operation: zOpenApi.enum(['send', 'finalize', 'cancel', 'mark_paid']),
-      invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
-      options: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      operation: zOpenApi.enum(['finalize', 'cancel']),
+      invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(50),
+      parameters: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -296,19 +296,25 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
 
   const InvoiceCreateBody = registry.registerSchema(
     'InvoiceCreateBody',
+    // Mirrors the create surface of INVOICE_FIELD_POLICY (schemas/invoiceFieldPolicy.ts): an
+    // invoice is always created as a draft. Lifecycle (status beyond draft), credit_applied,
+    // is_manual, is_prepayment and billing_cycle_id are server-owned and refused with a 400 when
+    // set to a non-default value; subtotal/tax/total_amount are derived from the charges and
+    // ignored if sent. None of those are published as inputs.
     zOpenApi.object({
-      client_id: zOpenApi.string().guid(),
+      client_id: zOpenApi.string().guid().describe('Must be a client in the caller\'s tenant.'),
       invoice_date: zOpenApi.string(),
       due_date: zOpenApi.string(),
-      subtotal: zOpenApi.number().int().min(0),
-      tax: zOpenApi.number().int().min(0),
-      total_amount: zOpenApi.number().int().min(0),
-      status: zOpenApi.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied']),
-      credit_applied: zOpenApi.number().int().min(0).optional(),
-      is_manual: zOpenApi.boolean().optional(),
-      is_prepayment: zOpenApi.boolean().optional(),
+      payment_method: zOpenApi.enum(PREFERRED_PAYMENT_METHODS).nullable().optional(),
+      billing_profile_id: zOpenApi.string().guid().nullable().optional(),
+      status: zOpenApi
+        .enum(['draft'])
+        .describe('Optional; invoices are always created as drafts. Use the finalize/send/payment commands to change status.')
+        .optional(),
       items: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
-    }).catchall(zOpenApi.unknown()),
+    }).catchall(zOpenApi.unknown()).describe(
+      'New draft invoice. Totals are computed from the items. status (other than draft), credit_applied, is_manual, is_prepayment and billing_cycle_id are server-owned and rejected with 400.',
+    ),
   );
 
   // Editable billing terms only (INVOICE_UPDATE_FIELDS). Lifecycle, identity and monetary fields
@@ -428,7 +434,6 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(100),
       status: zOpenApi.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied']),
-      finalized_at: zOpenApi.string().optional(),
     }),
   );
 
@@ -537,7 +542,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   });
 
   const financialBulkRoutes: Array<[string, string, string, any, Record<string, unknown>]> = [
-    ['/api/v1/financial/bulk/invoices', 'Run bulk invoice operation', 'FinancialService.bulkInvoiceOperation() supports send/finalize/cancel/mark_paid operations.', BulkInvoiceOperationBody, {}],
+    ['/api/v1/financial/bulk/invoices', 'Run bulk invoice operation', 'FinancialService.bulkInvoiceOperation() runs finalize or cancel against the canonical invoice engines (1–50 ids). finalize requires invoice:finalize; cancel voids eligible invoices through the canonical void engine (invoice:update, plus accounting_integrations:remote_mutate when an accounting integration is connected). Each id runs independently; per-id results carry success, error and outcome (finalized/voided). Bulk send is unsupported until canonical recipient delivery is implemented; standalone invoice send behavior is unchanged. apply_credit is unsupported: use POST /api/v1/financial/invoices/{id}/credit.', BulkInvoiceOperationBody, {}],
     ['/api/v1/financial/bulk/transactions', 'Run bulk transaction operation', 'FinancialService.bulkTransactionOperation() applies approve/reject/reverse to existing transactions (1–100 ids). reverse posts a compensating transaction linked to the original via related_transaction_id, recomputes the running balance, and syncs the client credit balance for credit-type transactions. Returns per-id results { total_requested, successful, failed, results[] }.', BulkTransactionOperationBody, {}],
     ['/api/v1/financial/bulk/credits', 'Run bulk credit operation', 'FinancialService.bulkCreditOperation() applies expire/extend_expiration/transfer to existing credits (1–100 ids). expire forfeits the remaining amount via a credit_expiration transaction and reduces the client balance; extend_expiration sets a new expiration_date; transfer moves the remaining amount to parameters.target_client_id. Returns per-id results { total_requested, successful, failed, results[] }.', BulkCreditOperationBody, {}],
   ];
@@ -949,7 +954,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/invoices',
     summary: 'Create invoice',
-    description: 'Creates an invoice record via ApiBaseController.create() and invoice create schema.',
+    description: 'Creates a draft invoice. Header totals are derived from the items; lifecycle, credit and provenance fields are owned by dedicated commands and rejected when set.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: InvoiceCreateBody } },
@@ -986,7 +991,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/invoices/bulk',
     summary: 'Bulk update invoice status',
-    description: 'Bulk status transition route using bulkInvoiceStatusUpdateSchema.',
+    description: 'Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: InvoiceBulkStatusBody } },

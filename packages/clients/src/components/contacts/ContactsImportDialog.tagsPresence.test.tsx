@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const hoisted = vi.hoisted(() => ({
   importContactsFromCSV: vi.fn(),
   checkExistingEmails: vi.fn(),
+  findClientsByNames: vi.fn(),
   unparseCSV: vi.fn(),
 }));
 
@@ -30,6 +31,7 @@ vi.mock('@alga-psa/core', async (importOriginal) => {
 vi.mock('@alga-psa/clients/actions', () => ({
   importContactsFromCSV: hoisted.importContactsFromCSV,
   checkExistingEmails: hoisted.checkExistingEmails,
+  findClientsByNames: hoisted.findClientsByNames,
   generateContactCSVTemplate: vi.fn(async () => ''),
 }));
 
@@ -73,7 +75,7 @@ const CLIENTS = [{ client_id: 'client-acme', client_name: 'Acme Corp' }];
 async function importCsv(csv: string, options: { unmapTags?: boolean } = {}) {
   const onImportComplete = vi.fn();
   render(
-    <ContactsImportDialog isOpen onClose={vi.fn()} onImportComplete={onImportComplete} clients={CLIENTS} />,
+    <ContactsImportDialog isOpen onClose={vi.fn()} onImportComplete={onImportComplete} />,
   );
 
   await act(async () => {
@@ -110,6 +112,10 @@ describe('ContactsImportDialog — Tags presence from the column mapping', () =>
   beforeEach(() => {
     hoisted.importContactsFromCSV.mockReset();
     hoisted.checkExistingEmails.mockReset();
+    hoisted.findClientsByNames.mockReset();
+    hoisted.findClientsByNames.mockImplementation(async (names: string[]) =>
+      CLIENTS.filter((client) => names.includes(client.client_name)),
+    );
     hoisted.checkExistingEmails.mockResolvedValue([]);
     hoisted.importContactsFromCSV.mockImplementation(async (rows: any[]) =>
       rows.map((row) => ({ success: true, message: 'ok', originalData: row })),
@@ -153,6 +159,22 @@ describe('ContactsImportDialog — Tags presence from the column mapping', () =>
     const { rows } = await importCsv('Name,Email,Tags\nAda Lovelace,ada@example.com,"vip, board"\n');
 
     expect(rows[0]).toHaveProperty('tags', 'vip, board');
+  });
+
+  it('passes resolved client names to the list after a successful import', async () => {
+    hoisted.importContactsFromCSV.mockImplementation(async (rows: any[]) =>
+      rows.map((row, index) => ({
+        success: true, originalData: row,
+        contact: { ...row, contact_name_id: `contact-${index}` },
+      })),
+    );
+    const { onImportComplete } = await importCsv(
+      'Name,Email,Client\nAda Lovelace,ada@example.com,Acme Corp\n',
+    );
+    await waitFor(() => expect(onImportComplete).toHaveBeenCalledWith([
+      expect.objectContaining({ client_id: 'client-acme', client_name: 'Acme Corp' }),
+    ]));
+    expect(hoisted.findClientsByNames).toHaveBeenCalledWith(['Acme Corp']);
   });
 
   describe('failed-records download', () => {

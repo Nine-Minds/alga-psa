@@ -432,6 +432,37 @@ test('CLI PR mode: an added file still goes through the unchanged path (no statu
   r.cleanup();
 });
 
+test('CLI PR mode: an aged pending migration passes after its timestamp is moved beyond the advanced base', (t) => {
+  const r = prRepo();
+  t.after(r.cleanup);
+  const oldName = '20240116000000_access_links.cjs';
+  const newName = '20240208000000_access_links.cjs';
+  r.write(oldName, "exports.up = async (knex) => { await knex.raw('CREATE TABLE IF NOT EXISTS access_links (id int)'); };\n");
+  r.commit('add pending access links migration');
+  assert.equal(r.lint().status, 0);
+
+  r.git('switch', '-q', 'main');
+  r.write('20240207000000_unrelated.cjs', "exports.up = async (knex) => { await knex.raw('CREATE TABLE IF NOT EXISTS unrelated (id int)'); };\n");
+  r.commit('advance base beyond the timestamp grace window');
+  r.git('switch', '-q', 'pr');
+  const merge = r.git('merge', '-q', '--no-edit', 'main');
+  assert.equal(merge.status, 0, merge.stderr);
+
+  const lint = () => spawnSync('node', [CLI, '--repo', r.repo, '--base', 'main', '--json'], { encoding: 'utf8' });
+  const stale = lint();
+  assert.equal(stale.status, 1, stale.stdout);
+  assert.deepEqual(JSON.parse(stale.stdout).violations.map(({ file, rule }) => ({ file, rule })),
+    [{ file: `server/migrations/${oldName}`, rule: 6 }]);
+
+  r.git('mv', `server/migrations/${oldName}`, `server/migrations/${newName}`);
+  r.commit('move pending migration after the advanced base');
+  const repaired = lint();
+  assert.equal(repaired.status, 0, repaired.stdout);
+  assert.equal(JSON.parse(repaired.stdout).filesScanned, 1);
+  assert.deepEqual(JSON.parse(repaired.stdout).violations, []);
+  assert.deepEqual(JSON.parse(repaired.stdout).undecided, []);
+});
+
 test('CLI PR mode: advancing base only invalidates a pending timestamp that sorts before a newer base migration on the same table', (t) => {
   const r = prRepo();
   t.after(r.cleanup);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -11,7 +11,8 @@ import {
   createFixedPlanAssignment,
   materializeRecurringServicePeriods,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -309,7 +310,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       }, 'billing_cycle_id');
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Invoice should use pricing schedule rate
       expect(result).not.toBeNull();
@@ -381,7 +382,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       }, 'billing_cycle_id');
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Should use contract rate since no pricing schedule
       expect(result).not.toBeNull();
@@ -481,8 +482,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       }, 'billing_cycle_id');
 
       // Act - Generate invoices for both periods
-      const januaryInvoice = await generateInvoice(januaryBillingCycleId);
-      const marchInvoice = await generateInvoice(marchBillingCycleId);
+      const januaryInvoice = await generateInvoiceForCycle(januaryBillingCycleId);
+      const marchInvoice = await generateInvoiceForCycle(marchBillingCycleId);
 
       // Assert - Both should succeed with different rates active
       expect(januaryInvoice).not.toBeNull();
@@ -572,7 +573,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       }, 'billing_cycle_id');
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Should fall back to contract rate
       expect(result).not.toBeNull();
@@ -651,7 +652,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       }, 'billing_cycle_id');
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Should use base rate since schedule expired
       expect(result).not.toBeNull();

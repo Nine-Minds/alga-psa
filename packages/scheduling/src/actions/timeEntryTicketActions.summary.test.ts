@@ -39,6 +39,10 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: async () => [],
 }));
 
+// The client read scope has its own DB test (T012); here the subject is not client-restricted.
+vi.mock('../lib/timeEntryAuthorizationSql', () => ({
+  resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined }),
+}));
 vi.mock('./timeEntryDelegationAuth', () => ({
   resolveManagedSubjectUserIds: async () => [],
 }));
@@ -109,7 +113,7 @@ describe('fetchTimeEntriesForTicketCore ticket totals', () => {
     state.decisions.set('other-hidden', { allowed: false, redactedFields: [] });
 
     const { fetchTimeEntriesForTicketCore } = await import('./timeEntryTicketActions');
-    const db = { raw: (sql: string) => sql } as never;
+    const db = { raw: (sql: string) => sql, schema: { hasColumn: async () => false } } as never;
 
     const summary = await fetchTimeEntriesForTicketCore(USER, 'tenant-1', db, 'ticket-1');
 

@@ -151,7 +151,8 @@ export function mergeBrowserShardEvidence({ edition, shards, root, revision, run
     revision: revision ?? null, runId: runId ?? null, runAttempt: Number.isSafeInteger(attempt) && attempt > 0 ? attempt : null,
     eventName: env.GITHUB_EVENT_NAME || null, branch: env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || null,
     shards: evidence.selection.shards.map(({ lane, index, total }) => ({ lane, index, total })),
-    tests: flaky.map(({ testId, file, name, projectName, retryCount }) => ({ testId, file, name, project: projectName, retryCount })),
+    tests: flaky.map(({ testId, file, name, projectName, retryCount, error }) =>
+      ({ testId, file, name, project: projectName, retryCount, ...(error ? { error } : {}) })),
   };
   return { complete, collected, report, evidence, metrics, flakyDocument, manifest };
 }

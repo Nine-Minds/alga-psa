@@ -1,0 +1,956 @@
+[
+  {
+    "id": "F001",
+    "description": "MobileCapabilitiesService returns features.assets (asset:read) and features.assetAudit (asset:read AND asset:update) in the PSA product block; both false for other products",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "OpenAPI mobileCapabilitiesV1 documents the assets and assetAudit flags",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Mobile FeatureCapabilities type + EMPTY_FEATURE_CAPABILITIES gain assets and assetAudit; parseFeatureCapabilities defaults them to false",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "DrawerNavigator renders AssetsTab only when features.assets is true, ProjectsTab only when features.projects is true",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "productSurfaceRegistry api_psa_only staticPrefixes include /api/v1/asset-audits; /api/v1/search confirmed listed in a group reachable with x-api-key",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "src/api/projects.ts listProjects(client, {apiKey, page, limit, project_name, status, client_id, assigned_to}) \u2192 GET /api/v1/projects with pagination meta (is_closed dropped: `projects` has no such column, sending it 500s \u2014 see SCRATCHPAD)",
+    "implemented": true,
+    "commitGroup": "projects-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "getProject(client, {apiKey, projectId}) \u2192 GET /api/v1/projects/{id} typed with phases, assigned_user, client, counts",
+    "implemented": true,
+    "commitGroup": "projects-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "listProjectTasks(client, {apiKey, projectId}) \u2192 GET /api/v1/projects/{id}/tasks typed ProjectTaskSummary (task_id, phase_id, task_name, assigned_to, assigned_user_name, due_date, priority_id, project_status_mapping_id, wbs_code, is_closed)",
+    "implemented": true,
+    "commitGroup": "projects-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "createProjectTask(client, {apiKey, projectId, phaseId, body}) \u2192 POST /api/v1/projects/{id}/phases/{phaseId}/tasks; body requires task_name and project_status_mapping_id",
+    "implemented": true,
+    "commitGroup": "projects-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Project types module exports ProjectStatus union and a statusTone(status) helper mapping to badge tones (planning/on_hold neutral, active/in_progress info, completed success, cancelled danger)",
+    "implemented": true,
+    "commitGroup": "projects-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "groupTasksByPhase(phases, tasks, statusMappings) pure helper returns phases in wbs order with tasks, doneCount, totalCount; tasks whose mapping is_closed count as done; tasks with unknown phase_id go to an 'Other' bucket last",
+    "implemented": true,
+    "commitGroup": "projects-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "projectProgress(phases) pure helper returns {done,total,ratio} with ratio 0 when total is 0",
+    "implemented": true,
+    "commitGroup": "projects-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client and status badge, and end date; paginates on end reached (walking past server pages that a multi-status filter narrows to nothing, and showing no count while narrowing because the server's total is unfiltered); pull to refresh. The per-row progress bar is dropped (the list payload carries no task counts, so it would be one request per row) and lives on ProjectDetail \u2014 see SCRATCHPAD",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Search box filters by project_name (debounced 300ms); empty query clears",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Filter sheet (id projects-filter-sheet) with status multi-select (default excludes completed and cancelled), client picker (EntityPickerModal), and 'Managed by me' toggle (assigned_to = current user id)",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Filter state persisted per user like TicketsList filters and surfaced as a filter count badge on the header button",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Empty state ('No projects match') with Clear filters; error state with Retry; offline shows cached first page",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Row tap navigates to ProjectDetail { projectId, projectName }",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "ProjectDetailScreen (root stack 'ProjectDetail', id project-detail) loads getProject + listProjectTasks + listTaskStatusMappings in parallel and renders header: name, client (tap \u2192 ClientDetail), status badge, start/end dates, manager name",
+    "implemented": true,
+    "commitGroup": "project-detail",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Phases render as sections in wbs order with 'n of m done' and a per-phase progress bar; project-level progress bar under the header",
+    "implemented": true,
+    "commitGroup": "project-detail",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Task rows show name, assignee avatar/initials, due date (danger colour when past and not closed), status badge from the mapping label; tap \u2192 ProjectTaskDetail { taskId }",
+    "implemented": true,
+    "commitGroup": "project-detail",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Closed tasks collapse under 'Show n completed' per phase (id project-phase-<phaseId>-show-completed)",
+    "implemented": true,
+    "commitGroup": "project-detail",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Description collapsed with See more (reusing the ticket description expander)",
+    "implemented": true,
+    "commitGroup": "project-detail",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Pull to refresh and resume refresh (useAppResume) reload the three calls; a task edit on ProjectTaskDetail invalidates the project cache so returning shows the change",
+    "implemented": true,
+    "commitGroup": "project-detail",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Empty project (no phases) shows 'No phases yet. Add phases on the web.'",
+    "implemented": true,
+    "commitGroup": "project-detail",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "CreateTaskModal (id create-task-modal) with name (required), description, assignee (AgentPickerModal), due date (DatePickerField), priority (priorities list), estimated hours (typed in hours, sent as the minutes the column stores); Save disabled until name is non-empty",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Create posts with project_status_mapping_id = first status mapping of the project (ordered by display order) and inserts the returned task into its phase without reload; toast on success",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Each phase header '+' (id project-phase-<phaseId>-add-task) opens CreateTaskModal preselecting the phase; hidden when the create request returns 403 once (capability-less fallback)",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "ProjectTaskDetail gains a Details card: Assignee row (tap \u2192 AgentPickerModal, Unassign option), Due date row (tap \u2192 DatePickerField, Clear), Priority row (tap \u2192 priority picker), Estimated hours read-only; a saved edit reloads the enriched GET payload, since the PUT answers with the bare row",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Edits call updateProjectTask with only the changed field, optimistic update, rollback + error toast on failure",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "'Open project' row at the top of ProjectTaskDetail navigates to ProjectDetail; header subtitle shows the project name (from the task's project_name)",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Task detail reads 403 on PUT as read-only: edit rows render without chevrons and show 'Read only' hint",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "src/api/assets.ts listAssets(client, {apiKey, page, limit, search, client_id, location_id, status, asset_type}) \u2192 GET /api/v1/assets; listAssetStatuses \u2192 GET /api/v1/asset-statuses (slug, label, kind, display_order)",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "AssetsScreen (drawer AssetsTab, id assets-list) with search box (debounced), rows: name, asset tag, type icon, client, location, status badge; pagination (walks past server pages a multi-status filter narrows to nothing and shows no count while narrowing); pull to refresh",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Filter sheet (id assets-filter-sheet): client (EntityPickerModal), location (client locations, enabled after a client is chosen, cleared when client changes), status chips grouped by kind (default: all statuses with kind != archived), asset type",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Status badge shows the registry label for the asset's slug; unknown slug (older server) shows the slug title-cased",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Header actions: Scan (id assets-scan) navigates to InventoryTab scan view when features.inventory, else opens a scan-only modal using ScanView; Audit (id assets-audit) visible when features.assetAudit \u2192 AuditSetup",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Empty, error and offline states consistent with Tickets; row tap \u2192 AssetDetail { assetId, assetName }",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Assets tab 'Recent audits' row (id assets-recent-audits) lists the last 10 audits (client, location, date, present/missing or In progress) and opens AuditSummary \u2014 an in-progress run reopens AuditSession instead",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Migration creates asset_audits and asset_audit_items (tenant in PK, distributed by tenant via tenantDb.cjs, no RLS) and adds assets.last_audited_at timestamptz null + assets.last_audit_result text null",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR15"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "AssetAuditService.start(context, {client_id, location_id|null, statuses[]}) snapshots expected assets (tenant, client, location match incl. null, status in list), inserts the audit with expected_count, returns audit + expected items",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "AssetAuditService.markItem(context, auditId, {asset_id, result present|unexpected, method}) upserts the item (idempotent on tenant+audit+asset), validates audit in_progress and asset in tenant; an asset outside the audit's scope is stored as unexpected regardless of requested result, while an asset that joined the scope after the snapshot (a field registration) is stored present and widens expected_count",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "AssetAuditService.unmarkItem removes an item; complete() inserts missing items for expected minus present, sets counts, status completed, completed_at",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "complete() writes one asset_history row per item (change_type 'audit', changes {audit_id, result, location_id, method}) and updates assets.last_audited_at/last_audit_result for present and missing assets, inside one transaction",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "cancel() sets status cancelled (only from in_progress); get() returns audit with client/location names and items joined to asset name/tag/location; list() returns newest first with the same names, optional client_id filter and pagination",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Routes: POST/GET /api/v1/asset-audits, GET /api/v1/asset-audits/{id}, POST /api/v1/asset-audits/{id}/items, DELETE /api/v1/asset-audits/{id}/items/{assetId}, POST /api/v1/asset-audits/{id}/complete, POST /api/v1/asset-audits/{id}/cancel via ApiAssetAuditController with zod schemas",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR17"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Permissions: asset:read for list/get; asset:update for start, items, complete, cancel; mutations on a non in_progress audit return 409",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR17"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "OpenAPI route definitions for every audit endpoint; CE/EE specs and MCP/chat registries regenerated",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "prdRefs": [
+      "FR18"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "src/api/assetAudits.ts wraps start, list, get, markItem, unmarkItem, complete, cancel with typed responses",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR19"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "AuditSetupScreen (root 'AuditSetup', id audit-setup): client picker, location picker (required: client locations + 'No location'), status chips by kind (default deployable + pending), expected count counted the way the server snapshots the scope \u2014 one dry listAssets count per status slug with the location applied, and no count for 'No location', which the list API cannot express",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR20"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "AuditSessionScreen (root 'AuditSession' { auditId }, id audit-session) loads the audit, shows progress 'n of m present', segments Remaining / Present / Unexpected with counts",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR21"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Scan button opens the audit scanner modal \u2014 the Inventory scanner's barcode types and repeat debounce (features/inventory/scanDebounce) in a code-only surface, since ScanView itself owns the inventory lookup and result cards \u2014 and resolves codes with lookupInventoryCode; an asset result in Remaining \u2192 markItem present (method scan) with haptic + toast; already-present asset \u2192 info toast; non-asset result \u2192 'Not an asset' toast",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR21"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Scan resolving to an asset outside the snapshot \u2192 markItem unexpected and the row appears under Unexpected with its real client/location",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR21"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Scan resolving to nothing offers Register asset (existing RegisterAssetModal prefilled with the audit's client and location, so the device is created at the audited location); on success the new asset is marked present with method register",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR21"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Remaining rows have 'Mark present' (method manual); Present rows have 'Unmark' (unmarkItem); a search field filters Remaining by name/tag/serial",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR21"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Finish asks for confirmation listing the remaining count when > 0, then calls complete and navigates to AuditSummary replacing the session route; Cancel audit in the header menu calls cancel after confirmation",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR21"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Session screen reloads the audit from the server on mount and on resume; an audit found completed on reload redirects to its summary",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR22"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "AuditSummaryScreen (root 'AuditSummary' { auditId }, id audit-summary): counts, Missing list with per-row Create ticket (existing CreateTicketModal preselecting the asset), Unexpected list with real location, Present count, Done \u2192 Assets tab",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR23"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "AssetDetailScreen shows a 'Last audited' row (date and result) when last_audited_at is present. The auditor is NOT shown: `assets` gained only last_audited_at/last_audit_result, so no column or join supplies an actor \u2014 the actor lives on the audit's asset_history row (changed_by) and shows on the web. Amended from '(date, result, auditor)' \u2014 see SCRATCHPAD",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR24"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "assets i18n namespace gains every audit string; no hardcoded text",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "prdRefs": [
+      "FR35"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "HomeScreen (drawer 'HomeTab', first entry, id home) with cards Running timer, Today, My tickets, Activities, Quick actions; each card has its own loading/error row with Retry and collapses when empty",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR25"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Drawer order: Home, Tickets, Activities, Schedule, Projects*, Interactions, Time Entries, Clients, Contacts, Assets*, Inventory*, Opportunities*, Settings; Home is initialRouteName; sign-in resets navigation to Home",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR25"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "My tickets card calls listTickets with assigned_to = current user, is_open=true, sort=latest_activity_at, limit=5, fields=mobile_list; header shows pagination.total; rows reuse the ticket list row; 'View all' opens TicketsTab with the assignee filter preset to me",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR26"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Today card loads schedule entries for the device-local day (same window maths as useScheduleWeek), sorted by start; rows show time range and title; tap opens the Schedule tab's ScheduleEntryDetailModal, with Open ticket / Open task / Open in Schedule actions",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR27"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Activities card loads activities due today or overdue (not done), 5 rows, 'View all' opens UserActivitiesTab",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR28"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Running timer card shows the active work item title and elapsed (useTimerElapsedMs) with Stop opening the existing StopTimerModal; hidden when no timer runs",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR25"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Quick actions: New ticket \u2192 CreateTicket; Scan \u2192 InventoryTab scan view (hidden when features.inventory is false); Log interaction \u2192 LogInteractionEntry flow; Start timer \u2192 ServicePickerModal then start with no work item (hidden while a timer runs)",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR29"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Cards read from TTL cache (homeCache.ts, 5 min) when offline with the offline banner; pull to refresh and useAppResume refresh all cards",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR30"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Home header: search icon (id home-search) \u2192 SearchScreen; existing HeaderTimerChip stays",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR25"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "home i18n namespace",
+    "implemented": true,
+    "commitGroup": "home",
+    "prdRefs": [
+      "FR35"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "src/api/search.ts search(client, {apiKey, query, types, limit, cursor}) \u2192 GET /api/v1/search; SearchResult type {type, id, title, subtitle, url}; nextCursor parsed",
+    "implemented": true,
+    "commitGroup": "search",
+    "prdRefs": [
+      "FR31"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "routeForResult(result) pure helper maps ticket/client/contact/asset/project/project_task to navigation targets and returns null for others",
+    "implemented": true,
+    "commitGroup": "search",
+    "prdRefs": [
+      "FR31"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "searchableTypes(features) pure helper returns ticket, client, contact always; asset when features.assets; project and project_task when features.projects",
+    "implemented": true,
+    "commitGroup": "search",
+    "prdRefs": [
+      "FR33"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "SearchScreen (root 'Search', id search): auto-focused field, 300ms debounce, min 2 chars, grouped results in order tickets, clients, contacts, assets, projects, project tasks with up to 5 per group and 'More' per group fetching the next page for that type only",
+    "implemented": true,
+    "commitGroup": "search",
+    "prdRefs": [
+      "FR32"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Recent searches (last 8, on device, keyed by server+user with the key sanitised for expo-secure-store) shown before typing with tap-to-search and Clear; cleared on sign-out and host switch, and a storage failure never blocks the host switch",
+    "implemented": true,
+    "commitGroup": "search",
+    "prdRefs": [
+      "FR32"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Empty ('No results for \u2026'), error with Retry, offline state; a stale response (older query) is discarded",
+    "implemented": true,
+    "commitGroup": "search",
+    "prdRefs": [
+      "FR32"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "search i18n namespace",
+    "implemented": true,
+    "commitGroup": "search",
+    "prdRefs": [
+      "FR35"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "navigation/linking.ts: alga://project/:projectId \u2192 ProjectDetail; hosted https://<host>/msp/projects/{id} (no taskId) folds to it; with taskId keeps folding to ProjectTaskDetail",
+    "implemented": true,
+    "commitGroup": "linking",
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "alga://asset/:assetId \u2192 AssetDetail; hosted /msp/assets/{id} folds to it",
+    "implemented": true,
+    "commitGroup": "linking",
+    "prdRefs": [
+      "FR14"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Push routing: notification data with projectId (and no taskId/ticketId) opens ProjectDetail; data with assetId opens AssetDetail",
+    "implemented": true,
+    "commitGroup": "linking",
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "RootNavigator registers ProjectDetail, AuditSetup, AuditSession, AuditSummary, Search routes with HeaderBackButton; navigation/types.ts params; navStatePersistence strips audit session params on restore so a stale audit is reloaded, not assumed",
+    "implemented": true,
+    "commitGroup": "linking",
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "app.json version 2.0.0, ios.buildNumber 39, android.versionCode 39, with package.json and package-lock.json on the same version so verify:expo-config passes",
+    "implemented": true,
+    "commitGroup": "release",
+    "prdRefs": [
+      "FR34"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Release notes at ee/docs/plans/2026-10-14-mobile-2-0/RELEASE_NOTES.md covering Home, Projects, Assets + audit, Search (and outbox if shipped)",
+    "implemented": true,
+    "commitGroup": "release",
+    "prdRefs": [
+      "FR34"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "All new strings in projects/home/search/assets namespaces; i18n unresolved-keys check passes; mobile lint, typecheck, full vitest green",
+    "implemented": true,
+    "commitGroup": "release",
+    "prdRefs": [
+      "FR35"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "OpenAPI CE/EE specs + MCP/chat registries regenerated and committed; nm-store spec copy noted for the alga-openapi-sync skill",
+    "implemented": true,
+    "commitGroup": "release",
+    "prdRefs": [
+      "FR18"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Migration creates api_idempotency_keys (tenant, user_id, key, route, response_status, response_body jsonb, created_at; PK tenant+user_id+key; distributed by tenant)",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "prdRefs": [
+      "FR36"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "withIdempotency(route) helper: when Idempotency-Key is present, returns the stored response for (tenant, user, key) if created within 24h, else runs the handler, stores status+body, and returns it; concurrent duplicate within the window waits on the row (insert-first, on conflict read)",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "prdRefs": [
+      "FR36"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Applied to POST /api/v1/tickets/{id}/comments, POST /api/v1/time-entries, POST /api/v1/interactions; OpenAPI documents the header; keys older than 24h are ignored (no purge job in scope)",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "prdRefs": [
+      "FR36"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "src/offline/outbox.ts: persisted queue (type comment|timeEntry|interaction, payload, idempotencyKey uuid, createdAt, attempts, lastError, status pending|sending|failed) in app storage keyed by baseUrl+tenant+user; enqueue/list/remove/markFailed; cleared on sign-out after the FR40 prompt and on host switch",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "prdRefs": [
+      "FR37"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "CommentComposer, time entry form and LogInteractionModal enqueue instead of failing when offline or when the request fails with a network error (not 4xx/5xx); the UI shows 'Saved to outbox'",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "prdRefs": [
+      "FR37"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "OutboxRunner replays on reconnect (useNetworkStatus) and on resume, strictly in createdAt order, one at a time; sends Idempotency-Key; success removes the item and invalidates the ticket/time/interaction caches; 4xx \u2192 failed with the error, continue; network error \u2192 stop",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "prdRefs": [
+      "FR38"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Pending comment renders in the ticket comment list with a Pending badge; pending time entry in the ticket time section; pending interaction in Interactions list; each badge taps to the Outbox screen",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "prdRefs": [
+      "FR39"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "OutboxScreen (root 'Outbox', id outbox): items with type, target title, created time, status/error, Retry (resets to pending and runs) and Discard (confirm); header icon with count on every drawer screen while non-empty",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "prdRefs": [
+      "FR39"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Sign-out with a non-empty outbox shows 'n unsent items will be lost' with Cancel / Discard and sign out",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "prdRefs": [
+      "FR40"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "GET /api/v1/tickets/categories lists board-scoped ticket categories behind ticket:read (sibling of /tickets/statuses and /priorities), so agents without ticket_settings:read can classify a ticket; an ITIL board resolves by is_from_itil_standard rather than board_id (the standards are copied once per tenant and stamped with the first board that enabled ITIL), matching getTicketCategoriesByBoard; documented in the CE/EE specs",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "OPERATOR-2026-10-19"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "PUT /api/v1/tickets/{id} accepts null category_id/subcategory_id so a re-classification clears the old parent's child; the ticket detail payload returns subcategory_name",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "OPERATOR-2026-10-19"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Ticket detail Details card shows Category (parent \u203a child) with a Change category picker: board categories grouped parent/child, search, tap-to-clear, notification-suppression footer; unblocks boards whose close rules require category/subcategory",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "OPERATOR-2026-10-19"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "The task detail GET fills priority_name (tenant-scoped priorities join in ProjectService.getTaskById) and the mobile Priority row falls back to the picker's own priorities list, so the row names the priority instead of reading 'none' after a save",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "POST /api/v1/tickets accepts asset_ids[] and links every named device in the SAME transaction as the insert (asset_associations, entity_type 'ticket', relationship 'affected'); an asset outside the tenant is rejected before the ticket exists, so a failed link never leaves an orphan",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "The first named asset makes the ticket inherit that asset's billing profile the way POST /tickets/from-asset and the web create do, whether one device or several are named. The rule lives once in shared/models/ticketAssetLinkModel.ts and is read by the REST service and the web addTicket action",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "addTicket (the server action behind QuickAddTicket) reads asset_ids as one JSON array (parseTicketCreateExtras, which also carries watchers), still accepts the legacy single asset_id and places it first, de-duplicates, requires asset:update, and links them all in its own transaction",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "QuickAddTicket renders a real client-scoped multi-asset picker in its Assets section: disabled until a client is chosen, cleared on client change, with the opened-from asset still named by its banner and linked through asset_id. The control is ClientAssetMultiSelect, injected as the renderAssetPicker prop so the tickets package still does not import the assets package",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Mobile CreateTicketScreen gains an Assets field (gated by the assets capability): disabled until a client is chosen, lists that client's assets through listAssets with search, multi-selects through EntityPickerModal's selectedIds mode, clears on client change, and posts asset_ids",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Starting from an asset on mobile (asset detail, link-ticket escape hatch, audit summary missing row) navigates to the one CreateTicket form with that client and device pre-selected; the separate create-from-asset modal is gone. The linked devices show on TicketDetail through the existing AssetsSection",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "asset_ids is documented on the v1 create-ticket request body (WorkV1CreateTicketBody) and the CE/EE specs plus the MCP/chat registries are regenerated with the repo tooling",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "The close-rule pre-check evaluates the required fields a batch save is about to write: checkTicketClosure takes the pending changes, pickCloseRulePendingFields narrows them to CLOSE_RULE_REQUIRED_FIELDS, and TicketDetails' batch path (TicketInfo Save Changes and BentoHero) passes them, so setting the classification and the closing status together is no longer blocked",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "alga-2026-0002627"
+    ]
+  }
+]

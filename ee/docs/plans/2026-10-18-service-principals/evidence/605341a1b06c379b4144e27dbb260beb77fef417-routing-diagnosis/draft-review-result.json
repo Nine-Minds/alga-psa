@@ -1,0 +1,14 @@
+{
+  "reviewType": "independent PRD draft review",
+  "reviewedDiffRoot": "605341a1b06c379b4144e27dbb260beb77fef417",
+  "source": "ee/docs/plans/2026-10-18-service-principals/PRD.md",
+  "requirements": ["R8.3", "R5.5"],
+  "status": "passed",
+  "detail": "Corrected documentation is consistent with archive/list/audit retention and via attribution semantics. Routing evidence distinguishes stale pane f9b1c96a from current inventory pane 363aee64; browser-get-url and list-pane-tabs succeeded on 363a. No remaining documentation inconsistency was found.",
+  "separateBoardVerifierRun": {
+    "id": "4e787c96-7f94-4b97-a948-2da8c3f0140c",
+    "status": "inconclusive",
+    "detail": "Cancelled without a verdict; not represented as a pass."
+  },
+  "freshUiAndDatabaseEvidence": "blocked"
+}

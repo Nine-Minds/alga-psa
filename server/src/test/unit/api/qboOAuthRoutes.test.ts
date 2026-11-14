@@ -11,6 +11,7 @@ const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const resolveQboOAuthCredentialsMock = vi.hoisted(() => vi.fn());
 const getQboRedirectUriMock = vi.hoisted(() => vi.fn());
 const getQboOAuthScopesStringMock = vi.hoisted(() => vi.fn());
+const resolveTenantQboEnvironmentMock = vi.hoisted(() => vi.fn(async () => 'production' as const));
 const upsertStoredQboCredentialsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
 const isProviderDisconnectActiveMock = vi.hoisted(() => vi.fn());
@@ -58,6 +59,7 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   resolveQboOAuthCredentials: resolveQboOAuthCredentialsMock,
   getQboRedirectUri: getQboRedirectUriMock,
   getQboOAuthScopesString: getQboOAuthScopesStringMock,
+  resolveTenantQboEnvironment: resolveTenantQboEnvironmentMock,
   upsertStoredQboCredentials: upsertStoredQboCredentialsMock
 }));
 
@@ -191,6 +193,23 @@ describe('QBO OAuth routes', () => {
     });
   });
 
+  it('connect route surfaces the Development-keys reason for a sandbox tenant', async () => {
+    const reason =
+      'Connecting an Intuit sandbox company requires this tenant\'s own Intuit app: save its Development keys (client ID and secret) before connecting.';
+    // The shape resolveQboOAuthCredentials throws: an AppError carrying a
+    // secret-free, admin-facing reason. Flattening it to the generic text would
+    // leave the admin with nothing to act on.
+    const configError = Object.assign(new Error(reason), { code: 'QBO_CONFIG_MISSING' });
+    resolveQboOAuthCredentialsMock.mockRejectedValueOnce(configError);
+
+    const { GET } = await import('@/app/api/integrations/qbo/connect/route');
+
+    const response = await GET();
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: reason });
+  });
+
   it('connect route requires the accounting connection-admin permission', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
@@ -289,7 +308,9 @@ describe('QBO OAuth routes', () => {
       expect.objectContaining({
         realmId: 'realm-1',
         accessToken: 'access-token',
-        refreshToken: 'refresh-token'
+        refreshToken: 'refresh-token',
+        // The realm is stamped with the environment it was authorized in.
+        environment: 'production'
       }),
       { authorizationFlowStartedAt: '2026-08-31T12:00:00.000Z' }
     );

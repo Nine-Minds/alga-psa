@@ -6,6 +6,7 @@ import { getClientBillingCycleAnchor } from '@shared/billingClients/billingSched
 import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { buildScheduleSourceRuleVersion } from '@shared/billingClients/clientCadenceScheduleRegeneration';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import {
   isAdvanceTimingAllowedForLineType,
   contractLineOwnStream,
@@ -326,6 +327,7 @@ export async function repairArrearsOnlyLineSchedulesForTenant(
 
   const lines = await loadAffectedLines(trx, tenant, advanceRows);
   summary.linesScanned = lines.length;
+  if (lines.length > 0) await lockTenantBilling(trx, tenant);
 
   for (const line of lines) {
     // 1. Stored timing.

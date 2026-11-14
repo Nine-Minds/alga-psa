@@ -11,6 +11,7 @@
 import type { Knex } from 'knex';
 import { CREATED, VALID_UNTIL, configuredDefaultCurrency, id, put, type FixtureModule, type VerifyReport } from './shared';
 import { EMERALD, KANSAS, OZ } from './base';
+import { NOTIFICATION_CUSTOMER } from './notification';
 
 export const L1A_ENTITLEMENT_REFERENCE = 'fixture:l1a';
 export const L1A_CAPACITY = 5;
@@ -20,8 +21,8 @@ export const DISPOSABLE_CLIENTS = [
   { slug: 'disposable-cancel', name: 'Disposable Cancel Co' },
 ].map(client => ({ ...client, clientId: id(`client/oz/${client.slug}`) }));
 
-/** Tenants a fixture run may leave as `co_managed`: none. Provisioning creates them live. */
-export async function strayCoManagedTenants(db: Knex, createdByRun: readonly string[] = []): Promise<string[]> {
+/** Tenants owned by fixture layers are not stray provisioning artifacts. */
+export async function strayCoManagedTenants(db: Knex, createdByRun: readonly string[] = [NOTIFICATION_CUSTOMER]): Promise<string[]> {
   const rows = await db('tenants').where({ product_code: 'co_managed' }).select('tenant');
   return rows.map((row: { tenant: string }) => row.tenant).filter(tenant => !createdByRun.includes(tenant));
 }

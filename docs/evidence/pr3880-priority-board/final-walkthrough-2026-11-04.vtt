@@ -1,0 +1,21 @@
+WEBVTT
+
+1
+00:01:09.602 --> 00:02:13.311
+Current ticket priority options follow the board
+
+2
+00:02:13.311 --> 00:03:19.546
+Client board override refuses inherited ITIL priority
+
+3
+00:03:19.546 --> 00:03:34.336
+Real maintenance event: created and failed client outcomes
+
+4
+00:03:34.336 --> 00:05:38.567
+Definition mismatch fails; client priority repair creates a ticket
+
+5
+00:05:38.567 --> 00:05:51.586
+Moving a ticket to a custom board clears the ITIL priority

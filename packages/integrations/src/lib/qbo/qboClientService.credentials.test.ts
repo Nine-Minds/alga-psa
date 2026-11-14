@@ -21,6 +21,10 @@ vi.mock('@alga-psa/core/secrets', () => ({
 // The token-refresh path persists credentials via upsertStoredQboCredentials,
 // which retires any stale terminal provider-disconnect record before the write.
 // Stub the DB so that no-op retirement lookup never reaches a real database.
+// The same stub serves the tenant_settings read behind the per-tenant Intuit
+// environment setting.
+const tenantSettingsRow = vi.hoisted(() => ({ current: null as null | { settings: any } }));
+
 vi.mock('@alga-psa/db', () => ({
   // Minimal transactional knex: the credential upsert holds its disconnect
   // serialization lock (a raw advisory-lock statement) inside a transaction.
@@ -37,12 +41,16 @@ vi.mock('@alga-psa/db', () => ({
     tenant: 'tenant-unit-test-1',
   }),
   tenantDb: () => ({
-    table: () => ({
-      where: () => ({
-        first: async () => undefined,
+    table: (name: string) => {
+      const builder: any = {
+        select: () => builder,
+        forUpdate: () => builder,
+        where: () => builder,
+        first: async () => (name === 'tenant_settings' ? tenantSettingsRow.current : undefined),
         delete: async () => {},
-      }),
-    }),
+      };
+      return builder;
+    },
   }),
 }));
 
@@ -64,6 +72,8 @@ import axios from 'axios';
 import {
   resolveQboOAuthCredentials,
   getQboEnvironment,
+  getExplicitTenantQboEnvironment,
+  resolveTenantQboEnvironment,
   getDefaultQboRealmId,
   QboClientService,
   getQboRedirectUri,
@@ -102,6 +112,7 @@ describe('resolveQboOAuthCredentials', () => {
   beforeEach(() => {
     tenantSecrets.clear();
     appSecrets.clear();
+    tenantSettingsRow.current = null;
     vi.clearAllMocks();
   });
 
@@ -152,6 +163,36 @@ describe('resolveQboOAuthCredentials', () => {
     expect(err).toBeDefined();
     expect(err.code).toBe('QBO_CONFIG_MISSING');
   });
+
+  it('tenant chose sandbox but only app keys exist → QBO_CONFIG_MISSING naming the Development keys', async () => {
+    tenantSettingsRow.current = { settings: { qbo: { environment: 'sandbox' } } };
+    setAppSecret('qbo_client_id', 'app-cid');
+    setAppSecret('qbo_client_secret', 'app-csec');
+
+    const err = await resolveQboOAuthCredentials(TENANT_ID).catch((e) => e);
+    expect(err.code).toBe('QBO_CONFIG_MISSING');
+    expect(err.message).toMatch(/Development keys/);
+  });
+
+  it('tenant chose sandbox with its own keys → source "tenant"', async () => {
+    tenantSettingsRow.current = { settings: { qbo: { environment: 'sandbox' } } };
+    setTenantSecret('qbo_client_id', 'tenant-cid');
+    setTenantSecret('qbo_client_secret', 'tenant-csec');
+
+    await expect(resolveQboOAuthCredentials(TENANT_ID)).resolves.toMatchObject({ source: 'tenant' });
+  });
+
+  it('deployment-wide sandbox (no tenant setting) still uses the app fallback', async () => {
+    vi.stubEnv('QBO_ENVIRONMENT', 'sandbox');
+    setAppSecret('qbo_client_id', 'app-cid');
+    setAppSecret('qbo_client_secret', 'app-csec');
+
+    try {
+      await expect(resolveQboOAuthCredentials(TENANT_ID)).resolves.toMatchObject({ source: 'app' });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,6 +235,44 @@ describe('getQboEnvironment', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+describe('resolveTenantQboEnvironment', () => {
+  beforeEach(() => {
+    tenantSettingsRow.current = null;
+    vi.stubEnv('QBO_ENVIRONMENT', 'production');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    tenantSettingsRow.current = null;
+  });
+
+  it('no tenant setting → the deployment-wide value', async () => {
+    await expect(getExplicitTenantQboEnvironment(TENANT_ID)).resolves.toBeNull();
+    await expect(resolveTenantQboEnvironment(TENANT_ID)).resolves.toBe('production');
+  });
+
+  it('tenant setting wins over the deployment-wide value', async () => {
+    tenantSettingsRow.current = { settings: { qbo: { environment: 'sandbox' } } };
+    await expect(getExplicitTenantQboEnvironment(TENANT_ID)).resolves.toBe('sandbox');
+    await expect(resolveTenantQboEnvironment(TENANT_ID)).resolves.toBe('sandbox');
+  });
+
+  it('ignores an unrecognized stored value and falls back', async () => {
+    tenantSettingsRow.current = { settings: { qbo: { environment: 'staging' } } };
+    await expect(getExplicitTenantQboEnvironment(TENANT_ID)).resolves.toBeNull();
+    await expect(resolveTenantQboEnvironment(TENANT_ID)).resolves.toBe('production');
+  });
+
+  it('leaves sibling settings keys alone when reading', async () => {
+    tenantSettingsRow.current = {
+      settings: { qboAutomatedSalesTax: { realms: ['realm-1'] } }
+    };
+    await expect(resolveTenantQboEnvironment(TENANT_ID)).resolves.toBe('production');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 describe('getDefaultQboRealmId', () => {
   beforeEach(() => {
     tenantSecrets.clear();
@@ -230,6 +309,7 @@ describe('QboClientService.create', () => {
   beforeEach(() => {
     tenantSecrets.clear();
     appSecrets.clear();
+    tenantSettingsRow.current = null;
     vi.clearAllMocks();
     delete process.env.QBO_ENVIRONMENT;
   });
@@ -296,6 +376,7 @@ describe('QboClientService token refresh uses resolved tenant credentials', () =
   beforeEach(() => {
     tenantSecrets.clear();
     appSecrets.clear();
+    tenantSettingsRow.current = null;
     vi.clearAllMocks();
     delete process.env.QBO_ENVIRONMENT;
   });

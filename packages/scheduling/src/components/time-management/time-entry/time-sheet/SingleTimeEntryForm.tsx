@@ -24,6 +24,7 @@ interface SingleTimeEntryFormProps {
   date?: Date;
   workTimeZone?: string;
   isNewEntry?: boolean;
+  serviceOptional?: boolean;
 }
 
 const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
@@ -43,7 +44,8 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
   periodCatalog,
   date,
   workTimeZone,
-  isNewEntry = false
+  isNewEntry = false,
+  serviceOptional = false
 }: SingleTimeEntryFormProps) {
   return (
     <div className="space-y-4">
@@ -66,6 +68,7 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
         date={date}
         workTimeZone={workTimeZone}
         isNewEntry={isNewEntry}
+        serviceOptional={serviceOptional}
       />
     </div>
   );

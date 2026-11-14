@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,7 +20,6 @@ import {
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let ContractLineService: typeof import('../../lib/api/services/ContractLineService').ContractLineService;
 let schemas: typeof import('../../lib/api/schemas/contractLineSchemas');
@@ -145,7 +145,6 @@ describe('contract line API: per-seat recurring services', () => {
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
     apiContext = { tenant: tenantId, userId: uuidv4() };
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ ContractLineService } = await import('../../lib/api/services/ContractLineService'));
     schemas = await import('../../lib/api/schemas/contractLineSchemas');
@@ -193,7 +192,7 @@ describe('contract line API: per-seat recurring services', () => {
     expect(locationConfig.config_rate).toBeNull();
 
     await syncLine(lineId);
-    const january = invoiceOf(await generateInvoice(januaryCycle));
+    const january = invoiceOf(await generateInvoiceForCycle(januaryCycle));
     expect(Number(january.subtotal)).toBe(390000);
 
     // Quantity update after January was billed: 20 -> 23 from the next unbilled boundary.
@@ -203,7 +202,7 @@ describe('contract line API: per-seat recurring services', () => {
     expect(Number(untouched.subtotal)).toBe(390000);
     expect(Number((await fixedConfigFor(lineId, user.serviceId)).quantity)).toBe(20);
 
-    const february = invoiceOf(await generateInvoice(februaryCycle));
+    const february = invoiceOf(await generateInvoiceForCycle(februaryCycle));
     expect(Number(february.subtotal)).toBe(420000);
 
     // A unit-rate change (type_config.base_rate) is also boundary-only: no more

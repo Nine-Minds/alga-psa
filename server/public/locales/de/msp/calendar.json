@@ -243,6 +243,23 @@
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"
+        },
+        "setup": {
+          "title": "Vor dem Verbinden",
+          "intro": "Fügen Sie in Ihrer Microsoft-Entra-App-Registrierung diesen Umleitungs-URI hinzu und erteilen Sie diese delegierten Berechtigungen.",
+          "redirectUri": "Umleitungs-URI",
+          "copy": "Kopieren",
+          "copied": "Kopiert",
+          "copyFailed": "Kopieren nicht möglich",
+          "unavailable": "Nicht verfügbar",
+          "permissions": "Delegierte Berechtigungen (Microsoft Graph)",
+          "tenancy": "Die App kann einen oder mehrere Mandanten unterstützen. Die Anmeldung folgt der Verzeichnis-ID (Mandanten-ID) des Microsoft-Profils, das an den Kalender gebunden ist.",
+          "openProviders": "Microsoft-Anbietereinstellungen öffnen"
+        },
+        "adminConsentPending": {
+          "title": "Die Genehmigung durch einen Administrator steht noch aus.",
+          "body": "Ein Microsoft-365-Administrator muss die an den Kalender gebundene App-Registrierung noch genehmigen. Bitten Sie ihn, die unten aufgeführten Berechtigungen per Administratoreinwilligung zu erteilen, und kehren Sie dann hierher zurück, um Outlook Calendar zu verbinden.",
+          "openSettings": "Microsoft-Anbietereinstellungen öffnen"
         }
       }
     }

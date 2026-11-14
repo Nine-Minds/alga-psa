@@ -6,7 +6,8 @@ import { authorizeTicketRecordAccess } from "@alga-psa/tickets/lib/ticketRecordA
 import {
   addExternalLink, getTicketExternalLinks, removeExternalLink, updateExternalLink,
 } from "@alga-psa/tickets/actions/externalLinks/externalLinkActions";
-import { openWarrantyClaim } from "@alga-psa/inventory/actions/rmaWarrantyActions";
+import { openWarrantyClaimFlow } from "@alga-psa/inventory/lib/rma/openWarrantyClaimRunner";
+import { openWarrantyClaimForTicketSchema } from "@alga-psa/inventory/lib/rma/warrantySchemas";
 import { getRmaCase } from "@alga-psa/inventory/actions/rmaActions";
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from "@alga-psa/ui/lib/errorHandling";
 import {
@@ -23,19 +24,19 @@ import {
  */
 type RmaTicketError = ActionMessageError | ActionPermissionError;
 
-/** Open a claim from a ticket. `ticket:read` plus the ticket record check, then the normal warranty permissions. */
+/**
+ * Open a claim from a ticket. `ticket:read` plus the ticket record check, then the normal warranty permissions.
+ * The inventory core runs the check inside the claim's transaction, on the ticket it finally resolves (this one, or
+ * the open custody episode's if there is one), and a denied ticket reads exactly like a missing one.
+ */
 export const openWarrantyClaimFromTicket = withAuth(
   async (user, { tenant }, input: { ticket_id: string } & Record<string, unknown>): Promise<IRmaCase | RmaTicketError> => {
     if (!(await hasPermission(user, "ticket", "read"))) {
       return permissionError("Permission denied: Cannot read tickets") as ActionPermissionError;
     }
-    const { knex } = await createTenantKnex();
-    try {
-      await authorizeTicketRecordAccess({ trx: knex, tenant, user, ticketId: input.ticket_id, action: "read" });
-    } catch {
-      return actionError("Ticket not found.", "features/inventory:errors.rma.ticketNotFound");
-    }
-    return openWarrantyClaim(input) as Promise<IRmaCase | RmaTicketError>;
+    return openWarrantyClaimFlow(user as any, tenant, input, openWarrantyClaimForTicketSchema, async (trx, ticketId, action) => {
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action });
+    }) as Promise<IRmaCase | RmaTicketError>;
   },
 );
 

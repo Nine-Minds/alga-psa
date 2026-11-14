@@ -107,6 +107,7 @@ import { useHuduClientTab } from './useHuduClientTab';
 import { useCredentialsVaultTab } from './useCredentialsVaultTab';
 import { ClientCredentialsTab } from './ClientCredentialsTab';
 import { useClientEquipmentTab } from './useClientEquipmentTab';
+import { useClientAuditsTab } from './useClientAuditsTab';
 import { ClientEquipmentTab } from './ClientEquipmentTab';
 
 const EMPTY_CONTACTS: IContact[] = [];
@@ -206,7 +207,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, getClientSoftwareSummary, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails, renderClientCoManagedIntegration } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientAudits, hasClientAuditsAccess, getClientSoftwareSummary, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails, renderClientCoManagedIntegration } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   // `client` is a prop and does not advance after this component saves. Keep
@@ -289,6 +290,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const credentialsVaultTab = useCredentialsVaultTab();
   // F023: shown only when the current user has inventory:read.
   const clientEquipmentTab = useClientEquipmentTab();
+  // Site audits: shown only when the current user has asset:read.
+  const clientAuditsTab = useClientAuditsTab(hasClientAuditsAccess);
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -1450,6 +1453,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         />
       ),
     }] : []),
+    // Site audits focus view: audits are client-keyed, so the client's own runs
+    // belong here. PSA-only, injected by the composition layer (the list lives
+    // in the assets package), and gated on a real asset:read probe.
+    ...((shouldRenderPsaOnlyClientSurfaces && renderClientAudits && clientAuditsTab.visible) ? [{
+      id: 'audits',
+      label: t('clientDetails.audits', { defaultValue: 'Audits' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {renderClientAudits({ clientId: client.client_id })}
+        </div>
+      ),
+    }] : []),
     // F022/F023: inventory Equipment tab — PSA-only, and only when inventory:read.
     ...((shouldRenderPsaOnlyClientSurfaces && clientEquipmentTab.visible) ? [{
       id: 'equipment',
@@ -1779,7 +1794,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     interactions,
     huduClientTab.visible,
     credentialsVaultTab.visible,
-    clientEquipmentTab.visible
+    clientEquipmentTab.visible,
+    renderClientAudits,
+    clientAuditsTab.visible
   ]);
 
   const tabContent = useMemo(() => {

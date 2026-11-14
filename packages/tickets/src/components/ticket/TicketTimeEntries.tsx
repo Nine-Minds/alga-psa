@@ -9,6 +9,7 @@ import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { formatMinutesAsHoursAndMinutes, getUserTimeZone, workedMinutes } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
+import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import { useTicketDataSource } from './TicketDataSourceContext';
 import type {
   TicketTimeEntriesSummary,
@@ -361,6 +362,12 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
           {showUserName
             ? entry.user_name || t('timeEntries.unknownUser', 'Unknown user')
             : startLabel}
+          {entry.via_principal_name && (
+            <>
+              {' '}
+              <ViaPrincipalLabel principalName={entry.via_principal_name} />
+            </>
+          )}
         </span>
         <div className="flex items-center gap-2">
           {canEdit && (

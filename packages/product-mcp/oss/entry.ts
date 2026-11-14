@@ -20,6 +20,11 @@ export async function resolvePublicBaseUrl(req: NextRequest): Promise<string> {
   return base.replace(/\/$/, '');
 }
 
+// Mirrors @ee/lib/mcp/oauth/tokens. Unreachable in CE (routes gate first).
+export function mcpResource(base: string): string {
+  return `${base.replace(/\/$/, '')}/api/mcp`;
+}
+
 // Mirrors @ee/lib/mcp/adminAuth's McpAdminContext so the route shells type-check
 // identically against either edition's seam entry.
 export interface McpAdminContext {
@@ -46,6 +51,11 @@ export async function deleteAgent(_tenant?: string, _agentId?: string): Promise<
 export async function addTrustedIdp(_input: unknown): Promise<never> {
   throw new Error('MCP is an Enterprise feature.');
 }
+export function isUsableAudience(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+export const MISSING_AUDIENCE_MESSAGE =
+  'An audience is required: the `aud` your IdP issues for this MCP resource.';
 export async function listTrustedIdps(_tenant: string): Promise<unknown[]> {
   return [];
 }

@@ -28,3 +28,4 @@ export * from './co-managed-provisioning-workflow.js';
 export * from './trial-payment-reminder-workflow.js';
 export * from './threecx-call-control-workflow.js';
 export * from './appliance-console/index.js';
+export * from './co-managed-upgrade-workflow.js';

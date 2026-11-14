@@ -4,10 +4,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import type { ColumnDefinition, TicketTemplateListItem } from '@alga-psa/types';
+import type { ColumnDefinition, IClient, TicketTemplateListItem } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import {
@@ -25,12 +26,13 @@ import {
   listTicketTemplates,
   setTicketTemplateActive,
 } from '../../actions/ticketTemplateActions';
+import { getAllClients } from '../../actions/clientLookupActions';
 import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import { recurringErrorMessage, unwrapRecurring } from '../recurring/recurringUi';
 import { useTicketTemplatePermissions } from './useTicketTemplatePermissions';
 
 /** Column widths of the loading skeleton, shaped like the table it stands in for. */
-const SKELETON_CELLS = ['w-40', 'w-48', 'w-24', 'w-20', 'w-16'];
+const SKELETON_CELLS = ['w-40', 'w-48', 'w-32', 'w-24', 'w-20', 'w-16'];
 
 /** The ticket templates list: name, board, checklist size, active state and the row actions. */
 export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode?: boolean } = {}) {
@@ -41,6 +43,11 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
   const [canCreateTicket, setCanCreateTicket] = useState(false);
   const [items, setItems] = useState<TicketTemplateListItem[]>([]);
   const [includeInactive, setIncludeInactive] = useState(false);
+  // The filter means "usable by this client": its own templates plus the tenant-wide ones.
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TicketTemplateListItem | null>(null);
@@ -49,7 +56,7 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
     setLoading(true);
     setError(null);
     try {
-      setItems(unwrapRecurring(await listTicketTemplates({ includeInactive })));
+      setItems(unwrapRecurring(await listTicketTemplates({ includeInactive, clientId: clientFilter })));
     } catch (loadError) {
       // Includes the permission message: a user without `ticket_template:read` sees it instead of a table.
       setItems([]);
@@ -57,9 +64,17 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
     } finally {
       setLoading(false);
     }
-  }, [includeInactive]);
+  }, [includeInactive, clientFilter]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAllClients(true)
+      .then((all) => { if (!cancelled) setClients(all); })
+      .catch(() => { if (!cancelled) setClients([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const openNew = useCallback(() => router.push('/msp/tickets/templates/new'), [router]);
 
@@ -93,6 +108,11 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
     const cols: ColumnDefinition<TicketTemplateListItem>[] = [
       { title: t('templates.list.columns.name', 'Name'), dataIndex: 'name' },
       { title: t('templates.list.columns.title', 'Ticket title'), dataIndex: 'title' },
+      {
+        title: t('templates.list.columns.client', 'Client'),
+        dataIndex: 'client_name',
+        render: (value: string | null) => value || t('templates.list.allClients', 'All clients'),
+      },
       {
         title: t('templates.list.columns.board', 'Board'),
         dataIndex: 'board_name',
@@ -211,6 +231,28 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{t('templates.list.title', 'Ticket templates')}</h1>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-64">
+              <ClientPicker
+                id="ticket-templates-client-filter"
+                clients={clients}
+                selectedClientId={clientFilter}
+                onSelect={setClientFilter}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+                placeholder={t('templates.list.clientFilter', 'All clients')}
+              />
+            </div>
+            {/* The picker has no empty entry, so clearing the filter needs its own control. */}
+            {clientFilter && (
+              <Button id="ticket-templates-client-filter-clear" type="button" variant="outline" size="sm"
+                onClick={() => setClientFilter(null)}>
+                {t('templates.list.allClients', 'All clients')}
+              </Button>
+            )}
+          </div>
           <SwitchWithLabel
             id="ticket-templates-show-inactive"
             label={t('templates.list.showInactive', 'Show inactive')}

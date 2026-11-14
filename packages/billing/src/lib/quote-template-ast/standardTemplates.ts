@@ -13,9 +13,9 @@ type QuoteColumnShape = {
   lines?: unknown[];
 };
 
-const QUOTE_ITEM_NAME_LINE = {
-  id: 'item-name',
-  value: { type: 'path', path: 'service_name' },
+const QUOTE_ITEM_DESCRIPTION_LINE = {
+  id: 'item-description',
+  value: { type: 'path', path: 'description' },
   style: { inline: { fontWeight: 600, lineHeight: 1.3 } },
 };
 
@@ -39,21 +39,24 @@ const QUOTE_OPTIONAL_MARKER_LINE = {
 };
 
 /**
- * Standard quote line tables show the item name above the catalog description
- * in one cell. The legacy single `value` (the editable line `description`)
- * stays as the cell fallback so custom, discount, and pre-snapshot rows keep
- * rendering their line text instead of showing an empty cell. Layouts bind
- * `description`, `service_name`, or `catalog_description` independently.
+ * Standard quote line tables show the editable line `description` above the
+ * catalog description in one cell. Binding the first line to `service_name`
+ * (ticket alga-2026-0002902) hid every per-item edit, because the flat `value`
+ * only renders when no line resolves. Unedited catalog rows read the same as
+ * before: `QuoteItem.create` defaults `description` to the service name. The
+ * renderer drops a line repeating text already shown in the cell, so
+ * `catalog_description` appears only when it differs. The legacy single `value`
+ * stays as the cell fallback for pre-snapshot rows.
  */
 const withItemDescriptionLines = <T extends QuoteColumnShape>(column: T): T =>
   column.id === 'description' && column.value.type === 'path' && column.value.path === 'description'
-    ? { ...column, lines: [QUOTE_ITEM_NAME_LINE, QUOTE_CATALOG_DESCRIPTION_LINE] }
+    ? { ...column, lines: [QUOTE_ITEM_DESCRIPTION_LINE, QUOTE_CATALOG_DESCRIPTION_LINE] }
     : column;
 
 /** Description lines plus the optional-row marker (base bands of the grouped layout). */
 const withItemDescriptionAndOptionalLines = <T extends QuoteColumnShape>(column: T): T =>
   column.id === 'description' && column.value.type === 'path' && column.value.path === 'description'
-    ? { ...column, lines: [QUOTE_ITEM_NAME_LINE, QUOTE_CATALOG_DESCRIPTION_LINE, QUOTE_OPTIONAL_MARKER_LINE] }
+    ? { ...column, lines: [QUOTE_ITEM_DESCRIPTION_LINE, QUOTE_CATALOG_DESCRIPTION_LINE, QUOTE_OPTIONAL_MARKER_LINE] }
     : column;
 
 /**

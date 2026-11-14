@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildContactAvatarUri,
+  contactPrimaryLocationLabel,
   createContact,
   formatContactTypeLabel,
   getContact,
@@ -135,6 +136,44 @@ describe("getContactReachLine", () => {
   });
 });
 
+// T084: the one-line label the list row and the picker row both render.
+describe("contactPrimaryLocationLabel", () => {
+  const contact = (overrides: Partial<ContactListItem>): ContactListItem => ({
+    contact_name_id: "contact-1",
+    full_name: "Jane Doe",
+    ...overrides,
+  });
+  const link = (id: string, name: string, isPrimary = false) => ({
+    location_id: id, location_name: name, is_primary: isPrimary, is_active: true,
+  });
+
+  it("names the primary location and counts the rest", () => {
+    expect(contactPrimaryLocationLabel(
+      contact({ locations: [link("w", "Warehouse", true), link("h", "Head office")] }),
+      "Remote",
+    )).toBe("Warehouse +1");
+  });
+
+  it("treats a lone unflagged link as the primary", () => {
+    expect(contactPrimaryLocationLabel(contact({ locations: [link("w", "Warehouse")] }), "Remote"))
+      .toBe("Warehouse");
+  });
+
+  it("uses the caller's remote label only when there is no link", () => {
+    expect(contactPrimaryLocationLabel(contact({ work_arrangement: "remote" }), "Op afstand"))
+      .toBe("Op afstand");
+    expect(contactPrimaryLocationLabel(
+      contact({ work_arrangement: "remote", locations: [link("w", "Warehouse", true)] }),
+      "Op afstand",
+    )).toBe("Warehouse");
+  });
+
+  it("is nothing for an unlinked contact who is not remote — never the client default", () => {
+    expect(contactPrimaryLocationLabel(contact({ locations: [] }), "Remote")).toBeNull();
+    expect(contactPrimaryLocationLabel(contact({ work_arrangement: "hybrid" }), "Remote")).toBeNull();
+  });
+});
+
 describe("buildContactAvatarUri", () => {
   it("prefixes relative paths with the base url", () => {
     expect(buildContactAvatarUri("https://host.example", "/api/avatar/1")).toBe(
@@ -176,6 +215,40 @@ describe("contact writes", () => {
       path: "/api/v1/contacts",
       headers: { "x-api-key": "api-key-1" },
       body: expect.objectContaining({ full_name: "Jane Doe", client_id: "client-1" }),
+    }));
+  });
+
+  it("sends the work arrangement and the links when they are given", async () => {
+    const client = mockClient({ ok: true, data: { data: { contact_name_id: "contact-1" } } });
+
+    await createContact(client, {
+      apiKey: "api-key-1",
+      data: {
+        full_name: "Jane Doe",
+        email: "jane@acme.test",
+        client_id: "client-1",
+        phone_numbers: [],
+        work_arrangement: "hybrid",
+        locations: [{ location_id: "loc-1", is_primary: true }],
+      },
+    });
+
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      body: expect.objectContaining({
+        work_arrangement: "hybrid",
+        locations: [{ location_id: "loc-1", is_primary: true }],
+      }),
+    }));
+  });
+
+  it("puts an empty set to remove every link", async () => {
+    const client = mockClient({ ok: true, data: { data: { contact_name_id: "contact-1" } } });
+
+    await updateContact(client, { apiKey: "api-key-1", contactId: "contact-1", data: { locations: [] } });
+
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      method: "PUT",
+      body: { locations: [] },
     }));
   });
 

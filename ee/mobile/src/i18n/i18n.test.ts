@@ -32,6 +32,21 @@ describe("i18n", () => {
     expect(t("auth:signIn.cta")).toBe("Sign in");
   });
 
+  it("T102 registers the mobile 2.0 namespaces with their screen strings", () => {
+    // Every namespace this release added must be bundled, not just present on
+    // disk: a missing register makes t() echo the key at runtime.
+    expect(t("projects:title")).toBe("Projects");
+    expect(t("projects:detail.noPhases")).toBe("No phases yet. Add phases on the web.");
+    expect(t("projects:task.create.title")).toBe("New task");
+    expect(t("home:title")).toBe("Home");
+    expect(t("home:quickActions.newTicket")).toBe("New ticket");
+    expect(t("search:title")).toBe("Search");
+    expect(t("search:groups.project_task")).toBe("Project tasks");
+    expect(t("assets:list.title")).toBe("Assets");
+    expect(t("assets:audit.segments.remaining")).toBe("Remaining");
+    expect(t("assets:audit.lastAudited")).toBe("Last audited");
+  });
+
   it("resolves settings namespace", () => {
     expect(t("settings:title")).toBe("Settings");
   });

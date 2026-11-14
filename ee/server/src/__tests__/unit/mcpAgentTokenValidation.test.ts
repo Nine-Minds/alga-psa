@@ -1,7 +1,10 @@
-import http from 'node:http';
-import type { AddressInfo } from 'node:net';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+
+const network = vi.hoisted(() => ({ jwksJson: '{"keys":[]}' }));
+vi.mock('@ee/lib/mcp/idpNetwork', () => ({
+  fetchIdpDocument: vi.fn(async () => new Response(network.jwksJson, { headers: { 'content-type': 'application/json' } })),
+}));
 
 /**
  * MCP agent-token validation round-trip (easy-path F012, Tier 2 built-ins).
@@ -24,6 +27,7 @@ vi.mock('@ee/lib/mcp/idpBuiltins', () => ({
 }));
 
 import { authenticateAgentToken } from '@ee/lib/mcp/idpToken';
+import { fetchIdpDocument } from '@ee/lib/mcp/idpNetwork';
 import { findTrustedIdpsByIssuer, resolveAgentByIdp } from '@ee/lib/mcp/agents';
 import { getBuiltinIdpForIssuer } from '@ee/lib/mcp/idpBuiltins';
 
@@ -33,8 +37,8 @@ const mBuiltin = vi.mocked(getBuiltinIdpForIssuer);
 
 const ISSUER = 'https://idp.example.test/tenant-1';
 let privateKey: CryptoKey;
-let server: http.Server;
 let jwksUri: string;
+let baseJwksJson: string;
 
 beforeAll(async () => {
   const kp = await generateKeyPair('RS256');
@@ -44,22 +48,17 @@ beforeAll(async () => {
   jwk.alg = 'RS256';
   jwk.use = 'sig';
 
-  server = http.createServer((_req, res) => {
-    res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ keys: [jwk] }));
-  });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  jwksUri = `http://127.0.0.1:${(server.address() as AddressInfo).port}/jwks`;
-});
-
-afterAll(() => {
-  server.close();
+  baseJwksJson = JSON.stringify({ keys: [jwk] });
+  network.jwksJson = baseJwksJson;
+  jwksUri = 'https://idp.example.test/tenant/jwks';
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
   mBuiltin.mockResolvedValue(null);
   mFindIdps.mockResolvedValue([]);
+  network.jwksJson = baseJwksJson;
+  jwksUri = `https://idp.example.test/tenant/${crypto.randomUUID()}/jwks`;
 });
 
 async function sign(opts: {
@@ -67,15 +66,17 @@ async function sign(opts: {
   aud?: string;
   iss?: string;
   extra?: Record<string, unknown>;
+  key?: CryptoKey;
+  kid?: string;
 }): Promise<string> {
   let jwt = new SignJWT({ ...(opts.extra ?? {}) })
-    .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
+    .setProtectedHeader({ alg: 'RS256', kid: opts.kid ?? 'test-key' })
     .setIssuer(opts.iss ?? ISSUER)
     .setIssuedAt()
     .setExpirationTime('5m');
   if (opts.sub) jwt = jwt.setSubject(opts.sub);
   if (opts.aud) jwt = jwt.setAudience(opts.aud);
-  return jwt.sign(privateKey);
+  return jwt.sign(opts.key ?? privateKey);
 }
 
 function row(over: Record<string, unknown> = {}) {
@@ -103,14 +104,33 @@ function agent(over: Record<string, unknown> = {}) {
 
 describe('authenticateAgentToken — registered IdP row', () => {
   it('validates a real token and resolves the bound agent', async () => {
+    vi.useFakeTimers();
     mFindIdps.mockResolvedValue([row()] as never);
     mResolveAgent.mockResolvedValue(agent());
     const token = await sign({ sub: 'agent-subject-1', aud: 'mcp-resource' });
 
-    const res = await authenticateAgentToken(token);
-    expect(res.ok).toBe(true);
-    expect(mResolveAgent).toHaveBeenCalledWith(ISSUER, 'agent-subject-1');
-    if (res.ok) expect(res.ctx.resolved.backingUserId).toBe('user-1');
+    try {
+      const res = await authenticateAgentToken(token);
+      expect(res.ok).toBe(true);
+      expect(fetchIdpDocument).toHaveBeenCalledWith(jwksUri);
+      expect(mResolveAgent).toHaveBeenCalledWith(ISSUER, 'agent-subject-1');
+      if (res.ok) expect(res.ctx.resolved.backingUserId).toBe('user-1');
+
+      // After JOSE's cooldown, an unknown kid triggers a remote JWKS refresh.
+      // The refresh uses the same secure custom fetch hook as the initial fetch.
+      await vi.advanceTimersByTimeAsync(31_000);
+      const rotated = await generateKeyPair('RS256');
+      const rotatedJwk = await exportJWK(rotated.publicKey);
+      Object.assign(rotatedJwk, { kid: 'rotated-key', alg: 'RS256', use: 'sig' });
+      network.jwksJson = JSON.stringify({ keys: [rotatedJwk] });
+      const refreshed = await authenticateAgentToken(await sign({
+        sub: 'agent-subject-1', aud: 'mcp-resource', kid: 'rotated-key', key: rotated.privateKey,
+      }));
+      expect(refreshed.ok).toBe(true);
+      expect(fetchIdpDocument).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('rejects a token whose audience does not match the row (403)', async () => {
@@ -177,6 +197,51 @@ describe('authenticateAgentToken — hosted built-in (Tier 2)', () => {
       expect(res.status).toBe(401);
       expect(res.error).toMatch(/untrusted token issuer/i);
     }
+  });
+});
+
+describe('authenticateAgentToken — fails closed without an audience', () => {
+  for (const [label, audience] of [['null', null], ['blank', ''], ['whitespace', '   ']] as const) {
+    it(`rejects a registered row with ${label} audience even for a validly signed token with an unrelated aud (403)`, async () => {
+      mFindIdps.mockResolvedValue([row({ audience })] as never);
+      mResolveAgent.mockResolvedValue(agent());
+      const token = await sign({ sub: 'agent-subject-1', aud: 'some-other-app' });
+
+      const res = await authenticateAgentToken(token);
+      expect(res.ok).toBe(false);
+      if (res.ok === false) {
+        expect(res.status).toBe(403);
+        expect(res.error).toMatch(/audience/i);
+      }
+      expect(mResolveAgent).not.toHaveBeenCalled();
+    });
+  }
+
+  it('control: audience X accepts aud X and rejects aud Y', async () => {
+    mFindIdps.mockResolvedValue([row({ audience: 'X' })] as never);
+    mResolveAgent.mockResolvedValue(agent());
+    const ok = await authenticateAgentToken(await sign({ sub: 's', aud: 'X' }));
+    expect(ok.ok).toBe(true);
+    const bad = await authenticateAgentToken(await sign({ sub: 's', aud: 'Y' }));
+    expect(bad.ok).toBe(false);
+    if (bad.ok === false) expect(bad.status).toBe(403);
+  });
+
+  it('skips a built-in candidate with a null audience', async () => {
+    mFindIdps.mockResolvedValue([]);
+    mBuiltin.mockResolvedValue({ jwksUri, audience: null, subjectClaim: 'sub' });
+    mResolveAgent.mockResolvedValue(agent());
+    const res = await authenticateAgentToken(await sign({ sub: 's', aud: 'whatever' }));
+    expect(res.ok).toBe(false);
+    if (res.ok === false) expect(res.status).toBe(403);
+    expect(mResolveAgent).not.toHaveBeenCalled();
+  });
+
+  it('still authenticates via a usable candidate when another has no audience', async () => {
+    mFindIdps.mockResolvedValue([row({ audience: null }), row({ audience: 'X' })] as never);
+    mResolveAgent.mockResolvedValue(agent());
+    const res = await authenticateAgentToken(await sign({ sub: 's', aud: 'X' }));
+    expect(res.ok).toBe(true);
   });
 });
 

@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:03.500
+Open Settings and locate MCP agent management (approximate chapter boundary)
+
+2
+00:00:03.500 --> 00:00:06.000
+Open MCP server settings (approximate chapter boundary)
+
+3
+00:00:06.000 --> 00:00:10.000
+Verify archived agent absent and inactive agent visible after load (approximate chapter boundary)
+
+4
+00:00:10.000 --> 00:00:12.000
+Reload MCP settings before list assertions (approximate chapter boundary)
+
+5
+00:00:12.000 --> 00:00:18.857
+Check authorized audit endpoint for archived agent while absent from list (approximate chapter boundary)
+
+6
+00:00:18.857 --> 00:00:18.882
+Verify authorized audit history for archived agent
+
+7
+00:00:18.882 --> 00:00:25.834
+Create a fresh act-as time entry for QA UI editing
+
+8
+00:00:25.834 --> 00:00:42.319
+Open QA timesheet and locate the new act-as entry
+
+9
+00:00:42.319 --> 00:00:47.065
+Edit the delegated entry as QA in the timesheet UI
+
+10
+00:00:47.065 --> 00:00:48.562
+Save the UI edit and reopen the persisted entry

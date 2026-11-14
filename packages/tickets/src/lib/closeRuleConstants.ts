@@ -74,6 +74,34 @@ export const CLOSE_RULE_REQUIRED_FIELD_LABELS: Record<string, string> = {
   assigned_to: 'Assignee',
 };
 
+/** Unsaved required-field values from a batch edit, keyed as the ticket row is. */
+export type CloseRulePendingFields = Partial<Record<CloseRuleRequiredField, string | null>>;
+
+/**
+ * Narrows a pending batch of ticket edits to the required-field values the
+ * close gates read, so a save that sets the classification and the closing
+ * status together is checked against what it is about to write rather than
+ * against the stale row. Unknown keys are dropped; the write paths merge the
+ * same way and remain the authority.
+ */
+export function pickCloseRulePendingFields(
+  changes: Record<string, unknown> | null | undefined
+): CloseRulePendingFields {
+  const pending: CloseRulePendingFields = {};
+  if (!changes) return pending;
+  for (const field of CLOSE_RULE_REQUIRED_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(changes, field)) continue;
+    const value = changes[field];
+    if (typeof value === 'string') {
+      // 'unassigned' is the assignee select's empty sentinel.
+      pending[field] = value === '' || value === 'unassigned' ? null : value;
+    } else {
+      pending[field] = null;
+    }
+  }
+  return pending;
+}
+
 export interface EnforceTicketCloseRulesResult {
   overridden: boolean;
   bypassed: boolean;

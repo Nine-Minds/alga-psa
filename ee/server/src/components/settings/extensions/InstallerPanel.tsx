@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // EE server actions
-import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '../../../lib/actions/extBundleActions';
+import { extFinalizeUpload, extAbortUpload, extUploadProxy, extGetUploadLimit } from '../../../lib/actions/extBundleActions';
 import { installExtensionForCurrentTenantV2 } from '../../../lib/actions/extRegistryV2Actions';
 
 type UploadProxyResponse = {
@@ -36,6 +36,8 @@ type ApiError = {
   code?: string;
   details?: unknown;
 };
+
+const formatBundleBytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 
@@ -119,6 +121,18 @@ export default function InstallerPanel() {
     setNeedsManifest(false);
 
     try {
+      // 0) Refuse a bundle over the server's limit before sending it
+      const { maxBytes } = await extGetUploadLimit();
+      if (file.size > maxBytes) {
+        setError({
+          error: t('messages.bundleTooLarge', { size: formatBundleBytes(file.size), limit: formatBundleBytes(maxBytes) }),
+          code: 'UPLOAD_SIZE_LIMIT_EXCEEDED',
+          details: { size: file.size, maxBytes },
+        });
+        setInstalling(false);
+        return;
+      }
+
       // 1) Upload via server action proxy (FormData)
       const fd = new FormData();
       fd.set('file', file);

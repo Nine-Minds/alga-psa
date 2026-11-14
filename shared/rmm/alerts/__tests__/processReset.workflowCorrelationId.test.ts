@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NormalizedRmmAlertEvent } from '../contracts';
 
 /**
  * Regression: Level alert ids are base64 GIDs, not UUIDs. processReset used to
@@ -33,6 +34,7 @@ vi.mock('@alga-psa/db', () => ({
     table: (name: string) => {
       const qb: any = {
         where: () => qb,
+        forUpdate: () => qb,
         select: () => qb,
         whereIn: async () => [
           { status_id: OPEN_STATUS_ID, is_closed: false },
@@ -123,8 +125,10 @@ describe('processReset workflow correlation ids', () => {
         integrationId: 'int-1',
         provider: 'levelio',
         externalAlertId: LEVEL_GID,
+        severity: 'critical',
         occurredAt: '2026-10-16T00:00:00.000Z',
-      } as any
+        raw: {},
+      } satisfies NormalizedRmmAlertEvent
     );
     expect(result.outcome).toBe('resolved');
 

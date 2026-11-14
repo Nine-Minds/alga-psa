@@ -11,6 +11,7 @@ import InteractionModel from '../models/interactions';
 import type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
+import { isRecordCreateDeniedError } from '@alga-psa/authorization/recordCreateAuthorization';
 import {
   createInteractionScheduleEntry,
   createInteractionWithSideEffects,
@@ -19,6 +20,8 @@ import {
   resolveScheduleAssignees,
   syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
+import { getInteractionById as fetchInteractionById } from './queryActions';
+import { resolveInteractionReadScope } from '../lib/interactionAuthorizationSql';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { assertMspPermission, hasPermissionAsync } from '../lib/authHelpers';
@@ -57,6 +60,10 @@ const durationRejectionError = (reason: InteractionDurationRejectionReason): Act
   actionError(DURATION_REJECTION_MESSAGES[reason]);
 
 export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
+
+export async function getInteractionById(interactionId: string) {
+  return fetchInteractionById(interactionId);
+}
 
 function interactionActionErrorFrom(error: unknown): InteractionActionError | null {
   if (error instanceof Error) {
@@ -202,7 +209,7 @@ export const addInteraction = withAuth(async (
     return newInteraction;
   } catch (error) {
     if (isInteractionCommandError(error)) return actionError(error.message);
-    if (isInteractionForbidden(error)) return permissionError('Permission denied: Cannot create this interaction.');
+    if (isInteractionForbidden(error) || isRecordCreateDeniedError(error)) return permissionError('Permission denied: Cannot create this interaction.');
     console.error('Error adding interaction:', error)
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
@@ -242,7 +249,9 @@ export const getInteractionsForEntity = withAuth(async (
       if (admitted.handled) return admitted.interactions;
     }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getForEntity(entityId, entityType, tenant);
+      // The read scope is part of the native read: resolved in its transaction, never ahead of it.
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
+      return await InteractionModel.getForEntity(entityId, entityType, tenant, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -270,7 +279,8 @@ export const getRecentInteractions = withAuth(async (
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters }));
     if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getRecentInteractions(filters, tenant);
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
+      return await InteractionModel.getRecentInteractions(filters, tenant, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -292,7 +302,8 @@ export const getInteractionsPage = withAuth(async (
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true }));
     if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return InteractionModel.getInteractionsPage(filters, tenant, trx);
+      const readScope = await resolveInteractionReadScope(trx, tenant, user, 'i');
+      return InteractionModel.getInteractionsPage(filters, tenant, trx, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);

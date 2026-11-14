@@ -1,0 +1,25 @@
+{
+  "agents": [
+    {
+      "active": false,
+      "agent_id": "03889177-f70a-4050-ae02-b23ebdbb0a68",
+      "archived": false
+    },
+    {
+      "active": false,
+      "agent_id": "5823a340-1626-4519-97ed-1f43946eabff",
+      "archived": true
+    }
+  ],
+  "audit_rows": 2,
+  "time_entry": {
+    "notes": "Card C direct QA UI edit saved and reopened 2026-11-03",
+    "user_id": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+    "entry_id": "aaeec38b-8f21-4f2b-91b5-6984b48280ab",
+    "created_by": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+    "updated_by": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+    "time_sheet_id": "00b6fbb9-6e2d-4e01-8ed2-b4f277a1f880",
+    "created_via_principal_id": "4c725ada-2d39-4c46-b7b5-8ebad758b845",
+    "updated_via_principal_id": null
+  }
+}

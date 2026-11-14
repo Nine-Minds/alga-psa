@@ -155,7 +155,7 @@ function verifyLicenseUncached(token: string): LicenseVerifyResult {
     return { valid: false, reason: 'malformed' };
   }
   if (typeof payload.exp === 'number' && nowSeconds - CLOCK_SKEW_SECONDS >= payload.exp) {
-    return { valid: false, reason: 'expired' };
+    return { valid: false, reason: 'expired', expiredAt: payload.exp };
   }
 
   // Validate required claims.

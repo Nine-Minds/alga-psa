@@ -16,14 +16,14 @@
  * capability exists).
  */
 
-import { isFeatureFlagEnabled } from './features';
+import { evaluateFeatureFlag } from './features';
 import logger from './logger-universal';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type CapabilityKey = 'co-managed';
+export type CapabilityKey = 'co-managed' | 'co-managed-seat';
 export type CapabilityMode = 'admits' | 'serves';
 
 export type CapabilityReason =
@@ -213,7 +213,10 @@ function registry(): CapabilityRegistry {
   const host = globalThis as RegistryHost;
   if (!host[REGISTRY_KEY]) {
     const gates = new Map<CapabilityKey, CapabilityGateDefinition>();
+    // Two capabilities on one rollout flag: each has its own resolvers and its own
+    // FORCE_CAPABILITIES key, so either can be closed without moving the other.
     gates.set('co-managed', { capability: 'co-managed', featureFlag: 'release-v2-0-feature' });
+    gates.set('co-managed-seat', { capability: 'co-managed-seat', featureFlag: 'release-v2-0-feature' });
     host[REGISTRY_KEY] = { gates, cache: new Map() };
   }
   return host[REGISTRY_KEY]!;
@@ -398,7 +401,7 @@ export async function admits(capability: CapabilityKey, tenantId: string): Promi
   if (cached) return cached;
 
   const result = await computeAdmits(gate, tenantId);
-  writeCache(key, result);
+  if (result.reasons.admitted !== 'flag-unavailable') writeCache(key, result);
   return result;
 }
 
@@ -407,14 +410,18 @@ async function computeAdmits(gate: CapabilityGateDefinition, tenantId: string): 
   // No eligibility resolver: nobody can be admitted, so do not even ask PostHog.
   if (!gate.eligibility) return decision(capability, 'admits', null, false, 'resolver-unregistered');
 
-  let flagOn: boolean;
+  let flag: Awaited<ReturnType<typeof evaluateFeatureFlag>>;
   try {
-    flagOn = await isFeatureFlagEnabled(gate.featureFlag, { tenantId });
+    flag = await evaluateFeatureFlag(gate.featureFlag, { tenantId });
   } catch (error) {
     warnDowngrade(capability, tenantId, 'admits', 'featureFlag', error);
     return decision(capability, 'admits', null, false, 'flag-unavailable');
   }
-  if (!flagOn) return decision(capability, 'admits', null, false, 'flag-off');
+  if (flag.status === 'unavailable') {
+    warnDowngrade(capability, tenantId, 'admits', 'featureFlag', 'evaluation unavailable');
+    return decision(capability, 'admits', null, false, 'flag-unavailable');
+  }
+  if (!flag.enabled) return decision(capability, 'admits', null, false, 'flag-off');
 
   try {
     const eligible = await gate.eligibility({ tenantId });

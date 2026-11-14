@@ -157,8 +157,20 @@ podDisruptionBudget:
 
 podAnnotations: {}
 podLabels: {}
-podSecurityContext: {}
-securityContext: {}
+# The email-service image runs as uid 1000 (`node`).
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 nodeSelector: {}
 tolerations: []
 affinity: {}
@@ -166,6 +178,22 @@ affinity: {}
 extraEnv: []
 extraVolumes: []
 extraVolumeMounts: []
+
+# Local-provider file storage (STORAGE_LOCAL_BASE_PATH). email-service writes
+# inbound email attachments and the original .eml here when the local storage
+# provider is used. The pod runs as uid 1000, so the image's default path under
+# /app is not writable and an explicit writable volume is always mounted.
+# Default is a pod-local emptyDir: files written there are NOT visible to the
+# server and are lost on pod restart. For attachments to reach the server's
+# storage, set existingClaim to the claim the server mounts for local storage
+# (or use the S3 provider on both sides).
+filesStorage:
+  mountPath: /data/files
+  # Name of an existing PersistentVolumeClaim to mount instead of an emptyDir.
+  # The claim must be writable by uid 1000 (fsGroup is applied for most CSI
+  # volumes; hostPath-backed classes such as local-path ignore it, so the
+  # server's fix-permissions init container must have handed it to uid 1000).
+  existingClaim: ""
 
 # Shared tenant-secret store on the single-node appliance. When enabled, mounts
 # a hostPath into the pod and points the filesystem secret provider at it via
@@ -175,6 +203,20 @@ sharedTenantSecrets:
   enabled: false
   hostPath: /var/lib/alga-appliance/tenant-secrets
   mountPath: /shared-tenant-secrets
+
+# Optional root init container that hands the shared tenant-secret mount to the
+# application uid. hostPath volumes ignore fsGroup, so kubelet cannot do this
+# itself. Runs the `alga-runtime-permissions` script, which ships in the
+# alga-psa server image (not in this chart's image), so the server image is
+# required when enabled. Only acts when sharedTenantSecrets.enabled is true.
+fixPermissions:
+  enabled: false
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  uid: 1000
+  gid: 1000
 
 # Wait-for-bootstrap init container. When enabled, polls the server database
 # until the email_providers table exists so the service does not crashloop on

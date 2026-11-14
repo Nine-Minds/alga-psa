@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/clients/lib/interactionAuthorizationSql', () => ({ resolveInteractionReadScope: async () => ({ narrowed: false, apply: () => undefined, applyWith: () => undefined, subject: null }) }));
+
 const mocks = vi.hoisted(() => ({
   createInteractionWithSideEffects: vi.fn(),
   createInteractionScheduleEntry: vi.fn(),
@@ -28,7 +31,7 @@ vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
+vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 
 import { InteractionService } from '../../../lib/api/services/InteractionService';
 
@@ -79,7 +82,7 @@ describe('InteractionService', () => {
 
   it.each([undefined, [], ['user-1']])('books self without a schedule permission check (%j)', async (ids) => {
     const publish = vi.fn();
-    mocks.createInteractionScheduleEntry.mockResolvedValue({ publishScheduleEntryCreated: publish });
+    mocks.createInteractionScheduleEntry.mockResolvedValue({ entry: { entry_id: 'entry-1' }, publishScheduleEntryCreated: publish });
     await new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ids }, context);
     expect(mocks.hasPermission).not.toHaveBeenCalled();
     expect(mocks.createInteractionScheduleEntry).toHaveBeenCalledWith({

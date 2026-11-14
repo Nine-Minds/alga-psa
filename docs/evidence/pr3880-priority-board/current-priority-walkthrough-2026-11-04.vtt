@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:05.196 --> 00:00:13.098
+Legacy template warning and refused save
+
+2
+00:00:13.098 --> 00:00:48.437
+Attempted c05 URL returned template not found
+
+3
+00:00:48.437 --> 00:00:48.460
+Template remains unmodified after refusal; legacy value remains visible

@@ -10,6 +10,7 @@ import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -165,7 +166,9 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [accessDenied, setAccessDenied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<AccountingExportBatch[]>([]);
-  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  // Deep link from the errored-ops list: /msp/billing?tab=accounting-exports&batchId=<id> opens that batch.
+  const searchParams = useSearchParams();
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(() => searchParams?.get('batchId') ?? null);
   const [selectedDetail, setSelectedDetail] = useState<BatchDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 

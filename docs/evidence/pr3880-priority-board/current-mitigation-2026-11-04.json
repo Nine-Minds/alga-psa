@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "title": "PR 3880 current priority board verification",
+  "paneId": "3c471de2-b8db-4889-a0d8-9fed53c26374",
+  "startedAt": "2026-11-04T00:23:01.969Z",
+  "finishedAt": "2026-11-04T00:27:12.287Z",
+  "durationMs": 37636,
+  "width": 988,
+  "height": 557,
+  "bytes": 712962,
+  "frames": 269,
+  "marks": [
+    {
+      "t": 2.001,
+      "label": "Sign in with dossier QA account"
+    },
+    {
+      "t": 17.938,
+      "label": "Signed-in dashboard on current PR checkout"
+    }
+  ],
+  "files": {
+    "video": "current-mitigation-2026-11-04.webm",
+    "chapters": "current-mitigation-2026-11-04.vtt"
+  }
+}

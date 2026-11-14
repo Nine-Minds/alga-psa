@@ -32,7 +32,8 @@ export type OpportunityEvidenceRefType =
   | 'contract'
   | 'project'
   | 'schedule_entry'
-  | 'interaction';
+  | 'interaction'
+  | 'document';
 
 export type OpportunityLossReason =
   | 'no_response'
@@ -288,7 +289,12 @@ export interface IOpportunityListItem {
 export interface IOpportunityEvidenceLadderStep {
   checkpoint: OpportunityCheckpoint | 'identified';
   state: 'reached' | 'skipped' | 'pending';
-  evidence?: Pick<IOpportunityEvidence, 'evidence_id' | 'source' | 'ref_type' | 'ref_id' | 'detail' | 'recorded_at'> | null;
+  evidence?: (Pick<IOpportunityEvidence, 'evidence_id' | 'source' | 'ref_type' | 'ref_id' | 'detail' | 'recorded_at'> & {
+    /** Display name of the cited interaction/document; null when uncited or the target is gone. */
+    ref_label?: string | null;
+    /** True when the evidence cites a source that no longer exists. Never an error. */
+    ref_missing?: boolean;
+  }) | null;
 }
 
 export interface IOpportunityDetail extends IOpportunity {

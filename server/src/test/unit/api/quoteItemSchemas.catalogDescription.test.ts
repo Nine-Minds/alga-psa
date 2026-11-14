@@ -62,6 +62,40 @@ describe('quote API item schemas: catalog_description is server-captured only', 
     }
   });
 
+  // alga-2026-0002902: a defaulted `true` was indistinguishable from an
+  // explicit caller choice, so every quote line was created taxable even when
+  // its service had no tax rate. The schema must leave the key absent.
+  it('createQuoteItemSchema does not inject is_taxable when the caller omits it', () => {
+    const result = createQuoteItemSchema.safeParse({
+      service_id: SERVICE_ID,
+      description: 'Managed Firewall Service',
+      quantity: 1,
+      unit_price: 25000,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.is_taxable).toBeUndefined();
+    }
+  });
+
+  it('createQuoteItemSchema keeps an explicit is_taxable choice', () => {
+    for (const isTaxable of [true, false]) {
+      const result = createQuoteItemSchema.safeParse({
+        service_id: SERVICE_ID,
+        description: 'Managed Firewall Service',
+        quantity: 1,
+        unit_price: 25000,
+        is_taxable: isTaxable,
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.is_taxable).toBe(isTaxable);
+      }
+    }
+  });
+
   it('createQuoteApiSchema strips catalog_description from inline items', () => {
     const result = createQuoteApiSchema.safeParse({
       title: 'Managed services proposal',

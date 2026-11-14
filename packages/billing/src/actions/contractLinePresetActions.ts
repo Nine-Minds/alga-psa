@@ -723,6 +723,7 @@ export const copyPresetToContractLine = withAuth(async (
                         await upsertBucketOverlayInTransaction(
                             trx,
                             tenantId,
+                            user,
                             contractLineId,
                             presetService.service_id,
                             {
@@ -1048,6 +1049,7 @@ export const createCustomContractLine = withAuth(async (
                     await upsertBucketOverlayInTransaction(
                         trx,
                         tenantId,
+                        user,
                         contractLineId,
                         serviceConfig.service_id,
                         {

@@ -60,3 +60,16 @@ export const checkAccountManagementUpdatePermission = withOptionalAuth(async (cu
     return false;
   }
 });
+
+export const checkAccountManagementDeletePermission = withOptionalAuth(async (currentUser, _ctx) => {
+  try {
+    if (!currentUser) {
+      return false;
+    }
+
+    return await hasPermission(currentUser, 'account_management', 'delete');
+  } catch (error) {
+    console.error('Error checking account management delete permission:', error);
+    return false;
+  }
+});

@@ -8,12 +8,14 @@ export const recurrencePatternSchema = z.object({
   frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
   interval: z.number().positive(),
   daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+  weekOfMonth: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(-1)]).optional(),
   dayOfMonth: z.number().min(1).max(31).optional(),
   monthOfYear: z.number().min(1).max(12).optional(),
   startDate: z.date(),
   endDate: z.date().optional(),
   exceptions: z.array(z.date()).optional(),
-  count: z.number().positive().optional()
+  count: z.number().positive().optional(),
+  timeZone: z.string().optional()
 });
 
 // Base schema without validation

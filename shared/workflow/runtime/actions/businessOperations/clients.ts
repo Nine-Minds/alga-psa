@@ -1,4 +1,5 @@
 import { deactivateClientScopedChecklistTemplates } from '../../../../lib/ticketChecklists/clientDeletion';
+import { deactivateClientScopedTicketTemplates } from '../../../../lib/ticketTemplates/clientDeletion';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -721,11 +722,18 @@ async function cleanupClientDeleteArtifacts(
 ): Promise<void> {
   await cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
   await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+  await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+  // RMM organisations stay mapped to nothing; the client's maintenance windows
+  // go with it. Neither foreign key acts on its own on Citus.
+  await tenantScopedTableForTenant(trx, tenant, 'rmm_organization_mappings')
+    .where('client_id', clientId)
+    .update({ client_id: null, billing_profile_id: null, updated_at: new Date().toISOString() });
+  await deleteFromTenantTableIfExists(trx, tenant, 'rmm_maintenance_windows', { client_id: clientId });
   // After every table that references a profile, before the client itself.
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_profiles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });

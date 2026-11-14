@@ -2,6 +2,9 @@ import { isValidEmail } from '@alga-psa/core';
 import { tenantDb } from '@alga-psa/db';
 import { getActiveWatchListEmails } from '@shared/lib/tickets/watchList';
 import type { Knex } from 'knex';
+import {
+  recipientRendering, resolveTicketNotificationRecipients, type NotificationTicket,
+} from '@shared/lib/notificationAudience';
 
 export function normalizeRecipientEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -14,11 +17,17 @@ export function normalizeRecipientEmail(email: string): string {
  * client-portal link: watchers can be either internal agents or external
  * client contacts, and the watch list itself stores only bare email strings
  * with no type distinction.
+ *
+ * "Internal" here means "gets the MSP rendering on THIS ticket", not `user_type = 'internal'`: a
+ * seat technician outside the ticket's scope is an external party (`recipientRendering`) and is
+ * left out, so every caller sends them the client template and portal link. Classified here so
+ * the created, updated, assigned, closed and comment paths all follow.
  */
 export async function resolveInternalWatcherEmails(
   db: Knex,
   tenantId: string,
-  emails: string[]
+  emails: string[],
+  ticket: NotificationTicket
 ): Promise<Set<string>> {
   const normalized = Array.from(
     new Set(emails.map((email) => normalizeRecipientEmail(email)).filter((email) => isValidEmail(email)))
@@ -32,7 +41,9 @@ export async function resolveInternalWatcherEmails(
     .where({ user_type: 'internal' })
     .whereIn(db.raw('lower(email)') as unknown as string, normalized);
 
-  return new Set<string>(rows.map((row: { email: string }) => normalizeRecipientEmail(row.email)));
+  const addresses = rows.map((row: { email: string }) => normalizeRecipientEmail(row.email));
+  const recipients = await resolveTicketNotificationRecipients(db, tenantId, ticket, addresses.map((email) => ({ email })));
+  return new Set<string>(addresses.filter((_, index) => recipientRendering(recipients[index]) === 'msp'));
 }
 
 export function extractActiveWatcherEmails(attributes: unknown): string[] {

@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
+import { ServiceAuthorBadge } from '@enterprise/components/service-principals/ServiceAuthorBadge';
+import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle, SmilePlus } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -262,6 +264,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const getAuthorEmail = () => {
     if (isSystemAuthor) return null;
+    // Service principals have only a synthetic placeholder address; never surface it.
+    if (resolvedAuthor.authorKind === 'service') return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
@@ -580,6 +584,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className={`font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] min-w-0 ${isCompact ? 'truncate' : 'break-words'}`}>
                   {getAuthorName()}
                 </p>
+                {resolvedAuthor.authorKind === 'service' && <ServiceAuthorBadge />}
+                <ViaPrincipalLabel principalName={conversation.via_principal_name} />
                 {isBundleMirror && (
                   conversation.bundle_mirror_source?.master_ticket_id ? (
                     <a

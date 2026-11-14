@@ -404,6 +404,30 @@ test('the committed quarantine registry is valid and every entry is still in dat
   assert.deepEqual(resolved.failures, [], 'committed quarantine entries must be owned, justified and unexpired');
 });
 
+test('Teams requires successful evidence after its expired quarantine is removed', async () => {
+  const { readFileSync } = await import('node:fs');
+  const committed = JSON.parse(readFileSync(new URL('../lib/quarantine.json', import.meta.url), 'utf8'));
+  // Model the registry after the current exemption expires on 2026-12-02 and is retired.
+  const quarantine = { ...committed, entries: committed.entries.filter(entry => entry.artifact !== QUARANTINABLE) };
+  const input = { ...fixture(), quarantine, now: '2026-12-03' };
+  const passing = evaluate(input);
+  assert.equal(passing.status, 'passed', passing.failures.join('\n'));
+  assert.equal(resultFor(passing, QUARANTINABLE).status, 'passed');
+
+  input.artifacts[QUARANTINABLE].status = 'failed';
+  input.artifacts[QUARANTINABLE].failures = ['Teams journey failed'];
+  const failing = evaluate(input);
+  assert.equal(failing.status, 'failed');
+  assert.equal(resultFor(failing, QUARANTINABLE).status, 'failed');
+  assert.ok(failing.failures.some(failure => failure.startsWith(`${QUARANTINABLE}:`)));
+
+  delete input.artifacts[QUARANTINABLE];
+  const missing = evaluate(input);
+  assert.equal(missing.status, 'failed');
+  assert.equal(resultFor(missing, QUARANTINABLE).status, 'failed');
+  assert.ok(missing.failures.some(failure => failure.startsWith(`${QUARANTINABLE}:`)));
+});
+
 test('a quarantined requirement that was not applicable does not read as passing', () => {
   const input = fixture();
   // Documentation-only selection: the suite legitimately did not run.

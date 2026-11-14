@@ -139,6 +139,8 @@ COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 # when the source checkout is absent. tenantDb.cjs travels with it: the catalog
 # modules require it as ../tenantDb.cjs.
 COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+# Edition contributions to the catalog (loaded from ./contributions when packaged).
+COPY ee/server/permission-catalog /app/ee/temporal-workflows/dist/seeds/permissions/contributions
 COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 # Verify seeds were copied (debug step)
@@ -152,9 +154,14 @@ FROM base AS prebuilt
 COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+# Edition contributions to the catalog (loaded from ./contributions when packaged).
+COPY ee/server/permission-catalog /app/ee/temporal-workflows/dist/seeds/permissions/contributions
 COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"
+
+# Validate the prebuilt worker artifact's adjacent CommonJS runtime dependency.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/packages/co-managed/src/upgradePurchase.js'); if (m.CO_MANAGED_UPGRADE_PURCHASE_STATES?.length !== 5 || !m.CO_MANAGED_UPGRADE_PENDING_STATES?.includes('payment_failed')) throw new Error('co-managed purchase runtime artifact is incomplete')"
 
 RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 

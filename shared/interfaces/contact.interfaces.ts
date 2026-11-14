@@ -12,6 +12,36 @@ export const CONTACT_EMAIL_CANONICAL_TYPES = ['work', 'personal', 'billing', 'ot
 
 export type ContactEmailCanonicalType = typeof CONTACT_EMAIL_CANONICAL_TYPES[number];
 
+export const CONTACT_WORK_ARRANGEMENTS = ['on_site', 'hybrid', 'remote'] as const;
+
+/** Where a person normally works. Null/undefined means unset. */
+export type ContactWorkArrangement = typeof CONTACT_WORK_ARRANGEMENTS[number];
+
+/**
+ * A contact's link to one of its client's locations. The address fields are a read-through of
+ * `client_locations`, never stored on the contact.
+ */
+export interface IContactLocation {
+  location_id: string;
+  location_name: string | null;
+  is_primary: boolean;
+  is_active: boolean;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+}
+
+/** What a caller may write: the set of links, with at most one primary. */
+export interface ContactLocationInput {
+  location_id: string;
+  is_primary?: boolean;
+}
+
 export interface IContactPhoneNumber {
   contact_phone_number_id: string;
   phone_number: string;
@@ -79,6 +109,11 @@ export interface IContact {
   notes: string | null;
   notes_document_id?: string | null;
   is_inactive: boolean | null;
+  work_arrangement?: ContactWorkArrangement | null;
+  /** Links to the client's locations, primary first; set by the loaders, not stored on the contact. */
+  locations?: IContactLocation[];
+  /** The primary link (or the only one), for list columns and picker rows. */
+  primaryLocation?: Pick<IContactLocation, 'location_id' | 'location_name'> | null;
   created_at: string;
   updated_at: string;
   [key: string]: any; // Allow additional properties for database fields
@@ -103,6 +138,9 @@ export interface CreateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  work_arrangement?: ContactWorkArrangement | null;
+  /** Omitted leaves links untouched; [] removes them all. */
+  locations?: ContactLocationInput[];
 }
 
 /**
@@ -123,4 +161,7 @@ export interface UpdateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  work_arrangement?: ContactWorkArrangement | null;
+  /** Omitted leaves links untouched; [] removes them all. */
+  locations?: ContactLocationInput[];
 }

@@ -1,7 +1,7 @@
 /**
  * Hot-path query-count budget (CM L0g, plan section 5).
  *
- * Runs the canonical 16-step psa scenario (hotPathScenario.ts) three times
+ * Runs the canonical 18-step psa scenario (hotPathScenario.ts) three times
  * in-process and compares per-step statement and lock counts against the
  * committed snapshot hotPathQueryBudget.json.
  *
@@ -117,6 +117,15 @@ const HOOK_TIMEOUT = 600_000;
 const RUNS = 3;
 const SNAPSHOT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hotPathQueryBudget.json');
 
+/** Statement counts measured on origin/main (162d106175) before the subject resolver changed. */
+const MAIN_BASELINE_STATEMENTS: Record<string, number> = {
+  'ticket.list': 17,
+  'ticket.open': 32,
+  'client.list': 8,
+  'search.query': 6,
+  'timeEntry.create': 18,
+};
+
 interface Snapshot {
   schemaVersion: 1;
   scenario: string;
@@ -191,6 +200,7 @@ describe('hot-path query budget', () => {
       if (unstable) throw new Error(unstable);
 
       const measured = runs[0];
+      console.table(measured.steps.map(({ name, statements, locks }) => ({ name, statements, locks })));
       expect(measured.steps.map((s) => s.name)).toEqual([...STEP_NAMES]);
 
       // The new-table denylist applies to what the scenario actually touched.
@@ -210,6 +220,19 @@ describe('hot-path query budget', () => {
         };
         fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`);
         return;
+      }
+
+      // T005: the five paths the subject resolver touches or sits beside, under the canonical
+      // scenario (a tenant with no bundle assignments and no portfolio rows, i.e. the fast path).
+      // Baselines were measured on origin/main before the resolver changed; the fast path may
+      // never cost a statement more than main did. The committed JSON ratchets the exact value.
+      const byName = new Map(measured.steps.map((s) => [s.name, s.statements]));
+      for (const [name, mainStatements] of Object.entries(MAIN_BASELINE_STATEMENTS)) {
+        expect(byName.get(name), `step ${name} is missing from the scenario`).toBeDefined();
+        expect(
+          byName.get(name)!,
+          `fast-path step ${name}: ${byName.get(name)} statements > ${mainStatements} on main`,
+        ).toBeLessThanOrEqual(mainStatements);
       }
 
       const snapshot = readSnapshot();

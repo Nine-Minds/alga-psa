@@ -376,8 +376,9 @@ the development server writes into the checkout (all of it ignored by Git).
 Building on the runner is what lets the webpack filesystem cache
 (`server/node_modules/.cache/webpack`, configured in `next.config.mjs`) and
 the Nx cache survive between runs: `scripts/build-cache-snapshot.mjs` pulls a
-snapshot of both from `ghcr.io/<repository>/build-cache:<edition>` before the
-build and, on runs of `main` only, pushes the new state afterwards. A pull
+snapshot of both from `ghcr.io/<repository>/build-cache:<edition>-v2` before
+the build and, on runs of `main` only, pushes the new state afterwards (the
+tag's generation suffix moves when a pack has to start over cold). A pull
 request never writes a snapshot, because a cache can shape build output. A
 missing or unreadable snapshot is a cold build, not a failure. The daily
 candidate-image cleanup removes the superseded, untagged snapshot versions.

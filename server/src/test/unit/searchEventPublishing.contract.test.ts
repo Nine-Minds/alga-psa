@@ -138,18 +138,18 @@ describe('search index source event publishing contracts', () => {
     }
   });
 
-  it('T063 contract and client-contract CRUD emit contract-family events', () => {
+  it('T063 contract creation and assignment edits emit contract-family events', () => {
+    // Shared update/delete publishing is exercised in billing/contractLifecycle.behavior.test.ts.
     const contractSource = readRepoFile('packages/billing/src/actions/contractActions.ts');
     const clientContractSource = readRepoFile('packages/clients/src/actions/clientContractActions.ts');
 
-    for (const eventType of ['CONTRACT_CREATED', 'CONTRACT_UPDATED', 'CONTRACT_DELETED']) {
+    for (const eventType of ['CONTRACT_CREATED', 'CONTRACT_UPDATED']) {
       expect(contractSource + clientContractSource).toContain(`eventType: '${eventType}'`);
     }
 
     for (const eventType of [
       'CLIENT_CONTRACT_CREATED',
       'CLIENT_CONTRACT_UPDATED',
-      'CLIENT_CONTRACT_DELETED',
     ]) {
       expect(contractSource + clientContractSource).toContain(`eventType: '${eventType}'`);
     }
@@ -159,6 +159,8 @@ describe('search index source event publishing contracts', () => {
     const documentSource = readRepoFile('packages/documents/src/actions/documentActions.ts');
     const contentSource = readRepoFile('packages/documents/src/actions/documentBlockContentActions.ts');
     const shareLinkSource = readRepoFile('packages/documents/src/actions/shareLinkActions.ts');
+    // The DOCUMENT_UPDATED publisher is shared with chunked-upload completion.
+    const documentEventSource = readRepoFile('packages/documents/src/lib/createDocumentFromCommittedFile.ts');
 
     expect(contentSource).toContain('export const updateBlockContent = withAuth(async');
     expect(contentSource).toContain("eventType: 'DOCUMENT_UPDATED'");
@@ -166,7 +168,11 @@ describe('search index source event publishing contracts', () => {
     expect(documentSource).toContain('createDocumentAssociations = withAuth(async');
     expect(documentSource).toContain('removeDocumentAssociations = withAuth(async');
     expect(documentSource).toContain("['document_associations']");
-    expect(documentSource).toContain("eventType: 'DOCUMENT_UPDATED'");
+    expect(documentSource).toContain("from '../lib/createDocumentFromCommittedFile'");
+    const associationActions = documentSource.slice(documentSource.indexOf('createDocumentAssociations = withAuth(async'));
+    expect(associationActions.match(/await publishDocumentUpdatedSearchEvent\(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(documentEventSource).toContain('export async function publishDocumentUpdatedSearchEvent(');
+    expect(documentEventSource).toContain("eventType: 'DOCUMENT_UPDATED'");
 
     expect(shareLinkSource).toContain('createShareLink = withAuth(');
     expect(shareLinkSource).toContain('revokeShareLink = withAuth(');

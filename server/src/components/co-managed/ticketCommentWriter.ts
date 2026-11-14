@@ -31,7 +31,9 @@ export type CommentWriter = (message: CommentMessage) => Promise<CommentWriteRec
 export type CommentWriterFactory = (input: CommentWriterInput) => CommentWriter;
 
 /** Turns staged files into a draft submission for one writer kind. Native staging registers none yet. */
-export type FileStager = (input: CommentWriterInput, message: CommentMessage, operationId: string) => Promise<Result>;
+/** `attachmentIds` is retained by the writer with the pending operation (keyed by staged-entry key): the stager fills it on
+ * first use and reads it on a retry, so a replay sends the identical manifest. */
+export type FileStager = (input: CommentWriterInput, message: CommentMessage, operationId: string, attachmentIds: Map<string, string>) => Promise<Result>;
 
 const writers = new Map<string, CommentWriterFactory>();
 const stagers = new Map<string, FileStager>();
@@ -53,17 +55,28 @@ export const PLAIN_TEXT_WRITER = 'plain-text';
  * server admits every command; this retains the same operation across uncertain acknowledgments. */
 function createPlainTextWriter(input: CommentWriterInput): CommentWriter {
   const resource = { ...input.resource };
-  let pending: { key: string; id: string } | null = null;
+  let pending: { key: string; id: string; attachmentIds: Map<string, string> } | null = null;
   return async message => {
     const fail = (code: string): never => { throw new TicketCommentWriteError(code); };
     const context = input.context();
     if (!context.canWrite || !context.writeAudiences.includes(message.audience)) fail('forbidden');
     const document = conversationDocument(message.content) ?? fail('invalid');
     const parent = message.parentCommentId ? await input.parent(message.parentCommentId) ?? fail('invalid') : undefined;
-    // Files need a registered stager for this kind; none ships yet, so they are refused rather than dropped.
-    if ((input.files?.().length ?? 0) > 0) fail('invalid');
+    // Files need a registered stager for this kind; with none they are refused rather than dropped.
+    const staged = input.files?.() ?? [];
+    if (staged.length > 0) {
+      const stage = resolveFileStager(PLAIN_TEXT_WRITER);
+      if (!stage) fail('invalid');
+      // The operation id is retained across an uncertain acknowledgement, so the same message + files replays one draft.
+      const stagedKey = JSON.stringify([message.content, message.audience, parent ?? null, staged.map(item => (item as { key?: string }).key ?? null)]);
+      if (pending?.key !== stagedKey) pending = { key: stagedKey, id: newCoManagedOperationId(), attachmentIds: new Map() };
+      const operation = pending, outcome = await stage!(input, message, operation.id, operation.attachmentIds).catch(() => fail('unknownOutcome'));
+      if (!outcome.ok) { if (outcome.code !== 'unknownOutcome' && outcome.code !== 'notReady' && pending === operation) pending = null; return fail(outcome.code); }
+      if (pending === operation) pending = null;
+      return outcome.receipt;
+    }
     const key = JSON.stringify([message.content, message.audience, parent ?? null]);
-    if (pending?.key !== key) pending = { key, id: newCoManagedOperationId() };
+    if (pending?.key !== key) pending = { key, id: newCoManagedOperationId(), attachmentIds: new Map() };
     const operation = pending;
     let result: Result;
     try {

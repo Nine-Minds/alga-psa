@@ -19,6 +19,7 @@ interface TokenRecord {
   template?: string | null;
   recipient_email?: string | null;
   entity_type?: string | null;
+  expires_at?: Date | string | null;
 }
 
 interface TicketRecord {
@@ -1010,6 +1011,11 @@ beforeAll(async () => {
   ({ registerTicketEmailSubscriber } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber'));
   ({ registerProjectEmailSubscriber } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber'));
   ({ ServerEventPublisher } = await import('@alga-psa/event-bus'));
+  // These tenants hold no co-managed seat arrangement, so the seat gate decides the recipient
+  // boundary is closed and no seat row is read (the mocked database has no seat tables). The
+  // boundary itself is covered against the real schema by seatNotificationAudience.integration.test.ts.
+  const { registerCapabilityParticipation } = await import('@alga-psa/core/capability');
+  registerCapabilityParticipation('co-managed-seat', async () => []);
 });
 
 beforeEach(() => {
@@ -1093,6 +1099,68 @@ function processedCall(index: number) {
 }
 
 describe('sendEventEmail reply markers', () => {
+  async function sendPersistedToken(conversationToken: string) {
+    const templateName = `expiry-template-${randomUUID()}`;
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    seedTemplate(templateName, 'Reply {{body}}', '<p>{{body}}</p>');
+    await sendEventEmail({
+      mailClass: 'ticket', tenantId, to: 'user@example.com', subject: 'Reply', template: templateName,
+      context: { body: 'reply' }, replyContext: { ticketId, conversationToken },
+    });
+    return tokenStore.get(conversationToken);
+  }
+
+  function restoreReplyTokenLifetime(previous: string | undefined) {
+    if (previous === undefined) delete process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS;
+    else process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS = previous;
+  }
+
+  it('persists the configured non-default lifetime through sendEventEmail', async () => {
+    const previous = process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS;
+    const lifetimeDays = 2.5;
+    const startedAt = Date.now();
+    try {
+      process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS = String(lifetimeDays);
+      const token = randomUUID();
+      const persisted = await sendPersistedToken(token);
+      expect(persisted).toBeTruthy();
+      const expiry = new Date(persisted!.expires_at!).getTime();
+      expect(expiry).toBeGreaterThanOrEqual(startedAt + lifetimeDays * 24 * 60 * 60 * 1000);
+      expect(expiry).toBeLessThanOrEqual(Date.now() + lifetimeDays * 24 * 60 * 60 * 1000);
+    } finally {
+      restoreReplyTokenLifetime(previous);
+    }
+  });
+
+  it('uses the configured default lifetime when no override is set', async () => {
+    const previous = process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS;
+    const startedAt = Date.now();
+    try {
+      delete process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS;
+      const token = randomUUID();
+      const persisted = await sendPersistedToken(token);
+      expect(persisted).toBeTruthy();
+      const expiry = new Date(persisted!.expires_at!).getTime();
+      expect(expiry).toBeGreaterThanOrEqual(startedAt + 30 * 24 * 60 * 60 * 1000);
+      expect(expiry).toBeLessThanOrEqual(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    } finally {
+      restoreReplyTokenLifetime(previous);
+    }
+  });
+
+  it('does not persist a token when the configured lifetime is invalid', async () => {
+    const previous = process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS;
+    try {
+      process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS = 'not-a-number';
+      const token = randomUUID();
+      await expect(sendPersistedToken(token)).resolves.toBeUndefined();
+      expect(tokenStore.has(token)).toBe(false);
+    } finally {
+      restoreReplyTokenLifetime(previous);
+    }
+  });
+
   it('adds reply markers when conversation token is provided', async () => {
     const templateName = `template-${randomUUID()}`;
     seedTemplate(templateName, 'New Ticket {{body}}', '<p>{{body}}</p>');

@@ -29,7 +29,6 @@ import { appendNoteBlock, blockDataToText } from "../features/assets/blockNote";
 import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { LinkTicketModal } from "../features/assets/LinkTicketModal";
-import { CreateTicketModal } from "../features/assets/CreateTicketModal";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AssetDetail">;
@@ -72,10 +71,10 @@ function maintenanceDueBadge(
   return null;
 }
 
-function FieldRow({ label, value }: { label: string; value: string }) {
+function FieldRow({ label, value, testID }: { label: string; value: string; testID?: string }) {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: theme.spacing.xs }}>
+    <View testID={testID} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: theme.spacing.xs }}>
       <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
       <Text style={{ ...theme.typography.body, color: theme.colors.text, flexShrink: 1, textAlign: "right" }}>{value}</Text>
     </View>
@@ -113,7 +112,6 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const [notesLoaded, setNotesLoaded] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "unavailable">("loading");
   const [linkOpen, setLinkOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [recordSchedule, setRecordSchedule] = useState<MaintenanceSchedule | null>(null);
   const [recordNote, setRecordNote] = useState("");
   const [recording, setRecording] = useState(false);
@@ -252,6 +250,16 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const hasClient = Boolean(asset.client_id);
   const notesText = blockDataToText(notesBlockData);
 
+  // One create form for every route in: the asset starts the ticket's device
+  // selection instead of a separate create-from-asset dialog (alga-2026-0002785).
+  const openCreateTicket = () => {
+    navigation.navigate("CreateTicket", {
+      clientId: asset.client_id,
+      clientName: asset.client_name ?? undefined,
+      assets: [{ asset_id: asset.asset_id, name: asset.name }],
+    });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView
@@ -298,6 +306,24 @@ export function AssetDetailScreen({ route, navigation }: Props) {
             {asset.purchase_date ? (
               <FieldRow label={t("identity.purchased", "Purchased")} value={formatDateShort(asset.purchase_date)} />
             ) : null}
+            {/* Written by the site audit. The auditor is not here: `assets`
+                carries only the date and result, and the History card below is
+                maintenance history — the audit's asset_history row (with its
+                changed_by) shows on the web. */}
+            {typeof asset.last_audited_at === "string" && asset.last_audited_at ? (
+              <FieldRow
+                testID="asset-last-audited"
+                label={t("audit.lastAudited", "Last audited")}
+                value={[
+                  formatDateShort(asset.last_audited_at),
+                  typeof asset.last_audit_result === "string" && asset.last_audit_result
+                    ? t(`audit.result.${asset.last_audit_result}`, asset.last_audit_result)
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" • ")}
+              />
+            ) : null}
           </View>
         </Card>
 
@@ -312,7 +338,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
               </View>
               <View style={{ flex: 1 }}>
                 <PrimaryButton
-                  onPress={() => setCreateOpen(true)}
+                  onPress={openCreateTicket}
                   disabled={!hasClient}
                   accessibilityLabel="asset-detail-create-ticket"
                 >
@@ -602,18 +628,9 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         clientId={asset.client_id}
         onClose={() => setLinkOpen(false)}
         onLinked={() => void refetchTickets()}
-        onCreateInstead={hasClient ? () => { setLinkOpen(false); setCreateOpen(true); } : undefined}
+        onCreateInstead={hasClient ? () => { setLinkOpen(false); openCreateTicket(); } : undefined}
       />
 
-      <CreateTicketModal
-        visible={createOpen}
-        client={client}
-        apiKey={apiKey}
-        assetId={assetId}
-        clientId={asset.client_id}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => void refetchTickets()}
-      />
     </View>
   );
 }

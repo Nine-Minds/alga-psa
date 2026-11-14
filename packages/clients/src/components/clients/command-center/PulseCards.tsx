@@ -377,16 +377,19 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
 
 // ── Install base ─────────────────────────────────────────────────────────────
 
-export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset, className, t }: {
+export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAudits, onOpenAsset, className, t }: {
   id: string;
   data: ClientPulseInstallBase;
   onOpen: (() => void) | null;
   /** Assets focus view, when Equipment holds the header action (both tabs exist). */
   onOpenAssetList: (() => void) | null;
+  /** Audits focus view; null when the client has no Audits tab (no asset:read). */
+  onOpenAudits?: (() => void) | null;
   onOpenAsset: (assetId: string) => void;
   className?: string;
   t: TFn;
 }) {
+  const { formatDate } = useFormatters();
   return (
     <CardShell
       id={id}
@@ -402,6 +405,14 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
             onClick: onOpenAssetList,
           }
           : null,
+        onOpenAudits
+          ? {
+            id: 'audits',
+            label: t('clientCommandCenter.installBase.auditsLink', { defaultValue: 'Site audits' }),
+            icon: <ArrowUpRight className="w-3 h-3" aria-hidden="true" />,
+            onClick: onOpenAudits,
+          }
+          : null,
       ]}
     >
       <div className="flex gap-6 mb-3">
@@ -411,6 +422,34 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
         <BentoStat value={data.soldUnitCount} label={t('clientCommandCenter.installBase.sold', { defaultValue: 'sold units' })} />
         <BentoStat value={data.openRmaCount} label={t('clientCommandCenter.installBase.rmas', { defaultValue: 'open RMAs' })} />
       </div>
+      {/* Only for a reader who may see assets: `lastAudit` is absent (not null)
+          without asset:read, and null means the site was never walked. */}
+      {data.lastAudit !== undefined && (
+        <p id={`${id}-last-audit`} className="mb-2 text-xs text-[rgb(var(--color-text-600))]">
+          {data.lastAudit === null
+            ? t('clientCommandCenter.installBase.neverAudited', { defaultValue: 'Never audited' })
+            : (
+              <>
+                <span>
+                  {t('clientCommandCenter.installBase.lastAudit', {
+                    defaultValue: 'Last audit {{date}}',
+                    date: data.lastAudit.completed_at
+                      ? formatDate(data.lastAudit.completed_at, { day: 'numeric', month: 'short' })
+                      : '—',
+                  })}
+                </span>
+                <span className="text-[rgb(var(--color-text-300))]"> · </span>
+                <span className={data.lastAudit.missing_count > 0 ? 'font-semibold text-red-600 dark:text-red-400' : ''}>
+                  {t('clientCommandCenter.installBase.lastAuditMissing', {
+                    defaultValue_one: '1 missing',
+                    defaultValue_other: '{{count}} missing',
+                    count: data.lastAudit.missing_count,
+                  })}
+                </span>
+              </>
+            )}
+        </p>
+      )}
       {/* W4: renders only when at least one unit/asset carries a warranty date —
           a fleet that doesn't track warranties shows nothing, not zeros. */}
       {data.warranty && (
@@ -586,6 +625,7 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
   className?: string;
   t: TFn;
 }) {
+  const { formatDate } = useFormatters();
   return (
     <CardShell
       id={id}
@@ -625,6 +665,15 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
                 </div>
               )}
               <div className="mt-1 flex gap-1">
+                {location.contact_count > 0 && (
+                  <BentoChip id={`${id}-contact-count-${location.location_id}`}>
+                    {t('clientCommandCenter.locations.contactCount', {
+                      defaultValue_one: '1 contact',
+                      defaultValue_other: '{{count}} contacts',
+                      count: location.contact_count,
+                    })}
+                  </BentoChip>
+                )}
                 {location.is_billing && (
                   <BentoChip tone="info">
                     {t('clientCommandCenter.locations.billing', { defaultValue: 'Billing' })}
@@ -633,6 +682,18 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
                 {location.is_shipping && (
                   <BentoChip tone="success">
                     {t('clientCommandCenter.locations.shipping', { defaultValue: 'Shipping' })}
+                  </BentoChip>
+                )}
+                {/* Audits are scoped to a location, so when this site was last
+                    walked belongs on its row. Absent without asset:read. */}
+                {location.last_audit_at !== undefined && (
+                  <BentoChip id={`${id}-last-audit-${location.location_id}`}>
+                    {location.last_audit_at
+                      ? t('clientCommandCenter.locations.lastAudit', {
+                        defaultValue: 'Audited {{date}}',
+                        date: formatDate(location.last_audit_at, { day: 'numeric', month: 'short' }),
+                      })
+                      : t('clientCommandCenter.locations.neverAudited', { defaultValue: 'Never audited' })}
                   </BentoChip>
                 )}
               </div>

@@ -227,13 +227,14 @@ export const updateContractLine = withAuth(async (
                 throw new Error('Permission denied: Cannot update contract lines');
             }
 
-            const { line: enrichedPlan, updatedFields, isTemplate } = await updateContractLineInTransaction(
+            const { line: enrichedPlan, updatedFields, isTemplate, presentationOnly } = await updateContractLineInTransaction(
                 trx,
                 tenant,
                 planId,
                 updateData,
             );
-            if (isTemplate) {
+            // Template lines have no service periods; invoice text is presentation only.
+            if (isTemplate || presentationOnly) {
                 return enrichedPlan;
             }
 

@@ -1,0 +1,2109 @@
+{
+  "events": [
+    {
+      "eventId": "1",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 237000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "workflowExecutionStartedEventAttributes": {
+        "workflowType": {
+          "name": "slaTicketWorkflow"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwb2xpY3lUYXJnZXRzIjpbeyJ0YXJnZXRfaWQiOiJ0YXJnZXQtbGVnYWN5Iiwic2xhX3BvbGljeV9pZCI6InBvbGljeS1sZWdhY3kiLCJwcmlvcml0eV9pZCI6InByaW9yaXR5LWxlZ2FjeSIsInJlc3BvbnNlX3RpbWVfbWludXRlcyI6MiwicmVzb2x1dGlvbl90aW1lX21pbnV0ZXMiOm51bGwsImVzY2FsYXRpb25fMV9wZXJjZW50Ijo3MCwiZXNjYWxhdGlvbl8yX3BlcmNlbnQiOjkwLCJlc2NhbGF0aW9uXzNfcGVyY2VudCI6MCwiaXNfMjR4NyI6dHJ1ZX1dLCJidXNpbmVzc0hvdXJzU2NoZWR1bGUiOnsic2NoZWR1bGVfaWQiOiIyNHg3Iiwic2NoZWR1bGVfbmFtZSI6IjI0eDciLCJ0aW1lem9uZSI6IlVUQyIsImlzX2RlZmF1bHQiOmZhbHNlLCJpc18yNHg3Ijp0cnVlLCJlbnRyaWVzIjpbXSwiaG9saWRheXMiOltdfSwibm90aWZpY2F0aW9uVGhyZXNob2xkcyI6WzUwLDc1XX0="
+            }
+          ]
+        },
+        "workflowExecutionTimeout": {
+          "seconds": "315360000"
+        },
+        "workflowRunTimeout": {
+          "seconds": "315360000"
+        },
+        "workflowTaskTimeout": {
+          "seconds": "10"
+        },
+        "originalExecutionRunId": "573550f8-744c-419f-8b05-b4c15c8dad3d",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "firstExecutionRunId": "573550f8-744c-419f-8b05-b4c15c8dad3d",
+        "attempt": 1,
+        "firstWorkflowTaskBackoff": {},
+        "header": {}
+      }
+    },
+    {
+      "eventId": "2",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 237000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "3",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 238000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "837"
+      }
+    },
+    {
+      "eventId": "4",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 276000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {
+          "coreUsedFlags": [
+            2,
+            3,
+            1
+          ],
+          "sdkName": "temporal-typescript",
+          "sdkVersion": "1.14.1"
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "5",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 276000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "1",
+        "activityType": {
+          "name": "completeIfTicketClosed"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUifQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "3",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "6",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 276000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "5",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "7",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 283000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJjbG9zZWQiOmZhbHNlLCJyZXNwb25zZU1ldCI6bnVsbCwicmVzb2x1dGlvbk1ldCI6bnVsbH0="
+            }
+          ]
+        },
+        "scheduledEventId": "5",
+        "startedEventId": "6",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "8",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 283000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "9",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 283000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "8",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "1581"
+      }
+    },
+    {
+      "eventId": "10",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 287000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "8",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "11",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 287000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "2",
+        "activityType": {
+          "name": "calculateNextWakeTime"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJjdXJyZW50VGltZSI6IjIwMjYtMTEtMDRUMTM6NTM6MDkuMjM4WiIsInRhcmdldE1pbnV0ZXMiOjEsInNjaGVkdWxlIjp7InNjaGVkdWxlX2lkIjoiMjR4NyIsInNjaGVkdWxlX25hbWUiOiIyNHg3IiwidGltZXpvbmUiOiJVVEMiLCJpc19kZWZhdWx0IjpmYWxzZSwiaXNfMjR4NyI6dHJ1ZSwiZW50cmllcyI6W10sImhvbGlkYXlzIjpbXX0sInBhdXNlTWludXRlcyI6MH0="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "9",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "12",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 287000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "11",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "13",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 288000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "IjIwMjYtMTEtMDRUMTM6NTQ6MDkuMjM4WiI="
+            }
+          ]
+        },
+        "scheduledEventId": "11",
+        "startedEventId": "12",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "14",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 288000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "15",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 288000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "14",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "2390"
+      }
+    },
+    {
+      "eventId": "16",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 290000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "14",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "17",
+      "eventTime": {
+        "seconds": "1793800389",
+        "nanos": 290000000
+      },
+      "eventType": "EVENT_TYPE_TIMER_STARTED",
+      "timerStartedEventAttributes": {
+        "timerId": "1",
+        "startToFireTimeout": {
+          "seconds": "59",
+          "nanos": 950000000
+        },
+        "workflowTaskCompletedEventId": "15"
+      }
+    },
+    {
+      "eventId": "18",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 240000000
+      },
+      "eventType": "EVENT_TYPE_TIMER_FIRED",
+      "timerFiredEventAttributes": {
+        "timerId": "1",
+        "startedEventId": "17"
+      }
+    },
+    {
+      "eventId": "19",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 240000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "20",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 240000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "19",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "2715"
+      }
+    },
+    {
+      "eventId": "21",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "19",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "22",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "3",
+        "activityType": {
+          "name": "completeIfTicketClosed"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUifQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "20",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "23",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "22",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "24",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJjbG9zZWQiOmZhbHNlLCJyZXNwb25zZU1ldCI6bnVsbCwicmVzb2x1dGlvbk1ldCI6bnVsbH0="
+            }
+          ]
+        },
+        "scheduledEventId": "22",
+        "startedEventId": "23",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "25",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "26",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "25",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "3419"
+      }
+    },
+    {
+      "eventId": "27",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "25",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "28",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "4",
+        "activityType": {
+          "name": "sendSlaNotification"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwaGFzZSI6InJlc3BvbnNlIiwidGhyZXNob2xkUGVyY2VudCI6NTB9"
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "26",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "29",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "28",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "30",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "scheduledEventId": "28",
+        "startedEventId": "29",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "31",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "32",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "31",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "4106"
+      }
+    },
+    {
+      "eventId": "33",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "31",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "34",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "5",
+        "activityType": {
+          "name": "checkAndEscalate"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwaGFzZSI6InJlc3BvbnNlIiwidGhyZXNob2xkUGVyY2VudCI6NTB9"
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "32",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "35",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "34",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "36",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "scheduledEventId": "34",
+        "startedEventId": "35",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "37",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "38",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "37",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "4790"
+      }
+    },
+    {
+      "eventId": "39",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "37",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "40",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "6",
+        "activityType": {
+          "name": "calculateNextWakeTime"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJjdXJyZW50VGltZSI6IjIwMjYtMTEtMDRUMTM6NTM6MDkuMjM4WiIsInRhcmdldE1pbnV0ZXMiOjIsInNjaGVkdWxlIjp7InNjaGVkdWxlX2lkIjoiMjR4NyIsInNjaGVkdWxlX25hbWUiOiIyNHg3IiwidGltZXpvbmUiOiJVVEMiLCJpc19kZWZhdWx0IjpmYWxzZSwiaXNfMjR4NyI6dHJ1ZSwiZW50cmllcyI6W10sImhvbGlkYXlzIjpbXX0sInBhdXNlTWludXRlcyI6MH0="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "38",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "41",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "40",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "42",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 250000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "IjIwMjYtMTEtMDRUMTM6NTU6MDkuMjM4WiI="
+            }
+          ]
+        },
+        "scheduledEventId": "40",
+        "startedEventId": "41",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "43",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 250000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "44",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 250000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "43",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "5593"
+      }
+    },
+    {
+      "eventId": "45",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "43",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "46",
+      "eventTime": {
+        "seconds": "1793800449",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_TIMER_STARTED",
+      "timerStartedEventAttributes": {
+        "timerId": "2",
+        "startToFireTimeout": {
+          "seconds": "59",
+          "nanos": 988000000
+        },
+        "workflowTaskCompletedEventId": "44"
+      }
+    },
+    {
+      "eventId": "47",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 239000000
+      },
+      "eventType": "EVENT_TYPE_TIMER_FIRED",
+      "timerFiredEventAttributes": {
+        "timerId": "2",
+        "startedEventId": "46"
+      }
+    },
+    {
+      "eventId": "48",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 239000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "49",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 239000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "48",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "5915"
+      }
+    },
+    {
+      "eventId": "50",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 241000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "48",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "51",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 241000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "7",
+        "activityType": {
+          "name": "completeIfTicketClosed"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUifQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "49",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "52",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 241000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "51",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "53",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 241000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJjbG9zZWQiOmZhbHNlLCJyZXNwb25zZU1ldCI6bnVsbCwicmVzb2x1dGlvbk1ldCI6bnVsbH0="
+            }
+          ]
+        },
+        "scheduledEventId": "51",
+        "startedEventId": "52",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "54",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 241000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "55",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 241000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "54",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "6619"
+      }
+    },
+    {
+      "eventId": "56",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 243000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "54",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "57",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 243000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "8",
+        "activityType": {
+          "name": "sendSlaNotification"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwaGFzZSI6InJlc3BvbnNlIiwidGhyZXNob2xkUGVyY2VudCI6NzV9"
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "55",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "58",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 243000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "57",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "59",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 243000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "scheduledEventId": "57",
+        "startedEventId": "58",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "60",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 243000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "61",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 243000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "60",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "7306"
+      }
+    },
+    {
+      "eventId": "62",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "60",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "63",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "9",
+        "activityType": {
+          "name": "checkAndEscalate"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwaGFzZSI6InJlc3BvbnNlIiwidGhyZXNob2xkUGVyY2VudCI6NzV9"
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "61",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "64",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 244000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "63",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "65",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 245000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "scheduledEventId": "63",
+        "startedEventId": "64",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "66",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 245000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "67",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 245000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "66",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "7990"
+      }
+    },
+    {
+      "eventId": "68",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "66",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "69",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "10",
+        "activityType": {
+          "name": "calculateNextWakeTime"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJjdXJyZW50VGltZSI6IjIwMjYtMTEtMDRUMTM6NTM6MDkuMjM4WiIsInRhcmdldE1pbnV0ZXMiOjIsInNjaGVkdWxlIjp7InNjaGVkdWxlX2lkIjoiMjR4NyIsInNjaGVkdWxlX25hbWUiOiIyNHg3IiwidGltZXpvbmUiOiJVVEMiLCJpc19kZWZhdWx0IjpmYWxzZSwiaXNfMjR4NyI6dHJ1ZSwiZW50cmllcyI6W10sImhvbGlkYXlzIjpbXX0sInBhdXNlTWludXRlcyI6MH0="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "67",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "70",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 246000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "69",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "71",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 247000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "IjIwMjYtMTEtMDRUMTM6NTU6MDkuMjM4WiI="
+            }
+          ]
+        },
+        "scheduledEventId": "69",
+        "startedEventId": "70",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "72",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 247000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "73",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 247000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "72",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "8794"
+      }
+    },
+    {
+      "eventId": "74",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "72",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "75",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "11",
+        "activityType": {
+          "name": "completeIfTicketClosed"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUifQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "73",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "76",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 248000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "75",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "77",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJjbG9zZWQiOmZhbHNlLCJyZXNwb25zZU1ldCI6bnVsbCwicmVzb2x1dGlvbk1ldCI6bnVsbH0="
+            }
+          ]
+        },
+        "scheduledEventId": "75",
+        "startedEventId": "76",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "78",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "79",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "78",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "9499"
+      }
+    },
+    {
+      "eventId": "80",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "78",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "81",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 249000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "12",
+        "activityType": {
+          "name": "sendSlaNotification"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwaGFzZSI6InJlc3BvbnNlIiwidGhyZXNob2xkUGVyY2VudCI6MTAwfQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "79",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "82",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 250000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "81",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "83",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 250000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "scheduledEventId": "81",
+        "startedEventId": "82",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "84",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 250000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "85",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 250000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "84",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "10188"
+      }
+    },
+    {
+      "eventId": "86",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "84",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "87",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "13",
+        "activityType": {
+          "name": "updateSlaStatus"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwaGFzZSI6InJlc3BvbnNlIiwiYnJlYWNoZWQiOnRydWV9"
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "85",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "88",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "87",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "89",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "scheduledEventId": "87",
+        "startedEventId": "88",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "90",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "91",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 251000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "90",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "10866"
+      }
+    },
+    {
+      "eventId": "92",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 252000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "90",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "93",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 252000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "14",
+        "activityType": {
+          "name": "checkAndEscalate"
+        },
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "eyJ0ZW5hbnRJZCI6InRlbmFudC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJ0aWNrZXRJZCI6InRpY2tldC1sZWdhY3ktcmVwbGF5LWZpeHR1cmUiLCJwaGFzZSI6InJlc3BvbnNlIiwidGhyZXNob2xkUGVyY2VudCI6MTAwfQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": "315360000"
+        },
+        "scheduleToStartTimeout": {
+          "seconds": "315360000"
+        },
+        "startToCloseTimeout": {
+          "seconds": "300"
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": "91",
+        "retryPolicy": {
+          "initialInterval": {
+            "seconds": "1"
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": "30"
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "eventId": "94",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 252000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "93",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "95",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 252000000
+      },
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "scheduledEventId": "93",
+        "startedEventId": "94",
+        "identity": "3679310@robert-X670E-Pro-RS"
+      }
+    },
+    {
+      "eventId": "96",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 252000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "sla-legacy-history-1793800387933",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": {
+          "seconds": "10"
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "97",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 252000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "96",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "historySizeBytes": "11552"
+      }
+    },
+    {
+      "eventId": "98",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 254000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "96",
+        "identity": "3679310@robert-X670E-Pro-RS",
+        "binaryChecksum": "@temporalio/worker@1.14.1+ac5420d1c759708ebd602eda5e02af4e47840d4f483c976a6ba26fa5d7a517d3",
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "99",
+      "eventTime": {
+        "seconds": "1793800509",
+        "nanos": 254000000
+      },
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+      "workflowExecutionCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L251bGw="
+              }
+            }
+          ]
+        },
+        "workflowTaskCompletedEventId": "97"
+      }
+    }
+  ]
+}

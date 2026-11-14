@@ -11,7 +11,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTenant, createUser, createClient } from '../../../../test-utils/testDataFactory';
@@ -92,9 +92,11 @@ vi.mock('@alga-psa/notifications/actions/internal-notification-actions/internalN
   }),
 }));
 
+const sendEmailNotification = vi.fn(async (_params: Record<string, unknown>) => ({ status: 'sent' as const }));
+
 vi.mock('@alga-psa/notifications/notifications/email', () => ({
   getEmailNotificationService: vi.fn(() => ({
-    sendNotification: vi.fn(async () => {}),
+    sendNotification: (params: Record<string, unknown>) => sendEmailNotification(params),
   })),
 }));
 
@@ -199,6 +201,7 @@ describe('SLA Notification Service Integration Tests', () => {
   beforeEach(async () => {
     // Clean up before each test
     createdNotifications.length = 0;
+    sendEmailNotification.mockClear();
     await tenantTable(db, tenantId, 'sla_audit_log').where({ tenant: tenantId }).delete().catch(() => undefined);
     await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
   });
@@ -225,7 +228,11 @@ describe('SLA Notification Service Integration Tests', () => {
         assignedTo: assigneeUserId,
       });
 
-      await db.transaction(async (trx) => {
+      await tenantTable(db, tenantId, 'sla_notification_thresholds')
+        .where({ sla_policy_id: slaPolicyId, threshold_percent: 50 })
+        .update({ channels: ['in_app', 'email'] });
+
+      await withTransaction(db, async (trx) => {
         await startSlaForTicket(trx, tenantId, ticketId, clientId, boardId, priorityHighId);
 
         // Send 50% warning notification
@@ -254,6 +261,12 @@ describe('SLA Notification Service Integration Tests', () => {
       expect(createdNotifications.length).toBeGreaterThanOrEqual(1);
       expect(createdNotifications.some(n => n.user_id === assigneeUserId)).toBe(true);
       expect(createdNotifications.some(n => n.user_id === boardManagerId)).toBe(true);
+      expect(sendEmailNotification).toHaveBeenCalled();
+      expect(sendEmailNotification).toHaveBeenCalledWith(expect.objectContaining({
+        tenant: tenantId,
+        boardId,
+        mailClass: 'ticket',
+      }));
 
       // Verify audit log
       const auditLog = await tenantTable(db, tenantId, 'sla_audit_log')

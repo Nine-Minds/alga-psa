@@ -4,6 +4,7 @@ import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import AssetTypesManager from '@alga-psa/assets/components/settings/AssetTypesManager';
 import AssetStatusesManager from '@alga-psa/assets/components/settings/AssetStatusesManager';
 import RemoteAccessLinksManager from '@alga-psa/assets/components/settings/RemoteAccessLinksManager';
+import AssetNumberingSettings from '@alga-psa/assets/components/settings/AssetNumberingSettings';
 
 export async function generateMetadata(): Promise<Metadata> {
   return settingsTabMetadata('assets');
@@ -14,6 +15,7 @@ export default function AssetsSettingsRoute() {
     <SettingsTab tabId="assets">
       <AssetTypesManager />
       <AssetStatusesManager />
+      <AssetNumberingSettings />
       <RemoteAccessLinksManager />
     </SettingsTab>
   );

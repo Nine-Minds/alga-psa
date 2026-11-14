@@ -261,12 +261,19 @@ export async function deleteLocation(
   }
 
   const dependencies: string[] = [];
-  const [ticketCount, taxRateCount] = await Promise.all([
+  const [ticketCount, taxRateCount, contactCount] = await Promise.all([
     db.table('tickets').where({ location_id: locationId }).count('ticket_id as count').first(),
     db.table('client_tax_rates').where({ location_id: locationId }).count('tax_rate_id as count').first(),
+    // contact_locations is ON DELETE RESTRICT, so the database would refuse this anyway; counting
+    // first turns a bare FK error into the same "it has associated N contact(s)" the operator reads
+    // for tickets. Deactivating the location instead keeps every link.
+    db.table('contact_locations').where({ location_id: locationId }).count('contact_name_id as count').first(),
   ]);
   if (ticketCount && Number(ticketCount.count) > 0) {
     dependencies.push(`${ticketCount.count} ticket(s)`);
+  }
+  if (contactCount && Number(contactCount.count) > 0) {
+    dependencies.push(`${contactCount.count} contact(s)`);
   }
   if (taxRateCount && Number(taxRateCount.count) > 0) {
     dependencies.push(`${taxRateCount.count} tax rate(s)`);

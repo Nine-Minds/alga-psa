@@ -43,7 +43,6 @@ describe('ContractBasicsStep i18n wiring contract', () => {
       'wizardBasics.template.preview.billingCadenceLabel',
       'wizardBasics.template.preview.notSpecified',
       'wizardBasics.client.clientLabel',
-      'wizardBasics.client.loadingClients',
       'wizardBasics.client.selectClient',
       'wizardBasics.client.chooseClientHint',
       'wizardBasics.contractName.label',

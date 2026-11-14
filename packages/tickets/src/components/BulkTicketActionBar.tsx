@@ -24,6 +24,8 @@ interface BulkTicketActionBarProps {
   showPriority: boolean;
   showTags: boolean;
   showDueDate: boolean;
+  /** Defaults to true; a read-only workspace withdraws it. */
+  showDelete?: boolean;
   statusDisabled?: boolean;
   statusDisabledTitle?: string;
   onMove: () => void;
@@ -48,6 +50,7 @@ export default function BulkTicketActionBar({
   showPriority,
   showTags,
   showDueDate,
+  showDelete = true,
   statusDisabled = false,
   statusDisabledTitle,
   onMove,
@@ -106,7 +109,7 @@ export default function BulkTicketActionBar({
       ? t('bulk.actionBar.printLabelsLimit', 'You can print at most {{max}} labels at a time', { max: MAX_LABELS_PER_REQUEST })
       : undefined,
   });
-  actions.push({
+  if (showDelete) actions.push({
     id: 'delete',
     label: t('bulk.actionBar.delete', 'Delete'),
     icon: <Trash2 className="h-4 w-4" />,

@@ -23,6 +23,7 @@ const makeBuilder = (table: string) => {
     return builder;
   });
   builder.select = vi.fn(() => builder);
+  builder.forUpdate = vi.fn(() => builder);
   builder.first = vi.fn(async () => {
     if (table === 'contract_template_lines') return undefined;
     if (table === 'contract_lines') {
@@ -45,6 +46,7 @@ const makeBuilder = (table: string) => {
       return { is_system_managed_default: systemManagedContract };
     }
     if (table === 'contract_line_services') return undefined;
+    if (table === 'contract_line_service_configuration') return undefined;
     throw new Error(`Unexpected first() on ${table}`);
   });
   builder.insert = vi.fn(async () => undefined);

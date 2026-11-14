@@ -1,0 +1,11 @@
+# PHR recovery diagnosis
+
+The four PHR runs explicitly returned execution.kind=fail and success=false. “Codex step completed” was the generic runner summary, not evidence of success or a lost successful result envelope. Their stored results survive and consistently omit reviewOutcome and reviewDocumentPath. Each stopped before authoring a guide.
+
+The old prompt required current-revision live smoke, ready simulator/services, a served guide, and a successful lightweight Open Review. Dev-server memory admission blocked the attempted live refresh (queue positions 3, 2, 4, 5 respectively). Existing smoke was for 2fb583e4b2, while the review head was 007c0683. Each run deferred the guide until the refresh, then Open Review failed because no guide service existed. Repeating the unchanged prerequisite produced no work revision change and triggered the execution safeguard. The current card step has only the success-envelope exit criterion; the captain explicitly retired the old gates and authorized an evidence-based guide.
+
+The fixture correction was already present: notification.ts:132–136 sets MSP read/update role and permission flags; :273–278 checks runtime authorization. No new application repair is established. No replacement verifier is needed.
+
+Repair: index.html packages the existing demonstration, pinned code references, evidence and limitations; handoff.json records reviewOutcome=prepared, reviewDocumentPath and reviewHeadSha. Evidence remains in the durable external packet; the committed guide uses local file links and does not add media to Git. This artifact is not a submitted workflow result and does not update card state. reviewDocumentUrl remains null because no service was registered or started. The board owner retains service publication and any workflow resumption.
+
+The fixture repair is already committed in cabe72e0f3 and covered by the stale-role repair regression in 007c0683. Under the captain’s bounded recovery order, only index.html, handoff.json and this diagnosis are committed and pushed to change the work revision. No application code changed. No verifier, app build, board state change or approval occurred. The 2fb583e4b2 smoke remains historical evidence; no current-HEAD live pass is asserted.

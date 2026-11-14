@@ -8,12 +8,11 @@ import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
-import type { IClient } from '@alga-psa/types';
+import { useBillingClient } from '../../hooks/useBillingClient';
 import { toMinorUnits } from '@alga-psa/core';
 import { useTranslation } from 'react-i18next';
 
 interface PrepaymentInvoicesProps {
-  clients: IClient[];
   onGenerateSuccess: () => void;
 }
 
@@ -29,7 +28,7 @@ function getReturnedActionError(value: unknown): string | null {
       : null;
 }
 
-const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGenerateSuccess }) => {
+const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ onGenerateSuccess }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [amount, setAmount] = useState<number | undefined>();
@@ -38,7 +37,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
   const [error, setError] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const selectedClientRecord = clients.find((client) => client.client_id === selectedClient);
+  const { client: selectedClientRecord, isLoading: isClientLoading } = useBillingClient(selectedClient);
   const currencyCode = selectedClientRecord?.default_currency_code || 'USD';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,7 +108,6 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
             </label>
             <ClientPicker
               id='client-picker'
-              clients={clients}
               selectedClientId={selectedClient}
               onSelect={(clientId) => {
                 setSelectedClient(clientId);
@@ -154,7 +152,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
           <Button
             id='generate-button'
             type="submit"
-            disabled={isGenerating || !selectedClient || amount === undefined || amount <= 0}
+            disabled={isGenerating || !selectedClient || isClientLoading || amount === undefined || amount <= 0}
             className="w-full"
           >
             {isGenerating

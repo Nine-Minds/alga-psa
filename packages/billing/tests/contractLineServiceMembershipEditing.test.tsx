@@ -343,7 +343,7 @@ describe('contract line service membership editing', () => {
     fireEvent.change(endDate, {target: {value: '2027-01-01'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
     await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({
-      line: { invoice_line_description: 'Support and monitoring', start_date: null, end_date: '2027-01-01' },
+      line: { invoice_line_description: 'Support and monitoring', invoice_line_subtitle: null, start_date: null, end_date: '2027-01-01' },
       expected_version: 'v1',
     })));
     expect(actionMocks.updateContractLine).not.toHaveBeenCalled();
@@ -445,7 +445,7 @@ describe('contract line service membership editing', () => {
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
     await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({
       // Pricing-only after billing: only the narrow invoice fields travel with the line.
-      line: { invoice_line_description: null, start_date: null, end_date: null },
+      line: { invoice_line_description: null, invoice_line_subtitle: null, start_date: null, end_date: null },
       members: [expect.objectContaining({config_id: 'existing-config', quantity: 0, base_rate: 10000})],
       effective_boundary: '2026-10-01',
       added_service_ids: [],

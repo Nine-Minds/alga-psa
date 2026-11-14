@@ -5,7 +5,10 @@ import { TicketModel } from '../ticketModel';
 // table name, so mock the facade as a passthrough — tenant scoping is the
 // real facade's concern, not these tests'. tenantJoin degrades to a plain
 // join call on the underlying builder.
+const registerAfterCommitMock = vi.hoisted(() => vi.fn());
+
 vi.mock('@alga-psa/db', () => ({
+  registerAfterCommit: registerAfterCommitMock,
   tenantDb: (conn: any, _tenant: string) => ({
     table: (name: string) => conn(name),
     tenantJoin: (query: any, table: string, left: string, right: string, opts?: { type?: string }) =>
@@ -48,7 +51,10 @@ function createTrxHarness(options?: {
   const trx: any = vi.fn((table: string) => {
     if (table === 'ticket_comment_attachments') return { where: () => ({ orderBy: () => ({ forUpdate: async () => [] }) }) };
     if (table === 'tickets') {
-      return { where: ticketsWhere };
+      return {
+        where: ticketsWhere,
+        select: () => ({ where: ticketsWhere }),
+      };
     }
     if (table === 'contacts') {
       return { where: contactsWhere };

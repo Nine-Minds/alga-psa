@@ -28,6 +28,16 @@ import {
 } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { randomBytes } from 'crypto';
+import { buildMicrosoftEmailRedirectUri } from '@alga-psa/shared/services/email/microsoftRedirectUris';
+import { resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
+import {
+  classifyMicrosoftOAuthFailure,
+  classifySafeMicrosoftOAuthFailure,
+  describeMicrosoftOAuthFailureForMailboxFlow,
+  extractRedirectUriFromDescription,
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  toSafeMicrosoftOAuthFailure,
+} from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { runMicrosoftOAuthCallbackDiagnostic } from '@alga-psa/shared/services/email/microsoftOAuthCallbackDiagnostic';
 
 export const dynamic = 'force-dynamic';
@@ -295,11 +305,24 @@ export async function GET(request: NextRequest) {
 
       // Callback query values may contain credentials or provider-supplied
       // private details. Retain only coarse diagnostics in application logs.
+      const redirectFailureKind = classifyMicrosoftOAuthFailure({ error, errorDescription });
       console.error('[MS OAuth] OAuth error from Microsoft:', {
         hasProviderError: Boolean(error),
         hasCode: Boolean(code),
         hasState: Boolean(state),
+        aadstsKind: redirectFailureKind,
       });
+      if (redirectFailureKind) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          success: false,
+          error: MICROSOFT_OAUTH_FAILURE_ERROR_CODES[redirectFailureKind],
+          errorDescription: describeMicrosoftOAuthFailureForMailboxFlow(redirectFailureKind, {
+            redirectUri: extractRedirectUriFromDescription(errorDescription),
+          }),
+        });
+      }
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -494,7 +517,7 @@ export async function GET(request: NextRequest) {
       isHostedFlow
         ? hostedRedirect
         : (process.env.MICROSOFT_REDIRECT_URI || tenantRedirect)
-    ) || `${baseUrl}/api/auth/microsoft/callback`;
+    ) || buildMicrosoftEmailRedirectUri(baseUrl);
 
     // Log non-sensitive debug information to help diagnose invalid_client
     const maskedClientId = clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null';
@@ -524,7 +547,13 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     try {
-      const tokenUrl = getMicrosoftTokenUrl('common');
+      // Same authority the authorize step used: derived from the revalidated
+      // issuer (managed -> common, tenant-owned -> profile directory ID).
+      const tokenAuthority = resolveMicrosoftOAuthAuthority({
+        issuerKind: issuerResolution?.issuerKind === 'managed' ? 'platform-managed' : 'tenant-owned',
+        profileTenantId: issuerResolution?.microsoftTenantId,
+      });
+      const tokenUrl = getMicrosoftTokenUrl(tokenAuthority);
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -843,16 +872,20 @@ export async function GET(request: NextRequest) {
         }
       });
     } catch (tokenError: any) {
-      const errorData = tokenError.response?.data || {};
-      const errorMessage = errorData.error_description || errorData.error || tokenError.message;
-      const errorCode = errorData.error || 'token_exchange_failed';
+      // Never log the raw axios error: `config.data` is the urlencoded token
+      // request body and contains client_secret.
+      const safeFailure = toSafeMicrosoftOAuthFailure(tokenError);
+      const errorMessage = safeFailure.errorDescription || safeFailure.error || safeFailure.message || 'Token exchange failed';
+      const errorCode = safeFailure.error || 'token_exchange_failed';
+      const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
 
       console.error('[MS OAuth] Failed to exchange authorization code:', {
-        error: errorCode,
-        errorDescription: errorMessage,
-        status: tokenError.response?.status,
-        statusText: tokenError.response?.statusText,
-        requestUrl: tokenError.config?.url,
+        status: safeFailure.status,
+        error: safeFailure.error,
+        errorCodes: safeFailure.errorCodes,
+        errorDescription: safeFailure.errorDescription,
+        traceId: safeFailure.traceId,
+        correlationId: safeFailure.correlationId,
         redirectUri: redirectUri,
         clientId: clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null',
         hasCode: !!code,
@@ -860,7 +893,13 @@ export async function GET(request: NextRequest) {
       });
 
       try {
-        await persistProviderError(stateContext, errorCode, errorMessage);
+        await persistProviderError(
+          stateContext,
+          failureKind ? MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind] : errorCode,
+          failureKind
+            ? describeMicrosoftOAuthFailureForMailboxFlow(failureKind, { redirectUri })
+            : errorMessage
+        );
       } catch (persistError: any) {
         console.warn('⚠️ Failed to persist Microsoft OAuth token exchange error:', persistError?.message || persistError);
       }
@@ -869,8 +908,12 @@ export async function GET(request: NextRequest) {
         type: 'oauth-callback',
         provider: 'microsoft',
         success: false,
-        error: errorCode,
-        errorDescription: 'Microsoft authorization failed. Please try again.'
+        error: failureKind ? MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind] : errorCode,
+        errorDescription: failureKind
+          ? describeMicrosoftOAuthFailureForMailboxFlow(failureKind, {
+              redirectUri: extractRedirectUriFromDescription(safeFailure.errorDescription) ?? redirectUri,
+            })
+          : 'Microsoft authorization failed. Please try again.'
       });
     }
   } catch (error: any) {

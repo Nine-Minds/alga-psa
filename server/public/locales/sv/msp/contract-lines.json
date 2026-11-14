@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Fakturaradens beskrivning",
         "invoiceLineDescriptionPlaceholder": "T.ex. månatligt underhåll av telefonsystem enligt avtal från 2019",
         "nameLabel": "Avtalsradsnamn *",
-        "namePlaceholder": "T.ex. Drift och support – Guld"
+        "namePlaceholder": "T.ex. Drift och support – Guld",
+        "invoiceLineSubtitleLabel": "Undertitel för fakturarad",
+        "invoiceLineSubtitlePlaceholder": "t.ex. Hanterade slutpunkter och säkerhetskopiering",
+        "invoiceLineSubtitleHelp": "Visas som en dämpad andra rad under titeln när den här fasta raden visas på en faktura."
       },
       "cardTitle": "Redigera avtalsrad: {{name}} (fast)",
       "errors": {

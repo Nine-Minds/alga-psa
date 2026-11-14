@@ -7,6 +7,7 @@ import { localizeTemplateAstForLocale } from './i18nLabels';
 import { tenantDb } from '@alga-psa/db';
 import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
 import { buildPreviewSheetCss, wrapInPreviewSheet } from './previewSheet';
+import { PDF_FONT_FACE_CSS } from '../pdf-fonts';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 import type { FileStore } from '@alga-psa/storage';
 
@@ -275,6 +276,7 @@ export const renderTemplateAstHtmlDocument = async (
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
     <style>
+${PDF_FONT_FACE_CSS}
 ${css}
 ${additionalCss}
     </style>

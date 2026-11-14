@@ -27,6 +27,7 @@ import {
   isTableAllowed,
   isColumnAllowed,
 } from './blocklist';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 /**
  * Custom report as stored in the database
@@ -530,12 +531,10 @@ export class PlatformReportService {
 
   private formatCurrency(value: number, formatting: FormattingOptions): string {
     const amount = formatting.divisor ? value / formatting.divisor : value;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: formatting.currency || 'USD',
+    return formatCurrencyWithSymbol(amount, 'en-US', formatting.currency || 'USD', {
       minimumFractionDigits: formatting.decimals ?? 2,
       maximumFractionDigits: formatting.decimals ?? 2,
-    }).format(amount);
+    });
   }
 
   private formatNumber(value: number, formatting: FormattingOptions): string {

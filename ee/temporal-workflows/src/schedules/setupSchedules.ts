@@ -5,9 +5,14 @@ import { getAdminConnection } from '@alga-psa/db/admin.js';
 import {
   LEGACY_PER_TENANT_SCHEDULE_PREFIXES,
   listMaintenanceFanoutSchedules,
+  listExtensionMaintenanceSchedules,
+  PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE,
+  registerMaintenanceSchedule,
+  MAINTENANCE_FANOUT_SCHEDULES,
   TIER_FEATURES,
   tierHasFeature,
 } from '@alga-psa/types';
+import { forcedValue } from '@alga-psa/core/capability';
 import { resolveTenantTier } from '@alga-psa/licensing';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
@@ -354,6 +359,41 @@ export async function setupSchedules() {
     const connection = await Connection.connect({ address: temporalAddress });
     const client = new Client({ connection, namespace: temporalNamespace });
 
+    // This registry is process-local. The Temporal scheduler must register the
+    // extension itself after a restore has created journal data, before its
+    // durable schedules are converged. Keep dark installations neutral and
+    // avoid loading any co-managed package into the worker.
+    let portableRestoreScheduleState: 'enabled' | 'disabled' | 'unknown' = 'unknown';
+    try {
+      const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
+      if (forced === 'off' || forced === 'malformed') {
+        portableRestoreScheduleState = 'disabled';
+      } else {
+        const db = await getAdminConnection();
+        const hasJournal = await db.schema.hasTable('portable_workspace_restore_uploads');
+        const hasAttempts = hasJournal
+          ? await db('portable_workspace_restore_uploads').select(db.raw('1')).first()
+          : undefined;
+        portableRestoreScheduleState = hasAttempts ? 'enabled' : 'disabled';
+        const alreadyRegistered = listExtensionMaintenanceSchedules('ee').some(
+          (row) => row.jobName === PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE.jobName,
+        );
+        if (hasAttempts && !alreadyRegistered) {
+          registerMaintenanceSchedule(
+            { ...PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE, edition: 'ee' },
+            MAINTENANCE_FANOUT_SCHEDULES.map(({ jobName }) => jobName),
+          );
+        }
+      }
+    } catch (error) {
+      // This optional probe must not prevent native Temporal schedules from converging.
+      // Unknown keeps a previously persisted recovery schedule in place until a later successful probe.
+      portableRestoreScheduleState = 'unknown';
+      logger.warn('Portable restore schedule registration failed; continuing native schedule setup', {
+        error: error instanceof Error ? error.message : 'unknown registration failure',
+      });
+    }
+
     const scheduleId = 'email-webhook-maintenance-schedule';
 
     await upsertSchedule(client, scheduleId, {
@@ -512,6 +552,9 @@ export async function setupSchedules() {
           catchupWindow: '1m',
         },
       });
+    }
+    if (portableRestoreScheduleState === 'disabled') {
+      await deleteScheduleIfExists(client, `maintenance-fanout:${PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE.jobName}`);
     }
 
     for (const { scheduleId: marketingScheduleId, jobName, cron } of MARKETING_FANOUT_SCHEDULES) {

@@ -54,7 +54,7 @@ function productionPermissionCalls(): Set<string> {
       else if (/\.[cm]?[jt]sx?$/.test(entry.name)) {
         const source = fs.readFileSync(path.join(repoRoot, child), 'utf8');
         for (const match of source.matchAll(
-          /hasPermission\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]/g,
+          /(?:hasPermission|hasApiContextPermission)\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]/g,
         )) calls.add(`${match[1]}.${match[2]}`);
       }
     }

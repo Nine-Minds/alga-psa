@@ -6,6 +6,7 @@ import { StorageError, StorageProviderFactory } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
+import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 
 /**
  * GET /api/documents/[documentId]/preview
@@ -72,7 +73,12 @@ export async function GET(
 
     // Set aggressive caching headers
     const headers = new Headers();
-    headers.set('Content-Type', fileRecord.mime_type || 'image/jpeg');
+    // Shared policy: raster inline, everything else (incl. legacy rows whose preview
+    // is the uploaded SVG) neutralised to an octet-stream attachment.
+    // LEVERAGE: pattern byte-serving-headers — policy headers set by hand in each byte-serving route
+    for (const [name, value] of Object.entries(buildDocumentPreviewHeaders(fileRecord.mime_type))) {
+      headers.set(name, value);
+    }
     headers.set('Content-Length', buffer.length.toString());
 
     // Cache for 1 year - previews are immutable (file_id changes if regenerated)

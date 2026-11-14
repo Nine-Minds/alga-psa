@@ -18,6 +18,10 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: async () => true,
 }));
 
+vi.mock('../../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccessConcealed: vi.fn(async () => ({ ticket_id: 'ticket-1' })),
+}));
+
 vi.mock('@alga-psa/shared/lib/ticketActivity', () => ({
   TICKET_ACTIVITY_ACTOR: {},
   TICKET_ACTIVITY_ENTITY: {},
@@ -114,7 +118,8 @@ describe('deleteChecklistItem transaction boundary', () => {
     const result: any = await deleteChecklistItem('item-1');
 
     expect(result).toMatchObject({ actionError: 'Checklist item not found' });
-    expect(state.statements.map((s: Statement) => s.op)).toEqual(['forUpdate']);
+    // The authorization item load rejects before the locking read or any delete.
+    expect(state.statements.map((s: Statement) => s.op)).toEqual([]);
   });
 
   it('A5(ii): the guard read is tenant-scoped, so another tenant\'s item is not found and not deleted', async () => {
@@ -123,7 +128,8 @@ describe('deleteChecklistItem transaction boundary', () => {
     const result: any = await deleteChecklistItem('item-1');
 
     expect(result).toMatchObject({ actionError: 'Checklist item not found' });
-    expect(state.statements.map((s: Statement) => s.op)).toEqual(['forUpdate']);
+    // The authorization item load rejects before the locking read or any delete.
+    expect(state.statements.map((s: Statement) => s.op)).toEqual([]);
   });
 
   it('A5(iii): when the delete throws, the transaction rolls back and the error propagates', async () => {

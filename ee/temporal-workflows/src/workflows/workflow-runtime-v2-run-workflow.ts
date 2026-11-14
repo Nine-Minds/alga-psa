@@ -10,7 +10,7 @@ import {
   WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
   type WorkflowRuntimeV2TemporalRunInput,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
-import { compileExpression, type CompiledExpression } from '@alga-psa/workflows/runtime/expressionEngine';
+import { compileExpression, evaluateWorkflowExpression, type CompiledExpression } from '@alga-psa/workflows/runtime/expressionEngine';
 import type { EventWaitFilter, Expr, ForEachBlock, IfBlock, Step } from '@alga-psa/workflows/runtime/core';
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime/core';
 import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime/core';
@@ -1173,7 +1173,10 @@ function cloneRecord(value: Record<string, unknown>): Record<string, unknown> {
 
 async function evaluateExpression(source: string, context: Record<string, unknown>): Promise<unknown> {
   const compiled = getCompiledExpression(source);
-  return await compiled.evaluate(context);
+  // Runs inside Temporal's deterministic sandbox: the funnel applies the parent
+  // guard and step/byte budgets, but process-wide admission and timers are
+  // inactive there by design (see expressionAdmission.ts).
+  return await evaluateWorkflowExpression(compiled, context);
 }
 
 function getCompiledExpression(source: string): CompiledExpression {

@@ -64,23 +64,27 @@ function buildComment(overrides: Partial<IComment>): IComment {
   } as IComment;
 }
 
-function renderComment(comment: IComment, userMap: Record<string, any> = {}) {
-  return render(
-    <CommentItem
-      conversation={comment}
-      currentUserId="user-1"
-      isEditing={false}
-      currentComment={null}
-      ticketId="t1"
-      userMap={userMap}
-      contactMap={{}}
-      onContentChange={() => {}}
-      onSave={() => {}}
-      onClose={() => {}}
-      onEdit={() => {}}
-      onDelete={() => {}}
-    />
-  );
+function commentElement(comment: IComment, userMap: Record<string, any> = {}, variant?: 'default' | 'compact') {
+  const props = {
+    conversation: comment,
+    currentUserId: 'user-1',
+    isEditing: false,
+    currentComment: null,
+    ticketId: 't1',
+    userMap,
+    contactMap: {},
+    onContentChange: () => {},
+    onSave: () => {},
+    onClose: () => {},
+    onEdit: () => {},
+    onDelete: () => {},
+    variant,
+  };
+  return <CommentItem {...props} />;
+}
+
+function renderComment(comment: IComment, userMap: Record<string, any> = {}, variant?: 'default' | 'compact') {
+  return render(commentElement(comment, userMap, variant));
 }
 
 const FOREIGN = {
@@ -116,5 +120,21 @@ describe('CommentItem collaborator attribution', () => {
     });
     expect(screen.getByText('Local Person')).toBeInTheDocument();
     expect(screen.getByLabelText('Edit comment')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['Entry', 'default'],
+    ['Grid', 'compact'],
+  ] as const)('updates an initially unknown author immediately in the %s comment presentation', (_layout, variant) => {
+    const comment = buildComment({ author_type: 'internal', user_id: 'posting-user' });
+    const view = renderComment(comment, {}, variant);
+    expect(screen.getByText('Unknown User')).toBeInTheDocument();
+
+    view.rerender(commentElement(comment, {
+      'posting-user': { user_id: 'posting-user', first_name: 'Ada', last_name: 'Technician', user_type: 'internal', avatarUrl: null },
+    }, variant));
+
+    expect(screen.getByText('Ada Technician')).toBeInTheDocument();
+    expect(screen.queryByText('Unknown User')).not.toBeInTheDocument();
   });
 });

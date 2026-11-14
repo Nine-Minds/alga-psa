@@ -1,0 +1,111 @@
+{
+  "title": "Service principals C fresh UI verification at a29e82f8",
+  "recordingStartedAt": "2026-11-03T19:29:52.915Z",
+  "durationSeconds": 48.562,
+  "servedRevision": "a29e82f8c9633e6956b746a58ea76f9cd35accb9+da39a3ee5e6b",
+  "paneId": "f6e6f7ad-3ce5-4724-89cb-41ccf5f537a9",
+  "capture": "Alga Dev browser recorder output; recoverably truncated when its owner viewer disconnected. Remuxed with ffmpeg stream copy to finalize playback. Browser-returned mark times are exact where stated; early chapter boundaries are approximate from frames.",
+  "marks": [
+    {
+      "t": 0.0,
+      "label": "Open Settings and locate MCP agent management",
+      "timestampPrecision": "approximate-frame-boundary"
+    },
+    {
+      "t": 3.5,
+      "label": "Open MCP server settings",
+      "timestampPrecision": "approximate-frame-boundary"
+    },
+    {
+      "t": 6.0,
+      "label": "Verify archived agent absent and inactive agent visible after load",
+      "timestampPrecision": "approximate-frame-boundary"
+    },
+    {
+      "t": 10.0,
+      "label": "Reload MCP settings before list assertions",
+      "timestampPrecision": "approximate-frame-boundary"
+    },
+    {
+      "t": 12.0,
+      "label": "Check authorized audit endpoint for archived agent while absent from list",
+      "timestampPrecision": "approximate-frame-boundary"
+    },
+    {
+      "t": 18.857,
+      "label": "Verify authorized audit history for archived agent",
+      "timestampPrecision": "exact browser-record-mark response"
+    },
+    {
+      "t": 18.882,
+      "label": "Create a fresh act-as time entry for QA UI editing",
+      "timestampPrecision": "exact browser-record-mark response"
+    },
+    {
+      "t": 25.834,
+      "label": "Open QA timesheet and locate the new act-as entry",
+      "timestampPrecision": "exact browser-record-mark response"
+    },
+    {
+      "t": 42.319,
+      "label": "Edit the delegated entry as QA in the timesheet UI",
+      "timestampPrecision": "exact browser-record-mark response"
+    },
+    {
+      "t": 47.065,
+      "label": "Save the UI edit and reopen the persisted entry",
+      "timestampPrecision": "exact browser-record-mark response"
+    }
+  ],
+  "assertions": {
+    "viewerRouting": {
+      "status": "succeeded",
+      "detail": "Project-scoped space-new-tab succeeded; get-layout reported host scope; browser navigation, DOM inspection, reload, click and screenshot succeeded through the routed viewer before owner disconnect."
+    },
+    "mcpSettingsUi": {
+      "status": "succeeded",
+      "archivedAgentId": "5823a340-1626-4519-97ed-1f43946eabff",
+      "archivedAgentVisibleAfterReload": false,
+      "inactiveAgentId": "03889177-f70a-4050-ae02-b23ebdbb0a68",
+      "inactiveAgentVisibleAfterReload": true,
+      "screenshot": "mcp-settings-agents-reloaded.png"
+    },
+    "archivedAudit": {
+      "status": "succeeded",
+      "authorizedSameOriginFetchHttpStatus": 200,
+      "agentId": "5823a340-1626-4519-97ed-1f43946eabff",
+      "retainedRows": 2,
+      "evidenceSource": "same-origin product audit endpoint in authenticated QA browser session; sanitized response counts only and allowlisted fields"
+    },
+    "agentListApi": {
+      "status": "not_verified",
+      "detail": "A fresh API-key request returned 401 because this route requires authenticated MCP-admin session context; read-only database and authenticated UI checks cover the listed fixtures."
+    },
+    "timesheetUi": {
+      "status": "save_succeeded",
+      "qaUserId": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+      "entryId": "aaeec38b-8f21-4f2b-91b5-6984b48280ab",
+      "editAndSaveThroughActualTimesheetUi": true,
+      "saveToastObserved": true,
+      "reopenActionAttempted": true,
+      "reopenedNotesVisuallyAsserted": false,
+      "persistedNotes": "Card C direct QA UI edit saved and reopened 2026-11-03",
+      "createdViaPrincipalId": "4c725ada-2d39-4c46-b7b5-8ebad758b845",
+      "updatedViaPrincipalIdAfterSave": null,
+      "updatedBy": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+      "limitation": "The original authenticated pane disconnected before a settled reopened-form assertion. Read-only SQL after save verified persisted note and attribution; the subsequently created scoped local viewer had no QA session.",
+      "screenshots": [
+        "qa-timesheet-edit-form.png (edited notes visible before save)",
+        "qa-timesheet-save-success.png (saved toast and persisted grid total)"
+      ]
+    },
+    "database": {
+      "readOnly": true,
+      "database": "server_card_sp_c4",
+      "port": 5474,
+      "sanitizedBefore": "sanitized-database-before.json (authenticated POST response immediately after insert, before UI edit)",
+      "sanitizedAfter": "sanitized-database-after.json (read-only SQL after UI save)",
+      "agentsApiKeyResult": "api-key-list-attempt.json"
+    }
+  }
+}

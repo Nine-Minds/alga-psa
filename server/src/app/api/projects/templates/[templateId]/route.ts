@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import {
   getTemplateWithDetails,
   updateTemplate,
@@ -11,7 +12,7 @@ export async function GET(
   { params }: { params: { templateId: string } }
 ) {
   try {
-    const template = await getTemplateWithDetails(params.templateId);
+    const template = await runWithApiKeyOrSession(request, () => getTemplateWithDetails(params.templateId));
     if (isTemplateActionError(template)) {
       return templateErrorResponse(template, 'Failed to fetch template');
     }
@@ -42,11 +43,13 @@ export async function PATCH(
     }
     const { template_name, description, category } = body;
 
-    const template = await updateTemplate(params.templateId, {
-      template_name: typeof template_name === 'string' ? template_name : undefined,
-      description: typeof description === 'string' ? description : undefined,
-      category: typeof category === 'string' ? category : undefined
-    });
+    const template = await runWithApiKeyOrSession(request, () =>
+      updateTemplate(params.templateId, {
+        template_name: typeof template_name === 'string' ? template_name : undefined,
+        description: typeof description === 'string' ? description : undefined,
+        category: typeof category === 'string' ? category : undefined
+      })
+    );
     if (isTemplateActionError(template)) {
       return templateErrorResponse(template, 'Failed to update template');
     }
@@ -62,7 +65,7 @@ export async function DELETE(
   { params }: { params: { templateId: string } }
 ) {
   try {
-    const result = await deleteTemplate(params.templateId);
+    const result = await runWithApiKeyOrSession(request, () => deleteTemplate(params.templateId));
     if (isTemplateActionError(result)) {
       return templateErrorResponse(result, 'Failed to delete template');
     }

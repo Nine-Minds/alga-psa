@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "⟦Īƞṽȯīƈḗ Ŀīƞḗ Ḓḗşƈřīƥŧīȯƞ⟧",
         "invoiceLineDescriptionPlaceholder": "⟦ḗ.ɠ. Ḿȯƞŧħŀẏ ƥħȯƞḗ şẏşŧḗḿ ḿȧīƞŧḗƞȧƞƈḗ ƥḗř 2019 ȧɠřḗḗḿḗƞŧ⟧",
         "nameLabel": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƞȧḿḗ *⟧",
-        "namePlaceholder": "⟦ḗ.ɠ. Ḿȧƞȧɠḗḓ Şŭƥƥȯřŧ - Ɠȯŀḓ⟧"
+        "namePlaceholder": "⟦ḗ.ɠ. Ḿȧƞȧɠḗḓ Şŭƥƥȯřŧ - Ɠȯŀḓ⟧",
+        "invoiceLineSubtitleLabel": "⟦Īƞṽȯīƈḗ Ŀīƞḗ Şŭƀŧīŧŀḗ⟧",
+        "invoiceLineSubtitlePlaceholder": "⟦ḗ.ɠ. Ḿȧƞȧɠḗḓ ḗƞḓƥȯīƞŧ ȧƞḓ ƀȧƈķŭƥ şḗřṽīƈḗş⟧",
+        "invoiceLineSubtitleHelp": "⟦Şħȯẇƞ ȧş ȧ ḿŭŧḗḓ şḗƈȯƞḓ ŀīƞḗ ŭƞḓḗř ŧħḗ ŧīŧŀḗ ẇħḗƞ ŧħīş ƒīẋḗḓ ŀīƞḗ ȧƥƥḗȧřş ȯƞ ȧƞ īƞṽȯīƈḗ.⟧"
       },
       "cardTitle": "⟦Ḗḓīŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ: {{name}} (Ƒīẋḗḓ)⟧",
       "errors": {

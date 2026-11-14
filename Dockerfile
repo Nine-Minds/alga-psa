@@ -5,8 +5,13 @@
 # Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
 # and broke bundled Vault provider initialization in the blue deployment.
 FROM node:26.1.0-alpine
+# FreeFont ships as CFF-based OTF (and ghostscript's fonts are Type 1); Chromium embeds
+# those in PDFs as Type 3 glyph outlines that print poorly. DejaVu (sans-serif/monospace)
+# and Liberation (Arial/Helvetica/Courier) are TrueType and embed cleanly.
 RUN apk add --no-cache \
     bash \
+    findutils \
+    setpriv \
     postgresql-client \
     redis \
     graphicsmagick \
@@ -21,6 +26,8 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    font-dejavu \
+    font-liberation \
     ffmpeg
 
 # Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.
@@ -64,11 +71,14 @@ COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
 COPY ./server/tsconfig.json ./server/
 COPY ./server/index.ts ./server/
-COPY ./server/migrations/ ./server/migrations/
-COPY ./server/seeds/ ./server/seeds/
+COPY --chown=1000:1000 ./server/migrations/ ./server/migrations/
+COPY --chown=1000:1000 ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
 COPY ./ee/packages/workflows/ ./ee/packages/workflows/
 COPY ./scripts ./scripts
+COPY scripts/runtime-permissions.sh /usr/local/bin/alga-runtime-permissions
+COPY scripts/repair-secret-permissions.sh /usr/local/bin/alga-repair-secret-permissions
+RUN chmod 0755 /usr/local/bin/alga-runtime-permissions /usr/local/bin/alga-repair-secret-permissions
 COPY ./shared/workflow/ ./shared/workflow/
 
 # Copy the workspace packages with their pre-built dist directories, as the
@@ -91,6 +101,8 @@ RUN chmod +x /app/entrypoint.sh
 # that cannot create logs/ throws. Give that user the directory, as the old
 # test image did.
 RUN chown 1000:1000 /app/server /app/server/tsconfig.json
+RUN install -d -o 1000 -g 1000 -m 0755 /data/files && \
+    install -d -o 1000 -g 1000 -m 0700 /run/secrets
 
 # Create build timestamp for verification
 RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
@@ -107,5 +119,7 @@ ENV NODE_ENV=production
 # See docs/DOCKER_SECRET_PROVIDER_CONFIG.md for details
 ENV SECRET_READ_CHAIN="env,filesystem"
 ENV SECRET_WRITE_PROVIDER="filesystem"
+ENV HOME=/home/node
+USER 1000:1000
 
 ENTRYPOINT ["/app/entrypoint.sh"]

@@ -18,6 +18,7 @@ import type {
   ClientRmaRow,
 } from '@alga-psa/inventory/lib/integrationTypes';
 import { SectionLoadError } from './SectionLoadError';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 interface ClientEquipmentTabProps {
   clientId: string;
@@ -27,7 +28,7 @@ const shortDate = (iso: string | null, emptyValue: string): string =>
   iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : emptyValue;
 
 const money = (cents: number, currency: string): string =>
-  `${(Number(cents || 0) / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'USD' })}`;
+  formatCurrencyWithSymbol(Number(cents || 0) / 100, undefined, currency || 'USD');
 
 const capitalizeStatus = (status: string | null | undefined, emptyValue: string): string => {
   const value = String(status ?? '').replace(/_/g, ' ');

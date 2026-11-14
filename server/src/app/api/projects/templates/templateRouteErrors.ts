@@ -1,9 +1,26 @@
 import { NextResponse } from 'next/server';
+import { AuthenticationError } from '@alga-psa/auth';
 
 type TemplateRouteError = {
   status: number;
   message: string;
 };
+
+/**
+ * A caller without a resolvable identity (no session and no usable API key) is a
+ * 401, never a 500: `withAuth` throws AuthenticationError and
+ * `authenticateApiKeyRequest` throws UnauthorizedError (statusCode 401).
+ */
+function unauthenticatedStatus(error: unknown): number | undefined {
+  if (error instanceof AuthenticationError) {
+    return 401;
+  }
+  const candidate = error as { name?: string; statusCode?: unknown };
+  if (candidate?.name === 'AuthenticationError' || candidate?.name === 'UnauthorizedError') {
+    return typeof candidate.statusCode === 'number' ? candidate.statusCode : 401;
+  }
+  return undefined;
+}
 
 export function isTemplateActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   const candidate = value as Record<string, unknown>;
@@ -20,6 +37,11 @@ export function isTemplateActionError(value: unknown): value is { actionError: s
 function templateRouteErrorFrom(error: unknown, fallbackMessage: string): TemplateRouteError {
   if (error instanceof SyntaxError) {
     return { status: 400, message: 'Request body must be valid JSON' };
+  }
+
+  const unauthenticated = unauthenticatedStatus(error);
+  if (unauthenticated !== undefined) {
+    return { status: unauthenticated, message: 'Unauthorized: valid session or API key required' };
   }
 
   if (isTemplateActionError(error)) {

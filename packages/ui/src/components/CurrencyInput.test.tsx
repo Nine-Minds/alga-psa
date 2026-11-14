@@ -140,6 +140,13 @@ describe('CurrencyInput component', () => {
     expect(screen.getByText('¥').getAttribute('aria-hidden')).toBe('true');
     expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('1,234');
   });
+
+  it('adorns with the product symbol, not the ISO code, for ZAR', () => {
+    render(<CurrencyInput id="c" value={1234.56} currencyCode="ZAR" />);
+
+    expect(screen.getByText('R').getAttribute('aria-hidden')).toBe('true');
+    expect(screen.queryByText('ZAR')).toBeNull();
+  });
 });
 
 describe('CurrencyInput with a controlled parent', () => {

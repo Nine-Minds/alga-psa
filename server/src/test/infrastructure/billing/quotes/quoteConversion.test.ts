@@ -580,6 +580,52 @@ describe('Quote conversion infrastructure', () => {
     expect(Number(discountCharge.net_amount)).toBe(-1000);
   });
 
+  it('a discounted quote converts to an invoice with the same per-line and total tax', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 10 });
+
+    const { quote, items } = await createAcceptedQuote([
+      { description: 'Project A', quantity: 1, unit_price: 10000, is_recurring: false, billing_method: 'fixed' },
+      { description: 'Project B', quantity: 1, unit_price: 5000, is_recurring: false, billing_method: 'fixed' },
+    ]);
+    // Whole-quote fixed discount, added through the model so quote totals recalc.
+    await context.db('quotes').where({ tenant: context.tenantId, quote_id: quote.quote_id }).update({ status: 'draft' });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Quote-wide discount',
+      quantity: 1,
+      unit_price: 3000,
+      is_discount: true,
+      discount_type: 'fixed',
+      created_by: context.userId,
+    } as any);
+    await context.db('quotes').where({ tenant: context.tenantId, quote_id: quote.quote_id })
+      .update({ status: 'accepted', accepted_at: ACCEPTED_AT, accepted_by: context.userId });
+
+    const quoteRow = await context.db('quotes').where({ tenant: context.tenantId, quote_id: quote.quote_id }).first();
+    const quoteLines = await context.db('quote_items')
+      .where({ tenant: context.tenantId, quote_id: quote.quote_id, is_discount: false });
+    // 3000 spread 2:1 -> 2000 / 1000, so the taxed base is 8000 + 4000 = 12000.
+    expect(Number(quoteRow.tax)).toBe(1200);
+    expect(quoteLines.reduce((sum: number, line: any) => sum + Number(line.tax_amount), 0)).toBe(1200);
+
+    const result = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const charges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const invoiceLineTax = charges.reduce((sum: number, c: any) => sum + Number(c.tax_amount), 0);
+    expect(invoiceLineTax).toBe(Number(quoteRow.tax));
+    for (const line of quoteLines) {
+      const converted = charges.find((c: any) => c.description === line.description);
+      expect(Number(converted.tax_amount)).toBe(Number(line.tax_amount));
+    }
+    expect(charges.find((c: any) => c.is_discount === true).tax_amount.toString()).toBe('0');
+    expect(items).toHaveLength(2);
+  });
+
   it('T112: invoice conversion stores converted_invoice_id on the source quote', async () => {
     const { quote } = await createAcceptedQuote([
       {

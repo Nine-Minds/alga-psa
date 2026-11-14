@@ -1,0 +1,50 @@
+[
+  {
+    "event_name": "TICKET_CREATED",
+    "correlation_key": "a61a9895-a1d6-4f31-bfda-7c7d1280cbca",
+    "payload": {
+      "source": "web_app",
+      "userId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "board_id": "6e361682-53db-448a-8dca-f44775f1afd0",
+      "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "ticketId": "a61a9895-a1d6-4f31-bfda-7c7d1280cbca",
+      "actorType": "USER",
+      "client_id": "b4cc85d7-8898-48af-8191-251bcc657be8",
+      "clientName": "Smoke Deferred 1755",
+      "occurredAt": "2026-11-04T21:15:56.210Z",
+      "actorUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "priority_id": "416d38c1-bd6c-4764-b415-14faa96d01c2",
+      "requesterName": "Smoke Deferred 1755"
+    },
+    "created_at": "2026-11-04T21:15:56.215Z"
+  },
+  {
+    "event_name": "TICKET_ADDITIONAL_AGENT_ASSIGNED",
+    "correlation_key": "a61a9895-a1d6-4f31-bfda-7c7d1280cbca",
+    "payload": {
+      "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "ticketId": "a61a9895-a1d6-4f31-bfda-7c7d1280cbca",
+      "actorType": "USER",
+      "occurredAt": "2026-11-04T21:15:56.225Z",
+      "actorUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "primaryAgentId": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+      "assignedByUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "additionalAgentId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7"
+    },
+    "created_at": "2026-11-04T21:15:56.228Z"
+  },
+  {
+    "event_name": "TICKET_ASSIGNED",
+    "correlation_key": "a61a9895-a1d6-4f31-bfda-7c7d1280cbca",
+    "payload": {
+      "userId": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+      "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "ticketId": "a61a9895-a1d6-4f31-bfda-7c7d1280cbca",
+      "actorType": "USER",
+      "occurredAt": "2026-11-04T21:15:56.230Z",
+      "actorUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "assignedByUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7"
+    },
+    "created_at": "2026-11-04T21:15:56.361Z"
+  }
+]

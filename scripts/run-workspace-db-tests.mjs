@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
@@ -45,9 +45,14 @@ const env = {
     [`${prefix}_DB_NAME`, databaseName],
   ])),
 };
-const args = ['--config', 'vitest.workspace-db.config.ts', ...process.argv.slice(2)];
 const run = (args) => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
-const filters = process.argv.slice(2);
+const requestedFilters = process.argv.slice(2);
+const filters = requestedFilters.map((filter) => {
+  if (filter.startsWith('-')) return filter;
+  const repositoryPath = path.resolve(root, filter);
+  return existsSync(repositoryPath) ? path.relative(cwd, repositoryPath) : filter;
+});
+const args = ['--config', 'vitest.workspace-db.config.ts', ...filters];
 let before;
 let evidence;
 let phase = 'Revision inspection';
@@ -80,7 +85,7 @@ try {
 } catch (error) {
   evidence = { schemaVersion: 1, suite: 'workspace-db', revision: before?.revision, status: 'failed', failures: [`${phase}: ${error.message}`] };
 }
-evidence.selection = { mode: filters.length ? 'filtered' : 'full', filters };
+evidence.selection = { mode: requestedFilters.length ? 'filtered' : 'full', filters: requestedFilters };
 try {
   const after = testRevision(root);
   evidence.source = { before, after };

@@ -15,7 +15,6 @@ import type { IContact } from '@alga-psa/types';
 
 const hoisted = vi.hoisted(() => ({
   getAllContacts: vi.fn(),
-  getAllClients: vi.fn(),
   getCurrentUserAsync: vi.fn(),
   importedContacts: [] as any[],
 }));
@@ -23,7 +22,6 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('@alga-psa/clients/actions', () => ({
   getAllContacts: hoisted.getAllContacts,
   getContactsByClient: vi.fn(async () => []),
-  getAllClients: hoisted.getAllClients,
   searchContactListIds: vi.fn(async () => []),
   exportContactsToCSV: vi.fn(),
   deleteContact: vi.fn(),
@@ -107,6 +105,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
           data-testid={`row-${row.contact_name_id}`}
           data-avatar={row.avatarUrl ?? ''}
           data-client-name={row.client_name ?? ''}
+          data-client-logo={row.client_logo_url ?? ''}
         >
           {row.full_name}
         </div>
@@ -162,10 +161,6 @@ describe('Contacts — CSV import reconciliation', () => {
 
   beforeEach(() => {
     hoisted.getAllContacts.mockResolvedValue([ada, grace]);
-    hoisted.getAllClients.mockResolvedValue([
-      { client_id: 'client-acme', client_name: 'Acme Corp' },
-      { client_id: 'client-globex', client_name: 'Globex' },
-    ]);
     hoisted.getCurrentUserAsync.mockResolvedValue({ user_id: 'user-1' });
   });
 
@@ -190,28 +185,30 @@ describe('Contacts — CSV import reconciliation', () => {
     ).toEqual(['row-ada', 'row-grace', 'row-linus']);
   });
 
-  it('keeps list-only fields the import does not return and re-derives the client name', async () => {
+  it('keeps contact avatars and uses client names resolved by the import dialog', async () => {
     // As getAllContacts returns them: with avatarUrl and the joined client_name.
     const listedAda = contact('ada', 'Ada Lovelace', {
       client_id: 'client-acme',
       client_name: 'Acme Corp',
       avatarUrl: '/avatars/ada.png',
+      client_logo_url: '/logos/acme.png',
     });
     const listedGrace = contact('grace', 'Grace Hopper', {
       client_id: 'client-acme',
       client_name: 'Acme Corp',
       avatarUrl: '/avatars/grace.png',
+      client_logo_url: '/logos/acme.png',
     });
     hoisted.getAllContacts.mockResolvedValue([listedAda, listedGrace]);
     render(<Contacts initialContacts={[listedAda, listedGrace]} />);
     await waitFor(() => expect(screen.getByTestId('row-grace')).toBeInTheDocument());
 
-    // As importContactsFromCSV returns them (getContactById): no avatarUrl, no
-    // client_name. Ada is edited in place, Grace moves to another client.
+    // The dialog adds names from its targeted lookup. An import without a
+    // client column leaves Ada assigned to the same client.
     hoisted.importedContacts = [
       contact('ada', 'Ada King', { client_id: 'client-acme' }),
-      contact('grace', 'Grace Hopper', { client_id: 'client-globex' }),
-      contact('linus', 'Linus Torvalds', { client_id: 'client-globex' }),
+      contact('grace', 'Grace Hopper', { client_id: 'client-globex', client_name: 'Globex' }),
+      contact('linus', 'Linus Torvalds', { client_id: 'client-globex', client_name: 'Globex' }),
     ];
     await act(async () => {
       fireEvent.click(screen.getByText('finish-import'));
@@ -220,8 +217,10 @@ describe('Contacts — CSV import reconciliation', () => {
     expect(screen.getByTestId('row-ada')).toHaveTextContent('Ada King');
     expect(screen.getByTestId('row-ada')).toHaveAttribute('data-avatar', '/avatars/ada.png');
     expect(screen.getByTestId('row-ada')).toHaveAttribute('data-client-name', 'Acme Corp');
+    expect(screen.getByTestId('row-ada')).toHaveAttribute('data-client-logo', '/logos/acme.png');
     expect(screen.getByTestId('row-grace')).toHaveAttribute('data-avatar', '/avatars/grace.png');
     expect(screen.getByTestId('row-grace')).toHaveAttribute('data-client-name', 'Globex');
+    expect(screen.getByTestId('row-grace')).toHaveAttribute('data-client-logo', '');
     expect(screen.getByTestId('row-linus')).toHaveAttribute('data-client-name', 'Globex');
 
     // Client-name search still finds the edited contact without a refetch.
@@ -231,5 +230,17 @@ describe('Contacts — CSV import reconciliation', () => {
         screen.getAllByTestId(/^row-/).map((row) => row.getAttribute('data-testid')),
       ).toEqual(['row-ada']),
     );
+  });
+
+  it('clears the previous client name when an imported contact becomes unassigned', async () => {
+    const listedAda = contact('ada', 'Ada Lovelace', {
+      client_id: 'client-acme', client_name: 'Acme Corp',
+    });
+    hoisted.getAllContacts.mockResolvedValue([listedAda]);
+    render(<Contacts initialContacts={[listedAda]} />);
+    await waitFor(() => expect(screen.getByTestId('row-ada')).toBeInTheDocument());
+    hoisted.importedContacts = [contact('ada', 'Ada King')];
+    fireEvent.click(screen.getByText('finish-import'));
+    await waitFor(() => expect(screen.getByTestId('row-ada')).toHaveAttribute('data-client-name', ''));
   });
 });

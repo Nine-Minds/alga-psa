@@ -123,6 +123,8 @@ interface DetailedContractLineMapping {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   location_id?: string | null;
+  /** Muted second line under the bundle title (Fixed lines). */
+  invoice_line_subtitle?: string | null;
   /** Step 2 of the charge-attribution chain; overrides the contract's profile. */
   billing_profile_id?: string | null;
   /** Verbatim invoice line text; falls back to the line name when null. */
@@ -740,6 +742,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         round_up_to_nearest: line.round_up_to_nearest,
         location_id: line.location_id ?? defaultLocationId ?? null,
         invoice_line_description: line.invoice_line_description ?? null,
+        invoice_line_subtitle: line.invoice_line_subtitle ?? null,
         start_date: line.start_date ?? null,
         end_date: line.end_date ?? null,
       });
@@ -926,6 +929,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       // (base_rate_basis, revision vs in-place update) are the server's call.
       const narrowInvoiceEdit = {
         invoice_line_description: editLineData.invoice_line_description?.trim() || null,
+        invoice_line_subtitle: editLineData.invoice_line_subtitle?.trim() || null,
         start_date: editLineData.start_date || null,
         end_date: editLineData.end_date || null,
       };
@@ -1885,6 +1889,34 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 )}
                               </div>
                             </div>
+
+                            {/* Invoice subtitle: the muted second line under the bundle
+                                row's title (the "Invoice line text" above). Fixed lines
+                                only; presentation, not billing data. */}
+                            {line.contract_line_type === 'Fixed' && (
+                              <div className="grid gap-4 md:grid-cols-3" id={`invoice-subtitle-group-${line.contract_line_id}`}>
+                                <div>
+                                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    {t('contractLines.invoiceText.subtitleLabel', { defaultValue: 'Invoice subtitle' })}
+                                  </Label>
+                                  {editingLineId === line.contract_line_id ? (
+                                    <Input
+                                      id={`invoice-subtitle-${line.contract_line_id}`}
+                                      value={editLineData.invoice_line_subtitle ?? ''}
+                                      onChange={(e) => setEditLineData({
+                                        ...editLineData,
+                                        invoice_line_subtitle: e.target.value,
+                                      })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                      {line.invoice_line_subtitle || '—'}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                             {pricingOnly && editingLineId === line.contract_line_id && (
                               <p className="text-sm text-[rgb(var(--color-text-600))]">
                                 {t('contractLines.configuration.billedEditExplanation', { defaultValue: 'After a line has billed, invoice text and line dates remain editable. Dates cannot exclude service periods already billed or claimed; rates and quantities use prospective changes.' })}

@@ -1,4 +1,5 @@
-import type { TemplateAst } from '@alga-psa/types';
+import { buildBundleChildRowsPreset } from './bundleChildRows';
+import type { TemplateAst, TemplateNode, TemplateDynamicTableNode } from '@alga-psa/types';
 import { DEFAULT_INVOICE_PRINT_SETTINGS, TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 const cloneAst = (ast: TemplateAst): TemplateAst =>
@@ -17,6 +18,10 @@ export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['binding
     poNumber: { id: 'poNumber', kind: 'value', path: 'poNumber' },
     paymentMethod: { id: 'paymentMethod', kind: 'value', path: 'paymentMethod' },
     subtotal: { id: 'subtotal', kind: 'value', path: 'subtotal' },
+    // Opt-in discount view (positive magnitude; ids match the quote bindings). Unreferenced
+    // by the shipped templates, so adding them changes no render.
+    discountTotal: { id: 'discountTotal', kind: 'value', path: 'discountTotal' },
+    grossSubtotal: { id: 'grossSubtotal', kind: 'value', path: 'grossSubtotal' },
     tax: { id: 'tax', kind: 'value', path: 'tax' },
     total: { id: 'total', kind: 'value', path: 'total' },
     notes: { id: 'notes', kind: 'value', path: 'notes', fallback: '' },
@@ -1014,12 +1019,45 @@ const buildStandardByTicketAst = (): TemplateAst => ({
   },
 });
 
+/**
+ * "Standard Invoice With Bundle Quantities": the standard layout with Fixed
+ * bundles rendered as a title, a muted subtitle and the bundle total, followed
+ * by an indented row per service showing its quantity and an optional green
+ * +N / red \u2212N change against the previous period. Component prices are not
+ * bound, so `templateUsesComponentPricing` is false and the view model sent to
+ * the client carries no component prices.
+ */
+const buildStandardBundleQuantitiesAst = (): TemplateAst => {
+  const ast = buildStandardDefaultAst('Standard Invoice With Bundle Quantities');
+  const table = (ast.layout as { children?: TemplateNode[] }).children?.find(
+    (child): child is TemplateDynamicTableNode => child.type === 'dynamic-table' && child.id === 'line-items',
+  );
+  if (!table) {
+    throw new Error('standard-default is missing its line-items table');
+  }
+  const description = table.columns.find((column) => column.id === 'description');
+  if (description) {
+    description.lines = [
+      { id: 'description-title', value: { type: 'path', path: 'description' }, style: { inline: { fontWeight: 600 } } },
+      {
+        id: 'description-subtitle',
+        value: { type: 'path', path: 'subtitle' },
+        supplemental: true,
+        style: { inline: { color: '#6b7280', fontSize: '12px' } },
+      },
+    ];
+  }
+  table.childRows = buildBundleChildRowsPreset({ prices: false, showChange: true });
+  return ast;
+};
+
 export const STANDARD_INVOICE_TEMPLATE_ASTS: Readonly<Record<string, TemplateAst>> = {
   'standard-default': buildStandardDefaultAst('Standard Template'),
   'standard-detailed': buildStandardDetailedAst(),
   'standard-grouped': buildStandardGroupedAst(),
   'standard-invoice-by-location': buildStandardByLocationAst(),
   'standard-invoice-by-ticket': buildStandardByTicketAst(),
+  'standard-bundle-quantities': buildStandardBundleQuantitiesAst(),
 };
 
 export const STANDARD_INVOICE_DEFAULT_CODE = 'standard-default';

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import Stripe from 'stripe';
 import {
   peekTenantId,
-  resolveWebhookSecretCandidates,
+  resolveSignatureCandidates,
   verifyStripeSignature,
 } from '../paymentsSignature';
 
@@ -43,69 +43,71 @@ describe('peekTenantId', () => {
   });
 });
 
-describe('resolveWebhookSecretCandidates', () => {
-  it('prefers the tenant endpoint secret, then the platform secret', async () => {
-    const candidates = await resolveWebhookSecretCandidates(
-      provider({
-        tenant: { stripe_payment_webhook_secret: TENANT_SECRET },
-        app: { stripe_webhook_secret: PLATFORM_SECRET },
-      }),
-      TENANT
-    );
-    expect(candidates).toEqual([
-      { source: 'tenant', secret: TENANT_SECRET },
-      { source: 'platform', secret: PLATFORM_SECRET },
+const TENANT_B = '5b3f0f5e-7a7e-4c3e-9d0b-1f0a1c2d3e4f';
+const B_SECRET = 'whsec_tenant_b';
+
+describe('resolveSignatureCandidates', () => {
+  const prov = {
+    getAppSecret: async (name: string) => ({ stripe_webhook_secret: PLATFORM_SECRET } as Record<string, string>)[name],
+    getTenantSecret: async (t: string) => ({ [TENANT]: TENANT_SECRET, [TENANT_B]: B_SECRET } as Record<string, string>)[t],
+  };
+
+  it('route tenant: only that tenant secret, never platform', async () => {
+    expect(await resolveSignatureCandidates(prov, { tenantIdFromRoute: TENANT })).toEqual([
+      { source: 'route-tenant', tenantId: TENANT, secret: TENANT_SECRET },
     ]);
   });
 
-  it('falls back to stripe_webhook_secret when the payment-specific app secret is absent', async () => {
-    const candidates = await resolveWebhookSecretCandidates(
-      provider({ app: { stripe_webhook_secret: PLATFORM_SECRET } }),
-      null
-    );
-    expect(candidates).toEqual([{ source: 'platform', secret: PLATFORM_SECRET }]);
+  it('legacy: hint first, then every enabled tenant (deduped), then platform', async () => {
+    const c = await resolveSignatureCandidates(prov, {
+      payloadTenantHint: TENANT_B,
+      enabledTenantIds: [TENANT, TENANT_B],
+    });
+    expect(c.map((x) => [x.source, x.tenantId])).toEqual([
+      ['hint-tenant', TENANT_B],
+      ['tenant', TENANT],
+      ['platform', null],
+    ]);
   });
 
-  it('prefers stripe_payment_webhook_secret over stripe_webhook_secret at app level', async () => {
-    const candidates = await resolveWebhookSecretCandidates(
-      provider({ app: { stripe_payment_webhook_secret: 'whsec_specific', stripe_webhook_secret: PLATFORM_SECRET } }),
-      null
-    );
-    expect(candidates).toEqual([{ source: 'platform', secret: 'whsec_specific' }]);
+  it('skips tenants without a secret and de-duplicates identical secrets', async () => {
+    const dup = { ...prov, getTenantSecret: async () => TENANT_SECRET };
+    const c = await resolveSignatureCandidates(dup, { enabledTenantIds: [TENANT, TENANT_B] });
+    expect(c.filter((x) => x.secret === TENANT_SECRET)).toHaveLength(1);
   });
 
-  it('returns no candidates when nothing is configured', async () => {
-    expect(await resolveWebhookSecretCandidates(provider({}), TENANT)).toEqual([]);
+  it('prefers stripe_payment_webhook_secret at app level and returns [] when nothing configured', async () => {
+    const p = { getAppSecret: async (n: string) => (n === 'stripe_payment_webhook_secret' ? 'whsec_specific' : PLATFORM_SECRET), getTenantSecret: async () => undefined };
+    expect((await resolveSignatureCandidates(p, {}))[0].secret).toBe('whsec_specific');
+    expect(await resolveSignatureCandidates({ getAppSecret: async () => undefined, getTenantSecret: async () => undefined }, {})).toEqual([]);
   });
 });
 
 describe('verifyStripeSignature', () => {
-  const tenantCandidates = [
-    { source: 'tenant' as const, secret: TENANT_SECRET },
-    { source: 'platform' as const, secret: PLATFORM_SECRET },
+  const cands = [
+    { source: 'tenant' as const, tenantId: TENANT, secret: TENANT_SECRET },
+    { source: 'platform' as const, tenantId: null, secret: PLATFORM_SECRET },
   ];
 
-  it('verifies an event signed by the tenant endpoint secret', () => {
-    const body = payload({ tenant_id: TENANT });
-    const result = verifyStripeSignature(body, sign(body, TENANT_SECRET), tenantCandidates);
-    expect(result?.source).toBe('tenant');
-    expect(result?.event.id).toBe('evt_test');
+  it('verifies an untagged event for the signing tenant', () => {
+    const body = payload();
+    const r = verifyStripeSignature(body, sign(body, TENANT_SECRET), cands);
+    expect(r).toMatchObject({ kind: 'verified', tenantId: TENANT, secretSource: 'tenant' });
   });
 
-  it('verifies an event signed by the platform secret', () => {
-    const body = payload({ tenant_id: TENANT });
-    const result = verifyStripeSignature(body, sign(body, PLATFORM_SECRET), tenantCandidates);
-    expect(result?.source).toBe('platform');
+  it('verifies a platform-signed event with null tenant', () => {
+    const body = payload();
+    expect(verifyStripeSignature(body, sign(body, PLATFORM_SECRET), cands)).toMatchObject({ kind: 'verified', tenantId: null, secretSource: 'platform' });
   });
 
-  it('rejects an event signed with an unknown secret', () => {
-    const body = payload({ tenant_id: TENANT });
-    expect(verifyStripeSignature(body, sign(body, 'whsec_other'), tenantCandidates)).toBeNull();
+  it('ignores a payload tagged with a different tenant than the verified one', () => {
+    const body = payload({ tenant_id: TENANT_B });
+    expect(verifyStripeSignature(body, sign(body, TENANT_SECRET), cands)).toMatchObject({ kind: 'ignored', tenantId: TENANT, reason: 'tenant_mismatch' });
   });
 
-  it('rejects a payload whose claimed tenant does not match the signing secret', () => {
-    // Attacker claims a tenant id but cannot produce that tenant's signature.
+  it('returns invalid for unknown secret or tampered signature', () => {
     const body = payload({ tenant_id: TENANT });
-    expect(verifyStripeSignature(body, 't=1,v1=deadbeef', tenantCandidates)).toBeNull();
+    expect(verifyStripeSignature(body, sign(body, 'whsec_other'), cands)).toEqual({ kind: 'invalid' });
+    expect(verifyStripeSignature(body, 't=1,v1=deadbeef', cands)).toEqual({ kind: 'invalid' });
   });
 });

@@ -59,6 +59,21 @@ describe('tenant product upgrade workflow client', () => {
     expect(mocks.close).toHaveBeenCalledOnce();
   });
 
+  it('dispatches independent customer upgrades to the product-owned workflow with the same status identity', async () => {
+    mocks.start.mockResolvedValue({ workflowId: 'tenant-product-upgrade-tenant-1', firstExecutionRunId: 'run-cm' });
+    const coManaged = {
+      actor: { kind: 'session' as const, tenant: 'tenant-1', userId: 'user-1', sessionId: 'session-1' },
+      target: { customerTenant: 'tenant-1', relationshipId: 'relationship-1' },
+      request: { operationId: 'operation-1', expectedRevision: 1 },
+    };
+    const input = { tenantId: 'tenant-1', requestedByUserId: 'user-1', coManaged };
+    await expect(startTenantProductUpgradeWorkflow(input)).resolves.toMatchObject({ available: true, runId: 'run-cm' });
+    expect(mocks.start).toHaveBeenCalledWith('coManagedIndependentUpgradeWorkflow', {
+      args: [input], taskQueue: 'tenant-workflows', workflowId: 'tenant-product-upgrade-tenant-1',
+    });
+    expect(mocks.close).toHaveBeenCalledOnce();
+  });
+
   it('returns the existing execution when Temporal rejects a duplicate start', async () => {
     const duplicate = new Error('already started');
     duplicate.name = 'WorkflowExecutionAlreadyStartedError';

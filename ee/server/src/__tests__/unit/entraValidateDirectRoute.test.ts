@@ -99,6 +99,36 @@ describe('validate-direct route', () => {
     expect(refreshEntraDirectTokenMock).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['a mapped AADSTS operator error', true],
+    ['an unmapped error', false],
+  ])('returns %s message appropriately when the token refresh fails', async (_label, mapped) => {
+    requireEntraAccessMock.mockResolvedValue({ tenantId: 'tenant-rf', userId: 'user-rf' });
+    resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+      clientId: 'client-id', clientSecret: 'secret', tenantId: null,
+      source: 'profile', profileId: 'profile', profileDisplayName: 'MSP app',
+    });
+    getSecretProviderInstanceMock.mockResolvedValue({ getTenantSecret: vi.fn().mockResolvedValue(undefined) });
+    const { EntraOperatorError } = await import('@ee/lib/integrations/entra/entraOperatorError');
+    const mappedMessage = 'aadsts_7000215_invalid_secret: Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.';
+    refreshEntraDirectTokenMock.mockRejectedValue(
+      mapped
+        ? new EntraOperatorError('credential-rejected', mappedMessage)
+        : new EntraOperatorError('credential-rejected', 'Microsoft rejected the stored credentials for this connection. Reconnect Microsoft Entra to resume syncing.')
+    );
+
+    const { POST } = await import('@ee/app/api/integrations/entra/validate-direct/route');
+    const response = await POST();
+    const payload = await response.json();
+    const expected = mapped ? mappedMessage : 'Direct Entra token is not configured or refresh failed.';
+
+    expect(response.status).toBe(400);
+    expect(JSON.stringify(payload)).toContain(expected);
+    expect(updateEntraConnectionValidationMock).toHaveBeenCalledWith(expect.objectContaining({
+      snapshot: expect.objectContaining({ message: expected, code: 'refresh_failed' }),
+    }));
+  });
+
   it('persists validation_failed with the Graph detail and answers 502 when the probe fails', async () => {
     requireEntraAccessMock.mockResolvedValue({
       tenantId: 'tenant-39',

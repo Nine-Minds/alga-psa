@@ -120,7 +120,9 @@ export function allowsContactSenderAttribution(results: SenderAuthResults | null
  * was authenticated inside the receiving Microsoft 365 organization, and strips every
  * `X-MS-Exchange-Organization-*` header from mail arriving from outside it. Such mail
  * carries no Authentication-Results header (SPF/DKIM are never evaluated for
- * intra-tenant delivery), so it would otherwise fail the contact gate closed.
+ * intra-tenant delivery), so it would otherwise fail both the contact gate and the
+ * internal-user gate closed — the latter silently quarantining an MSP technician who
+ * mails their own helpdesk mailbox about an existing ticket.
  * Only trust this for Microsoft providers: other MTAs do not strip the header.
  */
 export function isMicrosoftIntraOrgSender(

@@ -22,7 +22,7 @@ vi.mock('@/lib/auth/rbac', () => ({
 }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => state.allowed),
+  authorizeApiResourceRead: vi.fn(async () => ({ allowed: state.allowed, redactedFields: [] })),
 }));
 vi.mock('@/lib/productAccess', () => ({ ProductAccessError: class extends Error {}, getTenantProduct: vi.fn() }));
 vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.fn() }));

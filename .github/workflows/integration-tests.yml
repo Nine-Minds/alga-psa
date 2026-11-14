@@ -49,9 +49,11 @@ jobs:
     needs: [check-changes, images]
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
+
     # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21 and the
     # Chromium install below dies with "Playwright does not support chromium
     # on ubuntu26.04-x64". Unpin once Playwright ships 26.04 dependencies.
+
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -98,6 +100,7 @@ jobs:
       INTEGRATION_SHARD_INDEX: ${{ matrix.shard }}
       INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
       COMMENT_SMTP_ISOLATED: 'true'
+      RUN_SLA_GREENMAIL_SMOKE: '1'
       DB_HOST: localhost
       DB_PORT: '5432'
       DB_USER_ADMIN: postgres
@@ -214,6 +217,18 @@ jobs:
             sleep 2
           done
 
+      # Suites that exercise the S3 storage provider end to end (resumable
+      # document uploads) default to MinIO's standard local address and
+      # credentials. They are deliberately not exported as STORAGE_S3_* for
+      # the whole job, which would switch every other suite's storage config.
+      - name: Start disposable object storage
+        uses: ./.github/actions/start-minio
+        with:
+          name: integration-test-minio
+          port: '9000'
+          access-key: minioadmin
+          secret-key: minioadmin
+
       # Some tests read credentials from secrets/ files directly (getSecret falls back to env).
       - name: Create secrets files
         run: |
@@ -246,6 +261,10 @@ jobs:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ''
+
+      - name: Stop disposable object storage
+        if: always()
+        run: docker rm -f integration-test-minio || true
 
       - name: Upload integration execution diagnostics
         if: always()
@@ -444,6 +463,12 @@ jobs:
           path: test-results/infrastructure/
           if-no-files-found: error
           retention-days: 30
+          # Re-running only the failed shard leaves the earlier attempt's
+          # same-named artifact in place; the aggregator's pattern download
+          # then has two "infrastructure-shard-N" artifacts to choose from and
+          # can pick the stale, failing one even though the rerun went green.
+          # Overwrite so a rerun always replaces this shard's own evidence.
+          overwrite: true
 
       # Published only when this shard retried something. The shard bundle above
       # expires in a week; the weekly flaky report reads this one.

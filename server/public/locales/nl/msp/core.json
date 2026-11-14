@@ -108,10 +108,13 @@
     "ticketsTemplates": "Ticketsjablonen",
     "assetsCustody": "Apparatuur in bewaring",
     "ticketsCannedResponses": "Standaardantwoorden",
+    "ticketsCustomer": "Klanttickets",
     "profile": "Profiel",
     "signOut": "Afmelden",
     "coManaged": "Gezamenlijk beheerde IT",
-    "coManagedAdministration": "Toegang en beheer"
+    "coManagedArchive": "Archief gezamenlijk beheer",
+    "coManagedAdministration": "Toegang en beheer",
+    "assetsAudits": "Locatieaudits"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

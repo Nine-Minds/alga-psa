@@ -1,13 +1,17 @@
+import { View } from "react-native";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { DrawerParamList } from "./types";
 import { TicketsStackNavigator } from "./TicketsStackNavigator";
+import { HomeScreen, HomeSearchButton } from "../screens/HomeScreen";
 import { UserActivitiesScreen } from "../screens/UserActivitiesScreen";
 import { ScheduleScreen } from "../screens/ScheduleScreen";
+import { ProjectsScreen } from "../screens/ProjectsScreen";
 import { InteractionsScreen } from "../screens/InteractionsScreen";
 import { TimeEntriesScreen } from "../screens/TimeEntriesScreen";
 import { ClientsListScreen } from "../screens/ClientsListScreen";
 import { ContactsListScreen } from "../screens/ContactsListScreen";
+import { AssetsScreen } from "../screens/AssetsScreen";
 import { InventoryScreen } from "../screens/InventoryScreen";
 import { OpportunitiesScreen } from "../screens/OpportunitiesScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
@@ -30,9 +34,13 @@ export function DrawerNavigator() {
   const { t: tSettings } = useTranslation("settings");
   const { t: tInventory } = useTranslation("inventory");
   const { t: tOpportunities } = useTranslation("opportunities");
+  const { t: tProjects } = useTranslation("projects");
+  const { t: tAssets } = useTranslation("assets");
+  const { t: tHome } = useTranslation("home");
   const { features } = useCapabilities();
   return (
     <Drawer.Navigator
+      initialRouteName="HomeTab"
       screenOptions={{
         drawerActiveTintColor: theme.colors.primary,
         drawerInactiveTintColor: theme.colors.textSecondary,
@@ -53,6 +61,22 @@ export function DrawerNavigator() {
         headerRight: () => <HeaderTimerChip />,
       }}
     >
+      <Drawer.Screen
+        name="HomeTab"
+        component={HomeScreen}
+        options={({ navigation }) => ({
+          title: tHome("title", "Home"),
+          drawerIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="home-outline" size={size} color={color} />
+          ),
+          headerRight: () => (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <HomeSearchButton onPress={() => navigation.getParent()?.navigate("Search")} />
+              <HeaderTimerChip />
+            </View>
+          ),
+        })}
+      />
       <Drawer.Screen
         name="TicketsTab"
         component={TicketsStackNavigator}
@@ -84,6 +108,18 @@ export function DrawerNavigator() {
           ),
         }}
       />
+      {features.projects ? (
+        <Drawer.Screen
+          name="ProjectsTab"
+          component={ProjectsScreen}
+          options={{
+            title: tProjects("title", "Projects"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="clipboard-list-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
       <Drawer.Screen
         name="InteractionsTab"
         component={InteractionsScreen}
@@ -124,6 +160,18 @@ export function DrawerNavigator() {
           ),
         }}
       />
+      {features.assets ? (
+        <Drawer.Screen
+          name="AssetsTab"
+          component={AssetsScreen}
+          options={{
+            title: tAssets("list.title", "Assets"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="devices" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
       {features.inventory ? (
         <Drawer.Screen
           name="InventoryTab"
