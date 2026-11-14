@@ -169,7 +169,6 @@ vi.mock('@alga-psa/event-bus', () => ({
 }));
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(),
-  assertTicketMoveKeepsSeatsInScope: vi.fn(async () => undefined),
   assertHumanWorkOwner: vi.fn(),
 }));
 vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({

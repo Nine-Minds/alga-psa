@@ -732,6 +732,13 @@
     "boardTabs": {
       "all": "Alla ärenden"
     },
+    "seatViews": {
+      "clientIt": "Kundens IT",
+      "msp": "Hos MSP",
+      "unassigned": "Ej tilldelade",
+      "all": "Alla",
+      "empty": "Inga ärenden i {{view}} just nu."
+    },
     "boardHeader": {
       "open": "Öppna",
       "overdue": "Försenade",

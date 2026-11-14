@@ -786,6 +786,13 @@
     "boardTabs": {
       "all": "⟦Ȧŀŀ ŧīƈķḗŧş⟧"
     },
+    "seatViews": {
+      "clientIt": "⟦Ƈŀīḗƞŧ ĪŦ⟧",
+      "msp": "⟦Ẇīŧħ ḾŞƤ⟧",
+      "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+      "all": "⟦Ȧŀŀ⟧",
+      "empty": "⟦Ƞȯ ŧīƈķḗŧş īƞ {{view}} řīɠħŧ ƞȯẇ.⟧"
+    },
     "boardHeader": {
       "open": "⟦Ȯƥḗƞ⟧",
       "overdue": "⟦Ȯṽḗřḓŭḗ⟧",

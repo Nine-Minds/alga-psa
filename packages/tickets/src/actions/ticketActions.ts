@@ -1,7 +1,7 @@
 'use server';
 
 import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
-import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
   resolveSeatAssigneeAudience,
@@ -105,6 +105,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
+import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from '@alga-psa/authorization/assetReadAuthorization';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -508,6 +509,17 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
               board_id: data.board_id,
               entered_by: user.user_id,
             });
+
+            // The asset the ticket is created from must be one the creator may read: for a seat technician that is
+            // their own client's, and anything else answers as missing. Without a restricting rule this allows.
+            const sourceAsset = await tenantScopedTable(trx, 'assets', tenant)
+              .where({ asset_id: data.asset_id })
+              .first('asset_id', 'client_id');
+            if (!sourceAsset || !await isAssetReadAllowed(
+              trx, tenant, await createAssetReadContext(trx, tenant, user as AssetAuthUser), sourceAsset,
+            )) {
+              throw new Error(`Invalid asset: ${data.asset_id} was not found`);
+            }
 
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
@@ -1714,10 +1726,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
         await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
       }
-      await assertTicketMoveKeepsSeatsInScope(
-        trx, tenant, id, pendingPlacement,
-        isChangingAssignment ? updateData.assigned_to : undefined
-      );
+      // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+      // after the write, clears and drops the seat technicians it strands (F094).
 
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.

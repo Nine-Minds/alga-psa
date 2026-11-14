@@ -786,6 +786,13 @@
     "boardTabs": {
       "all": "Alle tickets"
     },
+    "seatViews": {
+      "clientIt": "Klant-IT",
+      "msp": "Bij de MSP",
+      "unassigned": "Niet toegewezen",
+      "all": "Alle",
+      "empty": "Momenteel geen tickets in \"{{view}}\"."
+    },
     "boardHeader": {
       "open": "Openstaand",
       "overdue": "Te laat",

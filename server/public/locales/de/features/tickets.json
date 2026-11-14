@@ -732,6 +732,13 @@
     "boardTabs": {
       "all": "Alle Tickets"
     },
+    "seatViews": {
+      "clientIt": "Kunden-IT",
+      "msp": "Beim MSP",
+      "unassigned": "Nicht zugewiesen",
+      "all": "Alle",
+      "empty": "Derzeit keine Tickets in „{{view}}“."
+    },
     "boardHeader": {
       "open": "Offen",
       "overdue": "Überfällig",
