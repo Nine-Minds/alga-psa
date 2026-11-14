@@ -10,6 +10,11 @@ import path from 'node:path';
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
 
 const PAIR = ['index_authorization_resolver_subjects', 'validate_authorization_resolver_subjects'];
+const SHIPPED_PAIR = [
+  '20261113140000_index_authorization_resolver_subjects.cjs',
+  '20261113140100_validate_authorization_resolver_subjects.cjs',
+];
+const PAIR_TABLES = ['authorization_resolver_subjects', 'co_managed_seat_assignments'];
 const PRIOR_SEAT_TABLE_MIGRATIONS = [
   'create_co_managed_seat_ticket_work',
   'add_users_seat_reader_marker',
@@ -40,10 +45,23 @@ describe('authorization resolver subjects migration ordering', () => {
     }
   });
 
-  it('gives each migration in the pair a timestamp no other migration file uses', () => {
+  // Deployed databases record these names in knex_migrations, and knex refuses to migrate when a
+  // recorded file is missing, so a shipped migration is never renamed to resolve an ordering clash.
+  it('keeps the filenames deployed databases have recorded', () => {
+    expect(PAIR.map(fileFor)).toEqual(SHIPPED_PAIR);
+  });
+
+  // Knex breaks timestamp ties by full filename, so a neighbour sharing a timestamp only matters
+  // when it touches the same tables; then fresh and deployed databases could order them differently.
+  it('shares its timestamps only with migrations that touch none of the pair\'s tables', () => {
     for (const name of PAIR.map(fileFor)) {
       const ts = timestampOf(name);
-      expect(allMigrations.filter((other) => timestampOf(other) === ts), name).toEqual([name]);
+      for (const other of allMigrations.filter((o) => o !== name && timestampOf(o) === ts)) {
+        const source = readFileSync(path.join(MIGRATIONS_DIR, other), 'utf8');
+        for (const table of PAIR_TABLES) {
+          expect(new RegExp(`\\b${table}\\b`).test(source), `${other} touches ${table}`).toBe(false);
+        }
+      }
     }
   });
 

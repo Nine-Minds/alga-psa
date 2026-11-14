@@ -27,7 +27,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
 
 const DAY = 86_400_000;
 const describeDb = await describeWithDb();
-const membershipMigration = createRequire(import.meta.url)('../../../migrations/20261113140050_index_authorization_resolver_subjects.cjs');
+const membershipMigration = createRequire(import.meta.url)('../../../migrations/20261113140000_index_authorization_resolver_subjects.cjs');
 const membershipValidation = createRequire(import.meta.url)('../../../migrations/20261113140100_validate_authorization_resolver_subjects.cjs');
 
 describeDb('co-managed seat authority is resolved from rows on every request', { shuffle: false }, () => {
