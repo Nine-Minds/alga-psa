@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { recordTicketAssigneeChange } from '@alga-psa/db';
-import { assertHumanWorkAssignee, assertHumanWorkOwner } from '../../../../lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertHumanWorkOwner, timeEntryWorkItem } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate } from '@alga-psa/core';
@@ -796,7 +796,7 @@ async function resolveOrCreateTimeSheet(params: {
 
   if (!timeSheet?.id) {
     // Human-work guard (R5.3): never create a time sheet for a non-internal user.
-    await assertHumanWorkAssignee(trx, tenantId, [userId]);
+    await assertHumanWorkAssignee(trx, tenantId, [userId], { kind: 'unscoped', surface: 'time_sheet' });
     const inserted = await tenantScopedTable(trx, 'time_sheets', tenantId)
       .insert({
         id: uuidv4(),
@@ -959,7 +959,7 @@ export async function createWorkflowTimeEntry(params: {
 
   await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, input.user_id);
   // Human-work guard (R5.3): the entry owner (also becomes ticket/task resource or assignee).
-  await assertHumanWorkAssignee(trx, tenantId, [input.user_id]);
+  await assertHumanWorkAssignee(trx, tenantId, [input.user_id], timeEntryWorkItem(input.link?.type, input.link?.id));
 
   const service = await tenantScopedTable(trx, 'service_catalog', tenantId)
     .where({ service_id: input.service_id })

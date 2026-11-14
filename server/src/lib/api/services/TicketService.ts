@@ -3,6 +3,7 @@ import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertActorMayAssign } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, silentTicketCreation, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -2006,6 +2007,8 @@ export class TicketService extends BaseService<ITicket> {
         // read the newly-created ticket on their own connections.
         const analyticsTracker = new ServerAnalyticsTracker();
 
+        await assertActorMayAssign(trx, context.tenant, context.userId, [createTicketInput.assigned_to]);
+
         // Use shared TicketModel with retry logic and analytics
         const ticketResult = await TicketModel.createTicketWithRetry(
           createTicketInput,
@@ -2451,7 +2454,8 @@ export class TicketService extends BaseService<ITicket> {
         cleanedData.assigned_to !== currentTicket.assigned_to;
       // Human-work guard: only when this write changes assigned_to (legacy references untouched).
       if (isChangingAssignment && (cleanedData as { assigned_to?: string | null }).assigned_to) {
-        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertActorMayAssign(trx, context.tenant, context.userId, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to], { kind: 'ticket', ticketId: id });
       }
       const finalizeResourceReassignment = isChangingAssignment
         ? await prepareTicketResourceReassignment(

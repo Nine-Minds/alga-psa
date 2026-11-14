@@ -787,7 +787,7 @@ export class ProjectService extends BaseService<IProject> {
         };
   
         // Human-work guard: a task's assignee must be an active internal user.
-        await assertHumanWorkAssignee(trx, context.tenant, [(taskData as { assigned_to?: string | null }).assigned_to]);
+        await assertHumanWorkAssignee(trx, context.tenant, [(taskData as { assigned_to?: string | null }).assigned_to], { kind: 'project_phase', phaseId });
 
         const [task] = await db.table('project_tasks')
           .insert(withViaPrincipal(context, taskData, 'created_via_principal_id'))
@@ -868,7 +868,7 @@ export class ProjectService extends BaseService<IProject> {
         // Human-work guard: only when this write changes assigned_to (legacy references untouched).
         const requestedAssignee = (updateData as { assigned_to?: string | null }).assigned_to;
         if (requestedAssignee && requestedAssignee !== beforeTask.assigned_to) {
-          await assertHumanWorkAssignee(trx, context.tenant, [requestedAssignee]);
+          await assertHumanWorkAssignee(trx, context.tenant, [requestedAssignee], { kind: 'project_task', taskId });
         }
 
         const [task] = await db.table('project_tasks')

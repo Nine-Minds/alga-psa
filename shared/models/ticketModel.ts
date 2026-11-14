@@ -1178,7 +1178,11 @@ export class TicketModel {
     };
 
     // Human-work guard: a ticket's primary assignee must be an active internal user.
-    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to]);
+    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to], {
+      kind: 'ticket_draft',
+      clientId: dbData.client_id,
+      boardId: dbData.board_id,
+    });
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
@@ -1459,7 +1463,7 @@ export class TicketModel {
     // Human-work guard: validate assigned_to only when this write changes it, so legacy
     // references (e.g. a former agent user) never block unrelated edits.
     if ('assigned_to' in updateData && updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId });
     }
 
     // Update the ticket

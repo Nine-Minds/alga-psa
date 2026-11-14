@@ -3,6 +3,11 @@
 import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
+  assertActorMayAssign,
+  resolveSeatAssigneeAudience,
+  restrictToSeatAudience,
+} from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
+import {
   isClientUserType,
   isMspPrincipalUserType,
   type AllowlistedUserField,
@@ -794,6 +799,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         assigned_team_id: createTicketInput.assigned_team_id,
         entered_by: user.user_id,
       });
+
+      await assertActorMayAssign(trx, tenant, user.user_id, [createTicketInput.assigned_to]);
 
       // Use shared TicketModel with retry logic
       // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
@@ -1702,7 +1709,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       // Human-work guard: only when this write changes assigned_to (legacy references untouched).
       if (isChangingAssignment && updateData.assigned_to) {
-        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+        await assertActorMayAssign(trx, tenant, user.user_id, [updateData.assigned_to]);
+        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id });
       }
 
       // Changing assigned_to needs the ticket_resources rows keyed to the old
@@ -3119,14 +3127,19 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       const includeAgentDirectory = !isClientUserType(user.user_type);
 
       // Fetch additional resources and available agents in parallel
+      const seatAssigneeAudience = includeAgentDirectory
+        ? await resolveSeatAssigneeAudience(trx, tenant, user.user_id)
+        : null;
       const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
             ticket_id: id
           }),
         includeAgentDirectory
-          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
-              .where({ is_inactive: false })
+          ? restrictToSeatAudience(
+              projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).where({ is_inactive: false }),
+              seatAssigneeAudience
+            )
               .orderBy('first_name', 'asc')
               .then(sanitizeResponseUsers)
           : Promise.resolve(undefined)

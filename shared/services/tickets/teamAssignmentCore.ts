@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { assertHumanWorkAssignee } from '../../lib/humanWork/assertHumanWorkAssignee';
+import { assertActorMayAssign } from '../../lib/humanWork/seatAssigneeAudience';
 
 export type RemoveTeamFromTicketMode = 'remove_all' | 'keep_all' | 'selective';
 
@@ -99,9 +100,14 @@ export async function assignTeamToTicketCore(
   const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
   const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
 
+  await assertActorMayAssign(trx, tenant, actorUserId, [...(ticket.assigned_to ? [] : [resolvedAssignedTo]), ...toInsert]);
+
   // Human-work guard: validate only what this write sets (a newly defaulted lead; an existing
   // assignee is left alone) and the members about to become resources, before any write.
-  await assertHumanWorkAssignee(trx, tenant, [...(ticket.assigned_to ? [] : [resolvedAssignedTo]), ...toInsert]);
+  await assertHumanWorkAssignee(trx, tenant, [...(ticket.assigned_to ? [] : [resolvedAssignedTo]), ...toInsert], {
+    kind: 'ticket',
+    ticketId,
+  });
 
   await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: ticketId })
