@@ -13,7 +13,7 @@ import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority'
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { tenantDb } from '@alga-psa/db';
 import {
-  assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope, type HumanWorkItem,
+  assertHumanWorkAssignee, type HumanWorkItem,
 } from '../../../../shared/lib/humanWork/assertHumanWorkAssignee';
 import { HumanWorkAssigneeInvalidError } from '../../../../shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import {
@@ -200,22 +200,8 @@ describeDb('the human-work guard scopes seat technicians to their own client', {
       .resolves.toBeUndefined();
   });
 
-  it('refuses a move that would strand a seat technician already on the ticket', async () => {
-    const s = await arrangement();
-    const ticketId = await ticket(s.tenant, s.clientId, s.scopedBoard);
-    await db('tickets').where({ tenant: s.tenant, ticket_id: ticketId }).update({ assigned_to: s.technician });
-    await refusal(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, undefined));
-    await refusal(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { clientId: s.otherClientId }, undefined));
-    // Reassigning to an MSP user in the same write lets the move through.
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, s.msp)).resolves.toBeUndefined();
-    // An additional agent is stranded too.
-    await db('tickets').where({ tenant: s.tenant, ticket_id: ticketId }).update({ assigned_to: s.msp });
-    await db('ticket_resources').insert({ tenant: s.tenant, assignment_id: randomUUID(), ticket_id: ticketId,
-      assigned_to: s.msp, additional_user_id: s.peer, role: 'support', assigned_at: db.fn.now() });
-    await refusal(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, undefined));
-    // No placement change, no check.
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, {}, undefined)).resolves.toBeUndefined();
-  });
+  // A move that strands a seat technician already on the ticket is not refused here: the move
+  // releases them (F094, coManagedSeatLifecycleGuards.db.test.ts).
 
   it('prefers the live seat assignment over a revoked one', async () => {
     const s = await arrangement();
@@ -266,7 +252,6 @@ describeDb('the human-work guard scopes seat technicians to their own client', {
     expect(technicianRow.seat_reader).toBe(true);
 
     expect(await seatReads(() => assign(s.tenant, [s.msp], { kind: 'ticket', ticketId }))).toEqual([]);
-    expect(await seatReads(() => assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.scopedBoard }, s.msp))).toEqual([]);
     expect(await seatReads(async () => expect(await resolveSeatAssigneeAudience(db, s.tenant, mspRow)).toBeNull())).toEqual([]);
     expect(await seatReads(() => assertActorMayAssign(db, s.tenant, mspRow, [s.technician]))).toEqual([]);
 
