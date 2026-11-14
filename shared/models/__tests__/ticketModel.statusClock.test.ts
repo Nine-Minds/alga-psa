@@ -5,6 +5,8 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => ({
     table: (name: string) => conn(name),
   }),
+  // Seat work on a client or board change is covered against a real database in coManagedSeatLifecycleGuards.db.test.ts.
+  releaseSeatTicketOnMove: async () => ({ assigneeCleared: false }),
 }));
 
 const TICKET_ID = '11111111-1111-1111-1111-111111111111';

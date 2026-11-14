@@ -3,7 +3,8 @@ import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { createPredicateGuard, type PredicateGuard } from '../controllers/authorizationKernel';
-import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertActorMayAssign } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, silentTicketCreation, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -27,7 +28,7 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canWriteAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import {
   runAuthorizedTicketWatcherWrite,
@@ -2020,6 +2021,8 @@ export class TicketService extends BaseService<ITicket> {
         // read the newly-created ticket on their own connections.
         const analyticsTracker = new ServerAnalyticsTracker();
 
+        await assertActorMayAssign(trx, context.tenant, context.userId, [createTicketInput.assigned_to]);
+
         // Use shared TicketModel with retry logic and analytics
         const ticketResult = await TicketModel.createTicketWithRetry(
           createTicketInput,
@@ -2465,8 +2468,18 @@ export class TicketService extends BaseService<ITicket> {
         cleanedData.assigned_to !== currentTicket.assigned_to;
       // Human-work guard: only when this write changes assigned_to (legacy references untouched).
       if (isChangingAssignment && (cleanedData as { assigned_to?: string | null }).assigned_to) {
-        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertActorMayAssign(trx, context.tenant, context.userId, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to], {
+          kind: 'ticket',
+          ticketId: id,
+          pending: { clientId: (cleanedData as { client_id?: string }).client_id, boardId: (cleanedData as { board_id?: string }).board_id },
+        });
       }
+      await assertTicketMoveKeepsSeatsInScope(
+        trx, context.tenant, id,
+        { clientId: (cleanedData as { client_id?: string }).client_id, boardId: (cleanedData as { board_id?: string }).board_id },
+        isChangingAssignment ? (cleanedData as { assigned_to?: string | null }).assigned_to : undefined
+      );
       const finalizeResourceReassignment = isChangingAssignment
         ? await prepareTicketResourceReassignment(
           trx,
@@ -2488,6 +2501,11 @@ export class TicketService extends BaseService<ITicket> {
         await finalizeResourceReassignment();
         // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
         await recordTicketAssigneeChange(trx, context.tenant, id);
+      }
+
+      // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+      if (ticket && (await releaseSeatTicketOnMove(trx, context.tenant, id, currentTicket, ticket)).assigneeCleared) {
+        ticket.assigned_to = null;
       }
 
       if (clearsResponseStateOnClose) {

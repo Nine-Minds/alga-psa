@@ -832,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Permission denied: API key management is restricted to internal users",
+      "notAvailableForAccount": "API keys are not available for this account.",
       "configInternalOnly": "Permission denied: API key configuration is restricted to internal users",
       "invalidExpiration": "Choose a valid expiration date for this API key.",
       "notFound": "API key not found.",

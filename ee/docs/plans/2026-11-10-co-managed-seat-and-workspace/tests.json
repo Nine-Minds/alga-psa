@@ -147,7 +147,7 @@
   {
     "id": "T017",
     "description": "E2E: a seat technician's menu shows only the operational surface; requesting billing, settings, user administration, dispatch and reports routes answers not found; an API key cannot be created and a REST request is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030"
@@ -165,7 +165,7 @@
   {
     "id": "T019",
     "description": "DB integration: a seat technician's user list, assignee options and mention suggestions contain no user outside the projection and no MSP staff email or phone.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -256,7 +256,7 @@
   {
     "id": "T029",
     "description": "DB integration: assigning a seat technician is accepted on an own-client in-scope ticket and refused on another client's ticket, an out-of-scope board and a task of an unshared project; the technician's picker lists no MSP user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F052"
@@ -450,7 +450,7 @@
   {
     "id": "T050",
     "description": "DB integration: client delete, merge and inactivate are refused while an arrangement is live; a contract test finds every arrangement table in the client-owned roster; changing a ticket's client or board clears the technician assignee and returns responsibility to the MSP.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093",
       "F094"

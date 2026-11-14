@@ -5,6 +5,8 @@ import { createHash } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
+import { coManagedSeatParticipants } from '@alga-psa/co-managed/seatCapability';
+import { registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import {
@@ -325,6 +327,11 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     // A dedicated database: the shared `test_database` is recreated by every
     // other integration suite, which would drop this suite's connection.
     db = await createTestDbConnection({ databaseName: 'test_db_client_merge' });
+    // The seat-arrangement merge guard asks the co-managed-seat capability first, as the server
+    // registers it at boot. Point its resolver at this suite's database and cache no verdict, so a
+    // tenant that gains its first arrangement mid-suite is served from that step on.
+    registerCapabilityParticipation('co-managed-seat', ({ tenantIds }) => coManagedSeatParticipants(tenantIds, db));
+    process.env.CAPABILITY_CACHE_TTL_MS = '0';
 
     tenantId = uuidv4();
     await tenantsUnscoped().insert({
@@ -364,6 +371,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    delete process.env.CAPABILITY_CACHE_TTL_MS;
     await db?.destroy();
   }, HOOK_TIMEOUT);
 

@@ -2,6 +2,11 @@ import { predicateReferencesValue, type PredicateNode } from '@alga-psa/predicat
 import type { EntityDeletionConfig } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { isCapabilityServed } from '../../lib/capability';
+import { countLiveCoManagedSeatArrangementsForClient } from './seatArrangementClientGuard';
+
+export {
+  assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError, countLiveCoManagedSeatArrangementsForClient,
+} from './seatArrangementClientGuard';
 
 // Raw tenant scoping (not @alga-psa/db's tenantDb) so @alga-psa/core does not
 // depend on @alga-psa/db — that import direction creates a core<->db build cycle.
@@ -355,6 +360,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'co_managed_provisioning_operations',
         label: 'co-managed IT workspace',
         countQuery: countLiveCoManagedWorkspacesForClient
+      },
+      {
+        type: 'co_managed_seat_arrangement',
+        table: 'co_managed_seat_arrangements',
+        label: 'co-managed IT seat arrangement',
+        countQuery: countLiveCoManagedSeatArrangementsForClient
       }
     ]
   },

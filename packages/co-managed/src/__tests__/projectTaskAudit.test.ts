@@ -25,7 +25,9 @@ const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}
 const actor: any = { tenant: U(1), userId: U(2) };
 const resource: any = { kind: 'project_task', tenant: U(3), id: U(4), relationshipId: U(5) };
 const assignee = { from: U(90), to: U(91), kind: 'user', name: 'Alex MSP' };
+const statusChange = { from: U(92), to: U(93), from_name: 'Open', to_name: 'In Progress' };
 const changed = { msp_assignee: assignee, task_name: { from: 'a', to: 'b' } };
+const statusAliases = ['status', 'status_name', 'status_id', 'selectedStatus', 'statuses', 'standard_statuses', 'custom_name', 'project_status_mappings'];
 
 describe('projectCoManagedChanges', () => {
   it('derives the assignee-name aliases for msp_assignee only', () => {
@@ -59,6 +61,21 @@ describe('listCoManagedProjectTaskHistory', () => {
     const [entry] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
     expect(entry.changes).toEqual({ msp_assignee: { kind: 'user', name: 'Alex MSP' } });
     expect(JSON.stringify(entry)).not.toContain(U(91));
+  });
+  it.each(statusAliases)('omits status mapping audit values when %s is redacted', async redaction => {
+    state.rows = [{ audit_id: U(7), timestamp: '2026-01-02T03:04:05Z', operation: 'co_managed_project_task_update',
+      changed_data: { project_status_mapping_id: statusChange }, details: { actor_display_name: 'Sam', actor_organization_name: 'MSP Co' } }];
+    state.redactedFields = [redaction];
+    const [entry] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(entry.changes).toEqual({});
+    expect(JSON.stringify(entry)).not.toContain(U(92));
+    expect(JSON.stringify(entry)).not.toContain(U(93));
+  });
+  it('keeps an unredacted status mapping audit entry visible', async () => {
+    state.rows = [{ audit_id: U(7), timestamp: '2026-01-02T03:04:05Z', operation: 'co_managed_project_task_update',
+      changed_data: { project_status_mapping_id: statusChange }, details: { actor_display_name: 'Sam', actor_organization_name: 'MSP Co' } }];
+    const [entry] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(entry.changes).toEqual({ project_status_mapping_id: statusChange });
   });
   it.each([['assignee_name'], ['users']])('omits msp_assignee for a reader with %s redacted but keeps the header', async redaction => {
     state.redactedFields = [redaction];

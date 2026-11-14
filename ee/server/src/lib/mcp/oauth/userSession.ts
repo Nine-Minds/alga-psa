@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { ApiCredentialsRefusedError, mayHoldApiCredentials } from '@alga-psa/authorization/subject/principalKind';
 
 /**
  * Mint a short-lived USER-scoped API key for dispatching MCP tool calls under the
@@ -18,6 +19,8 @@ export async function mintUserSessionKey(params: {
   const hash = crypto.createHash('sha256').update(token).digest('hex');
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
+    // MCP acts as the user: a principal kind that holds no API credentials (a seat technician) gets no session.
+    if (!(await mayHoldApiCredentials(knex, { tenant, userId }))) throw new ApiCredentialsRefusedError('MCP is not available for this account');
     // Opportunistically sweep this tenant's expired MCP user session keys.
     await knex('api_keys')
       .where({ tenant, purpose: 'mcp_user' })

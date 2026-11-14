@@ -1,6 +1,11 @@
 'use server';
 
-import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import {
+  assertActorMayAssign,
+  resolveSeatAssigneeAudience,
+  restrictToSeatAudience,
+} from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import {
   isClientUserType,
   isMspPrincipalUserType,
@@ -13,6 +18,7 @@ import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaborat
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { projectResponseUsers } from '../lib/responseUsers';
+import { projectedPeopleForCaller, projectedPeopleForSubject, projectedPersonToUser, projectedUsers, withholdPersonContactFields } from '@alga-psa/user-composition/lib/seatPeople';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -50,6 +56,7 @@ import {
   createTenantKnex,
   getConnection,
   recordTicketAssigneeChange,
+  releaseSeatTicketOnMove,
   tenantDb,
   resolveUserTimeZone,
   normalizeIanaTimeZone,
@@ -544,10 +551,23 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     if (!ticketRead) {
       throw new Error('Permission denied: Cannot view ticket');
     }
+
+    // A seat technician is offered only the technicians of their own client as assignees.
+    const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
     const ticketRedactions = ticketRead.redactedFields;
     // A related record is derived from a ticket field: hiding the field hides the record.
     const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
       isRecordFieldHidden('ticket', field, ticketRedactions) ? null : value;
+
+    // A seat technician's agent pickers are the people projection, the same answer as getTicketFormOptions:
+    // MSP staff who participate on tickets they can see (by name only) and the technicians of their client.
+    // The subject was resolved for the ticket read above, so an ordinary user is told apart without a statement.
+    const seatPeople = await projectedPeopleForSubject(trx, authorizationContext.authorizationSubject, { kinds: ['msp_staff', 'client_technician'] });
+    const seatAssignees = seatPeople ? projectedUsers(seatPeople) : null;
+    // People the ticket merely references (creator, last editor, comment authors) keep their name for a seat
+    // technician and release nothing else: no email, phone or username of MSP staff.
+    const releasedPerson = <Row extends Record<string, unknown>>(row: Row): Row =>
+      (seatPeople ? withholdPersonContactFields(row) : row);
 
     // Fetch all related data in parallel
     const [
@@ -589,11 +609,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
       // LEVERAGE: pattern users-star-projection — every ticket loader's users fetch should route through USER_RESPONSE_FIELD_NAMES (users.* carries hashed_password / two_factor_secret)
-      tenantScopedTable(trx, 'users', tenant)
-        .select(...USER_RESPONSE_FIELD_NAMES)
-        .where('user_type', 'internal')
-        .where('is_inactive', false)
-        .orderBy('first_name', 'asc'),
+      seatAssignees
+        ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
+        : restrictToSeatAudience(
+          tenantScopedTable(trx, 'users', tenant)
+            .select(...USER_RESPONSE_FIELD_NAMES)
+            .where('user_type', 'internal')
+            .where('is_inactive', false),
+          seatAssigneeAudience
+        ).orderBy('first_name', 'asc'),
       
       // Statuses
       tenantScopedTable(trx, 'statuses', tenant)
@@ -779,10 +803,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .first() : null;
 
     const createdByUser: SafeConsolidatedUser | null = createdByUserRow
-      ? sanitizeUserForResponse(createdByUserRow)
+      ? sanitizeUserForResponse(releasedPerson(createdByUserRow))
       : null;
     const updatedByUser: SafeConsolidatedUser | null = updatedByUserRow
-      ? sanitizeUserForResponse(updatedByUserRow)
+      ? sanitizeUserForResponse(releasedPerson(updatedByUserRow))
       : null;
 
     // Fetch board
@@ -816,7 +840,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
       extraAuthorIds.length > 0
         // LEVERAGE: pattern users-star-projection — see availableAgents query above
-        ? await projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn('user_id', extraAuthorIds)
+        ? (await projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn('user_id', extraAuthorIds)).map(releasedPerson)
         : [];
 
     // Client-portal authors carry their avatar on the linked contact, not the user
@@ -2431,6 +2455,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         throw new Error('Permission denied: Cannot view ticket options');
       }
 
+      // A seat technician is offered only the technicians of their own client, never an MSP user.
+      const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
+
       // Fetch all options in parallel
       const scopedDb = tenantDb(trx, tenant);
       const ticketTagMappingsQuery = scopedDb.table('tag_mappings as tm')
@@ -2446,6 +2473,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         ticketTagMappingsQuery.where('tm.tagged_type', 'ticket');
         readableTickets.apply(ticketTagMappingsQuery, 't');
       }
+
+      const seatPeople = await projectedPeopleForCaller(trx, tenant, user, { kinds: ['msp_staff', 'client_technician'] });
+      const seatAssignees = seatPeople ? projectedUsers(seatPeople) : null;
 
       const [
         statuses,
@@ -2477,11 +2507,16 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('category_name', 'asc'),
       
       // Assignee and user options are internal staff only: a portal (client) user is never a valid assignee,
-      // for any client, whoever is asking.
-      tenantScopedTable(trx, 'users', tenant)
-        .where('user_type', 'internal')
-        .select(...USER_RESPONSE_FIELD_NAMES)
-        .orderBy('first_name', 'asc'),
+      // for any client, whoever is asking. A seat technician is offered the people projection instead of the
+      // tenant's staff (MSP staff by name only, and the technicians of their own client).
+      seatAssignees
+        ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
+        : restrictToSeatAudience(
+          tenantScopedTable(trx, 'users', tenant)
+            .where('user_type', 'internal')
+            .select(...USER_RESPONSE_FIELD_NAMES),
+          seatAssigneeAudience
+        ).orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
@@ -2916,9 +2951,16 @@ export async function updateTicketInTransaction(
     }
 
     // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+    // The placement the write leaves behind is what scope is judged against, not the stored one.
+    const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
     if (isChangingAssignment && updateData.assigned_to) {
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+      await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
     }
+    await assertTicketMoveKeepsSeatsInScope(
+      trx, tenant, id, pendingPlacement,
+      isChangingAssignment ? updateData.assigned_to : undefined
+    );
 
     let updatedTicket;
     
@@ -2993,6 +3035,11 @@ export async function updateTicketInTransaction(
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
+    }
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, id, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
     }
 
     // Emit expanded domain transition events for workflow v2 triggers.

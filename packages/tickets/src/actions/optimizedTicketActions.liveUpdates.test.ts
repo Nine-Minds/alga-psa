@@ -27,7 +27,13 @@ const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 // The human-work guard is covered against a real database in T043; this fake DB has no users table.
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertTicketMoveKeepsSeatsInScope: vi.fn(async () => undefined),
   assertHumanWorkOwner: vi.fn(async () => undefined),
+}));
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
@@ -69,6 +75,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   // Seat work revisions are covered against a real database in coManagedSeatTicketNativeReassignment.db.test.ts.
   recordTicketAssigneeChange: vi.fn(async () => null),
+  releaseSeatTicketOnMove: vi.fn(async () => ({ assigneeCleared: false })),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
     unscoped: (table: string) => conn(table),
