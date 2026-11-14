@@ -690,6 +690,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'inbound_email_outbox',
   'inbound_email_inbox',
   'inbound_email_ingress',
+  'inbound_email_quarantine',
   'tenant_extension_schedule',
   'tenant_extension_install_secrets',
   'tenant_extension_install_config',

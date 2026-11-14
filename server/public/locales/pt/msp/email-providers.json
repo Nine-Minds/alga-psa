@@ -1167,5 +1167,52 @@
         "users": "Falha ao carregar os usuários. Tente novamente."
       }
     }
+  },
+  "quarantine": {
+    "title": "E-mails recebidos em quarentena",
+    "description": "Mensagens recebidas que foram recusadas em vez de adicionadas a um ticket. Revise-as e dispense as que já tratou.",
+    "backToSettings": "Voltar às configurações de e-mail",
+    "openQueue": "E-mails em quarentena",
+    "empty": "Nenhum e-mail em quarentena com estes filtros.",
+    "loadError": "Falha ao carregar e-mails em quarentena",
+    "dismissError": "Falha ao dispensar a entrada",
+    "dismissed": "Entrada dispensada",
+    "noSubject": "(sem assunto)",
+    "dismiss": "Dispensar",
+    "filters": {
+      "mailbox": "Caixa de correio",
+      "reason": "Motivo",
+      "status": "Status",
+      "allMailboxes": "Todas as caixas",
+      "allReasons": "Todos os motivos",
+      "allStatuses": "Todos os status",
+      "ticket": "Filtrado por um ticket",
+      "clearTicket": "Mostrar todos os tickets"
+    },
+    "status": {
+      "open": "Aberto",
+      "dismissed": "Dispensado"
+    },
+    "columns": {
+      "mailbox": "Caixa de correio",
+      "sender": "Remetente",
+      "subject": "Assunto",
+      "reason": "Motivo",
+      "ticket": "Ticket",
+      "received": "Recebido",
+      "status": "Status",
+      "actions": "Ações"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "O remetente não está no ticket",
+      "reply_outside_sender_audience": "Resposta fora do público da notificação",
+      "co_managed_token_refused": "Link de resposta de cogestão recusado",
+      "co_managed_token_unserved": "Conversa de cogestão não aceita aqui",
+      "co_managed_sender_unauthenticated": "Remetente de cogestão não verificado"
+    },
+    "banner_one": "{{count}} e-mail recebido para este ticket foi colocado em quarentena",
+    "banner_many": "{{count}} e-mails recebidos para este ticket foram colocados em quarentena",
+    "banner_other": "{{count}} e-mails recebidos para este ticket foram colocados em quarentena",
+    "bannerLink": "Revisar e-mails em quarentena"
   }
 }

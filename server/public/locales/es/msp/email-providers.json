@@ -1167,5 +1167,52 @@
         "users": "No se pudieron cargar los usuarios. Inténtelo de nuevo."
       }
     }
+  },
+  "quarantine": {
+    "title": "Correo entrante en cuarentena",
+    "description": "Mensajes entrantes que fueron rechazados en lugar de agregarse a un ticket. Revíselos y descarte los que ya haya gestionado.",
+    "backToSettings": "Volver a la configuración de correo",
+    "openQueue": "Correo en cuarentena",
+    "empty": "No hay correo en cuarentena con estos filtros.",
+    "loadError": "No se pudo cargar el correo en cuarentena",
+    "dismissError": "No se pudo descartar la entrada",
+    "dismissed": "Entrada descartada",
+    "noSubject": "(sin asunto)",
+    "dismiss": "Descartar",
+    "filters": {
+      "mailbox": "Buzón",
+      "reason": "Motivo",
+      "status": "Estado",
+      "allMailboxes": "Todos los buzones",
+      "allReasons": "Todos los motivos",
+      "allStatuses": "Todos los estados",
+      "ticket": "Filtrado por un ticket",
+      "clearTicket": "Mostrar todos los tickets"
+    },
+    "status": {
+      "open": "Abierto",
+      "dismissed": "Descartado"
+    },
+    "columns": {
+      "mailbox": "Buzón",
+      "sender": "Remitente",
+      "subject": "Asunto",
+      "reason": "Motivo",
+      "ticket": "Ticket",
+      "received": "Recibido",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "El remitente no está en el ticket",
+      "reply_outside_sender_audience": "Respuesta fuera de la audiencia de la notificación",
+      "co_managed_token_refused": "Enlace de respuesta de gestión compartida rechazado",
+      "co_managed_token_unserved": "Hilo de gestión compartida no aceptado aquí",
+      "co_managed_sender_unauthenticated": "Remitente de gestión compartida no verificado"
+    },
+    "banner_one": "Se puso en cuarentena {{count}} correo entrante de este ticket",
+    "banner_many": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
+    "banner_other": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
+    "bannerLink": "Revisar correo en cuarentena"
   }
 }

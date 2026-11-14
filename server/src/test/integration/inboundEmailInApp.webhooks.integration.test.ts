@@ -3292,6 +3292,91 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(comments).toHaveLength(0);
   });
 
+  it('quarantine surfacing: unauthorized_thread_header_sender records a ticket-linked row, dedupes redelivery, and throttles notifications per window', async () => {
+    const providerId = uuidv4();
+    const mailbox = `helpdesk-quarantine-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+    cleanup.push(async () => {
+      await tenantTable('inbound_email_quarantine').where({ provider_id: providerId }).delete();
+      await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const internalEmail = `quarantine-tech-${uuidv4().slice(0, 6)}@example.com`;
+    const { ticketId, originalMessageId } = await seedIntraOrgThreadFixture({ internalEmail });
+    const messageId = `<reply-quarantine-${uuidv4()}@mail>`;
+    const longSubject = `Re: ${'very long subject '.repeat(30)}`;
+    const deliver = () => processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: messageId,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalEmail, name: 'Forged Sender' },
+        to: [{ email: mailbox, name: 'Helpdesk' }],
+        subject: longSubject,
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Must never be stored.', html: undefined },
+        attachments: [],
+        headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+      } as any,
+    });
+
+    const first = await deliver();
+    expect(first.outcome).toBe('quarantined');
+    expect(first.diagnostics?.threading.failureReason ?? 'quarantined').toBe('quarantined');
+
+    const rows = await tenantTable('inbound_email_quarantine').where({ provider_id: providerId });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      reason: 'unauthorized_thread_header_sender',
+      matched_by: 'thread_headers',
+      ticket_id: ticketId,
+      mailbox,
+      sender: internalEmail,
+      status: 'open',
+    });
+    expect(rows[0].ticket_number).toMatch(/^INTRAORG-/);
+    expect(rows[0].subject.length).toBeLessThanOrEqual(200);
+    expect(rows[0].message_id_hash).toMatch(/^[0-9a-f]{64}$/);
+    // No body or header column exists at all.
+    expect(Object.keys(rows[0])).not.toContain('body');
+    expect(JSON.stringify(rows[0])).not.toContain('Must never be stored');
+
+    // Redelivery of the same Message-ID must not create a second row.
+    const second = await deliver();
+    expect(second.outcome).toBe('quarantined');
+    expect(await tenantTable('inbound_email_quarantine').where({ provider_id: providerId })).toHaveLength(1);
+
+    // Notification throttle: one claim per (tenant, mailbox, reason) per 15-minute window.
+    const { claimQuarantineNotificationWindow } = await import('../../services/email/inboundQuarantineNotificationService');
+    const claim = (id: string, reason = 'unauthorized_thread_header_sender') =>
+      claimQuarantineNotificationWindow(db, { tenant: tenantId, quarantineId: id, providerId, reason: reason as any });
+    expect(await claim(rows[0].id)).toBe(true);
+
+    const siblingId = uuidv4();
+    const insertSibling = (id: string, reason: string) => tenantTable('inbound_email_quarantine').insert({
+      tenant: tenantId, id, provider_id: providerId, mailbox, sender: internalEmail, subject: 's',
+      received_at: db.fn.now(), reason, matched_by: 'thread_headers', ticket_id: ticketId,
+      message_id_hash: uuidv4().replace(/-/g, '').padEnd(64, '0'), status: 'open',
+    });
+    await insertSibling(siblingId, 'unauthorized_thread_header_sender');
+    expect(await claim(siblingId)).toBe(false); // same reason inside the window
+    const otherReasonId = uuidv4();
+    await insertSibling(otherReasonId, 'co_managed_token_refused');
+    expect(await claim(otherReasonId, 'co_managed_token_refused')).toBe(true); // different reason is its own window
+
+    await tenantTable('inbound_email_quarantine')
+      .where({ id: rows[0].id })
+      .update({ notified_at: db.raw("now() - interval '16 minutes'") });
+    expect(await claim(siblingId)).toBe(true); // window elapsed
+  });
+
   it('Internal reply (Microsoft): a verified list rewrite alone does not grant an internal identity', async () => {
     const providerId = uuidv4();
     const mailbox = `helpdesk-rewrite-${uuidv4().slice(0, 6)}@example.com`;

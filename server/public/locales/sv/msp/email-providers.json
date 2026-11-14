@@ -1167,5 +1167,51 @@
         "users": "Det gick inte att läsa in användare. Försök igen."
       }
     }
+  },
+  "quarantine": {
+    "title": "Inkommande e-post i karantän",
+    "description": "Inkommande meddelanden som avvisades i stället för att läggas till i ett ärende. Granska dem och avfärda det du har hanterat.",
+    "backToSettings": "Tillbaka till e-postinställningar",
+    "openQueue": "E-post i karantän",
+    "empty": "Ingen e-post i karantän matchar filtren.",
+    "loadError": "Det gick inte att läsa in e-post i karantän",
+    "dismissError": "Det gick inte att avfärda posten",
+    "dismissed": "Posten avfärdades",
+    "noSubject": "(inget ämne)",
+    "dismiss": "Avfärda",
+    "filters": {
+      "mailbox": "Brevlåda",
+      "reason": "Orsak",
+      "status": "Status",
+      "allMailboxes": "Alla brevlådor",
+      "allReasons": "Alla orsaker",
+      "allStatuses": "Alla statusar",
+      "ticket": "Filtrerat på ett ärende",
+      "clearTicket": "Visa alla ärenden"
+    },
+    "status": {
+      "open": "Öppen",
+      "dismissed": "Avfärdad"
+    },
+    "columns": {
+      "mailbox": "Brevlåda",
+      "sender": "Avsändare",
+      "subject": "Ämne",
+      "reason": "Orsak",
+      "ticket": "Ärende",
+      "received": "Mottaget",
+      "status": "Status",
+      "actions": "Åtgärder"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "Avsändaren finns inte i ärendet",
+      "reply_outside_sender_audience": "Svar utanför aviseringens målgrupp",
+      "co_managed_token_refused": "Svarslänk för samhantering nekades",
+      "co_managed_token_unserved": "Samhanteringstråd accepteras inte här",
+      "co_managed_sender_unauthenticated": "Avsändare för samhantering inte verifierad"
+    },
+    "banner_one": "{{count}} inkommande e-post till detta ärende har satts i karantän",
+    "banner_other": "{{count}} inkommande e-postmeddelanden till detta ärende har satts i karantän",
+    "bannerLink": "Granska e-post i karantän"
   }
 }

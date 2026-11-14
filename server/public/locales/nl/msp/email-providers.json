@@ -1167,5 +1167,51 @@
         "users": "Kan de gebruikers niet laden. Probeer het opnieuw."
       }
     }
+  },
+  "quarantine": {
+    "title": "Inkomende e-mail in quarantaine",
+    "description": "Inkomende berichten die zijn geweigerd in plaats van aan een ticket toegevoegd. Bekijk ze en sluit af wat je hebt afgehandeld.",
+    "backToSettings": "Terug naar e-mailinstellingen",
+    "openQueue": "E-mail in quarantaine",
+    "empty": "Geen e-mail in quarantaine voor deze filters.",
+    "loadError": "Kan e-mail in quarantaine niet laden",
+    "dismissError": "Kan item niet verwijderen",
+    "dismissed": "Item verwijderd",
+    "noSubject": "(geen onderwerp)",
+    "dismiss": "Verwijderen",
+    "filters": {
+      "mailbox": "Postvak",
+      "reason": "Reden",
+      "status": "Status",
+      "allMailboxes": "Alle postvakken",
+      "allReasons": "Alle redenen",
+      "allStatuses": "Alle statussen",
+      "ticket": "Gefilterd op één ticket",
+      "clearTicket": "Alle tickets tonen"
+    },
+    "status": {
+      "open": "Open",
+      "dismissed": "Verwijderd"
+    },
+    "columns": {
+      "mailbox": "Postvak",
+      "sender": "Afzender",
+      "subject": "Onderwerp",
+      "reason": "Reden",
+      "ticket": "Ticket",
+      "received": "Ontvangen",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "Afzender staat niet op het ticket",
+      "reply_outside_sender_audience": "Antwoord buiten het publiek van de melding",
+      "co_managed_token_refused": "Co-managed antwoordlink geweigerd",
+      "co_managed_token_unserved": "Co-managed thread hier niet geaccepteerd",
+      "co_managed_sender_unauthenticated": "Co-managed afzender niet geverifieerd"
+    },
+    "banner_one": "{{count}} inkomende e-mail voor dit ticket is in quarantaine geplaatst",
+    "banner_other": "{{count}} inkomende e-mails voor dit ticket zijn in quarantaine geplaatst",
+    "bannerLink": "E-mail in quarantaine bekijken"
   }
 }

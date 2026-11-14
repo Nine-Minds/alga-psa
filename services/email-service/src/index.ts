@@ -13,6 +13,8 @@ import {
   assertInboundAuthPauseNotifierRegistered,
 } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
 import { registerInboundAuthPauseEventPublisher } from '@alga-psa/shared/services/email/inboundAuthPauseEventNotifier';
+import { assertInboundQuarantineNotifierRegistered } from '@alga-psa/shared/services/email/inboundQuarantine';
+import { registerInboundQuarantineEventPublisher } from '@alga-psa/shared/services/email/inboundQuarantineEventNotifier';
 import { installInboundEmailMetricsSink } from '@alga-psa/shared/services/email/inboundEmailMetrics';
 import { createInboundEmailMetrics } from './observability/registry';
 import { createPromSink } from './observability/promSink';
@@ -32,6 +34,11 @@ dotenv.config();
 // notifications (same hand-off as MAINTENANCE_JOB_REQUESTED).
 registerInboundAuthPauseEventPublisher();
 assertInboundAuthPauseNotifierRegistered('services/email-service');
+
+// Same hand-off for quarantined inbound email: the row is persisted in-process;
+// the event only triggers the server-side admin notification.
+registerInboundQuarantineEventPublisher();
+assertInboundQuarantineNotifierRegistered('services/email-service');
 
 const service = new EmailService();
 let healthServer: ReturnType<typeof createHealthServer> | undefined;

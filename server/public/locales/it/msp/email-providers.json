@@ -1167,5 +1167,52 @@
         "users": "Impossibile caricare gli utenti. Riprovare."
       }
     }
+  },
+  "quarantine": {
+    "title": "E-mail in entrata in quarantena",
+    "description": "Messaggi in entrata rifiutati invece di essere aggiunti a un ticket. Controllali e scarta quelli gestiti.",
+    "backToSettings": "Torna alle impostazioni e-mail",
+    "openQueue": "E-mail in quarantena",
+    "empty": "Nessuna e-mail in quarantena con questi filtri.",
+    "loadError": "Impossibile caricare le e-mail in quarantena",
+    "dismissError": "Impossibile scartare la voce",
+    "dismissed": "Voce scartata",
+    "noSubject": "(nessun oggetto)",
+    "dismiss": "Scarta",
+    "filters": {
+      "mailbox": "Casella",
+      "reason": "Motivo",
+      "status": "Stato",
+      "allMailboxes": "Tutte le caselle",
+      "allReasons": "Tutti i motivi",
+      "allStatuses": "Tutti gli stati",
+      "ticket": "Filtrato su un ticket",
+      "clearTicket": "Mostra tutti i ticket"
+    },
+    "status": {
+      "open": "Aperto",
+      "dismissed": "Scartato"
+    },
+    "columns": {
+      "mailbox": "Casella",
+      "sender": "Mittente",
+      "subject": "Oggetto",
+      "reason": "Motivo",
+      "ticket": "Ticket",
+      "received": "Ricevuto",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "Il mittente non è nel ticket",
+      "reply_outside_sender_audience": "Risposta fuori dal pubblico della notifica",
+      "co_managed_token_refused": "Link di risposta di co-gestione rifiutato",
+      "co_managed_token_unserved": "Thread di co-gestione non accettato qui",
+      "co_managed_sender_unauthenticated": "Mittente di co-gestione non verificato"
+    },
+    "banner_one": "{{count}} e-mail in entrata per questo ticket è stata messa in quarantena",
+    "banner_many": "{{count}} e-mail in entrata per questo ticket sono state messe in quarantena",
+    "banner_other": "{{count}} e-mail in entrata per questo ticket sono state messe in quarantena",
+    "bannerLink": "Controlla le e-mail in quarantena"
   }
 }

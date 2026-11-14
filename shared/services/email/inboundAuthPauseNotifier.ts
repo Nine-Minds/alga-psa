@@ -11,6 +11,7 @@
  * Delivery is best-effort and must never roll back the pause itself.
  */
 
+// LEVERAGE: pattern shared-notifier-hook — same register/assert/dispatch + event-publisher + subscriber trio as inboundQuarantine.ts
 export interface InboundAuthPauseNotificationParams {
   tenant: string;
   providerId: string;

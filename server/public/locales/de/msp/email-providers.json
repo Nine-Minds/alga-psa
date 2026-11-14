@@ -1167,5 +1167,51 @@
         "users": "Die Benutzer konnten nicht geladen werden. Bitte versuchen Sie es erneut."
       }
     }
+  },
+  "quarantine": {
+    "title": "Unter Quarantäne gestellte eingehende E-Mails",
+    "description": "Eingehende Nachrichten, die abgewiesen statt einem Ticket hinzugefügt wurden. Prüfen Sie sie und schließen Sie Erledigtes ab.",
+    "backToSettings": "Zurück zu den E-Mail-Einstellungen",
+    "openQueue": "E-Mails in Quarantäne",
+    "empty": "Keine E-Mails in Quarantäne für diese Filter.",
+    "loadError": "E-Mails in Quarantäne konnten nicht geladen werden",
+    "dismissError": "Eintrag konnte nicht verworfen werden",
+    "dismissed": "Eintrag verworfen",
+    "noSubject": "(kein Betreff)",
+    "dismiss": "Verwerfen",
+    "filters": {
+      "mailbox": "Postfach",
+      "reason": "Grund",
+      "status": "Status",
+      "allMailboxes": "Alle Postfächer",
+      "allReasons": "Alle Gründe",
+      "allStatuses": "Alle Status",
+      "ticket": "Auf ein Ticket gefiltert",
+      "clearTicket": "Alle Tickets anzeigen"
+    },
+    "status": {
+      "open": "Offen",
+      "dismissed": "Verworfen"
+    },
+    "columns": {
+      "mailbox": "Postfach",
+      "sender": "Absender",
+      "subject": "Betreff",
+      "reason": "Grund",
+      "ticket": "Ticket",
+      "received": "Empfangen",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "Absender gehört nicht zum Ticket",
+      "reply_outside_sender_audience": "Antwort außerhalb der Benachrichtigungszielgruppe",
+      "co_managed_token_refused": "Co-Managed-Antwortlink abgelehnt",
+      "co_managed_token_unserved": "Co-Managed-Thread hier nicht akzeptiert",
+      "co_managed_sender_unauthenticated": "Co-Managed-Absender nicht verifiziert"
+    },
+    "banner_one": "{{count}} eingehende E-Mail zu diesem Ticket wurde unter Quarantäne gestellt",
+    "banner_other": "{{count}} eingehende E-Mails zu diesem Ticket wurden unter Quarantäne gestellt",
+    "bannerLink": "E-Mails in Quarantäne prüfen"
   }
 }

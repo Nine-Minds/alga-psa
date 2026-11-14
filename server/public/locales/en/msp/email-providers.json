@@ -1167,5 +1167,51 @@
         "users": "Failed to load users. Please try again."
       }
     }
+  },
+  "quarantine": {
+    "title": "Quarantined inbound email",
+    "description": "Inbound messages that were refused instead of being added to a ticket. Review them and dismiss what you have handled.",
+    "backToSettings": "Back to email settings",
+    "openQueue": "Quarantined email",
+    "empty": "No quarantined email match these filters.",
+    "loadError": "Failed to load quarantined email",
+    "dismissError": "Failed to dismiss entry",
+    "dismissed": "Entry dismissed",
+    "noSubject": "(no subject)",
+    "dismiss": "Dismiss",
+    "filters": {
+      "mailbox": "Mailbox",
+      "reason": "Reason",
+      "status": "Status",
+      "allMailboxes": "All mailboxes",
+      "allReasons": "All reasons",
+      "allStatuses": "All statuses",
+      "ticket": "Filtered to one ticket",
+      "clearTicket": "Show all tickets"
+    },
+    "status": {
+      "open": "Open",
+      "dismissed": "Dismissed"
+    },
+    "columns": {
+      "mailbox": "Mailbox",
+      "sender": "Sender",
+      "subject": "Subject",
+      "reason": "Reason",
+      "ticket": "Ticket",
+      "received": "Received",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "Sender is not on the ticket",
+      "reply_outside_sender_audience": "Reply outside the notification audience",
+      "co_managed_token_refused": "Co-managed reply link refused",
+      "co_managed_token_unserved": "Co-managed thread not accepted here",
+      "co_managed_sender_unauthenticated": "Co-managed sender not verified"
+    },
+    "banner_one": "{{count}} inbound email to this ticket was quarantined",
+    "banner_other": "{{count}} inbound emails to this ticket were quarantined",
+    "bannerLink": "Review quarantined email"
   }
 }

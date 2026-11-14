@@ -169,7 +169,7 @@ import {
   mediaProcessingSucceededEventPayloadSchema,
 } from './domain/assetMediaEventSchemas';
 import { maintenanceJobRequestedEventPayloadSchema } from './domain/maintenanceEventSchemas';
-import { inboundEmailProviderAutoPausedEventPayloadSchema } from './domain/inboundEmailEventSchemas';
+import { inboundEmailProviderAutoPausedEventPayloadSchema, inboundEmailQuarantinedEventPayloadSchema } from './domain/inboundEmailEventSchemas';
 import {
   ticketApprovalGrantedEventPayloadSchema,
   ticketApprovalRejectedEventPayloadSchema,
@@ -230,6 +230,8 @@ const CORE_EVENT_TYPES = [
   // Inbound email (worker emits after atomic auth-failure auto-pause; server
   // subscriber delivers admin notifications)
   'INBOUND_EMAIL_PROVIDER_AUTO_PAUSED',
+  // Inbound email quarantined (row already persisted; subscriber notifies admins)
+  'INBOUND_EMAIL_QUARANTINED',
   'TICKET_ASSIGNED',
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
@@ -1274,6 +1276,7 @@ const TicketClosedPayloadSchema = legacyTicketUnion(ticketClosedEventPayloadSche
 const TicketAutoCloseWarningPayloadSchema = legacyTicketUnion(ticketAutoCloseWarningEventPayloadSchema);
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
+const InboundEmailQuarantinedPayloadSchema = inboundEmailQuarantinedEventPayloadSchema;
 // On TICKET_ASSIGNED `userId` is the assignee (the notification recipient), so it stays required.
 export const TicketAssignedLegacyPayloadSchema = TicketEventPayloadSchema.extend({ userId: z.string().guid() });
 const TicketAssignedPayloadSchema = z.union([TicketAssignedLegacyPayloadSchema, ticketAssignedEventPayloadSchema]);
@@ -1307,6 +1310,7 @@ export const CorePayloadSchemas = {
   TICKET_AUTO_CLOSE_WARNING: TicketAutoCloseWarningPayloadSchema,
   MAINTENANCE_JOB_REQUESTED: MaintenanceJobRequestedPayloadSchema,
   INBOUND_EMAIL_PROVIDER_AUTO_PAUSED: InboundEmailProviderAutoPausedPayloadSchema,
+  INBOUND_EMAIL_QUARANTINED: InboundEmailQuarantinedPayloadSchema,
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,

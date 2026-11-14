@@ -6,8 +6,10 @@ import {
 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2';
 import { getInboundDurableMode } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
 import { assertInboundAuthPauseNotifierRegistered } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
+import { assertInboundQuarantineNotifierRegistered } from '@alga-psa/shared/services/email/inboundQuarantine';
 import { processUnifiedInboundEmailQueueJob } from '../services/email/unifiedInboundEmailQueueJobProcessor';
 import { registerInboundAuthPauseNotifications } from '../services/email/inboundAuthPauseNotificationService';
+import { registerInboundQuarantineNotifications } from '../services/email/inboundQuarantineNotificationService';
 
 async function main(): Promise<void> {
   // CM L5: this process runs processInboundEmailInApp, so it needs the same delivery + inbound
@@ -22,6 +24,10 @@ async function main(): Promise<void> {
   // registered notifier those pauses would be silent to tenant admins.
   registerInboundAuthPauseNotifications();
   assertInboundAuthPauseNotifierRegistered('server/bin/unifiedInboundEmailQueueConsumer');
+
+  // This process runs processInboundEmailInApp, which can quarantine messages.
+  registerInboundQuarantineNotifications();
+  assertInboundQuarantineNotifierRegistered('server/bin/unifiedInboundEmailQueueConsumer');
 
   const consumer = new UnifiedInboundEmailQueueConsumer({
     pollDelayMs: 250,

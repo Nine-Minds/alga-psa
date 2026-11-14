@@ -31,6 +31,7 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: 'prepaid-balance-alert-scan', cron: '0 9 * * *' },
   { jobName: 'auto-close-tickets', cron: '*/15 * * * *' },
   { jobName: 'cleanup-webhook-deliveries', cron: '*/15 * * * *' },
+  { jobName: 'cleanup-inbound-email-quarantine', cron: '30 2 * * *' },
   { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },
   { jobName: 'renew-google-gmail-watch', cron: '*/30 * * * *' },
   { jobName: 'renew-teams-meeting-artifact-subscriptions', cron: '*/30 * * * *' },

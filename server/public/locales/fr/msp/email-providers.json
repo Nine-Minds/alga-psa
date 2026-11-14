@@ -1167,5 +1167,52 @@
         "users": "Échec du chargement des utilisateurs. Veuillez réessayer."
       }
     }
+  },
+  "quarantine": {
+    "title": "E-mails entrants en quarantaine",
+    "description": "Messages entrants refusés au lieu d'être ajoutés à un ticket. Examinez-les et écartez ceux que vous avez traités.",
+    "backToSettings": "Retour aux paramètres e-mail",
+    "openQueue": "E-mails en quarantaine",
+    "empty": "Aucun e-mail en quarantaine pour ces filtres.",
+    "loadError": "Impossible de charger les e-mails en quarantaine",
+    "dismissError": "Impossible d'écarter l'entrée",
+    "dismissed": "Entrée écartée",
+    "noSubject": "(sans objet)",
+    "dismiss": "Écarter",
+    "filters": {
+      "mailbox": "Boîte aux lettres",
+      "reason": "Motif",
+      "status": "Statut",
+      "allMailboxes": "Toutes les boîtes",
+      "allReasons": "Tous les motifs",
+      "allStatuses": "Tous les statuts",
+      "ticket": "Filtré sur un ticket",
+      "clearTicket": "Afficher tous les tickets"
+    },
+    "status": {
+      "open": "Ouvert",
+      "dismissed": "Écarté"
+    },
+    "columns": {
+      "mailbox": "Boîte aux lettres",
+      "sender": "Expéditeur",
+      "subject": "Objet",
+      "reason": "Motif",
+      "ticket": "Ticket",
+      "received": "Reçu",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "L'expéditeur ne figure pas sur le ticket",
+      "reply_outside_sender_audience": "Réponse hors de l'audience de la notification",
+      "co_managed_token_refused": "Lien de réponse de cogestion refusé",
+      "co_managed_token_unserved": "Fil de cogestion non accepté ici",
+      "co_managed_sender_unauthenticated": "Expéditeur de cogestion non vérifié"
+    },
+    "banner_one": "{{count}} e-mail entrant pour ce ticket a été mis en quarantaine",
+    "banner_many": "{{count}} e-mails entrants pour ce ticket ont été mis en quarantaine",
+    "banner_other": "{{count}} e-mails entrants pour ce ticket ont été mis en quarantaine",
+    "bannerLink": "Examiner les e-mails en quarantaine"
   }
 }

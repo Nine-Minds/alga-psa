@@ -40,6 +40,10 @@ import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId, rfcMessageIdLookupForms } from './inboundEmailIdentity';
 import { captureTicketTransitionSnapshot, publishTicketTransitionsAfterCommit } from '../../lib/tickets/ticketLifecycleEvents';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import { QUARANTINE_REASONS, surfaceInboundQuarantine, type QuarantineReason } from './inboundQuarantine';
+
+export { QUARANTINE_REASONS };
+export type { QuarantineReason };
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
@@ -209,7 +213,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated' | 'reply_outside_sender_audience';
+      reason: QuarantineReason;
       ticketId: string;
       matchedBy: 'thread_headers' | 'reply_token';
     };
@@ -1307,6 +1311,48 @@ export async function processInboundEmailInApp(
     }
   };
 
+  /**
+   * THE choke point for every quarantined return. Builds the result, marks the
+   * diagnostics, keeps the `security_event` log, and surfaces the quarantine
+   * (durable row + best-effort admin notification). Surfacing never throws and
+   * never changes the outcome. No site may build a quarantined result
+   * without going through here.
+   */
+  const quarantined = async (params: {
+    reason: QuarantineReason;
+    ticketId: string;
+    matchedBy: 'thread_headers' | 'reply_token';
+    /** Overrides the generic security log line for sites that already had a specific one. */
+    securityEvent?: { name: string; details: Record<string, unknown> };
+  }): Promise<ProcessInboundEmailInAppResult> => {
+    if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+    console.warn(`security_event: ${params.securityEvent?.name ?? 'inbound_quarantined'}`, params.securityEvent?.details ?? {
+      tenantId,
+      providerId,
+      ticketId: params.ticketId,
+      emailId: emailData.id,
+      reason: params.reason,
+      matchedBy: params.matchedBy,
+    });
+    await surfaceInboundQuarantine({
+      tenant: tenantId,
+      providerId,
+      messageId: emailData.id,
+      sender: senderEmail ?? emailData.from?.email ?? null,
+      subject: emailData.subject ?? null,
+      receivedAt: emailData.receivedAt ?? null,
+      reason: params.reason,
+      matchedBy: params.matchedBy,
+      ticketId: params.ticketId,
+    });
+    return withDiagnostics({
+      outcome: 'quarantined',
+      reason: params.reason,
+      ticketId: params.ticketId,
+      matchedBy: params.matchedBy,
+    }, diagnostics);
+  };
+
   let rerouteToNewTicket = false;
   let rerouteReasonMetadata: InboundReplyDecisionMetadata | null = null;
 
@@ -1335,13 +1381,11 @@ export async function processInboundEmailInApp(
       || matchedSenderContact.user_type === 'internal'
       || matchedSenderContact.is_inactive !== false
     )) {
-      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-      return withDiagnostics({
-        outcome: 'quarantined',
+      return quarantined({
         reason: 'co_managed_token_refused',
         ticketId: params.ticketId,
         matchedBy: params.matchedBy,
-      }, diagnostics);
+      });
     }
     const existingCommentId = await findExistingEmailComment({
       tenantId,
@@ -1381,22 +1425,21 @@ export async function processInboundEmailInApp(
     // answers; out of scope they are an external party, so it is stored as `requester`. A token that recorded a narrower
     // audience than `requester` was sent to a seat technician, so a reply to it from a sender
     // not attributed to an internal user is refused rather than retargeted to a public thread.
-    const refuseReplyOutsideAudience = () => {
-      console.warn('security_event: inbound_reply_outside_sender_audience', {
-        tenantId,
-        providerId,
-        ticketId: params.ticketId,
-        emailId: emailData.id,
-        matchedBy: params.matchedBy,
-      });
-      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-      return withDiagnostics({
-        outcome: 'quarantined' as const,
-        reason: 'reply_outside_sender_audience' as const,
-        ticketId: params.ticketId,
-        matchedBy: params.matchedBy,
-      }, diagnostics);
-    };
+    const refuseReplyOutsideAudience = () => quarantined({
+      reason: 'reply_outside_sender_audience',
+      ticketId: params.ticketId,
+      matchedBy: params.matchedBy,
+      securityEvent: {
+        name: 'inbound_reply_outside_sender_audience',
+        details: {
+          tenantId,
+          providerId,
+          ticketId: params.ticketId,
+          emailId: emailData.id,
+          matchedBy: params.matchedBy,
+        },
+      },
+    });
     const replyAudience = matchedSenderIsInternalUser && senderContact?.user_id
       ? await withTenantAdminTransaction(tenantId, async (trx: any) => resolveInboundReplyAudience(trx, tenantId, {
           ticketId: params.ticketId,
@@ -1476,33 +1519,32 @@ export async function processInboundEmailInApp(
         // Keep this a structured security log rather than creating a ticket by default.
         // Operations can route this event through their log/audit pipeline without giving
         // an untrusted sender another ticket-creation side effect.
-        console.warn('security_event: inbound_thread_header_sender_quarantined', {
-          tenantId,
-          providerId,
-          ticketId: params.ticketId,
-          senderEmail: senderEmail ?? null,
-          matchedMessageId: emailData.inReplyTo ?? emailData.references?.at(-1) ?? null,
-          emailId: emailData.id,
-          matchedContactId: matchedSenderContactId ?? null,
-          ticketClientId: policyContext?.clientId ?? null,
-          authorization: {
-            senderIsTicketClientContact,
-            senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
-            senderIsActiveWatcher,
-            senderIsOneOffRecipient,
-          },
-          securityBoardTicketHookEnabled:
-            process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
-        });
-        if (diagnostics) {
-          diagnostics.threading.failureReason = 'quarantined';
-        }
-        return withDiagnostics({
-          outcome: 'quarantined',
+        return quarantined({
           reason: 'unauthorized_thread_header_sender',
           ticketId: params.ticketId,
           matchedBy: 'thread_headers',
-        }, diagnostics);
+          securityEvent: {
+            name: 'inbound_thread_header_sender_quarantined',
+            details: {
+              tenantId,
+              providerId,
+              ticketId: params.ticketId,
+              senderEmail: senderEmail ?? null,
+              matchedMessageId: emailData.inReplyTo ?? emailData.references?.at(-1) ?? null,
+              emailId: emailData.id,
+              matchedContactId: matchedSenderContactId ?? null,
+              ticketClientId: policyContext?.clientId ?? null,
+              authorization: {
+                senderIsTicketClientContact,
+                senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
+                senderIsActiveWatcher,
+                senderIsOneOffRecipient,
+              },
+              securityBoardTicketHookEnabled:
+                process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
+            },
+          },
+        });
       }
     }
 
@@ -1795,13 +1837,11 @@ export async function processInboundEmailInApp(
       if (match?.ticketId && match.expiryValid === false && tokenClass === 'cm2') {
         // A known expired cm2 bearer credential is terminal. Do this
         // before admission fallbacks, thread-header matching, or ticket creation.
-        if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-        return withDiagnostics({
-          outcome: 'quarantined',
+        return await quarantined({
           reason: 'co_managed_token_refused',
           ticketId: match.ticketId,
           matchedBy: 'reply_token',
-        }, diagnostics);
+        });
       }
       // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
       // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
@@ -1835,13 +1875,14 @@ export async function processInboundEmailInApp(
           if (!verdict.served && !(await cmTokenIsRequesterThread(tenantId, match.metadata))) {
             // Genuinely not served and the token points at a shared_it / organization_private thread:
             // the native writer cannot take it. Terminal, visible, no write.
-            if (diagnostics) diagnostics.threading.failureReason = 'co_managed_token_unserved';
-            return withDiagnostics({
-              outcome: 'quarantined',
+            const result = await quarantined({
               reason: 'co_managed_token_unserved',
               ticketId: match.ticketId,
               matchedBy: 'reply_token',
-            }, diagnostics);
+            });
+            // Keep the more specific failure reason this site has always reported.
+            if (diagnostics) diagnostics.threading.failureReason = 'co_managed_token_unserved';
+            return result;
           }
         }
         // Not served, requester-thread token: the token is inert and thread headers decide (native writer).
@@ -1866,13 +1907,11 @@ export async function processInboundEmailInApp(
               });
             }
           }
-          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-          return withDiagnostics({
-            outcome: 'quarantined',
+          return await quarantined({
             reason: admission.reason === 'sender_unauthenticated' ? 'co_managed_sender_unauthenticated' : 'co_managed_token_refused',
             ticketId: match.ticketId,
             matchedBy: 'reply_token',
-          }, diagnostics);
+          });
         }
         if (admission && admission.admitted === true && admission.actor) {
           // shared_it / organization_private reply: written through L4a's writer as the verified
@@ -1911,8 +1950,7 @@ export async function processInboundEmailInApp(
           ? admission.requesterClientId
           : undefined;
         if (admission?.admitted === true && admission.audience === 'requester' && (!authorizedRequesterContactId || !authorizedRequesterClientId)) {
-          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-          return withDiagnostics({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId: admission.ticketId, matchedBy: 'reply_token' }, diagnostics);
+          return await quarantined({ reason: 'co_managed_token_refused', ticketId: admission.ticketId, matchedBy: 'reply_token' });
         }
       }
       if (match?.ticketId && !tokenInert) {

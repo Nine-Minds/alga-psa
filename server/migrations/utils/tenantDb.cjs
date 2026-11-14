@@ -201,6 +201,7 @@ const TENANT_TABLE_METADATA = {
   email_processed_attachments: { scope: 'tenant' },
   email_processed_messages: { scope: 'tenant' },
   inbound_email_ingress: { scope: 'tenant' },
+  inbound_email_quarantine: { scope: 'tenant' },
   inbound_email_inbox: { scope: 'tenant' },
   inbound_email_effects: { scope: 'tenant' },
   inbound_email_artifacts: { scope: 'tenant' },

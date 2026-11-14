@@ -1065,6 +1065,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'inbound_email_outbox', deletion: 'ordered' },
   { table: 'inbound_email_inbox', deletion: 'ordered' },
   { table: 'inbound_email_ingress', deletion: 'ordered' },
+  { table: 'inbound_email_quarantine', deletion: 'ordered' },
   { table: 'tenant_extension_schedule', deletion: 'ordered' },
   { table: 'tenant_extension_install_secrets', deletion: 'ordered' },
   { table: 'tenant_extension_install_config', deletion: 'ordered' },
