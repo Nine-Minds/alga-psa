@@ -5,6 +5,7 @@ import { canReadKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermission
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { canMutateKnowledgeBaseArticles, resolveKnowledgeBaseReadScope } from '@alga-psa/authorization/knowledgeBaseReadAuthorization';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -90,6 +91,47 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(alias ? `${table} as ${alias}` : table);
 }
 
+/**
+ * Narrows a query over `kb_articles` to the articles the user may read (the kernel's `knowledge_base_article:read`
+ * rules: a co-managed seat technician sees `client` and `public` articles only). Adds nothing for a user the
+ * rules do not narrow, and no statement at all for a user row that is known not to be a seat reader.
+ */
+async function applyKbArticleReadScope(
+  knex: Knex,
+  tenant: string,
+  user: Parameters<typeof resolveKnowledgeBaseReadScope>[2],
+  query: Knex.QueryBuilder,
+  articleAlias: string = 'ka'
+): Promise<void> {
+  const scope = await resolveKnowledgeBaseReadScope(knex, tenant, user);
+  scope?.apply(query, articleAlias);
+}
+
+/** Document RBAC for the write, and the kernel's say on whether this subject may write articles at all. */
+async function canWriteKbArticles(
+  user: Parameters<typeof resolveKnowledgeBaseReadScope>[2] & Parameters<typeof hasPermission>[0],
+  tenant: string,
+  action: 'create' | 'update' | 'delete'
+): Promise<boolean> {
+  if (!(await hasPermission(user, 'document', action))) return false;
+  const { knex } = await createTenantKnex();
+  return canMutateKnowledgeBaseArticles(knex, tenant, user, action);
+}
+
+/** Whether the user may read this one article. No statement beyond the scope probe when nothing narrows the user. */
+async function kbArticleReadable(
+  knex: Knex,
+  tenant: string,
+  user: Parameters<typeof resolveKnowledgeBaseReadScope>[2],
+  articleId: string
+): Promise<boolean> {
+  const scope = await resolveKnowledgeBaseReadScope(knex, tenant, user);
+  if (!scope) return true;
+  const query = tenantScopedTable(knex, 'kb_articles as ka', tenant).where('ka.article_id', articleId);
+  scope.apply(query, 'ka');
+  return Boolean(await query.first('ka.article_id'));
+}
+
 async function publishKbArticleSearchEvent(
   eventType: 'KB_ARTICLE_CREATED' | 'KB_ARTICLE_UPDATED' | 'KB_ARTICLE_DELETED',
   tenant: string,
@@ -132,7 +174,7 @@ export const createArticle = withAuth(
   ): Promise<IKBArticleWithDocument | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'create'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'create'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -160,7 +202,7 @@ export const updateArticle = withAuth(
   ): Promise<IKBArticle | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'update'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'update'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -266,7 +308,7 @@ export const publishArticle = withAuth(
   ): Promise<IKBArticle | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'update'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'update'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -328,7 +370,7 @@ export const archiveArticle = withAuth(
   ): Promise<IKBArticle | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'update'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'update'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -389,7 +431,7 @@ export const deleteArticle = withAuth(
   ): Promise<{ success: true } | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'delete'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'delete'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -453,7 +495,7 @@ export const submitForReview = withAuth(
   ): Promise<boolean | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'update'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'update'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -553,7 +595,7 @@ export const completeReview = withAuth(
   ): Promise<boolean | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'update'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'update'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -663,6 +705,7 @@ export const getArticles = withAuth(
         'd.document_name',
       ]);
     tenantDb(knex, tenant).tenantJoin(query, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+    await applyKbArticleReadScope(knex, tenant, user, query);
 
     if (filters.status) {
       query = query.andWhere('ka.status', filters.status);
@@ -813,6 +856,7 @@ export const getArticlesWithTags = withAuth(
         'd.document_name',
       ]);
     tenantDb(knex, tenant).tenantJoin(query, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+    await applyKbArticleReadScope(knex, tenant, user, query);
 
     if (filters.status) {
       query = query.andWhere('ka.status', filters.status);
@@ -893,15 +937,20 @@ export const getArticlesWithTags = withAuth(
     }
 
     // --- available tags for filter sidebar ---
+    // A tag only an unreadable article carries is not offered: its text would name that article's subject.
+    const mappedTags = tenantDb(knex, tenant).table('tag_mappings as tm')
+      .select(knex.raw('1'))
+      .whereRaw('tm.tag_id = td.tag_id');
+    const tagScope = await resolveKnowledgeBaseReadScope(knex, tenant, user);
+    if (tagScope) {
+      tenantDb(knex, tenant).tenantJoin(mappedTags, 'kb_articles as tka', 'tka.article_id', 'tm.tagged_id');
+      tagScope.apply(mappedTags, 'tka');
+    }
     const availableTagDefs = await tenantScopedTable(knex, 'tag_definitions as td', tenant)
       .distinctOn('td.tag_text')
       .select('td.*')
       .where('td.tagged_type', 'knowledge_base_article')
-      .whereExists(
-        tenantDb(knex, tenant).table('tag_mappings as tm')
-          .select(knex.raw('1'))
-          .whereRaw('tm.tag_id = td.tag_id')
-      )
+      .whereExists(mappedTags)
       .orderBy('td.tag_text', 'asc')
       .orderBy('td.created_at', 'asc');
 
@@ -959,6 +1008,8 @@ export const getArticle = withAuth(
     db.tenantJoin(articleQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
     db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
 
+    await applyKbArticleReadScope(knex, tenant, user, articleQuery);
+
     const article = await articleQuery
       .andWhere('ka.article_id', articleId)
       .first();
@@ -993,6 +1044,8 @@ export const getStaleArticles = withAuth(
       ]);
     tenantDb(knex, tenant).tenantJoin(articlesQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
 
+    await applyKbArticleReadScope(knex, tenant, user, articlesQuery);
+
     const articles = await articlesQuery
       .andWhere('ka.status', 'published')
       .andWhere('ka.next_review_due', '<=', knex.fn.now())
@@ -1019,6 +1072,8 @@ export const recordArticleView = withAuth(
       return false;
     }
 
+    // Only an article the user can read counts a view; an unreadable one is answered as if it did not exist.
+    if (!(await kbArticleReadable(knex, tenant, user, articleId))) return false;
     await tenantScopedTable(knex, 'kb_articles', tenant)
       .where({ article_id: articleId })
       .increment('view_count', 1);
@@ -1047,6 +1102,7 @@ export const recordArticleFeedback = withAuth(
 
     const column = helpful ? 'helpful_count' : 'not_helpful_count';
 
+    if (!(await kbArticleReadable(knex, tenant, user, articleId))) return false;
     await tenantScopedTable(knex, 'kb_articles', tenant)
       .where({ article_id: articleId })
       .increment(column, 1);
@@ -1145,7 +1201,7 @@ export const startArticleImport = withAuth(
   ): Promise<IStartArticleImportResult | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'create'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'create'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -1262,7 +1318,7 @@ export const getArticleImportStatus = withAuth(
   ): Promise<IArticleImportStatus | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'create'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'create'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -1313,7 +1369,7 @@ export const createArticleFromTicket = withAuth(
   ): Promise<IKBArticleWithDocument | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'create'))) {
+    if (!(await canWriteKbArticles(user, tenant, 'create'))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 

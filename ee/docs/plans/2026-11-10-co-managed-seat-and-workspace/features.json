@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "A seat technician reads client-visible documents of their own client and documents attached to visible tickets, and uploads ticket attachments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "A seat technician reads only knowledge base articles with a client or public audience; internal-audience articles are hidden from them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -618,7 +618,7 @@
   {
     "id": "F078",
     "description": "Stored credentials are unavailable to seat technicians on every path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]

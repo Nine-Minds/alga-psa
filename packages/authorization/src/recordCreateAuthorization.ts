@@ -14,6 +14,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { resolveAuthorizationSubject } from './subject/resolver';
 import type { SubjectUserInput } from './subject/assemble';
 import { probeTenantAuthorizationScope } from './subject/tenantScope';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Create authorization for server actions: "may this subject create THIS record?", asked before anything is
@@ -104,6 +105,15 @@ export interface DocumentAssociationTarget {
   entityId: string;
 }
 
+async function candidateTicket(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  ticketId: string
+): Promise<Array<{ clientId: string | null; boardId: string | null }>> {
+  const ticket = await tenantDb(conn, tenant).table('tickets').where({ ticket_id: ticketId }).first('client_id', 'board_id');
+  return ticket ? [{ clientId: ticket.client_id ?? null, boardId: ticket.board_id ?? null }] : [];
+}
+
 /**
  * Whether the subject may associate a document with each of `targets`. The candidate document association
  * belongs to the client of the entity it points at (S4 `document_entity` resolver). A kind with no client
@@ -124,6 +134,9 @@ export async function isDocumentAssociationCreateAllowed(
       resourceType: 'document',
       record: async () => ({
         clientId: await clientResolvers.resolveClient(conn, input.tenant, 'document_entity', entityType, entityId),
+        // The ticket the document is being attached to, for the seat resolver's ticket-scope guard. Read only
+        // when a rule could apply (this function is lazy), so an ordinary tenant pays nothing for it.
+        attachedTickets: entityType === 'ticket' ? await candidateTicket(conn, input.tenant, entityId) : [],
       }),
       requestCache,
     });
