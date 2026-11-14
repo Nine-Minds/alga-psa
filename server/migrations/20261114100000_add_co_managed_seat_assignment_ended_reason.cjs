@@ -10,7 +10,10 @@
  * column existed (none was: nothing ended an assignment until this slice).
  *
  * Additive and idempotent. A nullable column with no default is a catalog change only. The CHECK
- * leads with nothing distributed-table specific: it is a row-level constraint, valid on Citus.
+ * is added NOT VALID so the ALTER takes no scan under its lock (a NOT VALID check still holds for
+ * every new or updated row), and leads with nothing distributed-table specific: it is a row-level
+ * constraint, valid on Citus. Every row that exists today satisfies it — a live assignment has
+ * `ended_reason` NULL — so 20261114100100 validates it in its own non-transactional file.
  */
 const TABLE = 'co_managed_seat_assignments';
 const CHECK = 'co_managed_seat_assignments_ended_reason_check';
@@ -23,7 +26,7 @@ exports.up = async function up(knex) {
   const existing = await knex.raw(`SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass`, [CHECK, TABLE]);
   if (!existing.rows.length) {
     await knex.raw(`ALTER TABLE ${TABLE} ADD CONSTRAINT ${CHECK}
-      CHECK (ended_reason IS NULL OR (state = 'revoked' AND ended_reason IN ('revoked', 'converted')))`);
+      CHECK (ended_reason IS NULL OR (state = 'revoked' AND ended_reason IN ('revoked', 'converted'))) NOT VALID`);
   }
 };
 
