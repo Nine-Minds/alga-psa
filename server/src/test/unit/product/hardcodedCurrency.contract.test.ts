@@ -85,7 +85,7 @@ const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
       why: "deliberate: Nine Minds subscription pricing is USD (Stripe)",
     },
     "packages/notifications/src/lib/templateVariables/seed.ts": {
-      count: 10,
+      count: 14,
       why: "deliberate: sample preview values documenting template-variable output",
     },
     "packages/validation/src/lib/clientFormValidation.ts": {
