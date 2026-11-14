@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "Deze assettag is al in gebruik of gereserveerd. Scan de tag om de bestaande asset te vinden of voer een andere tag in.",
       "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "ticketNotFound": "Ticket niet gevonden. Mogelijk is dit verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "alreadyLinkedToTicket": "Deze asset is al aan het ticket gekoppeld.",
       "clientNotFound": "Klant niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "maintenanceNotFound": "Onderhoudsplanning niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "maintenanceMismatch": "Dit onderhoudsrecord hoort niet bij het geselecteerde asset. Vernieuw de pagina en probeer het opnieuw.",

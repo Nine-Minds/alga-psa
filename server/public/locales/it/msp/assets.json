@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "Questa etichetta del bene è già in uso o riservata. Scansionala per trovare il bene esistente oppure inserisci un’altra etichetta.",
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "ticketNotFound": "Ticket non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "alreadyLinkedToTicket": "Questo asset è già collegato al ticket.",
       "clientNotFound": "Cliente non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "maintenanceNotFound": "Pianificazione della manutenzione non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
       "maintenanceMismatch": "Questo record di manutenzione non corrisponde all’asset selezionato. Aggiornare la pagina e riprovare.",
