@@ -43,6 +43,7 @@ async function grantServiceReadToMspRoles(knex, db, tenant) {
       .where({ tenant, role_id: roleId, permission_id: permission.permission_id })
       .first('tenant');
     if (existing) continue;
+    // migration-lint: allow 8 - additive backfill of one catalog permission (service:read) onto existing MSP roles, idempotent (checked above); custom roles are outside the catalog's default-role grants, so reconcileAllTenants cannot reach them
     await db.table('role_permissions').insert({
       tenant, role_id: roleId, permission_id: permission.permission_id, created_at: knex.fn.now(),
     });
