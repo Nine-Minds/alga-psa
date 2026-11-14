@@ -18,6 +18,14 @@
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"
     },
+    "./seatArrangement": {
+      "types": "./src/seatArrangement.ts",
+      "import": "./src/seatArrangement.ts"
+    },
+    "./seatRole": {
+      "types": "./src/seatRole.ts",
+      "import": "./src/seatRole.ts"
+    },
     "./seatAuthority": {
       "types": "./src/seatAuthority.ts",
       "import": "./src/seatAuthority.ts"

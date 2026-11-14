@@ -23,7 +23,7 @@ const { reconcileAllTenants } = require('./utils/permissions/reconcileTenants.cj
 
 // Pinned to CO_MANAGED_SEAT_ROLE.role_name (packages/co-managed/src/seatRole.ts) by a unit test.
 const SEAT_ROLE_NAME = 'Seat Technician';
-const MIGRATION_TENANT = 'migration:20261113140000_grant_service_read_to_msp_roles';
+const MIGRATION_TENANT = 'migration:20261113140200_grant_service_read_to_msp_roles';
 const TENANT_ENUMERATION_REASON = 'enumerate tenants to grant service:read to existing MSP roles';
 
 async function grantServiceReadToMspRoles(knex, db, tenant) {

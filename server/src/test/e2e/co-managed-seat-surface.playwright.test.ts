@@ -21,7 +21,8 @@ import { test, expect, type Page } from '@playwright/test';
 import crypto from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
-import { admitCoManagedSeatRole, createCoManagedSeatArrangement } from '@alga-psa/co-managed';
+import { createCoManagedSeatArrangement } from '@alga-psa/co-managed/seatArrangement';
+import { admitCoManagedSeatRole } from '@alga-psa/co-managed/seatRole';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 
