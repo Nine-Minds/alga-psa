@@ -237,7 +237,7 @@
   {
     "id": "T027",
     "description": "E2E: on the native ticket screen a seat technician sees no billing, materials, credentials, bundle, delete or scheduling affordance and no billing profile picker; the network log shows no billing rollup or materials request.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047",
       "F048",

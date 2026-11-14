@@ -990,7 +990,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             required: a technician who leaves it alone still gets a correctly
             attributed charge from the contract or the client default.
           */}
-          {client && onChangeBillingProfile && (
+          {client && onChangeBillingProfile && dataSource.capabilities.billing && (
             <BillingProfilePicker
               id={`${id}-billing-profile-picker`}
               clientId={ticket.client_id}

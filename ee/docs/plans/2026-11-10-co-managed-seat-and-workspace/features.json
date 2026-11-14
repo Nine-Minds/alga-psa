@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "A seat technician opens a ticket on the native ticket screen with a capability set that turns off billing, quick invoice, materials, credentials, bundles, delete, duplicate, email logs, surveys, scheduling, templates, workflows and category creation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "The ticket page's server preloads (billing rollup, materials, surveys, email logs and the other capability-gated reads) are skipped when the viewer's capability is off, so those reads are not made for a seat technician.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "The billing profile picker and its change action are absent for a viewer without the billing capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]

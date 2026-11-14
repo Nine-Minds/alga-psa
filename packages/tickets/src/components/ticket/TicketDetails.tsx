@@ -4665,7 +4665,7 @@ const handleClose = () => {
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
                     onChangeLocation={handleLocationChange}
-                    onChangeBillingProfile={handleBillingProfileChange}
+                    onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}
@@ -4908,7 +4908,7 @@ const handleClose = () => {
                                 onChangeContact={handleContactChange}
                                 onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
-                                onChangeBillingProfile={handleBillingProfileChange}
+                                onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}

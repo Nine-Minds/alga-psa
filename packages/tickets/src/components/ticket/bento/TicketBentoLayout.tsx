@@ -863,7 +863,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                 ) : null}
                 {/* Renders nothing while the client holds a single profile
                     (decision D6) — the picker itself owns that rule. */}
-                {props.onChangeBillingProfile ? (
+                {props.onChangeBillingProfile && capabilities.billing ? (
                   <BillingProfilePicker
                     id={`${id}-billing-profile-picker`}
                     clientId={props.client.client_id}
