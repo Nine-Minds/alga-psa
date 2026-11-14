@@ -24,7 +24,10 @@ export async function resolveSeatAssigneeAudience(
 ): Promise<string[] | null> {
   if (!actorUserId) return null;
   const scoped = tenantDb(db, tenant);
-  const own = await scoped.table('co_managed_seat_assignments').where('user_id', actorUserId).first('arrangement_id', 'state');
+  // A user may hold a revoked history row beside a live one: the live row decides, and any other
+  // row only makes them a seat subject with nothing granted.
+  const own = await scoped.table('co_managed_seat_assignments').where('user_id', actorUserId)
+    .orderByRaw("(state = 'active') desc").first('arrangement_id', 'state');
   if (!own) return null;
 
   // A seat technician whose seat is not live is still a seat subject and is offered nobody.

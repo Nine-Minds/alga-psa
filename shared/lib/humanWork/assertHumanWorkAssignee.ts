@@ -9,11 +9,21 @@ type MaybeId = string | null | undefined;
 type Db = Knex | Knex.Transaction;
 
 /**
+ * Where a write will leave a ticket. A field that is `undefined` is not being changed and the
+ * stored value is used; `null` means the write clears it.
+ */
+export interface PendingTicketPlacement {
+  clientId?: string | null;
+  boardId?: string | null;
+}
+
+/**
  * The work item an assignment is being made to. The guard resolves own-client and scope from it
  * for seat technicians (internal users holding a seat assignment for one client); for everyone
  * else it is not read.
  *
- * - `ticket`: an existing ticket. Needs the client and a board with `work` or `create` access.
+ * - `ticket`: an existing ticket (with `pending` when the same write moves it: the client and
+ *   board it will have afterwards are judged, not the ones it has now). Needs the client and a board with `work` or `create` access.
  * - `ticket_draft`: a ticket being created. Needs the client and a board with `create` access.
  * - `project_task`: an existing task. Needs the client and a project shared with the technician.
  * - `project` / `project_phase`: a task being created in a project, or in one of its phases (same rule
@@ -22,7 +32,7 @@ type Db = Knex | Knex.Transaction;
  *   schedule entries, time on non-ticket work...). A seat technician is always refused.
  */
 export type HumanWorkItem =
-  | { kind: 'ticket'; ticketId: string }
+  | { kind: 'ticket'; ticketId: string; pending?: PendingTicketPlacement }
   | { kind: 'ticket_draft'; clientId: string | null | undefined; boardId: string | null | undefined }
   | { kind: 'project_task'; taskId: string }
   | { kind: 'project'; projectId: string }
@@ -109,7 +119,13 @@ async function resolveWorkItem(trx: Db, tenant: string, item: HumanWorkItem): Pr
   switch (item.kind) {
     case 'ticket': {
       const row = await db.table('tickets').where('ticket_id', item.ticketId).first('client_id', 'board_id');
-      return row ? { clientId: row.client_id ?? null, boardId: row.board_id ?? null, projectId: null, needsCreate: false } : null;
+      if (!row) return null;
+      return {
+        clientId: (item.pending?.clientId !== undefined ? item.pending.clientId : row.client_id) ?? null,
+        boardId: (item.pending?.boardId !== undefined ? item.pending.boardId : row.board_id) ?? null,
+        projectId: null,
+        needsCreate: false,
+      };
     }
     case 'ticket_draft':
       return { clientId: item.clientId ?? null, boardId: item.boardId ?? null, projectId: null, needsCreate: true };
@@ -187,6 +203,15 @@ export async function assertHumanWorkAssignee(
   if (invalid.length > 0) {
     throw new HumanWorkAssigneeInvalidError(invalid);
   }
+  await refuseSeatsOutsideScope(trx, tenant, seats, workItem);
+}
+
+async function refuseSeatsOutsideScope(
+  trx: Db,
+  tenant: string,
+  seats: Map<string, SeatRow>,
+  workItem: HumanWorkItem | readonly HumanWorkItem[]
+): Promise<void> {
   if (seats.size === 0) return;
   // A write that touches several work items (a bundle's children) needs the seat to cover each.
   const items: readonly HumanWorkItem[] = Array.isArray(workItem) ? workItem : [workItem as HumanWorkItem];
@@ -200,6 +225,35 @@ export async function assertHumanWorkAssignee(
     }
   }
   if (refused.length > 0) throw new HumanWorkAssigneeInvalidError(refused, 'seat_out_of_scope');
+}
+
+/**
+ * A write that moves a ticket (new client and/or board) must not strand a seat technician on work
+ * that is no longer theirs: the primary assignee the ticket will have (`primaryAssignee`: the new
+ * one when the write reassigns; `undefined` reads the current one) and every additional agent are checked
+ * against the post-write placement. Only seat scope is judged, never validity, so a legacy
+ * reference never blocks a move. Cost: one `ticket_resources` read and one users query.
+ */
+export async function assertTicketMoveKeepsSeatsInScope(
+  trx: Db,
+  tenant: string,
+  ticketId: string,
+  pending: PendingTicketPlacement,
+  primaryAssignee: MaybeId
+): Promise<void> {
+  if (pending.clientId === undefined && pending.boardId === undefined) return;
+  if (primaryAssignee === undefined) {
+    const current = await tenantDb(trx, tenant).table('tickets').where('ticket_id', ticketId).first('assigned_to');
+    primaryAssignee = current?.assigned_to ?? null;
+  }
+  const resources = (await tenantDb(trx, tenant).table('ticket_resources')
+    .where('ticket_id', ticketId)
+    .select('additional_user_id')) as Array<{ additional_user_id: string | null }>;
+  const ids = Array.from(new Set([primaryAssignee, ...resources.map((row) => row.additional_user_id)]
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)));
+  if (ids.length === 0) return;
+  const { seats } = await loadUsers(trx, tenant, ids);
+  await refuseSeatsOutsideScope(trx, tenant, seats, { kind: 'ticket', ticketId, pending });
 }
 
 /**

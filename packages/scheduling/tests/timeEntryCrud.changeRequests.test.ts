@@ -23,6 +23,7 @@ const resolveContractLineSelectionMock = vi.fn(async () => ({
 // The human-work guard is covered against a real database in T043; this fake DB has no users table.
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertTicketMoveKeepsSeatsInScope: vi.fn(async () => undefined),
   timeEntryWorkItem: vi.fn(() => ({ kind: 'unscoped', surface: 'time_entry' })),
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));

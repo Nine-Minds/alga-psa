@@ -1,6 +1,6 @@
 'use server';
 
-import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
   resolveSeatAssigneeAudience,
@@ -2919,10 +2919,16 @@ export async function updateTicketInTransaction(
     }
 
     // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+    // The placement the write leaves behind is what scope is judged against, not the stored one.
+    const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
     if (isChangingAssignment && updateData.assigned_to) {
       await assertActorMayAssign(trx, tenant, user.user_id, [updateData.assigned_to]);
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id });
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
     }
+    await assertTicketMoveKeepsSeatsInScope(
+      trx, tenant, id, pendingPlacement,
+      isChangingAssignment ? updateData.assigned_to : undefined
+    );
 
     let updatedTicket;
     

@@ -13,7 +13,7 @@ import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority'
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { tenantDb } from '@alga-psa/db';
 import {
-  assertHumanWorkAssignee, type HumanWorkItem,
+  assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope, type HumanWorkItem,
 } from '../../../../shared/lib/humanWork/assertHumanWorkAssignee';
 import { HumanWorkAssigneeInvalidError } from '../../../../shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import {
@@ -183,6 +183,56 @@ describeDb('the human-work guard scopes seat technicians to their own client', {
     // A technician of another client's arrangement is not a peer.
     const other = await arrangement();
     expect(audience).not.toContain(other.technician);
+  });
+
+  // T029: the placement a write leaves behind is what is judged
+  it('refuses assigning a seat technician in the same update that moves the ticket out of scope', async () => {
+    const s = await arrangement();
+    const ticketId = await ticket(s.tenant, s.clientId, s.scopedBoard);
+    // (a) out-of-scope board
+    await refusal(assign(s.tenant, [s.technician], { kind: 'ticket', ticketId, pending: { boardId: s.unscopedBoard } }));
+    // (b) another client
+    await refusal(assign(s.tenant, [s.technician], { kind: 'ticket', ticketId, pending: { clientId: s.otherClientId } }));
+    // A move that stays in scope is accepted, and the stored ticket is not what decides.
+    await expect(assign(s.tenant, [s.technician], { kind: 'ticket', ticketId, pending: { boardId: s.scopedBoard } })).resolves.toBeUndefined();
+    const foreign = await ticket(s.tenant, s.otherClientId, s.unscopedBoard);
+    await expect(assign(s.tenant, [s.technician], { kind: 'ticket', ticketId: foreign, pending: { clientId: s.clientId, boardId: s.scopedBoard } }))
+      .resolves.toBeUndefined();
+  });
+
+  it('refuses a move that would strand a seat technician already on the ticket', async () => {
+    const s = await arrangement();
+    const ticketId = await ticket(s.tenant, s.clientId, s.scopedBoard);
+    await db('tickets').where({ tenant: s.tenant, ticket_id: ticketId }).update({ assigned_to: s.technician });
+    await refusal(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, undefined));
+    await refusal(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { clientId: s.otherClientId }, undefined));
+    // Reassigning to an MSP user in the same write lets the move through.
+    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, s.msp)).resolves.toBeUndefined();
+    // An additional agent is stranded too.
+    await db('tickets').where({ tenant: s.tenant, ticket_id: ticketId }).update({ assigned_to: s.msp });
+    await db('ticket_resources').insert({ tenant: s.tenant, assignment_id: randomUUID(), ticket_id: ticketId,
+      assigned_to: s.msp, additional_user_id: s.peer, role: 'support', assigned_at: db.fn.now() });
+    await refusal(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, undefined));
+    // No placement change, no check.
+    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, {}, undefined)).resolves.toBeUndefined();
+  });
+
+  it('prefers the live seat assignment over a revoked one', async () => {
+    const s = await arrangement();
+    const userId = await createUser(db, s.tenant, { user_type: 'internal' });
+    await db.transaction(async (trx) => {
+      await retainBuiltinResolverSubject(trx, { tenant: s.tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await trx('co_managed_seat_assignments').insert([
+        { tenant: s.tenant, assignment_id: randomUUID(), arrangement_id: s.arrangementId, user_id: userId, state: 'revoked', revoked_at: new Date(Date.now() - DAY) },
+        { tenant: s.tenant, assignment_id: randomUUID(), arrangement_id: s.arrangementId, user_id: userId, state: 'active' },
+      ]);
+    });
+    for (let i = 0; i < 3; i++) {
+      expect((await resolveSeatAssigneeAudience(db, s.tenant, userId))?.sort()).toEqual([s.technician, s.peer, userId].sort());
+    }
+    await expect(assertActorMayAssign(db, s.tenant, userId, [userId, s.peer])).resolves.toBeUndefined();
+    const ticketId = await ticket(s.tenant, s.clientId, s.scopedBoard);
+    await expect(assign(s.tenant, [userId], { kind: 'ticket', ticketId })).resolves.toBeUndefined();
   });
 
   // T029 regression

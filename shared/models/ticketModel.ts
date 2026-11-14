@@ -15,7 +15,7 @@ import {
   nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
 } from '../lib/commentAudience';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
-import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -1462,9 +1462,13 @@ export class TicketModel {
 
     // Human-work guard: validate assigned_to only when this write changes it, so legacy
     // references (e.g. a former agent user) never block unrelated edits.
-    if ('assigned_to' in updateData && updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId });
+    const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
+    const reassigning = 'assigned_to' in updateData && updateData.assigned_to !== undefined
+      && updateData.assigned_to !== currentTicket.assigned_to;
+    if (reassigning && updateData.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId, pending: pendingPlacement });
     }
+    await assertTicketMoveKeepsSeatsInScope(trx, tenant, ticketId, pendingPlacement, reassigning ? updateData.assigned_to : undefined);
 
     // Update the ticket
     const [updatedTicket] = await db.table('tickets')

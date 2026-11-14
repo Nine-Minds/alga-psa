@@ -28,6 +28,7 @@ vi.mock('@alga-psa/clients/actions/interactionCreateHelper', () => ({
 
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertTicketMoveKeepsSeatsInScope: vi.fn(async () => undefined),
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 
