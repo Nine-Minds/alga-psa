@@ -2,9 +2,10 @@
  * Per-entry time-entry billing mode primitives (CM L6a2).
  *
  * These are plain TypeScript with no database or server dependency. They live in `@alga-psa/types`, below both
- * `@alga-psa/co-managed` and `@alga-psa/scheduling`, so scheduling can use them without importing co-managed
+ * the co-managed package and `@alga-psa/scheduling`, so scheduling can use them without importing co-managed
  * (co-managed already reaches scheduling's time source, so that import would form a package cycle).
- * `@alga-psa/co-managed/timeEntryBillingMode` re-exports them and keeps the database-backed readers.
+ * The co-managed package's `timeEntryBillingMode` module re-exports them and keeps the database-backed readers.
+ * Native files (this directory included) never name that package; noCoManagedNativeImports.contract.test.ts enforces it.
  */
 
 /**
