@@ -343,10 +343,13 @@ describeDb('co-managed seat authority is resolved from rows on every request', {
       expect(await constraints()).toEqual(pendingConstraints);
       // NOT VALID defers only the historical scan: new writes are still fenced.
       // Savepoints keep expected constraint errors from aborting the upgrade transaction.
+      // A real, seat-reader-marked user isolates the resolver-membership key from the seat-reader key.
+      const unretainedUser = await createUser(trx, s.tenant, { user_type: 'internal' });
+      await trx('users').where({ tenant: s.tenant, user_id: unretainedUser }).update({ seat_reader: true });
       await expect(trx.transaction(async (attempt) => {
         await attempt('co_managed_seat_assignments').insert({ tenant: s.tenant,
           assignment_id: randomUUID(), arrangement_id: s.arrangementId,
-          user_id: randomUUID(), state: 'active' });
+          user_id: unretainedUser, state: 'active' });
       })).rejects.toMatchObject({ code: '23503', constraint: 'co_managed_seat_assignment_resolver_subject_fk' });
       await expect(trx.transaction(async (attempt) => {
         await attempt('co_managed_seat_assignments').where({ tenant: s.tenant, user_id: s.userId })
