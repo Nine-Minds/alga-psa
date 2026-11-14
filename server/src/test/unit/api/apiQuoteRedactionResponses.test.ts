@@ -2,7 +2,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const state = vi.hoisted(() => ({ decision: { allowed: true, redactedFields: [] as string[] }, items: [] as Record<string, any>[], versions: [] as Record<string, any>[] }));
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({ authorizeApiResourceRead: vi.fn(async () => state.decision) }));
+const authorizeResource = vi.hoisted(() => vi.fn(async () => state.decision));
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: vi.fn(async () => ({ authorizeResource, authorizeMutation: vi.fn(async () => ({ allowed: true })) })),
+}));
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (_knex: unknown, input: any) => ({
+    tenant: input.tenant, userId: input.user?.user_id ?? '', userType: 'internal',
+    roleIds: [], teamIds: [], managedUserIds: [], portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
 vi.mock('@/lib/db', () => ({ runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<any>) => callback()) }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/api/services/QuoteService', () => ({ QuoteService: class {} }));
@@ -44,7 +55,7 @@ describe('quote child read responses', () => {
     const instance = controller();
     for (const response of [await instance.listItems()(request()), await instance.listVersions()(request())]) {
       const body = await response.json();
-      expect(body.data[0]).not.toHaveProperty('client_name');
+      expect(body.data[0].client_name).toBeNull();
       expect(body.data[0]).toHaveProperty('quote_id', 'q1');
     }
   });
@@ -58,16 +69,43 @@ describe('quote child read responses', () => {
     expect(versions.status).toBe(404);
   });
 
-  it.each(['quote_items', 'quotes.quote_items.description', 'values.unit_price'])('projects conversion preview dependencies hidden by %s', async (redaction) => {
-    state.decision = { allowed: true, redactedFields: [redaction] };
+  it('suppresses quote-derived preview lines when the quote item resource is hidden', async () => {
+    state.decision = { allowed: true, redactedFields: ['quote_items'] };
     const response = await controller().conversionPreview()(request());
     expect(response.status).toBe(200);
-    expect((await response.json()).data).toEqual({ quote_id: 'q1' });
+    const data = (await response.json()).data;
+    expect(data.contract_items).toEqual([]);
+    expect(data.contract_discounts).toEqual([]);
+    expect(data.contract_monthly_total).toBeNull();
+    expect(JSON.stringify(data)).not.toContain('Confidential service');
+  });
+
+  it('projects alternate preview lines under quote_items.description redactions', async () => {
+    state.decision = { allowed: true, redactedFields: ['quotes.quote_items.description'] };
+    const response = await controller().conversionPreview()(request());
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.contract_items[0]).not.toHaveProperty('description');
+    expect(data.contract_blocked_item_description).toBeNull();
+    expect(data.contract_monthly_total).toBe(490);
+    expect(JSON.stringify(data)).not.toContain('Confidential service');
+  });
+
+  it('nulls preview calculations that depend on hidden unit prices', async () => {
+    state.decision = { allowed: true, redactedFields: ['values.unit_price'] };
+    const response = await controller().conversionPreview()(request());
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.contract_items[0]).not.toHaveProperty('unit_price');
+    expect(data.contract_discounts[0].amount).toBeNull();
+    expect(data.contract_monthly_before_discounts).toBeNull();
+    expect(data.contract_monthly_total).toBeNull();
   });
 
   it('preserves unrestricted conversion previews', async () => {
     state.decision = { allowed: true, redactedFields: [] };
     const response = await controller().conversionPreview()(request());
+    expect(response.status).toBe(200);
     expect((await response.json()).data).toMatchObject({
       contract_items: [{ description: 'Confidential service', unit_price: 500 }],
       contract_monthly_total: 490,

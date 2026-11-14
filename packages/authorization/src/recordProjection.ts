@@ -105,9 +105,18 @@ function recordFieldLocalPath(source: RedactableRecordSource, alias: string): st
   return alias.startsWith('values.') ? alias.slice('values.'.length) : alias;
 }
 
+function policyRelatedSources(source: RedactableRecordSource): Set<RedactableRecordSource> {
+  const related = new Set<RedactableRecordSource>();
+  for (let current: RedactableRecordSource | undefined = source; current && !related.has(current); current = current.policySource) {
+    related.add(current);
+  }
+  return related;
+}
+
 function childRouteAliases(source: RedactableRecordSource, childKey: string, childSource: RedactableRecordSource): readonly string[] {
+  const childLineage = policyRelatedSources(childSource);
   const keys = Object.entries(source.children ?? {}).flatMap(([key, child]) =>
-    childSources(child).includes(childSource) ? [key] : []);
+    childSources(child).some(candidate => [...policyRelatedSources(candidate)].some(ancestor => childLineage.has(ancestor))) ? [key] : []);
   const routeKeys = keys.length > 0 ? keys : [childKey];
   return routeKeys.flatMap(key => [
     key,
@@ -420,9 +429,24 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
 
 const ids = (...names: string[]) => names;
 
+/** Canonical identities shared by action projections and REST source descriptors. */
+export const PROJECT_IDENTITY_ALIASES = ids(
+  'project_id', 'projectId', 'projects.project_id', 'values.project_id', 'id',
+  'project_number', 'projects.project_number',
+);
+export const TICKET_IDENTITY_ALIASES = ids(
+  'ticket_id', 'tickets.ticket_id', 'values.ticket_id', 'ticket_number', 'tickets.ticket_number', 'ticket', 'ticketId',
+);
+export const QUOTE_IDENTITY_ALIASES = ids(
+  'quote_id', 'quotes.quote_id', 'values.quote_id', 'quote_number', 'quotes.quote_number', 'quote', 'quoteId',
+);
+export const ASSET_IDENTITY_ALIASES = ids(
+  'asset_id', 'assets.asset_id', 'values.asset_id', 'asset_tag', 'assets.asset_tag', 'asset', 'assetId',
+);
+
 const ASSET_ROW_SOURCE: RedactableRecordSource = {
   resource: ['assets'],
-  identifier: ids('asset_id', 'assets.asset_id', 'asset', 'assetId'),
+  identifier: ASSET_IDENTITY_ALIASES,
   fields: {},
   derived: {
     client_name: ids('client_id', 'clients', 'clients.client_name'),
@@ -838,7 +862,7 @@ export type ProjectableResource = 'project' | 'ticket' | 'quote' | 'asset' | 'ph
 const DEFINITIONS: Record<ProjectableResource, ResourceDefinition> = {
   project: {
     aliases: ['project', 'projects'],
-    identifiers: ['project_id', 'projectId', 'projects.project_id', 'values.project_id', 'id', 'project_number', 'projects.project_number'],
+    identifiers: PROJECT_IDENTITY_ALIASES,
     fields: {
       project_name: [...PROJECT_NAME_ALIASES.filter((alias) => !['project', 'project_id', 'projects'].includes(alias)), 'values.project_name', 'projects.project_name', 'project_tasks.project_name'],
       projectName: [...PROJECT_NAME_ALIASES.filter((alias) => !['project', 'project_id', 'projects'].includes(alias)), 'values.project_name', 'projects.project_name', 'project_tasks.project_name'],
@@ -864,7 +888,7 @@ const DEFINITIONS: Record<ProjectableResource, ResourceDefinition> = {
   },
   ticket: {
     aliases: ['ticket', 'tickets'],
-    identifiers: ['ticket_id', 'tickets.ticket_id', 'values.ticket_id', 'ticket_number', 'tickets.ticket_number'],
+    identifiers: TICKET_IDENTITY_ALIASES,
     fields: {
       client_name: commonClientName,
       clientName: commonClientName,
@@ -885,7 +909,7 @@ const DEFINITIONS: Record<ProjectableResource, ResourceDefinition> = {
   },
   quote: {
     aliases: ['quote', 'quotes', 'billing'],
-    identifiers: ['quote_id', 'quotes.quote_id', 'values.quote_id', 'quote_number', 'quotes.quote_number'],
+    identifiers: QUOTE_IDENTITY_ALIASES,
     fields: {
       client_name: commonClientName,
       clientName: commonClientName,
@@ -906,7 +930,7 @@ const DEFINITIONS: Record<ProjectableResource, ResourceDefinition> = {
   },
   asset: {
     aliases: ['asset', 'assets'],
-    identifiers: ['asset_id', 'assets.asset_id', 'values.asset_id', 'asset_tag', 'assets.asset_tag'],
+    identifiers: ASSET_IDENTITY_ALIASES,
     fields: {
       client: ['client', ...commonClientName],
       client_name: commonClientName,

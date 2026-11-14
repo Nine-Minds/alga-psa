@@ -27,7 +27,6 @@ import {
 } from '../../auth/rbac';
 import {
   authorizeApiResource,
-  buildAuthorizationPrincipalSubject,
   projectApiResourceRead,
   projectApiResourceReads,
   reprojectUnderDecision,
@@ -55,6 +54,8 @@ import { buildTicketRecordContext } from './recordContexts';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
+import { RequestLocalAuthorizationCache, type AuthorizationRequestCache } from '@alga-psa/authorization/kernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
@@ -91,17 +92,20 @@ import {
 // by checkPermission('read'), exactly as the per-row path relies on.
 export async function resolveTicketReadAuthorizationApplier(
   apiRequest: AuthenticatedApiRequest,
-  knex: Knex
+  knex: Knex,
+  requestCache: AuthorizationRequestCache = new RequestLocalAuthorizationCache(),
 ): Promise<((query: TenantScopedQuery) => void) | null> {
-  const subject = buildAuthorizationPrincipalSubject(
-    apiRequest.context.user,
-    apiRequest.context.apiKeyId
-  );
-  subject.tenant = apiRequest.context.tenant;
+  const subject = await resolveAuthorizationSubject(knex, {
+    tenant: apiRequest.context.tenant,
+    user: apiRequest.context.user,
+    apiKeyId: apiRequest.context.apiKeyId,
+    requestCache,
+  });
 
   const bundleRules = await resolveBundleNarrowingRulesForEvaluation(knex, {
     subject,
     resource: { type: 'ticket', action: 'read' },
+    requestCache,
     knex,
   });
   const builtinRules = resolveDefaultBuiltinRelationshipRules({
@@ -131,6 +135,7 @@ export async function resolveTicketReadAuthorizationApplier(
   const builtinRedactions = await kernel.resolveFieldRedactions({
     knex: knex as any,
     subject,
+    requestCache,
     resource: { type: 'ticket', action: 'read' },
     record: { id: '00000000-0000-0000-0000-000000000000' },
   });
@@ -421,13 +426,14 @@ export class ApiTicketController extends ApiBaseController {
           delete filters.fields;
 
           const knex = await getConnection(apiRequest.context.tenant);
+          const requestCache = new RequestLocalAuthorizationCache();
 
           // Preferred path: push read-authorization into SQL so the database
           // paginates and counts only the authorized set (one data + one count
           // query, accurate total). RBAC was already enforced by checkPermission
           // above. Falls back to the per-row JS kernel when a narrowing rule
           // isn't representable in SQL.
-          const applyAuthorization = await resolveTicketReadAuthorizationApplier(apiRequest, knex);
+          const applyAuthorization = await resolveTicketReadAuthorizationApplier(apiRequest, knex, requestCache);
           if (applyAuthorization) {
             const authorizedResult = await this.ticketService.list(
               {
@@ -466,6 +472,7 @@ export class ApiTicketController extends ApiBaseController {
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
+                requestCache,
                 kind: 'ticket',
                 record: ticket,
               }),

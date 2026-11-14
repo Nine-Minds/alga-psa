@@ -3,6 +3,18 @@ import knexFactory from 'knex';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 
 vi.mock('server/src/lib/authorization/kernel', () => ({ getAuthorizationKernel: vi.fn() }));
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (_knex: unknown, input: any) => ({
+    tenant: input.tenant,
+    userId: input.user?.user_id ?? input.userId ?? '',
+    userType: input.user?.user_type ?? 'internal',
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    portfolioClientIds: [],
+  })),
+}));
 
 import { buildPredicateGuard, createPredicateGuard } from '../../../lib/api/controllers/authorizationKernel';
 import {
@@ -112,15 +124,22 @@ describe('isRecordFieldReadable (descriptor-driven)', () => {
     const record = { quote_id: 'quote-1', quote_number: 'Q-9', version: 2, display_quote_number: 'Q-9 v2' };
     expect(projectRecordByRedactions([], record, QUOTE_RECORD_SOURCE)?.display_quote_number).toBe('Q-9 v2');
 
-    for (const alias of ['quote_number', 'values.quote_number', 'quotes.quote_number', 'version']) {
+    for (const alias of ['quote_number', 'values.quote_number', 'quotes.quote_number']) {
       const projected = projectRecordByRedactions([alias], record, QUOTE_RECORD_SOURCE);
-      expect(projected).not.toHaveProperty(alias === 'version' ? 'version' : 'quote_number');
-      expect(projected?.display_quote_number, alias).toBeNull();
+      expect(projected).toBeNull();
       expect(buildPredicateGuard('quote', [alias]).columns([
         { column: 'q.display_quote_number', field: 'display_quote_number' },
         { column: 'q.title', field: 'title' },
-      ])).toEqual(['q.title']);
+      ])).toEqual([]);
     }
+
+    const versionRedacted = projectRecordByRedactions(['version'], record, QUOTE_RECORD_SOURCE);
+    expect(versionRedacted).not.toHaveProperty('version');
+    expect(versionRedacted?.display_quote_number).toBeNull();
+    expect(buildPredicateGuard('quote', ['version']).columns([
+      { column: 'q.display_quote_number', field: 'display_quote_number' },
+      { column: 'q.title', field: 'title' },
+    ])).toEqual(['q.title']);
   });
 
   it('suppresses each resource when a values-prefixed identifier alias is hidden', () => {

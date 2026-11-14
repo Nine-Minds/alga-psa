@@ -6,6 +6,18 @@ const resolveFieldRedactions = vi.hoisted(() => vi.fn(async () => state.builtinR
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({ resolveFieldRedactions, authorizeResource: vi.fn() })),
 }));
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (_knex: unknown, input: any) => ({
+    tenant: input.tenant,
+    userId: input.user.user_id,
+    userType: 'internal',
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    portfolioClientIds: [],
+  })),
+}));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => state.bundleRules),
 }));

@@ -33,7 +33,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, reprojectUnderDecisions, type AuthorizedProjection } from './authorizationKernel';
+import { isAuthorizedProjectionFieldReadable, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, reprojectUnderDecisions, type AuthorizedProjection } from './authorizationKernel';
 import {
   PROJECT_PHASE_RECORD_SOURCE,
   PROJECT_RECORD_SOURCE,
@@ -178,9 +178,20 @@ export class ApiProjectController extends ApiBaseController {
     authorizedProjects: AuthorizedProjection<Record<string, any>>[],
     knex?: Awaited<ReturnType<typeof getConnection>>
   ) {
-    // Aggregates are computed from projected rows only: a redacted numeric (budgeted_hours) is absent and adds 0.
+    // Retained row policies decide whether an aggregate may expose its source dimension at all.
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const statusIds = Array.from(new Set(authorizedProjects.map((project) => project.status).filter(Boolean)));
+    const canReadAt = (index: number, field: string) =>
+      isAuthorizedProjectionFieldReadable(authorizedProjects[index], field, PROJECT_RECORD_SOURCE);
+    const canReadAny = (field: string) => authorizedProjects.some((_, index) => canReadAt(index, field));
+    const canReadPairAny = (first: string, second: string) => authorizedProjects.some((_, index) =>
+      canReadAt(index, first) && canReadAt(index, second));
+    const statusAggregatesReadable = canReadAny('status_name');
+    const overdueAggregateReadable = canReadPairAny('status_name', 'end_date');
+    const completedMonthAggregateReadable = canReadPairAny('status_name', 'updated_at');
+    const budgetAggregateReadable = canReadAny('budgeted_hours');
+    const createdMonthAggregateReadable = canReadAny('created_at');
+    const statusIds = Array.from(new Set(authorizedProjects.flatMap((project, index) =>
+      canReadAt(index, 'status_name') && project.status ? [project.status] : [])));
 
     const statuses = statusIds.length > 0
       ? await tenantDb(resolvedKnex, apiRequest.context.tenant).table('statuses')
@@ -222,8 +233,9 @@ export class ApiProjectController extends ApiBaseController {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const projectsByStatus = projects.reduce((acc: Record<string, number>, project) => {
-      const statusName = String(project.status_name ?? 'unknown');
+    const projectsByStatus = projects.reduce((acc: Record<string, number>, project, index) => {
+      if (!canReadAt(index, 'status_name') || typeof project.status_name !== 'string') return acc;
+      const statusName = project.status_name;
       acc[statusName] = (acc[statusName] ?? 0) + 1;
       return acc;
     }, {});
@@ -256,34 +268,47 @@ export class ApiProjectController extends ApiBaseController {
       .sort((left, right) => right.project_count - left.project_count)
       .slice(0, 10);
 
-    return {
+    const stats: Record<string, unknown> = {
       total_projects: projects.length,
-      active_projects: projects.filter((project) => project.status_name === 'Active').length,
-      completed_projects: projects.filter((project) => project.status_name === 'Completed').length,
-      on_hold_projects: projects.filter((project) => project.status_name === 'On Hold').length,
-      cancelled_projects: projects.filter((project) => project.status_name === 'Cancelled').length,
-      overdue_projects: projects.filter((project) => {
-        if (!project.end_date || project.status_name === null) {
-          return false;
-        }
+    };
+    if (statusAggregatesReadable) {
+      Object.assign(stats, {
+        active_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'Active').length,
+        completed_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'Completed').length,
+        on_hold_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'On Hold').length,
+        cancelled_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'Cancelled').length,
+        projects_by_status: projectsByStatus,
+      });
+    }
+    if (overdueAggregateReadable) {
+      stats.overdue_projects = projects.filter((project, index) => {
+        if (!canReadAt(index, 'status_name') || !canReadAt(index, 'end_date')) return false;
+        if (!project.end_date || project.status_name === null) return false;
         return new Date(project.end_date) < new Date() && project.status_name !== 'Completed';
-      }).length,
-      total_budgeted_hours: projects.reduce(
-        (sum, project) => sum + Number(project.budgeted_hours ?? 0),
+      }).length;
+    }
+    if (budgetAggregateReadable) {
+      stats.total_budgeted_hours = projects.reduce(
+        (sum, project, index) => sum + (canReadAt(index, 'budgeted_hours') ? Number(project.budgeted_hours ?? 0) : 0),
         0,
-      ),
-      projects_created_this_month: projects.filter(
-        (project) => project.created_at && new Date(project.created_at) >= monthStart,
-      ).length,
-      projects_completed_this_month: projects.filter(
-        (project) =>
+      );
+    }
+    if (createdMonthAggregateReadable) {
+      stats.projects_created_this_month = projects.filter(
+        (project, index) => canReadAt(index, 'created_at') && project.created_at && new Date(project.created_at) >= monthStart,
+      ).length;
+    }
+    if (completedMonthAggregateReadable) {
+      stats.projects_completed_this_month = projects.filter(
+        (project, index) =>
+          canReadAt(index, 'status_name') && canReadAt(index, 'updated_at') &&
           project.status_name === 'Completed' &&
           project.updated_at &&
           new Date(project.updated_at) >= monthStart,
-      ).length,
-      projects_by_status: projectsByStatus,
-      top_clients_by_project_count: topClientsByProjectCount,
-    };
+      ).length;
+    }
+    stats.top_clients_by_project_count = topClientsByProjectCount;
+    return stats;
   }
 
   private convertProjectsToCsv(projects: AuthorizedProjection<Record<string, any>>[]): string {

@@ -139,6 +139,8 @@ vi.mock('@alga-psa/shared/services/assetNumbering', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/shared/services/assetNumbering')>();
   return {
     ...actual,
+    assetTagClaimsRequired: vi.fn(async () => true),
+    claimAssetTag: vi.fn(async () => undefined),
     prepareAssetIdentity: vi.fn(async (_trx: unknown, args: { assetTag?: string }) => ({
       asset_id: 'new-asset',
       asset_tag: args.assetTag ?? 'AUTO-00001',
@@ -149,6 +151,7 @@ vi.mock('@alga-psa/shared/services/assetNumbering', async (importOriginal) => {
 });
 
 import { AssetService } from '../../../lib/api/services/AssetService';
+import { assetTagClaimsRequired, claimAssetTag, normalizeAssetTag, prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 const TENANT = 'tenant-1';
 const CLIENT_A = 'client-a';
@@ -198,6 +201,19 @@ const baseCreate = {
 } as any;
 
 describe('AssetService.create contact assignment', () => {
+  it('consumes an optional reservation inside the insert transaction and strips its request field', async () => {
+    await service.create({ ...baseCreate, asset_number_reservation_id: 'reservation-1' }, context);
+
+    expect(prepareAssetIdentity).toHaveBeenCalledWith(h.knex, {
+      tenant: TENANT,
+      clientId: CLIENT_A,
+      assetTag: 'WS-1',
+      reservationId: 'reservation-1',
+    });
+    expect(h.inserts[0].row).toMatchObject({ asset_tag: 'WS-1', asset_tag_normalized: normalizeAssetTag('WS-1') });
+    expect(h.inserts[0].row).not.toHaveProperty('asset_number_reservation_id');
+  });
+
   it('stores a contact of the asset client', async () => {
     await service.create({ ...baseCreate, contact_name_id: CONTACT_A }, context);
     // The insert leaves the column null and setAssetAssignee fills it, so the
@@ -218,6 +234,25 @@ describe('AssetService.create contact assignment', () => {
 });
 
 describe('AssetService.update contact assignment', () => {
+  it('normalizes and transactionally claims a changed physical tag', async () => {
+    h.state.assets[0].asset_tag = 'OLD-1';
+
+    await service.update(ASSET_ID, { asset_tag: ' New-Tag ' } as any, context);
+
+    expect(assetTagClaimsRequired).toHaveBeenCalledWith(h.knex, TENANT);
+    expect(claimAssetTag).toHaveBeenCalledWith(h.knex, {
+      tenant: TENANT,
+      assetTag: ' New-Tag ',
+      ownerKind: 'asset',
+      ownerId: ASSET_ID,
+    });
+    expect(h.updates.find(({ table }) => table === 'assets')?.patch).toMatchObject({
+      asset_tag_normalized: normalizeAssetTag(' New-Tag '),
+      asset_tag_legacy_exempt: false,
+      asset_tag_managed: true,
+    });
+  });
+
   it('assigns a valid contact', async () => {
     h.state.assets[0].contact_name_id = null;
     await service.update(ASSET_ID, { contact_name_id: CONTACT_A } as any, context);

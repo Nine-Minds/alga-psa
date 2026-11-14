@@ -1,5 +1,8 @@
 import {
   ASSET_RECORD_SOURCE,
+  PROJECT_IDENTITY_ALIASES,
+  TICKET_IDENTITY_ALIASES,
+  QUOTE_IDENTITY_ALIASES,
   PHASE_NAME_ALIASES,
   PROJECT_NAME_ALIASES,
   TASK_NAME_ALIASES,
@@ -22,7 +25,7 @@ const CO_MANAGED_PROJECT_FIELD_SOURCE: CoManagedFieldSource = {
   resource: ['projects'],
   title: PROJECT_NAME_ALIASES,
   description: ['description', 'values.description', 'projects.description'],
-  identifier: ['project_id', 'projects.project_id', 'project', 'projectId', 'project_id', 'projects.project_id'],
+  identifier: PROJECT_IDENTITY_ALIASES,
 };
 const CO_MANAGED_PHASE_FIELD_SOURCE: CoManagedFieldSource = {
   resource: ['project_phases'],
@@ -334,7 +337,7 @@ export const TICKET_AGENT_RESPONSE_SOURCE: RedactableRecordSource = {
 
 export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['tickets'],
-  identifier: ids('ticket_id', 'tickets.ticket_id', 'ticket', 'ticketId'),
+  identifier: TICKET_IDENTITY_ALIASES,
   fields: {},
   derived: {
     client_name: ids('client_id', 'clients', 'clients.client_name'),
@@ -427,6 +430,8 @@ export const QUOTE_LINE_RECORD_SOURCE: RedactableRecordSource = {
   identifier: ids('quote_item_id', 'quote_items.quote_item_id'),
   fields: {},
   derived: {
+    // Line endpoints repeat the parent quote's client label; keep its source policy after detaching the row.
+    client_name: ids('quotes.client_name'),
     // Discount rows resolve against selected bases and their item/service targets before totals are persisted.
     total_price: ids('unit_price', 'quantity', 'discount_type', 'discount_percentage',
       'applies_to_item_id', 'applies_to_service_id', 'service_id', 'is_optional', 'is_selected', 'is_discount'),
@@ -448,6 +453,7 @@ export const QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE: RedactableRecordSource = {
     ),
   },
   derived: {
+    client_name: ids('quotes.client_name'),
     // Preview prices can be copied, discounted, or rebuilt from allocated quote discounts.
     total_price: quoteItemSources(
       'unit_price', 'quantity', 'is_optional', 'is_selected', 'is_recurring', 'is_discount',
@@ -503,7 +509,7 @@ export const QUOTE_ACTIVITY_SOURCE: RedactableRecordSource = {
 /** Quotes are read under the kernel's `billing` resource, so a whole-`billing` redaction hides the quote too. */
 export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['quotes', 'billing'],
-  identifier: ids('quote_id', 'quotes.quote_id', 'quote', 'quoteId'),
+  identifier: QUOTE_IDENTITY_ALIASES,
   fields: {},
   derived: {
     client_name: ids('client_id', 'clients', 'clients.client_name'),

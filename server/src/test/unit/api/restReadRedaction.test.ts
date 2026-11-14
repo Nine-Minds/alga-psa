@@ -54,9 +54,17 @@ const authorizeResource = vi.hoisted(() =>
     state.decisions.get(input.record?.id ?? input.recordContext?.id ?? '') ?? { allowed: true, redactedFields: [] }
   )
 );
+const authorizeMutation = vi.hoisted(() => vi.fn(async (input: { record?: { id?: string }; recordContext?: { id?: string } }) =>
+  state.decisions.get(input.record?.id ?? input.recordContext?.id ?? '') ?? { allowed: true, redactedFields: [] }
+));
 
 vi.mock('server/src/lib/authorization/kernel', () => ({
-  getAuthorizationKernel: vi.fn(async () => ({ authorizeResource })),
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource,
+    // Mutation response cases exercise read projection after admission. Dedicated mutation tests cover the real
+    // authorizeMutation read-admission contract independently.
+    authorizeMutation,
+  })),
 }));
 
 vi.mock('@/lib/db', () => ({
@@ -64,6 +72,22 @@ vi.mock('@/lib/db', () => ({
   runWithApiKeyUser: vi.fn(async (_user: unknown, callback: () => Promise<any>) => callback()),
 }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
+
+// Controllers now use the shared subject resolver; model its complete current contract so these route tests can focus
+// on response projection rather than reproducing the resolver's database-backed role/relationship lookups.
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (_knex: unknown, input: any) => ({
+    tenant: input.tenant,
+    userId: input.user?.user_id ?? '',
+    userType: input.user?.user_type ?? 'internal',
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
 
 // Populated lookups ensure enrichment cannot restore values hidden by the project's decision.
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -234,6 +258,7 @@ beforeEach(() => {
   state.clientTenantFilters = [];
   state.clientIdLookups = [];
   authorizeResource.mockClear();
+  authorizeMutation.mockClear();
   vi.spyOn(ApiBaseController.prototype as any, 'authenticate').mockImplementation(async (req: any) => {
     req.context = context;
     return req;
@@ -310,7 +335,7 @@ describe('projects: REST reads serialize the projection', () => {
     state.decisions.set(P3, { allowed: true, redactedFields: ['projects'] });
     const hidden = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
     expect(hidden.data.total_projects).toBe(2);
-    expect(hidden.data.total_budgeted_hours).toBe(0);
+    expect(hidden.data).not.toHaveProperty('total_budgeted_hours');
   });
 
   it('stats enrich ProjectService.list rows with tenant-scoped client labels before aggregation', async () => {
@@ -427,12 +452,11 @@ describe('projects: REST reads serialize the projection', () => {
 
       hideProjectFields(alias);
       const hidden = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
-      expect(hidden.data).toMatchObject({
-        total_projects: 4,
-        active_projects: 0, completed_projects: 0, on_hold_projects: 0, cancelled_projects: 0,
-        overdue_projects: 0, projects_completed_this_month: 0,
-        projects_by_status: { unknown: 4 },
-      });
+      expect(hidden.data.total_projects).toBe(4);
+      for (const field of [
+        'active_projects', 'completed_projects', 'on_hold_projects', 'cancelled_projects',
+        'overdue_projects', 'projects_completed_this_month', 'projects_by_status',
+      ]) expect(hidden.data).not.toHaveProperty(field);
     },
   );
 
@@ -444,7 +468,7 @@ describe('projects: REST reads serialize the projection', () => {
     const response = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
     expect(response.data).toMatchObject({
       total_projects: 2, active_projects: 0, completed_projects: 1,
-      projects_by_status: { unknown: 1, Completed: 1 },
+      projects_by_status: { Completed: 1 },
     });
     expect(authorizeResource).toHaveBeenCalledTimes(2);
   });
@@ -701,7 +725,8 @@ describe('tickets: REST reads serialize the projection', () => {
     const data = (await response.json()).data;
     expect(data).toMatchObject({ ticket_id: TICKET, title: 'Printer', priority: 'high' });
     expect(data).not.toHaveProperty('description');
-    expect(authorizeResource).toHaveBeenCalledTimes(4);
+    expect(authorizeResource).toHaveBeenCalledTimes(2);
+    expect(authorizeMutation).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -917,15 +942,13 @@ describe('quotes: REST reads serialize the projection', () => {
     };
   });
 
-  it('nulls display_quote_number when quote_number is hidden and preserves it otherwise', async () => {
+  it('suppresses the quote when its human identifier is hidden', async () => {
     const visible = await new ApiQuoteController().getById()(request(`/api/v1/quotes/${QUOTE}`, { id: QUOTE }));
     expect((await visible.json()).data.display_quote_number).toBe('QUO-1 v2');
 
     state.decisions.set(QUOTE, { allowed: true, redactedFields: ['quote_number'] });
     const hidden = await new ApiQuoteController().getById()(request(`/api/v1/quotes/${QUOTE}`, { id: QUOTE }));
-    const hiddenData = (await hidden.json()).data;
-    expect(hiddenData).not.toHaveProperty('quote_number');
-    expect(hiddenData.display_quote_number).toBeNull();
+    expect(hidden.status).toBe(404);
   });
 
   it('get hides cost/margin style fields, nulls computed totals and suppresses with 404', async () => {
@@ -1054,8 +1077,7 @@ describe('remaining REST projection consumers', () => {
     expect(response.status).toBe(200);
     const data = (await response.json()).data;
     expect(data.master).not.toHaveProperty('title');
-    expect(data.children[0]).toMatchObject({ ticket_id: childId, title: 'Visible child' });
-    expect(data.children[0]).not.toHaveProperty('ticket_number');
+    expect(data.children).toEqual([]);
     expect(data.master_ticket_id).toBe(masterId);
 
     for (const [id, owner, assignee, board, team] of [
@@ -1399,11 +1421,11 @@ describe('asset routes serialize the projection', () => {
     expect(JSON.stringify((await hidden.json()).data.relationships)).not.toContain('Sensitive related name');
 
     state.decisions.delete(A1);
+    const unrestrictedRelated = await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 });
+    expect((await unrestrictedRelated.json()).data.relationships[0]).toMatchObject({ related_asset_id: related.id, asset_tag: 'OTHER' });
     state.decisions.set(related.id, { allowed: true, redactedFields: ['assets.asset_tag'] });
     const visible = await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 });
-    const relationship = (await visible.json()).data.relationships[0];
-    expect(relationship).toMatchObject({ related_asset_id: related.id, related_asset_name: 'Sensitive related name', status: 'active' });
-    expect(relationship).not.toHaveProperty('asset_tag');
+    expect((await visible.json()).data.relationships).toEqual([]);
     expect(authorizeResource.mock.calls.some(([input]) => input.record?.id === related.id
       && input.record.ownerUserId === 'related-owner'
       && input.record.assignedUserIds.includes('related-owner'))).toBe(true);
@@ -1418,14 +1440,14 @@ describe('asset routes serialize the projection', () => {
     state.assetAuthorizationRecords.set(relatedId, { id: relatedId, ownerUserId: 'owner-2', assignedUserIds: ['owner-2'] });
     state.assets = [asset(A1, { relationships: [{ relationship_id: 'r-list', related_asset_id: relatedId,
       related_asset_name: 'Related list name', asset_tag: 'LIST-TAG', asset_type: 'server', status: 'active' }] })];
+    const unrestricted = await controller().listRelationships(request(`/api/v2/assets/${A1}/relationships`), { id: A1 });
+    expect((await unrestricted.json()).data).toHaveLength(1);
     state.decisions.set(relatedId, { allowed: true, redactedFields: ['assets.asset_tag'] });
 
     const visible = await controller().listRelationships(request(`/api/v2/assets/${A1}/relationships`), { id: A1 });
     expect(visible.status).toBe(200);
     const rows = (await visible.json()).data;
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ related_asset_id: relatedId, related_asset_name: 'Related list name', status: 'active' });
-    expect(rows[0]).not.toHaveProperty('asset_tag');
+    expect(rows).toEqual([]);
 
     state.decisions.set(relatedId, { allowed: true, redactedFields: ['assets.asset_id'] });
     const suppressed = await controller().listRelationships(request(`/api/v2/assets/${A1}/relationships`), { id: A1 });
