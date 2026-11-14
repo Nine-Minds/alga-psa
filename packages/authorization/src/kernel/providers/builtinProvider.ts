@@ -10,6 +10,7 @@ import type {
 import { evaluateRelationshipRules } from '../relationships';
 import { ALLOW_ALL_SCOPE, DENY_ALL_SCOPE, intersectAuthorizationScopes } from '../scope';
 import { evaluateBuiltinRuleResolvers } from './builtinResolverEvaluation';
+import { builtinClosedFields } from '../builtinRuleResolvers';
 import { resolveVisibleContactIds } from '../../portal/visibility';
 
 export type BuiltinRelationshipRulesResolver = (
@@ -214,7 +215,7 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
   }
 
   async resolveFieldRedactions(input: AuthorizationEvaluationInput): Promise<FieldRedactionResult> {
-    const fields = (await this.fieldRedactionResolver?.(input)) ?? [];
+    const fields = [...new Set([...((await this.fieldRedactionResolver?.(input)) ?? []), ...builtinClosedFields(input)])];
 
     return {
       fields,

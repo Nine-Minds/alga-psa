@@ -129,7 +129,7 @@ export async function createInteractionRecord({
   if ((user as { user_id?: string } | undefined)?.user_id === interactionData.user_id) {
     await assertHumanWorkOwner(trx, tenant, interactionData.user_id, 'user_id');
   } else {
-    await assertHumanWorkAssignee(trx, tenant, [interactionData.user_id]);
+    await assertHumanWorkAssignee(trx, tenant, [interactionData.user_id], { kind: 'unscoped', surface: 'interaction' });
   }
 
   if (!interactionData.client_id && !interactionData.contact_name_id) {

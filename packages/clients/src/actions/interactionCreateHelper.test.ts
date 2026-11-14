@@ -27,6 +27,7 @@ vi.mock('@alga-psa/shared/models/scheduleEntry', () => ({
 // The human-work guard is covered against a real database in T043; the fake trx here has no users table.
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertTicketMoveKeepsSeatsInScope: vi.fn(async () => undefined),
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 

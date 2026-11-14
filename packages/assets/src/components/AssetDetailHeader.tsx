@@ -1,3 +1,4 @@
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
@@ -83,6 +84,10 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   const [isRebootDialogOpen, setIsRebootDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
   const { renderQuickAddTicket } = useAssetCrossFeature();
+  // What the server's seat authority closes for this user: those controls are left out, not disabled.
+  const { canUpdate, canDelete, canRemoteAccess, canRunRmmCommands, canRefreshRmm } = useAssetSurfaceControls();
+  const showRmmGroup = Boolean(asset.rmm_provider) && (canRefreshRmm || canRunRmmCommands);
+  const showActionsMenu = showRmmGroup || canUpdate || canDelete;
   const assetTypeEntries = useAssetTypeRegistry();
   // Custom types render their registry-configured icon; built-ins keep the
   // hardcoded lucide icon (mirrors AssetDashboardClient.getAssetTypeIcon).
@@ -222,7 +227,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
               idPrefix="asset-print-label"
             />
           )}
-          <RemoteAccessButton asset={asset} variant="default" hasTemplateLinks={hasTemplateLinks} surface="asset-header" />
+          {canRemoteAccess && <RemoteAccessButton asset={asset} variant="default" hasTemplateLinks={hasTemplateLinks} surface="asset-header" />}
           
           <Button 
             id="create-ticket-header-btn"
@@ -233,7 +238,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
             {t('assetDetailHeader.actions.createTicket', { defaultValue: 'Create Ticket' })}
           </Button>
 
-          <DropdownMenu>
+          {showActionsMenu && <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 id="asset-actions-btn"
@@ -248,45 +253,53 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
               <div className="px-2 py-1.5 text-sm font-semibold text-gray-900">
                 {t('assetDetailHeader.actions.menu', { defaultValue: 'Actions' })}
               </div>
-              {asset.rmm_provider && (
+              {showRmmGroup && (
                 <>
-                  <DropdownMenuItem onClick={onRefresh} disabled={isRefreshing}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    {isRefreshing
-                      ? t('assetDetailHeader.actions.refreshing', { defaultValue: 'Refreshing...' })
-                      : t('assetDetailHeader.actions.refreshData', { defaultValue: 'Refresh Data' })}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    id="reboot-device-action"
-                    disabled={!onReboot || isRebooting}
-                    onSelect={() => setIsRebootDialogOpen(true)}
-                  >
-                    <Power className="mr-2 h-4 w-4" />
-                    {isRebooting
-                      ? t('assetDetailHeader.actions.rebooting', { defaultValue: 'Rebooting...' })
-                      : t('assetDetailHeader.actions.rebootDevice', { defaultValue: 'Reboot Device' })}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {canRefreshRmm && (
+                    <DropdownMenuItem onClick={onRefresh} disabled={isRefreshing}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {isRefreshing
+                        ? t('assetDetailHeader.actions.refreshing', { defaultValue: 'Refreshing...' })
+                        : t('assetDetailHeader.actions.refreshData', { defaultValue: 'Refresh Data' })}
+                    </DropdownMenuItem>
+                  )}
+                  {canRunRmmCommands && (
+                    <DropdownMenuItem
+                      id="reboot-device-action"
+                      disabled={!onReboot || isRebooting}
+                      onSelect={() => setIsRebootDialogOpen(true)}
+                    >
+                      <Power className="mr-2 h-4 w-4" />
+                      {isRebooting
+                        ? t('assetDetailHeader.actions.rebooting', { defaultValue: 'Rebooting...' })
+                        : t('assetDetailHeader.actions.rebootDevice', { defaultValue: 'Reboot Device' })}
+                    </DropdownMenuItem>
+                  )}
+                  {(canUpdate || canDelete) && <DropdownMenuSeparator />}
                 </>
               )}
-              <DropdownMenuItem
-                id="edit-asset-action"
-                onSelect={() => (onEdit ? onEdit() : router.push(`/msp/assets/${asset.asset_id}/edit`))}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                {t('assetDetailHeader.actions.editAsset', { defaultValue: 'Edit Asset' })}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                id="delete-asset-action"
-                className="text-red-600 focus:text-red-600"
-                onSelect={() => { void openDeleteDialog(); }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('assetDetailHeader.actions.deleteAsset', { defaultValue: 'Delete Asset' })}
-              </DropdownMenuItem>
+              {canUpdate && (
+                <DropdownMenuItem
+                  id="edit-asset-action"
+                  onSelect={() => (onEdit ? onEdit() : router.push(`/msp/assets/${asset.asset_id}/edit`))}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  {t('assetDetailHeader.actions.editAsset', { defaultValue: 'Edit Asset' })}
+                </DropdownMenuItem>
+              )}
+              {canUpdate && canDelete && <DropdownMenuSeparator />}
+              {canDelete && (
+                <DropdownMenuItem
+                  id="delete-asset-action"
+                  className="text-red-600 focus:text-red-600"
+                  onSelect={() => { void openDeleteDialog(); }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('assetDetailHeader.actions.deleteAsset', { defaultValue: 'Delete Asset' })}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu>}
         </div>
       </div>
 

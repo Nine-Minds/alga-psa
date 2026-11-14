@@ -50,7 +50,7 @@ const ProjectTaskModel = {
       }
   
       // Human-work guard: a task's assignee must be an active internal user.
-      await assertHumanWorkAssignee(knexOrTrx, tenant, [taskData.assigned_to]);
+      await assertHumanWorkAssignee(knexOrTrx, tenant, [taskData.assigned_to], { kind: 'project_phase', phaseId });
 
       const [newTask] = await tenantScopedTable<IProjectTask>(knexOrTrx, 'project_tasks', tenant)
         .insert({
@@ -159,7 +159,7 @@ const ProjectTaskModel = {
           .where('task_id', taskId)
           .first('assigned_to');
         if (finalTaskData.assigned_to !== current?.assigned_to) {
-          await assertHumanWorkAssignee(knexOrTrx, tenant, [finalTaskData.assigned_to]);
+          await assertHumanWorkAssignee(knexOrTrx, tenant, [finalTaskData.assigned_to], { kind: 'project_task', taskId });
         }
       }
 
@@ -486,7 +486,7 @@ const ProjectTaskModel = {
       }
 
       // Human-work guard: the added resource (and a promoted-to-primary assignee) is this user.
-      await assertHumanWorkAssignee(knexOrTrx, tenant, [userId]);
+      await assertHumanWorkAssignee(knexOrTrx, tenant, [userId], { kind: 'project_task', taskId });
 
       // assigned_to is guaranteed non-null: either the task already has one,
       // or we fall back to the additional user being added.

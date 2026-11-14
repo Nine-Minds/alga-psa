@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import useSWR, { unstable_serialize, useSWRConfig } from 'swr';
 import type { Asset, AssetAssociation, AssetListResponse } from '@alga-psa/types';
-import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../actions/assetActions';
+import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets, getAssetSurfaceAccess, linkAssetToTicket } from '../actions/assetActions';
 import { entityAssetsCacheKey } from '../lib/assetCacheKeys';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
@@ -274,15 +274,23 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
         }
 
         try {
+            // Someone who may not edit assets (a seat technician, whose asset surface is read-only) links a device to
+            // a ticket through the ticket: `linkAssetToTicket` authorizes it from the asset read and the ticket update.
+            // Asked only when linking, so opening the ticket costs nothing extra.
+            const linkThroughTicket = entityType === 'ticket'
+                && (await getAssetSurfaceAccess()).closedActions.includes('update');
             // Create associations for all selected assets, tracking successes and failures
             const results = await Promise.allSettled(
                 Array.from(selectedAssets.values()).map(({ asset, relationshipType }) =>
-                    createAssetAssociation({
-                        asset_id: asset.asset_id,
-                        entity_id: entityId,
-                        entity_type: entityType,
-                        relationship_type: relationshipType
-                    }).then(unwrapAssetActionResult)
+                    (linkThroughTicket
+                        ? linkAssetToTicket({ asset_id: asset.asset_id, ticket_id: entityId, relationship_type: relationshipType })
+                        : createAssetAssociation({
+                            asset_id: asset.asset_id,
+                            entity_id: entityId,
+                            entity_type: entityType,
+                            relationship_type: relationshipType
+                        })
+                    ).then(unwrapAssetActionResult)
                 )
             );
 

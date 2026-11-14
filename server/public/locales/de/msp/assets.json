@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "Dieses Asset-Tag wird bereits verwendet oder ist reserviert. Scannen Sie es, um das vorhandene Asset zu finden, oder geben Sie ein anderes Tag ein.",
       "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "alreadyLinkedToTicket": "Dieses Asset ist bereits mit dem Ticket verknüpft.",
       "clientNotFound": "Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "maintenanceNotFound": "Wartungsplan nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "maintenanceMismatch": "Dieser Wartungsdatensatz passt nicht zum ausgewählten Asset. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
