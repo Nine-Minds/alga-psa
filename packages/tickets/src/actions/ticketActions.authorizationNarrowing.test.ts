@@ -14,6 +14,12 @@ const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const getClientContactVisibilityContextMock = vi.fn();
 
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),

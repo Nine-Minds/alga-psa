@@ -17,16 +17,27 @@ const testState = vi.hoisted(() => ({
   db: null as unknown,
   seatUserIds: new Set<string>(),
 }));
+/**
+ * The caller as the real `withAuth` hands it to an action: the user's loaded `users` row (which carries
+ * the `seat_reader` marker the seat-scope readers decide from), not a bare id. A partial identity would
+ * make every action look up the seat tables for a caller the real request already identified as staff.
+ */
+const authUser = vi.hoisted(() => async () => {
+  const db = testState.db as import('knex').Knex;
+  const row = await db('users').where({ tenant: testState.tenant, user_id: testState.user.user_id }).first();
+  if (!row) throw new Error(`test caller ${testState.user.user_id} has no users row in ${testState.tenant}`);
+  return { ...row, user_type: testState.user.user_type, tenant: testState.tenant };
+});
 const withAuthMock = vi.hoisted(() => () => ({
-  withAuth: (action: any) => (...args: any[]) =>
-    action({ ...testState.user, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
+  withAuth: (action: any) => async (...args: any[]) =>
+    action(await authUser(), { tenant: testState.tenant }, ...args),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', withAuthMock);
 vi.mock('@alga-psa/auth', () => ({
   ...withAuthMock(),
-  withOptionalAuth: (action: any) => (...args: any[]) =>
-    action({ ...testState.user, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(await authUser(), { tenant: testState.tenant }, ...args),
   getCurrentUser: vi.fn(),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({

@@ -256,7 +256,7 @@
   {
     "id": "T029",
     "description": "DB integration: assigning a seat technician is accepted on an own-client in-scope ticket and refused on another client's ticket, an out-of-scope board and a task of an unshared project; the technician's picker lists no MSP user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F052"
