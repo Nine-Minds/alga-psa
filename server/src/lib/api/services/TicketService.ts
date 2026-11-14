@@ -26,7 +26,7 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canWriteAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import {
   runAuthorizedTicketWatcherWrite,
@@ -2474,6 +2474,11 @@ export class TicketService extends BaseService<ITicket> {
         await finalizeResourceReassignment();
         // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
         await recordTicketAssigneeChange(trx, context.tenant, id);
+      }
+
+      // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+      if (ticket && (await releaseSeatTicketOnMove(trx, context.tenant, id, currentTicket, ticket)).assigneeCleared) {
+        ticket.assigned_to = null;
       }
 
       if (clearsResponseStateOnClose) {

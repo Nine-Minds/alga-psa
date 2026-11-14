@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useIsolatedEventBusModules } from './testing/isolatedEventBusModules';
 
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
@@ -24,8 +25,9 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 describe('EventBus Redis authentication', () => {
+  useIsolatedEventBusModules();
+
   afterEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
   });
 
