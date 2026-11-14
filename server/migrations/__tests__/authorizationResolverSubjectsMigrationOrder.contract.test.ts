@@ -40,10 +40,18 @@ describe('authorization resolver subjects migration ordering', () => {
     }
   });
 
-  it('gives each migration in the pair a timestamp no other migration file uses', () => {
-    for (const name of PAIR.map(fileFor)) {
+  // Main shipped 20261113140000_grant_service_read_to_msp_roles alongside the pair's first file,
+  // and shipped migration names are immutable (renaming one breaks every database that already
+  // recorded it). A shared timestamp is harmless only when the neighbour cannot interleave with the
+  // pair's schema work: it must not touch the table the pair constrains.
+  it('shares its timestamps only with migrations that leave co_managed_seat_assignments alone', () => {
+    const pair = PAIR.map(fileFor);
+    for (const name of pair) {
       const ts = timestampOf(name);
-      expect(allMigrations.filter((other) => timestampOf(other) === ts), name).toEqual([name]);
+      for (const other of allMigrations.filter((o) => timestampOf(o) === ts && !pair.includes(o))) {
+        const source = readFileSync(path.join(MIGRATIONS_DIR, other), 'utf8');
+        expect(source.includes('co_managed_seat_assignments'), `${other} shares ${ts} with ${name}`).toBe(false);
+      }
     }
   });
 
