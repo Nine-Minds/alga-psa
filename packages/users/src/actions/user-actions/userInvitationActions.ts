@@ -11,7 +11,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { findPendingInvitation } from '@alga-psa/licensing';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
-import { isCoManagedInvitationServed, seatAssignmentOfInvitation } from '../../lib/coManagedInvitationCapability';
+import { isCoManagedInvitationServed, seatAssignmentOfInvitation, seatInvitationAcceptance } from '../../lib/coManagedInvitationCapability';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -488,12 +488,25 @@ export async function completeUserInvitationSetup(
 
 /** Seat-kind completion: the same password policy and token handling as above, the seat command for the account. */
 async function completeSeatInvitationSetup(tenant: string, token: string, password: string, email: string) {
-  // Deferred: the seat module is only needed when a seat token arrives.
-  const { acceptCoManagedSeatInvitation, CoManagedSeatInvitationError } = await import('@alga-psa/co-managed/seatInvitation');
   try {
     return await runWithTenant(tenant, async () => {
       const { knex } = await createTenantKnex();
-      const accepted = await acceptCoManagedSeatInvitation(knex, { token, password });
+      const answer = await seatInvitationAcceptance().delegate(tenant, (seat) => seat.acceptSeatInvitation(knex, { token, password }));
+      // No provider, or the seat shape no longer serves the sponsor: the same refusal verifyToken gives.
+      if (!answer.handled) {
+        return { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' as const };
+      }
+      if ('refused' in answer) {
+        const { code, message } = answer.refused;
+        const errorCode: UserInvitationErrorCode =
+          code === 'INVITATION_NOT_FOUND' || code === 'INVITATION_EXPIRED' || code === 'INVITATION_REVOKED' || code === 'INVALID_ACCEPTANCE'
+            ? 'INVALID_OR_EXPIRED_TOKEN'
+            : code === 'EMAIL_IN_USE' ? 'CREATE_USER_FAILED'
+              : code === 'ENTITLEMENT_LAPSED' ? 'CO_MANAGED_LICENSE_LAPSED'
+                : 'CO_MANAGED_NOT_ACTIVE';
+        return { success: false, error: errorCode === 'INVALID_OR_EXPIRED_TOKEN' ? 'Invalid or expired invitation token' : message, errorCode } as const;
+      }
+      const accepted = answer.accepted;
       if (accepted.created) {
         try {
           const UserPreferences = await import('@alga-psa/db').then((m) => m.UserPreferences);
@@ -505,15 +518,6 @@ async function completeSeatInvitationSetup(tenant: string, token: string, passwo
       return { success: true, userId: accepted.user_id, username: email, message: 'Account created successfully' } as const;
     });
   } catch (error) {
-    if (error instanceof CoManagedSeatInvitationError) {
-      const errorCode: UserInvitationErrorCode =
-        error.code === 'INVITATION_NOT_FOUND' || error.code === 'INVITATION_EXPIRED' || error.code === 'INVITATION_REVOKED' || error.code === 'INVALID_ACCEPTANCE'
-          ? 'INVALID_OR_EXPIRED_TOKEN'
-          : error.code === 'EMAIL_IN_USE' ? 'CREATE_USER_FAILED'
-            : error.code === 'ENTITLEMENT_LAPSED' ? 'CO_MANAGED_LICENSE_LAPSED'
-              : 'CO_MANAGED_NOT_ACTIVE';
-      return { success: false, error: errorCode === 'INVALID_OR_EXPIRED_TOKEN' ? 'Invalid or expired invitation token' : error.message, errorCode } as const;
-    }
     console.error('Error completing seat invitation setup:', error);
     return { success: false, error: 'Failed to complete account setup', errorCode: 'SETUP_FAILED' as const };
   }

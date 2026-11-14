@@ -38,7 +38,6 @@
   },
   "dependencies": {
     "@alga-psa/auth": "*",
-    "@alga-psa/co-managed": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/documents": "*",

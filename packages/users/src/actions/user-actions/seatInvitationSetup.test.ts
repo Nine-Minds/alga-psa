@@ -1,10 +1,13 @@
 /**
  * A seat technician's invitation completes through the team setup flow (the link in the invitation email
  * opens /auth/team/setup). The flow recognises the seat-kind token by the metadata the seat invite stamps
- * on it and hands completion to `acceptCoManagedSeatInvitation`; every ordinary token takes the path it
- * always took; and a seat token is refused when `co-managed-seat` does not serve the sponsor.
+ * on it and hands completion to the seat shape through the `coManagedSeatInvitation` shared-work seam
+ * (this package never imports `@alga-psa/co-managed`); every ordinary token takes the path it always
+ * took; and a seat token is refused when `co-managed-seat` does not serve the sponsor or nothing is registered.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { sharedWorkSeam } from '@alga-psa/shared/utils/sharedWorkSeam';
+import { CO_MANAGED_SEAT_INVITATION_SEAM, type SeatInvitationAcceptor } from '../../lib/coManagedInvitationCapability';
 
 const gate = vi.hoisted(() => ({ seatServed: true, coManagedServed: true }));
 const accept = vi.hoisted(() => vi.fn());
@@ -14,12 +17,10 @@ const txRows = vi.hoisted(() => ({ productCode: 'psa', role: { role_id: 'role-1'
 
 class SeatError extends Error { constructor(public code: string) { super(code); } }
 
+const served = (key: string) => (key === 'co-managed-seat' ? gate.seatServed : gate.coManagedServed);
 vi.mock('@alga-psa/core/capability', () => ({
-  isCapabilityServed: async (key: string) => (key === 'co-managed-seat' ? gate.seatServed : gate.coManagedServed),
-}));
-vi.mock('@alga-psa/co-managed/seatInvitation', () => ({
-  acceptCoManagedSeatInvitation: (...a: unknown[]) => accept(...a),
-  CoManagedSeatInvitationError: SeatError,
+  isCapabilityServed: async (key: string) => served(key),
+  serves: async (key: string) => ({ served: served(key) }),
 }));
 const tenantDbMock = vi.hoisted(() => (_c: unknown, _t: string) => ({
   table: (name: string) => ({
@@ -57,8 +58,23 @@ const ordinaryVerification = { valid: true, tenant: 't1', invitee: { ...invitee,
 
 const load = () => import('./userInvitationActions');
 
+/** Stands in for the seat shape's registration: the seat command behind the seam, refusals as data. */
+const seam = sharedWorkSeam<SeatInvitationAcceptor>(CO_MANAGED_SEAT_INVITATION_SEAM, 'co-managed-seat');
+const registerSeatProvider = () => seam.register(() => ({
+  async acceptSeatInvitation(knex, input) {
+    try {
+      const accepted = await accept(knex, input);
+      return { handled: true, accepted: { user_id: accepted.user_id, created: accepted.created } };
+    } catch (error) {
+      if (error instanceof SeatError) return { handled: true, refused: { code: error.code, message: error.message } };
+      throw error;
+    }
+  },
+}));
+
 beforeEach(() => {
   gate.seatServed = true; gate.coManagedServed = true; txRows.productCode = 'psa';
+  seam.reset(); registerSeatProvider();
   for (const fn of [accept, createFromInvitation, upsert, verify]) fn.mockReset();
   upsert.mockResolvedValue(undefined);
   createFromInvitation.mockResolvedValue({ user: { user_id: 'ordinary-user' }, coManaged: false });
@@ -103,6 +119,25 @@ describe('completing a seat invitation through team setup', () => {
     expect(await completeUserInvitationSetup('a'.repeat(64), 'Sup3r-secret-pass!')).toMatchObject({ errorCode: 'CREATE_USER_FAILED' });
     accept.mockRejectedValueOnce(new SeatError('ENTITLEMENT_LAPSED'));
     expect(await completeUserInvitationSetup('a'.repeat(64), 'Sup3r-secret-pass!')).toMatchObject({ errorCode: 'CO_MANAGED_LICENSE_LAPSED' });
+  });
+
+  it('refuses a seat token, without creating anyone, when no seat provider is registered', async () => {
+    verify.mockResolvedValue(seatVerification);
+    seam.reset();
+    const { completeUserInvitationSetup } = await load();
+    expect(await completeUserInvitationSetup('a'.repeat(64), 'Sup3r-secret-pass!'))
+      .toEqual({ success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' });
+    expect(accept).not.toHaveBeenCalled();
+    expect(createFromInvitation).not.toHaveBeenCalled();
+  });
+
+  it('refuses a seat token when co-managed-seat stops serving the sponsor between verification and acceptance', async () => {
+    verify.mockResolvedValue(seatVerification);
+    gate.seatServed = false;
+    const { completeUserInvitationSetup } = await load();
+    expect(await completeUserInvitationSetup('a'.repeat(64), 'Sup3r-secret-pass!')).toMatchObject({ success: false, errorCode: 'CAPABILITY_UNAVAILABLE' });
+    expect(accept).not.toHaveBeenCalled();
+    expect(createFromInvitation).not.toHaveBeenCalled();
   });
 
   it('an unexpected failure is a setup failure, not a leaked error', async () => {

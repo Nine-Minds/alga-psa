@@ -39,6 +39,8 @@ import './seatTicketListViews';
 import './seatCapability';
 // The seat technician's principal-level write gate registers with the same import.
 import './seatWriteAdmission';
+// Seat invitation acceptance registers on its shared-work seam, so the team setup flow can complete it.
+import './seatInvitationRegistration';
 
 const READ_REASON = 'co-managed capability resolver: pre-tenant-context participation read, filtered by tenant ids';
 
