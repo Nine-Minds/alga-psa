@@ -10,11 +10,13 @@ import { clientScopeReadRulesForCreate } from '../candidateRecord';
 import { resolveAppliedBuiltinResolvers } from '../builtinRuleResolvers';
 import { DENY_ALL_SCOPE, intersectAuthorizationScopes } from '../scope';
 import { evaluateTemplateForRule } from './bundleProvider';
+import { evaluateRecordGuard, isRecordGuardKey } from '../recordGuards';
 
 export const RESOLVER_NARROWING_APPLIED_CODE = 'resolver_narrowing_applied';
 export const RESOLVER_TEMPLATE_DENIED_CODE = 'resolver_template_denied';
 export const RESOLVER_CLOSED_BASELINE_DENIED_CODE = 'resolver_closed_baseline_denied';
 export const RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE = 'resolver_client_visible_only_denied';
+export const RESOLVER_RECORD_GUARD_DENIED_CODE = 'resolver_record_guard_denied';
 
 /**
  * Evaluates every registered resolver that applies to the subject. Returns null when none contributes, so the
@@ -90,6 +92,22 @@ export function evaluateBuiltinRuleResolvers(input: AuthorizationEvaluationInput
         code: RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE,
         message: 'Built-in resolver client-visible-only guard denied access.',
         metadata: { resolverId: resolver.id, ruleIds: notClientVisible.map((rule) => rule.id), resource, action },
+      });
+    }
+    // The record guards of ./recordGuards: the same predicate the SQL compiler pushes into list queries.
+    const guardViolations = matching.filter(
+      (rule) => isRecordGuardKey(rule.constraintKey) && input.record !== undefined && !evaluateRecordGuard(rule.constraintKey, rule, input)
+    );
+    if (guardViolations.length > 0) {
+      allowed = false;
+      scopes.push(DENY_ALL_SCOPE);
+      reasons.push({
+        stage: 'builtin',
+        sourceType: 'resolver',
+        sourceId: resolver.id,
+        code: RESOLVER_RECORD_GUARD_DENIED_CODE,
+        message: 'Built-in resolver record guard denied access.',
+        metadata: { resolverId: resolver.id, ruleIds: guardViolations.map((rule) => rule.id), resource, action },
       });
     }
     if (mismatched.length > 0) {

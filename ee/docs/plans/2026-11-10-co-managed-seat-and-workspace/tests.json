@@ -360,7 +360,7 @@
   {
     "id": "T040",
     "description": "DB integration: a seat technician reads client-visible documents and client-audience articles, and is refused an internal-only document, an internal-audience article and any stored credential.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F077",
