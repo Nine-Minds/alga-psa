@@ -259,14 +259,20 @@ async function refuseSeatsOutsideScope(
 }
 
 /**
- * A write that moves a ticket (new client and/or board) must not strand a seat technician on work
- * that is no longer theirs: the primary assignee the ticket will have (`primaryAssignee`: the new
- * one when the write reassigns; `undefined` reads the current one) and every additional agent are checked
- * against the post-write placement. Only seat scope is judged, never validity, so a legacy
- * reference never blocks a move.
+ * A write that moves a ticket (new client and/or board) and, in the same write, chooses its primary
+ * assignee (`primaryAssignee`) may not hand a seat technician a placement they cannot work: the
+ * chosen assignee is judged against the post-write placement. Only seat scope is judged, never
+ * validity, so a legacy reference never blocks a move.
  *
- * Cost: one statement, which asks the seat-subject index which of those users are seat subjects
- * (tickets and ticket_resources are read inside it). The seat tables are read only when one is.
+ * Seat technicians already on the ticket (the stored assignee, every additional agent) are not
+ * judged here and never block a move: after it they are either still covered (the arrangement
+ * still shares the ticket) or released by the writer's `releaseSeatTicketOnMove`, which clears them
+ * and returns the ticket to the MSP. A tenant the `co-managed-seat` capability does not serve is
+ * left exactly as it was. `primaryAssignee` `undefined` (assignee not changed) or `null`
+ * (unassigned) therefore checks nothing.
+ *
+ * Cost: none unless the write both moves the ticket and names an assignee; then one statement on
+ * the seat-subject index, and the seat tables are read only when that assignee is a seat subject.
  */
 export async function assertTicketMoveKeepsSeatsInScope(
   trx: Db,
@@ -276,21 +282,12 @@ export async function assertTicketMoveKeepsSeatsInScope(
   primaryAssignee: MaybeId
 ): Promise<void> {
   if (pending.clientId === undefined && pending.boardId === undefined) return;
-  const scoped = tenantDb(trx, tenant);
-  const additionalAgents = scoped.subquery('ticket_resources')
-    .where('ticket_id', ticketId).whereNotNull('additional_user_id').select('additional_user_id');
-  const storedPrimary = scoped.subquery('tickets')
-    .where('ticket_id', ticketId).whereNotNull('assigned_to').select('assigned_to');
-  const rows = (await scoped.table('authorization_resolver_subjects')
-    .where('resolver_id', SEAT_RESOLVER_ID)
-    .where((onTicket) => {
-      onTicket.whereIn('user_id', additionalAgents);
-      if (primaryAssignee === undefined) onTicket.orWhereIn('user_id', storedPrimary);
-      else if (primaryAssignee) onTicket.orWhere('user_id', primaryAssignee);
-    })
-    .select('user_id')) as Array<{ user_id: string }>;
-  if (rows.length === 0) return;
-  const seats = await loadSeats(trx, tenant, Array.from(new Set(rows.map((row) => row.user_id))));
+  if (!primaryAssignee) return;
+  const subject = await tenantDb(trx, tenant).table('authorization_resolver_subjects')
+    .where({ resolver_id: SEAT_RESOLVER_ID, user_id: primaryAssignee })
+    .first('user_id');
+  if (!subject) return;
+  const seats = await loadSeats(trx, tenant, [primaryAssignee]);
   await refuseSeatsOutsideScope(trx, tenant, seats, { kind: 'ticket', ticketId, pending });
 }
 
