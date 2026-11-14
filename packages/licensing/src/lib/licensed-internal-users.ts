@@ -85,7 +85,7 @@ export async function findPendingInvitation(
 }
 
 /** Why a seat technician was refused. The allocation, not the MSP's licence, is what ran out. */
-export type CoManagedSeatTechnicianRefusal = 'ARRANGEMENT_ENDED' | 'ENTITLEMENT_LAPSED' | 'SEAT_LIMIT';
+export type CoManagedSeatTechnicianRefusal = 'ARRANGEMENT_ENDED' | 'ENTITLEMENT_LAPSED' | 'SEAT_LIMIT' | 'SEAT_REVOKED';
 
 export type CoManagedSeatTechnicianAdmission =
   /** Not a seat technician: the caller applies the MSP's own licensed seat limit. */
@@ -97,6 +97,7 @@ const REFUSALS: Record<CoManagedSeatTechnicianRefusal, string> = {
   ARRANGEMENT_ENDED: 'This seat arrangement has ended.',
   ENTITLEMENT_LAPSED: 'Restore the co-managed pool before activating this technician.',
   SEAT_LIMIT: 'Every seat in this arrangement is in use. Add seats before activating another technician.',
+  SEAT_REVOKED: 'This technician\'s co-managed seat was revoked. Invite them again, or convert them to an MSP user, instead of reactivating them.',
 };
 
 /**
@@ -112,6 +113,9 @@ const REFUSALS: Record<CoManagedSeatTechnicianRefusal, string> = {
  *
  * Returns `{ seatTechnician: false }` without taking any lock when the subject holds no live
  * seat assignment, which is every admission in a tenant without seat arrangements.
+ * An existing user whose seat was revoked (`ended_reason = 'revoked'`) is refused with `SEAT_REVOKED`:
+ * revocation deactivates a technician for good, and no reactivation path may turn them into a plain MSP
+ * user. That costs a reactivation one indexed read; it takes no lock.
  *
  * Locks. The caller already holds the tenant's internal-user seat lock. For a seat technician
  * this then takes the sponsor entitlement row, the allocation row and the arrangement row: the
@@ -138,6 +142,15 @@ export async function admitCoManagedSeatTechnician(
         .where({ 'seat_assignment.invitation_id': invitation.invitation_id, 'seat_assignment.state': 'invited' })
         .first('seat_assignment.assignment_id', 'seat_assignment.arrangement_id');
     }
+  }
+  if (!held && subject.existingUserId) {
+    // A technician whose seat was revoked is inactive with no role. Reactivating them would make
+    // an ordinary internal user out of someone who was only ever admitted against a seat, so
+    // every reactivation path (they all admit through here) refuses. A converted user's assignment
+    // also ended, but as `converted`: they are an MSP user and reactivate like any other.
+    const revoked = await scope.table('co_managed_seat_assignments')
+      .where({ user_id: subject.existingUserId, state: 'revoked', ended_reason: 'revoked' }).first('assignment_id');
+    if (revoked) return { seatTechnician: true, ok: false, reason: 'SEAT_REVOKED', error: REFUSALS.SEAT_REVOKED };
   }
   if (!held) return { seatTechnician: false };
   const { assignment_id: assignmentId, arrangement_id: arrangementId } = held;

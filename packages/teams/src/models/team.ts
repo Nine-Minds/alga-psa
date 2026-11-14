@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import type { ITeam } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 const TeamModel = {
@@ -12,6 +12,8 @@ const TeamModel = {
     if (!teamData.manager_id) {
       throw new Error('manager_id is required when creating a team');
     }
+    // A team's manager is a member of it: a live seat technician cannot lead an MSP team.
+    await assertSeatTechnicianWrite(knexOrTrx, tenant, [teamData.manager_id], { teamMembership: true });
 
     const [createdTeam] = await tenantDb(knexOrTrx, tenant).table<ITeam>('teams')
       .insert({
@@ -46,6 +48,9 @@ const TeamModel = {
     team_id: string,
     team: Partial<ITeam>
   ): Promise<void> => {
+    if (team.manager_id) {
+      await assertSeatTechnicianWrite(knexOrTrx, tenant, [team.manager_id], { teamMembership: true });
+    }
     await tenantDb(knexOrTrx, tenant).table<ITeam>('teams')
       .andWhere('team_id', team_id)
       .update(team);
@@ -99,6 +104,8 @@ const TeamModel = {
       throw new Error(`Cannot add inactive user to team in tenant ${tenant}`);
     }
 
+    // A live seat technician joins no MSP team.
+    await assertSeatTechnicianWrite(knexOrTrx, tenant, [user_id], { teamMembership: true });
     await db.table('team_members').insert({ team_id, user_id, tenant, role });
   },
 

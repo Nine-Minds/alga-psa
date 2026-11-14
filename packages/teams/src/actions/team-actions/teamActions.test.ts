@@ -19,6 +19,9 @@ vi.mock('@alga-psa/db', () => ({
     tenantJoin: (query: any, table: string, first: string, second: string) => query.join(table, first, second),
   }),
   withTransaction: withTransactionMock,
+  // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
+  assertSeatTechnicianWrite: async () => undefined,
+  isSeatTechnicianGuardError: () => false,
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
