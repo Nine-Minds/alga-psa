@@ -37,10 +37,15 @@ import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { createTenantKnex, isCoManagedWorkspace } from '@alga-psa/db';
+import { runGatedPreloads, gatedPreload } from '@alga-psa/tickets/lib/ticketPreloads';
+import { TicketCapabilitiesProvider } from '@alga-psa/tickets/components/ticket/TicketCapabilitiesProvider';
+import { getViewerTicketCapabilities } from '@/lib/tickets/ticketViewerCapabilities';
 import { getWorkspaceReadOnly } from '@/lib/co-managed/workspaceReadOnly';
 import { CoManagedLocalTicketDataSourceProvider } from '@/components/co-managed/CoManagedLocalTicketDataSourceProvider';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+
+type StreamOf = NonNullable<TicketScreenBootstrap['streams']>;
 
 const getCachedTicket = cache((id: string) => getTicketById(id));
 
@@ -125,6 +130,18 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
   }
 
   try {
+    // The viewer's capability set, derived once. It gates every preload below and is handed to the client
+    // data source, so what the server reads and what the screen shows cannot disagree.
+    const capabilities = await getViewerTicketCapabilities(user.tenant);
+
+    // Gated reads the first paint awaits. A capability that is off never starts its loader.
+    const firstPaintPreloads = runGatedPreloads(capabilities, {
+      surveySummary: gatedPreload('survey', () => (isAlgaDesk ? Promise.resolve(null) : getSurveyTicketSummary(id)).catch((error) => {
+        console.error('[TicketDetailsPage] Failed to load survey summary', error);
+        return null;
+      }), null),
+    });
+
     // Everything the first paint needs, gathered in ONE parallel batch so the
     // client renders without any fetch-on-mount requests.
     const [
@@ -140,10 +157,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       tags,
     ] = await Promise.all([
       getConsolidatedTicketData(id),
-      (isAlgaDesk ? Promise.resolve(null) : getSurveyTicketSummary(id)).catch((error) => {
-        console.error('[TicketDetailsPage] Failed to load survey summary', error);
-        return null;
-      }),
+      firstPaintPreloads.surveySummary,
       getTicketLayoutPreference().catch(() => null),
       getTicketChecklistItems(id).catch(() => null),
       getTicketExternalLinks(id).catch(() => null),
@@ -172,6 +186,17 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     const commentIds = (ticketData.comments ?? [])
       .map((comment: { comment_id?: string | null }) => comment.comment_id)
       .filter((commentId: string | null | undefined): commentId is string => Boolean(commentId));
+    // Gated streams: declared with the capability that backs each, started only when it is on.
+    const streamPreloads = runGatedPreloads(capabilities, {
+      scheduleEntries: gatedPreload('scheduling', () => (isAlgaDesk ? Promise.resolve([]) : getTicketScheduleEntries(id))
+        .then((entries) => isReturnedActionError(entries) ? [] : entries)
+        .catch(() => []), [] as Awaited<StreamOf['scheduleEntries']>),
+      billingRollup: gatedPreload('billing', () => (isAlgaDesk ? Promise.resolve(null) : getTicketBillingRollup(id))
+        .then((rollup) => isReturnedActionError(rollup) ? null : rollup)
+        .catch(() => null), null as Awaited<StreamOf['billingRollup']>),
+      materials: gatedPreload('materials', () => listTicketMaterials(id).catch(() => []),
+        [] as Awaited<StreamOf['materials']>),
+    });
     const bootstrap: TicketScreenBootstrap = {
       layoutPreference: safeLayoutPreference,
       checklistItems,
@@ -194,21 +219,15 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
           ? getCommentsReactionsBatch(commentIds)
           : Promise.resolve({ reactions: {}, userNames: {} })
         ).catch(() => ({ reactions: {}, userNames: {} })),
-        scheduleEntries: (isAlgaDesk ? Promise.resolve([]) : getTicketScheduleEntries(id))
-          .then((entries) => isReturnedActionError(entries) ? [] : entries)
-          .catch(() => []),
+        ...streamPreloads,
         interactions: getTicketInteractions(id, { limit: 5 })
           .then((interactions) => isReturnedActionError(interactions) ? [] : interactions)
           .catch(() => []),
-        billingRollup: (isAlgaDesk ? Promise.resolve(null) : getTicketBillingRollup(id))
-          .then((rollup) => isReturnedActionError(rollup) ? null : rollup)
-          .catch(() => null),
         slaPolicyName: (ticketData.ticket?.sla_policy_id
           ? getTicketSlaPolicyName(id).then((result) => isReturnedActionError(result) ? null : result.policyName ?? null)
           : Promise.resolve(null)
         ).catch(() => null),
         timeEntries: fetchTimeEntriesForTicket(id).catch(() => null),
-        materials: listTicketMaterials(id).catch(() => []),
         adjacentTickets: getAdjacentTicketIds(
           id,
           returnFiltersParam ? parseReturnFilters(returnFiltersParam) : DEFAULT_TICKET_LIST_FILTERS,
@@ -244,6 +263,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     const coManaged = await isCoManagedWorkspace(workspaceKnex, user.tenant);
     const workspaceReadOnly = coManaged ? await getWorkspaceReadOnly() : false;
     const detailsClient = (
+      <TicketCapabilitiesProvider capabilities={capabilities}>
       <MspTicketDetailsContainerClient
         ticketData={ticketData as any}
         surveySummary={surveySummary ?? null}
@@ -252,6 +272,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
         bootstrap={bootstrap}
         linkedTasksStream={linkedTasksStream}
       />
+      </TicketCapabilitiesProvider>
     );
     const detailsContent = (
       <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
