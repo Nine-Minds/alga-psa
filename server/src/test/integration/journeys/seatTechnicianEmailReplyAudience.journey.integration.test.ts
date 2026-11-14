@@ -391,16 +391,17 @@ describe('journey: a seat technician replies by email to a ticket notification',
     expect(reply.thread_id).not.toBe(note.threadId);
   }, HOOK_TIMEOUT);
 
-  it('a reply to a ticket that has left the technician\'s scope is refused and stores nothing', async () => {
+  it('a reply to a ticket that has left the technician\'s scope is admitted as an external party and stored as requester, never shared IT', async () => {
     const ticket = await createTicket();
     const note = await agentNote(ticket.ticketId, 'Shared: escalating to the carrier.', { is_internal: true, collaboration_audience: 'shared_it' });
     const notification = await notificationTo(note.commentId);
-    const before = await t('comments').where({ ticket_id: ticket.ticketId }).where('is_system_generated', false).count<{ count: string }[]>('* as count');
 
     await t('co_managed_seat_board_scopes').where({ arrangement_id: arrangementId }).delete();
     const result = await technicianReply(ticket, notification, 'Any update from the carrier?');
-    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'reply_outside_sender_audience', ticketId: ticket.ticketId });
-    const after = await t('comments').where({ ticket_id: ticket.ticketId }).where('is_system_generated', false).count<{ count: string }[]>('* as count');
-    expect(Number(after[0].count)).toBe(Number(before[0].count));
+    expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token' });
+    const reply = await stored((result as { commentId: string }).commentId);
+    // Out of scope they are an external party: the reply is requester content in a thread of its own.
+    expect(reply).toMatchObject({ audience: 'requester', is_internal: false, parent_comment_id: null });
+    expect(reply.thread_id).not.toBe(note.threadId);
   }, HOOK_TIMEOUT);
 });

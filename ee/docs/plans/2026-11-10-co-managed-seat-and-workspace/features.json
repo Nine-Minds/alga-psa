@@ -658,7 +658,7 @@
   {
     "id": "F083",
     "description": "A seat technician can be added as a watcher on any ticket, like any other address. On a ticket outside their scope they are treated as an external party: they receive only requester-audience content in the client rendering, never MSP links, internal or private notes, and their email replies are stored as requester. On a ticket inside their scope they receive what their audience can see. A ticket moving into or out of their scope changes what an existing subscription delivers, from live rows at delivery time.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]

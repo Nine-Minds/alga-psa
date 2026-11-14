@@ -4,9 +4,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import {
-  addTicketWatcher, addTicketWatcherRecipients, setTicketWatcherActive, TicketWatcherError,
+  addTicketWatcher, addTicketWatcherRecipients, setTicketWatcherActive,
 } from '@alga-psa/shared/services/tickets/ticketWatcherService';
-import { resolveInboundReplyAudience, resolveTicketNotificationRecipient } from '@alga-psa/shared/lib/notificationAudience';
+import {
+  recipientInScope, recipientRendering, resolveInboundReplyAudience, resolveTicketNotificationRecipient,
+} from '@alga-psa/shared/lib/notificationAudience';
 import { registerCapabilityParticipation, serves } from '@alga-psa/core/capability';
 import { clearCapabilityCache } from '@alga-psa/core/capability/testing';
 
@@ -191,6 +193,15 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     scoped.table('comments').where({ comment_id: event.payload.comment.id }).update({ metadata: { ...extra, email_recipients: {
       cc: (recipients.cc ?? []).map(email => ({ email })), bcc: (recipients.bcc ?? []).map(email => ({ email })),
     } } });
+  /** What a message to an external party may be: requester-audience, client rendering, no MSP link. */
+  const expectExternalRendering = (mail: Sent, requesterText: string, forbidden: string[] = []) => {
+    const rendered = JSON.stringify(mail.context);
+    expect(rendered).toContain(requesterText);
+    expect(rendered).not.toContain('/msp/');
+    expect(rendered).toContain('/client-portal/tickets/');
+    for (const text of forbidden) expect(rendered).not.toContain(text);
+    expect(mail.replyContext?.tokenMetadata).toMatchObject({ notificationAudience: 'requester' });
+  };
   /** A second seat technician, of Client B, live and in scope there: out of scope on Client A's tickets. */
   async function withClientBSeat<T>(run: (seatB: { userId: string; email: string }) => Promise<T>): Promise<T> {
     const email = `seat.b.${uuidv4().slice(0, 6)}@client-b.example.com`;
@@ -209,13 +220,16 @@ describe('audience-safe notifications for a seat technician (integration)', () =
   }
 
   // Review reproduction (PR #4339): a Client A technician copied on another client's comment.
-  it.each(['cc', 'bcc'] as const)('an out-of-scope technician in %s is on no envelope, and everyone else is still mailed (F080)', async (kind) => {
+  it.each(['cc', 'bcc'] as const)('an out-of-scope technician in %s gets a message of their own, requester-only in the client rendering, and everyone else is still mailed (F080)', async (kind) => {
     const ticketId = await createTicket({ client_id: clientB, assigned_to: msp });
     const event = await requesterNote(ticketId, 'S33-OTHER-CLIENT-CONTENT');
     await copyTo(event, { [kind]: [OUTSIDER_EMAIL, SEAT_EMAIL] });
     await deliver(event);
 
-    expect(everyAddress()).not.toContain(SEAT_EMAIL);
+    // The technician is on exactly one message, alone, rendered as an external party.
+    const withSeat = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
+    expect(withSeat.map(addressesOf)).toEqual([[SEAT_EMAIL]]);
+    expectExternalRendering(withSeat[0], 'S33-OTHER-CLIENT-CONTENT');
     expect(await inAppFor(seat)).toEqual([]);
     // The requester's message is the one that went out, with the permitted copy still on it.
     const requesterMail = mailTo(CLIENT_EMAIL);
@@ -224,15 +238,17 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(JSON.stringify(requesterMail[0].context)).toContain('S33-OTHER-CLIENT-CONTENT');
   });
 
-  it('a mixed envelope: the shared message keeps permitted addresses, the in-scope technician gets their own, the out-of-scope one nothing', async () => {
+  it('a mixed envelope: the shared message keeps permitted addresses; each technician gets their own, the out-of-scope one as an external party', async () => {
     await withClientBSeat(async (seatB) => {
       const ticketId = await createTicket({ assigned_to: msp });
       const event = await requesterNote(ticketId, 'PUBLIC-COPIED-UPDATE');
       await copyTo(event, { cc: [OUTSIDER_EMAIL, SEAT_EMAIL], bcc: [seatB.email, 'auditor@elsewhere.example.com'] });
       await deliver(event);
 
-      // Client B's technician is refused everywhere.
-      expect(everyAddress()).not.toContain(seatB.email);
+      // Client B's technician is an external party on this ticket: a message of their own, requester content.
+      const withSeatB = sent.filter(mail => addressesOf(mail).includes(seatB.email));
+      expect(withSeatB.map(addressesOf)).toEqual([[seatB.email]]);
+      expectExternalRendering(withSeatB[0], 'PUBLIC-COPIED-UPDATE');
       // The shared message: the requester, with the non-technician Cc and Bcc and nobody else.
       const requesterMail = mailTo(CLIENT_EMAIL);
       expect(requesterMail).toHaveLength(1);
@@ -259,7 +275,7 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     for (const mail of sent) expect(mail.replyContext?.tokenMetadata).toBeUndefined();
   });
 
-  it('the Cc/Bcc fallback: a refused technician carrying the To does not hold back the other copied addresses', async () => {
+  it('the Cc/Bcc fallback: an out-of-scope technician carrying the To does not hold back the other copied addresses', async () => {
     await withClientBSeat(async (seatB) => {
       // No requester address, so the copied addresses are mailed directly and the first Cc carries the To.
       const locations = () => scoped.table('client_locations').where({ client_id: clientA });
@@ -270,7 +286,10 @@ describe('audience-safe notifications for a seat technician (integration)', () =
         await copyTo(event, { cc: [seatB.email, OUTSIDER_EMAIL, SEAT_EMAIL], bcc: ['auditor@elsewhere.example.com'] });
         await deliver(event, emailCommentAdded, null);
 
-        expect(everyAddress()).not.toContain(seatB.email);
+        // The out-of-scope technician carrying the To is mailed alone, as an external party.
+        const withSeatB = sent.filter(mail => addressesOf(mail).includes(seatB.email));
+        expect(withSeatB.map(addressesOf)).toEqual([[seatB.email]]);
+        expectExternalRendering(withSeatB[0], 'PUBLIC-FALLBACK');
         // The next permitted Cc takes the To; the Bcc stays with it.
         const shared = mailTo(OUTSIDER_EMAIL);
         expect(shared).toHaveLength(1);
@@ -280,12 +299,14 @@ describe('audience-safe notifications for a seat technician (integration)', () =
         expect(addressesOf(withSeat[0])).toEqual([SEAT_EMAIL]);
         expect(withSeat[0].replyContext?.tokenMetadata).toMatchObject({ notificationAudience: 'requester' });
 
-        // Bcc only, and the only address is a refused technician: nobody is mailed.
+        // Bcc only, and the only address is an out-of-scope technician: they are mailed alone, requester-only.
         sent.length = 0;
         const bccOnly = await requesterNote(ticketId, 'PUBLIC-FALLBACK-BCC');
         await copyTo(bccOnly, { bcc: [seatB.email] });
         await deliver(bccOnly, emailCommentAdded, null);
-        expect(everyAddress()).not.toContain(seatB.email);
+        const bccMail = sent.filter(mail => addressesOf(mail).includes(seatB.email));
+        expect(bccMail.map(addressesOf)).toEqual([[seatB.email]]);
+        expectExternalRendering(bccMail[0], 'PUBLIC-FALLBACK-BCC');
       } finally {
         await locations().update({ email: CLIENT_EMAIL });
       }
@@ -305,10 +326,14 @@ describe('audience-safe notifications for a seat technician (integration)', () =
       }));
     };
 
-    // Another client's ticket: the technician is on nothing, the requester and the Cc are mailed.
+    // Another client's ticket: the technician is an external party with a message of their own;
+    // the requester and the Cc are mailed as before.
     await close(clientB);
-    expect(everyAddress()).not.toContain(SEAT_EMAIL);
     expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
+    const external = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
+    expect(external.map(addressesOf)).toEqual([[SEAT_EMAIL]]);
+    expect(external[0].template).toBe('ticket-closed');
+    expect(JSON.stringify(external[0].context)).not.toContain('/msp/');
 
     // Their own client's ticket: one message of their own.
     await close(clientA);
@@ -328,8 +353,15 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(await resolve(inScope, { userId: seat })).toEqual({ seat: true, userId: seat, reader: { kind: 'seat', tenant, clientId: clientA } });
     // A watcher is only an address: the same technician is found by it, in any case.
     expect(await resolve(inScope, { email: SEAT_EMAIL.toUpperCase() })).toMatchObject({ seat: true, reader: { kind: 'seat' } });
-    expect(await resolve(otherBoard, { userId: seat })).toEqual({ seat: true, userId: seat, reader: null });
-    expect(await resolve(otherClient, { userId: seat })).toEqual({ seat: true, userId: seat, reader: null });
+    // Out of scope they are an external party: a requester reader, never null, never refused.
+    const external = { seat: true, userId: seat, reader: { kind: 'requester', tenant } };
+    expect(await resolve(otherBoard, { userId: seat })).toEqual(external);
+    expect(await resolve(otherClient, { userId: seat })).toEqual(external);
+    expect(recipientInScope(await resolve(inScope, { userId: seat }))).toBe(true);
+    expect(recipientRendering(await resolve(inScope, { userId: seat }))).toBe('msp');
+    expect(recipientInScope(await resolve(otherClient, { userId: seat }))).toBe(false);
+    expect(recipientRendering(await resolve(otherClient, { userId: seat }))).toBe('client');
+    expect(recipientRendering(await resolve(inScope, { userId: msp }))).toBe('msp');
     expect(await resolve(inScope, { userId: msp })).toEqual({ seat: false });
     expect(await resolve(otherClient, { email: 'someone@elsewhere.example.com' })).toEqual({ seat: false });
   });
@@ -418,7 +450,7 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(JSON.stringify(staffMail[0].context)).toContain('PRIVATE-RESOLUTION-COST');
   });
 
-  it('a ticket-level notification reaches the technician in scope and stops once the ticket leaves it (F083)', async () => {
+  it('a ticket-level notification reaches the technician in scope, and as an external party once the ticket leaves it (F083)', async () => {
     const ticketId = await createTicket({ assigned_to: seat });
     const assigned = () => ({
       id: uuidv4(), eventType: 'TICKET_ASSIGNED', timestamp: new Date().toISOString(),
@@ -427,65 +459,140 @@ describe('audience-safe notifications for a seat technician (integration)', () =
 
     await deliver(assigned(), emailAssigned, inAppAssigned);
     expect(mailTo(SEAT_EMAIL)).toHaveLength(1);
+    expect(JSON.stringify(mailTo(SEAT_EMAIL)[0].context)).toContain('/msp/');
     expect((await inAppFor(seat)).length).toBe(1);
 
-    // The board leaves the arrangement's scope: nothing more is delivered, with no cleanup.
+    // The board leaves the arrangement's scope: the same facts, now as an external party (no MSP link).
     sent.length = 0;
     await scoped.table('internal_notifications').delete();
     await scoped.table('co_managed_seat_board_scopes').where({ arrangement_id: arrangementId }).delete();
     await deliver(assigned(), emailAssigned, inAppAssigned);
-    expect(mailTo(SEAT_EMAIL)).toEqual([]);
-    expect(await inAppFor(seat)).toEqual([]);
+    expect(mailTo(SEAT_EMAIL)).toHaveLength(1);
+    expect(JSON.stringify(mailTo(SEAT_EMAIL)[0].context)).not.toContain('/msp/');
+    expect((await inAppFor(seat)).length).toBe(1);
   });
 
-  it('an existing watcher subscription stops delivering when the ticket leaves scope (F083)', async () => {
+  it('an existing watcher subscription is upgraded when the ticket moves into scope and downgraded when it moves out (F083)', async () => {
     const ticketId = await createTicket({ assigned_to: msp });
     await watch(ticketId, { user_id: seat });
 
-    // Watchers are mailed public comments.
+    // In scope: the MSP rendering.
     await deliver(await requesterNote(ticketId, 'PUBLIC-BEFORE-MOVE'));
     expect(mailTo(SEAT_EMAIL)).toHaveLength(1);
+    expect(JSON.stringify(mailTo(SEAT_EMAIL)[0].context)).toContain('/msp/');
 
-    // The ticket moves to a client the technician does not belong to. The watcher row stays.
+    // The ticket moves to a client the technician does not belong to. The same row now reads as
+    // an external party: requester content, client template and portal link, nothing private or shared.
     sent.length = 0;
     await scoped.table('tickets').where({ ticket_id: ticketId }).update({ client_id: clientB });
     await deliver(await requesterNote(ticketId, 'PUBLIC-AFTER-MOVE'));
-    expect(mailTo(SEAT_EMAIL)).toEqual([]);
+    expect(mailTo(SEAT_EMAIL)).toHaveLength(1);
+    expectExternalRendering(mailTo(SEAT_EMAIL)[0], 'PUBLIC-AFTER-MOVE');
+    expect(await inAppFor(seat)).toEqual([]);
     expect(mailTo(MSP_EMAIL)).toHaveLength(1); // the assignee, unaffected
+    expect(JSON.stringify(mailTo(MSP_EMAIL)[0].context)).toContain('/msp/');
     const rows = await scoped.table('ticket_watchers').where({ ticket_id: ticketId }).whereRaw('lower(email) = ?', [SEAT_EMAIL]);
     expect(rows).toHaveLength(1);
+
+    // Private notes are not sent to an external party, email or in-app.
+    sent.length = 0;
+    await deliver(await privateNote(ticketId, 'PRIVATE-WHILE-EXTERNAL', [seat]));
+    expect(mailTo(SEAT_EMAIL)).toEqual([]);
+    expect(await inAppFor(seat)).toEqual([]);
+
+    // Client changed back: the same subscription is upgraded again, with no re-subscribe.
+    sent.length = 0;
+    await scoped.table('tickets').where({ ticket_id: ticketId }).update({ client_id: clientA });
+    await deliver(await requesterNote(ticketId, 'PUBLIC-AFTER-RETURN'));
+    expect(mailTo(SEAT_EMAIL)).toHaveLength(1);
+    expect(JSON.stringify(mailTo(SEAT_EMAIL)[0].context)).toContain('/msp/');
+
+    // A board added to scope upgrades a ticket on a board that was outside it.
+    const otherBoard = await createTicket({ board_id: boardOut, assigned_to: msp });
+    await watch(otherBoard, { user_id: seat });
+    sent.length = 0;
+    await deliver(await requesterNote(otherBoard, 'PUBLIC-OTHER-BOARD'), emailCommentAdded, null);
+    expectExternalRendering(mailTo(SEAT_EMAIL)[0], 'PUBLIC-OTHER-BOARD');
+    await scoped.table('co_managed_seat_board_scopes').insert({ tenant, arrangement_id: arrangementId, board_id: boardOut, can_create: false });
+    sent.length = 0;
+    await deliver(await requesterNote(otherBoard, 'PUBLIC-BOARD-ADDED'), emailCommentAdded, null);
+    expect(JSON.stringify(mailTo(SEAT_EMAIL)[0].context)).toContain('/msp/');
   });
 
-  it('a technician cannot watch, or be added as a watcher on, an out-of-scope ticket (F083)', async () => {
+  it('a technician is admitted as a watcher on any ticket, and an out-of-scope one is an external party (F083)', async () => {
     const otherClient = await createTicket({ client_id: clientB, assigned_to: msp });
     const otherBoard = await createTicket({ board_id: boardOut, assigned_to: msp });
     const inScope = await createTicket({ assigned_to: msp });
 
     for (const ticketId of [otherClient, otherBoard]) {
       for (const input of [{ user_id: seat }, { email: SEAT_EMAIL }]) {
-        const refusal = await watch(ticketId, input).catch((error) => error);
-        expect(refusal).toBeInstanceOf(TicketWatcherError);
-        expect(refusal.kind).toBe('watcher_out_of_scope');
+        const added = await watch(ticketId, input);
+        expect(added.watchers.map((watcher) => watcher.email)).toContain(SEAT_EMAIL);
       }
-      // A batch (inbound mail, board defaults, team expansion) leaves the technician out and keeps the rest.
+      const rows = await scoped.table('ticket_watchers').where({ ticket_id: ticketId }).whereRaw('lower(email) = ?', [SEAT_EMAIL]);
+      expect(rows).toHaveLength(1);
+      // A batch (inbound mail, board defaults, team expansion) includes them.
+      await scoped.table('ticket_watchers').where({ ticket_id: ticketId }).whereRaw('lower(email) = ?', [SEAT_EMAIL]).delete();
       const batch = await testDb.transaction((trx) => addTicketWatcherRecipients(trx, tenant, ticketId, [
         { email: SEAT_EMAIL, entity_type: 'user', entity_id: seat, source: 'board_default' },
         { email: MSP_EMAIL, entity_type: 'user', entity_id: msp, source: 'board_default' },
       ], author));
-      expect(batch.watchers.map((watcher) => watcher.email)).toEqual([MSP_EMAIL]);
-      const mirror = (await scoped.table('tickets').where({ ticket_id: ticketId }).first('attributes')).attributes;
-      expect(JSON.stringify(mirror)).not.toContain(SEAT_EMAIL);
+      expect(batch.watchers.map((watcher) => watcher.email).sort()).toEqual([MSP_EMAIL, SEAT_EMAIL].sort());
     }
 
-    // In scope it is an ordinary watcher.
+    // Out of scope: requester-audience client rendering only, for email and in-app.
+    sent.length = 0;
+    await deliver(await requesterNote(otherClient, 'PUBLIC-EXTERNAL-WATCH'), emailCommentAdded, inAppCommentAdded);
+    expect(mailTo(SEAT_EMAIL)).toHaveLength(1);
+    expectExternalRendering(mailTo(SEAT_EMAIL)[0], 'PUBLIC-EXTERNAL-WATCH');
+    for (const [kind, text] of [['private', 'PRIVATE-EXTERNAL-WATCH']] as const) {
+      sent.length = 0;
+      await scoped.table('internal_notifications').delete();
+      await deliver(await privateNote(otherClient, text, [seat]));
+      expect(JSON.stringify(sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL)))).not.toContain(text);
+      expect(mailTo(SEAT_EMAIL)).toEqual([]);
+      expect(await inAppFor(seat)).toEqual([]);
+    }
+
+    // In scope it is an ordinary watcher: the MSP rendering.
     expect((await watch(inScope, { user_id: seat })).watchers.map((watcher) => watcher.email)).toEqual([SEAT_EMAIL]);
-    // Paused, then the board leaves the scope: switching it back on is refused too.
+    sent.length = 0;
+    await deliver(await requesterNote(inScope, 'PUBLIC-IN-SCOPE-WATCH'), emailCommentAdded, null);
+    expect(JSON.stringify(mailTo(SEAT_EMAIL)[0].context)).toContain('PUBLIC-IN-SCOPE-WATCH');
+    expect(JSON.stringify(mailTo(SEAT_EMAIL)[0].context)).toContain('/msp/');
+
+    // Paused, then switched back on after the board leaves the scope: admitted, now external.
     await testDb.transaction((trx) => setTicketWatcherActive(trx, tenant, inScope, SEAT_EMAIL, false, author));
     await scoped.table('co_managed_seat_board_scopes').where({ arrangement_id: arrangementId }).delete();
-    const reactivation = await testDb.transaction((trx) => setTicketWatcherActive(trx, tenant, inScope, SEAT_EMAIL, true, author)).catch((error) => error);
-    expect(reactivation).toMatchObject({ kind: 'watcher_out_of_scope' });
-    // MSP staff are never refused.
-    expect((await watch(otherClient, { user_id: author })).changed).toBe(true);
+    const reactivation = await testDb.transaction((trx) => setTicketWatcherActive(trx, tenant, inScope, SEAT_EMAIL, true, author));
+    expect(reactivation.changed).toBe(true);
+  });
+
+  it('an out-of-scope technician\'s email reply is admitted and stored as requester, never shared IT (F083)', async () => {
+    const otherClient = await createTicket({ client_id: clientB, assigned_to: msp });
+    const external = { seat: true, author: { kind: 'requester', tenant }, audience: 'requester' };
+    for (const notificationAudience of [undefined, 'requester', 'shared_it', 'organization_private'] as const) {
+      expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: otherClient, userId: seat, notificationAudience }))
+        .toMatchObject(external);
+    }
+    // The comment writer accepts it: a seat technician user writing with a requester author.
+    const reply = await resolveInboundReplyAudience(testDb, tenant, { ticketId: otherClient, userId: seat, notificationAudience: 'shared_it' });
+    if (!reply.seat) throw new Error('expected a seat technician');
+    const created = await testDb.transaction((trx) => TicketModel.createComment({
+      ticket_id: otherClient, content: note('EXTERNAL-REPLY'), author_type: 'internal', author_id: seat,
+      is_internal: false, collaboration_audience: reply.audience, audience_author: reply.author,
+    } as any, tenant, trx));
+    const stored = await scoped.table('comments as c').join('comment_threads as t', function () {
+      this.on('c.thread_id', 't.thread_id').andOn('c.tenant', 't.tenant');
+    }).where('c.comment_id', created.comment_id).first({ is_internal: 'c.is_internal', audience: 't.collaboration_audience' });
+    expect(stored.is_internal).toBe(false);
+    expect(stored.audience === 'requester' || stored.audience === null).toBe(true);
+    // In scope is unchanged: shared IT notifications are answered as shared IT.
+    const inScope = await createTicket();
+    expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: inScope, userId: seat, notificationAudience: 'shared_it' }))
+      .toMatchObject({ seat: true, author: { kind: 'seat' }, audience: 'shared_it' });
+    expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: inScope, userId: seat, notificationAudience: 'organization_private' }))
+      .toMatchObject({ seat: true, audience: 'shared_it' });
   });
 
   it('an in-app notification that does not declare its audience is never created for a technician', async () => {
@@ -502,6 +609,15 @@ describe('audience-safe notifications for a seat technician (integration)', () =
       testDb, request(seat, { ticketAudience: { ticketId, audience: 'organization_private' } })))).toBeNull();
     expect(await runWithTenant(tenant, () => createNotificationFromTemplateInternal(
       testDb, request(seat, { ticketAudience: { ticketId, audience: 'requester' } })))).not.toBeNull();
+    // Out of scope they are an external party: requester notifications only.
+    const otherClient = await createTicket({ client_id: clientB });
+    expect(await runWithTenant(tenant, () => createNotificationFromTemplateInternal(testDb, request(seat)))).toBeNull();
+    for (const audience of ['shared_it', 'organization_private'] as const) {
+      expect(await runWithTenant(tenant, () => createNotificationFromTemplateInternal(
+        testDb, request(seat, { ticketAudience: { ticketId: otherClient, audience } })))).toBeNull();
+    }
+    expect(await runWithTenant(tenant, () => createNotificationFromTemplateInternal(
+      testDb, request(seat, { ticketAudience: { ticketId: otherClient, audience: 'requester' } })))).not.toBeNull();
     // MSP staff need no declaration.
     expect(await runWithTenant(tenant, () => createNotificationFromTemplateInternal(testDb, request(msp)))).not.toBeNull();
   });
@@ -573,26 +689,32 @@ describe('audience-safe notifications for a seat technician (integration)', () =
 
       const otherClient = await createTicket({ client_id: clientB, assigned_to: seat });
       const inScope = await createTicket({ assigned_to: seat });
-      expect(await resolveTicketNotificationRecipient(testDb, tenant, { ticketId: otherClient }, { userId: seat })).toEqual({ seat: true, userId: seat, reader: null });
+      expect(await resolveTicketNotificationRecipient(testDb, tenant, { ticketId: otherClient }, { userId: seat })).toEqual({ seat: true, userId: seat, reader: { kind: 'requester', tenant } });
 
-      // Email and in-app: nothing about another client's ticket, and no private note in scope.
+      // Email and in-app: only requester content about another client's ticket, as an external party, and no private note in scope.
       await deliver(await requesterNote(otherClient, 'OTHER-CLIENT-PUBLIC'));
       await deliver(await privateNote(inScope, 'PRIVATE-IN-SCOPE', [seat]));
-      expect(everyAddress()).not.toContain(SEAT_EMAIL);
-      expect(await inAppFor(seat)).toEqual([]);
+      const seatMails = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
+      expect(JSON.stringify(seatMails.map(mail => mail.context))).toContain('OTHER-CLIENT-PUBLIC');
+      expect(JSON.stringify(seatMails.map(mail => mail.context))).not.toContain('/msp/');
+      expect(JSON.stringify(seatMails.map(mail => mail.context))).not.toContain('PRIVATE-IN-SCOPE');
+      expect(JSON.stringify((await inAppFor(seat)).map(row => row.message))).not.toContain('PRIVATE-IN-SCOPE');
 
-      // The envelope: a copied technician is taken off another client's message.
+      // The envelope: a copied technician is taken off the shared message and mailed on their own.
       const copied = await createTicket({ client_id: clientB, assigned_to: msp });
       const event = await requesterNote(copied, 'OTHER-CLIENT-COPIED');
+      sent.length = 0;
       await copyTo(event, { cc: [SEAT_EMAIL], bcc: [OUTSIDER_EMAIL] });
       await deliver(event, emailCommentAdded, null);
-      expect(everyAddress()).not.toContain(SEAT_EMAIL);
+      expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
+      expect(sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL)).map(addressesOf)).toEqual([[SEAT_EMAIL]]);
 
-      // Watchers and inbound replies.
-      expect(await watch(otherClient, { user_id: seat }).catch((error) => error)).toMatchObject({ kind: 'watcher_out_of_scope' });
-      expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: otherClient, userId: seat })).toEqual({ seat: true, admitted: false });
+      // Watchers are admitted; inbound replies are admitted as requester out of scope, shared IT in scope.
+      expect((await watch(otherClient, { user_id: seat })).watchers.map((watcher) => watcher.email)).toEqual([SEAT_EMAIL]);
+      expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: otherClient, userId: seat }))
+        .toMatchObject({ seat: true, audience: 'requester', author: { kind: 'requester' } });
       expect(await resolveInboundReplyAudience(testDb, tenant, { ticketId: inScope, userId: seat, notificationAudience: 'shared_it' }))
-        .toMatchObject({ seat: true, admitted: true, audience: 'shared_it' });
+        .toMatchObject({ seat: true, audience: 'shared_it' });
     });
   });
 });

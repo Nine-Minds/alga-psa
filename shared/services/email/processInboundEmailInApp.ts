@@ -1378,7 +1378,7 @@ export async function processInboundEmailInApp(
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
 
     // Reply audience (S33). A seat technician's reply keeps the audience of the notification it
-    // answers; it is never stored for an out-of-scope ticket. A token that recorded a narrower
+    // answers; out of scope they are an external party, so it is stored as `requester`. A token that recorded a narrower
     // audience than `requester` was sent to a seat technician, so a reply to it from a sender
     // not attributed to an internal user is refused rather than retargeted to a public thread.
     const refuseReplyOutsideAudience = () => {
@@ -1405,11 +1405,10 @@ export async function processInboundEmailInApp(
           notificationAudience: params.notificationAudience,
         }))
       : null;
-    if (replyAudience?.seat && !replyAudience.admitted) return refuseReplyOutsideAudience();
     if (!matchedSenderIsInternalUser && params.notificationAudience && params.notificationAudience !== 'requester') {
       return refuseReplyOutsideAudience();
     }
-    const seatReply = replyAudience?.seat && replyAudience.admitted ? replyAudience : null;
+    const seatReply = replyAudience?.seat ? replyAudience : null;
 
     let policyContext: InboundReplyReopenPolicyContext | null = null;
     try {

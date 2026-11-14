@@ -21,7 +21,10 @@ import {
  *   - the reader is `seat` only while the ticket is IN SCOPE: their assignment and arrangement are
  *     live, the ticket belongs to their client and its board is in the arrangement's board scope;
  *   - anything else (assignment not live, other client, board out of scope, ticket unreadable)
- *     is `null`, which every predicate treats as "sees nothing".
+ *     reads as an EXTERNAL party: a `requester` reader. They are never refused, on any ticket
+ *     (a watcher, a Cc, a reply), but they are told only what a requester is told, in the client
+ *     rendering and with the portal link (`recipientRendering`), and their replies are stored
+ *     as `requester`.
  *
  * Scope is evaluated at delivery time, from rows. A subscription made while a ticket was in scope
  * therefore stops delivering the moment the ticket leaves it; nothing has to be cleaned up.
@@ -36,7 +39,7 @@ import {
  */
 export type TicketNotificationRecipient =
   | { seat: false }
-  | { seat: true; userId: string; reader: CommentAudienceReader | null };
+  | { seat: true; userId: string; reader: Extract<CommentAudienceReader, { kind: 'seat' | 'requester' }> };
 
 const NOT_SEAT: TicketNotificationRecipient = { seat: false };
 
@@ -142,8 +145,9 @@ export async function resolveTicketNotificationRecipients(
     const email = normalizeEmail(recipient.email);
     const seat = (recipient.userId ? byUser.get(recipient.userId) : undefined) ?? (email ? byEmail.get(email) : undefined);
     if (!seat) return NOT_SEAT;
-    const reader: CommentAudienceReader | null = seat.arrangement_id && inScope.has(seat.arrangement_id) && seat.client_id
-      ? { kind: 'seat', tenant, clientId: seat.client_id } : null;
+    const reader: Extract<CommentAudienceReader, { kind: 'seat' | 'requester' }> =
+      seat.arrangement_id && inScope.has(seat.arrangement_id) && seat.client_id
+        ? { kind: 'seat', tenant, clientId: seat.client_id } : { kind: 'requester', tenant };
     return { seat: true, userId: seat.user_id, reader };
   });
 }
@@ -239,9 +243,10 @@ async function readTicketOrganization(
 /**
  * May this recipient be told something of `audience` about the ticket they were resolved for?
  *
- * Not a seat technician: always, the caller's existing rules stand. A seat technician: only in
- * scope, and only what `isCommentAudienceVisible` shows their organization. A message that does
- * not say what it carries (`audience` missing) is never sent to them.
+ * Not a seat technician: always, the caller's existing rules stand. A seat technician: only what
+ * `isCommentAudienceVisible` shows their reader (their client's `shared_it` too while in scope,
+ * `requester` only as an external party). A message that does not say what it carries
+ * (`audience` missing) is never sent to them.
  *
  * Ticket-level facts (title, status, assignment) are `requester`: everyone admitted to the ticket.
  */
@@ -251,13 +256,27 @@ export function recipientMayReceive(
 ): boolean {
   if (!recipient.seat) return true;
   const reader = recipient.reader;
-  if (!reader || reader.kind !== 'seat' || !isCommentAudience(audience)) return false;
-  return isCommentAudienceVisible(audience, { tenant: reader.tenant, clientId: reader.clientId }, reader);
+  if (!isCommentAudience(audience)) return false;
+  return isCommentAudienceVisible(
+    audience, { tenant: reader.tenant, clientId: reader.kind === 'seat' ? reader.clientId : null }, reader);
 }
 
-/** Is the ticket in this recipient's scope at all? True for everyone who is not a seat technician. */
+/**
+ * Is the ticket in this recipient's scope? True for everyone who is not a seat technician and for
+ * a seat technician whose reader is `seat`. False for the one who is an external party here. It
+ * does NOT mean "may receive requester content": everyone may, an external party included.
+ */
 export function recipientInScope(recipient: TicketNotificationRecipient): boolean {
-  return recipientMayReceive(recipient, 'requester');
+  return !recipient.seat || recipient.reader.kind === 'seat';
+}
+
+/**
+ * Which rendering of a ticket message this recipient gets: `msp` (MSP link, internal-user
+ * template) or `client` (portal link, client template). An out-of-scope seat technician is an
+ * external party and gets `client`; everyone else keeps `msp` or `client` by their own type.
+ */
+export function recipientRendering(recipient: TicketNotificationRecipient): 'msp' | 'client' {
+  return recipientInScope(recipient) ? 'msp' : 'client';
 }
 
 /** An audience known now, or read only if a seat technician turns out to be among the recipients. */
@@ -284,14 +303,14 @@ export const TICKET_FACTS_AUDIENCE: ReadonlyArray<AudienceContent<never>> = [{ a
  *
  * Not a seat technician: `{ admitted: true }` with no selection and no audience read, so the
  * caller sends what it built. A seat technician gets the first rendering their audience admits,
- * or is not admitted. A message that declares no rendering is never sent to them.
+ * or is not admitted (an external party's reader admits `requester` only). A message that
+ * declares no rendering is never sent to them.
  */
 export async function selectAudienceContent<T>(
   recipient: TicketNotificationRecipient,
   renderings: ReadonlyArray<AudienceContent<T>> | null | undefined,
 ): Promise<{ admitted: false } | { admitted: true; selected?: { audience: CommentAudience; content?: T } }> {
   if (!recipient.seat) return { admitted: true };
-  if (!recipientInScope(recipient)) return { admitted: false };
   for (const rendering of renderings ?? []) {
     const audience = typeof rendering.audience === 'function' ? await rendering.audience() : rendering.audience;
     if (recipientMayReceive(recipient, audience)) return { admitted: true, selected: { audience, content: rendering.content } };
@@ -345,14 +364,13 @@ export function readNotificationAudience(tokenMetadata: unknown): CommentAudienc
 export type InboundReplyAudience =
   /** Not a seat technician: the native reply rules stand. */
   | { seat: false }
-  /** A seat technician with no access to this ticket: nothing is stored. */
-  | { seat: true; admitted: false }
   /**
-   * A seat technician, in scope. The reply is stored with `audience`, written as `author`. It
+   * A seat technician. In scope the reply is written as a `seat` author; out of scope as an
+   * external `requester` author, with `requester` audience. The reply is stored with `audience`, written as `author`. It
    * joins the thread it answers only while that thread still has this audience; otherwise it
    * starts a new thread, so a later audience change never widens what the technician wrote.
    */
-  | { seat: true; admitted: true; author: CommentAudienceReader; audience: CommentAudience; joinThread: boolean };
+  | { seat: true; author: CommentAudienceReader; audience: CommentAudience; joinThread: boolean };
 
 /**
  * The audience of a seat technician's email reply: the audience of the notification they answered.
@@ -362,8 +380,9 @@ export type InboundReplyAudience =
  *     the audience of the thread it answers; with no thread it is a new `requester` comment, as
  *     an email reply to a ticket has always been.
  *   - An audience the technician may not write (a private or legacy internal thread they were
- *     never notified of) is never used: the reply becomes a new `shared_it` thread, the narrowest
- *     audience their organization has.
+ *     never notified of) is never used: in scope the reply becomes a new `shared_it` thread, the
+ *     narrowest audience their organization has; as an external party it becomes a new `requester`
+ *     one. A reply is never refused.
  *
  * The write itself is still decided by `assertCommentWriteAudience` in the comment writer; this
  * only chooses what to ask it for.
@@ -375,8 +394,6 @@ export async function resolveInboundReplyAudience(
 ): Promise<InboundReplyAudience> {
   const recipient = await resolveTicketNotificationRecipient(trx, tenant, { ticketId: input.ticketId }, { userId: input.userId });
   if (!recipient.seat) return { seat: false };
-  if (!recipient.reader || !recipientInScope(recipient)) return { seat: true, admitted: false };
-
   let threadAudience: CommentAudience | null = null;
   if (input.threadId) {
     const db = tenantDb(trx, tenant);
@@ -394,6 +411,6 @@ export async function resolveInboundReplyAudience(
   }
 
   const intended = input.notificationAudience ?? threadAudience ?? 'requester';
-  const audience = recipientMayReceive(recipient, intended) ? intended : 'shared_it';
-  return { seat: true, admitted: true, author: recipient.reader, audience, joinThread: threadAudience === audience };
+  const audience = recipientMayReceive(recipient, intended) ? intended : recipientInScope(recipient) ? 'shared_it' : 'requester';
+  return { seat: true, author: recipient.reader, audience, joinThread: threadAudience === audience };
 }

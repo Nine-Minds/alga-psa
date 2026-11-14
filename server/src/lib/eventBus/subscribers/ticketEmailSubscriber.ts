@@ -64,6 +64,7 @@ import {
   readTicketCommentAudience,
   planTicketEnvelope,
   selectAudienceContent,
+  recipientRendering,
   type AudienceContent,
   type TicketNotificationRecipient,
 } from '@shared/lib/notificationAudience';
@@ -688,10 +689,29 @@ async function sendTicketEmailMessage(
       });
       return false;
     }
+    // An external party (a seat technician outside the ticket's scope) is never handed the MSP
+    // link, whichever path built the message (watcher, assignee, agent): it is swapped for the
+    // portal link here, where every recipient passes.
+    const externalTicketId = recipientRendering(recipient) === 'client' && recipient.seat
+      ? params.replyContext?.ticketId : undefined;
+    const externalLinks = externalTicketId ? await resolveTicketLinks(knex, params.tenantId, externalTicketId) : null;
+    const toPortal = <V,>(value: V): V => {
+      if (!externalLinks) return value;
+      const swap = (node: unknown): unknown => {
+        if (typeof node === 'string') return node.split(externalLinks.internalUrl).join(externalLinks.portalUrl);
+        if (Array.isArray(node)) return node.map(swap);
+        if (node && typeof node === 'object') {
+          return Object.fromEntries(Object.entries(node as Record<string, unknown>).map(([k, v]) => [k, swap(v)]));
+        }
+        return node;
+      };
+      return swap(value) as V;
+    };
+    if (externalLinks) params = { ...params, context: toPortal(params.context) };
     if (admission.selected) {
       params = {
         ...params,
-        context: admission.selected.content ?? params.context,
+        context: toPortal(admission.selected.content ?? params.context),
         ...(params.replyContext ? {
           replyContext: {
             ...params.replyContext,
@@ -1360,10 +1380,12 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         { excludeUserIds: [ticket.assigned_to, creatorUserId] }
       );
       if (resolved.length > 0) {
+        // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
         const internalWatchers = await resolveInternalWatcherEmails(
           db,
           tenantId,
-          extractActiveWatcherEmails(ticket.attributes)
+          extractActiveWatcherEmails(ticket.attributes),
+          { ticketId: payload.ticketId }
         );
         const notWatchers = resolved.filter(
           (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
@@ -1515,7 +1537,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       });
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -1589,7 +1612,8 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
 
     // Active watchers already follow the ticket and get the standard update emails.
     const watcherEmails = extractActiveWatcherEmails(ticket.attributes);
-    const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails, { ticketId: payload.ticketId });
     const notWatchers = resolved.filter(
       (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
     );
@@ -2007,7 +2031,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -2431,7 +2456,8 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -3459,7 +3485,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         }
       }
 
-      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+      // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
       await sendOneEmailPerWatcher(
         activeWatcherEmails,
         async (watcherEmail) => {
@@ -4026,7 +4053,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
