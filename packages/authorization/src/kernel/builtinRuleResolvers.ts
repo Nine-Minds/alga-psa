@@ -49,6 +49,20 @@ export interface BuiltinResolverFactSource {
   subjectFacts(knex: Knex | Knex.Transaction, subject: Pick<AuthorizationSubject, 'tenant' | 'userId'>): Knex.QueryBuilder;
 }
 
+/**
+ * A class of subjects that is a kind of principal in its own right, not only a narrowing of rules: its members
+ * see their own product surface (routes, menu, server-action guards) and may or may not hold API credentials.
+ * The surface itself is data in the product surface registry, keyed by `kind`; this declaration is only the
+ * link from "this subject is in the resolver's class" to that key, so the registry never imports the package
+ * that owns the class.
+ */
+export interface BuiltinResolverPrincipalKind {
+  /** Key of the surface the registry holds for the kind. */
+  kind: string;
+  /** Whether a member may be issued or authenticate with an API key, REST or MCP. */
+  apiCredentials: 'allowed' | 'refused';
+}
+
 export interface BuiltinRuleResolver {
   /** Unique, stable id. Appears as the `sourceId` of every reason the resolver produces. */
   id: string;
@@ -62,6 +76,8 @@ export interface BuiltinRuleResolver {
    * the resource/action): the SQL path calls it with a record-less input.
    */
   appliesTo(input: AuthorizationEvaluationInput): boolean;
+  /** Set when the class is a kind of principal with its own surface. Absent for a resolver that only narrows rules. */
+  principalKind?: BuiltinResolverPrincipalKind;
   /** Per-request facts the class or the rules are derived from. Absent for a resolver that needs only the subject. */
   facts?: BuiltinResolverFactSource;
   /** Rules for a subject in the class. Not called for subjects outside it. */
@@ -107,6 +123,22 @@ export function builtinResolverFactSources(): Array<{ id: string; facts: Builtin
     .filter((resolver): resolver is BuiltinRuleResolver & { facts: BuiltinResolverFactSource } => Boolean(resolver.facts))
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     .map((resolver) => ({ id: resolver.id, facts: resolver.facts }));
+}
+
+/** Registered resolvers that declare a principal kind, in id order. */
+export function builtinPrincipalKindResolvers(): Array<BuiltinRuleResolver & { principalKind: BuiltinResolverPrincipalKind }> {
+  return [...store().values()]
+    .filter((resolver): resolver is BuiltinRuleResolver & { principalKind: BuiltinResolverPrincipalKind } => Boolean(resolver.principalKind))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/**
+ * The principal kind of a subject, from the facts it already carries; null for an ordinary principal. Pure: no
+ * statement is issued. The first kind in resolver id order wins, so the answer cannot depend on load order.
+ */
+export function principalKindOfSubject(subject: AuthorizationSubject): BuiltinResolverPrincipalKind | null {
+  const input = { subject, resource: { type: '', action: '' } } as AuthorizationEvaluationInput;
+  return builtinPrincipalKindResolvers().find((resolver) => resolver.appliesTo(input))?.principalKind ?? null;
 }
 
 /** Whether some registered resolver has no fact source, so nothing can say a tenant has none of its subjects. */

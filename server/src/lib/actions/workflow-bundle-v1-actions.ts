@@ -29,7 +29,7 @@ const requireWorkflowPermission = async (
 };
 
 export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
-  await assertPsaOnlyTenantAccess(tenant, 'workflow_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'workflow_actions');
   const parsed = WorkflowIdInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
@@ -37,7 +37,7 @@ export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, in
 });
 
 export const importWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
-  await assertPsaOnlyTenantAccess(tenant, 'workflow_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'workflow_actions');
   const parsed = z.object({ bundle: z.unknown(), force: z.boolean().optional() }).parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
