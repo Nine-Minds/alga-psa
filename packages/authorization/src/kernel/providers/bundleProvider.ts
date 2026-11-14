@@ -33,6 +33,7 @@ export interface BundleNarrowingRule {
   redactedFields?: string[];
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
+  selectedRecordIds?: string[];
 }
 
 export interface BundleProviderConfig {
@@ -71,6 +72,8 @@ export function evaluateTemplateForRule(
       rule.templateKey === 'selected_clients' ? (rule.selectedClientIds ?? []) : input.selectedClientIds,
     selectedBoardIds:
       rule.templateKey === 'selected_boards' ? (rule.selectedBoardIds ?? []) : input.selectedBoardIds,
+    selectedRecordIds:
+      rule.templateKey === 'selected_records' ? (rule.selectedRecordIds ?? []) : input.selectedRecordIds,
   };
 
   return evaluateRelationshipTemplate(rule.templateKey as RelationshipTemplateKey, ruleScopedInput);

@@ -479,6 +479,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_seat_board_scopes',
   'co_managed_seat_project_grants',
   'co_managed_seat_assignments',
+  'authorization_resolver_subjects',
   'co_managed_seat_arrangements',
   'co_managed_allocations',
   'co_managed_relationship_closures',
