@@ -38,7 +38,9 @@ describe('asset group surfaces', () => {
   it('T107: an ungrouped asset gets Add to group in the Related assets tile', () => {
     const text = source('packages/assets/src/components/AssetBentoLayout.tsx');
 
-    expect(text).toMatch(/\{!asset\.group \?[\s\S]{0,300}id="asset-bento-add-to-group"/);
+    // Grouping is a write: a read-only surface (a seat technician's device) does not offer it.
+    expect(text).toMatch(/\{!asset\.group && canUpdate \?[\s\S]{0,300}id="asset-bento-add-to-group"/);
+    expect(text).toContain('const { canUpdate, readOnly } = useAssetSurfaceControls();');
     expect(text).toContain("t('assetGroups.actions.addToGroup'");
   });
 
