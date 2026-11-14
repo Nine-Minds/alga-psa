@@ -2506,7 +2506,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('category_name', 'asc'),
       
       // Assignee and user options are internal staff only: a portal (client) user is never a valid assignee,
-      // A seat technician is offered the people projection instead of the
+      // for any client, whoever is asking. A seat technician is offered the people projection instead of the
       // tenant's staff (MSP staff by name only, and the technicians of their own client).
       seatAssignees
         ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
