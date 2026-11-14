@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import BulkBundleDialog from './BulkBundleDialog';
-import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters, ITicketListViewSummary } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
@@ -149,6 +149,7 @@ import {
   buildBoardSelectionFilterUpdate,
   resolveActiveBoardId,
   buildBoardTabs,
+  type BoardTabDescriptor,
 } from '../lib/boardTabs';
 import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 import { useTicketsRouteState } from './TicketsRouteProvider';
@@ -184,6 +185,8 @@ interface TicketingDashboardProps {
   clientTagDefinitions?: ITag[];
   initialUsers?: IUser[];
   totalCount: number;
+  /** Named views of the list (with their counts) the server offers this caller. Absent for callers with none. */
+  namedViews?: ITicketListViewSummary[];
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -338,6 +341,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTags = [],
   initialUsers = [],
   totalCount,
+  namedViews,
   currentPage,
   pageSize,
   onPageChange,
@@ -914,6 +918,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   );
   const activeBoardTabId = boardTabId(selectedBoard);
 
+  // Named views the server offers this caller (a seat technician's Client IT / With MSP / Unassigned / All).
+  // They are a second face on the list's own `listView` filter: one tab is "this key is set", and the
+  // count on it is the number of rows that filter returns, computed by the server in the same pass.
+  const listViewTabs = useMemo(
+    () => (namedViews ?? []).map((view): BoardTabDescriptor => ({
+      id: view.key,
+      boardId: null,
+      label: t(view.labelKey, view.defaultLabel),
+      openTicketCount: view.count,
+      isInactive: false,
+    })),
+    [namedViews, t]
+  );
+  const activeListViewKey = namedViews?.find((view) => view.key === filterValues.listView)?.key
+    ?? namedViews?.find((view) => view.key === 'all')?.key
+    ?? namedViews?.[0]?.key
+    ?? '';
+  const handleListViewSelect = useCallback((key: string) => {
+    if (key === activeListViewKey) return;
+    onFilterChange({ listView: key }, { pushHistory: true });
+  }, [activeListViewKey, onFilterChange]);
+
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
     const params = new URLSearchParams();
@@ -961,6 +987,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.bundleView && f.bundleView !== 'bundled') {
       params.set('bundleView', f.bundleView);
     }
+    if (f.listView) params.set('listView', f.listView);
     if (f.responseState && f.responseState !== 'all') {
       params.set('responseState', f.responseState);
     }
@@ -2464,6 +2491,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
       />
+      {listViewTabs.length > 0 && (
+        <>
+          <BoardTabStrip
+            id={`${id}-list-view-tabs`}
+            tabs={listViewTabs}
+            value={activeListViewKey}
+            onChange={handleListViewSelect}
+          />
+          {totalCount === 0 && !isLoadingMore && (
+            <p id={`${id}-list-view-empty`} className="px-1 py-2 text-sm text-[rgb(var(--color-text-500))]">
+              {t('dashboard.seatViews.empty', {
+                view: t(
+                  namedViews?.find((view) => view.key === activeListViewKey)?.labelKey ?? 'dashboard.seatViews.all',
+                  namedViews?.find((view) => view.key === activeListViewKey)?.defaultLabel ?? 'All',
+                ),
+                defaultValue: 'No tickets in {{view}} right now.',
+              })}
+            </p>
+          )}
+        </>
+      )}
       {listCallout}
       <ListCard>
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a

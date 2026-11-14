@@ -189,5 +189,6 @@ export const ticketListFiltersSchema = z.object({
   sortBy: z.enum(TICKET_LIST_SORT_KEYS).optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
   bundleView: z.enum(['bundled', 'individual']).optional(),
+  listView: z.string().max(64).optional(),
   where: ticketWhereSchema.optional(),
 });
