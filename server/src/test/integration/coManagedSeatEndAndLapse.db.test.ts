@@ -17,6 +17,8 @@ import {
   createCoManagedSeatArrangement, endCoManagedSeatArrangement, handCoManagedSeatTicketToClientIt, inviteCoManagedSeatTechnician,
   previewCoManagedSeatArrangementEnd, readCoManagedSeatTicketWork, setCoManagedSeatBoardScope,
 } from '@alga-psa/co-managed';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { registerCoManagedSeatWriteAdmission } from '@alga-psa/co-managed/seatWriteAdmission';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
@@ -54,8 +56,12 @@ describeDb('ending a seat arrangement and lapse', { shuffle: false }, () => {
 
   const seat = async (tenant: string, arrangementId: string, state: 'active' | 'revoked' = 'active') => {
     const userId = await createUser(db, tenant, { user_type: 'internal' });
-    await db('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId,
-      user_id: userId, state, revoked_at: state === 'revoked' ? new Date() : null });
+    // As the invitation flow does: membership is retained in the same transaction that binds the user.
+    await db.transaction(async (trx) => {
+      await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await trx('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId,
+        user_id: userId, state, revoked_at: state === 'revoked' ? new Date() : null });
+    });
     return userId;
   };
   const ticket = async (w: World, assignedTo: string | null = null) => {
