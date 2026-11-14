@@ -144,6 +144,8 @@ export * from './seatArrangement';
 export * from './seatRole';
 // Seat shape (S7): inviting a technician against the arrangement's allocation.
 export * from './seatInvitation';
+// Seat shape (S38): ending an arrangement.
+export * from './seatArrangementEnd';
 // Seat shape (S23): ticket responsibility and the handoff in each direction.
 export * from './seatTicketHandoff';
 // Seat shape (S32): who a handoff and a shared IT note notify.

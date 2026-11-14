@@ -64,5 +64,22 @@
     },
     "retentionFailuresHeading": "Niezachowane załączniki",
     "retentionFailed": "Załącznik nie został zachowany: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "Zakończyć umowę stanowisk dla {{name}}?",
+    "intro": "Zakończenie obowiązuje od następnego żądania każdego technika i nie można go tutaj cofnąć.",
+    "effectTechnicians": "Dezaktywowani technicy: {{count}}",
+    "effectInvitations": "Wycofane oczekujące zaproszenia: {{count}}",
+    "effectTickets": "Zgłoszenia zwrócone do Twojego zespołu: {{count}}",
+    "effectSeats": "Stanowiska zwolnione do puli: {{count}}",
+    "effectNotes": "Wspólne notatki pozostają czytelne dla Twojego personelu.",
+    "confirm": "Zakończ umowę",
+    "cancel": "Anuluj",
+    "start": "Zakończ umowę stanowisk",
+    "done": "Umowa stanowisk została zakończona.",
+    "errorDenied": "Nie masz uprawnień do zakończenia tej umowy.",
+    "errorNotFound": "Nie znaleziono tej umowy.",
+    "errorGeneric": "Nie można przetworzyć żądania.",
+    "loading": "Ładowanie…"
   }
 }

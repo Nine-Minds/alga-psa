@@ -31,6 +31,8 @@ import { CO_MANAGED_CAPABILITY } from './permissionsCapability';
 // The seat shape's capability registers with the same import, so every host that registers
 // `co-managed` (server entry, Temporal worker) registers `co-managed-seat` too.
 import './seatCapability';
+// The seat technician's principal-level write gate registers with the same import.
+import './seatWriteAdmission';
 
 const READ_REASON = 'co-managed capability resolver: pre-tenant-context participation read, filtered by tenant ids';
 
