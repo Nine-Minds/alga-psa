@@ -10,6 +10,7 @@ describe('date trigger designer payload schemas', () => {
       'contract.end': 'payload.ContractEndDate.v1',
       'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
       'asset.maintenance_due': 'payload.AssetMaintenanceDue.v1',
+      'ticket.due_date': 'payload.TicketDueDate.v1',
       'ticket.status_age': 'payload.TicketStatusAge.v1',
     });
   });

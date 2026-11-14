@@ -126,9 +126,10 @@ export async function launchDateTriggeredWorkflows(params: {
     const { fromDate, toDate } = getDateTriggerOccurrenceRange(workflowToday, offsetDays);
     let occurrences: Awaited<ReturnType<DateTriggerSource['findOccurrences']>>;
     try {
+      const scanContext = { params: sourceParams, today: workflowToday, timezone: localTimezone, now: params.now };
       occurrences = isCondition
-        ? await source.findOccurrences(params.knex, params.tenantId, workflowToday, workflowToday, { params: sourceParams, today: workflowToday, timezone: localTimezone })
-        : await source.findOccurrences(params.knex, params.tenantId, fromDate, toDate);
+        ? await source.findOccurrences(params.knex, params.tenantId, workflowToday, workflowToday, scanContext)
+        : await source.findOccurrences(params.knex, params.tenantId, fromDate, toDate, scanContext);
     } catch (error) {
       logger.error('Failed to query date-trigger source', { tenantId: params.tenantId, workflowId: workflow.workflow_id, source: trigger.source, entityId: null, error });
       continue;

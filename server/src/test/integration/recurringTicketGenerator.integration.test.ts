@@ -172,6 +172,7 @@ describe('recurring ticket generator (integration)', () => {
     expect(summary).toMatchObject({ definitions: 1, definitionClients: 1, created: 1, failed: 0, missed: 0 });
 
     const [occurrence] = await occurrences(f, definitionClientId);
+    const occurrenceDateText = (await db.raw('SELECT occurrence_date::text AS d FROM recurring_ticket_occurrences WHERE tenant = ? AND occurrence_id = ?', [f.tenant, occurrence.occurrence_id])).rows[0].d;
     expect(occurrence.status).toBe('created');
     expect(occurrence.attempts).toBe(1);
     expect(occurrence.ticket_id).toBeTruthy();
@@ -198,6 +199,14 @@ describe('recurring ticket generator (integration)', () => {
       tenantId: f.tenant,
       ticketId: occurrence.ticket_id,
       suppressContactNotifications: true,
+      // Provenance for workflows: origin, due date and the schedule ids handed down by the generator.
+      ticketOrigin: 'recurring',
+      dueDate: new Date(occurrence.due_at).toISOString(),
+      recurrence: {
+        definitionId: occurrence.definition_id,
+        occurrenceId: occurrence.occurrence_id,
+        occurrenceDate: occurrenceDateText,
+      },
     });
     expect(created[0].payload.userId).toBeUndefined();
 

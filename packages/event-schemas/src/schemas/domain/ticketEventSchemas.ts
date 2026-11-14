@@ -5,6 +5,7 @@ import {
   BaseDomainEventPayloadSchema,
   changesSchema,
   entityIdSchema,
+  ticketRecurrenceSchema,
   updatedFieldsSchema,
   uuidSchema,
 } from './commonEventPayloadSchemas';
@@ -55,6 +56,11 @@ export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   changes: changesSchema,
   externalLinks: z.array(z.record(z.string(), z.unknown())).optional()
     .describe('Ticket-level external links created with the ticket'),
+  dueDate: z.string().datetime({ offset: true }).nullable().optional()
+    .describe('Ticket due date (ISO 8601 instant); null when the ticket has none'),
+  ticketOrigin: z.enum(['internal', 'client_portal', 'inbound_email', 'api', 'recurring']).or(z.string()).optional()
+    .describe('Where the ticket came from (internal, client_portal, inbound_email, api, recurring)'),
+  recurrence: ticketRecurrenceSchema.optional(),
   ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_CREATED');
 
