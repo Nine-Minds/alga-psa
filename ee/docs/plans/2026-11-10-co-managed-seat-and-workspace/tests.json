@@ -165,7 +165,7 @@
   {
     "id": "T019",
     "description": "DB integration: a seat technician's user list, assignee options and mention suggestions contain no user outside the projection and no MSP staff email or phone.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]

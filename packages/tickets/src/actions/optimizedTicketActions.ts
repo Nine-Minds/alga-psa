@@ -13,6 +13,7 @@ import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaborat
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { projectResponseUsers } from '../lib/responseUsers';
+import { projectedPeopleForCaller, projectedPeopleForSubject, projectedPersonToUser, projectedUsers, withholdPersonContactFields } from '@alga-psa/user-composition/lib/seatPeople';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -549,6 +550,16 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
       isRecordFieldHidden('ticket', field, ticketRedactions) ? null : value;
 
+    // A seat technician's agent pickers are the people projection, the same answer as getTicketFormOptions:
+    // MSP staff who participate on tickets they can see (by name only) and the technicians of their client.
+    // The subject was resolved for the ticket read above, so an ordinary user is told apart without a statement.
+    const seatPeople = await projectedPeopleForSubject(trx, authorizationContext.authorizationSubject, { kinds: ['msp_staff', 'client_technician'] });
+    const seatAssignees = seatPeople ? projectedUsers(seatPeople) : null;
+    // People the ticket merely references (creator, last editor, comment authors) keep their name for a seat
+    // technician and release nothing else: no email, phone or username of MSP staff.
+    const releasedPerson = <Row extends Record<string, unknown>>(row: Row): Row =>
+      (seatPeople ? withholdPersonContactFields(row) : row);
+
     // Fetch all related data in parallel
     const [
       rawComments,
@@ -589,11 +600,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
       // LEVERAGE: pattern users-star-projection — every ticket loader's users fetch should route through USER_RESPONSE_FIELD_NAMES (users.* carries hashed_password / two_factor_secret)
-      tenantScopedTable(trx, 'users', tenant)
-        .select(...USER_RESPONSE_FIELD_NAMES)
-        .where('user_type', 'internal')
-        .where('is_inactive', false)
-        .orderBy('first_name', 'asc'),
+      seatAssignees
+        ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
+        : tenantScopedTable(trx, 'users', tenant)
+          .select(...USER_RESPONSE_FIELD_NAMES)
+          .where('user_type', 'internal')
+          .where('is_inactive', false)
+          .orderBy('first_name', 'asc'),
       
       // Statuses
       tenantScopedTable(trx, 'statuses', tenant)
@@ -779,10 +792,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .first() : null;
 
     const createdByUser: SafeConsolidatedUser | null = createdByUserRow
-      ? sanitizeUserForResponse(createdByUserRow)
+      ? sanitizeUserForResponse(releasedPerson(createdByUserRow))
       : null;
     const updatedByUser: SafeConsolidatedUser | null = updatedByUserRow
-      ? sanitizeUserForResponse(updatedByUserRow)
+      ? sanitizeUserForResponse(releasedPerson(updatedByUserRow))
       : null;
 
     // Fetch board
@@ -816,7 +829,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
       extraAuthorIds.length > 0
         // LEVERAGE: pattern users-star-projection — see availableAgents query above
-        ? await projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn('user_id', extraAuthorIds)
+        ? (await projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn('user_id', extraAuthorIds)).map(releasedPerson)
         : [];
 
     // Client-portal authors carry their avatar on the linked contact, not the user
@@ -2447,6 +2460,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         readableTickets.apply(ticketTagMappingsQuery, 't');
       }
 
+      const seatPeople = await projectedPeopleForCaller(trx, tenant, user, { kinds: ['msp_staff', 'client_technician'] });
+      const seatAssignees = seatPeople ? projectedUsers(seatPeople) : null;
+
       const [
         statuses,
         priorities,
@@ -2477,11 +2493,14 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('category_name', 'asc'),
       
       // Assignee and user options are internal staff only: a portal (client) user is never a valid assignee,
-      // for any client, whoever is asking.
-      tenantScopedTable(trx, 'users', tenant)
-        .where('user_type', 'internal')
-        .select(...USER_RESPONSE_FIELD_NAMES)
-        .orderBy('first_name', 'asc'),
+      // for any client, whoever is asking. A seat technician is offered the people projection instead of the
+      // tenant's staff (MSP staff by name only, and the technicians of their own client).
+      seatAssignees
+        ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
+        : tenantScopedTable(trx, 'users', tenant)
+          .where('user_type', 'internal')
+          .select(...USER_RESPONSE_FIELD_NAMES)
+          .orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
