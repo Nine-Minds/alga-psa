@@ -251,16 +251,3 @@ export function InboundQuarantineQueue({ initialTicketId, initialStatus = 'open'
 
 export default InboundQuarantineQueue;
 
-/** Entry point from the inbound email settings to the quarantine queue. */
-export function InboundQuarantineQueueLink() {
-  const { t } = useTranslation('msp/email-providers');
-  return (
-    <Link
-      id="inbound-quarantine-queue-link"
-      href="/msp/settings/email/quarantine"
-      className="inline-flex text-sm font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-    >
-      {t('quarantine.openQueue', { defaultValue: 'Quarantined email' })}
-    </Link>
-  );
-}

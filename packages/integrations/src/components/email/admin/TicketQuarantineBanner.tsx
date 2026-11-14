@@ -54,7 +54,7 @@ export function TicketQuarantineBanner({ ticketId }: { ticketId: string }) {
             {t('quarantine.bannerLink', { defaultValue: 'Review quarantined email' })}
           </Link>
         ) : (
-          <span>{t('quarantine.bannerAskAdmin', { defaultValue: 'Ask an email administrator to review them.' })}</span>
+          <span>{t('quarantine.bannerAskAdmin', { count, defaultValue: 'Ask an email administrator to review them.' })}</span>
         )}
       </AlertDescription>
     </Alert>

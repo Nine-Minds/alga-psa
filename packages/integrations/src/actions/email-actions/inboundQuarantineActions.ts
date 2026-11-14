@@ -56,6 +56,7 @@ export interface InboundQuarantineListResult {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_PAGE_SIZE = 100;
 const DENIED_KEY = 'errors.permissionDenied';
+const QUEUE_DENIED_MESSAGE = 'Permission denied: only email administrators can review quarantined inbound email';
 
 const iso = (value: unknown): string => (value instanceof Date ? value.toISOString() : String(value));
 
@@ -66,7 +67,7 @@ export const listInboundQuarantine = withAuth(async (
 ): Promise<InboundQuarantineListResult | ReturnType<typeof permissionError> | ReturnType<typeof actionError>> => {
   const { knex } = await createTenantKnex();
   const access = await requireOutboundEmailAdmin(user, knex);
-  if (!access.allowed) return permissionError(access.message, DENIED_KEY);
+  if (!access.allowed) return permissionError(QUEUE_DENIED_MESSAGE, DENIED_KEY);
 
   if (filters.providerId && !UUID_PATTERN.test(filters.providerId)) return actionError('Invalid mailbox filter');
   if (filters.ticketId && !UUID_PATTERN.test(filters.ticketId)) return actionError('Invalid ticket filter');
@@ -126,7 +127,7 @@ export const dismissInboundQuarantine = withAuth(async (
 ): Promise<{ success: true } | ReturnType<typeof permissionError> | ReturnType<typeof actionError>> => {
   const { knex } = await createTenantKnex();
   const access = await requireOutboundEmailAdmin(user, knex);
-  if (!access.allowed) return permissionError(access.message, DENIED_KEY);
+  if (!access.allowed) return permissionError(QUEUE_DENIED_MESSAGE, DENIED_KEY);
   if (!UUID_PATTERN.test(quarantineId ?? '')) return actionError('Invalid quarantine entry');
 
   const updated = await tenantDb(knex, tenant).table('inbound_email_quarantine')

@@ -28,6 +28,7 @@ import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManag
 import { InboundEmailRulesManager } from './admin/InboundEmailRulesManager';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { GmailDiagnosticsDialog } from './admin/GmailDiagnosticsDialog';
+import { InboundQuarantineQueue } from './admin/InboundQuarantineQueue';
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -92,7 +93,7 @@ function EmailProviderConfigurationContent({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
   const [tenant, setTenant] = useState<string>('');
-  const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules'>('providers');
+  const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules' | 'quarantine'>('providers');
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [diagnosticsProvider, setDiagnosticsProvider] = useState<PublicEmailProvider | null>(null);
   const [microsoftEmailSetup, setMicrosoftEmailSetup] = useState<MicrosoftEmailSetupReadiness | null | undefined>(undefined);
@@ -685,6 +686,20 @@ function EmailProviderConfigurationContent({
               defaultValue: 'Inbound Rules',
             })}
           </Button>
+          <Button
+            id="nav-inbound-quarantine"
+            variant="ghost"
+            className={`justify-start w-full px-2 py-2 rounded-md ${
+              activeSection === 'quarantine'
+                ? 'text-[rgb(var(--color-primary-700))] font-semibold underline decoration-[rgb(var(--color-primary-600))] decoration-2 underline-offset-4 bg-primary-500/10'
+                : 'text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-50))]'
+            }`}
+            onClick={() => setActiveSection('quarantine')}
+          >
+            {t('quarantine.openQueue', {
+              defaultValue: 'Quarantined email',
+            })}
+          </Button>
         </nav>
       </div>
       <div className="flex-1 min-w-0">
@@ -717,6 +732,10 @@ function EmailProviderConfigurationContent({
               window.dispatchEvent(new CustomEvent('inbound-defaults-updated'));
             }} />
           </div>
+        ) : activeSection === 'quarantine' ? (
+          // Refused inbound mail for every mailbox (alga-2026-0003119). The same queue is also
+          // served at /msp/settings/email/quarantine for the ticket banner and notification links.
+          <InboundQuarantineQueue />
         ) : (
           <div className="space-y-4">
             <InboundEmailRulesManager />

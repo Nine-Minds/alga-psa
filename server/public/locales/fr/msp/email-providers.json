@@ -1214,6 +1214,8 @@
     "banner_many": "{{count}} e-mails entrants pour ce ticket ont été mis en quarantaine",
     "banner_other": "{{count}} e-mails entrants pour ce ticket ont été mis en quarantaine",
     "bannerLink": "Examiner les e-mails en quarantaine",
-    "bannerAskAdmin": "Demandez à un administrateur de messagerie de les examiner."
+    "bannerAskAdmin_one": "Demandez à un administrateur de messagerie de l'examiner.",
+    "bannerAskAdmin_many": "Demandez à un administrateur de messagerie de les examiner.",
+    "bannerAskAdmin_other": "Demandez à un administrateur de messagerie de les examiner."
   }
 }

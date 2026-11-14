@@ -1214,6 +1214,8 @@
     "banner_many": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
     "banner_other": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
     "bannerLink": "Revisar correo en cuarentena",
-    "bannerAskAdmin": "Pida a un administrador de correo que los revise."
+    "bannerAskAdmin_one": "Pida a un administrador de correo que lo revise.",
+    "bannerAskAdmin_many": "Pida a un administrador de correo que los revise.",
+    "bannerAskAdmin_other": "Pida a un administrador de correo que los revise."
   }
 }

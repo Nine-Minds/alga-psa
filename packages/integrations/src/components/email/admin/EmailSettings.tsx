@@ -34,7 +34,6 @@ import {
   verifyEmailDomain
 } from '../../../actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
-import { InboundQuarantineQueueLink } from './InboundQuarantineQueue';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import {
   getErrorMessage,
@@ -757,7 +756,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             defaultValue: 'Configure email providers to receive and process emails as tickets'
           })}
         </div>
-        <InboundQuarantineQueueLink />
         <EmailProviderConfiguration
           onProviderAdded={(provider) => {
             // Optional: Handle provider added event

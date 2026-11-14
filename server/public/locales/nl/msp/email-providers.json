@@ -1170,7 +1170,7 @@
   },
   "quarantine": {
     "title": "Inkomende e-mail in quarantaine",
-    "description": "Inkomende berichten die zijn geweigerd in plaats van aan een ticket toegevoegd. Bekijk ze en sluit af wat je hebt afgehandeld.",
+    "description": "Inkomende berichten die zijn geweigerd in plaats van aan een ticket toegevoegd. Bekijk ze en sluit af wat u hebt afgehandeld.",
     "backToSettings": "Terug naar e-mailinstellingen",
     "openQueue": "E-mail in quarantaine",
     "empty": "Geen e-mail in quarantaine voor deze filters.",
@@ -1213,6 +1213,7 @@
     "banner_one": "{{count}} inkomende e-mail voor dit ticket is in quarantaine geplaatst",
     "banner_other": "{{count}} inkomende e-mails voor dit ticket zijn in quarantaine geplaatst",
     "bannerLink": "E-mail in quarantaine bekijken",
-    "bannerAskAdmin": "Vraag een e-mailbeheerder om ze te bekijken."
+    "bannerAskAdmin_one": "Vraag een e-mailbeheerder om deze te bekijken.",
+    "bannerAskAdmin_other": "Vraag een e-mailbeheerder om ze te bekijken."
   }
 }

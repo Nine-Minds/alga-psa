@@ -1215,6 +1215,9 @@
     "banner_many": "{{count}} wiadomości przychodzących do tego zgłoszenia trafiło do kwarantanny",
     "banner_other": "{{count}} wiadomości przychodzącej do tego zgłoszenia trafiło do kwarantanny",
     "bannerLink": "Przejrzyj wiadomości w kwarantannie",
-    "bannerAskAdmin": "Poproś administratora poczty o ich przejrzenie."
+    "bannerAskAdmin_one": "Poproś administratora poczty o jej przejrzenie.",
+    "bannerAskAdmin_few": "Poproś administratora poczty o ich przejrzenie.",
+    "bannerAskAdmin_many": "Poproś administratora poczty o ich przejrzenie.",
+    "bannerAskAdmin_other": "Poproś administratora poczty o ich przejrzenie."
   }
 }
