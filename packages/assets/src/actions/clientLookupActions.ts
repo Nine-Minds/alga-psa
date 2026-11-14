@@ -93,7 +93,7 @@ export const getAllClientsForAssets = withAuth(async (
   { tenant },
   includeInactive: boolean = true
 ): Promise<IClient[]> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -136,7 +136,7 @@ export const getClientByIdForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<IClient | null> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -167,7 +167,7 @@ export const getClientLocationsForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<IClientLocation[]> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -198,7 +198,7 @@ export const getClientContactsForAssets = withAuth(async (
   clientId: string,
   currentContactId?: string | null
 ): Promise<IContact[]> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -231,7 +231,7 @@ export const getVendorOptionsForAssets = withAuth(async (
   { tenant },
   currentVendorId?: string | null
 ): Promise<Array<{ vendor_id: string; vendor_name: string }>> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset vendor options');
   }
@@ -261,7 +261,7 @@ export const getClientBillingProfilesForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<Array<{ billing_profile_id: string; name: string; is_default: boolean }>> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
