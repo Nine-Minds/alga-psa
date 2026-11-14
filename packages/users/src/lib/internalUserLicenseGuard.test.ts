@@ -12,7 +12,11 @@ const lockCalls: unknown[][] = [];
 
 function asTransaction(fn: any) {
   fn.isTransaction = true;
-  fn.raw = async (...args: unknown[]) => { lockCalls.push(args); return { rows: [] }; };
+  fn.raw = async (...args: unknown[]) => {
+    // Only the advisory lock is recorded; `raw('1')` builds the subquery's select list.
+    if (String(args[0]).startsWith('SELECT pg_advisory')) lockCalls.push(args);
+    return { rows: [] };
+  };
   return fn;
 }
 
@@ -23,10 +27,16 @@ function fakeTrx(input: { plan: string | null; licensedUserCount: number | null;
       return { first: async (..._fields: any[]) => tenantRow };
     }
 
+    // The seat-assignment subquery that leaves seat technicians out of the licensed count.
+    if (table === 'co_managed_seat_assignments as seat_assignment') {
+      const subquery: any = { whereNot: () => subquery, select: () => subquery, whereRaw: () => subquery };
+      return subquery;
+    }
+
     if (table === 'users') {
       return {
         where: (_criteria: Record<string, any>) => ({
-          count: async () => [{ count: String(input.usedInternalUsers) }],
+          whereNotExists: () => ({ count: () => ({ first: async () => ({ count: String(input.usedInternalUsers) }) }) }),
         }),
       };
     }
@@ -143,23 +153,31 @@ describe('countPendingInvitationSeats', () => {
       whereNull: (...a: unknown[]) => { calls.push(['whereNull', ...a]); return query; },
       where: (...a: unknown[]) => { calls.push(['where', ...a]); return query; },
       whereNot: (...a: unknown[]) => { calls.push(['whereNot', ...a]); return query; },
+      whereNotExists: () => { calls.push(['whereNotExists']); return query; },
+      select: () => query,
+      whereRaw: () => query,
       count: () => query,
       first: async () => ({ count }),
     };
     const trx: any = (table: string) => { calls.push(['table', table]); return query; };
     trx.fn = { now: () => 'NOW' };
+    trx.raw = () => 'RAW';
     return { trx, calls };
   }
 
   it('counts only unused, unexpired invitations of the tenant', async () => {
     const { trx, calls } = recordingTrx('3');
     await expect(countPendingInvitationSeats(trx, 'tenant-1')).resolves.toBe(3);
-    expect(calls).toEqual([['table', 'user_invitations'], ['whereNull', 'used_at'], ['where', 'expires_at', '>', 'NOW']]);
+    // Unused, unexpired, and not the invitation of a seat technician (a live seat assignment).
+    expect(calls).toEqual([
+      ['table', 'user_invitations'], ['whereNull', 'user_invitations.used_at'], ['where', 'user_invitations.expires_at', '>', 'NOW'],
+      ['table', 'co_managed_seat_assignments as seat_assignment'], ['whereNot', 'seat_assignment.state', 'revoked'], ['whereNotExists'],
+    ]);
   });
 
   it('leaves out the invitee being re-invited when asked to', async () => {
     const { trx, calls } = recordingTrx('0');
     await expect(countPendingInvitationSeats(trx, 'tenant-1', { excludeEmail: 'a@example.test' })).resolves.toBe(0);
-    expect(calls).toContainEqual(['whereNot', 'email', 'a@example.test']);
+    expect(calls).toContainEqual(['whereNot', 'user_invitations.email', 'a@example.test']);
   });
 });
