@@ -2,7 +2,7 @@
  * API Document Service
  *
  * Minimal BaseService implementation for the document attach endpoint. Attaching
- * is served by `attachDocumentFromBytes`, so the CRUD methods are intentionally
+ * is served by `attachDocument`, so the CRUD methods are intentionally
  * unsupported -- the controller never calls them.
  */
 

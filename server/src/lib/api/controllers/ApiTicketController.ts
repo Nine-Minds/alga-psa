@@ -33,6 +33,7 @@ import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticket
 import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
+import { assertMultipartRequestWithinCap } from '../services/documents/multipartCap';
 import { ApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createServerActionErrorResponse, createSuccessResponse, handleApiError, isServerActionErrorResult } from '../middleware/apiMiddleware';
 import {
   createBundleSchema,
@@ -1447,6 +1448,8 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
           await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
+          // formData() buffers the request, so it is bounded first (see multipartCap.ts).
+          await assertMultipartRequestWithinCap(req);
           const formData = await req.formData();
           const file = formData.get('file');
 

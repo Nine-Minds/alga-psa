@@ -22,6 +22,32 @@ export class ValidationError extends Error implements ApiError {
   }
 }
 
+/** 413: the payload is larger than this endpoint accepts. The message should say where large files go. */
+export class PayloadTooLargeError extends Error implements ApiError {
+  statusCode = 413;
+  code = 'PAYLOAD_TOO_LARGE';
+  details: any;
+
+  constructor(message: string, details?: any) {
+    super(message);
+    this.name = 'PayloadTooLargeError';
+    this.details = details;
+  }
+}
+
+/** 411: the endpoint buffers the body, so it needs a declared Content-Length to bound it before reading. */
+export class LengthRequiredError extends Error implements ApiError {
+  statusCode = 411;
+  code = 'LENGTH_REQUIRED';
+  details: any;
+
+  constructor(message: string, details?: any) {
+    super(message);
+    this.name = 'LengthRequiredError';
+    this.details = details;
+  }
+}
+
 export class UnauthorizedError extends Error implements ApiError {
   statusCode = 401;
   code = 'UNAUTHORIZED';

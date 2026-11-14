@@ -2,6 +2,7 @@ import path from 'node:path';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 import { isMimeAllowed } from './storage-mime';
+import { UploadContentTypeError, UploadSizeLimitError } from '../ingest/errors';
 import type { StorageConfig, StorageProviderConfig } from '../types/storage';
 
 // Cached configuration to avoid multiple async calls
@@ -80,8 +81,10 @@ async function validateFileSize(fileSize: number): Promise<StorageProviderConfig
   const config = await buildStorageConfig();
   const provider = config.providers[config.defaultProvider];
 
+  // The ingest pipeline's typed errors (same messages as before), so every entry point maps a
+  // refusal by its type (413 / 400-415) whether it came from this pre-check or from the stream.
   if (fileSize > provider.maxFileSize) {
-    throw new Error(`File size exceeds limit of ${provider.maxFileSize} bytes`);
+    throw new UploadSizeLimitError(provider.maxFileSize);
   }
 
   return provider;
@@ -92,7 +95,7 @@ export async function validateFileUpload(mimeType: string, fileSize: number): Pr
   const provider = await validateFileSize(fileSize);
 
   if (!isMimeAllowed(provider.allowedMimeTypes, mimeType)) {
-    throw new Error('File type not allowed');
+    throw new UploadContentTypeError('File type not allowed', mimeType, undefined);
   }
 }
 

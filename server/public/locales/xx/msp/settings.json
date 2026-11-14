@@ -3033,7 +3033,8 @@
         "preparingPreview": "⟦Ƥřḗƥȧřīƞɠ ƥřḗṽīḗẇ…⟧",
         "linking": "⟦Ŀīƞķīƞɠ ȧƈƈȯŭƞŧş…⟧",
         "unlinking": "⟦Ŭƞŀīƞķīƞɠ ȧƈƈȯŭƞŧş…⟧",
-        "bulkLabel": "⟦Ɓŭŀķ ŞŞȮ ȧƈŧīȯƞş {{location}}⟧"
+        "bulkLabel": "⟦Ɓŭŀķ ŞŞȮ ȧƈŧīȯƞş {{location}}⟧",
+        "disabledSelectUsers": "⟦Şḗŀḗƈŧ ȧŧ ŀḗȧşŧ ȯƞḗ ŭşḗř ƒīřşŧ.⟧"
       },
       "table": {
         "email": "⟦Ḗḿȧīŀ⟧",
