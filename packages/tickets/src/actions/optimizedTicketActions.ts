@@ -651,7 +651,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // or deriving counts. This also annotates effective comment visibility.
     // One roles load answers both the document policy and the client billing projection below,
     // so the billing projection costs this hot path no extra statement.
-    // LEVERAGE: pattern request-scoped-permissions — hand-batched permission checks to stay inside the hot-path budget (also getAllClientsPaginated).
+    // LEVERAGE: pattern request-scoped-permissions — hand-batched permission checks to stay inside the hot-path budget (also the paginated client list in @alga-psa/clients clientActions).
     const [documentRead, clientBillingRead] = await checkMultiplePermissions(
       user,
       [{ resource: 'document', action: 'read' }, CLIENT_BILLING_PERMISSION],

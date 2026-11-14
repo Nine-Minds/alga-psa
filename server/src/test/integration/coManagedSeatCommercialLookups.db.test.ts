@@ -269,6 +269,56 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     expect(adminPage.clients.find((c: any) => c.client_id === clientId)).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly' });
   });
 
+  it('the tickets-package client lookups project the same way: no billing column for the seat technician, all of them for billing-permitted users', async () => {
+    const ticketLookups = await import('../../../../packages/tickets/src/actions/clientLookupActions');
+
+    as('seat');
+    const seatOne: any = await ticketLookups.getClientById(clientId);
+    expect(seatOne?.client_name).toBe('S13 client');
+    expect(leaked(seatOne)).toEqual([]);
+    const seatAll: any[] = await ticketLookups.getAllClients();
+    expect(seatAll.map(c => c.client_id)).toContain(clientId);
+    for (const row of seatAll) expect(leaked(row)).toEqual([]);
+
+    as('admin');
+    expect(await ticketLookups.getClientById(clientId)).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly', billing_email: 'ap@s13.example' });
+    expect((await ticketLookups.getAllClients()).find(c => c.client_id === clientId)).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly' });
+  });
+
+  it('the REST client reads project by the API caller: the acting user and any principal it acts through must both hold billing', async () => {
+    const { ClientService } = await import('../../lib/api/services/ClientService');
+    const { runWithTenant } = await import('@alga-psa/db');
+    // The API middleware runs each request inside its tenant; the service reads through this suite's connection.
+    const inner = new ClientService();
+    vi.spyOn(inner as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
+    const service = {
+      getById: (id: string, context: any) => runWithTenant(tenant, () => inner.getById(id, context)),
+      list: (options: any, context: any) => runWithTenant(tenant, () => inner.list(options, context)),
+    };
+    const contextFor = (user: any, viaPrincipalUserId: string | null = null) =>
+      ({ tenant, userId: user.user_id, user, viaPrincipalUserId }) as any;
+    const listed = async (context: any) =>
+      (await service.list({ page: 1, limit: 100 } as any, context)).data.find((c: any) => c.client_id === clientId) as any;
+
+    const adminRead: any = await service.getById(clientId, contextFor(people.admin));
+    expect(adminRead).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly', billing_email: 'ap@s13.example' });
+    expect(await listed(contextFor(people.admin))).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly' });
+
+    const seatRead: any = await service.getById(clientId, contextFor(people.seat));
+    expect(seatRead?.client_name).toBe('S13 client');
+    expect(leaked(seatRead)).toEqual([]);
+    expect(leaked(await listed(contextFor(people.seat)))).toEqual([]);
+
+    // The admin acting through the seat technician's key: the principal holds no billing, so neither does the request.
+    const viaSeat: any = await service.getById(clientId, contextFor(people.admin, people.seat.user_id));
+    expect(viaSeat?.client_name).toBe('S13 client');
+    expect(leaked(viaSeat)).toEqual([]);
+    expect(leaked(await listed(contextFor(people.admin, people.seat.user_id)))).toEqual([]);
+
+    // No authenticated user on the context: nothing to grant billing to.
+    expect(leaked((await service.getById(clientId, { tenant, userId: people.admin.user_id } as any)) as any)).toEqual([]);
+  });
+
   it('saving a client from a projected row (as ClientDetails does) leaves every billing column untouched', async () => {
     const { getClientById } = await import('../../../../packages/clients/src/actions/queryActions');
     const { updateClient } = await import('../../../../packages/clients/src/actions/clientActions');

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 // Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
 vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }), permits: async () => true }) }));
 
-// The billing-column projection has its own DB suite (coManagedSeatCommercialLookups); here the subject may read billing.
+// The billing-column projection has its own DB suite (coManagedSeatCommercialLookups); these rows carry no billing column.
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 
 const listRows = [{

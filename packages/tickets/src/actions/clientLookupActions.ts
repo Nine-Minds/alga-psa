@@ -1,6 +1,6 @@
 'use server';
 
-import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
+import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation, IContact, IContactLocation } from '@alga-psa/types';
@@ -26,7 +26,7 @@ import {
   listClientBillingProfiles,
   type ClientBillingProfileRow,
 } from '@alga-psa/shared/billingClients/billingProfiles';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission, checkMultiplePermissions } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { createClientScopeContext, type ClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
@@ -51,8 +51,28 @@ async function assertInternalReadAccess(user: IUserWithRoles, resource: 'client'
   }
 }
 
+/**
+ * `assertInternalReadAccess(user, 'client')` for an action that returns client rows: the read check and the
+ * billing projection (clientBillingProjection) are answered from one load of the user's roles, so projecting
+ * the rows costs the lookup no extra statement. Returns whether the billing columns may be shown.
+ */
+// LEVERAGE: pattern request-scoped-permissions — third hand-batched read+billing check (getAllClientsPaginated, getConsolidatedTicketData); a per-request permission set would make the projection free everywhere.
+async function assertInternalClientRowAccess(user: IUserWithRoles): Promise<{ billingVisible: boolean }> {
+  if (user.user_type !== 'internal') {
+    throw new Error('Permission denied: client lookup actions are internal-only');
+  }
+  const [canRead, billing] = await checkMultiplePermissions(user, [
+    { resource: 'client', action: 'read' },
+    CLIENT_BILLING_PERMISSION,
+  ]);
+  if (!canRead?.granted) {
+    throw new Error('Permission denied: cannot read client');
+  }
+  return { billingVisible: Boolean(billing?.granted) };
+}
+
 export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
-  await assertInternalReadAccess(user, 'client');
+  const { billingVisible } = await assertInternalClientRowAccess(user);
   const { knex } = await createTenantKnex();
 
   // Resolved before the transaction opens; the predicate is applied inside the list query.
@@ -61,11 +81,11 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return getAllClientsModel(trx, tenant, includeInactive, { narrowQuery: (query) => { narrowing.apply(query); } });
   });
-  return projectClientsForSubject(user, clients);
+  return billingVisible ? clients : clients.map(omitClientBillingColumns);
 });
 
 export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClient | null> => {
-  await assertInternalReadAccess(user, 'client');
+  const { billingVisible } = await assertInternalClientRowAccess(user);
   const { knex } = await createTenantKnex();
 
   const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('client', 'clients');
@@ -81,7 +101,8 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
   // Resolve the uploaded logo so the client drawer opened from the tickets list
   // shows the real logo (matching the table), not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return projectClientForSubject(user, { ...client, logoUrl });
+  const withLogo = { ...client, logoUrl };
+  return billingVisible ? withLogo : omitClientBillingColumns(withLogo);
 });
 
 export const getContactsByClient = withAuth(async (
