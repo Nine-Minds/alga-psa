@@ -1,5 +1,6 @@
 'use server';
 
+import { projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -67,13 +68,13 @@ async function getClientNameById(
 }
 
 export const getIntegrationClients = withAuth(async (
-  _user,
+  user,
   { tenant },
   includeInactive: boolean = true
 ): Promise<IClient[]> => {
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const query = tenantDb(trx, tenant).table('clients')
       .select('*')
       .orderBy('client_name', 'asc');
@@ -84,6 +85,7 @@ export const getIntegrationClients = withAuth(async (
 
     return query;
   }) as unknown as IClient[];
+  return projectClientsForSubject(user, clients);
 });
 
 export const getIntegrationContacts = withAuth(async (

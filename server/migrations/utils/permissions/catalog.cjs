@@ -268,7 +268,7 @@ const ACTIVE_PERMISSIONS = [
 
   { resource: 'service', action: 'create', msp: true, client: false, description: 'Create services/products in the service catalog', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'service', action: 'delete', msp: true, client: false, description: 'Archive/delete services/products in the service catalog', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
-  { resource: 'service', action: 'read', msp: true, client: false, description: 'View services/products in the service catalog', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+  { resource: 'service', action: 'read', msp: true, client: false, description: 'View services/products in the service catalog', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'service', action: 'update', msp: true, client: false, description: 'Update services/products in the service catalog', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 
   { resource: 'settings', action: 'create', msp: true, client: true, description: 'Create portal settings', products: ['psa', 'co_managed'], defaultGrants: { psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
