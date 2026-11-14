@@ -230,7 +230,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    // Two reply-target queries plus the per-ticket one-off Cc/Bcc lookup.
+    // Two reply-target queries plus the per-ticket one-off Cc/Bcc lookup. The
+    // new comment's visibility is read only for a body that embeds an image.
     expect(commentsQueryCount).toBe(3);
   });
 
@@ -333,7 +334,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    // One reply-target query plus the per-ticket one-off Cc/Bcc lookup.
+    // One reply-target query plus the per-ticket one-off Cc/Bcc lookup. The
+    // new comment's visibility is read only for a body that embeds an image.
     expect(commentsQueryCount).toBe(2);
   });
 

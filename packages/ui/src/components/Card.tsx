@@ -4,6 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Slot } from '@radix-ui/react-slot';
 import { ReflectionParentContext } from '../ui-reflection/ReflectionParentContext';
 import { AutomationProps } from '../ui-reflection/types';
+import { cn } from '../lib/utils';
 
 export function Card({
   className,
@@ -17,7 +18,7 @@ export function Card({
   const cardContent = (
     <div
       ref={ref}
-      className={`rounded-lg border bg-card text-card-foreground card-elevated ${className ?? ''}`}
+      className={cn('rounded-lg border border-border bg-card text-card-foreground card-elevated', className)}
       id={id}
       data-automation-id={dataAutomationId}
       data-automation-type={dataAutomationType}

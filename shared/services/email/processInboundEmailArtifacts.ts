@@ -38,6 +38,7 @@ interface PersistAttachmentInput {
   };
   consumedInlineCids?: Set<string>;
   clientVisibleAttachments?: boolean;
+  clientVisibleEmbeddedImages?: boolean;
   maxAttachmentBytes?: number | null;
 }
 
@@ -57,6 +58,15 @@ export interface ProcessInboundEmailArtifactsInput {
   scopeLabel: 'new-ticket' | 'reply';
   maxAttachmentConcurrency?: number;
   clientVisibleAttachments?: boolean;
+  /**
+   * The body these artifacts belong to is readable in the client portal. An
+   * image embedded in that body is part of it, so it is served to the same
+   * readers even when the sender's file attachments are not.
+   *
+   * A resolver is asked only when the email actually carries an embedded
+   * image, so a plain reply costs nothing to answer it.
+   */
+  clientVisibleEmbeddedImages?: boolean | (() => boolean | Promise<boolean>);
 }
 
 export interface EmbeddedImageUrlMapping {
@@ -434,6 +444,27 @@ function resolveAttachmentConcurrency(
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) return 1;
   return Math.max(1, Math.min(8, Math.floor(parsed)));
+}
+
+/**
+ * Visibility of the body's embedded images. A resolver that fails leaves the
+ * images staff-only — the safe answer — but says so in the log, because a
+ * silent false hides a picture from a message the client can read.
+ */
+async function resolveClientVisibleEmbeddedImages(
+  value: ProcessInboundEmailArtifactsInput['clientVisibleEmbeddedImages'],
+  scopeLabel: string
+): Promise<boolean> {
+  if (typeof value !== 'function') return Boolean(value);
+  try {
+    return Boolean(await value());
+  } catch (error) {
+    console.warn(
+      `processInboundEmailInApp:[${scopeLabel}] embedded image visibility lookup failed; keeping images staff-only`,
+      { error: error instanceof Error ? error.message : String(error) }
+    );
+    return false;
+  }
 }
 
 async function runWithConcurrency<T>(
@@ -1347,7 +1378,10 @@ async function persistInboundEmailAttachment(input: PersistAttachmentInput): Pro
     fileName: resolvedFileName,
     mimeType: resolvedMimeType,
     buffer,
-    clientVisibleOverride: input.clientVisibleAttachments ? true : undefined,
+    clientVisibleOverride:
+      input.clientVisibleAttachments || (allowInlineProcessing && input.clientVisibleEmbeddedImages)
+        ? true
+        : undefined,
   });
 
   if (!persistResult.success) {
@@ -1549,6 +1583,12 @@ export async function processInboundEmailArtifactsBestEffort(
     }
   }
 
+  // Only an embedded image reads this flag, and answering it can cost a query.
+  const clientVisibleEmbeddedImages =
+    embeddedAttachments.length > 0
+      ? await resolveClientVisibleEmbeddedImages(input.clientVisibleEmbeddedImages, input.scopeLabel)
+      : false;
+
   const allAttachments = [...baseAttachments, ...embeddedAttachments];
   const baseAttachmentById = new Map<string, any>();
   for (const attachment of baseAttachments) {
@@ -1597,6 +1637,7 @@ export async function processInboundEmailArtifactsBestEffort(
         },
         consumedInlineCids,
         clientVisibleAttachments: input.clientVisibleAttachments,
+        clientVisibleEmbeddedImages,
         maxAttachmentBytes,
       });
 

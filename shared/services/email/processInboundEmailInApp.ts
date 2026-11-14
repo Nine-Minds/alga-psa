@@ -661,6 +661,19 @@ function normalizeStoredMessageId(value: string | null | undefined): string | nu
   return normalizeRfc822MessageId(value) ?? value;
 }
 
+/**
+ * Whether the comment an inbound email became is readable in the client
+ * portal. Asked only when that email carried an embedded image; a failure is
+ * reported by the caller, which keeps the images staff-only.
+ */
+async function isClientVisibleComment(tenantId: string, commentId: unknown): Promise<boolean> {
+  if (typeof commentId !== 'string' || !commentId) return false;
+  return withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
+    const comment = await db.table('comments').where({ comment_id: commentId }).first('is_internal');
+    return Boolean(comment) && comment.is_internal === false;
+  });
+}
+
 async function findExistingEmailComment(params: {
   tenantId: string;
   ticketId: string;
@@ -1753,6 +1766,7 @@ export async function processInboundEmailInApp(
           && policyContext?.clientId
           && senderContact?.client_id === policyContext.clientId
         ),
+        clientVisibleEmbeddedImages: () => isClientVisibleComment(tenantId, commentId),
       });
       await applyEmbeddedImageUrlMappingsToStoredBodies({
         tenantId,
@@ -2444,6 +2458,8 @@ export async function processInboundEmailInApp(
         !matchedSenderIsInternalUser
         && ((matchedSenderContact?.client_id && matchedSenderContact.client_id === targetClientId) || Boolean(autoCreatedContactId))
       ),
+      // The description of a ticket is always readable by the client.
+      clientVisibleEmbeddedImages: true,
     });
     await applyEmbeddedImageUrlMappingsToStoredBodies({
       tenantId,
