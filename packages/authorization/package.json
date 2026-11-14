@@ -86,6 +86,10 @@
       "import": "./dist/clientReadScope.js",
       "types": "./src/clientReadScope.ts"
     },
+    "./knowledgeBaseReadAuthorization": {
+      "import": "./dist/knowledgeBaseReadAuthorization.js",
+      "types": "./src/knowledgeBaseReadAuthorization.ts"
+    },
     "./readScope": {
       "import": "./dist/readScope.js",
       "types": "./src/readScope.ts"

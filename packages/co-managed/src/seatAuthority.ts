@@ -43,7 +43,13 @@ export type CoManagedSeatCondition =
   /** The record is a project shared with the arrangement. */
   | 'shared_project'
   /** The record is marked client-visible. */
-  | 'client_visible';
+  | 'client_visible'
+  /** The record's audience is `client` or `public`. Knowledge base articles carry an audience and no client. */
+  | 'external_audience'
+  /** Every ticket the record is attached to is one the technician can see (own client, board in scope). */
+  | 'attached_tickets_in_scope'
+  /** The record is client-visible, or is attached to a ticket the technician can see. */
+  | 'client_visible_or_in_scope_ticket';
 
 export type CoManagedSeatResourcePolicy =
   /** The resource type is closed to seat subjects; the string says why. */
@@ -52,9 +58,10 @@ export type CoManagedSeatResourcePolicy =
   | { granted: Readonly<Record<string, readonly CoManagedSeatCondition[]>> };
 
 /**
- * Every resource type of the kernel catalog, classified for seat subjects. The resolver's rules are
- * derived from this table and from nothing else, and the contract test fails when a catalog
- * resource type is missing from it.
+ * Every resource type of the kernel catalog, classified for seat subjects, plus the kernel resource
+ * types that are not bundle-nameable (`knowledge_base_article`, `credential`) and so are not in the
+ * catalog. The resolver's rules are derived from this table and from nothing else, and the contract
+ * test fails when a catalog resource type is missing from it.
  */
 export const SEAT_AUTHORITY_POLICY: Readonly<Record<string, CoManagedSeatResourcePolicy>> = Object.freeze({
   ticket: { granted: {
@@ -66,10 +73,17 @@ export const SEAT_AUTHORITY_POLICY: Readonly<Record<string, CoManagedSeatResourc
     read: ['own_client', 'shared_project'],
     update: ['own_client', 'shared_project'],
   } },
+  // A document reaches the technician through its client, and is refused when any ticket it is attached to is
+  // outside their scope. It must be client-visible, unless it is attached to a ticket they can see. An upload
+  // is a create of a document attached to its ticket, so it is held to the same ticket scope.
   document: { granted: {
-    read: ['own_client', 'client_visible'],
-    create: ['own_client'],
+    read: ['own_client', 'attached_tickets_in_scope', 'client_visible_or_in_scope_ticket'],
+    create: ['own_client', 'attached_tickets_in_scope'],
   } },
+  // The kernel resource type of a knowledge base article. An article has no client, so audience is the whole rule.
+  knowledge_base_article: { granted: { read: ['external_audience'] } },
+  // Stored credentials are never available to a seat technician: not listed, read, revealed, searched or counted.
+  credential: { denied: 'Stored credentials are never available to a seat technician.' },
   time_entry: { granted: {
     read: ['own_client'], create: ['own_client'], update: ['own_client'], delete: ['own_client'],
   } },
@@ -169,6 +183,11 @@ function conditionRule(resource: string, action: string, condition: CoManagedSea
     case 'creatable_board': return { ...rule, templateKey: 'selected_boards', selectedBoardIds: scope.creatableBoardIds };
     case 'shared_project': return { ...rule, templateKey: 'selected_records', selectedRecordIds: scope.projectIds };
     case 'client_visible': return { ...rule, constraintKey: 'client_visible_only' };
+    case 'external_audience': return { ...rule, constraintKey: 'external_audience_only' };
+    // Guards that read the technician's ticket scope carry it: the arrangement's client and its boards.
+    case 'attached_tickets_in_scope':
+    case 'client_visible_or_in_scope_ticket':
+      return { ...rule, constraintKey: condition, selectedClientIds: [scope.clientId], selectedBoardIds: scope.boardIds };
   }
 }
 

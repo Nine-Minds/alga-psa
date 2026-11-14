@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import knexFactory from 'knex';
+import knexFactory, { type Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   BuiltinAuthorizationKernelProvider, RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE, RESOLVER_CLOSED_BASELINE_DENIED_CODE,
-  RESOLVER_TEMPLATE_DENIED_CODE, builtinResolversRestrict, compileResourceReadAuthorizationSql, createAuthorizationKernel,
+  RESOLVER_TEMPLATE_DENIED_CODE, RESOLVER_RECORD_GUARD_DENIED_CODE, builtinResolversRestrict, compileResourceReadAuthorizationSql, createAuthorizationKernel,
   registerBuiltinRuleResolver, resetBuiltinRuleResolversForTests,
   type AuthorizationDecision, type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
@@ -45,7 +45,12 @@ const decide = (subject: AuthorizationSubject, resource: string, action: string,
   kernel.authorizeResource({ subject, resource: { type: resource, action }, record });
 
 /** A record that meets every condition the policy can ask for. */
-const goodRecord = { id: 'project-shared', clientId: OWN, boardId: 'board-create', is_client_visible: true };
+const goodRecord = {
+  id: 'project-shared', clientId: OWN, boardId: 'board-create', is_client_visible: true, audience: 'client', attachedTickets: [],
+};
+/** The resource types the seat policy classifies: the bundle catalog, and the kernel types a bundle cannot name. */
+const NON_CATALOG_RESOURCES = ['knowledge_base_article', 'credential'] as const;
+const SEAT_RESOURCES = [...BUNDLE_RULE_RESOURCE_TYPES, ...NON_CATALOG_RESOURCES];
 /** The same record with exactly one condition broken. */
 const broken: Record<CoManagedSeatCondition, Record<string, unknown>> = {
   own_client: { ...goodRecord, clientId: OTHER },
@@ -53,9 +58,13 @@ const broken: Record<CoManagedSeatCondition, Record<string, unknown>> = {
   creatable_board: { ...goodRecord, boardId: 'board-work' },
   shared_project: { ...goodRecord, id: 'project-unshared' },
   client_visible: { ...goodRecord, is_client_visible: false },
+  external_audience: { ...goodRecord, audience: 'internal' },
+  attached_tickets_in_scope: { ...goodRecord, attachedTickets: [{ clientId: OWN, boardId: 'board-elsewhere' }] },
+  client_visible_or_in_scope_ticket: { ...goodRecord, is_client_visible: false, attachedTickets: [] },
 };
 const deniedRuleIds = (decision: AuthorizationDecision) => decision.reasons
-  .filter((reason) => reason.code === RESOLVER_TEMPLATE_DENIED_CODE || reason.code === RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE)
+  .filter((reason) => reason.code === RESOLVER_TEMPLATE_DENIED_CODE || reason.code === RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE ||
+    reason.code === RESOLVER_RECORD_GUARD_DENIED_CODE)
   .flatMap((reason) => reason.metadata?.ruleIds as string[]);
 const closedDenial = (decision: AuthorizationDecision) =>
   decision.reasons.find((reason) => reason.code === RESOLVER_CLOSED_BASELINE_DENIED_CODE);
@@ -67,7 +76,7 @@ beforeAll(() => {
 afterAll(() => resetBuiltinRuleResolversForTests());
 
 describe('T015: a seat subject against every resource type and action in the kernel catalog', () => {
-  for (const resource of BUNDLE_RULE_RESOURCE_TYPES) {
+  for (const resource of SEAT_RESOURCES) {
     const entry = SEAT_AUTHORITY_POLICY[resource];
     for (const action of BUNDLE_RULE_ACTIONS) {
       const conditions = 'granted' in entry ? entry.granted[action] : undefined;
@@ -105,9 +114,14 @@ describe('T015: a seat subject against every resource type and action in the ker
     }
   }
 
-  it('own client is a condition of every action the policy grants', () => {
+  it('own client is a condition of every action the policy grants, except for a resource with no client', () => {
     for (const [resource, entry] of Object.entries(SEAT_AUTHORITY_POLICY)) {
       if (!('granted' in entry)) continue;
+      // An article has an audience and no client column: its rule is the audience alone.
+      if (resource === 'knowledge_base_article') {
+        expect(entry.granted).toEqual({ read: ['external_audience'] });
+        continue;
+      }
       for (const [action, conditions] of Object.entries(entry.granted)) {
         expect(conditions, `${resource}:${action}`).toContain('own_client');
       }
@@ -123,8 +137,8 @@ describe('T015: a seat subject against every resource type and action in the ker
       .toEqual(['seat:ticket:create:creatable_board']);
     expect(deniedRuleIds(await decide(seat, 'project', 'read', { id: 'project-unshared', clientId: OWN })))
       .toEqual(['seat:project:read:shared_project']);
-    expect(deniedRuleIds(await decide(seat, 'document', 'read', { id: 'd', clientId: OWN, is_client_visible: false })))
-      .toEqual(['seat:document:read:client_visible']);
+    expect(deniedRuleIds(await decide(seat, 'document', 'read', { id: 'd', clientId: OWN, is_client_visible: false, attachedTickets: [] })))
+      .toEqual(['seat:document:read:client_visible_or_in_scope_ticket']);
     expect((await decide(seat, 'ticket', 'read', { id: 't', clientId: OWN, boardId: 'board-work' })).allowed).toBe(true);
   });
 
@@ -149,7 +163,7 @@ describe('T015: a seat subject against every resource type and action in the ker
       const subject = subjectWith({ [CO_MANAGED_SEAT_RESOLVER_ID]: seatFacts });
       expect(isCoManagedSeatSubject(subject)).toBe(true);
       expect(coManagedSeatAuthority(subject)).toEqual({ scope: null });
-      for (const resource of [...BUNDLE_RULE_RESOURCE_TYPES, 'a_future_resource']) {
+      for (const resource of [...SEAT_RESOURCES, 'a_future_resource']) {
         for (const action of BUNDLE_RULE_ACTIONS) {
           const decision = await decide(subject, resource, action, goodRecord);
           expect(decision.allowed, `${resource}:${action}`).toBe(false);
@@ -193,19 +207,29 @@ describe('T015: a seat subject against every resource type and action in the ker
 
   it('list reads are narrowed the same way in SQL', () => {
     const knex = knexFactory({ client: 'pg' });
-    const sqlFor = (subject: AuthorizationSubject, resourceType: string) => {
+    // The adapter's ticket hook is the resource's own SQL; here it only shows what it was asked.
+    const ticketHook = (builder: Knex.QueryBuilder, scope: { clientIds: string[]; boardIds: string[] }, quantifier: string) =>
+      builder.whereRaw(`${quantifier}_tickets_in(?, ?)`, [scope.clientIds.join(','), scope.boardIds.join(',')]);
+    const sqlFor = (subject: AuthorizationSubject, resourceType: string, withHooks = true) => {
       const builder = knex('records as r');
       const result = compileResourceReadAuthorizationSql(builder, {
         resourceType, action: 'read', builtinRules: [], bundleRules: [],
         ctx: { subject, adapter: { idColumn: 'r.id', clientColumn: 'r.client_id', boardColumn: 'r.board_id',
-          clientVisibleColumn: 'r.is_client_visible', applyAssignedUsers: () => undefined } },
+          clientVisibleColumn: 'r.is_client_visible', applyAssignedUsers: () => undefined,
+          ...(withHooks ? { audienceColumn: 'r.audience', applyAttachedTickets: ticketHook } : {}) } },
       });
       expect(result.supported).toBe(true);
       return builder.toQuery();
     };
     expect(sqlFor(seat, 'ticket')).toBe(`select * from "records" as "r" where ("r"."client_id" in ('${OWN}')) and ("r"."board_id" in ('board-create', 'board-work'))`);
     expect(sqlFor(seat, 'project')).toBe(`select * from "records" as "r" where ("r"."client_id" in ('${OWN}')) and ("r"."id" in ('project-shared'))`);
-    expect(sqlFor(seat, 'document')).toBe(`select * from "records" as "r" where ("r"."client_id" in ('${OWN}')) and "r"."is_client_visible" = true`);
+    // A document: its client, no ticket outside the scope, and client-visible or attached to a ticket inside it.
+    expect(sqlFor(seat, 'document')).toBe(`select * from "records" as "r" where ("r"."client_id" in ('${OWN}')) and (every_tickets_in('${OWN}', 'board-create,board-work')) and (("r"."is_client_visible" = true or (some_tickets_in('${OWN}', 'board-create,board-work'))))`);
+    // An article: its audience, and nothing else (no client condition).
+    expect(sqlFor(seat, 'knowledge_base_article')).toBe(`select * from "records" as "r" where ("r"."audience" in ('client', 'public'))`);
+    // A resource that maps neither the audience nor the ticket attachments matches no row: fail closed, as the JS guards do.
+    expect(sqlFor(seat, 'knowledge_base_article', false)).toBe('select * from "records" as "r" where (1 = 0)');
+    expect(sqlFor(seat, 'credential')).toBe('select * from "records" as "r" where 1 = 0');
     expect(sqlFor(seat, 'billing')).toBe('select * from "records" as "r" where 1 = 0');
     expect(sqlFor(subjectWith({ [CO_MANAGED_SEAT_RESOLVER_ID]: facts({ assignments: [{ arrangement_id: ARRANGEMENT, state: 'revoked' }] }) }), 'ticket'))
       .toBe('select * from "records" as "r" where 1 = 0');
@@ -218,6 +242,17 @@ describe('T016: the seat policy classifies the whole kernel catalog and is not e
     expect(unclassifiedSeatResourceTypes(BUNDLE_RULE_RESOURCE_TYPES)).toEqual([]);
   });
 
+  it('credentials are an explicit denial: no rule, a stated reason, and every action refused', async () => {
+    const entry = SEAT_AUTHORITY_POLICY.credential;
+    expect('denied' in entry && entry.denied.length > 0).toBe(true);
+    for (const action of ['read', 'create', 'update', 'delete', 'reveal']) {
+      const decision = await decide(seat, 'credential', action, { id: 'c', clientId: OWN });
+      expect(decision.allowed, action).toBe(false);
+      expect(closedDenial(decision), action).toMatchObject({ sourceId: CO_MANAGED_SEAT_RESOLVER_ID, metadata: { resource: 'credential' } });
+    }
+    expect((await decide(mspStaff, 'credential', 'read', { id: 'c', clientId: OWN })).allowed).toBe(true);
+  });
+
   it('a resource type added to the catalog without classifying it for seat subjects fails the check', () => {
     expect(unclassifiedSeatResourceTypes([...BUNDLE_RULE_RESOURCE_TYPES, 'purchase_order'])).toEqual(['purchase_order']);
     const { asset: _dropped, ...withoutAsset } = SEAT_AUTHORITY_POLICY;
@@ -228,7 +263,7 @@ describe('T016: the seat policy classifies the whole kernel catalog and is not e
   });
 
   it('the policy names no resource type or action the catalog does not have', () => {
-    const catalog = new Set<string>(BUNDLE_RULE_RESOURCE_TYPES);
+    const catalog = new Set<string>(SEAT_RESOURCES);
     expect(Object.keys(SEAT_AUTHORITY_POLICY).filter((resource) => !catalog.has(resource))).toEqual([]);
     expect([...SEAT_AUTHORITY_ACTIONS]).toEqual([...BUNDLE_RULE_ACTIONS]);
     for (const [resource, entry] of Object.entries(SEAT_AUTHORITY_POLICY)) {
