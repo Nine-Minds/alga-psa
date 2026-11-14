@@ -3,7 +3,7 @@
 'use server'
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { attachThreadAudiencesOnSeatTicket } from './commentAudienceRead';
-import { assertNativeEditKeepsAudience } from '@alga-psa/shared/lib/commentAudience';
+import { assertNativeEditKeepsAudience, resolveCommentWriteAuthor } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -381,7 +381,10 @@ export const createComment = withAuth(async (
         };
       }
 
-      const insertedComment = await Comment.insertRecord(trx, commentTenant!, commentToInsert);
+      // A seat technician reaches this action from the ticket screen: decide the write for their
+      // organization so Private and the legacy internal note are refused (COMMENT_AUDIENCE_INVALID).
+      const audienceAuthor = await resolveCommentWriteAuthor(trx, commentTenant!, user);
+      const insertedComment = await Comment.insertRecord(trx, commentTenant!, commentToInsert, undefined, audienceAuthor);
       const commentId = insertedComment.comment_id!;
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 

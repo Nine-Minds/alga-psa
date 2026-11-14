@@ -24,7 +24,7 @@ import { projectedPeopleForCaller, projectedPeopleForSubject, projectedPersonToU
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
-import { nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { nativeThreadAudience, resolveCommentWriteAuthor, type CommentAudienceReader, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -3530,7 +3530,6 @@ export async function addTicketCommentInTransaction(
     schedule,
     emailRecipients,
     audienceId,
-    audienceAuthor,
   } = input;
 
   const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
@@ -3637,6 +3636,13 @@ export async function addTicketCommentInTransaction(
 
   // Native: `{}` with zero SQL (psa tenants, internal notes, plain authors). Co-managed: fails closed.
   // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+  // The author is decided here, once, for every caller (addTicketCommentWithCache, addTicketComment,
+  // bulk close resolution, canned responses): a seat technician is refused Private and the legacy
+  // internal note. Staff with `seat_reader === false` cost no SQL; client and service principals
+  // keep the author their authorType implies.
+  const audienceAuthor = input.audienceAuthor !== undefined
+    ? input.audienceAuthor
+    : await resolveCommentWriteAuthor(trx, tenant, user);
   const threadAudience = await nativeThreadAudience(trx, tenant, {
     isInternal: effectiveIsInternal, authorType, audience: audienceId, author: audienceAuthor, ticketId,
   });
