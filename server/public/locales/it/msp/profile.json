@@ -832,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Autorizzazione negata: la gestione delle chiavi API è riservata agli utenti interni",
+      "notAvailableForAccount": "Le chiavi API non sono disponibili per questo account.",
       "configInternalOnly": "Autorizzazione negata: la configurazione delle chiavi API è riservata agli utenti interni",
       "invalidExpiration": "Scegli una data di scadenza valida per questa chiave API.",
       "notFound": "Chiave API non trovata.",
