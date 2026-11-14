@@ -50,6 +50,12 @@ interface UserAndTeamPickerProps {
    * false so every existing consumer keeps today's behavior.
    */
   hideNotAssignedOption?: boolean;
+  /**
+   * Lists the named users under their own heading after everyone else, in the order given. A user
+   * in no group stays in the main list; an id that is not in `users` is ignored. Groups are
+   * display only: search, selection and filtering apply to every user as before.
+   */
+  userGroups?: ReadonlyArray<{ label: string; userIds: readonly string[] }>;
 }
 
 interface OptionButtonProps {
@@ -102,6 +108,7 @@ const UserAndTeamPicker = ({
   userTypeFilter = 'internal',
   modal = true,
   hideNotAssignedOption = false,
+  userGroups,
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-and-team-picker'
 }: UserAndTeamPickerProps & AutomationProps) => {
@@ -423,6 +430,30 @@ const UserAndTeamPicker = ({
     setIsOpen(false);
   };
 
+  const renderUserOption = (user: IUser): React.JSX.Element => {
+    const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || t('pickers.unnamedUser', 'Unnamed User');
+    return (
+      <OptionButton
+        key={user.user_id}
+        id={`${pickerId}-option-${user.user_id}`}
+        label={userName}
+        onClick={() => handleSelectUser(user.user_id)}
+        className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
+        parentId={pickerId}
+      >
+        <div className="flex items-center gap-2">
+          <UserAvatar
+            userId={user.user_id}
+            userName={userName}
+            avatarUrl={resolveUserAvatar(user.user_id)}
+            size="xs"
+          />
+          <span>{userName}</span>
+        </div>
+      </OptionButton>
+    );
+  };
+
   const dropdownContent = (
     // The dropdown is portaled to document.body, so inside a modal dialog it sits
     // outside that dialog's focus scope: without a scope of its own the dialog's
@@ -497,29 +528,30 @@ const UserAndTeamPicker = ({
             </OptionButton>
           )}
 
-          {filteredUsers.map((user): React.JSX.Element => {
-            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || t('pickers.unnamedUser', 'Unnamed User');
+          {(() => {
+            const groupOf = new Map<string, string>();
+            for (const group of userGroups ?? []) for (const userId of group.userIds) if (!groupOf.has(userId)) groupOf.set(userId, group.label);
+            const ungrouped = filteredUsers.filter((user) => !groupOf.has(user.user_id));
+            const groups = (userGroups ?? [])
+              .map((group) => ({ label: group.label, members: filteredUsers.filter((user) => groupOf.get(user.user_id) === group.label) }))
+              .filter((group) => group.members.length > 0);
             return (
-              <OptionButton
-                key={user.user_id}
-                id={`${pickerId}-option-${user.user_id}`}
-                label={userName}
-                onClick={() => handleSelectUser(user.user_id)}
-                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
-                parentId={pickerId}
-              >
-                <div className="flex items-center gap-2">
-                  <UserAvatar
-                    userId={user.user_id}
-                    userName={userName}
-                    avatarUrl={resolveUserAvatar(user.user_id)}
-                    size="xs"
-                  />
-                  <span>{userName}</span>
-                </div>
-              </OptionButton>
+              <>
+                {ungrouped.map(renderUserOption)}
+                {groups.map((group, groupIndex) => (
+                  <React.Fragment key={`group:${group.label}`}>
+                    <div
+                      data-automation-id={`${pickerId}-group-${groupIndex}`}
+                      className="px-3 pt-2 pb-1 text-xs uppercase text-gray-500 tracking-wide"
+                    >
+                      {group.label}
+                    </div>
+                    {group.members.map(renderUserOption)}
+                  </React.Fragment>
+                ))}
+              </>
             );
-          })}
+          })()}
 
           {filteredTeams.length > 0 && (
             <div className="px-3 pt-2 pb-1 text-xs uppercase text-gray-500 tracking-wide">Teams</div>

@@ -593,6 +593,7 @@
       "requester": "Requester",
       "sharedIt": "Shared IT",
       "organizationPrivate": "Organization private",
+      "private": "Private",
       "placeholder": "Who can see this?",
       "required": "Choose who can see this comment before posting it."
     },
@@ -1277,6 +1278,7 @@
     "keepEditing": "Keep Editing",
     "statusRequiresSelection": "Select a status for the new board before saving.",
     "notAssigned": "Not assigned",
+    "clientItGroup": "Client IT",
     "additionalAgentsTooltip": "Additional Agents:",
     "loading": "Loading...",
     "tagsCannotBeManaged": "Tags cannot be managed",

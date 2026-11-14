@@ -507,6 +507,7 @@ describe('updateTicketWithCache live updates', () => {
       last_name: 'Agent',
       tenant: 'tenant-1',
       user_type: 'internal',
+      seat_reader: false, // a loaded staff row: the write resolves its author with no seat SQL
     };
     hasPermissionMock.mockResolvedValue(true);
     resolveBundleRulesMock.mockReset().mockResolvedValue([]);

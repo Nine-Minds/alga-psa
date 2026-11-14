@@ -551,6 +551,7 @@
       "requester": "Anfragender",
       "sharedIt": "Gemeinsame IT",
       "organizationPrivate": "Nur Organisation",
+      "private": "Privat",
       "placeholder": "Wer kann das sehen?",
       "required": "Wählen Sie vor dem Senden aus, wer diesen Kommentar sehen kann."
     },
@@ -1165,6 +1166,7 @@
     "keepEditing": "Weiter bearbeiten",
     "statusRequiresSelection": "Wählen Sie vor dem Speichern einen Status für das neue Board aus.",
     "notAssigned": "Nicht zugewiesen",
+    "clientItGroup": "Client-IT",
     "additionalAgentsTooltip": "Zusätzliche Agents:",
     "loading": "Wird geladen...",
     "tagsCannotBeManaged": "Tags können nicht verwaltet werden",

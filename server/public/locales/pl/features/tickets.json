@@ -595,6 +595,7 @@
       "requester": "Zgłaszający",
       "sharedIt": "Wspólny dział IT",
       "organizationPrivate": "Prywatne dla organizacji",
+      "private": "Prywatne",
       "placeholder": "Kto może to zobaczyć?",
       "required": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
     },
@@ -1279,6 +1280,7 @@
     "keepEditing": "Kontynuuj edycję",
     "statusRequiresSelection": "Wybierz status dla nowej tablicy przed zapisaniem.",
     "notAssigned": "Nie przypisano",
+    "clientItGroup": "Dział IT klienta",
     "additionalAgentsTooltip": "Dodatkowi agenci:",
     "loading": "Ładowanie...",
     "tagsCannotBeManaged": "Tagami nie można zarządzać",

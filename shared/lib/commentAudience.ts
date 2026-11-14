@@ -219,6 +219,24 @@ export async function admitCommentAudienceReader(
   return resolveCommentAudienceReader(trx, tenant, user);
 }
 
+/**
+ * The author a native comment write is decided for, from the user row the entry point already holds.
+ *
+ * An internal user is resolved with `admitCommentAudienceReader` (staff with zero SQL when
+ * `seat_reader === false`; a seat technician is their client's seat reader, so
+ * `assertCommentWriteAudience` refuses them Private and the legacy internal note). Any other
+ * principal (a client user, a service principal) returns `undefined`: the write keeps the author
+ * its `authorType` has always implied, so those paths behave exactly as before.
+ */
+export async function resolveCommentWriteAuthor(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: { user_id: string; user_type?: string | null; seat_reader?: boolean | null },
+): Promise<CommentAudienceReader | null | undefined> {
+  if (user.user_type !== 'internal') return undefined;
+  return admitCommentAudienceReader(trx, tenant, { userId: user.user_id, userType: 'internal', seatReader: user.seat_reader });
+}
+
 /** The owning organization as a WRITE sees it: the read owner plus whether its client has a live seat arrangement. */
 export interface CommentWriteOwner extends CommentAudienceOwner {
   /** The ticket's client has an active seat arrangement. Only then does `shared_it` exist. */

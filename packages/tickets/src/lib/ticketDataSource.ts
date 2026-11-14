@@ -391,6 +391,14 @@ export interface TicketConversationConfig {
    * resolution flow never offers it.
    */
   audiences?: readonly CommentAudience[];
+  /**
+   * The audience a fresh composer starts on, when it is one of `audiences`. Absent: no default, and
+   * submit stays blocked until the author chooses (the fail-closed default of shared tickets and
+   * co_managed workspaces).
+   */
+  defaultAudience?: CommentAudience;
+  /** Display names that replace an audience's stock label (already translated), e.g. `Private` for `organization_private`. */
+  audienceLabels?: Partial<Record<CommentAudience, string>>;
 }
 
 // ---------------------------------------------------------------------------

@@ -21,6 +21,12 @@ export function useComposerAudiences(): readonly ComposerAudience[] | null {
   return audiences && audiences.length > 0 ? audiences : null;
 }
 
+/** The audience a fresh composer starts on, if the data source names one that it offers. */
+export function useDefaultComposerAudience(): ComposerAudience | null {
+  const { audiences, defaultAudience } = useTicketDataSource().conversation;
+  return defaultAudience && audiences?.includes(defaultAudience) ? defaultAudience : null;
+}
+
 export const nativeComposerAudiences = (audiences: readonly ComposerAudience[]): NativeComposerAudience[] =>
   audiences.filter((audience): audience is NativeComposerAudience => audience !== 'shared_it');
 
@@ -35,7 +41,9 @@ const BADGE_VARIANT: Record<CommentAudience, BadgeVariant> = {
 
 function useAudienceLabels() {
   const { t } = useTranslation('features/tickets');
+  const overrides = useTicketDataSource().conversation.audienceLabels;
   return (audience: CommentAudience): string => {
+    if (overrides?.[audience]) return overrides[audience] as string;
     switch (audience) {
       case 'requester':
         return t('conversation.audience.requester', 'Requester');
@@ -64,7 +72,7 @@ interface CommentAudienceSelectProps {
   disabled?: boolean;
 }
 
-/** Audience picker for the composer. No default: the author must choose (fail-closed). */
+/** Audience picker for the composer. Without a data-source default the author must choose (fail-closed). */
 export function CommentAudienceSelect({ id, audiences, value, onChange, disabled }: CommentAudienceSelectProps) {
   const { t } = useTranslation('features/tickets');
   const labelOf = useAudienceLabels();

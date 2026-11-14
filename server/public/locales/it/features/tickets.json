@@ -593,6 +593,7 @@
       "requester": "Richiedente",
       "sharedIt": "IT condiviso",
       "organizationPrivate": "Privato dell'organizzazione",
+      "private": "Privato",
       "placeholder": "Chi può vederlo?",
       "required": "Scegli chi può vedere questo commento prima di pubblicarlo."
     },
@@ -1277,6 +1278,7 @@
     "keepEditing": "Continua a modificare",
     "statusRequiresSelection": "Seleziona uno stato per la nuova bacheca prima di salvare.",
     "notAssigned": "Non assegnato",
+    "clientItGroup": "IT del cliente",
     "additionalAgentsTooltip": "Agenti aggiuntivi:",
     "loading": "Caricamento...",
     "tagsCannotBeManaged": "I tag non possono essere gestiti",

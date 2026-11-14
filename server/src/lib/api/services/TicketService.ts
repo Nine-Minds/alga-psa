@@ -17,7 +17,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { admitInternalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { admitInternalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience, resolveCommentWriteAuthor } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -2986,6 +2986,15 @@ export class TicketService extends BaseService<ITicket> {
       // author_type comes from the authenticated key's user, via the same
       // resolver the UI action uses; a client user also records its contact.
       const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
+      // A seat technician can hold an API key: decide the write for their organization. The verified
+      // user row (when the transport loaded it) lets staff skip the seat tables; other principals
+      // (service, client) keep the author their authorType implies.
+      const apiAudienceUser = context.user as TicketServiceUser | undefined;
+      const apiAudienceAuthor = apiAudienceUser && apiAudienceUser.user_id === context.userId
+        ? await resolveCommentWriteAuthor(trx, context.tenant, apiAudienceUser)
+        : apiAuthor.authorType === 'internal' && context.userId
+          ? await resolveCommentWriteAuthor(trx, context.tenant, { user_id: context.userId, user_type: 'internal' })
+          : undefined;
 
       if (apiIsReply) {
         // Reply: attach to the parent's existing thread and inherit its
@@ -3035,7 +3044,7 @@ export class TicketService extends BaseService<ITicket> {
         // Labelled thread: serialise against an audience change; the reply inherits it.
         const apiReplyAudience = await nativeReplyAudience(trx, context.tenant,
           { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-          { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null, ticketId });
+          { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null, ticketId, author: apiAudienceAuthor });
         if (apiReplyAudience) apiThreadAudience = { collaboration_audience: apiReplyAudience };
       } else {
         // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
@@ -3060,6 +3069,7 @@ export class TicketService extends BaseService<ITicket> {
           authorType: apiAuthor.authorType,
           audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
           ticketId,
+          author: apiAudienceAuthor,
         });
 
         await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({

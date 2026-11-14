@@ -551,6 +551,7 @@
       "requester": "Beställare",
       "sharedIt": "Delad IT",
       "organizationPrivate": "Privat för organisationen",
+      "private": "Privat",
       "placeholder": "Vem kan se detta?",
       "required": "Välj vem som kan se kommentaren innan du publicerar den."
     },
@@ -1165,6 +1166,7 @@
     "keepEditing": "Fortsätt redigera",
     "statusRequiresSelection": "Välj en status för den nya tavlan innan du sparar.",
     "notAssigned": "Inte tilldelat",
+    "clientItGroup": "Kundens IT",
     "additionalAgentsTooltip": "Ytterligare handläggare:",
     "loading": "Läser in…",
     "tagsCannotBeManaged": "Taggar kan inte hanteras",
