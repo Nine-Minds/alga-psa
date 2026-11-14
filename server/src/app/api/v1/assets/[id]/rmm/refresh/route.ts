@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { refreshAssetRmmDataForApi } from '@/lib/actions/asset-actions/rmmActions';
+import { refreshAssetRmmDataForApi } from '@alga-psa/integrations/lib/rmm/assetRmmApi';
 import { assetRmmRecordSource } from '@alga-psa/authorization/recordProjection';
 import { readAssetGateForRequest, assetNotFoundResponse } from 'server/src/lib/api/controllers/assetReadGuard';
 import { reprojectUnderDecision, type AuthorizedProjection } from 'server/src/lib/api/controllers/authorizationKernel';
