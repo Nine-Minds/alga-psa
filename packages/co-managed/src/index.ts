@@ -138,3 +138,17 @@ export { getCoManagedIndependentUpgradeScreen, resolveCoManagedUpgradeAccess, ty
 export { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, CO_MANAGED_UPGRADE_PURCHASE_STATES,
   CO_MANAGED_UPGRADE_PENDING_STATES } from './upgradePurchase';
 export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManagedUpgradePurchaseState } from './upgradePurchase';
+// Seat shape (S5): seat arrangements and their board scope.
+export * from './seatArrangement';
+// Seat shape (S8): the role a seat technician holds, seeded by the sponsor's first arrangement.
+export * from './seatRole';
+// Seat shape (S14): the people a seat technician can see.
+export * from './seatPeopleProjection';
+// Seat shape (S7): inviting a technician against the arrangement's allocation.
+export * from './seatInvitation';
+// Seat shape (S10): revoking a seat and converting a technician to an MSP user.
+export * from './seatRevocation';
+// Seat shape (S23): ticket responsibility and the handoff in each direction.
+export * from './seatTicketHandoff';
+// Seat shape (S32): who a handoff and a shared IT note notify.
+export * from './seatNotifications';

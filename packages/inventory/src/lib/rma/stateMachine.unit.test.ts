@@ -121,6 +121,18 @@ describe('warranty state machine', () => {
       expect(() => assertWarrantyTransition('dead_unit_owed', 'confirm_vendor_receipt', 'standard')).toThrow(RmaTransitionError);
     });
 
+    it('charges only overdue return-window cases on the advance track and resolves them', () => {
+      for (const status of RMA_STATUSES) {
+        expect(nextWarrantyStatus(status, 'charge_vendor_non_return', 'advance_replacement'))
+          .toBe(['replaced', 'repaired'].includes(status) ? 'closed' : null);
+      }
+      expect(WARRANTY_TRANSITIONS.charge_vendor_non_return).toMatchObject({
+        from: ['replaced', 'repaired'], to: 'closed', eventType: 'closed', closes: true,
+        fixedClosedReason: 'resolved', onlyTrack: 'advance_replacement', writesAsset: false,
+      });
+      expect(nextWarrantyStatus('replaced', 'charge_vendor_non_return', 'standard')).toBeNull();
+    });
+
     it('generic close accepts dead_unit_owed; return_to_client does not', () => {
       expect(nextWarrantyStatus('dead_unit_owed', 'close')).toBe('closed');
       expect(nextWarrantyStatus('dead_unit_owed', 'return_to_client')).toBeNull();

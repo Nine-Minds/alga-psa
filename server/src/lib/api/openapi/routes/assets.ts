@@ -88,7 +88,8 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       client_id: zOpenApi.string().guid().describe('Client UUID from clients.client_id. Required.'),
       asset_type: AssetType.describe('Must be a built-in slug or registered custom slug; unknown slugs return 400.'),
-      asset_tag: zOpenApi.string().min(1).max(255).describe('Required tenant-specific asset tag.'),
+      asset_tag: zOpenApi.string().max(255).optional().describe('Optional physical tag. Omit or send blank to allocate from the tenant-wide asset sequence.'),
+      asset_number_reservation_id: zOpenApi.string().guid().optional().describe('Optional durable reservation to commit to this new asset.'),
       name: zOpenApi.string().min(1).max(255).describe('Required asset name.'),
       status: zOpenApi.string().min(1).describe('Required asset status.'),
       location_id: zOpenApi.string().guid().nullable().optional().describe('Optional client_locations.location_id link. Validated to belong to client_id.'),
@@ -873,7 +874,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets',
     summary: 'Create asset',
     description:
-      'Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.',
+      'Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, name, and status are required. A blank or omitted asset_tag is allocated from the tenant-wide sequence, optionally using asset_number_reservation_id. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {

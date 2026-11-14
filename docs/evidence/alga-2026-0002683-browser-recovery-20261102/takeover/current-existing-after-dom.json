@@ -1,0 +1,105 @@
+{
+  "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+  "success": true,
+  "result": {
+    "url": "file:///home/robert/alga-copies/feature-alga-2026-0002683-c5-follow-up-2-advance-track-v/docs/evidence/alga-2026-0002683-browser-recovery-20261102/takeover/diagnostic.html",
+    "title": "Browser pipeline diagnostic",
+    "tree": {
+      "uid": "e0",
+      "tag": "body",
+      "visible": true,
+      "bounds": {
+        "x": 8,
+        "y": 8,
+        "width": 2620,
+        "height": 406
+      },
+      "selector": "body",
+      "children": [
+        {
+          "uid": "e1",
+          "tag": "h1",
+          "text": "Browser pipeline diagnostic",
+          "visible": true,
+          "bounds": {
+            "x": 48,
+            "y": 86,
+            "width": 2540,
+            "height": 65
+          },
+          "selector": "h1"
+        },
+        {
+          "uid": "e2",
+          "tag": "p",
+          "text": "Local diagnostic only. No Alga feature assertions.",
+          "visible": true,
+          "bounds": {
+            "x": 48,
+            "y": 188,
+            "width": 2540,
+            "height": 32
+          },
+          "selector": "p"
+        },
+        {
+          "uid": "e3",
+          "tag": "label",
+          "text": "Input probe",
+          "visible": true,
+          "bounds": {
+            "x": 48,
+            "y": 251,
+            "width": 149,
+            "height": 31
+          },
+          "selector": "label"
+        },
+        {
+          "uid": "e4",
+          "tag": "input",
+          "id": "probe-input",
+          "type": "text",
+          "value": "existing-card-pane-verified",
+          "visible": true,
+          "bounds": {
+            "x": 197,
+            "y": 248,
+            "width": 369,
+            "height": 38
+          },
+          "selector": "#probe-input"
+        },
+        {
+          "uid": "e5",
+          "tag": "button",
+          "id": "probe-button",
+          "text": "Check input",
+          "type": "submit",
+          "visible": true,
+          "bounds": {
+            "x": 566,
+            "y": 248,
+            "width": 164,
+            "height": 38
+          },
+          "selector": "#probe-button"
+        },
+        {
+          "uid": "e6",
+          "tag": "p",
+          "id": "probe-result",
+          "text": "Click received: existing-card-pane-verified",
+          "visible": true,
+          "bounds": {
+            "x": 48,
+            "y": 314,
+            "width": 2540,
+            "height": 32
+          },
+          "selector": "#probe-result"
+        }
+      ]
+    }
+  }
+}

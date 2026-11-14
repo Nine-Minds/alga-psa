@@ -221,21 +221,21 @@ describe('asset procurement fields', () => {
     actionAuth.tenant = own.tenantId;
     actionAuth.userId = own.userId;
 
-    // Validation failures throw, as every other unavailable-selection check in
-    // createAsset does; the UI maps the throw through assetActionErrorFrom.
+    // Expected selection failures return a localizable action error without persisting an asset.
     const crossTenant = await createAsset({
       ...baseAsset(own.clientId),
       vendor_id: other.vendorId,
-    } as any).catch((error: unknown) => error);
-    expect(crossTenant).toBeInstanceOf(Error);
+    } as any);
+    expect(crossTenant).toMatchObject({ actionError: 'Selected vendor is not available.' });
     expect(assetActionErrorFrom(crossTenant)).not.toBeNull();
 
     const missing = await createAsset({
       ...baseAsset(own.clientId),
       vendor_id: randomUUID(),
-    } as any).catch((error: unknown) => error);
-    expect(missing).toBeInstanceOf(Error);
+    } as any);
+    expect(missing).toMatchObject({ actionError: 'Selected vendor is not available.' });
     expect(assetActionErrorFrom(missing)).not.toBeNull();
+    expect(await table(own.tenantId, 'assets')).toHaveLength(0);
   });
 
   // T006

@@ -25,6 +25,7 @@ import type {
   RecurringChargeFamily,
 } from '@alga-psa/types';
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import {
   getRecurringServicePeriodDisplayState,
@@ -599,6 +600,8 @@ async function persistRecurringServicePeriodRepair(
     recordsToInsert: IRecurringServicePeriodRecord[];
   },
 ) {
+  if (params.recordsToSupersede.length === 0 && params.recordsToInsert.length === 0) return;
+  await lockTenantBilling(trx, params.tenant);
   for (const record of params.recordsToSupersede) {
     await tenantDb(trx, params.tenant).table('recurring_service_periods')
       .where({ record_id: record.recordId })

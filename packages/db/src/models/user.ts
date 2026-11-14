@@ -11,6 +11,8 @@ import { INTERACTIVE_USER_TYPES } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
+import { assertUserRoleFloor, isUserRoleFloorRejected, UserRoleFloorError } from '../lib/userRoleFloor';
+import { assertSeatTechnicianWrite } from '../lib/seatTechnicianGuard';
 import { verifyPassword } from '@alga-psa/core/encryption';
 
 interface IUserRoleWithOptionalTenant extends Omit<IUserRole, 'tenant'> {
@@ -601,6 +603,19 @@ const User = {
   updateUserRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, roles: IRole[]): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
+      // Defense in depth: this exported write path replaces the whole role set,
+      // so it must respect the same floors the server actions do.
+      const floor = await assertUserRoleFloor(knexOrTrx, tenant, {
+        kind: 'set_roles',
+        userId: user_id,
+        roleIds: roles.map((role) => role.role_id),
+      });
+      if (isUserRoleFloorRejected(floor)) {
+        throw new UserRoleFloorError(floor.message, floor.violation);
+      }
+
+      await assertSeatTechnicianWrite(knexOrTrx, tenant, [user_id], { roleIds: roles.map((role) => role.role_id) });
+
       const db = tenantDb(knexOrTrx, tenant);
       await db.table('user_roles').where({ user_id }).del();
       const userRoles = roles.map((role): IUserRoleWithOptionalTenant => ({

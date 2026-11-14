@@ -602,6 +602,7 @@ CE,/api/v1/quotes,GET POST,server/src/app/api/v1/quotes/route.ts,ApiQuoteControl
 CE,/api/v1/quotes/{id},DELETE GET PUT,server/src/app/api/v1/quotes/[id]/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/quotes/{id}/activities,GET,server/src/app/api/v1/quotes/[id]/activities/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/quotes/{id}/approve,POST,server/src/app/api/v1/quotes/[id]/approve/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/archive,POST,server/src/app/api/v1/quotes/[id]/archive/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/quotes/{id}/convert,POST,server/src/app/api/v1/quotes/[id]/convert/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/quotes/{id}/convert/preview,GET,server/src/app/api/v1/quotes/[id]/convert/preview/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/quotes/{id}/items,GET POST,server/src/app/api/v1/quotes/[id]/items/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts

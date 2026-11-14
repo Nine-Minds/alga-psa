@@ -5,7 +5,7 @@
 
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
-import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertHumanWorkOwner, timeEntryWorkItem } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import {
@@ -43,16 +43,28 @@ import {
   getWorkItemBillingContext,
   deleteTimeEntryCore,
   persistTimeEntry,
+  assertTimeEntryCreateInScope,
   publishPersistedTimeEntryEvents,
   type PersistedTimeEntry,
 } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
 import { getEligibleContractLines } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
 import { resolveDeterministicContractLineSelection } from '@alga-psa/scheduling/lib/contractLineDisambiguation.shared';
 import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '@alga-psa/scheduling/actions/timeEntrySchemas';
+import { resolveTimeEntryReadScope } from '@alga-psa/scheduling/lib/timeEntryAuthorizationSql';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import {
   CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
   type ContractLineSource,
 } from '@alga-psa/types';
+
+/** `readScope.apply` narrows the builder in place; this returns it so it chains with the query it was applied to. */
+function narrowToReadScope<Q extends Knex.QueryBuilder>(
+  readScope: { apply(builder: Knex.QueryBuilder): void },
+  query: Q,
+): Q {
+  readScope.apply(query);
+  return query;
+}
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -186,7 +198,8 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'list', [options, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Extract filters from options
     const filters = options.filters as TimeEntryFilterData;
@@ -220,7 +233,7 @@ export class TimeEntryService extends BaseService<any> {
     query.limit(limit).offset(offset);
 
     // Get total count - need to apply same filters to count query
-    const countQuery = this.buildTenantScopedQuery(knex, context);
+    const countQuery = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     
     // Apply same filters to count query
     this.applyFilters(countQuery, filters, knex, context.tenant);
@@ -241,8 +254,9 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getById', [id, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
     const scopedDb = tenantDb(knex, context.tenant);
-    const query = this.buildTenantScopedQuery(knex, context);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'service_catalog', 'time_entries.service_id', 'service_catalog.service_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'time_sheets', 'time_entries.time_sheet_id', 'time_sheets.id', { type: 'left' });
@@ -378,6 +392,13 @@ export class TimeEntryService extends BaseService<any> {
       throw new ConflictError('Time entry overlaps with existing entry');
     }
 
+    // The create gate runs before anything is written, so a refused entry leaves no time sheet behind. The write core
+    // asks the same question again inside its transaction.
+    if (!context.user) {
+      throw new ForbiddenError('Permission denied: Missing user context');
+    }
+    await knex.transaction((trx) => assertTimeEntryCreateInScope(trx, context.tenant, context.user as IUser, context.userId, data as any));
+
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheetForWorkDate(work_date, context.userId, context);
 
@@ -451,7 +472,10 @@ export class TimeEntryService extends BaseService<any> {
     // Human-work guard: only when this write changes the owner.
     const requestedOwner = (data as { user_id?: string | null }).user_id;
     if (requestedOwner && requestedOwner !== existing.user_id) {
-      await assertHumanWorkAssignee(knex, context.tenant, [requestedOwner]);
+      await assertHumanWorkAssignee(knex, context.tenant, [requestedOwner], timeEntryWorkItem(
+        (data as { work_item_type?: string | null }).work_item_type ?? existing.work_item_type,
+        (data as { work_item_id?: string | null }).work_item_id ?? existing.work_item_id
+      ));
     }
 
     // Extract is_billable from data as it's not a database column
@@ -821,6 +845,10 @@ export class TimeEntryService extends BaseService<any> {
     };
     
     this.applyFilters(query, filters, knex, context.tenant);
+
+    // Only the entries the caller may read: entries on work items of clients outside their scope are not exported,
+    // and an entry on client-less work (ad hoc) is exported to its own user only. Free for a caller nothing narrows.
+    (await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName)).apply(query);
     
     // Add joins for complete data
     const scopedDb = tenantDb(knex, context.tenant);
@@ -904,11 +932,12 @@ export class TimeEntryService extends BaseService<any> {
     // Human-work guard: approval requires a human approver. Checked before the per-entry
     // loop, whose catch would otherwise swallow the error into a per-entry failure.
     await assertHumanWorkOwner(knex, context.tenant, context.userId, 'approved_by');
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
 
     for (const entryId of data.entry_ids) {
       try {
         // First check if the entry exists
-        const entry = await this.buildTenantScopedQuery(knex, context)
+        const entry = await narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context))
           .where('entry_id', entryId)
           .first();
           
@@ -985,10 +1014,11 @@ export class TimeEntryService extends BaseService<any> {
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
     
     for (const entryId of data.entry_ids) {
       try {
-        await this.buildTenantScopedQuery(knex, context)
+        await narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context))
           .where('entry_id', entryId)
           .where('approval_status', 'SUBMITTED')
           .update(withViaPrincipal(context, {
@@ -1024,7 +1054,8 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'searchTimeEntries', [searchData, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
     const tableName = this.tableName;
@@ -1072,7 +1103,7 @@ export class TimeEntryService extends BaseService<any> {
     query.limit(limit).offset(offset);
 
     // Get total count
-    const countQuery = this.buildTenantScopedQuery(knex, context);
+    const countQuery = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     
     if (searchData.query) {
       countQuery.where(`${this.tableName}.notes`, 'ilike', `%${searchData.query}%`);
@@ -1093,7 +1124,8 @@ export class TimeEntryService extends BaseService<any> {
   
   async search(searchData: TimeEntrySearchData, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
-    const query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
     if (searchData.fields && searchData.fields.length > 0) {
@@ -1169,7 +1201,8 @@ export class TimeEntryService extends BaseService<any> {
   
   async getStatistics(context: ServiceContext, filters?: TimeEntryFilterData): Promise<any> {
     const { knex } = await this.getKnex();
-    let query = this.buildTenantScopedQuery(knex, context);
+    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    let query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Apply date filters if provided
     if (filters?.date_from) {
@@ -1217,7 +1250,7 @@ export class TimeEntryService extends BaseService<any> {
     if (!timeSheet) {
       // Create new time sheet
       // Human-work guard (R5.3): never create a time sheet for a non-internal user.
-      await assertHumanWorkAssignee(knex, context.tenant, [userId]);
+      await assertHumanWorkAssignee(knex, context.tenant, [userId], { kind: 'unscoped', surface: 'time_sheet' });
       const [newTimeSheet] = await tenantDb(knex, context.tenant).table('time_sheets')
         .insert({
           period_id: period.period_id,

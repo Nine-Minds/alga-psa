@@ -44,6 +44,9 @@ describe('production release tenant targeting (co-managed)', () => {
       'release-v2-0-feature': flag,
       'capability:co-managed': served,
       'capability:co-managed:admit': admitted,
+      // No seat resolver is registered here: the seat capability stays closed on the same flag.
+      'capability:co-managed-seat': false,
+      'capability:co-managed-seat:admit': false,
     });
     expect(checker).not.toHaveBeenCalled();
   });
@@ -55,6 +58,8 @@ describe('production release tenant targeting (co-managed)', () => {
       'release-v2-0-feature': true,
       'capability:co-managed': false,
       'capability:co-managed:admit': false,
+      'capability:co-managed-seat': false,
+      'capability:co-managed-seat:admit': false,
     });
   });
 

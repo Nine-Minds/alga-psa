@@ -913,6 +913,38 @@ export interface RmaReceivables {
   more_count: number;
 }
 
+export interface OverdueAdvanceVendorReturn {
+  rma_id: string;
+  rma_number: string;
+  rma_reference: string | null;
+  asset_id: string;
+  client_id: string | null;
+  return_by: string;
+  overdue_days: number;
+  days_until_due: number;
+}
+
+/** Advance-track claims awaiting dead-unit shipment, overdue or due within the next seven calendar days. */
+export async function queryOverdueAdvanceVendorReturns(db: Db, tenant: string, today: string): Promise<OverdueAdvanceVendorReturn[]> {
+  return db('rma_cases as r')
+    .where({ 'r.tenant': tenant, 'r.rma_type': 'advance_replacement' })
+    .whereIn('r.status', ['replaced', 'repaired'])
+    .whereNull('r.closed_at')
+    .whereNull('r.outbound_shipped_at')
+    .whereNull('r.returned_unit_id')
+    .whereNotNull('r.asset_id')
+    .whereNotNull('r.return_by')
+    .whereRaw("r.return_by <= ?::date + interval '7 days'", [today])
+    .orderBy('r.return_by', 'asc')
+    .select<OverdueAdvanceVendorReturn[]>(
+      'r.rma_id as rma_id', 'r.rma_number as rma_number', 'r.rma_reference as rma_reference',
+      'r.asset_id as asset_id', 'r.client_id as client_id',
+      db.raw("to_char(r.return_by, 'YYYY-MM-DD') as return_by"),
+      db.raw('( ?::date - r.return_by)::int as overdue_days', [today]),
+      db.raw('(r.return_by - ?::date)::int as days_until_due', [today]),
+    );
+}
+
 /**
  * Units sitting at the vendor age like receivables: everything in
  * status 'sent_to_vendor', aged from the rma_out movement (opened_at fallback),

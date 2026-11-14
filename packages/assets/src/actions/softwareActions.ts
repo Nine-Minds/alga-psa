@@ -102,6 +102,8 @@ async function updateSoftwareCatalogEntryAuthorized(
   if (updates.is_security_relevant !== undefined) updateData.is_security_relevant = updates.is_security_relevant;
 
   if (Object.keys(updateData).length > 0) {
+    // No trigger stamps this where the table is Citus-distributed.
+    updateData.updated_at = new Date();
     await tenantScopedTable(knex, tenant, 'software_catalog')
       .where({ software_id: softwareId })
       .update(updateData);

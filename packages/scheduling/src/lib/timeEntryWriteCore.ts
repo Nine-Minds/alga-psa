@@ -1,9 +1,12 @@
+import { clientResolvers } from '@alga-psa/authorization/kernel';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
 import {
   computeWorkDateFields,
   recalculateProjectTaskActualHoursForEntryChange,
+  recordTicketAssigneeChange,
   resolveUserTimeZone,
   tenantDb,
   truncateToMinute,
@@ -17,7 +20,7 @@ import {
 // Bucket usage MUST go through the shared canonical service. See the note in
 // actions/timeEntryCrudActions.ts history: a local fork once queried the dropped
 // `client_contract_lines` table and caused a prod outage on time-entry save.
-import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertHumanWorkOwner, timeEntryWorkItem } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { adjustTimeSpanDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 // Hour-block burn MUST go through the shared canonical service too.
@@ -236,6 +239,31 @@ export async function publishPersistedTimeEntryEvents(persisted: PersistedTimeEn
   }
 }
 
+/**
+ * A new entry is created for the client of its work item (S4 `work_item` resolver), so a client-restricted
+ * subject cannot log time against a client outside their scope. An entry whose work item has no client
+ * (ad hoc, non-billable) is the subject's own to log, exactly as such entries stay readable by their own
+ * user (see timeEntryAuthorizationSql.ts); for anyone else's, the candidate has no client and a narrowed
+ * subject is refused.
+ */
+export async function assertTimeEntryCreateInScope(
+  trx: Knex.Transaction,
+  tenant: string,
+  actor: IUser,
+  entryUserId: string,
+  entry: Pick<SaveTimeEntryParams, 'work_item_type' | 'work_item_id'>,
+): Promise<void> {
+  await assertRecordCreateAllowed(trx, {
+    tenant,
+    user: actor,
+    resourceType: 'time_entry',
+    record: async () => {
+      const clientId = await clientResolvers.resolveClient(trx, tenant, 'work_item', entry.work_item_type, entry.work_item_id);
+      return !clientId && entryUserId === actor.user_id ? null : { clientId, ownerUserId: entryUserId };
+    },
+  }, 'time entries');
+}
+
 export async function persistTimeEntry(
   trx: Knex.Transaction,
   input: PersistTimeEntryInput,
@@ -281,10 +309,11 @@ export async function persistTimeEntry(
   // An explicit owner must be a licensed user; a defaulted owner (the actor) must be one too.
   if (!validatedTimeEntry.entry_id) {
     if (validatedTimeEntry.user_id) {
-      await assertHumanWorkAssignee(trx, tenant, [validatedTimeEntry.user_id]);
+      await assertHumanWorkAssignee(trx, tenant, [validatedTimeEntry.user_id], timeEntryWorkItem(validatedTimeEntry.work_item_type, validatedTimeEntry.work_item_id));
     } else {
       await assertHumanWorkOwner(trx, tenant, actorUserId, 'user_id');
     }
+    await assertTimeEntryCreateInScope(trx, tenant, actor, timeEntryUserId, validatedTimeEntry);
   }
 
   // Extract only the fields that exist in the database schema
@@ -616,6 +645,8 @@ export async function persistTimeEntry(
                 updated_at: new Date().toISOString(),
                 updated_by: actorUserId,
               });
+            // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+            await recordTicketAssigneeChange(trx, tenant, work_item_id);
           }
         }
       }

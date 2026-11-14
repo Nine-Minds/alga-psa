@@ -12,6 +12,8 @@ const mockExtUploadProxy = vi.fn(async () => ({
   upload: { key: 'sha256/staging/test', strategy: 'staging' as const },
 }));
 
+const mockExtGetUploadLimit = vi.fn(async () => ({ maxBytes: 26 * 1024 * 1024 }));
+
 const mockExtFinalizeUpload = vi.fn(async () => ({
   success: false,
   error: {
@@ -29,6 +31,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 
 vi.mock('@ee/lib/actions/extBundleActions', () => ({
   extUploadProxy: (...args: any[]) => mockExtUploadProxy(...args),
+  extGetUploadLimit: (...args: any[]) => mockExtGetUploadLimit(...args),
   extFinalizeUpload: (...args: any[]) => mockExtFinalizeUpload(...args),
   extAbortUpload: vi.fn(async () => ({ status: 'deleted' })),
 }));

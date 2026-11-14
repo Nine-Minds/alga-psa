@@ -6,7 +6,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 
-import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
+import { refuseWhenClientRestricted, reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 import { buildDeferredRevenueReport } from './deferred-revenue/compose';
 import type { DeferredRevenueReport } from './deferred-revenue/types';
 import { isValidMonth } from './deferred-revenue/month';
@@ -65,6 +65,9 @@ export const getDeferredRevenueReport = withAuth(
     try {
       const { knex } = await createTenantKnex();
       await assertCanReadDeferredRevenueReport(user, knex);
+      // Credit, bucket and charge ledgers across every client: no per-row client limit is expressible, so refuse.
+      const refused = await refuseWhenClientRestricted(knex, tenant, user, 'billing.deferred_revenue');
+      if (refused) return refused;
       return await buildDeferredRevenueReport(knex, tenant, validationResult.data.month);
     } catch (error) {
       const expected = reportingActionErrorFrom(error);

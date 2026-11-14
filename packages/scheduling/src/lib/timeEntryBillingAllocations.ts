@@ -151,15 +151,9 @@ export async function reconcileTimeEntryBillingAllocations(
         await reverseTimeEntryAllocations(burnTrx, tenant, savedEntryId);
       }
       if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-        let blockClientId: string | null = null;
-        if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
-          blockClientId = await getClientIdForWorkItem(
-            burnTrx,
-            tenant,
-            resultingEntry.work_item_id as string,
-            resultingEntry.work_item_type as string,
-          );
-        }
+        // The saved entry's client was resolved above for the bucket draw; nothing in this
+        // transaction has moved its work item since, so the burn reuses it rather than re-reading.
+        const blockClientId = newClientId;
         if (blockClientId) {
           const burnEntry = {
             entry_id: savedEntryId!,

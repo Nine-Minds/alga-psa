@@ -33,7 +33,10 @@ vi.mock('@alga-psa/onboarding/actions/onboarding-actions/onboardingActions', () 
 }));
 vi.mock('@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale', () => ({ getHierarchicalLocaleAction: vi.fn(async () => 'en') }));
 vi.mock('server/src/app/msp/MspLayoutClient', () => ({ MspLayoutClient: () => null }));
-vi.mock('@/lib/productAccess', () => ({ getCurrentTenantProduct: vi.fn(async () => mocks.productCode) }));
+vi.mock('@/lib/productAccess', () => ({
+  getCurrentTenantProduct: vi.fn(async () => mocks.productCode),
+  getCurrentProductPrincipal: vi.fn(async () => ({ productCode: mocks.productCode })),
+}));
 vi.mock('@/lib/actions/coManagedWorkspaceActions', () => ({ getCoManagedWorkspaceState: mocks.getCoManagedWorkspaceState }));
 vi.mock('@alga-psa/billing/actions/billingCurrencyActions', () => ({ getTenantDefaultCurrencyCode: vi.fn(async () => 'USD') }));
 vi.mock('@alga-psa/clients/actions/countryActions', () => ({ getDateFormatPreference: vi.fn(async () => 'ymd') }));

@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Regression coverage for the customer-reported API fixes on this branch:
  *
@@ -170,7 +171,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(statusColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await tenantTable(tenantId, 'assets').insert({
+  await insertTestAssets(db, {
     tenant: tenantId,
     asset_id: assetId,
     ...(hasColumn(assetColumns, 'asset_type') ? { asset_type: 'workstation' } : {}),

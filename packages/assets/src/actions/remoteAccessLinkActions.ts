@@ -6,7 +6,7 @@ import type { AssetRemoteAccessLink } from '@alga-psa/types';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { AssetActionError } from './assetActionErrors';
 import { hasLiteralHttpAuthority, renderRemoteAccessTemplate, SUPPORTED_ASSET_PLACEHOLDER_KEYS } from '../lib/remoteAccessTemplate';
-import { createAssetReadContext, isAssetReadAllowed } from '../lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetOperationClosed, isAssetOperationClosedForUser, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 
 type RemoteAccessLinkInput = Partial<AssetRemoteAccessLink> & {
   label: string;
@@ -135,6 +135,9 @@ export const hasRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<b
     .table('asset_remote_access_links')
     .select('link_id')
     .first();
+  // Closed to a seat subject: no remote access is offered. Asked only once there is a link to hide, so a tenant
+  // without templates pays nothing for it.
+  if (link && await isAssetOperationClosedForUser(knex, tenant, user as any, 'remote_access')) return false;
   return Boolean(link);
 });
 
@@ -157,6 +160,8 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
 
     const readContext = await createAssetReadContext(trx, tenant, user as any);
     if (!await isAssetReadAllowed(trx, tenant, readContext, assetIdentity)) return [];
+    // Remote access is closed to a seat subject even on an asset they may read.
+    if (isAssetOperationClosed(readContext.subject, 'remote_access')) return [];
 
     const assetQuery = db.table('assets')
       .select(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.rmm_device_id', 'assets.rmm_provider', 'assets.rmm_organization_id', 'assets.attributes', 'clients.client_name']);

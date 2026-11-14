@@ -4,11 +4,10 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import type { IDocument } from '@alga-psa/types';
+import { UploadSessionClientError, uploadFileInSession } from '../lib/uploadSessionClient';
 // Import the .tsx explicitly: src/components ships stale committed .jsx twins
 // that Vite's default extension order would otherwise prefer.
 import DocumentUpload from './DocumentUpload.tsx';
-import { uploadDocument } from '../actions/documentActions';
 
 const { toastError, toastFn, folderModalSpy } = vi.hoisted(() => ({
   toastError: vi.fn(),
@@ -32,8 +31,10 @@ vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
   ReflectionContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('../actions/documentActions', () => ({
-  uploadDocument: vi.fn(),
+// The protocol client has its own tests; here it is the seam between the UI and the server.
+vi.mock('../lib/uploadSessionClient', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/uploadSessionClient')>()),
+  uploadFileInSession: vi.fn(),
 }));
 
 vi.mock('./AssociatedEntityPicker', () => ({
@@ -47,11 +48,17 @@ vi.mock('./FolderSelectorModal', () => ({
   },
 }));
 
-const makeDocument = (name: string): IDocument => ({
+const makeDocument = (name: string) => ({
   document_id: `doc-${name}`,
   document_name: name,
   file_id: `file-${name}`,
-} as IDocument);
+  mime_type: 'application/pdf',
+  file_size: 4,
+});
+
+const uploadMock = uploadFileInSession as unknown as ReturnType<typeof vi.fn>;
+const refuse = (...args: ConstructorParameters<typeof UploadSessionClientError>) =>
+  new UploadSessionClientError(...args);
 
 const makeFile = (name: string, type = 'application/pdf') =>
   new File(['data'], name, { type });
@@ -83,49 +90,121 @@ const selectFiles = (input: HTMLInputElement, files: File[]) => {
 describe('DocumentUpload outcome feedback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (uploadDocument as unknown as { mockReset: () => void }).mockReset();
+    uploadMock.mockReset();
   });
 
-  it('keeps a returned upload error visible with one failure announcement', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
-      success: false,
-      error: 'File type not allowed',
-    });
+  const settle = () =>
+    waitFor(() => expect(screen.getByRole('button', { name: /Browse Files/i })).not.toBeDisabled());
+
+  it('says the file type is not allowed, with one failure announcement', async () => {
+    uploadMock.mockRejectedValueOnce(refuse('typeNotAllowed', 'File type not allowed'));
     const { input } = renderUpload();
 
     selectFiles(input, [makeFile('report.eml')]);
 
-    // The filename renders while the row is still "Uploading...", and the
-    // summary toast plus guard release follow the error row asynchronously, so
-    // wait for the batch to settle (controls re-enabled) before asserting.
-    await waitFor(() => expect(screen.getByText('File type not allowed')).toBeInTheDocument());
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Browse Files/i })).not.toBeDisabled(),
+      expect(screen.getByText("This file type isn't allowed. Choose a different file.")).toBeInTheDocument(),
     );
+    await settle();
     expect(screen.getByText('report.eml')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to upload file')).not.toBeInTheDocument();
     expect(toastError).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a permission error readable after processing', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
-      permissionError: 'Permission denied: Cannot create documents',
-    });
+  it('names both the file size and the API-provided limit for an over-limit file', async () => {
+    uploadMock
+      .mockRejectedValueOnce(refuse('tooLarge', 'File size exceeds limit', { status: 413, maxFileSize: 5 * 1024 * 1024 * 1024 }))
+      .mockResolvedValueOnce(makeDocument('small.pdf'));
+    const { input } = renderUpload();
+    const big = makeFile('huge.iso');
+    Object.defineProperty(big, 'size', { value: 6 * 1024 * 1024 * 1024 });
+
+    selectFiles(input, [big, makeFile('small.pdf')]);
+
+    await waitFor(() =>
+      expect(screen.getByText('This file is 6 GB. The current limit is 5 GB per file.')).toBeInTheDocument(),
+    );
+    await settle();
+    // The server decides; the UI neither pre-filters nor hardcodes a limit, and the rest of the batch goes on.
+    expect(uploadMock).toHaveBeenCalledTimes(2);
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('huge.iso')).toBeInTheDocument();
+  });
+
+  it('says permission was denied', async () => {
+    uploadMock.mockRejectedValueOnce(refuse('permissionDenied', 'Permission denied: Cannot create documents', { status: 403 }));
     const { input } = renderUpload();
 
     selectFiles(input, [makeFile('restricted.pdf')]);
 
     await waitFor(() =>
-      expect(screen.getByText('Permission denied: Cannot create documents')).toBeInTheDocument(),
+      expect(screen.getByText("You don't have permission to upload documents here.")).toBeInTheDocument(),
     );
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(toastError).toHaveBeenCalledTimes(1);
   });
 
-  it('uses a safe localized fallback for a thrown transport error', async () => {
-    (uploadDocument as unknown as { mockRejectedValueOnce: (v: unknown) => void }).mockRejectedValueOnce(
-      new Error('socket hang up at internal stack line 42'),
+  it('says the connection was interrupted once the retries ran out, and offers to try again', async () => {
+    uploadMock.mockRejectedValueOnce(refuse('network', 'socket hang up at internal stack line 42'));
+    const { input } = renderUpload();
+
+    selectFiles(input, [makeFile('flaky.bin')]);
+
+    await waitFor(() =>
+      expect(screen.getByText(/The connection was interrupted and the upload could not be resumed/)).toBeInTheDocument(),
     );
+    expect(screen.queryByText(/internal stack line 42/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument();
+  });
+
+  it('offers to start again when the session expired, and sends the file to the same folder', async () => {
+    uploadMock
+      .mockRejectedValueOnce(refuse('sessionGone', 'gone', { status: 410 }))
+      .mockResolvedValueOnce(makeDocument('late.pdf'));
+    const { input } = renderUpload({ folderPath: '/Clients/Acme' });
+
+    selectFiles(input, [makeFile('late.pdf')]);
+    await waitFor(() => expect(screen.getByText('This upload expired before it finished. Start it again.')).toBeInTheDocument());
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
+
+    await waitFor(() => expect(screen.getByText('Uploaded')).toBeInTheDocument());
+    expect(uploadMock).toHaveBeenCalledTimes(2);
+    expect(uploadMock.mock.calls[1][0].target.folderPath).toBe('/Clients/Acme');
+  });
+
+  it('retries one failed row in place and keeps the other rows outcomes', async () => {
+    uploadMock
+      .mockRejectedValueOnce(refuse('network', 'dropped'))
+      .mockRejectedValueOnce(refuse('permissionDenied', 'denied'))
+      .mockResolvedValueOnce(makeDocument('c.pdf'))
+      .mockResolvedValueOnce(makeDocument('a.pdf'));
+    const { input, props } = renderUpload();
+
+    selectFiles(input, [makeFile('a.pdf'), makeFile('b.pdf'), makeFile('c.pdf')]);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument());
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
+
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(screen.getAllByText('Uploaded')).toHaveLength(2));
+    // All three rows are still listed; b keeps its own error.
+    expect(screen.getByText('a.pdf')).toBeInTheDocument();
+    expect(screen.getByText('b.pdf')).toBeInTheDocument();
+    expect(screen.getByText('c.pdf')).toBeInTheDocument();
+    expect(screen.getByText(/don't have permission/)).toBeInTheDocument();
+    expect(screen.queryByText(/connection was interrupted/)).not.toBeInTheDocument();
+    expect(uploadMock.mock.calls[3][0].file.name).toBe('a.pdf');
+    await waitFor(() =>
+      expect(props.onAllUploadsComplete).toHaveBeenLastCalledWith({ total: 3, succeeded: 2, failed: 1 }),
+    );
+  });
+
+  it('keeps the generic message for a failure with no known cause', async () => {
+    uploadMock.mockRejectedValueOnce(new Error('socket hang up at internal stack line 42'));
     const { input } = renderUpload();
 
     selectFiles(input, [makeFile('opaque.bin')]);
@@ -135,15 +214,57 @@ describe('DocumentUpload outcome feedback', () => {
     expect(toastError).toHaveBeenCalledTimes(1);
   });
 
+  it('shows committed bytes over the total in a progress bar while uploading', async () => {
+    let report: (p: { committed: number; total: number }) => void = () => {};
+    let finish: (d: unknown) => void = () => {};
+    uploadMock.mockImplementation((input: { onProgress: typeof report }) => {
+      report = input.onProgress;
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    const { input } = renderUpload();
+    const big = makeFile('movie.mp4', 'video/mp4');
+    Object.defineProperty(big, 'size', { value: 400 * 1024 * 1024 });
+
+    selectFiles(input, [big]);
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(1));
+
+    act(() => report({ committed: 100 * 1024 * 1024, total: 400 * 1024 * 1024 }));
+
+    const bar = await screen.findByRole('progressbar', { name: 'Upload progress for movie.mp4' });
+    // 100 of 400 MB committed: the indicator is shifted left by the 75% still to go.
+    expect(bar.firstElementChild).toHaveStyle({ transform: 'translateX(-75%)' });
+    expect(screen.getByText('100 MB of 400 MB')).toBeInTheDocument();
+
+    await act(async () => finish(makeDocument('movie.mp4')));
+    await settle();
+  });
+
+  it('cancels the upload in flight and marks the file cancelled without a failure toast', async () => {
+    uploadMock.mockImplementation((input: { signal: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        input.signal.addEventListener('abort', () => reject(refuse('cancelled', 'Upload cancelled')));
+      }));
+    const { input, props } = renderUpload();
+
+    selectFiles(input, [makeFile('slow.bin')]);
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel upload' }));
+
+    await waitFor(() => expect(screen.getByText('Cancelled')).toBeInTheDocument());
+    await settle();
+    expect(toastError).not.toHaveBeenCalled();
+    expect(props.onAllUploadsComplete).toHaveBeenCalledWith({ total: 1, succeeded: 0, failed: 1 });
+  });
+
   it('retains success and failure rows in a success-then-failure batch', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void })
-      .mockResolvedValueOnce({ success: true, document: makeDocument('good.pdf') })
-      .mockResolvedValueOnce({ success: false, error: 'Blocked MIME type' });
+    uploadMock.mockResolvedValueOnce(makeDocument('good.pdf'))
+      .mockRejectedValueOnce(refuse('typeNotAllowed', 'File type not allowed'));
     const { input, props } = renderUpload();
 
     selectFiles(input, [makeFile('good.pdf'), makeFile('bad.eml')]);
 
-    await waitFor(() => expect(screen.getByText('Blocked MIME type')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/file type isn't allowed/)).toBeInTheDocument());
     expect(screen.getByText('good.pdf')).toBeInTheDocument();
     expect(screen.getByText('Uploaded')).toBeInTheDocument();
     expect(screen.getByText('bad.eml')).toBeInTheDocument();
@@ -154,9 +275,8 @@ describe('DocumentUpload outcome feedback', () => {
   });
 
   it('retains success and failure rows in a failure-then-success batch', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void })
-      .mockResolvedValueOnce({ success: false, error: 'Blocked MIME type' })
-      .mockResolvedValueOnce({ success: true, document: makeDocument('good.pdf') });
+    uploadMock.mockRejectedValueOnce(refuse('typeNotAllowed', 'File type not allowed'))
+      .mockResolvedValueOnce(makeDocument('good.pdf'));
     const { input, props } = renderUpload();
 
     selectFiles(input, [makeFile('bad.eml'), makeFile('good.pdf')]);
@@ -164,15 +284,14 @@ describe('DocumentUpload outcome feedback', () => {
     await waitFor(() => expect(screen.getByText('Uploaded')).toBeInTheDocument());
     expect(screen.getByText('good.pdf')).toBeInTheDocument();
     expect(screen.getByText('bad.eml')).toBeInTheDocument();
-    expect(screen.getByText('Blocked MIME type')).toBeInTheDocument();
+    expect(screen.getByText(/file type isn't allowed/)).toBeInTheDocument();
     expect(props.onAllUploadsComplete).toHaveBeenCalledWith({ total: 2, succeeded: 1, failed: 1 });
     expect(toastError).toHaveBeenCalledTimes(1);
   });
 
   it('reports correct totals for an all-success batch with no failure toast', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void })
-      .mockResolvedValueOnce({ success: true, document: makeDocument('a.pdf') })
-      .mockResolvedValueOnce({ success: true, document: makeDocument('b.pdf') });
+    uploadMock.mockResolvedValueOnce(makeDocument('a.pdf'))
+      .mockResolvedValueOnce(makeDocument('b.pdf'));
     const { input, props } = renderUpload();
 
     selectFiles(input, [makeFile('a.pdf'), makeFile('b.pdf')]);
@@ -186,9 +305,8 @@ describe('DocumentUpload outcome feedback', () => {
   });
 
   it('finishes every attempt and reports totals for an all-failure batch', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void })
-      .mockResolvedValueOnce({ success: false, error: 'First failed' })
-      .mockResolvedValueOnce({ success: false, error: 'Second failed' });
+    uploadMock.mockRejectedValueOnce(refuse('permissionDenied', 'denied'))
+      .mockRejectedValueOnce(refuse('network', 'dropped'));
     const { input, props } = renderUpload();
 
     selectFiles(input, [makeFile('one.eml'), makeFile('two.eml')]);
@@ -196,16 +314,13 @@ describe('DocumentUpload outcome feedback', () => {
     await waitFor(() =>
       expect(props.onAllUploadsComplete).toHaveBeenCalledWith({ total: 2, succeeded: 0, failed: 2 }),
     );
-    expect(screen.getByText('First failed')).toBeInTheDocument();
-    expect(screen.getByText('Second failed')).toBeInTheDocument();
+    expect(screen.getByText(/don't have permission/)).toBeInTheDocument();
+    expect(screen.getByText(/connection was interrupted/)).toBeInTheDocument();
     expect(toastError).toHaveBeenCalledTimes(1);
   });
 
   it('does not relabel a stored file when the per-file callback rejects', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
-      success: true,
-      document: makeDocument('good.pdf'),
-    });
+    uploadMock.mockResolvedValueOnce(makeDocument('good.pdf'));
     const onUploadComplete = vi.fn().mockRejectedValue(new Error('handler boom'));
     const { input } = renderUpload({ onUploadComplete });
 
@@ -217,10 +332,7 @@ describe('DocumentUpload outcome feedback', () => {
   });
 
   it('reports a rejected per-file success callback with reload guidance without relabeling', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
-      success: true,
-      document: makeDocument('good.pdf'),
-    });
+    uploadMock.mockResolvedValueOnce(makeDocument('good.pdf'));
     const onUploadComplete = vi.fn().mockRejectedValue(new Error('consumer refresh boom'));
     const { input } = renderUpload({ onUploadComplete });
 
@@ -238,10 +350,7 @@ describe('DocumentUpload outcome feedback', () => {
   });
 
   it('reports a refresh callback rejection separately without relabeling the upload', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
-      success: true,
-      document: makeDocument('good.pdf'),
-    });
+    uploadMock.mockResolvedValueOnce(makeDocument('good.pdf'));
     const onAllUploadsComplete = vi.fn().mockRejectedValue(new Error('refresh boom'));
     const { input } = renderUpload({ onAllUploadsComplete });
 
@@ -259,7 +368,7 @@ describe('DocumentUpload outcome feedback', () => {
 describe('DocumentUpload empty drops and batch guarding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (uploadDocument as unknown as { mockReset: () => void }).mockReset();
+    uploadMock.mockReset();
   });
 
   it('guides the user for an empty drop without uploading or opening the folder selector', async () => {
@@ -269,28 +378,28 @@ describe('DocumentUpload empty drops and batch guarding', () => {
 
     await waitFor(() => expect(screen.getByText('No files received')).toBeInTheDocument());
     expect(screen.getByText(/Save the attachment or email to your computer/)).toBeInTheDocument();
-    expect(uploadDocument).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
     expect(folderModalSpy).not.toHaveBeenCalledWith(expect.objectContaining({ isOpen: true }));
     expect(toastFn).toHaveBeenCalledTimes(1);
   });
 
   it('cannot replace an active batch with an overlapping drop', async () => {
     let resolveUpload: (value: unknown) => void = () => {};
-    (uploadDocument as unknown as { mockImplementation: (fn: () => Promise<unknown>) => void }).mockImplementation(
+    uploadMock.mockImplementation(
       () => new Promise((resolve) => { resolveUpload = resolve; }),
     );
     const { input, dropZone } = renderUpload();
 
     selectFiles(input, [makeFile('first.pdf')]);
-    await waitFor(() => expect(uploadDocument).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(1));
 
     fireEvent.drop(dropZone, { dataTransfer: { files: [makeFile('second.pdf')] } });
 
     await waitFor(() => expect(toastFn).toHaveBeenCalledTimes(1));
-    expect(uploadDocument).toHaveBeenCalledTimes(1);
+    expect(uploadMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      resolveUpload({ success: true, document: makeDocument('first.pdf') });
+      resolveUpload(makeDocument('first.pdf'));
     });
 
     await waitFor(() => expect(screen.getByText('first.pdf')).toBeInTheDocument());
@@ -298,26 +407,25 @@ describe('DocumentUpload empty drops and batch guarding', () => {
   });
 
   it('resets the hidden input and starts a fresh batch when the same file is selected again', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void })
-      .mockResolvedValueOnce({ success: false, error: 'Temporary failure' })
-      .mockResolvedValueOnce({ success: true, document: makeDocument('retry.pdf') });
+    uploadMock.mockRejectedValueOnce(refuse('network', 'dropped'))
+      .mockResolvedValueOnce(makeDocument('retry.pdf'));
     const { input } = renderUpload();
 
     selectFiles(input, [makeFile('retry.pdf')]);
-    await waitFor(() => expect(screen.getByText('Temporary failure')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/connection was interrupted/)).toBeInTheDocument());
     expect(input.value).toBe('');
 
     selectFiles(input, [makeFile('retry.pdf')]);
-    await waitFor(() => expect(uploadDocument).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByText('Uploaded')).toBeInTheDocument());
-    expect(screen.queryByText('Temporary failure')).not.toBeInTheDocument();
+    expect(screen.queryByText(/connection was interrupted/)).not.toBeInTheDocument();
   });
 });
 
 describe('DocumentUpload folder destination selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (uploadDocument as unknown as { mockReset: () => void }).mockReset();
+    uploadMock.mockReset();
   });
 
   type FolderModalProps = {
@@ -330,10 +438,7 @@ describe('DocumentUpload folder destination selection', () => {
     folderModalSpy.mock.calls.at(-1)?.[0] as FolderModalProps;
 
   it('retains previous outcomes when folder selection is canceled', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
-      success: false,
-      error: 'kept failure',
-    });
+    uploadMock.mockRejectedValueOnce(refuse('typeNotAllowed', 'kept failure'));
     const { input } = renderUpload({ folderPath: undefined });
 
     selectFiles(input, [makeFile('first.eml')]);
@@ -345,7 +450,7 @@ describe('DocumentUpload folder destination selection', () => {
       props.onSelectFolder('/Root');
       props.onClose();
     });
-    await waitFor(() => expect(screen.getByText('kept failure')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/file type isn't allowed/)).toBeInTheDocument());
 
     // A second selection opens the folder modal again; canceling must not clear the list.
     selectFiles(input, [makeFile('second.eml')]);
@@ -354,15 +459,12 @@ describe('DocumentUpload folder destination selection', () => {
       latestFolderProps().onClose();
     });
 
-    expect(uploadDocument).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('kept failure')).toBeInTheDocument();
+    expect(uploadMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/file type isn't allowed/)).toBeInTheDocument();
   });
 
   it('uploads to the confirmed destination folder', async () => {
-    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
-      success: true,
-      document: makeDocument('filed.pdf'),
-    });
+    uploadMock.mockResolvedValueOnce(makeDocument('filed.pdf'));
     const { input } = renderUpload({ folderPath: undefined });
 
     selectFiles(input, [makeFile('filed.pdf')]);
@@ -374,11 +476,12 @@ describe('DocumentUpload folder destination selection', () => {
       props.onClose();
     });
 
-    await waitFor(() => expect(uploadDocument).toHaveBeenCalledTimes(1));
-    const uploadOptions = (uploadDocument as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][1] as {
-      folder_path: string | null;
-    };
-    expect(uploadOptions.folder_path).toBe('/Clients/Acme');
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(1));
+    expect(uploadMock.mock.calls[0][0].target).toEqual({
+      entityType: 'ticket',
+      entityId: 'ticket-1',
+      folderPath: '/Clients/Acme',
+    });
     await waitFor(() => expect(screen.getByText('Uploaded')).toBeInTheDocument());
   });
 });

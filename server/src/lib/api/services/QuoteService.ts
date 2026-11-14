@@ -32,6 +32,7 @@ import type {
   SendQuoteApi,
   ConvertQuoteApi,
 } from '../schemas/quoteSchemas';
+import { QUOTE_SORT_FIELDS } from '../schemas/quoteSchemas';
 import { canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '@alga-psa/billing/lib/quoteActivityTypes';
@@ -121,6 +122,60 @@ export class QuoteService extends BaseService<IQuote> {
     }
   }
 
+  /**
+   * A quote item's location must be one of the owning client's own locations —
+   * neither this path nor the UI checked before (alga-2026-0002902), so a
+   * caller could pin a line to another client's address.
+   */
+  private async assertItemLocationsBelongToClient(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string | null | undefined,
+    items: Array<{ location_id?: string | null } | undefined>
+  ): Promise<void> {
+    const locationIds = [...new Set(
+      items
+        .map((item) => item?.location_id)
+        .filter((locationId): locationId is string => typeof locationId === 'string' && locationId.length > 0)
+    )];
+
+    if (locationIds.length === 0) {
+      return;
+    }
+
+    if (!clientId) {
+      throw new ValidationError('location_id requires the quote to be linked to a client');
+    }
+
+    const found = await tenantDb(trx, tenant).table('client_locations')
+      .whereIn('location_id', locationIds)
+      .andWhere('client_id', clientId)
+      .pluck<string[]>('location_id');
+
+    const missing = locationIds.filter((locationId) => !found.includes(locationId));
+    if (missing.length > 0) {
+      throw new ValidationError(
+        `location_id does not belong to this quote's client: ${missing.join(', ')}`
+      );
+    }
+  }
+
+  private async getQuoteClientId(
+    trx: Knex.Transaction,
+    tenant: string,
+    quoteId: string
+  ): Promise<string | null> {
+    const quote = await tenantDb(trx, tenant).table('quotes')
+      .where('quote_id', quoteId)
+      .first<{ client_id: string | null }>('client_id');
+
+    if (!quote) {
+      throw new NotFoundError('Quote not found');
+    }
+
+    return quote.client_id ?? null;
+  }
+
   // ============================================================================
   // CRUD Operations
   // ============================================================================
@@ -137,6 +192,14 @@ export class QuoteService extends BaseService<IQuote> {
       const limit = options.limit ?? 25;
       const sortBy = options.sort ?? 'created_at';
       const sortOrder = options.order ?? 'desc';
+
+      // orderBy(`q.${sortBy}`) interpolates the value, so an unknown column
+      // reached Postgres and surfaced as a 500 (alga-2026-0002902).
+      if (!(QUOTE_SORT_FIELDS as readonly string[]).includes(sortBy)) {
+        throw new ValidationError(
+          `Unsupported sort field '${sortBy}'. Allowed: ${QUOTE_SORT_FIELDS.join(', ')}`
+        );
+      }
       const isTemplate = options.is_template ?? filters?.is_template ?? false;
 
       const baseQuery = tenantDb(trx, context.tenant).table('quotes as q')
@@ -232,6 +295,10 @@ export class QuoteService extends BaseService<IQuote> {
         }
       }
 
+      if (items?.length) {
+        await this.assertItemLocationsBelongToClient(trx, context.tenant, quoteData.client_id, items);
+      }
+
       const quote = await Quote.create(trx, context.tenant, {
         ...quoteData,
         currency_code: currencyCode ?? 'USD',
@@ -277,9 +344,16 @@ export class QuoteService extends BaseService<IQuote> {
 
     const { knex } = await this.getKnex();
 
+    // `items` is inherited from the create shape but `quotes` has no such
+    // column, so letting it through produced a 500 from Postgres.
+    const { items, ...updateData } = data;
+    if (items !== undefined) {
+      throw new ValidationError('items cannot be updated via PUT; use the /quotes/{id}/items endpoints');
+    }
+
     return withTransaction(knex, async (trx) => {
       return Quote.update(trx, context.tenant, id, {
-        ...data,
+        ...updateData,
         updated_by: context.userId,
       } as Partial<IQuote>);
     }).catch(throwQuoteApiError);
@@ -325,6 +399,13 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.assertItemLocationsBelongToClient(
+        trx,
+        context.tenant,
+        await this.getQuoteClientId(trx, context.tenant, quoteId),
+        [data]
+      );
+
       // QuoteItem.create handles display_order, totals, and recalculation internally
       const item = await QuoteItem.create(trx, context.tenant, {
         ...data,
@@ -351,6 +432,13 @@ export class QuoteService extends BaseService<IQuote> {
       if (!item || item.quote_id !== quoteId) {
         throw new NotFoundError('Quote item not found');
       }
+
+      await this.assertItemLocationsBelongToClient(
+        trx,
+        context.tenant,
+        await this.getQuoteClientId(trx, context.tenant, quoteId),
+        [data]
+      );
 
       // QuoteItem.update handles recalculation internally
       return QuoteItem.update(trx, context.tenant, itemId, {
@@ -395,6 +483,25 @@ export class QuoteService extends BaseService<IQuote> {
     return withTransaction(knex, async (trx) => {
       return Quote.update(trx, context.tenant, quoteId, {
         status: 'pending_approval',
+        updated_by: context.userId,
+      } as Partial<IQuote>);
+    }).catch(throwQuoteApiError);
+  }
+
+  /**
+   * The 409 a blocked delete returns advertises Archive as the alternative
+   * (deletionValidation supportsArchive), but there was no way to reach the
+   * `archived` status over the API at all (alga-2026-0002902). Quote.update
+   * enforces the transition table and writes the status_changed activity; no
+   * lifecycle workflow event exists for `archived`, which is intended.
+   */
+  async archive(quoteId: string, context: ServiceContext): Promise<IQuote> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      return Quote.update(trx, context.tenant, quoteId, {
+        status: 'archived',
+        archived_at: new Date().toISOString(),
         updated_by: context.userId,
       } as Partial<IQuote>);
     }).catch(throwQuoteApiError);

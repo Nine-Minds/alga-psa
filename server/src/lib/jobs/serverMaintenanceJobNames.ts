@@ -10,6 +10,8 @@ export const SERVER_MAINTENANCE_JOBS = {
   accountingSyncCycle: 'accounting-sync-cycle',
   huduAutoSync: 'hudu-auto-sync',
   recoverFileUploads: 'recover-file-uploads',
+  // Expires resumable document uploads past their expiry and aborts their provider write sessions.
+  expireDocumentUploadSessions: 'expire-document-upload-sessions',
   recoverCommentPublications: 'recover-comment-publications',
   createNextTimePeriods: 'create-next-time-periods',
   createClientContractLineCycles: 'create-client-contract-line-cycles',

@@ -3,6 +3,8 @@
 import { buildInventoryRmaCreatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex, admitOperationalWrite } from '@alga-psa/db';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
+import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IRmaCase, IStockUnit, RmaStatus } from '@alga-psa/types';
@@ -836,7 +838,7 @@ export const listRmaCases = withAuth(
  * "not found or no access" state.
  */
 export const getRmaCase = withAuth(
-  async (user, { tenant }, rmaId: string): Promise<IRmaCase | null | RmaActionError> => {
+  async (user, { tenant }, rmaId: string): Promise<(IRmaCase & { calendar_today: string; calendar_time_zone: string }) | null | RmaActionError> => {
     return withRmaActionErrors(async () => {
       const scope = await requireRmaReadScope(user);
       const { knex: db } = await createTenantKnex();
@@ -845,7 +847,9 @@ export const getRmaCase = withAuth(
         if (!row) return null;
         // A case the caller cannot read looks exactly like a missing one.
         const [visible] = await filterReadableRmaCases(trx, tenant, user, [row as IRmaCase], scope);
-        return visible ?? null;
+        if (!visible) return null;
+        const timeZone = await resolveEffectiveTimeZone(trx, tenant, user.user_id);
+        return { ...visible, calendar_today: toCalendarDateStringInTimeZone(new Date(), timeZone), calendar_time_zone: timeZone };
       });
     });
   },

@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.18",
+  "version": "1.6.19",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -17,6 +17,10 @@
     "./capability/server": {
       "import": "./dist/capability/server.js",
       "types": "./src/capability/server.ts"
+    },
+    "./jobRunnerAccessor": {
+      "import": "./dist/lib/jobRunnerAccessor.js",
+      "types": "./src/lib/jobRunnerAccessor.ts"
     },
     "./features": {
       "import": "./dist/lib/features.js",

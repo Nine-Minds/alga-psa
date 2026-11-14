@@ -1,7 +1,7 @@
 /**
  * Hot-path query-count budget (CM L0g, plan section 5).
  *
- * Runs the canonical 16-step psa scenario (hotPathScenario.ts) three times
+ * Runs the canonical 18-step psa scenario (hotPathScenario.ts) three times
  * in-process and compares per-step statement and lock counts against the
  * committed snapshot hotPathQueryBudget.json.
  *
@@ -9,6 +9,26 @@
  *   HOT_PATH_BUDGET_RECORD=1 run      rewrite the snapshot, only if the three
  *                                     runs agree with each other (never on
  *                                     UNSTABLE)
+ *
+ * Neutrality fence (F034 / T021). The same scenario is also run under named
+ * tenant postures that `co-managed-seat` does not serve:
+ *
+ *   seat-flag-off            release flag off
+ *   seat-flag-on-unentitled  release flag on, no seat entitlement or arrangement
+ *
+ * For the four paths a seat-aware slice would touch (ticket.list, ticket.open,
+ * comment.add, timeEntry.create) each posture must run EXACTLY the statement and
+ * lock count of the posture-less psa-canonical baseline (computed in-process and
+ * compared against the committed main snapshot, never two independently recorded
+ * numbers), touch the same tables, and touch no denylisted `co_managed_*` table.
+ * The posture is set through the real gate inputs: the release-flag checker (the
+ * PostHog edge) and the real seat resolvers registered by
+ * `@alga-psa/co-managed/capability`. The capability decision itself is not stubbed
+ * and the decision cache is disabled so a seat-aware lookup cannot hide behind it.
+ * Later seat-aware slices (D/E/F) must keep these unserved counts unchanged: if a
+ * path needs extra statements, they belong behind the served branch only. The
+ * entries live under `neutrality` in hotPathQueryBudget.json and are owned by this
+ * runner; record mode refuses to write them if the equality does not hold.
  *
  * Serial-safe with the repo's singleFork vitest config: the test owns one
  * connection to its own database and the scenario state is module-level but
@@ -21,7 +41,9 @@ import type { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
+  NEUTRALITY_FENCED_STEPS,
   NEW_TABLE_DENYLIST,
+  UNSERVED_POSTURES,
   SCENARIO_EDGE,
   SCENARIO_ID,
   STEP_NAMES,
@@ -29,6 +51,7 @@ import {
   matchesDenylist,
   runHotPathScenarioOnce,
   type ScenarioResult,
+  type TenantPosture,
 } from './hotPathScenario';
 
 // ---------------------------------------------------------------------------
@@ -117,6 +140,15 @@ const HOOK_TIMEOUT = 600_000;
 const RUNS = 3;
 const SNAPSHOT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hotPathQueryBudget.json');
 
+/** Statement counts measured on origin/main (162d106175) before the subject resolver changed. */
+const MAIN_BASELINE_STATEMENTS: Record<string, number> = {
+  'ticket.list': 17,
+  'ticket.open': 32,
+  'client.list': 8,
+  'search.query': 6,
+  'timeEntry.create': 18,
+};
+
 interface Snapshot {
   schemaVersion: 1;
   scenario: string;
@@ -124,6 +156,12 @@ interface Snapshot {
   steps: Array<{ name: string; statements: number; locks: number }>;
   totals: { statements: number; locks: number };
   denylist: string[];
+  /** Owned by the neutrality fence; each posture must equal `steps` for the fenced steps. */
+  neutrality: {
+    capability: 'co-managed-seat';
+    fencedSteps: string[];
+    postures: Record<string, { description: string; steps: Array<{ name: string; statements: number; locks: number }> }>;
+  };
   notes: string;
 }
 
@@ -148,6 +186,35 @@ function findInstability(runs: ScenarioResult[]): string | null {
   return null;
 }
 
+/** Warm-up plus RUNS measured runs; throws UNSTABLE if the measured runs disagree. */
+async function measureStable(connection: Knex, options?: Parameters<typeof runHotPathScenarioOnce>[1]) {
+  await runHotPathScenarioOnce(connection, options);
+  const runs: ScenarioResult[] = [];
+  for (let i = 0; i < RUNS; i++) runs.push(await runHotPathScenarioOnce(connection, options));
+  const unstable = findInstability(runs);
+  if (unstable) throw new Error(unstable);
+  return runs;
+}
+
+/**
+ * Puts the fixture tenant in `posture` through the real gate inputs and proves the
+ * real capability decision says "not served" for the reason the posture names.
+ * The probe runs before measurement starts, so its statements are not counted.
+ */
+async function applyPosture(posture: TenantPosture, tenant: string): Promise<void> {
+  const { registerFeatureFlagChecker } = await import('@alga-psa/core');
+  // The real seat resolvers (eligibility + participation SQL), exactly as production registers them.
+  const { registerCoManagedSeatCapability } = await import('@alga-psa/co-managed/seatCapability');
+  registerCoManagedSeatCapability();
+  const { evaluateCapability, invalidateCapability } = await import('@alga-psa/core/capability');
+  registerFeatureFlagChecker(async (flagKey) => flagKey === 'release-v2-0-feature' && posture.releaseFlag);
+  invalidateCapability('co-managed-seat');
+  const decision = await evaluateCapability('co-managed-seat', tenant);
+  expect(decision.forced, 'FORCE_CAPABILITIES must not be set for the neutrality fence').toBeNull();
+  expect({ admitted: decision.reasons.admitted, served: decision.reasons.served }).toEqual(posture.expect);
+  expect(decision.admitted || decision.served).toBe(false);
+}
+
 describe('hot-path query budget', () => {
   let connection: Knex;
 
@@ -159,6 +226,12 @@ describe('hot-path query budget', () => {
     installCoManagedWriteAdmission();
     // Chapter 0: control only the rollout input; eligibility remains false.
     // No PostHog request or capability SQL is included in the measured native writes.
+    // Every seat-capability decision must reach its resolvers (no 30s cache) so a hot-path
+    // lookup is counted in every run. The seat resolvers are registered per posture in
+    // applyPosture, not here: the committed psa-canonical baseline is measured with the
+    // co-managed gate unregistered (registering it adds statements to unrelated steps).
+    process.env.CAPABILITY_CACHE_TTL_MS = '0';
+    delete process.env.FORCE_CAPABILITIES;
     const rollout = process.env.CM_L0C_REVIEW_ROLLOUT;
     if (rollout) {
       const { registerFeatureFlagChecker } = await import('@alga-psa/core');
@@ -182,13 +255,7 @@ describe('hot-path query budget', () => {
       // (module-level memoisation, lazily loaded modules) that later runs hit.
       // Without it run 1 legitimately differs from runs 2..n. It is not
       // measured or compared; the three runs below are the stability evidence.
-      await runHotPathScenarioOnce(connection);
-
-      const runs: ScenarioResult[] = [];
-      for (let i = 0; i < RUNS; i++) runs.push(await runHotPathScenarioOnce(connection));
-
-      const unstable = findInstability(runs);
-      if (unstable) throw new Error(unstable);
+      const runs = await measureStable(connection);
 
       const measured = runs[0];
       console.table(measured.steps.map(({ name, statements, locks }) => ({ name, statements, locks })));
@@ -199,6 +266,39 @@ describe('hot-path query budget', () => {
       const offenders = [...touched].filter((t) => matchesDenylist(t));
       expect(offenders, `denylisted tables touched by the hot path: ${offenders.join(', ')}`).toEqual([]);
 
+      // Neutrality fence: every unserved posture equals the baseline on the fenced steps.
+      const baselineByName = new Map(measured.steps.map((s) => [s.name, s]));
+      const neutrality: Snapshot['neutrality'] = {
+        capability: 'co-managed-seat',
+        fencedSteps: [...NEUTRALITY_FENCED_STEPS],
+        postures: {},
+      };
+      const leaks: string[] = [];
+      for (const posture of UNSERVED_POSTURES) {
+        const postureRuns = await measureStable(connection, { afterFixture: (tenant) => applyPosture(posture, tenant) });
+        const entries = NEUTRALITY_FENCED_STEPS.map((name) => {
+          const base = baselineByName.get(name)!;
+          const got = postureRuns[0].steps.find((s) => s.name === name)!;
+          const touchedTables = new Set(postureRuns.flatMap((r) => r.steps.filter((s) => s.name === name).flatMap((s) => s.tables)));
+          const seatTables = [...touchedTables].filter((t) => matchesDenylist(t));
+          if (seatTables.length > 0) leaks.push(`${posture.name}/${name} touches denylisted table(s): ${seatTables.join(', ')}`);
+          const extraTables = got.tables.filter((t) => !base.tables.includes(t));
+          if (extraTables.length > 0) leaks.push(`${posture.name}/${name} touches table(s) the baseline does not: ${extraTables.join(', ')}`);
+          for (const metric of ['statements', 'locks'] as const) {
+            if (got[metric] !== base[metric]) {
+              leaks.push(`${posture.name}/${name} ${metric} ${got[metric]} != baseline ${base[metric]}`);
+            }
+          }
+          return { name, statements: got.statements, locks: got.locks };
+        });
+        neutrality.postures[posture.name] = { description: posture.description, steps: entries };
+      }
+      expect(
+        leaks,
+        'NEUTRALITY BROKEN: a tenant not served by co-managed-seat must run exactly the baseline statements on ' +
+          `${NEUTRALITY_FENCED_STEPS.join(', ')}. Put seat-aware work behind the served branch.\n${leaks.join('\n')}`,
+      ).toEqual([]);
+
       if (process.env.HOT_PATH_BUDGET_RECORD === '1') {
         const snapshot: Snapshot = {
           schemaVersion: 1,
@@ -207,10 +307,24 @@ describe('hot-path query budget', () => {
           steps: measured.steps.map(({ name, statements, locks }) => ({ name, statements, locks })),
           totals: measured.totals,
           denylist: NEW_TABLE_DENYLIST.map((r) => r.source),
+          neutrality,
           notes: 'raising a number requires this file in the PR diff',
         };
         fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`);
         return;
+      }
+
+      // T005: the five paths the subject resolver touches or sits beside, under the canonical
+      // scenario (a tenant with no bundle assignments and no portfolio rows, i.e. the fast path).
+      // Baselines were measured on origin/main before the resolver changed; the fast path may
+      // never cost a statement more than main did. The committed JSON ratchets the exact value.
+      const byName = new Map(measured.steps.map((s) => [s.name, s.statements]));
+      for (const [name, mainStatements] of Object.entries(MAIN_BASELINE_STATEMENTS)) {
+        expect(byName.get(name), `step ${name} is missing from the scenario`).toBeDefined();
+        expect(
+          byName.get(name)!,
+          `fast-path step ${name}: ${byName.get(name)} statements > ${mainStatements} on main`,
+        ).toBeLessThanOrEqual(mainStatements);
       }
 
       const snapshot = readSnapshot();
@@ -222,6 +336,30 @@ describe('hot-path query budget', () => {
         snapshot.steps.map((s) => s.name),
         'snapshot step set/order differs from the scenario; re-record with HOT_PATH_BUDGET_RECORD=1',
       ).toEqual(measured.steps.map((s) => s.name));
+
+      // The committed neutrality entries must equal the committed baseline (main) and be what was measured.
+      expect(snapshot.neutrality, 'snapshot has no neutrality section; re-record with HOT_PATH_BUDGET_RECORD=1').toBeDefined();
+      expect(snapshot.neutrality.fencedSteps).toEqual([...NEUTRALITY_FENCED_STEPS]);
+      expect(Object.keys(snapshot.neutrality.postures)).toEqual(UNSERVED_POSTURES.map((p) => p.name));
+      const committedBase = new Map(snapshot.steps.map((s) => [s.name, s]));
+      for (const [postureName, entry] of Object.entries(snapshot.neutrality.postures)) {
+        expect(entry.steps.map((s) => s.name)).toEqual([...NEUTRALITY_FENCED_STEPS]);
+        for (const step of entry.steps) {
+          const base = committedBase.get(step.name)!;
+          expect(
+            { statements: step.statements, locks: step.locks },
+            `committed ${postureName}/${step.name} differs from the committed psa-canonical baseline`,
+          ).toEqual({ statements: base.statements, locks: base.locks });
+          expect(
+            { statements: step.statements, locks: step.locks },
+            `measured ${postureName}/${step.name} differs from the committed entry`,
+          ).toEqual(
+            (({ statements, locks }) => ({ statements, locks }))(
+              neutrality.postures[postureName].steps.find((s) => s.name === step.name)!,
+            ),
+          );
+        }
+      }
 
       const problems: string[] = [];
       for (const [i, step] of measured.steps.entries()) {

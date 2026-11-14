@@ -1,0 +1,30 @@
+[
+  {
+    "capturedAt": "2026-11-02T17:35:54.489493+00:00",
+    "command": [
+      "curl",
+      "--noproxy",
+      "*",
+      "-sS",
+      "--max-time",
+      "5",
+      "-o",
+      "/dev/null",
+      "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+    ],
+    "exitStatus": 7,
+    "stdout": "",
+    "stderr": "curl: (7) Failed to connect to feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost port 3536 after 0 ms: Could not connect to server\n"
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:54.606222+00:00",
+    "command": [
+      "ss",
+      "-ltnp",
+      "( sport = :3536 )"
+    ],
+    "exitStatus": 0,
+    "stdout": "State Recv-Q Send-Q Local Address:Port Peer Address:PortProcess\n",
+    "stderr": ""
+  }
+]

@@ -1,7 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
+  plugins: [tsconfigPaths({ projects: [path.resolve(__dirname, '../../tsconfig.base.json')] })],
   resolve: {
     // @alga-psa/ui publishes ./lib/* from dist, which tests do not build, so
     // resolve it from source the way the other packages' configs do.

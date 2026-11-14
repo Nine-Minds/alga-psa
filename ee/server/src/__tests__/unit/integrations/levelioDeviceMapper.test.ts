@@ -198,7 +198,8 @@ describe('mapLevelIoDeviceToSnapshot', () => {
     expect(snapshot.agentStatus).toBe('online');
     expect(snapshot.lifecycleState).toBe('active');
     expect(snapshot.location).toBe('Asheville, United States');
-    expect(snapshot.assetTag).toBe('levelio:dev-1');
+    expect(snapshot.assetTag).toBe('');
+    expect(snapshot.externalDeviceId).toBe('dev-1');
     expect(snapshot.extension?.uptimeSeconds).toBe(86400);
     expect(snapshot.extension?.osType).toBe('Windows');
     expect(snapshot.extension?.osVersion).toBe('10.0.22631.3007');

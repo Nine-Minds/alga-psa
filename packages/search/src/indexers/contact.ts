@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { truncateForIndex } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { attachClientScopes } from '../clientScope';
 
 interface ContactSearchRow {
   contact_name_id: string;
@@ -207,12 +208,13 @@ export const contactIndexer: EntityIndexer = {
 
     const phoneNumbers = await loadPhoneNumbers(knex, tenant, [row.contact_name_id]);
     const locations = await loadLocations(knex, tenant, [row.contact_name_id]);
-    return toSearchDoc(
+    const [doc] = await attachClientScopes(knex, tenant, 'contact', [toSearchDoc(
       tenant,
       row,
       phoneNumbers.get(row.contact_name_id) ?? [],
       locations.get(row.contact_name_id) ?? { tokens: [] },
-    );
+    )]);
+    return doc;
   },
 
   async loadBatch(
@@ -233,11 +235,11 @@ export const contactIndexer: EntityIndexer = {
     const contactIds = rows.map((row) => row.contact_name_id);
     const phoneNumbers = await loadPhoneNumbers(knex, tenant, contactIds);
     const locations = await loadLocations(knex, tenant, contactIds);
-    return rows.map((row) => toSearchDoc(
+    return attachClientScopes(knex, tenant, 'contact', rows.map((row) => toSearchDoc(
       tenant,
       row,
       phoneNumbers.get(row.contact_name_id) ?? [],
       locations.get(row.contact_name_id) ?? { tokens: [] },
-    ));
+    )));
   },
 };

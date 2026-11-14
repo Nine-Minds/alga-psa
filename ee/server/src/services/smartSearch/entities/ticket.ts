@@ -12,7 +12,8 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { aclPredicateSql, resolveSearchAclPrincipal, type SearchAclPrincipal } from '@alga-psa/search/acl';
+import { aclPredicateSql, type SearchAclPrincipal } from '@alga-psa/search/acl';
+import { resolveSearchPrincipal } from '@alga-psa/search/runAppSearch';
 import { getAllMatchingTicketIds, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ticketListFiltersSchema } from '@alga-psa/tickets/schemas/ticket.schema';
 import type { TicketSmartSearchRowMetadata, TicketSmartSearchScope } from '@alga-psa/tickets/lib/smartTicketSearch/types';
@@ -153,20 +154,21 @@ async function loadVisibleCommentRows(
   ticketIds: string[]
 ): Promise<CommentIndexRow[]> {
   const acl = aclPredicateSql(principal);
+  // LEVERAGE: friction search-acl-alias — aclPredicateSql's board clause assumes the index is aliased `s`; every reader must match it.
   // Newest first per ticket, capped per ticket so a 400-comment thread does not
   // pull 400 rows the budget will throw away. ROW_NUMBER keeps the query one
   // round trip for the whole chunk; the outer filter is on the ranked set.
   const ranked = tenantDb(trx, tenant)
-    .table('app_search_index as si')
-    .where('si.object_type', 'ticket_comment')
-    .whereIn('si.parent_id', ticketIds)
+    .table('app_search_index as s')
+    .where('s.object_type', 'ticket_comment')
+    .whereIn('s.parent_id', ticketIds)
     .whereRaw(acl.sql, acl.bindings)
     .select(
-      'si.parent_id',
-      'si.body',
-      'si.metadata',
-      'si.source_updated_at',
-      trx.raw('ROW_NUMBER() OVER (PARTITION BY si.parent_id ORDER BY si.source_updated_at DESC) AS rn')
+      's.parent_id',
+      's.body',
+      's.metadata',
+      's.source_updated_at',
+      trx.raw('ROW_NUMBER() OVER (PARTITION BY s.parent_id ORDER BY s.source_updated_at DESC) AS rn')
     )
     .as('ranked');
 
@@ -186,7 +188,7 @@ export async function loadTicketCandidates(
   if (ticketIds.length === 0) {
     return [];
   }
-  const principal = await resolveSearchAclPrincipal(trx, user);
+  const principal = await resolveSearchPrincipal(trx, tenant, user);
   const [ticketRows, commentRows] = await Promise.all([
     loadTicketTextRows(trx, tenant, ticketIds),
     loadVisibleCommentRows(trx, tenant, principal, ticketIds),

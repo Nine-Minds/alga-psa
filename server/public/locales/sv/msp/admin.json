@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Ärenden",
-      "documents": "Dokument",
-      "time": "Tid",
-      "projects": "Projekt",
-      "assets": "Tillgångar",
-      "billing": "Fakturering"
-    },
     "targetTypes": {
       "role": "Roll",
       "team": "Team",
@@ -453,11 +445,13 @@
         "custom": "Anpassat"
       },
       "badges": {
-        "starter": "Startpaket"
+        "starter": "Startpaket",
+        "closed": "Stängd"
       },
       "descriptions": {
         "systemStarter": "Systemets startpaket.",
-        "customBundle": "Anpassat begränsningspaket för tilldelning till roller, team, användare eller API-nycklar."
+        "customBundle": "Anpassat begränsningspaket för tilldelning till roller, team, användare eller API-nycklar.",
+        "closed": "Stängd: nekar allt som inte nämns."
       },
       "effectiveSummary": "Gällande sammanfattning: {{status}} paket. Aktiva tilldelningar: {{count}}.",
       "empty": "Inga behörighetspaket hittades.",
@@ -542,6 +536,17 @@
         "label": "Maskerade fält",
         "placeholder": "internal_cost, margin",
         "helper": "Kommaavgränsade fältnamn som ska maskeras när den här regeln tillåter åtkomst."
+      },
+      "baseline": {
+        "title": "Stängt paket",
+        "explanation": "Ett stängt paket nekar varje posttyp och åtgärd som det inte nämner. Ett öppet paket begränsar bara dem det nämner.",
+        "closedToggle": "Publicera som stängt",
+        "openBadge": "Öppen",
+        "previewTitle": "Det här stängda paketet kommer att neka",
+        "previewIntro": "Användare med det här paketet nekas dessa posttyper och åtgärder, eftersom paketet saknar regel för dem.",
+        "previewNothing": "Paketet nämner varje posttyp och åtgärd och nekar därför inget utöver sina egna regler.",
+        "deniedAll": "Alla åtgärder",
+        "deniedActions": "Nekas: {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Post",
       "useSynthetic": "Använd ett scenario med en syntetisk post",
       "syntheticOwnerPlaceholder": "Ägarens användar-ID (valfritt)",
-      "syntheticClientPlaceholder": "Kund-ID (valfritt)",
+      "syntheticClientPlaceholder": "Kund (valfritt)",
       "syntheticBoardPlaceholder": "Tavlans ID (valfritt)",
       "clientVisible": "Synlig för kunden",
       "run": "Kör simulering",
@@ -584,7 +589,18 @@
       "publishedRevision": "Publicerad version",
       "allowed": "Tillåten",
       "denied": "Nekad",
-      "empty": "Kör en simulering för att jämföra utkastets och den publicerade versionens beteende."
+      "empty": "Kör en simulering för att jämföra utkastets och den publicerade versionens beteende.",
+      "explanations": {
+        "closedBaseline": "Paketet är stängt och saknar regel för {{action}} på {{resource}}, så åtkomst nekas.",
+        "clientPortfolio": "Posten tillhör en kund utanför den här användarens kundportfölj, så portföljregeln nekar den.",
+        "createOutOfScope": "Att skapa {{resource}} för den här kunden nekas: kunden ligger utanför användarens omfång.",
+        "readRequired": "{{action}} på {{resource}} kräver också läsåtkomst till posten, och läsreglerna nekar den.",
+        "templateDenied": "En regel i paketet begränsar {{action}} på {{resource}} till poster som den här användaren inte matchar.",
+        "clientVisibleOnly": "Paketet tillåter {{action}} på {{resource}} bara när posten är synlig för kunden.",
+        "notSelfApprover": "Användare kan inte godkänna sina egna poster.",
+        "rulesUnavailable": "Paketets regler kunde inte läsas in, så åtkomst nekas.",
+        "rbacDenied": "Användarens roll ger inte {{action}} på {{resource}}."
+      }
     },
     "createDialog": {
       "title": "Skapa behörighetspaket",
@@ -622,9 +638,47 @@
       "selectRecord": "Välj en post innan du kör simuleringen.",
       "runSimulation": "Det gick inte att köra simuleringen.",
       "simulator": {
-        "unsupportedAction": "Simulatorn stöder för närvarande endast kontroller av Läs och Godkänn. Välj någon av dessa åtgärder och försök igen.",
+        "unsupportedAction": "Simulatorn stöder kontroller för Läs, Skapa, Uppdatera, Ta bort och Godkänn. Välj en av dessa åtgärder och försök igen.",
         "unsupportedResource": "Den här posttypen är ännu inte tillgänglig i simulatorn. Välj en posttyp som stöds och försök igen.",
-        "clientTicketNotSupported": "Ärendekontroller för kundanvändare är ännu inte tillgängliga i simulatorn eftersom ärendetavlornas synlighet inte ingår. Prova med en intern användare eller kontrollera kundens ärendeåtkomst i appen."
+        "clientTicketNotSupported": "Ärendekontroller för kundanvändare är ännu inte tillgängliga i simulatorn eftersom ärendetavlornas synlighet inte ingår. Prova med en intern användare eller kontrollera kundens ärendeåtkomst i appen.",
+        "syntheticRecordRequired": "Den här posttypen har inga lagrade poster att välja. Använd ett syntetiskt postscenario och försök igen."
+      },
+      "saveBaseline": "Det gick inte att ändra om paketet är stängt."
+    },
+    "resourceTypes": {
+      "ticket": "Ärenden",
+      "document": "Dokument",
+      "time_entry": "Tid",
+      "project": "Projekt",
+      "asset": "Tillgångar",
+      "billing": "Fakturering",
+      "tag": "Taggar",
+      "client": "Kunder",
+      "contact": "Kontakter",
+      "interaction": "Interaktioner",
+      "schedule_entry": "Schemaposter"
+    },
+    "actions": {
+      "read": "Läs",
+      "create": "Skapa",
+      "update": "Uppdatera",
+      "delete": "Ta bort",
+      "approve": "Godkänn"
+    },
+    "portfolio": {
+      "title": "Kundportfölj",
+      "description": "De kunder som den här användaren arbetar för. Paket med en kundportföljregel begränsar användaren till dessa kunder.",
+      "addClient": "Lägg till en kund",
+      "loading": "Läser in kundportfölj...",
+      "empty": "Inga kunder. En användare med tom portfölj nekas allt som en kundportföljregel omfattar.",
+      "removeClient": "Ta bort {{client}}",
+      "save": "Spara portfölj",
+      "saving": "Sparar...",
+      "saved": "Kundportföljen sparades.",
+      "errors": {
+        "load": "Det gick inte att läsa in kundportföljen.",
+        "lookup": "Det gick inte att söka upp kunden.",
+        "save": "Det gick inte att spara kundportföljen."
       }
     }
   },

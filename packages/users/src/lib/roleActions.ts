@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
@@ -15,6 +15,15 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 export type UserRoleActionError = ActionMessageError | ActionPermissionError;
+
+function userRoleFloorActionError(
+    violation: 'last_msp_admin' | 'last_role',
+    message: string
+): ActionMessageError {
+    return violation === 'last_msp_admin'
+        ? actionError(message, 'msp/settings:errors.roles.lastMspAdmin')
+        : actionError(message, 'msp/settings:errors.roles.lastRole');
+}
 
 function userRoleActionErrorFrom(error: unknown): UserRoleActionError | null {
     if (error instanceof Error) {
@@ -113,6 +122,14 @@ export const assignRoleToUser = withAuth(async (
                 return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
             }
 
+            // A live seat technician holds the seat role and no other. No message key: the refusal has no locale string yet.
+            try {
+                await assertSeatTechnicianWrite(trx, tenant, [userId], { roleIds: [roleId] });
+            } catch (error) {
+                if (isSeatTechnicianGuardError(error)) return actionError(error.message);
+                throw error;
+            }
+
             const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')
                 .insert({ user_id: userId, role_id: roleId, tenant })
                 .returning('*');
@@ -148,6 +165,12 @@ export const removeRoleFromUser = withAuth(async (
 
             if (!role) {
                 return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
+            }
+
+            // LEVERAGE: pattern user-role-floor — the same guard runs in policyActions.removeRoleFromUser and every other role/user write path
+            const floor = await assertUserRoleFloor(trx, tenant, { kind: 'remove_roles', userId, roleIds: [roleId] });
+            if (isUserRoleFloorRejected(floor)) {
+                return userRoleFloorActionError(floor.violation, floor.message);
             }
 
             await tenantDb(trx, tenant).table('user_roles').where({ user_id: userId, role_id: roleId }).del();

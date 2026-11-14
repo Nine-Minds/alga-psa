@@ -17,7 +17,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { createProject, getProjectStatuses } from '../actions/projectActions';
 import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
-import { getServices } from '../actions/serviceCatalogActions';
+import { loadServiceOptions } from '../lib/serviceOptions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -92,10 +92,10 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
           getAllUsersBasic(),
           getProjectStatuses(),
           getTenantProjectStatuses(),
-          getServices(1, 999)
+          loadServiceOptions()
         ]);
         setUsers(allUsers);
-        setServices(servicesResponse.services);
+        setServices(servicesResponse);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;

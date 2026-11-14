@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 // One self-contained file per subpath export so the package's exports map
-// (., ./acl, ./normalize, ./query, ./runAppSearch, ./sql, ./upsert,
+// (., ./acl, ./normalize, ./query, ./runAppSearch, ./sql, ./clientScope, ./upsert,
 // ./indexers, ./indexers/*, ./actions/searchActionShared, ./projectSearchAccess)
 // resolves to matching dist/ files. Each entry is bundled (internal relative imports inlined) so the
 // emitted .mjs/.js is valid Node ESM/CJS without extension rewriting, while
@@ -16,6 +16,7 @@ export default defineConfig({
     'src/query.ts',
     'src/runAppSearch.ts',
     'src/sql.ts',
+    'src/clientScope.ts',
     'src/upsert.ts',
     'src/indexers/index.ts',
     'src/indexers/*.ts',

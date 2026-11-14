@@ -21,8 +21,9 @@ describe('project authorization kernel contracts', () => {
     expect(projectActionsSource).toContain('export const getProjects = withAuth(async (user, { tenant })');
     expect(projectActionsSource).toContain('export const getProject = withAuth(async (user, { tenant }, projectId: string)');
     expect(projectReadAuthorizationSource).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
-    expect(projectReadAuthorizationSource).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
-    expect(projectReadAuthorizationSource).toContain('return await resolveBundleNarrowingRulesForEvaluation(conn, input);');
+    // Rules load through the shared fail-closed provider: a load fault denies, it never reads as "no rules".
+    expect(projectReadAuthorizationSource).toContain('bundleProvider: createBundleNarrowingProvider(conn),');
+    expect(projectReadAuthorizationSource).not.toContain('resolveBundleNarrowingRulesForEvaluation');
     expect(projectReadAuthorizationSource).toContain('record: toProjectAuthorizationRecord(project),');
   });
 

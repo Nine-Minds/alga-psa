@@ -376,7 +376,8 @@
     "extensionRemoved": "Tillägget har tagits bort",
     "reprovisionFailed": "Det gick inte att etablera på nytt",
     "manifestReadFailed": "Det gick inte att läsa manifestfilen",
-    "invalidBundleExtension": "Filnamnet måste sluta med ”.tar.zst”: {{filename}}"
+    "invalidBundleExtension": "Filnamnet måste sluta med ”.tar.zst”: {{filename}}",
+    "bundleTooLarge": "Det här paketet är {{size}}. Den nuvarande gränsen är {{limit}} per paket."
   },
   "debug": {
     "scopeToOneInstall": "Begränsa till en installation",

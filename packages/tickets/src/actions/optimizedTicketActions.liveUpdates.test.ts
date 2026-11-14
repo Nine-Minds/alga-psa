@@ -29,6 +29,11 @@ vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
+}));
 
 vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
   publishTicketTransitionsAfterCommit: vi.fn(async () => []),
@@ -67,6 +72,9 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
+  // Seat work revisions are covered against a real database in coManagedSeatTicketNativeReassignment.db.test.ts.
+  recordTicketAssigneeChange: vi.fn(async () => null),
+  releaseSeatTicketOnMove: vi.fn(async () => ({ assigneeCleared: false })),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
     unscoped: (table: string) => conn(table),

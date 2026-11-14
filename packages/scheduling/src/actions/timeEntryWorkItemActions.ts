@@ -1,6 +1,7 @@
 'use server'
 
 import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -61,6 +62,14 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     throw new Error('Permission denied: Cannot read time entry work items');
   }
 
+  // Work items listed here are the ones this sheet's entries point at; entries of clients the reader may not see do not count.
+  const readScope = await resolveTimeEntryReadScope(db, tenant, user);
+  const timeEntriesInScope = () => {
+    const query = scopedDb.table('time_entries');
+    readScope.apply(query);
+    return query;
+  };
+
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
@@ -79,7 +88,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const ticketsQuery = scopedDb.table('tickets')
     .whereIn(
       'tickets.ticket_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ticket',
@@ -87,6 +96,9 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
         })
     );
   scopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 'tickets.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+  // Not narrowed by ticket read scope here: the time sheet grid has one row per work item returned, so a time entry
+  // whose ticket is dropped would stay in the totals and submission with no row to show it. Narrowing this list
+  // belongs with the time entry list authorization (S10), which must drop the entries and the work items together.
   const tickets = await ticketsQuery
     .select(
       'tickets.ticket_id as work_item_id',
@@ -102,7 +114,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const projectTasksQuery = scopedDb.table('project_tasks')
     .whereIn(
       'task_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'project_task',
@@ -135,7 +147,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const adHocEntries = await scopedDb.table('schedule_entries')
     .whereIn(
       'entry_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ad_hoc',
@@ -153,7 +165,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const interactionsQuery = scopedDb.table('interactions')
     .whereIn(
       'interaction_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'interaction',
@@ -174,7 +186,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
       db.raw("'interaction' as type")
     );
 
-  const nonBillableEntries = await scopedDb.table('time_entries')
+  const nonBillableEntries = await timeEntriesInScope()
     .where({
       'time_entries.work_item_type': 'non_billable_category',
       'time_entries.time_sheet_id': validatedParams.timeSheetId

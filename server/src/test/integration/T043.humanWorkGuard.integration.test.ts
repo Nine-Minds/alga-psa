@@ -36,6 +36,8 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 class Rollback extends Error {}
 
+const UNSCOPED = { kind: 'unscoped', surface: 'test' } as const;
+
 // T043 (F052-F060), T021 (F058), T022 (F061): CE human-work guard against a real database.
 describe('T043/T021/T022 human-work guard', () => {
   let knex: Knex;
@@ -130,8 +132,8 @@ describe('T043/T021/T022 human-work guard', () => {
 
   describe('assertHumanWorkAssignee (F052)', () => {
     it('passes active internal ids, ignores null/undefined, dedupes', async () => {
-      await expect(assertHumanWorkAssignee(knex, tenant, [internalId, internalId, null, undefined])).resolves.toBeUndefined();
-      await expect(assertHumanWorkAssignee(knex, tenant, [])).resolves.toBeUndefined();
+      await expect(assertHumanWorkAssignee(knex, tenant, [internalId, internalId, null, undefined], UNSCOPED)).resolves.toBeUndefined();
+      await expect(assertHumanWorkAssignee(knex, tenant, [], UNSCOPED)).resolves.toBeUndefined();
     });
 
     it('rejects service, client, inactive and unknown ids with the offending ids', async () => {
@@ -140,7 +142,7 @@ describe('T043/T021/T022 human-work guard', () => {
         const inactive = await insertUser(trx, { inactive: true });
         const unknown = uuidv4();
         for (const bad of [serviceId, clientUser, inactive, unknown]) {
-          const error = await assertHumanWorkAssignee(trx, tenant, [internalId, bad]).catch((e) => e);
+          const error = await assertHumanWorkAssignee(trx, tenant, [internalId, bad], UNSCOPED).catch((e) => e);
           expect(error).toBeInstanceOf(HumanWorkAssigneeInvalidError);
           expect(error.code).toBe('HUMAN_WORK_ASSIGNEE_INVALID');
           expect(error.userIds).toEqual([bad]);
@@ -149,7 +151,7 @@ describe('T043/T021/T022 human-work guard', () => {
     });
 
     it('is tenant scoped: an id from another tenant is invalid', async () => {
-      await expect(assertHumanWorkAssignee(knex, uuidv4(), [internalId])).rejects.toBeInstanceOf(HumanWorkAssigneeInvalidError);
+      await expect(assertHumanWorkAssignee(knex, uuidv4(), [internalId], UNSCOPED)).rejects.toBeInstanceOf(HumanWorkAssigneeInvalidError);
     });
   });
 

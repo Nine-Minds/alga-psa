@@ -376,7 +376,8 @@
     "extensionRemoved": "Estensione rimossa",
     "reprovisionFailed": "Riprovisionamento non riuscito",
     "manifestReadFailed": "Impossibile leggere il file manifest",
-    "invalidBundleExtension": "Il file deve terminare con \".tar.zst\": {{filename}}"
+    "invalidBundleExtension": "Il file deve terminare con \".tar.zst\": {{filename}}",
+    "bundleTooLarge": "Questo pacchetto è di {{size}}. Il limite attuale è di {{limit}} per pacchetto."
   },
   "debug": {
     "scopeToOneInstall": "Limita a un'installazione",

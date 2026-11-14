@@ -77,6 +77,10 @@ vi.mock('../lib/assetReadAuthorization', async (importOriginal) => ({
       authorizeResource: vi.fn(async ({ resource }: { resource: { action: string } }) => ({
         allowed: resource.action === 'read' ? h.readable : h.allowedActions.has(resource.action),
       })),
+      // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+      authorizeMutation: vi.fn(async ({ resource }: { resource: { action: string } }) => ({
+        allowed: h.readable && h.allowedActions.has(resource.action),
+      })),
     },
   })),
 }));

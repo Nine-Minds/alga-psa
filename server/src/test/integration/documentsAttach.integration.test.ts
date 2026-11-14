@@ -71,8 +71,8 @@ vi.mock('../../lib/net/safeFetch', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/net/safeFetch')>();
   return {
     ...actual,
-    safeFetch: (url: string, init: any) =>
-      actual.safeFetch(url, init, {
+    safeFetchStream: (url: string, init: any) =>
+      actual.safeFetchStream(url, init, {
         lookup: async () => [{ address: '93.184.216.34', family: 4 }],
         fetch: async (u: string) => {
           state.fetchCalls.push(u);
@@ -105,10 +105,12 @@ const ids = {
 };
 
 async function post(body: unknown) {
+  const json = JSON.stringify(body);
+  // A real HTTP request declares its length; the endpoint refuses (411) a body it cannot bound.
   const req = new NextRequest('http://localhost/api/v1/documents', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': 'k' },
-    body: JSON.stringify(body),
+    headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(json)), 'x-api-key': 'k' },
+    body: json,
   });
   const res = await controller.attach()(req);
   return { status: res.status, json: await res.json() };
@@ -297,7 +299,7 @@ describe('POST /api/v1/documents', () => {
     expect(after).toBe(before);
   }, HOOK_TIMEOUT);
 
-  it('returns 400 for an oversize file', async () => {
+  it('returns 413 for an oversize file', async () => {
     state.allow = true;
     const { status, json } = await post({
       entity_type: 'ticket',
@@ -305,7 +307,7 @@ describe('POST /api/v1/documents', () => {
       source: { type: 'base64', content: Buffer.alloc(8192, 'a').toString('base64') },
       file_name: 'big.txt',
     });
-    expect(status, JSON.stringify(json)).toBe(400);
+    expect(status, JSON.stringify(json)).toBe(413);
   }, HOOK_TIMEOUT);
 
   it('returns 404 when the entity does not exist', async () => {

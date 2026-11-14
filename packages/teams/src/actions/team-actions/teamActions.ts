@@ -3,7 +3,7 @@
 import Team from '../../models/team';
 import { USER_RESPONSE_FIELD_NAMES, sanitizeUserForResponse } from '@alga-psa/types';
 import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -394,6 +394,9 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
         if (inactiveIds.length > 0) {
           throw new Error('Cannot add inactive users to team');
         }
+
+        // A live seat technician joins no MSP team.
+        await assertSeatTechnicianWrite(trx, tenant, changes.addUserIds, { teamMembership: true });
 
         await db.table('team_members').insert(
           changes.addUserIds.map(userId => ({

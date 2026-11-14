@@ -11,8 +11,10 @@ import {
   closeWarrantyRmaCore, closeWarrantyRmaSchema, confirmVendorReceiptCore, confirmVendorReceiptSchema, shipDeadUnitToVendorCore, shipDeadUnitToVendorSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
   markDeviceReceivedSchema, openWarrantyClaimFlow, openWarrantyClaimSchema, ticketRecordAuthorizer,
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
+  recordVendorNonReturnChargeCore, recordVendorNonReturnChargeSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
   runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, validationActionError, withWarrantyErrors, type WarrantyActionError,
+  WarrantyError,
 } from '../lib/rma';
 import { rmaCaseQuery } from '../lib/rmaCaseQuery';
 import type { z } from 'zod';
@@ -41,9 +43,23 @@ function transition<S extends z.ZodTypeAny>(
       const parsed = schema.safeParse(rawInput ?? {});
       if (!parsed.success) return validationActionError(parsed.error);
       const input = parsed.data;
-      const result = await runWarrantyTransition(user as any, tenant, (trx, authorizeAsset) =>
-        core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset })
-      );
+      const result = await runWarrantyTransition(user as any, tenant, async (trx, authorizeAsset) => {
+        // Keep the record check at this server-action boundary, before the transition core can
+        // inspect protected case state or perform any mutation. The core repeats the same gate
+        // after taking its row lock, preserving protection for direct core callers as well.
+        const row = await trx('rma_cases')
+          .where({ tenant, rma_id: rmaId })
+          .forUpdate()
+          .select('asset_id', 'client_id', 'returned_unit_id')
+          .first();
+        if (!row) throw new WarrantyError('not_found', 'RMA case not found');
+        if (!row.asset_id) {
+          if (row.returned_unit_id) throw new WarrantyError('unit_tracked', 'This RMA is for a stock unit');
+          throw new WarrantyError('not_found', 'RMA case not found');
+        }
+        await authorizeAsset(row.asset_id, row.client_id ?? null);
+        return core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset });
+      });
       return reload(tenant, rmaId, result.rma);
     })
   );
@@ -68,6 +84,7 @@ export const confirmVendorReceipt = transition(confirmVendorReceiptSchema, confi
 export const receiveVendorReplacement = transition(receiveVendorReplacementSchema, receiveVendorReplacementCore);
 export const recordVendorRepair = transition(recordVendorRepairSchema, recordVendorRepairCore);
 export const recordVendorCredit = transition(recordVendorCreditSchema, recordVendorCreditCore);
+export const recordVendorNonReturnCharge = transition(recordVendorNonReturnChargeSchema, recordVendorNonReturnChargeCore);
 export const returnDeviceToClient = transition(returnDeviceToClientSchema, returnDeviceToClientCore);
 export const closeWarrantyRma = transition(closeWarrantyRmaSchema, closeWarrantyRmaCore);
 

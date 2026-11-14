@@ -96,6 +96,10 @@ class FakeBuilder {
     return this;
   }
 
+  forUpdate() {
+    return this;
+  }
+
   distinct(column: string) {
     this.projection = [column];
     return this;
@@ -321,7 +325,11 @@ vi.mock('@alga-psa/db/tenantDb', () => ({
 const coManagedWorkspaces = vi.hoisted(() => ({
   count: vi.fn(async (_trx: unknown, _options: { tenant: string; entityId: string }): Promise<number> => 0),
 }));
-vi.mock('@alga-psa/core/config/deletion', () => ({ countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count }));
+vi.mock('@alga-psa/core/config/deletion', () => ({
+  countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count,
+  // The seat arrangement half of the same blocker runs against real Postgres in coManagedSeatLifecycleGuards.db.test.ts.
+  countLiveCoManagedSeatArrangementsForClient: vi.fn(async () => 0),
+}));
 
 import { ClientMergeBlockedError, executeClientMerge, previewClientMerge } from './clientMergeEngine';
 
@@ -385,6 +393,13 @@ function seed() {
 beforeEach(seed);
 
 describe('executeClientMerge', () => {
+  it('moves pending intake to the surviving client without changing its printed tag or claim', async () => {
+    table('asset_number_reservations').push({ tenant: TENANT, reservation_id: 'label-1', client_id: 'source', asset_tag: 'FTS-00431', normalized_tag: 'FTS-00431', state: 'reserved' });
+    table('asset_tag_claims').push({ tenant: TENANT, normalized_tag: 'FTS-00431', owner_kind: 'reservation', owner_id: 'label-1' });
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', { sourceClientId: 'source', targetClientId: 'target' });
+    expect(table('asset_number_reservations')[0]).toMatchObject({ client_id: 'target', asset_tag: 'FTS-00431', normalized_tag: 'FTS-00431', state: 'reserved' });
+    expect(table('asset_tag_claims')[0]).toMatchObject({ normalized_tag: 'FTS-00431', owner_kind: 'reservation', owner_id: 'label-1' });
+  });
   it('moves the profiles, keeps their ids, and leaves the source with one fresh default', async () => {
     const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
       sourceClientId: 'source',

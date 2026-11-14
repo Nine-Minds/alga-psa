@@ -112,6 +112,14 @@ import {
   createAuthorizationKernel,
 } from '../../kernel';
 import { ensurePublishedBundleRule } from '../../bundles/service';
+import {
+  SINGLE_CLIENT_TECHNICIAN_ACTIONS,
+  SINGLE_CLIENT_TECHNICIAN_RESOURCE_TYPES,
+  STARTER_AUTHORIZATION_BUNDLES,
+} from '../../bundles/starterBundles';
+import { BUNDLE_RULE_RESOURCE_TYPES } from '../../bundles/catalog';
+import { computeClosedBundleDenialPreview } from '../../bundles/closedBundlePreview';
+import { explainDenialReasons } from '../../bundles/denialExplanations';
 
 const TENANT = 'tenant-a';
 const OTHER_TENANT = 'tenant-b';
@@ -289,5 +297,64 @@ describe('restricted asset operator starter bundle upgrade', () => {
     expect(state.tables.authorization_bundle_revisions.find(row => row.revision_id === 'revision-draft')?.lifecycle_state).toBe('draft');
     expect(state.tables.authorization_bundle_rules.filter(row => row.revision_id === 'revision-draft'))
       .toEqual([expect.objectContaining({ rule_id: 'draft-unrelated', config: { unfinished: true } })]);
+  });
+});
+
+describe('Single-client technician starter bundle', () => {
+  const bundle = STARTER_AUTHORIZATION_BUNDLES.find(item => item.key === 'single-client-technician')!;
+  const rules = bundle.rules.map((rule, index) => ({
+    id: `r${index}`, resource: rule.resourceType, action: rule.action, templateKey: rule.templateKey as any,
+    bundleId: 'starter', baseline: 'closed' as const,
+  }));
+  const kernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => rules }),
+    rbacEvaluator: async () => true,
+  });
+  const subject = { tenant: TENANT, userId: 'tech', userType: 'internal' as const, roleIds: [], teamIds: [], managedUserIds: [], clientId: null, portfolioClientIds: ['c1', 'c2'] };
+  const evaluate = (type: string, action: string, clientId: string) => {
+    const input = { subject, resource: { type, action }, record: { id: 'rec', clientId }, requestCache: new RequestLocalAuthorizationCache(), knex: db as any };
+    return action === 'read' ? kernel.authorizeResource(input) : kernel.authorizeMutation(input);
+  };
+
+  it('is a closed bundle with client_portfolio rules for the operational types and nothing else', () => {
+    expect(bundle.baseline).toBe('closed');
+    expect(bundle.rules.every(rule => rule.templateKey === 'client_portfolio')).toBe(true);
+    expect(new Set(bundle.rules.map(rule => rule.resourceType))).toEqual(new Set(SINGLE_CLIENT_TECHNICIAN_RESOURCE_TYPES));
+    expect(bundle.rules).toHaveLength(SINGLE_CLIENT_TECHNICIAN_RESOURCE_TYPES.length * SINGLE_CLIENT_TECHNICIAN_ACTIONS.length);
+    for (const type of SINGLE_CLIENT_TECHNICIAN_RESOURCE_TYPES) expect(BUNDLE_RULE_RESOURCE_TYPES).toContain(type);
+  });
+
+  it('is the only closed starter, and the other starters stay open', () => {
+    expect(STARTER_AUTHORIZATION_BUNDLES.filter(item => item.baseline === 'closed').map(item => item.key)).toEqual(['single-client-technician']);
+  });
+
+  it('previews billing as the type it denies outright', () => {
+    const preview = computeClosedBundleDenialPreview(bundle.rules);
+    expect(preview.deniedResourceTypes).toEqual(BUNDLE_RULE_RESOURCE_TYPES.filter(type => !(SINGLE_CLIENT_TECHNICIAN_RESOURCE_TYPES as readonly string[]).includes(type)));
+    expect(preview.deniedResourceTypes).toContain('billing');
+    // delete is covered by the update rule, so no operational type is partially denied.
+    expect(preview.partiallyDeniedResourceTypes).toEqual([]);
+  });
+
+  it('allows read, create and update inside the portfolio and explains each denial outside it', async () => {
+    for (const type of SINGLE_CLIENT_TECHNICIAN_RESOURCE_TYPES) {
+      for (const action of ['read', 'create', 'update', 'delete']) {
+        expect((await evaluate(type, action, 'c1')).allowed).toBe(true);
+        expect((await evaluate(type, action, 'c3')).allowed).toBe(false);
+      }
+    }
+    const read = await evaluate('ticket', 'read', 'c3');
+    expect(explainDenialReasons(read.reasons).map(e => e.kind)).toContain('client_portfolio');
+    const create = await evaluate('ticket', 'create', 'c3');
+    expect(explainDenialReasons(create.reasons).map(e => e.kind)).toEqual(expect.arrayContaining(['client_portfolio', 'create_out_of_scope']));
+    const update = await evaluate('ticket', 'update', 'c3');
+    expect(explainDenialReasons(update.reasons).map(e => e.kind)).toContain('read_required');
+  });
+
+  it('denies what it does not name through the closed baseline', async () => {
+    const decision = await evaluate('billing', 'read', 'c1');
+    expect(decision.allowed).toBe(false);
+    expect(explainDenialReasons(decision.reasons).map(e => e.kind)).toEqual(['closed_baseline']);
   });
 });

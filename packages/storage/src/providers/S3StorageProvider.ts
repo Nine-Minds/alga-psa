@@ -1,14 +1,29 @@
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-  PutObjectCommand,
+  UploadPartCommand,
   S3Client,
   S3ServiceException,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
 import type { S3ProviderConfig, StorageCapabilities } from '../types/storage';
-import { BaseStorageProvider } from './StorageProvider';
+import {
+  BaseStorageProvider,
+  type PartReceipt,
+  type SeekableInput,
+  type S3WriteSessionHandle,
+  type UploadResult,
+  type WriteSessionHandle,
+  type WriteSessionOptions,
+} from './StorageProvider';
+
+/** S3's single-object ceiling (a provider capability, not an upload limit). */
+const S3_MAX_OBJECT_BYTES = 5 * 1024 * 1024 * 1024;
 
 export class S3StorageProvider extends BaseStorageProvider {
   private readonly client: S3Client;
@@ -37,72 +52,120 @@ export class S3StorageProvider extends BaseStorageProvider {
     });
   }
 
+  /**
+   * `maxFileSize` is the smaller of S3's own single-object ceiling and the configured upload limit
+   * (STORAGE_S3_MAX_FILE_SIZE, see config/storage.ts), so a caller reading capabilities never sees
+   * more than validation allows. The configured limit wins; 5 GiB is only a backstop.
+   */
   getCapabilities(): StorageCapabilities {
+    const configured = (this.config as { maxFileSize?: number }).maxFileSize;
     return {
       supportsBuckets: true,
       supportsStreaming: true,
       supportsMetadata: true,
       supportsTags: true,
       supportsVersioning: true,
-      maxFileSize: 5 * 1024 * 1024 * 1024,
+      maxFileSize:
+        typeof configured === 'number' && configured > 0 ? Math.min(configured, S3_MAX_OBJECT_BYTES) : S3_MAX_OBJECT_BYTES,
     };
   }
 
-  async upload(
-    file: Buffer | Readable,
-    path: string,
-    options?: { mime_type?: string; metadata?: Record<string, string>; size?: number },
-  ) {
-    try {
-      // LEVERAGE: pattern s3-stream-put — identical stream/size/no-retry logic duplicated in the package and EE S3 providers (duplicated provider layer)
-      const isStream = !Buffer.isBuffer(file);
-      let contentLength: number | undefined;
-      if (isStream) {
-        // The SDK cannot measure a stream; without ContentLength it sends an
-        // undefined x-amz-decoded-content-length header and the PUT fails.
-        if (typeof options?.size !== 'number' || !Number.isFinite(options.size) || options.size < 0) {
-          throw new Error('S3 upload of a stream requires options.size (the exact byte length)');
-        }
-        contentLength = options.size;
-      }
-
-      const put = async () => {
-        await this.client.send(
-          new PutObjectCommand({
-            Bucket: this.bucket,
-            Key: path,
-            Body: file,
-            ContentLength: contentLength,
-            ContentType: options?.mime_type,
-            Metadata: options?.metadata,
-          }),
-        );
-      };
-      // A Readable can be consumed only once, so a stream PUT must not be retried.
-      if (isStream) {
-        await put();
-      } else {
-        await this.withRetry(put);
-      }
-
-      return await this.withRetry(async () => {
-        const head = await this.client.send(
-          new HeadObjectCommand({
-            Bucket: this.bucket,
-            Key: path,
-          }),
-        );
-
-        return {
-          path,
-          size: head.ContentLength || 0,
-          mime_type: head.ContentType || options?.mime_type || 'application/octet-stream',
-          metadata: head.Metadata,
-        };
-      });
-    } catch (error) {
-      this.handleError('upload', error);
+  protected async doBeginWrite(path: string, options: WriteSessionOptions): Promise<S3WriteSessionHandle> {
+    const created = await this.withRetry(() =>
+      this.client.send(
+        new CreateMultipartUploadCommand({
+          Bucket: this.bucket,
+          Key: path,
+          ContentType: options.mimeType,
+          Metadata: options.metadata,
+        }),
+      ),
+    );
+    if (!created.UploadId) {
+      throw new Error('S3 did not return an upload id');
     }
+    return { provider: 's3', bucket: this.bucket, key: path, uploadId: created.UploadId, mimeType: options.mimeType };
+  }
+
+  protected async doWritePart(
+    handle: WriteSessionHandle,
+    partNumber: number,
+    part: Readable | Buffer,
+    size: number,
+    signal?: AbortSignal,
+  ): Promise<Partial<PartReceipt>> {
+    const { key, uploadId } = this.s3Handle(handle);
+    const send = () =>
+      this.client.send(
+        new UploadPartCommand({
+          Bucket: this.bucket,
+          Key: key,
+          UploadId: uploadId,
+          PartNumber: partNumber,
+          Body: part,
+          // The SDK cannot measure a stream; without ContentLength the request fails.
+          ContentLength: size,
+        }),
+        signal ? { abortSignal: signal } : undefined,
+      );
+    // A Readable can be consumed only once, so only Buffer parts are retried.
+    const response = await (Buffer.isBuffer(part) ? this.withRetry(send) : send());
+    if (!response.ETag) {
+      throw new Error(`S3 did not return an ETag for part ${partNumber}`);
+    }
+    return { etag: response.ETag };
+  }
+
+  protected async doCompleteWrite(handle: WriteSessionHandle, parts: PartReceipt[]): Promise<UploadResult> {
+    const { key, uploadId, mimeType } = this.s3Handle(handle);
+    if (parts.some((part) => !part.etag)) {
+      throw this.writeError('INVALID_PARTS', 'S3 part receipts must include an etag');
+    }
+    await this.withRetry(() =>
+      this.client.send(
+        new CompleteMultipartUploadCommand({
+          Bucket: this.bucket,
+          Key: key,
+          UploadId: uploadId,
+          MultipartUpload: { Parts: parts.map((part) => ({ PartNumber: part.partNumber, ETag: part.etag })) },
+        }),
+      ),
+    );
+    return await this.withRetry(async () => {
+      const head = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      return {
+        path: key,
+        size: head.ContentLength || 0,
+        mime_type: head.ContentType || mimeType || 'application/octet-stream',
+        metadata: head.Metadata,
+      };
+    });
+  }
+
+  protected async doAbortWrite(handle: WriteSessionHandle): Promise<void> {
+    const { key, uploadId } = this.s3Handle(handle);
+    try {
+      await this.withRetry(() =>
+        this.client.send(new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId })),
+      );
+    } catch (error) {
+      // Already aborted or completed: abort is idempotent.
+      if (error instanceof S3ServiceException && (error.name === 'NoSuchUpload' || error.$metadata?.httpStatusCode === 404)) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private s3Handle(handle: WriteSessionHandle): S3WriteSessionHandle {
+    const h = handle as S3WriteSessionHandle;
+    if (typeof h.key !== 'string' || !h.key || typeof h.uploadId !== 'string' || !h.uploadId) {
+      throw this.writeError('INVALID_WRITE_HANDLE', 'S3 write session handle requires key and uploadId');
+    }
+    if (h.bucket !== this.bucket) {
+      throw this.writeError('INVALID_WRITE_HANDLE', 'S3 write session handle was issued for a different bucket');
+    }
+    return h;
   }
 
   async download(path: string): Promise<Buffer> {
@@ -148,6 +211,26 @@ export class S3StorageProvider extends BaseStorageProvider {
     } catch (error) {
       this.handleError('download', error);
     }
+  }
+
+  /**
+   * Presigned GET for server-side tools (ffmpeg). Signed by this provider's own client, so the
+   * host is the configured STORAGE_S3_ENDPOINT -- the internal endpoint the server already
+   * reaches -- and never a browser-facing/public URL. Must not be returned to clients.
+   */
+  // LEVERAGE: pattern s3-stream-put — ee/server/src/lib/storage has a second S3 provider that does not have getSeekableInput/getInternalReadUrl
+  async getInternalReadUrl(path: string, ttlSeconds: number): Promise<string> {
+    try {
+      return await getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: path }), {
+        expiresIn: ttlSeconds,
+      });
+    } catch (error) {
+      this.handleError('download', error);
+    }
+  }
+
+  async getSeekableInput(path: string, ttlSeconds: number): Promise<SeekableInput> {
+    return { kind: 'url', url: await this.getInternalReadUrl(path, ttlSeconds) };
   }
 
   async delete(path: string): Promise<void> {

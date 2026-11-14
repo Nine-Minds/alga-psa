@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { AssetAuditError } from '@alga-psa/assets/lib/audits/errors';
 
 /**
  * Site audit routes (mobile 2.0 FR17): reading needs asset:read, every mutation
  * needs asset:update, and a mutation on a closed audit answers 409.
+ *
+ * The lifecycle itself lives in @alga-psa/assets, so that is what is stubbed
+ * here — the server class under test is the thin adapter, and its only job
+ * beyond delegation is turning the package's refusal codes into the HTTP errors
+ * the route layer renders.
  */
 
 const serviceState = vi.hoisted(() => ({
@@ -11,11 +17,12 @@ const serviceState = vi.hoisted(() => ({
   audit: { audit_id: 'audit-1', status: 'in_progress', items: [] } as Record<string, unknown>,
   list: { data: [] as unknown[], total: 0 },
   throwOnMutation: null as Error | null,
+  throwOnRead: null as Error | null,
 }));
 
 const permissions = vi.hoisted(() => ({ read: true, update: true }));
 
-vi.mock('@/lib/api/services/AssetAuditService', () => ({
+vi.mock('@alga-psa/assets/lib/audits/service', () => ({
   AssetAuditService: class {
     async start(...args: unknown[]) {
       serviceState.calls.push({ method: 'start', args });
@@ -44,6 +51,7 @@ vi.mock('@/lib/api/services/AssetAuditService', () => ({
     }
     async get(...args: unknown[]) {
       serviceState.calls.push({ method: 'get', args });
+      if (serviceState.throwOnRead) throw serviceState.throwOnRead;
       return serviceState.audit;
     }
     async list(...args: unknown[]) {
@@ -68,12 +76,13 @@ vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 
 const { ApiAssetAuditController } = await import('@/lib/api/controllers/ApiAssetAuditController');
 const { setRequestContext } = await import('@/lib/api/utils/requestContext');
-const { ConflictError, handleApiError } = await import('@/lib/api/middleware/apiMiddleware');
+const { handleApiError } = await import('@/lib/api/middleware/apiMiddleware');
 
 const TENANT = '11111111-1111-1111-1111-111111111111';
 const CLIENT = '22222222-2222-2222-2222-222222222222';
 const ASSET = '33333333-3333-3333-3333-333333333333';
 const AUDIT = '44444444-4444-4444-4444-444444444444';
+const LOCATION = '55555555-5555-5555-5555-555555555555';
 
 function request(path: string, init?: { method?: string; body?: unknown }): NextRequest {
   const req = new NextRequest(`http://localhost${path}`, {
@@ -93,6 +102,7 @@ function request(path: string, init?: { method?: string; body?: unknown }): Next
 beforeEach(() => {
   serviceState.calls = [];
   serviceState.throwOnMutation = null;
+  serviceState.throwOnRead = null;
   permissions.read = true;
   permissions.update = true;
 });
@@ -144,6 +154,41 @@ describe('ApiAssetAuditController', () => {
     expect(serviceState.calls[0].args[0]).toMatchObject({ client_id: CLIENT, limit: 5 });
   });
 
+  it('passes the location, status and date-range filters through to the service', async () => {
+    serviceState.list = { data: [], total: 0 };
+
+    const response = await new ApiAssetAuditController().list(
+      request(
+        `/api/v1/asset-audits?client_id=${CLIENT}&location_id=${LOCATION}&status=completed` +
+          '&started_from=2026-03-01T00:00:00.000Z&started_to=2026-03-31T23:59:59.999Z',
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(serviceState.calls[0].args[0]).toMatchObject({
+      client_id: CLIENT,
+      location_id: LOCATION,
+      status: 'completed',
+      started_from: '2026-03-01T00:00:00.000Z',
+      started_to: '2026-03-31T23:59:59.999Z',
+    });
+  });
+
+  it('passes the "no location" scope through as a boolean', async () => {
+    serviceState.list = { data: [], total: 0 };
+
+    await new ApiAssetAuditController().list(request('/api/v1/asset-audits?no_location=true'));
+
+    expect(serviceState.calls[0].args[0]).toMatchObject({ no_location: true });
+  });
+
+  it('rejects a status outside the audit lifecycle', async () => {
+    const response = await new ApiAssetAuditController().list(request('/api/v1/asset-audits?status=paused'));
+
+    expect(response.status).toBe(400);
+    expect(serviceState.calls).toHaveLength(0);
+  });
+
   it('refuses to list audits without asset:read', async () => {
     permissions.read = false;
 
@@ -167,7 +212,9 @@ describe('ApiAssetAuditController', () => {
   });
 
   it('T056 surfaces a closed audit as 409', async () => {
-    serviceState.throwOnMutation = new ConflictError('Audit is completed');
+    // The package refuses with its own code; the adapter is what has to turn it
+    // into the middleware's ConflictError for the route layer to render.
+    serviceState.throwOnMutation = new AssetAuditError('conflict', 'Audit is completed');
 
     let status = 0;
     try {
@@ -180,6 +227,30 @@ describe('ApiAssetAuditController', () => {
     }
 
     expect(status).toBe(409);
+  });
+
+  it('maps a package not_found refusal to 404', async () => {
+    serviceState.throwOnRead = new AssetAuditError('not_found', 'Audit not found');
+
+    let status = 0;
+    try {
+      await new ApiAssetAuditController().getById(request(`/api/v1/asset-audits/${AUDIT}`), { id: AUDIT });
+    } catch (error) {
+      status = handleApiError(error).status;
+    }
+
+    expect(status).toBe(404);
+  });
+
+  it('lets a failure that is not an audit refusal through unchanged', async () => {
+    serviceState.throwOnMutation = new Error('connection terminated');
+
+    await expect(
+      new ApiAssetAuditController().complete(
+        request(`/api/v1/asset-audits/${AUDIT}/complete`, { method: 'POST' }),
+        { id: AUDIT },
+      ),
+    ).rejects.toThrow('connection terminated');
   });
 
   it('unmarks, completes and cancels through the service with asset:update', async () => {

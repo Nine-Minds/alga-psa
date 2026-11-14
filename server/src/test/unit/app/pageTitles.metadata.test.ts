@@ -68,8 +68,10 @@ function collectPages(rootRelativePath: string): string[] {
   }
 
   walk(rootPath);
+  // Parallel-slot pages (@modal, @surface, ...) render beside the routed page and never own the document
+  // title; the routed page's own metadata does.
   return pagePaths
-    .filter((relativePath) => !relativePath.includes('/@modal/'))
+    .filter((relativePath) => !/\/@[^/]+\//.test(relativePath))
     .sort();
 }
 

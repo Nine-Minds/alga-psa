@@ -90,7 +90,7 @@ export async function runDattoRmmAlertBackfill(args: {
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where({ provider: DATTO_RMM_PROVIDER })
-      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null, updated_at: new Date().toISOString() });
 
     await publishRmmSyncEvent({
       provider: DATTO_RMM_PROVIDER,

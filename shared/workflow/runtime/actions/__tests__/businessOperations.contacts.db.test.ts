@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../test-utils/assetFixtures';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knex, type Knex } from 'knex';
 import path from 'node:path';
@@ -858,7 +859,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       .where({ contact_name_id: reportId })
       .update({ manager_contact_id: managerId });
     const assetId = uuidv4();
-    await tenantTable(db, runtimeState.tenantId, 'assets').insert({
+    await insertTestAssets(db, {
       tenant: runtimeState.tenantId,
       asset_id: assetId,
       client_id: clientId,

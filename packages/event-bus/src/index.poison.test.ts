@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useIsolatedEventBusModules } from './testing/isolatedEventBusModules';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 
@@ -110,6 +111,8 @@ function mockModules(opts: {
 }
 
 describe('EventBus poison resistance', () => {
+  useIsolatedEventBusModules();
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -118,7 +121,6 @@ describe('EventBus poison resistance', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.resetModules();
     vi.clearAllMocks();
   });
 

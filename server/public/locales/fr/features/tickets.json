@@ -785,6 +785,13 @@
     "boardTabs": {
       "all": "Tous les tickets"
     },
+    "seatViews": {
+      "clientIt": "IT du client",
+      "msp": "Chez le MSP",
+      "unassigned": "Non assignés",
+      "all": "Tous",
+      "empty": "Aucun ticket dans « {{view}} » pour le moment."
+    },
     "boardHeader": {
       "open": "Ouverts",
       "overdue": "En retard",

@@ -212,7 +212,8 @@ async function regenerate() {
   const { replenishClientCadenceServicePeriods } = await import(
     '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration'
   );
-  await replenishClientCadenceServicePeriods({} as any, {
+  // raw() serves the tenant billing lock taken before period writes.
+  await replenishClientCadenceServicePeriods({ raw: async () => ({ rows: [] }) } as any, {
     tenant: TENANT,
     clientId: CLIENT,
     billingCycle: 'monthly',

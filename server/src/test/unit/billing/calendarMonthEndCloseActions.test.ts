@@ -28,11 +28,13 @@ vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => (
   generateInvoiceForSelectionInputs: mocks.generateInvoiceForSelectionInputs,
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async () => ({
   createTenantKnex: mocks.createTenantKnex,
   tenantDb: mocks.tenantDb,
   withTransaction: mocks.withTransaction,
   resolveEffectiveTimeZone: mocks.resolveEffectiveTimeZone,
+  // Real pure conversion: the close stamps invoices via localDateForInstant.
+  localDateForInstant: (await import('../../../../../packages/db/src/lib/workDate')).localDateForInstant,
 }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {

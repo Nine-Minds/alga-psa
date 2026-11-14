@@ -159,6 +159,8 @@ describe('search index source event publishing contracts', () => {
     const documentSource = readRepoFile('packages/documents/src/actions/documentActions.ts');
     const contentSource = readRepoFile('packages/documents/src/actions/documentBlockContentActions.ts');
     const shareLinkSource = readRepoFile('packages/documents/src/actions/shareLinkActions.ts');
+    // The DOCUMENT_UPDATED publisher is shared with chunked-upload completion.
+    const documentEventSource = readRepoFile('packages/documents/src/lib/createDocumentFromCommittedFile.ts');
 
     expect(contentSource).toContain('export const updateBlockContent = withAuth(async');
     expect(contentSource).toContain("eventType: 'DOCUMENT_UPDATED'");
@@ -166,7 +168,11 @@ describe('search index source event publishing contracts', () => {
     expect(documentSource).toContain('createDocumentAssociations = withAuth(async');
     expect(documentSource).toContain('removeDocumentAssociations = withAuth(async');
     expect(documentSource).toContain("['document_associations']");
-    expect(documentSource).toContain("eventType: 'DOCUMENT_UPDATED'");
+    expect(documentSource).toContain("from '../lib/createDocumentFromCommittedFile'");
+    const associationActions = documentSource.slice(documentSource.indexOf('createDocumentAssociations = withAuth(async'));
+    expect(associationActions.match(/await publishDocumentUpdatedSearchEvent\(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(documentEventSource).toContain('export async function publishDocumentUpdatedSearchEvent(');
+    expect(documentEventSource).toContain("eventType: 'DOCUMENT_UPDATED'");
 
     expect(shareLinkSource).toContain('createShareLink = withAuth(');
     expect(shareLinkSource).toContain('revokeShareLink = withAuth(');

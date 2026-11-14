@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// The client-scope create gate needs a real connection; it is covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn(async () => undefined) }));
 import { ZodError } from 'zod';
 
 const createTenantKnexMock = vi.fn();
@@ -20,6 +23,7 @@ const resolveContractLineSelectionMock = vi.fn(async () => ({
 // The human-work guard is covered against a real database in T043; this fake DB has no users table.
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
+  timeEntryWorkItem: vi.fn(() => ({ kind: 'unscoped', surface: 'time_entry' })),
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 
@@ -44,6 +48,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// The client read scope has its own DB test (T012); here the subject is not client-restricted.
+vi.mock('../src/lib/timeEntryAuthorizationSql', () => ({
+  resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined }),
+}));
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
   assertCanActOnBehalf: (...args: any[]) => assertCanActOnBehalfMock(...args),
 }));
