@@ -64,6 +64,8 @@ export async function deliverCoManagedSeatHandoffNotifications(
       type: 'info',
       category: 'tickets',
       link: internalUrl,
+      // A handoff is a ticket-level fact: everyone admitted to the ticket may be told it.
+      ticketAudience: { ticketId, audience: 'requester' },
       data: {
         ticketId: ticket.ticket_number,
         ticketNumber: ticket.ticket_number,
@@ -107,6 +109,8 @@ export async function deliverCoManagedSeatSharedNoteNotifications(
       type: 'info',
       category: 'tickets',
       link: input.link,
+      // The note is shared IT: a seat technician is told it only while the ticket is in their scope.
+      ticketAudience: { ticketId: input.ticketId, audience: 'shared_it' },
       data: { authorName: input.authorName, ticketId: input.ticketNumber || 'New Ticket', commentPreview: input.commentPreview },
       metadata: {
         ticketId: input.ticketId,
