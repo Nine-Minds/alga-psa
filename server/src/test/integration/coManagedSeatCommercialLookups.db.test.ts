@@ -15,7 +15,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
-import { admitCoManagedSeatRole, CO_MANAGED_SEAT_ROLE_GRANTS } from '@alga-psa/co-managed';
+import { admitCoManagedSeatRole, CO_MANAGED_SEAT_ROLE, CO_MANAGED_SEAT_ROLE_GRANTS } from '@alga-psa/co-managed';
 import { CLIENT_BILLING_COLUMNS } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -58,7 +58,7 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
   let tenant: string;
   let clientId: string;
   let serviceId: string;
-  const people = {} as Record<'seat' | 'portal' | 'admin' | 'technician', any>;
+  const people = {} as Record<'seat' | 'portal' | 'admin' | 'technician' | 'custom' | 'clientEditor', any>;
 
   const userRow = (id: string) => db('users').where({ tenant, user_id: id }).first();
   const grantRole = async (userId: string, roleId: string) => db('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
@@ -89,6 +89,21 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     await grantRole(technician, await roleId('Technician', true));
     const portal = await createUser(db, tenant, { user_type: 'client', username: 's13.portal' });
     await grantRole(portal, await roleId('Admin', false));
+    // A custom MSP role that existed before the migration, and a client editor without billing permission.
+    const customRole = randomUUID(), editorRole = randomUUID();
+    await db('roles').insert([
+      { tenant, role_id: customRole, role_name: 'Custom Helpdesk', description: 'pre-migration custom role', msp: true, client: false },
+      { tenant, role_id: editorRole, role_name: 'Client Editor', description: 'client:read/update, no billing', msp: true, client: false },
+    ]);
+    for (const action of ['read', 'update']) {
+      const permission = await db('permissions').where({ tenant, resource: 'client', action, msp: true, client: false }).first('permission_id');
+      await db('role_permissions').insert({ tenant, role_id: editorRole, permission_id: permission.permission_id });
+    }
+    const custom = await createUser(db, tenant, { user_type: 'internal', username: 's13.custom' });
+    await grantRole(custom, customRole);
+    const clientEditor = await createUser(db, tenant, { user_type: 'internal', username: 's13.editor' });
+    await grantRole(clientEditor, editorRole);
+    people.custom = await userRow(custom); people.clientEditor = await userRow(clientEditor);
     people.seat = await userRow(seat); people.admin = await userRow(admin);
     people.technician = await userRow(technician); people.portal = await userRow(portal);
 
@@ -114,6 +129,38 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     const { hasCommercialReadPermission } = await import('@alga-psa/auth/lib/commercialAccess');
     expect(await hasCommercialReadPermission(people.admin)).toBe(true);
     expect(await hasCommercialReadPermission(people.seat)).toBe(false);
+    expect(await hasCommercialReadPermission(people.portal)).toBe(false);
+  });
+
+  it('the migration keeps every non-seat MSP role (custom included) on service:read and never grants the seat role', async () => {
+    const serviceRead = await db('permissions').where({ tenant, resource: 'service', action: 'read', msp: true, client: false }).first('permission_id');
+    // The tenant as it was before this slice: nobody held service:read through a role but Admin.
+    const adminRoleId = await roleId('Admin', true);
+    await db('role_permissions').where({ tenant, permission_id: serviceRead.permission_id }).whereNot({ role_id: adminRoleId }).delete();
+    const { hasCommercialReadPermission } = await import('@alga-psa/auth/lib/commercialAccess');
+    expect(await hasCommercialReadPermission(people.technician)).toBe(false);
+    expect(await hasCommercialReadPermission(people.custom)).toBe(false);
+
+    const migration = require('../../../migrations/20261113140000_grant_service_read_to_msp_roles.cjs');
+    await migration.up(db);
+    expect(await hasCommercialReadPermission(people.technician)).toBe(true);
+    expect(await hasCommercialReadPermission(people.custom)).toBe(true);
+    expect(await hasCommercialReadPermission(people.clientEditor)).toBe(true);
+    expect(await hasCommercialReadPermission(people.seat)).toBe(false);
+    expect(await hasCommercialReadPermission(people.portal)).toBe(false);
+    const seatGrants = await db('role_permissions').where({ 'role_permissions.tenant': tenant, 'role_permissions.permission_id': serviceRead.permission_id })
+      .join('roles', function () { this.on('roles.tenant', 'role_permissions.tenant').andOn('roles.role_id', 'role_permissions.role_id'); })
+      .where('roles.role_name', 'Seat Technician');
+    expect(seatGrants).toEqual([]);
+
+    // Idempotent: a rerun writes nothing.
+    const count = async () => Number((await db('role_permissions').where({ tenant, permission_id: serviceRead.permission_id }).count('* as n').first())!.n);
+    const before = await count();
+    await migration.up(db);
+    expect(await count()).toBe(before);
+    // The role editor's copy of the role name is the one the seat role is created with.
+    expect(CO_MANAGED_SEAT_ROLE.role_name).toBe('Seat Technician');
+    // Roles of other scope are untouched: the client-portal Admin did not gain a service permission.
     expect(await hasCommercialReadPermission(people.portal)).toBe(false);
   });
 
@@ -177,11 +224,21 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     expect(Array.isArray(lines)).toBe(true);
   });
 
-  it('a standard Technician (neither service nor billing read) is refused: the release risk this slice records', async () => {
-    as('technician');
-    const result = await outcome(entryPoints()['scheduling lib getEligibleContractLinesForUI']);
-    expect(refused(result)).toBe(true);
-  });
+  for (const person of ['technician', 'custom'] as const) {
+    it(`${person}: every gated lookup still succeeds after the migration`, async () => {
+      as(person);
+      const points = entryPoints();
+      for (const name of ['integrations getServices', 'projects getServices', 'scheduling getServices', 'clients getServicesAsync']) {
+        const result = await points[name]();
+        expect(result.services.map((s: any) => s.service_id), name).toEqual([serviceId]);
+      }
+      expect((await points['billing getServices']()).services.map((s: any) => s.service_id)).toEqual([serviceId]);
+      for (const name of ['billing usage getEligibleContractLinesForUI', 'billing lib getEligibleContractLinesForUI', 'scheduling lib getEligibleContractLinesForUI']) {
+        const lines = await points[name]();
+        expect(lines.map((l: any) => l.contract_line_name), name).toEqual(['S13 hourly']);
+      }
+    });
+  }
 
   const BILLING_COLUMNS: readonly string[] = CLIENT_BILLING_COLUMNS;
   const leaked = (row: Record<string, unknown>) => BILLING_COLUMNS.filter(column => column in row);
@@ -210,5 +267,26 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     expect(adminAll.find(c => c.client_id === clientId)).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly' });
     const adminPage: any = await getAllClientsPaginated({ pageSize: 50 });
     expect(adminPage.clients.find((c: any) => c.client_id === clientId)).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly' });
+  });
+
+  it('saving a client from a projected row (as ClientDetails does) leaves every billing column untouched', async () => {
+    const { getClientById } = await import('../../../../packages/clients/src/actions/queryActions');
+    const { updateClient } = await import('../../../../packages/clients/src/actions/clientActions');
+    const stored = async () => db('clients').where({ tenant, client_id: clientId }).first();
+    const row = await stored();
+    const billingBefore = Object.fromEntries(CLIENT_BILLING_COLUMNS.filter(c => c !== 'credit_balance').map(c => [c, row[c]]));
+    expect(billingBefore).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly', billing_email: 'ap@s13.example', auto_invoice: true });
+
+    as('clientEditor');
+    const projected: any = await getClientById(clientId);
+    expect(leaked(projected)).toEqual([]);
+    const { account_manager_full_name, ...rest } = projected;
+    const saved: any = await updateClient(clientId, { ...rest, notes: 'edited by a user without billing permission' });
+    expect(saved?.client_id, JSON.stringify(saved)).toBe(clientId);
+    expect(leaked(saved)).toEqual([]);
+
+    const after = await stored();
+    expect(after.notes).toBe('edited by a user without billing permission');
+    for (const [column, value] of Object.entries(billingBefore)) expect(after[column], column).toEqual(value);
   });
 });

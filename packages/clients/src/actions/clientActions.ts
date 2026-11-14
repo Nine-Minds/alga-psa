@@ -1,6 +1,6 @@
 'use server'
 
-import { projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
+import { canReadClientBilling, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -356,11 +356,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         }
       });
 
-      // Explicitly set fields to null if they're not in updateData but should be cleared
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
+      // Explicitly set fields to null if they're not in updateData but should be cleared.
+      // Absence only means "cleared" for a subject who was shown these columns: a subject without billing
+      // permission reads the client without them (clientBillingProjection), so saving that row back must
+      // leave them untouched.
+      const billingColumnsWereVisible = !isClientPortalUpdate && await canReadClientBilling(user, trx);
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
         updateObject.billing_contact_id = null;
       }
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_email')) {
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_email')) {
         updateObject.billing_email = null;
       }
 
@@ -531,7 +535,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     }
 
     console.log('Updated client data:', updatedClientWithLogo);
-    return updatedClientWithLogo;
+    // Client-portal updates return the portal user's own client unchanged; MSP callers get the billing projection.
+    return isClientPortalUpdate ? updatedClientWithLogo : projectClientForSubject(user, updatedClientWithLogo, db);
   } catch (error) {
     console.error('Error updating client:', error);
     if (error instanceof ClientStructuralError) {
