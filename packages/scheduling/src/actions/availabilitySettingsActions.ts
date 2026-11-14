@@ -77,6 +77,8 @@ export interface AvailabilityAccessTeam {
 export interface AvailabilitySettingsAccess {
   canReadSystemSettings: boolean;
   canManageSystemSettings: boolean;
+  /** Mirrors what deleteAvailabilitySetting enforces for non-user_hours rows. */
+  canDeleteSystemSettings: boolean;
   canManageUserHours: boolean;
   users: AvailabilityAccessUser[];
   teams: AvailabilityAccessTeam[];
@@ -170,9 +172,10 @@ export const getAvailabilitySettingsAccess = withAuth(async (
 ): Promise<AvailabilitySettingsResult<AvailabilitySettingsAccess>> => {
   try {
     const { knex: db } = await createTenantKnex();
-    const [canReadSystemSettings, canManageSystemSettings, scopedUserIds] = await Promise.all([
+    const [canReadSystemSettings, canManageSystemSettings, canDeleteSystemSettings, scopedUserIds] = await Promise.all([
       hasPermission(user, 'system_settings', 'read', db),
       hasPermission(user, 'system_settings', 'update', db),
+      hasPermission(user, 'system_settings', 'delete', db),
       getScopedUserIds(db, tenant, user.user_id),
     ]);
     const scopedDb = tenantDb(db, tenant);
@@ -205,6 +208,7 @@ export const getAvailabilitySettingsAccess = withAuth(async (
       data: {
         canReadSystemSettings,
         canManageSystemSettings,
+        canDeleteSystemSettings,
         canManageUserHours: canManageSystemSettings || scopedUserIds.size > 0,
         users: users as AvailabilityAccessUser[],
         teams: teams.map((team) => ({

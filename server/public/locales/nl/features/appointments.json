@@ -16,6 +16,8 @@
     "description": "Kies de service waarmee u hulp nodig heeft",
     "selectService": "Selecteer een service",
     "serviceLabel": "Service",
+    "preselectedServiceNotice": "Deze service is al voor u geselecteerd — ga verder met het kiezen van een datum.",
+    "serviceReadOnlyLabel": "Geselecteerde service",
     "ticketLabel": "Koppelen aan bestaand ticket (Optioneel)",
     "selectTicket": "Selecteer een ticket",
     "noTicket": "Geen ticket",

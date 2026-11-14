@@ -472,18 +472,37 @@
         "noLimit": "Sem limite"
       },
       "actions": {
-        "save": "Salvar regras de serviço"
+        "save": "Salvar regras de serviço",
+        "savePortalBooking": "Salvar configurações de agendamento do portal"
       },
       "feedback": {
         "selectServiceError": "Selecione um serviço",
         "saveSuccess": "Regras de serviço salvas",
         "saveError": "Falha ao salvar regras de serviço",
         "deleteSuccess": "Regras de serviço excluídas",
-        "deleteError": "Falha ao excluir regras de serviço"
+        "deleteError": "Falha ao excluir regras de serviço",
+        "portalBookingSaveSuccess": "Configurações de agendamento do portal do cliente salvas"
       },
       "deleteDialog": {
         "title": "Excluir regras de serviço",
         "message": "Tem certeza de que deseja excluir as regras de {{serviceName}}? Esta ação não pode ser desfeita."
+      },
+      "portalBooking": {
+        "title": "Agendamento no portal do cliente",
+        "description": "O que os clientes veem ao solicitar um agendamento pelo portal."
+      },
+      "portalHideContractServices": {
+        "label": "Mostrar no portal do cliente apenas os serviços configurados para reserva",
+        "help": "Oculta os serviços que os clientes herdam de seus contratos: o portal lista apenas os serviços configurados acima com \"Permitir reserva sem contrato\"."
+      },
+      "portalDefaultService": {
+        "label": "Serviço de reserva padrão",
+        "none": "Sem padrão — o cliente escolhe",
+        "help": "Fica pré-selecionado para os clientes, para que nunca precisem escolher um serviço. Escolha um dos serviços configurados — até lá, nada fica pré-selecionado."
+      },
+      "portalShowServiceRates": {
+        "label": "Mostrar as tarifas dos serviços aos clientes",
+        "help": "Quando desativado, os clientes nunca veem o preço de um serviço ao agendar."
       }
     },
     "exceptions": {

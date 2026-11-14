@@ -472,18 +472,37 @@
         "noLimit": "No limit"
       },
       "actions": {
-        "save": "Save Service Rules"
+        "save": "Save Service Rules",
+        "savePortalBooking": "Save Portal Booking Settings"
       },
       "feedback": {
         "selectServiceError": "Please select a service",
         "saveSuccess": "Service rules saved",
         "saveError": "Failed to save service rules",
         "deleteSuccess": "Service rules deleted",
-        "deleteError": "Failed to delete service rules"
+        "deleteError": "Failed to delete service rules",
+        "portalBookingSaveSuccess": "Client portal booking settings saved"
       },
       "deleteDialog": {
         "title": "Delete Service Rules",
         "message": "Are you sure you want to delete the rules for {{serviceName}}? This action cannot be undone."
+      },
+      "portalBooking": {
+        "title": "Client Portal Booking",
+        "description": "What clients see when they request an appointment from the portal."
+      },
+      "portalHideContractServices": {
+        "label": "Only show configured bookable services in the client portal",
+        "help": "Hides the services clients inherit from their contracts, so the portal lists only the services configured above with \"Allow Booking Without Contract\"."
+      },
+      "portalDefaultService": {
+        "label": "Default booking service",
+        "none": "No default — client chooses",
+        "help": "Preselected for clients so they never have to choose a service. Pick one of your configured services — nothing is preselected until you do."
+      },
+      "portalShowServiceRates": {
+        "label": "Show service rates to clients",
+        "help": "When off, clients never see a price for a service while booking."
       }
     },
     "exceptions": {
