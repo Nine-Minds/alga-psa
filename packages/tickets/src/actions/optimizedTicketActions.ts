@@ -34,6 +34,7 @@ import type {
   ITicket,
   ITicketListItem,
   ITicketListFilters,
+  ITicketListViewSummary,
   IAgentSchedule,
   IComment,
   IContact,
@@ -154,6 +155,7 @@ import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErr
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveTicketListViews, ticketListViewPredicates, type TicketListViewDefinition } from '../lib/ticketListViews';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
@@ -1344,7 +1346,8 @@ async function buildTicketListBaseQuery(
   trx: Knex.Transaction,
   tenant: string,
   user: { user_id: string; user_type?: string; clientId?: string | null },
-  validatedFilters: ITicketListFilters
+  validatedFilters: ITicketListFilters,
+  listViews: readonly TicketListViewDefinition[] = []
 ): Promise<{ builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery }> {
     const scopedQuery = tenantDb(trx, tenant).scoped('tickets as t');
     let baseQuery = scopedQuery.builder;
@@ -1370,6 +1373,8 @@ async function buildTicketListBaseQuery(
       join: 'and',
       clauses: [
         ticketFiltersToPredicates(validatedFilters, codecContext),
+        // The selected view narrows the same group the rows and the count both compile from.
+        ...ticketListViewPredicates(listViews, validatedFilters.listView),
         ...(validatedFilters.where?.clauses ?? []),
       ],
     };
@@ -1391,6 +1396,64 @@ async function buildTicketListBaseQuery(
       builder: baseQuery,
       scopedQuery: scopedQuery.withBuilder(baseQuery),
     };
+}
+
+/**
+ * The one entry to a readable ticket list: the reader's authorization context, the named views that
+ * reader is offered, and the filtered base query with the selected view composed in. Rows, counts and
+ * id sets all start here, so a view cannot be applied to one and not the others.
+ * A reader with no views (everyone but a principal a view provider recognises) costs nothing extra.
+ */
+async function openReadableTicketList(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  validatedFilters: ITicketListFilters
+) {
+  const authorizationContext = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+  const listViews = await resolveTicketListViews({ tenant, subject: authorizationContext.authorizationSubject });
+  const { builder, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters, listViews);
+  return { builder, scopedQuery, authorizationContext, listViews };
+}
+
+/**
+ * Rows the reader may see under `scopedQuery`'s filters. The count of every list view and the page's
+ * total both come from here, so a count can never disagree with the rows its filter returns.
+ */
+async function countReadableTickets(
+  trx: Knex.Transaction,
+  tenant: string,
+  list: { builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery; authorizationContext: TicketAuthorizationContext }
+): Promise<number> {
+  const scoped = list.scopedQuery.clone();
+  if (applyTicketReadAuthorizationSql(scoped, trx, tenant, list.authorizationContext).supported) {
+    const row = await scoped.builder.clone().clearSelect().clearOrder()
+      .countDistinct<{ count: string | number }[]>({ count: 't.ticket_id' }).first();
+    return Number((row as { count?: string | number } | undefined)?.count ?? 0);
+  }
+  const rows = await list.builder.clone().clearSelect().clearOrder()
+    .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes');
+  return (await authorizeTicketReads(trx, list.authorizationContext, rows)).length;
+}
+
+/** Each view the reader is offered, with the number of rows it returns under the current filters. */
+async function summarizeTicketListViews(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  validatedFilters: ITicketListFilters,
+  listViews: readonly TicketListViewDefinition[],
+  authorizationContext: TicketAuthorizationContext
+): Promise<ITicketListViewSummary[] | undefined> {
+  if (listViews.length === 0) return undefined;
+  // Sequential: one transaction connection, and each count is the page's own count path.
+  const summaries: ITicketListViewSummary[] = [];
+  for (const view of listViews) {
+    const { builder, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, { ...validatedFilters, listView: view.key }, listViews);
+    const count = await countReadableTickets(trx, tenant, { builder, scopedQuery, authorizationContext });
+    summaries.push({ key: view.key, labelKey: view.labelKey, defaultLabel: view.defaultLabel, count });
+  }
+  return summaries;
 }
 
 function buildTicketListSearchPrefixTsquery(raw: string): string | null {
@@ -2162,7 +2225,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } } | TicketActionError> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[] } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2176,12 +2239,7 @@ export const getTicketsForList = withAuth(async (
       );
 
     // Build base query for filtering
-    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
+    const { builder: baseQuery, scopedQuery, authorizationContext, listViews } = await openReadableTicketList(trx, tenant, user, validatedFilters);
 
     let totalCount = 0;
     let ticketListItems: ITicketListItem[] = [];
@@ -2192,12 +2250,8 @@ export const getTicketsForList = withAuth(async (
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
 
     if (authSqlResult.supported) {
-      const countQuery = scopedBaseQuery.builder
-        .clone()
-        .clearSelect()
-        .clearOrder()
-        .countDistinct<{ count: string | number }[]>({ count: 't.ticket_id' })
-        .first();
+      // The page total is the same count every list view shows (countReadableTickets).
+      const countQuery = countReadableTickets(trx, tenant, { builder: baseQuery, scopedQuery, authorizationContext });
 
       const pageQuery = applyTicketListSort(
         buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), bundleChildReadScope(authorizationContext)),
@@ -2207,8 +2261,8 @@ export const getTicketsForList = withAuth(async (
         .limit(normalizedPageSize)
         .offset(offset);
 
-      const [countRow, pageTickets] = await Promise.all([countQuery, pageQuery]);
-      totalCount = Number((countRow as { count?: string | number } | undefined)?.count ?? 0);
+      const [count, pageTickets] = await Promise.all([countQuery, pageQuery]);
+      totalCount = count;
       ticketListItems = mapTicketListItems(pageTickets);
     } else {
       // Future ABAC templates/constraints may not be representable in SQL yet.
@@ -2228,10 +2282,12 @@ export const getTicketsForList = withAuth(async (
     }
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
+    const views = await summarizeTicketListViews(trx, tenant, user, validatedFilters, listViews, authorizationContext);
     return {
       tickets: enriched.tickets,
       totalCount,
       metadata: enriched.metadata,
+      ...(views ? { views } : {}),
     };
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
@@ -2265,12 +2321,7 @@ export const getAllMatchingTicketIds = withAuth(async (
         validateData(ticketListFiltersSchema, filters) as ITicketListFilters
       );
 
-      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
-      const authorizationContext = await createTicketAuthorizationContext(
-        trx,
-        tenant,
-        user as IUserWithRoles
-      );
+      const { builder: baseQuery, scopedQuery, authorizationContext, listViews } = await openReadableTicketList(trx, tenant, user, validatedFilters);
 
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
@@ -2332,12 +2383,7 @@ export const loadTicketListItemsByIds = withAuth(async (
         validateData(ticketListFiltersSchema, filters) as ITicketListFilters
       );
 
-      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
-      const authorizationContext = await createTicketAuthorizationContext(
-        trx,
-        tenant,
-        user as IUserWithRoles
-      );
+      const { builder: baseQuery, scopedQuery, authorizationContext, listViews } = await openReadableTicketList(trx, tenant, user, validatedFilters);
 
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
@@ -2957,6 +3003,8 @@ export async function updateTicketInTransaction(
       await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
       await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
     }
+    // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+    // after the write, clears and drops the seat technicians it strands (F094).
 
     let updatedTicket;
     
@@ -3993,7 +4041,8 @@ export const getConsolidatedTicketListData = withAuth(async (
           options: formOptions,
           tickets: ticketsData.tickets,
           totalCount: ticketsData.totalCount,
-          metadata: ticketsData.metadata
+          metadata: ticketsData.metadata,
+          ...(ticketsData.views ? { views: ticketsData.views } : {})
         };
       } catch (error) {
         const expected = ticketListActionErrorFrom(error);
@@ -4224,12 +4273,7 @@ export const getAdjacentTicketIds = withAuth(async (
       validateData(ticketListFiltersSchema, filters) as ITicketListFilters
     );
 
-    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
+    const { builder: baseQuery, scopedQuery, authorizationContext, listViews } = await openReadableTicketList(trx, tenant, user, validatedFilters);
     const scopedBaseQuery = scopedQuery.clone();
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
 

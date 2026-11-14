@@ -1468,6 +1468,8 @@ export class TicketModel {
     if (reassigning && updateData.assigned_to) {
       await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId, pending: pendingPlacement });
     }
+    // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+    // after the write, clears and drops the seat technicians it strands (F094).
 
     // Update the ticket
     const [updatedTicket] = await db.table('tickets')

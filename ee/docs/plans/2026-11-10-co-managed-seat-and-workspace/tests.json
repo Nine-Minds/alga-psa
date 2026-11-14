@@ -229,7 +229,7 @@
   {
     "id": "T026",
     "description": "E2E: a seat technician opens the native ticket list, sees only their client's in-scope tickets, and each view's count matches its rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]

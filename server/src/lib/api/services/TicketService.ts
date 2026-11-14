@@ -2461,6 +2461,8 @@ export class TicketService extends BaseService<ITicket> {
           pending: { clientId: (cleanedData as { client_id?: string }).client_id, boardId: (cleanedData as { board_id?: string }).board_id },
         });
       }
+      // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+      // after the write, clears and drops the seat technicians it strands (F094).
       const finalizeResourceReassignment = isChangingAssignment
         ? await prepareTicketResourceReassignment(
           trx,
