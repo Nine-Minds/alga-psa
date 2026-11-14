@@ -342,10 +342,29 @@ tax amounts back from QuickBooks report CSVs onto the matching invoices.
 
 ## Permissions
 
-Viewing the connection status and mappings requires `billing_settings` read.
-Saving Intuit app credentials, connecting or disconnecting a company, changing
-the Automated Sales Tax toggle, and creating, editing, or deleting mappings all
-require `billing_settings` update.
+QuickBooks access is gated by the seeded `accounting_integrations` resource,
+which splits accounting work into separate capabilities instead of a single
+read/update pair. The same capability model applies to the screens in AlgaPSA
+and to every QuickBooks REST endpoint under `/api/v1/integrations/quickbooks`,
+so an API key acting as a user can call exactly the endpoints that user could
+use in the UI.
+
+| Capability | What it allows | Default roles |
+| --- | --- | --- |
+| `accounting_integrations:catalog_read` | View connection status, sync health, mappings, and remote QuickBooks catalogs (customers, accounts, items, tax codes, terms). | Admin, Finance |
+| `accounting_integrations:connections_manage` | Save Intuit app credentials, connect or disconnect a company, choose the default company, change the Automated Sales Tax toggle, and manage health and diagnostics settings. | Admin |
+| `accounting_integrations:mappings_manage` | Create, edit, and delete mappings. | Admin, Finance |
+| `accounting_integrations:exports_execute` | Create and run exports and sync cycles, and import QuickBooks tax amounts. | Admin, Finance |
+| `accounting_integrations:remote_mutate` | Perform destructive or money-moving operations in the connected QuickBooks company. | Admin |
+
+Holding `catalog_read` alone does not allow disconnecting the company. Custom
+roles need each capability explicitly. A REST call without the required
+capability returns `403` with a message of the form
+`Permission denied: Cannot <capability> accounting integrations`. Earlier
+releases checked an unseeded `quickbooks` resource on the REST endpoints, which
+denied every call even for Admin and Finance; integrations that worked around
+that by granting a custom `quickbooks` permission should switch to the
+`accounting_integrations` capabilities above.
 
 ## Related topics
 
