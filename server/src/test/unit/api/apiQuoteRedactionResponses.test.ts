@@ -112,3 +112,38 @@ describe('quote child read responses', () => {
     });
   });
 });
+
+describe('quote create response', () => {
+  const createRequest = (body: Record<string, unknown>) =>
+    new NextRequest('http://localhost/api/v1/quotes', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' } });
+  const createdQuote = { quote_id: 'q-new', quote_number: 'Q-9', client_id: 'c1', client_name: 'Secret client', status: 'draft', created_by: 'u1' };
+  function creatingController(onCreate: (data: any) => void = () => undefined) {
+    const instance = controller();
+    instance.runWithApiKeyContext = async (_req: unknown, callback: () => Promise<any>) => callback();
+    instance.quoteService.create = async (data: any) => { onCreate(data); return { ...createdQuote }; };
+    return instance;
+  }
+
+  it('projects the created quote through the caller\'s read decision', async () => {
+    authorizeResource.mockClear();
+    let persisted: any;
+    const response = await creatingController((data) => { persisted = data; })
+      .create()(createRequest({ client_id: '00000000-0000-4000-8000-000000000001', title: 'New', quote_date: '2026-11-14', valid_until: '2026-12-14', notes: 'n', terms: 't' }));
+    expect(response.status).toBe(201);
+    const data = (await response.json()).data;
+    expect(data).toHaveProperty('quote_id', 'q-new');
+    expect(data.client_name).toBeNull();
+    expect(authorizeResource).toHaveBeenCalledWith(expect.objectContaining({ resource: { type: 'billing', action: 'read' } }));
+    expect(persisted).toMatchObject({ internal_notes: 'n', terms_and_conditions: 't' });
+  });
+
+  it('answers 201 with no record when the read decision denies the created quote', async () => {
+    state.decision = { allowed: false, redactedFields: [] };
+    const response = await creatingController()
+      .create()(createRequest({ client_id: '00000000-0000-4000-8000-000000000001', title: 'New', quote_date: '2026-11-14', valid_until: '2026-12-14' }));
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    expect(body.data).toBeNull();
+    expect(JSON.stringify(body)).not.toContain('Secret client');
+  });
+});

@@ -311,7 +311,20 @@ export class ApiQuoteController extends ApiBaseController {
 
           const created = await this.quoteService.create(data, apiRequest.context);
 
-          return createSuccessResponse(created, 201, undefined, apiRequest);
+          // The created quote goes out through the same read projection as getById, so a
+          // creator whose read decision redacts fields (or the identifier) does not get
+          // them back from POST. The quote exists either way, so a suppressed answer is
+          // 201 with null data, as addItem does, never a 404 that invites a retry.
+          const projection = await projectApiResourceRead({
+            knex: await getConnection(apiRequest.context.tenant),
+            tenant: apiRequest.context.tenant,
+            user: apiRequest.context.user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            kind: 'quote',
+            record: created as Record<string, any>,
+          });
+
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
         });
       } catch (error) {
         if (error instanceof ZodError) {
