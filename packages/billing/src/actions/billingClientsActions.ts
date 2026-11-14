@@ -1,5 +1,6 @@
 'use server';
 
+import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientContract } from '@alga-psa/types';
@@ -151,7 +152,7 @@ export const getAllClientsPaginatedForBilling = withAuth(async (
     await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const response = await getAllClientsPaginated(knex, tenant, params);
-  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
+  return { ...response, clients: await projectClientsForSubject(user, await attachClientLogos(response.clients, tenant)) };
   });
 });
 
@@ -164,7 +165,7 @@ export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async
     await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const response = await getClientsWithBillingCycleRangePaginated(knex, tenant, params);
-  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
+  return { ...response, clients: await projectClientsForSubject(user, await attachClientLogos(response.clients, tenant)) };
   });
 });
 
@@ -183,7 +184,7 @@ export const getClientByIdForBilling = withAuth(async (
   // Resolve the uploaded logo so the client drawer (e.g. from a contract) shows
   // the real logo, not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return { ...client, logoUrl };
+  return projectClientForSubject(user, { ...client, logoUrl });
   });
 });
 

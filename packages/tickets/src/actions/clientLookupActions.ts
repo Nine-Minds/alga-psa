@@ -1,5 +1,6 @@
 'use server';
 
+import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation, IContact, IContactLocation } from '@alga-psa/types';
@@ -57,9 +58,10 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   // Resolved before the transaction opens; the predicate is applied inside the list query.
   const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('client', 'clients');
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return getAllClientsModel(trx, tenant, includeInactive, { narrowQuery: (query) => { narrowing.apply(query); } });
   });
+  return projectClientsForSubject(user, clients);
 });
 
 export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClient | null> => {
@@ -79,7 +81,7 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
   // Resolve the uploaded logo so the client drawer opened from the tickets list
   // shows the real logo (matching the table), not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return { ...client, logoUrl };
+  return projectClientForSubject(user, { ...client, logoUrl });
 });
 
 export const getContactsByClient = withAuth(async (

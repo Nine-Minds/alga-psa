@@ -3,6 +3,7 @@
  * Business logic for client-related operations
  */
 
+import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -347,10 +348,10 @@ export class ClientService extends BaseService<IClient> {
       ]);
 
       return {
-        data: clientsWithLogos.map((client) => ({
+        data: await projectClientsForSubject(context.user, clientsWithLogos.map((client) => ({
           ...client,
           display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [],
-        })),
+        })), trx),
         total: parseInt(count as string)
       };
     });
@@ -391,12 +392,12 @@ export class ClientService extends BaseService<IClient> {
         ]),
       ]);
 
-      return withClientSinceDateString({
+      return projectClientForSubject(context.user, withClientSinceDateString({
         ...stripLegacyClientTaxId(client),
         logoUrl,
         // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
         display_tags: displayTags.get(displayTagKey('client', id)) ?? [],
-      }) as unknown as IClient;
+      }) as unknown as IClient, trx);
     });
   }
 

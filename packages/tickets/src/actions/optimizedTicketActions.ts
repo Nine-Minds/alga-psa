@@ -75,6 +75,7 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { projectClientForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
 import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList';
@@ -716,6 +717,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         if ('file_id' in client) {
             delete client.file_id;
         }
+        // Billing columns leave with the client row only for a subject holding billing permission.
+        client = await projectClientForSubject(user, client);
       }
     }
 

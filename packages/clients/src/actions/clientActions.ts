@@ -1,5 +1,6 @@
 'use server'
 
+import { projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -888,7 +889,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (await projectClientsForSubject(user, clientsWithLogos)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -1057,7 +1058,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (await projectClientsForSubject(user, clientsWithLogos)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -1636,7 +1637,7 @@ export const checkExistingClients = withAuth(async (
       .whereIn('client_name', clientNames)
   });
 
-  return existingClients;
+  return projectClientsForSubject(user, existingClients);
 });
 
 /**

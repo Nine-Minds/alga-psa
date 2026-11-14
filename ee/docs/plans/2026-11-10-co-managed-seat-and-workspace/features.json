@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "Service catalog and eligible contract-line lookups require an internal user with the relevant permission, so neither a seat technician nor a portal user can read services, rates or contract lines.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "Client records read by a subject without billing permission omit billing columns (payment terms, billing cycle, credit limit, invoicing settings).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]

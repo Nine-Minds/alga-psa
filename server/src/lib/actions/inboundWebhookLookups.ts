@@ -1,5 +1,6 @@
 'use server';
 
+import { projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClient, IUser, ITeam } from '@alga-psa/types';
@@ -333,14 +334,14 @@ export const listInboundWebhookLookup = withAuth(
 );
 
 export const listClientsForInboundWebhook = withAuth(
-  async (_user, { tenant }): Promise<IClient[]> => {
+  async (user, { tenant }): Promise<IClient[]> => {
     const { knex } = await createTenantKnex(tenant);
     const rows = await tenantDb(knex, tenant).table<IClient>('clients')
       .orderBy([
         { column: 'is_inactive', order: 'asc' },
         { column: 'client_name', order: 'asc' },
       ]);
-    return rows;
+    return projectClientsForSubject(user, rows);
   },
 );
 
