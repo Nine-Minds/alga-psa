@@ -7,9 +7,20 @@ import path from 'node:path';
 // file. Both must sort after every earlier migration that alters co_managed_seat_assignments,
 // including main's seat-reader marker; otherwise fresh databases run them in a different order
 // than deployed ones (migration-lint R6).
+//
+// The pair is released: deployed knex_migrations ledgers record these exact filenames, and
+// knex refuses to migrate ("migration directory is corrupt") when a recorded name is missing.
+// Their names are therefore fixed. Main later released 20261113140000_grant_service_read_to_msp_roles
+// with the same timestamp; knex orders by full filename, so the shared timestamp is harmless and,
+// being inherited from main, is not something this pair can fix by renaming (migration-lint R6
+// exempts a duplicate when both files are already on base).
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
 
 const PAIR = ['index_authorization_resolver_subjects', 'validate_authorization_resolver_subjects'];
+const RELEASED_NAMES = [
+  '20261113140000_index_authorization_resolver_subjects.cjs',
+  '20261113140100_validate_authorization_resolver_subjects.cjs',
+];
 const PRIOR_SEAT_TABLE_MIGRATIONS = [
   'create_co_managed_seat_ticket_work',
   'add_users_seat_reader_marker',
@@ -40,11 +51,8 @@ describe('authorization resolver subjects migration ordering', () => {
     }
   });
 
-  it('gives each migration in the pair a timestamp no other migration file uses', () => {
-    for (const name of PAIR.map(fileFor)) {
-      const ts = timestampOf(name);
-      expect(allMigrations.filter((other) => timestampOf(other) === ts), name).toEqual([name]);
-    }
+  it('keeps the filenames deployed ledgers recorded when the pair was released', () => {
+    expect(PAIR.map(fileFor)).toEqual(RELEASED_NAMES);
   });
 
   it('cross-references only migrations in the pair', () => {
