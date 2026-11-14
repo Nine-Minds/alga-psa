@@ -57,6 +57,16 @@ INITIAL_MODE=false
 # Derived from the persisted setup inputs just like the control plane's
 # dns-config.mjs, so admission can compare the two without trusting timestamps.
 CONFIG_FINGERPRINT=""
+# Rollout bookkeeping for the activation record (see write_status). Newline-
+# separated; PENDING_ROLLOUTS holds "<namespace>/<kind>/<name>" keys and
+# PREEXISTING_UNREADY holds "<namespace>\t<kind>/<name>\t<reason>" lines.
+NL=$'\n'
+TAB=$'\t'
+ROLLOUT_STATE_LOADED=false
+PENDING_ROLLOUTS=""
+PREEXISTING_UNREADY=""
+ROLLOUT_FAILURES=""
+DISCOVERY_FAILED_NAMESPACE=""
 
 usage() {
   cat <<'EOF'
@@ -283,10 +293,11 @@ write_files() {
 
 # Durable activation record. Every stage write preserves the original start time
 # and accumulates the evidence ({stage, fingerprint, resolvers, restartFrom,
-# restartVerified, error, timestamps}) so the control plane can read the true
-# state from the shared hostPath. Written 0644 (addresses only, no secrets) so the
-# control-plane host-service running as UID 10001 can read it from the state
-# volume; a root-only 0600 file would be invisible to it.
+# restartVerified, pendingRollouts, preexistingUnready, error, timestamps}) so
+# the control plane can read the true state from the shared hostPath. Written
+# 0644 (addresses only, no secrets) so the control-plane host-service running as
+# UID 10001 can read it from the state volume; a root-only 0600 file would be
+# invisible to it.
 write_status() {
   local stage="$1"
   local error="${2:-}"
@@ -294,6 +305,13 @@ write_status() {
   target="$(rooted "$DNS_STATUS_FILE")"
   mkdir -p "$(dirname "$target")"
   local tmp="${target}.tmp.$$"
+  # The rollout lists are only authoritative once this run has loaded them;
+  # before that, the previous record's lists carry over for the same bytes.
+  local rollout_env=()
+  if $ROLLOUT_STATE_LOADED; then
+    rollout_env=("STATUS_PENDING_ROLLOUTS=$PENDING_ROLLOUTS" "STATUS_PREEXISTING_UNREADY=$PREEXISTING_UNREADY")
+  fi
+  env ${rollout_env[@]+"${rollout_env[@]}"} \
   STATUS_PREVIOUS_FILE="$target" \
   STATUS_STAGE="$stage" \
   STATUS_ERROR="$error" \
@@ -320,6 +338,22 @@ write_status() {
     // A failed submission for new bytes must not inherit the old token and
     // trick a later reconcile into skipping the required k3s restart.
     const sameFingerprint = Boolean(fingerprint) && fingerprint === previous.fingerprint;
+    const lines = (value) => value.split("\n").filter(Boolean);
+    const carried = (field) => (sameFingerprint && Array.isArray(previous[field]) ? previous[field] : []);
+    // Rollouts this activation started (a workload it restarted) that have not
+    // been seen to complete yet: a later attempt must still blame itself for
+    // them, so a regression it caused cannot pass as an unrelated failure.
+    const pendingRollouts = process.env.STATUS_PENDING_ROLLOUTS !== undefined
+      ? lines(process.env.STATUS_PENDING_ROLLOUTS)
+      : carried("pendingRollouts");
+    // Workloads that were already not ready before this activation touched
+    // them and still were not ready afterwards ("namespace\tworkload\treason").
+    const preexistingUnready = process.env.STATUS_PREEXISTING_UNREADY !== undefined
+      ? lines(process.env.STATUS_PREEXISTING_UNREADY).map((line) => {
+        const [namespace, workload, ...reason] = line.split("\t");
+        return { namespace, workload, reason: reason.join("\t") || null };
+      })
+      : carried("preexistingUnready");
     const payload = {
       stage: process.env.STATUS_STAGE,
       fingerprint,
@@ -330,6 +364,8 @@ write_status() {
       // When k3s began running with these resolver bytes: pods created after it
       // already carry them, so a resumed rollout leaves those workloads alone.
       resolverLoadedAt: process.env.STATUS_RESOLVER_LOADED_AT || (sameFingerprint ? previous.resolverLoadedAt : null) || null,
+      pendingRollouts,
+      preexistingUnready,
       error: process.env.STATUS_ERROR || null,
       files: { resolver: process.env.STATUS_FILES_RESOLV, dropin: process.env.STATUS_FILES_DROPIN },
       startedAt: (sameFingerprint && previous.startedAt) || now,
@@ -355,6 +391,20 @@ status_field() {
       const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
       process.stdout.write(String(value?.[process.argv[2]] ?? ""));
     } catch { process.stdout.write(""); }
+  ' "$target" "$field" 2>/dev/null || true
+}
+
+status_list() {
+  local field="$1"
+  local target
+  target="$(rooted "$DNS_STATUS_FILE")"
+  [ -f "$target" ] || return 0
+  node -e '
+    const fs = require("fs");
+    try {
+      const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))?.[process.argv[2]];
+      if (Array.isArray(value)) process.stdout.write(value.filter((entry) => typeof entry === "string").join("\n"));
+    } catch { /* no list */ }
   ' "$target" "$field" 2>/dev/null || true
 }
 
@@ -579,12 +629,48 @@ plan_namespace() {
   return "$status"
 }
 
+pending_rollout_has() {
+  printf '%s\n' "$PENDING_ROLLOUTS" | grep -qxF -- "$1"
+}
+
+pending_rollout_add() {
+  pending_rollout_has "$1" && return 0
+  PENDING_ROLLOUTS="${PENDING_ROLLOUTS:+${PENDING_ROLLOUTS}${NL}}$1"
+}
+
+pending_rollout_remove() {
+  PENDING_ROLLOUTS="$(printf '%s\n' "$PENDING_ROLLOUTS" | grep -vxF -- "$1" || true)"
+}
+
+# The last line of a kubectl error, without its "error: " prefix, e.g.
+# `deployment "email-service" exceeded its progress deadline`.
+kubectl_reason() {
+  local reason
+  reason="$(printf '%s\n' "$1" | awk 'NF { line = $0 } END { print line }')"
+  reason="$(trim "${reason#error: }")"
+  printf '%s' "${reason:-kubectl exited non-zero}"
+}
+
+record_rollout_failure() {
+  ROLLOUT_FAILURES="${ROLLOUT_FAILURES:+${ROLLOUT_FAILURES}; }$1"
+}
+
 # Bring a namespace onto the current resolver one workload at a time: on a
 # single small node, restarting a whole namespace at once starves the kubelet
 # (a field appliance went NotReady) and makes every rollout slower. A rollout
 # that does not finish in time is reported and the rest continue; the next
 # attempt waits for it instead of restarting it again. Returns 2 when the
 # namespace's workloads could not be discovered.
+#
+# Only rollouts this activation started can fail it. A workload that was
+# already mid-rollout or unready when the activation found it (a `wait` that
+# no attempt for these resolver bytes restarted) and still is not ready is
+# recorded in preexistingUnready instead: the resolver change did not break it,
+# its own next rollout gives its pods the new resolver, and blocking on it
+# would let one broken workload hold the whole appliance — including the
+# update that fixes that workload — hostage. A workload this activation
+# restarted stays in pendingRollouts until its rollout completes, so a
+# regression the activation caused keeps failing on every later attempt.
 reconcile_namespace() {
   local namespace="$1" loaded_epoch="$2"
   local plan
@@ -597,24 +683,45 @@ reconcile_namespace() {
     log "No workloads found in ${namespace}."
     return 0
   fi
-  local action resource failed=0 recreated=0
+  local action resource key output reason failed=0 recreated=0
   while read -r action resource; do
     [ -n "$resource" ] || continue
+    key="${namespace}/${resource}"
     case "$action" in
       current) continue ;;
       restart)
-        if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout restart "$resource" >/dev/null; then
-          echo "Could not restart ${resource} in ${namespace}." >&2
+        if ! output="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout restart "$resource" 2>&1 >/dev/null)"; then
+          reason="$(kubectl_reason "$output")"
+          echo "Could not restart ${resource} in ${namespace}: ${reason}" >&2
+          record_rollout_failure "${key} could not be restarted (${reason})"
           failed=1
           continue
         fi
+        # Persisted before waiting, so an attempt that dies mid-rollout still
+        # leaves the next one the evidence that this rollout is its own.
+        pending_rollout_add "$key"
+        write_status rolling-out
         recreated=$((recreated + 1))
         ;;
       wait) log "Waiting for the rollout already in progress for ${resource} in ${namespace}." ;;
     esac
-    if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout status "$resource" --timeout="${DNS_ROLLOUT_TIMEOUT_SECONDS}s" >/dev/null; then
-      echo "Rollout of ${resource} in ${namespace} did not complete within ${DNS_ROLLOUT_TIMEOUT_SECONDS}s; the next attempt waits for it without restarting it again." >&2
+    if output="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout status "$resource" --timeout="${DNS_ROLLOUT_TIMEOUT_SECONDS}s" 2>&1 >/dev/null)"; then
+      if pending_rollout_has "$key"; then
+        pending_rollout_remove "$key"
+        write_status rolling-out
+      fi
+      continue
+    fi
+    reason="$(kubectl_reason "$output")"
+    if [ "$action" = "restart" ] || pending_rollout_has "$key"; then
+      # kubectl returns at once for a Deployment already past its progress
+      # deadline, so the reason, not the timeout, says what happened.
+      echo "Rollout of ${resource} in ${namespace} did not complete (${reason}); the next attempt waits for it without restarting it again." >&2
+      record_rollout_failure "${key} (${reason})"
       failed=1
+    else
+      log "${resource} in ${namespace} was already not ready before this activation and still is not (${reason}); it does not block activation and adopts the resolver on its next successful rollout."
+      PREEXISTING_UNREADY="${PREEXISTING_UNREADY:+${PREEXISTING_UNREADY}${NL}}${namespace}${TAB}${resource}${TAB}${reason}"
     fi
   done <<< "$plan"
   if [ "$recreated" -eq 0 ] && [ "$failed" -eq 0 ]; then
@@ -663,6 +770,7 @@ restart_existing_workloads() {
     local rc=0
     reconcile_namespace "$namespace" "$loaded_epoch" || rc=$?
     if [ "$rc" -eq 2 ]; then
+      DISCOVERY_FAILED_NAMESPACE="$namespace"
       return 1
     elif [ "$rc" -ne 0 ]; then
       failed=1
@@ -714,13 +822,28 @@ activate() {
     return 1
   fi
 
+  # Rollouts an earlier attempt for these resolver bytes started and never saw
+  # finish are still this activation's own; the pre-existing list is rebuilt.
+  if [ "$(status_field fingerprint)" = "$DESIRED_FINGERPRINT" ]; then
+    PENDING_ROLLOUTS="$(status_list pendingRollouts)"
+  fi
+  PREEXISTING_UNREADY=""
+  ROLLOUT_STATE_LOADED=true
   write_status rolling-out
   if ! restart_existing_workloads; then
-    write_status failed "One or more workload rollouts did not become ready; the next attempt waits for them without restarting them again."
+    if [ -n "$DISCOVERY_FAILED_NAMESPACE" ]; then
+      write_status failed "Could not list the workloads in ${DISCOVERY_FAILED_NAMESPACE}, so their rollout onto the new resolver cannot be verified."
+    else
+      write_status failed "Workload rollouts did not become ready after the resolver change: ${ROLLOUT_FAILURES:-unknown workload}. The next attempt waits for them without restarting them again."
+    fi
     return 1
   fi
   write_status active
-  log "Activated resolver configuration fingerprint ${DESIRED_FINGERPRINT:0:12}."
+  if [ -n "$PREEXISTING_UNREADY" ]; then
+    log "Activated resolver configuration fingerprint ${DESIRED_FINGERPRINT:0:12}; workloads that were already not ready keep their previous pods until their own rollout succeeds."
+  else
+    log "Activated resolver configuration fingerprint ${DESIRED_FINGERPRINT:0:12}."
+  fi
 }
 
 do_restart() {

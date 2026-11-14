@@ -25,7 +25,7 @@ import { PortForwardManager } from './port-forward-manager.mjs';
 import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
 import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
 import { createUpdateCoordinator } from './update-controller.mjs';
-import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS, isPidAlive, isUpdateInProgressStatus } from './update-ownership.mjs';
+import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS, classifyUpdateOwner, isPidAlive, isUpdateInProgressStatus } from './update-ownership.mjs';
 import { createReleaseAutoRecovery, summarizeAutoRecoveryRecord } from './release-auto-recovery.mjs';
 import {
   collectManageStatus,
@@ -334,7 +334,8 @@ function computeAutoRetrySummary(state) {
 
 // Owns cluster-DNS activation independently of the setup retry budget: it must
 // still run when setup is blocked/exhausted, and it must never fire while a
-// setup run owns the host (the activation restarts k3s).
+// setup run or an app update owns the host (the activation restarts k3s and
+// rolls every workload, including this pod and the update child it hosts).
 const dnsReconcileScript = process.env.ALGA_APPLIANCE_DNS_RECONCILE_SCRIPT
   || path.resolve(import.meta.dirname, '..', 'scripts', 'reconcile-k3s-dns.sh');
 const dnsReconciler = createDnsReconciler({
@@ -347,6 +348,9 @@ const dnsReconciler = createDnsReconciler({
   startupDelayMs: Number(process.env.ALGA_APPLIANCE_DNS_RECONCILE_STARTUP_DELAY_MS ?? 10 * 1000),
   shouldSkip: () => {
     const state = readInstallStateSafe();
+    // A dead or aged update owner no longer holds the host (the coordinator
+    // marks it interrupted), so only a live one defers activation.
+    if (classifyUpdateOwner(state, { maxAgeMs: UPDATE_OWNER_MAX_AGE_MS }).status === 'live') return 'update-in-progress';
     return installStateRunning(state) && setupWorkflowOwnerAlive(state);
   },
   logger: console

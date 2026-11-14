@@ -167,6 +167,45 @@ test('activation is skipped while a setup workflow owns the host', async () => {
   assert.equal(h.spawnCalls.length, 0);
 });
 
+test('activation is skipped while an app update owns the host, naming why', async () => {
+  const h = harness({ reconciler: { shouldSkip: () => 'update-in-progress' } });
+  const result = await h.reconciler.runOnce('periodic');
+  assert.equal(result.skipped, 'update-in-progress');
+  assert.equal(h.spawnCalls.length, 0);
+});
+
+test('an activation that left already-unready workloads behind is verified and lists them', async () => {
+  const preexistingUnready = [
+    { namespace: 'msp', workload: 'deployment/email-service', reason: 'deployment "email-service" exceeded its progress deadline' }
+  ];
+  const h = harness({
+    onSleep: ({ writeActivation }) => writeActivation({
+      stage: 'active',
+      fingerprint: 'a'.repeat(64),
+      updatedAt: '2026-10-21T00:00:05.000Z',
+      preexistingUnready
+    })
+  });
+  const pending = h.reconciler.runOnce('periodic');
+  resolveNext(h.children[0], 0);
+  const result = await pending;
+  assert.equal(result.state, 'active');
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.activation.preexistingUnready, preexistingUnready);
+});
+
+test('a rollout the activation broke fails the reconcile with the workload named', async () => {
+  const error = 'Workload rollouts did not become ready after the resolver change: msp/deployment/alga-core (deployment "alga-core" exceeded its progress deadline). The next attempt waits for them without restarting them again.';
+  const h = harness({
+    onSleep: ({ writeActivation }) => writeActivation({ stage: 'failed', fingerprint: 'a'.repeat(64), updatedAt: '2026-10-21T00:00:05.000Z', error })
+  });
+  const pending = h.reconciler.runOnce('periodic');
+  resolveNext(h.children[0], 0);
+  const result = await pending;
+  assert.equal(result.ok, false);
+  assert.match(h.readResult().error, /msp\/deployment\/alga-core/);
+});
+
 test('disabled reconciler never spawns', async () => {
   const h = harness({ reconciler: { disabled: true } });
   const result = await h.reconciler.runOnce('startup');
