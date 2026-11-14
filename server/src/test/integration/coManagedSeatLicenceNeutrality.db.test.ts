@@ -148,12 +148,14 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     await db('co_managed_seat_arrangements').where({ tenant: sponsor, arrangement_id: ended.arrangement.arrangement_id })
       .update({ state: 'ended', ended_at: new Date() });
     expect(await admit(sponsor, { kind: 'user', existingUserId: ended.technician }))
-      .toEqual({ ok: false, code: 'LICENSE_LIMIT_REACHED', error: 'This seat arrangement has ended.' });
+      .toEqual({ ok: false, code: 'SEAT_ARRANGEMENT_REFUSED', error: 'This seat arrangement has ended.' });
 
     await db('co_managed_entitlements').where({ tenant: sponsor }).update({ capacity: 0 });
     expect(await db.transaction((trx) => admitCoManagedSeatTechnician(trx, sponsor, { existingUserId: lapsed.technician })))
       .toMatchObject({ seatTechnician: true, ok: false, reason: 'ENTITLEMENT_LAPSED' });
-    expect(await admit(sponsor, { kind: 'user', existingUserId: lapsed.technician })).toMatchObject({ ok: false });
+    // Reported as the arrangement's refusal, never as the MSP's licence limit.
+    expect(await admit(sponsor, { kind: 'user', existingUserId: lapsed.technician }))
+      .toMatchObject({ ok: false, code: 'SEAT_ARRANGEMENT_REFUSED' });
   });
 
   it('counts a revoked technician as a licensed user again, and a tenant without seat assignments exactly as before', async () => {

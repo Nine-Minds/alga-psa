@@ -27,7 +27,7 @@ import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryAction
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import { CoManagedAdmissionError } from '@alga-psa/licensing';
-import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, type InternalUserLicenseLimitResult } from '../../lib/internalUserLicenseGuard';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, type InternalUserLicenseLimitResult, type InternalUserLicenseLimitCode } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -70,8 +70,7 @@ export type AddUserErrorCode =
   | 'ROLE_MSP_NOT_ALLOWED_FOR_CLIENT'
   | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
   | 'EMAIL_ALREADY_EXISTS'
-  | 'LICENSE_LIMIT_REACHED'
-  | 'SOLO_PLAN_LIMIT'
+  | InternalUserLicenseLimitCode
   | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_CREATE_FAILED';
@@ -88,8 +87,7 @@ export type UpdateUserErrorCode =
   | 'SCIM_MANAGED_INACTIVE'
   | 'INVALID_TIMEZONE'
   | 'INVALID_ACTIVE_STATE'
-  | 'LICENSE_LIMIT_REACHED'
-  | 'SOLO_PLAN_LIMIT'
+  | InternalUserLicenseLimitCode
   | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';

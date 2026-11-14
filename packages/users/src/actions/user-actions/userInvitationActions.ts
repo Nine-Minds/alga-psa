@@ -34,6 +34,7 @@ export type UserInvitationErrorCode =
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
   | 'LICENSE_LIMIT_REACHED'
+  | 'SEAT_ARRANGEMENT_REFUSED'
   | 'CAPABILITY_UNAVAILABLE'
   | 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED'
   | 'CO_MANAGED_INVITATION_INVALID' | 'CO_MANAGED_ALLOCATION_CONFLICT' | 'CO_MANAGED_POOL_LIMIT';
@@ -65,7 +66,7 @@ function normalizeSendUserInvitationError(
   // invite-send limit check reports).
   if (error instanceof Error && error.name === 'LicenseLimitError') {
     const code = (error as Error & { code?: unknown }).code;
-    if (code === 'SOLO_PLAN_LIMIT' || code === 'LICENSE_LIMIT_REACHED') {
+    if (code === 'SOLO_PLAN_LIMIT' || code === 'LICENSE_LIMIT_REACHED' || code === 'SEAT_ARRANGEMENT_REFUSED') {
       return { message: error.message, errorCode: code };
     }
   }

@@ -4,7 +4,13 @@ import {
   admitCoManagedSeatTechnician, assertCoManagedSeatAdmission, countLicensedInternalUsers, countLicensedPendingInvitations,
 } from '@alga-psa/licensing';
 
-export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED';
+/**
+ * Why an internal-user seat was refused. `SEAT_ARRANGEMENT_REFUSED` is a seat
+ * technician refused by its arrangement (ended, pool lapsed, allocation full):
+ * the MSP's own licence played no part, so it is never reported as
+ * `LICENSE_LIMIT_REACHED`, which tells an administrator to buy MSP licences.
+ */
+export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED' | 'SEAT_ARRANGEMENT_REFUSED';
 
 export type InternalUserLicenseLimitResult =
   | {
@@ -163,7 +169,7 @@ export async function admitInternalUserSeat(
   if (seat.seatTechnician) {
     return seat.ok === true
       ? { ok: true, seatTechnician: true }
-      : { ok: false, code: 'LICENSE_LIMIT_REACHED', error: seat.error };
+      : { ok: false, code: 'SEAT_ARRANGEMENT_REFUSED', error: seat.error };
   }
   return checkInternalUserLicenseLimit(trx, tenant, { reservedSeats });
 }
