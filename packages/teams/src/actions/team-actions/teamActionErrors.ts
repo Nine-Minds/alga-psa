@@ -1,4 +1,5 @@
-import { isSeatTechnicianGuardError } from '@alga-psa/db';
+// From @alga-psa/types, not @alga-psa/db: client components import this module.
+import { isSeatTechnicianGuardError } from '@alga-psa/types';
 import {
   actionError,
   isAuthorizationThrow,

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { CO_MANAGED_SEAT_ROLE_NAME, SeatTechnicianGuardError } from '@alga-psa/types';
 import { tenantDb } from './tenantDb';
 
 /**
@@ -30,28 +31,10 @@ import { tenantDb } from './tenantDb';
  * ends the assignment before it writes the MSP roles, so by then the user is no longer a
  * technician and the same writers would accept them.
  */
-export const CO_MANAGED_SEAT_ROLE_NAME = 'Seat Technician';
-
-export type SeatTechnicianGuardCode = 'SEAT_TECHNICIAN_ROLE_REFUSED' | 'SEAT_TECHNICIAN_TEAM_REFUSED';
-
-const MESSAGES: Record<SeatTechnicianGuardCode, string> = {
-  SEAT_TECHNICIAN_ROLE_REFUSED: 'A co-managed seat technician can hold only the seat role. Convert them to an MSP user first.',
-  SEAT_TECHNICIAN_TEAM_REFUSED: 'A co-managed seat technician cannot be added to an MSP team. Convert them to an MSP user first.',
-};
-
-export class SeatTechnicianGuardError extends Error {
-  readonly name = 'SeatTechnicianGuardError';
-  readonly statusCode = 409;
-  constructor(readonly code: SeatTechnicianGuardCode, readonly userIds: readonly string[]) {
-    super(MESSAGES[code]);
-  }
-}
-
-/** Recognises the error across bundle boundaries, where instanceof can fail. */
-export function isSeatTechnicianGuardError(error: unknown): error is SeatTechnicianGuardError {
-  return error instanceof SeatTechnicianGuardError
-    || (typeof error === 'object' && error !== null && (error as { name?: string }).name === 'SeatTechnicianGuardError');
-}
+// The error and the seat role's name live in @alga-psa/types, with no server dependency, so client
+// bundles that map action errors can recognise the refusal without importing this module.
+export { CO_MANAGED_SEAT_ROLE_NAME, SeatTechnicianGuardError, isSeatTechnicianGuardError } from '@alga-psa/types';
+export type { SeatTechnicianGuardCode } from '@alga-psa/types';
 
 /** What the caller is about to write: these roles for the users, or a team membership for them. */
 export type SeatTechnicianWrite = { roleIds: readonly string[] } | { teamMembership: true };
