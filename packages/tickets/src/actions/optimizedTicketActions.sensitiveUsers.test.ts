@@ -101,6 +101,8 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
+  checkMultiplePermissions: async (user: any, checks: Array<{ resource: string; action: string }>, conn?: unknown) =>
+    Promise.all(checks.map(async (check) => ({ ...check, granted: Boolean(await hasPermissionMock(user, check.resource, check.action, conn)) }))),
 }));
 
 vi.mock('@alga-psa/db', () => ({

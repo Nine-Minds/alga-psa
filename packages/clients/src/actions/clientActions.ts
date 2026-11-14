@@ -1,6 +1,6 @@
 'use server'
 
-import { canReadClientBilling, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
+import { CLIENT_BILLING_PERMISSION, canReadClientBilling, omitClientBillingColumns, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -18,6 +18,7 @@ import {
   assertMspPermission,
   hasMspOrClientPortalOwnClientPermission,
   hasMspPermission,
+  hasMspPermissions,
   isClientPortalUser,
 } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync, getClientWideLogoUrlAsync } from '../lib/documentsHelpers';
@@ -741,7 +742,16 @@ async function clientListSearchPermissions(user: IUserWithRoles, searchTerm: str
 }
 
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+  // One roles load answers the read check and the billing projection, so the projection costs the
+  // client list (a budgeted hot path) no extra statement.
+  // LEVERAGE: pattern request-scoped-permissions — each hasPermission reloads the user's roles; hot paths batch by hand (here, getConsolidatedTicketData). A per-request permission set would make every later check free.
+  const [canReadClients, billingVisible] = await hasMspPermissions(user, [
+    { resource: 'client', action: 'read' },
+    CLIENT_BILLING_PERMISSION,
+  ]);
+  if (!canReadClients) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
 
   const {
     page = 1,
@@ -894,7 +904,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     }
 
     return {
-      clients: (await projectClientsForSubject(user, clientsWithLogos)) as IClient[],
+      clients: (billingVisible ? clientsWithLogos : clientsWithLogos.map(omitClientBillingColumns)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,

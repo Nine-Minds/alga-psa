@@ -25,12 +25,19 @@ export const CLIENT_BILLING_COLUMNS = [
 
 export type ClientBillingColumn = (typeof CLIENT_BILLING_COLUMNS)[number];
 
+/**
+ * The permission that lets a subject see a client's billing columns, in its own scope. Exported so a
+ * hot path that already loads the subject's roles can evaluate it in the same
+ * `checkMultiplePermissions` call and then apply `omitClientBillingColumns` itself.
+ */
+export const CLIENT_BILLING_PERMISSION = { resource: 'billing', action: 'read' } as const;
+
 /** The subject may see a client's billing columns when it holds `billing:read` in its own scope. */
 export async function canReadClientBilling(
   user: IUser,
   knexConnection?: Knex | Knex.Transaction,
 ): Promise<boolean> {
-  return hasPermission(user, 'billing', 'read', knexConnection);
+  return hasPermission(user, CLIENT_BILLING_PERMISSION.resource, CLIENT_BILLING_PERMISSION.action, knexConnection);
 }
 
 /** Pure: a copy of `client` without the billing columns. */
