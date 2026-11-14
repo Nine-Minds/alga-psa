@@ -1,40 +1,5 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-
-const execFileAsync = promisify(execFile);
-const nxBin = path.resolve(process.cwd(), 'node_modules/.bin/nx');
-
-async function runNx(args: string[]) {
-  const { stdout } = await execFileAsync(nxBin, args, {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      NX_DAEMON: 'false',
-      NX_ISOLATE_PLUGINS: 'false',
-      CI: 'true',
-      PLAYWRIGHT_APP_PORT: process.env.PLAYWRIGHT_APP_PORT || '3300',
-      PLAYWRIGHT_APP_PORT_LOCKED: 'true',
-    },
-    encoding: 'utf8',
-    timeout: 180_000,
-    maxBuffer: 8 * 1024 * 1024,
-  });
-  return stdout;
-}
-
-function parseTrailingJsonArray(output: string): string[] {
-  const start = output.lastIndexOf('[');
-  const end = output.lastIndexOf(']');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error(`Expected JSON array in output. Output:\n${output}`);
-  }
-  const json = output.slice(start, end + 1);
-  const parsed = JSON.parse(json);
-  if (!Array.isArray(parsed)) throw new Error(`Expected JSON array, got: ${typeof parsed}`);
-  return parsed as string[];
-}
+import { parseTrailingJsonArray, runNx } from './nxTestUtils';
 
 describe('nx affected', () => {
   it('identifies affected projects from a file list', { timeout: 180_000 }, async () => {
