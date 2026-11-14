@@ -75,4 +75,59 @@ describe('serverProductRouteGuard', () => {
       await expect(mod.enforceServerProductRoute({ pathname: '/msp/tickets', scope: 'msp' })).resolves.toBeNull();
     });
   });
+
+  describe('the server-side surface gate (S12 F029)', () => {
+    afterEach(() => {
+      principalOverride = null;
+    });
+
+    const NOT_FOUND = /NEXT_HTTP_ERROR_FALLBACK;404|NEXT_NOT_FOUND/;
+
+    // /msp/settings, /msp/technician-dispatch and /msp/schedule carry no per-page guard of their own.
+    it.each(['/msp/settings', '/msp/settings/users', '/msp/technician-dispatch', '/msp/schedule', '/msp', '/msp/anything-unmatched'])(
+      'hits notFound() for a seat principal on %s, before any page renders',
+      async (pathname) => {
+        const mod = await import('@/lib/serverProductRouteGuard');
+        expect(() => mod.assertPrincipalRouteOpen({ productCode: 'psa', surfaceKind: 'co_managed_seat' }, pathname)).toThrow(NOT_FOUND);
+
+        principalOverride = { productCode: 'psa', surfaceKind: 'co_managed_seat' };
+        await expect(mod.enforcePrincipalSurfaceRoute(pathname)).rejects.toThrow(NOT_FOUND);
+      },
+    );
+
+    it.each(['/msp/tickets', '/msp/tickets/abc', '/msp/projects', '/msp/assets', '/msp/documents', '/msp/time-entry'])(
+      'lets a seat principal through on the operational route %s',
+      async (pathname) => {
+        const mod = await import('@/lib/serverProductRouteGuard');
+        principalOverride = { productCode: 'psa', surfaceKind: 'co_managed_seat' };
+        await expect(mod.enforcePrincipalSurfaceRoute(pathname)).resolves.toBeUndefined();
+      },
+    );
+
+    it.each(['psa', 'algadesk', 'co_managed'])('never acts on an ordinary %s principal, whatever the route', async (productCode) => {
+      const mod = await import('@/lib/serverProductRouteGuard');
+      principalOverride = { productCode };
+      for (const pathname of ['/msp/settings', '/msp/technician-dispatch', '/msp/schedule', '/msp/projects', '/msp/billing', '/msp/anything-unmatched']) {
+        expect(() => mod.assertPrincipalRouteOpen({ productCode } as never, pathname)).not.toThrow();
+        await expect(mod.enforcePrincipalSurfaceRoute(pathname)).resolves.toBeUndefined();
+      }
+    });
+
+    it('runs from the @surface slot on every navigation, and from the layout on a hard load', async () => {
+      const slot = (await import('@/app/msp/@surface/[[...path]]/page')).default;
+      principalOverride = { productCode: 'psa', surfaceKind: 'co_managed_seat' };
+      await expect(slot({ params: Promise.resolve({ path: ['settings', 'users'] }) })).rejects.toThrow(NOT_FOUND);
+      await expect(slot({ params: Promise.resolve({ path: ['tickets', 'abc'] }) })).resolves.toBeNull();
+      await expect(slot({ params: Promise.resolve({}) })).rejects.toThrow(NOT_FOUND); // /msp itself
+
+      principalOverride = { productCode: 'psa' };
+      await expect(slot({ params: Promise.resolve({ path: ['settings'] }) })).resolves.toBeNull();
+
+      const { readFileSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const layout = readFileSync(join(__dirname, '../../../app/msp/layout.tsx'), 'utf8');
+      expect(layout).toContain('assertPrincipalRouteOpen(principal, pathname)');
+      expect(layout).toContain('{surface}');
+    });
+  });
 });

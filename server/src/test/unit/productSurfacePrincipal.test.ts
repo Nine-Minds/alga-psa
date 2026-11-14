@@ -3,10 +3,8 @@ import { PRODUCT_CODES } from '@alga-psa/types';
 import {
   MSP_ROUTE_RULES,
   PORTAL_ROUTE_RULES,
-  API_RULES,
   filterMenuSectionsByProduct,
   filterPortalNavigationByProduct,
-  resolveProductApiBehavior,
   resolveProductCapabilityBehavior,
   resolveProductRouteBehavior,
   type ProductPrincipal,
@@ -65,21 +63,12 @@ describe('product surface registry resolves per principal (S12 F029)', () => {
 
     it('is closed to a principal kind nobody registered', () => {
       expect(resolveProductRouteBehavior({ productCode: 'psa', surfaceKind: 'not_a_kind' }, '/msp/tickets')).toBe('not_found');
-      expect(resolveProductApiBehavior({ productCode: 'psa', surfaceKind: 'not_a_kind' }, '/api/smart-search')).toBe('denied');
       expect(resolveProductCapabilityBehavior({ productCode: 'psa', surfaceKind: 'not_a_kind' }, 'scheduling_time_actions')).toBe('denied');
     });
 
     it('keeps the product gate: the surface intersects with the tenant product, it never widens it', () => {
       expect(resolveProductRouteBehavior(seat('algadesk'), '/msp/projects')).toBe('upgrade_boundary');
       expect(resolveProductRouteBehavior(seat('co_managed'), '/msp/projects')).toBe('not_found');
-    });
-
-    it('reaches only the app-internal API paths, never the public v1 API', () => {
-      expect(resolveProductApiBehavior(seat(), '/api/smart-search')).toBe('allowed');
-      expect(resolveProductApiBehavior(seat(), '/api/notifications/token')).toBe('allowed');
-      expect(resolveProductApiBehavior(seat(), '/api/v1/tickets')).toBe('denied');
-      expect(resolveProductApiBehavior(seat(), '/api/v1/time-entries')).toBe('denied');
-      expect(resolveProductApiBehavior(seat(), '/api/quote/abc')).toBe('denied');
     });
 
     it('reaches the time capability and no other product-guarded capability', () => {
@@ -105,21 +94,12 @@ describe('product surface registry resolves per principal (S12 F029)', () => {
       ...PORTAL_ROUTE_RULES,
     ].flatMap((rule) => [...(rule.staticPrefixes ?? []), ...(rule.staticPrefixes ?? []).map((p) => `${p}/child`)]);
     const extraRoutes = ['/msp', '/msp/dashboard', '/msp/unmatched', '/msp/settings', '/msp/settings/sla', '/msp/settings/users', '/client-portal', '/desk/tickets', '/msp/billing?tab=x'];
-    const everyApi = API_RULES.flatMap((rule) => [...(rule.staticPrefixes ?? []), ...(rule.staticPrefixes ?? []).map((p) => `${p}/child`)]);
 
     it.each([...PRODUCT_CODES])('resolves every route identically for %s whether given a code or a principal', (productCode) => {
       for (const pathname of [...everyRoute, ...extraRoutes]) {
         const byCode = resolveProductRouteBehavior(productCode, pathname);
         expect(resolveProductRouteBehavior({ productCode }, pathname)).toBe(byCode);
         expect(resolveProductRouteBehavior({ productCode, surfaceKind: null }, pathname)).toBe(byCode);
-      }
-    });
-
-    it.each([...PRODUCT_CODES])('resolves every API path identically for %s whether given a code or a principal', (productCode) => {
-      for (const path of [...everyApi, '/api/unmatched', '/api/v1/unmatched']) {
-        const byCode = resolveProductApiBehavior(productCode, path);
-        expect(resolveProductApiBehavior({ productCode }, path)).toBe(byCode);
-        expect(resolveProductApiBehavior({ productCode, surfaceKind: null }, path)).toBe(byCode);
       }
     });
 

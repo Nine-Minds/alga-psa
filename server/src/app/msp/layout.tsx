@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { cookies } from "next/headers.js";
+import { cookies, headers } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
 import { isLicensedUserType } from "@alga-psa/types";
@@ -10,6 +10,7 @@ import { MspLayoutClient } from "./MspLayoutClient";
 import { getCoManagedWorkspaceState } from "@/lib/actions/coManagedWorkspaceActions";
 import type { CoManagedWorkspaceNoticeState } from "@/components/co-managed/CoManagedWorkspaceNotice";
 import { getCurrentProductPrincipal } from "@/lib/productAccess";
+import { assertPrincipalRouteOpen } from "@/lib/serverProductRouteGuard";
 import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
@@ -75,11 +76,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MspLayout({
   children,
   modal,
+  surface,
 }: Readonly<{
   children: React.ReactNode;
   // Parallel slot for app-wide intercepting modal routes (e.g. create-ticket). Falls back
   // to @modal/default.tsx (null) on routes that don't open a modal.
   modal: React.ReactNode;
+  // Parallel slot holding the principal-kind surface gate. Renders nothing; it exists to run on every navigation.
+  surface: React.ReactNode;
 }>) {
   // Use full auth with revocation check so terminated sessions cannot keep browsing
   const session =
@@ -105,6 +109,13 @@ export default async function MspLayout({
   // action guards all decide from this principal.
   const principal = await getCurrentProductPrincipal();
   const productCode = principal.productCode;
+
+  // A principal kind's surface is enforced here, before any page renders, on a hard load. Soft navigation does
+  // not re-run a layout; the @surface slot below re-runs on every navigation and applies the same gate.
+  if (principal.surfaceKind) {
+    const pathname = (await headers()).get('x-pathname');
+    if (pathname) assertPrincipalRouteOpen(principal, pathname);
+  }
 
   // Only a customer workspace has a relationship notice; psa and algadesk read nothing.
   // A failed or gated read is no notice: the shell must never block on it.
@@ -176,6 +187,7 @@ export default async function MspLayout({
     >
       {children}
       {modal}
+      {surface}
     </MspLayoutClient>
   );
 }

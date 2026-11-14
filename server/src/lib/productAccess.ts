@@ -1,6 +1,7 @@
 import { getSession } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { cache } from 'react';
 import { NextResponse } from 'next/server';
 import {
   ProductCode,
@@ -104,7 +105,7 @@ export async function getProductPrincipal(tenantId: string, userId?: string | nu
 }
 
 /** The signed-in user's principal. With no session it is the PSA product, as `getCurrentTenantProduct`. */
-export async function getCurrentProductPrincipal(): Promise<ProductPrincipal> {
+export const getCurrentProductPrincipal = cache(async (): Promise<ProductPrincipal> => {
   const session = await getSession();
   const tenantId = session?.user?.tenant;
 
@@ -113,7 +114,7 @@ export async function getCurrentProductPrincipal(): Promise<ProductPrincipal> {
   }
 
   return getProductPrincipal(tenantId, session?.user?.id);
-}
+});
 
 export function assertProductAccess(input: {
   capability: string;

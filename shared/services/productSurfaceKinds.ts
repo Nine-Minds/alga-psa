@@ -6,12 +6,12 @@ import type { ProductCode } from '@alga-psa/types';
  * The product surface registry answers "what may this tenant's product reach". A principal is the tenant's
  * product plus the kind of user asking. An ordinary MSP user has no kind and the product alone decides. A
  * user of a registered kind (today the co-managed seat technician) sees only what the kind lists: whatever
- * it does not list is closed, so a route, API path or action added later is closed to the kind until a
+ * it does not list is closed, so a route or action added later is closed to the kind until a
  * rule here names it.
  *
  * A kind is keyed by the id its owning package declares on its built-in rule resolver
  * (`BuiltinRuleResolver.principalKind`), so the registry holds the surface and never imports the package.
- * This module is pure data and pure predicates: the sidebar, the route guard, the API guards and the
+ * This module is pure data and pure predicates: the sidebar, the route guard, the server-action guards and the
  * server-action guards all ask the same functions, in a client bundle or on the server.
  */
 
@@ -38,8 +38,6 @@ export interface SurfacePathRule {
 export interface SurfaceKind {
   /** MSP application routes (and the portal routes the kind may enter), first match wins. */
   routes: readonly SurfacePathRule[];
-  /** Session-authenticated app-internal API paths. REST under an API key is refused for a principal kind outright. */
-  apis: readonly SurfacePathRule[];
   /** Server-action product capabilities (the `capability` argument of the product guards) the kind reaches. */
   capabilities: readonly string[];
 }
@@ -47,7 +45,7 @@ export interface SurfaceKind {
 export const CO_MANAGED_SEAT_SURFACE = 'co_managed_seat';
 
 /** What a principal kind that is not registered gets: nothing. Unknown means closed. */
-const CLOSED_SURFACE: SurfaceKind = Object.freeze({ routes: [], apis: [], capabilities: [] });
+const CLOSED_SURFACE: SurfaceKind = Object.freeze({ routes: [], capabilities: [] });
 
 export const SURFACE_KINDS: Readonly<Record<string, SurfaceKind>> = Object.freeze({
   /**
@@ -82,9 +80,6 @@ export const SURFACE_KINDS: Readonly<Record<string, SurfaceKind>> = Object.freez
       { group: 'seat_documents', access: 'open', staticPrefixes: ['/msp/documents'] },
       { group: 'seat_time', access: 'open', staticPrefixes: ['/msp/time-entry'] },
     ],
-    apis: [
-      { group: 'seat_app_internal', access: 'open', staticPrefixes: ['/api/smart-search', '/api/notifications', '/api/v1/capabilities'] },
-    ],
     capabilities: ['scheduling_time_actions'],
   },
 });
@@ -112,10 +107,6 @@ function allowedByRules(rules: readonly SurfacePathRule[], path: string): boolea
 
 export function surfaceAllowsRoute(kind: string, pathname: string): boolean {
   return allowedByRules(surfaceKindRules(kind).routes, pathname);
-}
-
-export function surfaceAllowsApi(kind: string, path: string): boolean {
-  return allowedByRules(surfaceKindRules(kind).apis, path);
 }
 
 export function surfaceAllowsCapability(kind: string, capability: string): boolean {

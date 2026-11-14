@@ -1,7 +1,6 @@
 import { PRODUCT_CODES, type ProductCode } from '@alga-psa/types';
 import { getAllowedSettingsTabIds, isSettingsRestrictedProduct } from './settingsProductTabs';
 import {
-  surfaceAllowsApi,
   surfaceAllowsCapability,
   surfaceAllowsRoute,
   toProductPrincipal,
@@ -491,10 +490,7 @@ export function resolveProductRouteBehavior(principal: ProductPrincipalInput, pa
   return matched.behaviorByProduct[productCode];
 }
 
-export function resolveProductApiBehavior(principal: ProductPrincipalInput, path: string): ProductApiBehavior {
-  const { productCode, surfaceKind } = toProductPrincipal(principal);
-  if (surfaceKind && !surfaceAllowsApi(surfaceKind, path)) return 'denied';
-
+export function resolveProductApiBehavior(productCode: ProductCode, path: string): ProductApiBehavior {
   const matched = API_RULES.find((rule) => matchesRule(path, rule));
   if (!matched) {
     return productCode === 'psa' ? 'allowed' : 'denied';
