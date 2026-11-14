@@ -11,7 +11,7 @@ import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { createCoManagedSeatArrangement, inviteCoManagedSeatTechnician } from '@alga-psa/co-managed';
 import {
-  admitCoManagedSeatTechnician, countLicensedInternalUsers, holdsLiveSeatInvitation, countLicensedPendingInvitations, getLicenseUsage,
+  admitCoManagedSeatTechnician, countLicensedInternalUsers, findPendingInvitation, countLicensedPendingInvitations, getLicenseUsage,
 } from '@alga-psa/licensing';
 import {
   admitInternalUserSeat, assertInternalUserSeatsWithinLimit, checkInternalUserLicenseLimit, countPendingInvitationSeats,
@@ -94,8 +94,9 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     await expect(invite(sponsor, arrangement.arrangement_id)).rejects.toMatchObject({ code: 'SEAT_LIMIT' });
 
     // The MSP's own invitation flow must leave a seat invitation to the seat flow.
-    expect(await holdsLiveSeatInvitation(db, sponsor, first.email.toUpperCase())).toBe(true);
-    expect(await holdsLiveSeatInvitation(db, sponsor, address())).toBe(false);
+    expect(await findPendingInvitation(db, sponsor, ` ${first.email.toUpperCase()} `))
+      .toEqual({ invitationId: first.invitation_id, seatInvitation: true });
+    expect(await findPendingInvitation(db, sponsor, address())).toBeNull();
 
     // Two pending seat invitations: none reserves a licensed seat.
     expect(await licenceReadings(sponsor)).toEqual(before);
@@ -171,7 +172,8 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     expect(await countLicensedInternalUsers(db, sponsor)).toBe(3);
     expect(await db.transaction((trx) => admitCoManagedSeatTechnician(trx, sponsor, { existingUserId: technician })))
       .toEqual({ seatTechnician: false });
-    expect(await holdsLiveSeatInvitation(db, sponsor, invitation.email)).toBe(false);
+    // Accepted, so no longer pending at all.
+    expect(await findPendingInvitation(db, sponsor, invitation.email)).toBeNull();
 
     // Another tenant's assignments never touch this one.
     const plain = await createTenant(db, `Plain tenant ${randomUUID().slice(0, 8)}`, { productCode: 'psa' });

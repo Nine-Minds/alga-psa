@@ -57,20 +57,31 @@ export async function countLicensedPendingInvitations(
 }
 
 /**
- * Whether `email` holds an unexpired, unused seat invitation: the invitation of a seat technician.
- * The MSP's own invitation flow never sends or refreshes one (it would reserve an MSP seat and
- * give the technician a role); the seat flow owns it.
+ * The email's pending invitation (unused, unexpired), and whether it is a seat invitation: the
+ * invitation of a seat technician, which holds a seat of its arrangement. The MSP's own invitation
+ * flow never sends or refreshes a seat invitation (it would reserve an MSP seat and give the
+ * technician a role); the seat flow owns it.
+ *
+ * One read for both answers: the MSP flow already reads the pending invitation it refreshes, so
+ * asking about the seat costs a plain PSA invitation no extra query. Invitations are stored with
+ * the trimmed, lower-cased email (both flows normalize on write), so the match is exact, the same
+ * match the invitation service uses when it refreshes one.
  */
-export async function holdsLiveSeatInvitation(db: Db, tenant: string, email: string): Promise<boolean> {
+export async function findPendingInvitation(
+  db: Db, tenant: string, email: string,
+): Promise<{ invitationId: string; seatInvitation: boolean } | null> {
   const scope = tenantDb(db, tenant);
+  const seat = liveSeatAssignments(scope).select(db.raw('1'))
+    .whereRaw('seat_assignment.invitation_id = user_invitations.invitation_id');
   const row = await scope.table('user_invitations')
-    .whereRaw('lower(trim(user_invitations.email)) = ?', [email.trim().toLowerCase()])
+    .where('user_invitations.email', email.trim().toLowerCase())
     .whereNull('user_invitations.used_at')
     .where('user_invitations.expires_at', '>', db.fn.now())
-    .whereExists(liveSeatAssignments(scope).select(db.raw('1'))
-      .whereRaw('seat_assignment.invitation_id = user_invitations.invitation_id'))
-    .first('user_invitations.invitation_id');
-  return Boolean(row);
+    .select('user_invitations.invitation_id', db.raw('exists (?) as seat_invitation', [seat]))
+    // A seat invitation first: should both ever be pending, the seat flow's claim decides.
+    .orderBy('seat_invitation', 'desc')
+    .first() as { invitation_id: string; seat_invitation: boolean } | undefined;
+  return row ? { invitationId: row.invitation_id, seatInvitation: row.seat_invitation === true } : null;
 }
 
 /** Why a seat technician was refused. The allocation, not the MSP's licence, is what ran out. */

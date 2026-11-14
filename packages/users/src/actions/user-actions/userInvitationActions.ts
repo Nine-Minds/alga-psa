@@ -8,7 +8,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { holdsLiveSeatInvitation } from '@alga-psa/licensing';
+import { findPendingInvitation } from '@alga-psa/licensing';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
 import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
@@ -184,7 +184,9 @@ export const sendUserInvitation = withAuth(async (
       await lockInternalUserSeats(trx, tenant);
       // A seat technician's invitation holds a seat of its arrangement, not one of the MSP's. This
       // flow would count it against the MSP limit and give it a role, so the seat flow keeps it.
-      if (await holdsLiveSeatInvitation(trx, tenant, normalizedEmail)) {
+      // The same read tells whether this send creates the invitation or refreshes a pending one.
+      const pending = await findPendingInvitation(trx, tenant, normalizedEmail);
+      if (pending?.seatInvitation) {
         return { rejected: { success: false as const, error: 'This email already holds a seat invitation.', errorCode: 'CO_MANAGED_INVITATION_INVALID' as const } };
       }
       const reservedSeats = await countPendingInvitationSeats(trx, tenant, { excludeEmail: normalizedEmail });
@@ -197,11 +199,6 @@ export const sendUserInvitation = withAuth(async (
         return { rejected: { success: false as const, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' as const } };
       }
       if (licenseCheck.coManaged) await assertCoManagedSeatAdmission(trx, tenant, { email: normalizedEmail, kind: 'invitation' });
-
-      const refreshedExisting = await tenantDb(trx, tenant).table('user_invitations')
-        .where({ email: normalizedEmail, used_at: null })
-        .where('expires_at', '>', trx.fn.now())
-        .first('invitation_id');
 
       const invitationResult = await UserInvitationService.createInvitationWithTransaction(
         { email: normalizedEmail, firstName: params.firstName, lastName: params.lastName, roleId: params.roleId },
@@ -216,7 +213,7 @@ export const sendUserInvitation = withAuth(async (
       return {
         invitationId: invitationResult.invitationId,
         token: invitationResult.token || '',
-        created: !refreshedExisting,
+        created: !pending,
       };
     }).catch((error) => {
       console.error('Team invitation transaction failed:', error);
