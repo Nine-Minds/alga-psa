@@ -24,7 +24,7 @@ import {
 import {
   ASSET_SOFTWARE_SOURCE,
   ASSET_SOFTWARE_SUMMARY_SOURCE,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import type {
   AssetSoftwareDisplayItem,

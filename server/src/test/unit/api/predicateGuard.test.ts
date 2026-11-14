@@ -13,7 +13,7 @@ import {
   QUOTE_RECORD_SOURCE,
   TICKET_RECORD_SOURCE,
   type RedactableRecordSource,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 
 const qb = () => knexFactory({ client: 'pg' }).queryBuilder().from('projects');
 

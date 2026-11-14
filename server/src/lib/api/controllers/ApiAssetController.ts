@@ -44,7 +44,7 @@ import {
   ASSET_RECORD_SOURCE,
   ASSET_RELATIONSHIP_SOURCE,
   ASSET_TICKETS_RESPONSE_SOURCE,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import type { AuthorizationRecord } from '@alga-psa/authorization/kernel/contracts';

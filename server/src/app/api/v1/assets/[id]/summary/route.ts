@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { withTransaction } from '@alga-psa/db';
 import { calculateAssetSummaryMetrics, loadAssetSummaryFacts, loadAssetSummaryTickets } from '@alga-psa/assets/lib/assetSummary';
 import { assetSummaryRecordSource } from '@alga-psa/authorization/recordProjection';
-import { ASSET_SUMMARY_TICKET_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import { ASSET_SUMMARY_TICKET_SOURCE } from '@alga-psa/authorization/recordProjectionDescriptors';
 import { readAssetGateForRequest, assetNotFoundResponse } from 'server/src/lib/api/controllers/assetReadGuard';
 import {
   isAuthorizedProjectionFieldReadable,

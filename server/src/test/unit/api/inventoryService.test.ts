@@ -393,7 +393,7 @@ describe('InventoryService lookup applies asset projections to final output and 
 
   const db = () => makeDb({ 'assets as a': [asset] });
   const authorizeWithRedactions = async (redactions: string[]) => {
-    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/co-managed/recordProjection');
+    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/authorization/recordProjectionDescriptors');
     const policy = createRecordProjectionPolicy(redactions, ASSET_RECORD_SOURCE);
     return async (_trx: unknown, _authorizationRecords: any[], summaries: any[]) => summaries
       .map(row => policy.project(row, ASSET_RECORD_SOURCE))
@@ -494,7 +494,7 @@ describe('InventoryService lookup applies asset projections to final output and 
   });
 
   it('keeps raw authorization context separate from the projected response summary', async () => {
-    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/co-managed/recordProjection');
+    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/authorization/recordProjectionDescriptors');
     const policy = createRecordProjectionPolicy(['assets.client_id'], ASSET_RECORD_SOURCE);
     let observedAuthorizationRecord: any;
     let observedResponseSummary: any;

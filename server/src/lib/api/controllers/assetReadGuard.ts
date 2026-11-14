@@ -16,7 +16,7 @@ import type { ApiContext } from '../middleware/apiMiddleware';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../middleware/apiErrors';
 import { getConnection } from '../../db/db';
 import { projectApiResourceRead, reprojectUnderDecision, type AuthorizedProjection } from './authorizationKernel';
-import { ASSET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import { ASSET_RECORD_SOURCE } from '@alga-psa/authorization/recordProjectionDescriptors';
 
 export const ASSET_NOT_FOUND_MESSAGE = 'Asset not found';
 

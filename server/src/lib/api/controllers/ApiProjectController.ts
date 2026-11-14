@@ -42,7 +42,7 @@ import {
   PROJECT_TASK_RECORD_SOURCE,
   PROJECT_TICKET_RESPONSE_SOURCE,
   TICKET_PROJECT_LINK_SOURCE,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import { ApiRequest, AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';

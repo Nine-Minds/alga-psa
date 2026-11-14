@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAuthorizationPrincipalSubject, authorizeApiResource, isAuthorizedProjection, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
-import { QUOTE_LINE_RECORD_SOURCE, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import { QUOTE_LINE_RECORD_SOURCE, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE } from '@alga-psa/authorization/recordProjectionDescriptors';
 
 const authorizeResourceMock = vi.fn();
 const resolveSubjectMock = vi.hoisted(() => vi.fn());

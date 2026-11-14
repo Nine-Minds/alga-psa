@@ -45,7 +45,7 @@ import {
   QUOTE_ACTIVITY_SOURCE,
   QUOTE_LINE_RECORD_SOURCE,
   QUOTE_RECORD_SOURCE,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { buildQuoteRecordContext } from './recordContexts';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import {

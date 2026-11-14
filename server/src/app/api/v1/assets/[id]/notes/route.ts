@@ -12,7 +12,7 @@ import { readAssetGateForRequest } from 'server/src/lib/api/controllers/assetRea
 import { reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
 import {
   ASSET_NOTE_RESPONSE_SOURCE,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import {
   getAssetNoteContent,

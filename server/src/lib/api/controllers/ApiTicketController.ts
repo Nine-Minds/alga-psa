@@ -49,7 +49,7 @@ import {
   TICKET_TIME_ENTRIES_RESPONSE_SOURCE,
   TICKET_ASSETS_RESPONSE_SOURCE,
   type RedactableRecordSource,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { createProjectedFileResponse, createProjectedPreviewResponse } from '../utils/projectedFileResponse';
 import { buildTicketRecordContext } from './recordContexts';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';

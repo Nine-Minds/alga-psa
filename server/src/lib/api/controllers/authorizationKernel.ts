@@ -10,7 +10,7 @@ import {
   createRecordProjectionPolicy,
   type RecordProjectionPolicy,
   type RedactableRecordSource,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { buildProjectRecordContext, buildQuoteRecordContext, buildTicketRecordContext } from './recordContexts';
 import type {
   AuthorizationRecord,

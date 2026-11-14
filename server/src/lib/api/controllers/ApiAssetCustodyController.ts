@@ -35,7 +35,7 @@ import { reprojectUnderDecision, type AuthorizedProjection } from './authorizati
 import {
   ASSET_CUSTODY_MUTATION_RESPONSE_SOURCE,
   ASSET_CUSTODY_RESPONSE_SOURCE,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 
 const STATUS_BY_CODE: Record<CustodyErrorCode, number> = {
   not_found: 404,

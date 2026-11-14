@@ -13,7 +13,7 @@ import {
   PROJECT_TASK_RECORD_SOURCE,
   createRecordProjectionPolicy,
   type RedactableRecordSource,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 
 describe('source-aware record projection policy', () => {
   it('does not borrow an unrelated assignee decision for a comment author from the same user table', () => {
