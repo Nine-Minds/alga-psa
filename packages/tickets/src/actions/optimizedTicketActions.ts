@@ -13,7 +13,7 @@ import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaborat
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { projectResponseUsers } from '../lib/responseUsers';
-import { projectedPeopleForCaller, projectedPersonToUser, projectedUsers, withholdPersonContactFields } from '@alga-psa/user-composition/lib/seatPeople';
+import { projectedPeopleForCaller, projectedPeopleForSubject, projectedPersonToUser, projectedUsers, withholdPersonContactFields } from '@alga-psa/user-composition/lib/seatPeople';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -552,7 +552,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // A seat technician's agent pickers are the people projection, the same answer as getTicketFormOptions:
     // MSP staff who participate on tickets they can see (by name only) and the technicians of their client.
-    const seatPeople = await projectedPeopleForCaller(trx, tenant, user, { kinds: ['msp_staff', 'client_technician'] });
+    // The subject was resolved for the ticket read above, so an ordinary user is told apart without a statement.
+    const seatPeople = await projectedPeopleForSubject(trx, authorizationContext.authorizationSubject, { kinds: ['msp_staff', 'client_technician'] });
     const seatAssignees = seatPeople ? projectedUsers(seatPeople) : null;
     // People the ticket merely references (creator, last editor, comment authors) keep their name for a seat
     // technician and release nothing else: no email, phone or username of MSP staff.

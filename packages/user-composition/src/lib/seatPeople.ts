@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
-import { projectPeopleForUser, type PeopleProjectionQuery, type ProjectedPerson } from '@alga-psa/authorization/subject/peopleProjection';
+import { projectPeopleForSubject, projectPeopleForUser, type PeopleProjectionQuery, type ProjectedPerson } from '@alga-psa/authorization/subject/peopleProjection';
+import type { AuthorizationSubject } from '@alga-psa/authorization/kernel/contracts';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { getEntityImageUrlsBatch } from './avatarUtils';
 
 /**
  * The people a restricted (seat) caller may see, for every user list, picker and mention source in this
@@ -21,6 +21,18 @@ export async function projectedPeopleForCaller(
   // A portal user is never a restricted internal subject.
   if (currentUser.user_type === 'client') return null;
   return projectPeopleForUser(trx, { tenant, user: currentUser }, query);
+}
+
+/**
+ * The same answer for a caller whose authorization subject is already resolved (the ticket screen holds it in
+ * its authorization context). Costs no statement for a subject no projector claims.
+ */
+export async function projectedPeopleForSubject(
+  trx: Knex | Knex.Transaction,
+  subject: AuthorizationSubject,
+  query?: PeopleProjectionQuery,
+): Promise<ProjectedPerson[] | null> {
+  return projectPeopleForSubject(trx, subject, query);
 }
 
 /** The people that are users (a contact without a portal login is not), keyed by user id. */
@@ -66,15 +78,16 @@ export function withholdPersonContactFields<Row extends Record<string, unknown>>
   return kept as Row;
 }
 
-/** User rows for a seat caller's list, avatars attached from the person's reference. */
-export async function projectedPeopleAsUsers(
+/**
+ * User rows for a seat caller's list. Like the unrestricted lists, a row carries no avatar: the avatar is the
+ * person's image document, fetched by its `user_id` reference through the avatar actions, never read here.
+ */
+export function projectedPeopleAsUsers(
   people: readonly ProjectedPerson[],
   tenant: string,
   options: { userType?: string } = {},
-): Promise<IUserWithRoles[]> {
-  const users = projectedUsers(people).filter((person) =>
-    options.userType ? (person.kind === 'contact' ? 'client' : 'internal') === options.userType : true);
-  const avatars = await getEntityImageUrlsBatch('user', users.map((person) => person.userId), tenant);
-  return users.map((person) => projectedPersonToUser(person, tenant, avatars.get(person.userId) ?? null));
+): IUserWithRoles[] {
+  return projectedUsers(people)
+    .filter((person) => (options.userType ? (person.kind === 'contact' ? 'client' : 'internal') === options.userType : true))
+    .map((person) => projectedPersonToUser(person, tenant));
 }
-

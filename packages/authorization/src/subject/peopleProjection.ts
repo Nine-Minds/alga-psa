@@ -106,6 +106,19 @@ export async function projectPeopleForUser(
   const subject = await resolveAuthorizationSubject(knex, {
     tenant: input.tenant, user: input.user, requestCache: new RequestLocalAuthorizationCache(),
   });
-  const projector = projectors.find((candidate) => candidate.appliesTo(subject));
+  return projectPeopleForSubject(knex, subject, query);
+}
+
+/**
+ * The people an already-resolved `subject` may see, or null when no projector claims it. For callers that hold
+ * the subject (a ticket's authorization context): the class is decided from the subject's own facts, so a
+ * subject no projector claims costs no statement. Only a claimed subject reads its projector's tables.
+ */
+export async function projectPeopleForSubject(
+  knex: Knex | Knex.Transaction,
+  subject: AuthorizationSubject,
+  query: PeopleProjectionQuery = {},
+): Promise<ProjectedPerson[] | null> {
+  const projector = [...store().values()].find((candidate) => candidate.appliesTo(subject));
   return projector ? projector.people(knex, subject, query) : null;
 }

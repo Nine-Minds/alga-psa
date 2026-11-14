@@ -2,7 +2,6 @@
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { getEntityImageUrlsBatch } from '../lib/avatarUtils';
 import { projectedPeopleForCaller, projectedUsers } from '../lib/seatPeople';
 
 export interface MentionUser {
@@ -34,19 +33,18 @@ export const searchUsersForMentions = withAuth(async (
 
   try {
     // A seat technician mentions the people projection (staff and technicians; a contact is not a mention
-    // target), name and avatar for MSP staff. `email` and `username` are empty for staff, never derived.
+    // target), by name for MSP staff. `email` and `username` are empty for staff, never derived. Like every
+    // other mention suggestion, no avatar is read here.
     const projected = await projectedPeopleForCaller(knex, tenant, currentUser, {
       search: query, kinds: ['msp_staff', 'client_technician'], limit: 10,
     });
     if (projected) {
-      const people = projectedUsers(projected);
-      const avatars = await getEntityImageUrlsBatch('user', people.map((person) => person.userId), tenant);
-      return people.map((person): MentionUser => ({
+      return projectedUsers(projected).map((person): MentionUser => ({
         user_id: person.userId,
         username: person.username ?? '',
         display_name: person.displayName,
         email: person.email ?? '',
-        avatar_url: avatars.get(person.userId) ?? null,
+        avatar_url: null,
       }));
     }
 

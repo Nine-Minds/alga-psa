@@ -284,6 +284,39 @@ describeDb('a seat technician sees only the projected people', { shuffle: false 
     expect(ids(options.users)).toContain(s.C);
   });
 
+  it('a seat technician\'s people lists read no image document: avatars are fetched by reference, as for everyone', async () => {
+    as(s.A);
+    const statements: string[] = [];
+    const onQuery = (query: { sql: string }) => { statements.push(query.sql); };
+    db.on('query', onQuery);
+    try {
+      expect(ids(await getAllUsers()).length).toBeGreaterThan(0);
+      expect(ids(await getAllUsersBasic()).length).toBeGreaterThan(0);
+      expect(ids(await getMultipleUsersWithRoles([s.S1, s.S2]))).toEqual([s.S1, s.S2].sort());
+      expect((await searchUsersForMentions('')).length).toBeGreaterThan(0);
+      expect((await listUsersForInboundWebhook()).length).toBeGreaterThan(0);
+    } finally {
+      db.removeListener('query', onQuery);
+    }
+    expect(statements.length).toBeGreaterThan(0);
+    expect(statements.filter((sql) => /\bdocument(_associations|s)\b/.test(sql))).toEqual([]);
+    for (const mention of await searchUsersForMentions('')) expect(mention.avatar_url).toBeNull();
+  });
+
+  it('the ticket screen tells an ordinary user apart from the subject it already resolved, without a membership probe', async () => {
+    as(s.ordinary);
+    const statements: string[] = [];
+    const onQuery = (query: { sql: string }) => { statements.push(query.sql); };
+    db.on('query', onQuery);
+    try {
+      expect((await getConsolidatedTicketData(s.ticketIn) as any)?.ticket?.ticket_id).toBe(s.ticketIn);
+    } finally {
+      db.removeListener('query', onQuery);
+    }
+    // The projection's own membership read (`... where user_id = ? and resolver_id in (...)`) is not repeated here.
+    expect(statements.filter((sql) => /from "authorization_resolver_subjects"[^]*"resolver_id" in \(/.test(sql))).toEqual([]);
+  });
+
   it('a tenant without seat technicians reads no co_managed_ table on these paths', async () => {
     const plain = await createTenant(db, `Plain ${tag}`, { productCode: 'psa' });
     const plainUser = await createUser(db, plain, { user_type: 'internal' });
