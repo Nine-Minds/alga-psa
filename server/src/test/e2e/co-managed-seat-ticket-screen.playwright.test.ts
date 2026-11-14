@@ -5,9 +5,9 @@
  * scheduling affordance and no billing profile picker, and the browser makes no billing-rollup or materials
  * request. The MSP admin opening the same ticket is the control: the affordances are there for them.
  *
- * STATUS: written, type-checked, NOT RUN. It needs the app server and the e2e database, which this slice was
- * built without starting. The reduced set follows the seat principal alone (it fails closed), so no release
- * flag is needed to see the reduction; seeding the seat rows is enough.
+ * The reduced set follows the seat principal alone (it fails closed), so no release flag is needed to see the
+ * reduction; seeding the seat rows is enough. Run against a running app with PLAYWRIGHT_SKIP_WEB_SERVER=true and
+ * BASE_URL/NEXTAUTH_URL/PORT set to that app, so the injected session cookie carries its port-scoped name.
  * The server-side halves are covered by tests that did run:
  *   packages/tickets/src/lib/__tests__/ticketPreloads.test.ts    a gated loader is never called
  *   server/src/lib/tickets/ticketViewerCapabilities.test.ts       native / seat / flag-off resolution
@@ -52,6 +52,8 @@ const REMOVED_AFFORDANCES: Record<string, string> = {
   scheduling: '[id$="-scheduled-work-tile"], [id$="-scheduled-work-tile-loading"]',
 };
 
+const MORE_ACTIONS = '[id$="-more-actions-button"]';
+
 // LEVERAGE: pattern seat-e2e-seed — the same seat-technician row seeding as co-managed-seat-surface.playwright.test.ts (T017)
 async function seedSeatTechnicianWithTicket(db: Db, tenantData: TenantTestData) {
   const tenant = tenantData.tenant.tenantId;
@@ -62,7 +64,8 @@ async function seedSeatTechnicianWithTicket(db: Db, tenantData: TenantTestData) 
     tenant, source: 'hosted', source_reference: `sub_${uuidv4()}`, capacity: 3,
     verified_at: new Date(Date.now() - 400 * DAY), valid_until: new Date(Date.now() + 365 * DAY),
   });
-  await db('tenants').where({ tenant }).update({ product_code: 'psa' });
+  // A hosted entitlement sponsors seats only on a Pro PSA workspace (readEligibleSponsor).
+  await db('tenants').where({ tenant }).update({ product_code: 'psa', plan: 'pro' });
 
   const arrangement = await createCoManagedSeatArrangement(db, { sponsorTenant: tenant, clientId, operationId: uuidv4(), seats: 1 });
 
@@ -115,7 +118,10 @@ test.describe('Co-managed seat: reduced ticket screen (T027)', () => {
 
       // Control: MSP staff keep the full screen on the same ticket.
       await page.goto(`${baseUrl}/msp/tickets/${ticketId}`, { waitUntil: 'domcontentloaded' });
+      // Delete and duplicate live in the More actions menu, which mounts its items only when opened.
+      await page.locator(MORE_ACTIONS).first().click({ timeout: 30_000 });
       await expect(page.locator('[id$="-delete-ticket-button"]').first(), 'MSP staff keep delete').toBeAttached({ timeout: 30_000 });
+      await page.keyboard.press('Escape');
 
       await signInAs(page, db, tenantData, seat);
 
@@ -127,6 +133,9 @@ test.describe('Co-managed seat: reduced ticket screen (T027)', () => {
       // The screen is up: the conversation and status are still there.
       await expect(page.locator('[id$="-status-select"], [id*="status"]').first()).toBeVisible({ timeout: 30_000 });
       await page.waitForLoadState('networkidle');
+      // Open the same menu, so the absence of delete and duplicate below is a real check.
+      await page.locator(MORE_ACTIONS).first().click({ timeout: 30_000 });
+      await expect(page.locator('[role="menuitem"]').first(), 'the seat menu still opens').toBeVisible();
 
       for (const [name, selector] of Object.entries(REMOVED_AFFORDANCES)) {
         await expect(page.locator(selector), `no ${name} affordance for a seat technician`).toHaveCount(0);
