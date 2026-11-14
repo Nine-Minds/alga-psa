@@ -112,6 +112,7 @@ async function seedSeatTechnicianWithTicketAndPeriod(db: Db, tenantData: TenantT
 // The ticket screen's default (Grid) layout puts the launcher in the time tile; the Entry layout keeps it in the properties panel.
 const ADD_TIME = '#ticket-details-bento-add-time-entry, [id$="-add-time-entry-btn"]';
 const SAVE = '[id$="-save-dialog-btn"]';
+const NOTES = '[id$="-notes-0"]';
 // Controls the operational dialog does not render.
 const COMMERCIAL_CONTROLS = '[id*="-service-"], [id*="-billable-duration-"], [id^="contract-line-"]';
 // Reader names a request URL or body would carry; server actions hide theirs behind a hash (see the file header).
@@ -136,6 +137,9 @@ async function openDialogRecording(page: Page, ticketId: string) {
   page.on('request', onRequest);
   await page.locator(ADD_TIME).first().click({ timeout: 30_000 });
   await expect(page.locator(SAVE).first()).toBeVisible({ timeout: 30_000 });
+  // Save shows while the dialog is still a skeleton; the entry form (its notes field) renders only after the
+  // provider's initial reads resolve, so wait for it before closing the recording or late reads are missed.
+  await expect(page.locator(NOTES).first()).toBeVisible({ timeout: 30_000 });
   await page.waitForLoadState('networkidle');
   page.off('request', onRequest);
   return { actionIds: new Set(actionIds), requests };
@@ -169,7 +173,7 @@ test.describe('Co-managed seat: operational time entry (T035)', () => {
         'no service-catalog, tax or contract request from the seat dialog').toEqual([]);
 
       // Save. Only the note is filled in; there is no service to choose.
-      await page.locator('[id$="-notes-0"]').first().fill('Reset the printer queue');
+      await page.locator(NOTES).first().fill('Reset the printer queue');
       const saveRequests: Array<{ line: string; body: string }> = [];
       page.on('request', (request) => {
         const body = request.postData() ?? '';
