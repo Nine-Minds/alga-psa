@@ -14,5 +14,5 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down() {
-  // Validation is not reversed; 20261113150000's down removes the constraints.
+  // Validation is not reversed; 20261113140000's down removes the constraints.
 };
