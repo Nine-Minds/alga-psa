@@ -25,6 +25,8 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 
 vi.mock('@/lib/productAccess', () => ({
   getCurrentTenantProduct: getCurrentTenantProductMock,
+  // An ordinary user: no principal kind, so the page resolves the native ticket capability set.
+  getCurrentProductPrincipal: vi.fn().mockResolvedValue({ productCode: 'psa', surfaceKind: null }),
 }));
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
@@ -49,6 +51,7 @@ vi.mock('@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient', () 
 }));
 
 const { default: TicketDetailsPage } = await import('server/src/app/msp/tickets/[id]/page');
+const { NATIVE_TICKET_CAPABILITIES } = await import('@alga-psa/tickets/lib/ticketDataSource');
 
 describe('MSP ticket details page product composition', () => {
   const findElementByType = (node: unknown, targetType: unknown): React.ReactElement | null => {
@@ -135,5 +138,6 @@ describe('MSP ticket details page product composition', () => {
 
     expect(props.isAlgaDeskMode).toBe(false);
     expect(getSurveyTicketSummaryMock).toHaveBeenCalled();
+    expect(getConsolidatedTicketDataMock).toHaveBeenCalledWith(TICKET_ID, NATIVE_TICKET_CAPABILITIES);
   });
 });
