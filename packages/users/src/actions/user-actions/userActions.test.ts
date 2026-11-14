@@ -189,7 +189,8 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
     if (table === 'users') {
       return {
         where: (_criteria: Record<string, any>) => ({
-          count: async () => [{ count: String(input.usedInternalUsers) }],
+          // The licensed count leaves out users holding a live seat assignment.
+          whereNotExists: () => ({ count: () => ({ first: async () => ({ count: String(input.usedInternalUsers) }) }) }),
           select: (..._fields: any[]) => ({
             first: async () => insertedUser,
           }),
@@ -201,6 +202,11 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
           },
         }),
       };
+    }
+
+    if (table === 'co_managed_seat_assignments as seat_assignment') {
+      const subquery: any = { whereNot: () => subquery, select: () => subquery, whereRaw: () => subquery };
+      return subquery;
     }
 
     if (table === 'user_roles') {

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
+import { countLicensedInternalUsers } from '@alga-psa/licensing';
 
 /**
  * Verify webhook signature from nm-store
@@ -185,14 +186,7 @@ export async function GET(req: NextRequest) {
     }
     
     // Count active MSP (internal) users
-    const usedResult = await db.table('users')
-      .where({ 
-        user_type: 'internal',
-        is_inactive: false 
-      })
-      .count('* as count');
-    
-    const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
+    const used = await countLicensedInternalUsers(knex, tenantId);
     const limit = tenant.licensed_user_count;
     const remaining = limit !== null ? Math.max(0, limit - used) : null;
     

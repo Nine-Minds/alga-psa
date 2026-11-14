@@ -8,10 +8,10 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { createCoManagedSeatArrangement, inviteCoManagedSeatTechnician } from '@alga-psa/co-managed';
 import {
-  admitCoManagedSeatTechnician, countLicensedInternalUsers, countLicensedPendingInvitations, getLicenseUsage,
+  admitCoManagedSeatTechnician, countLicensedInternalUsers, holdsLiveSeatInvitation, countLicensedPendingInvitations, getLicenseUsage,
 } from '@alga-psa/licensing';
 import {
   admitInternalUserSeat, assertInternalUserSeatsWithinLimit, checkInternalUserLicenseLimit, countPendingInvitationSeats,
@@ -19,6 +19,12 @@ import {
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+
+// The EE appliance seat check is handed the licensed count by the seat guard; record what it is given.
+const appliance = vi.hoisted(() => ({ usedSeats: [] as number[] }));
+vi.mock('@enterprise/lib/license/userSeatGuard', () => ({
+  checkApplianceLicenseSeatLimit: async (usedSeats: number) => { appliance.usedSeats.push(usedSeats); return null; },
+}));
 
 const DAY = 86_400_000;
 const describeDb = await describeWithDb();
@@ -53,6 +59,7 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
 
   /** Every licence reading the MSP's own seat limit is decided on. */
   const licenceReadings = (sponsor: string) => db.transaction(async (trx) => {
+    appliance.usedSeats.length = 0;
     const usage = await getLicenseUsage(sponsor, trx);
     return {
       licensedUsers: await countLicensedInternalUsers(trx, sponsor),
@@ -62,6 +69,8 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
       pendingInvitations: await countLicensedPendingInvitations(trx, sponsor),
       // The seat guard, which also feeds this count to the appliance seat check.
       seatGuard: await checkInternalUserLicenseLimit(trx, sponsor),
+      // What the appliance seat check was handed, when the limits before it did not refuse first.
+      applianceUsedSeats: [...appliance.usedSeats],
     };
   });
   const admit = (sponsor: string, options: Parameters<typeof admitInternalUserSeat>[2]) =>
@@ -83,6 +92,10 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     const second = await invite(sponsor, arrangement.arrangement_id);
     // The allocation, not the MSP's licence, is what a technician runs out of.
     await expect(invite(sponsor, arrangement.arrangement_id)).rejects.toMatchObject({ code: 'SEAT_LIMIT' });
+
+    // The MSP's own invitation flow must leave a seat invitation to the seat flow.
+    expect(await holdsLiveSeatInvitation(db, sponsor, first.email.toUpperCase())).toBe(true);
+    expect(await holdsLiveSeatInvitation(db, sponsor, address())).toBe(false);
 
     // Two pending seat invitations: none reserves a licensed seat.
     expect(await licenceReadings(sponsor)).toEqual(before);
@@ -156,6 +169,7 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     expect(await countLicensedInternalUsers(db, sponsor)).toBe(3);
     expect(await db.transaction((trx) => admitCoManagedSeatTechnician(trx, sponsor, { existingUserId: technician })))
       .toEqual({ seatTechnician: false });
+    expect(await holdsLiveSeatInvitation(db, sponsor, invitation.email)).toBe(false);
 
     // Another tenant's assignments never touch this one.
     const plain = await createTenant(db, `Plain tenant ${randomUUID().slice(0, 8)}`, { productCode: 'psa' });
@@ -165,6 +179,10 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     await createUser(db, plain, { user_type: 'client' });
     await db('user_invitations').insert({ tenant: plain, email: address(), first_name: 'P', last_name: 'I', role_id: null,
       token: randomUUID(), expires_at: new Date(Date.now() + DAY) });
+    // Room on the limit: the appliance seat check sees the same count as every other site.
+    await db('tenants').where({ tenant: plain }).update({ licensed_user_count: 5 });
+    expect((await licenceReadings(plain)).applianceUsedSeats).toEqual([2]);
+    await db('tenants').where({ tenant: plain }).update({ licensed_user_count: 3 });
     expect(await licenceReadings(plain)).toMatchObject({ licensedUsers: await activeInternalUsers(plain),
       usage: { limit: 3, used: 2, remaining: 1 }, onboardingUsed: 3, pendingInvitations: 1, seatGuard: { ok: true } });
   });

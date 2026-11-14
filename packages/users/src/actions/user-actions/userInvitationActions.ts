@@ -8,6 +8,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { holdsLiveSeatInvitation } from '@alga-psa/licensing';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
 import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
@@ -180,6 +181,11 @@ export const sendUserInvitation = withAuth(async (
     const reservation: Reservation = await knex.transaction(async (trx): Promise<Reservation> => {
       // Lock before counting reserved seats: the count is part of the decision.
       await lockInternalUserSeats(trx, tenant);
+      // A seat technician's invitation holds a seat of its arrangement, not one of the MSP's. This
+      // flow would count it against the MSP limit and give it a role, so the seat flow keeps it.
+      if (await holdsLiveSeatInvitation(trx, tenant, normalizedEmail)) {
+        return { rejected: { success: false as const, error: 'This email already holds a seat invitation.', errorCode: 'CO_MANAGED_INVITATION_INVALID' as const } };
+      }
       const reservedSeats = await countPendingInvitationSeats(trx, tenant, { excludeEmail: normalizedEmail });
 
       const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { reservedSeats, deferCoManaged: true });

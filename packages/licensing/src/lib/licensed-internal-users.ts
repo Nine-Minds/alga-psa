@@ -56,6 +56,23 @@ export async function countLicensedPendingInvitations(
   return toCount(await query.count('* as count').first() as { count?: string | number } | undefined);
 }
 
+/**
+ * Whether `email` holds an unexpired, unused seat invitation: the invitation of a seat technician.
+ * The MSP's own invitation flow never sends or refreshes one (it would reserve an MSP seat and
+ * give the technician a role); the seat flow owns it.
+ */
+export async function holdsLiveSeatInvitation(db: Db, tenant: string, email: string): Promise<boolean> {
+  const scope = tenantDb(db, tenant);
+  const row = await scope.table('user_invitations')
+    .whereRaw('lower(trim(user_invitations.email)) = ?', [email.trim().toLowerCase()])
+    .whereNull('user_invitations.used_at')
+    .where('user_invitations.expires_at', '>', db.fn.now())
+    .whereExists(liveSeatAssignments(scope).select(db.raw('1'))
+      .whereRaw('seat_assignment.invitation_id = user_invitations.invitation_id'))
+    .first('user_invitations.invitation_id');
+  return Boolean(row);
+}
+
 /** Why a seat technician was refused. The allocation, not the MSP's licence, is what ran out. */
 export type CoManagedSeatTechnicianRefusal = 'ARRANGEMENT_ENDED' | 'ENTITLEMENT_LAPSED' | 'SEAT_LIMIT';
 
