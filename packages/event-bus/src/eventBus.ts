@@ -14,6 +14,7 @@ import {
   type WorkflowPublishHooks
 } from './schemas/eventBusSchema';
 import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
+import { EVENT_BUS_REGISTRY_KEY } from './eventBusRegistry';
 import { enforceWorkflowEventContract } from './workflow/workflowEventContract';
 
 type EventHandler = (event: Event) => Promise<void>;
@@ -172,15 +173,14 @@ async function getClient() {
 
 // Helper to check connection status (for external monitoring)
 export function isEventBusConnected(): boolean {
-  return eventBusRegistry[EVENT_BUS_KEY]?.isConnected() ?? false;
+  return eventBusRegistry[EVENT_BUS_REGISTRY_KEY]?.isConnected() ?? false;
 }
 
 // Next's main and EE graphs can bundle this module independently. All
 // subscribers in the process must share one consumer: separate consumers in
 // the same Redis group compete for messages and ACK each other's work.
-const EVENT_BUS_KEY = Symbol.for('alga.eventBus.v1');
 const eventBusRegistry = globalThis as typeof globalThis & {
-  [EVENT_BUS_KEY]?: EventBus;
+  [EVENT_BUS_REGISTRY_KEY]?: EventBus;
 };
 
 // LEVERAGE: pattern redis-consumer-group-ensure — same NOGROUP detection and group-cache invalidation lives in shared/workflow/streams/redisStreamClient.ts
@@ -225,10 +225,10 @@ export class EventBus {
   }
 
   public static getInstance(): EventBus {
-    if (!eventBusRegistry[EVENT_BUS_KEY]) {
-      eventBusRegistry[EVENT_BUS_KEY] = new EventBus();
+    if (!eventBusRegistry[EVENT_BUS_REGISTRY_KEY]) {
+      eventBusRegistry[EVENT_BUS_REGISTRY_KEY] = new EventBus();
     }
-    return eventBusRegistry[EVENT_BUS_KEY];
+    return eventBusRegistry[EVENT_BUS_REGISTRY_KEY];
   }
 
   public isConnected(): boolean {
@@ -1088,7 +1088,7 @@ export class EventBus {
       this.handlers.clear();
       EventBus.createdConsumerGroups.clear();
       EventBus.recoveringConsumerGroups.clear();
-      if (eventBusRegistry[EVENT_BUS_KEY] === this) delete eventBusRegistry[EVENT_BUS_KEY];
+      if (eventBusRegistry[EVENT_BUS_REGISTRY_KEY] === this) delete eventBusRegistry[EVENT_BUS_REGISTRY_KEY];
     }
   }
 }
