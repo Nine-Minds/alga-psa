@@ -73,9 +73,13 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', async (importOrigina
 
 // What the server registers at boot (instrumentation.ts): the seat authority resolver comes with it.
 import '@alga-psa/co-managed/capability';
+import { registerCapabilityParticipation } from '@alga-psa/core/capability';
+import { coManagedSeatParticipants } from '@alga-psa/co-managed/seatCapability';
 import {
   createCoManagedSeatArrangement, handCoManagedSeatTicketToClientIt, readCoManagedSeatTicketWork, setCoManagedSeatBoardScope,
 } from '@alga-psa/co-managed';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { tenantDb } from '@alga-psa/db';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -122,8 +126,11 @@ async function insertSeatTechnician(label: string, roleId: string): Promise<any>
     first_name: 'Seat', last_name: label, hashed_password: 'not-used', user_type: 'internal',
     email: `s39-${userId.slice(0, 8)}@example.com` });
   await db('user_roles').insert({ tenant: tenant(), user_id: userId, role_id: roleId });
-  await db('co_managed_seat_assignments').insert({ tenant: tenant(), assignment_id: randomUUID(), arrangement_id: arrangementId,
-    user_id: userId, state: 'active' });
+  await db.transaction(async (trx) => {
+    await retainBuiltinResolverSubject(trx, { tenant: tenant(), userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+    await trx('co_managed_seat_assignments').insert({ tenant: tenant(), assignment_id: randomUUID(), arrangement_id: arrangementId,
+      user_id: userId, state: 'active' });
+  });
   return principal(userId);
 }
 
@@ -215,6 +222,9 @@ const notesOf = (ticketId: string) => db('comments').where({ tenant: tenant(), t
 
 beforeAll(async () => {
   db = await createTestDbConnection({ databaseName: 's39_seat_ticket_read_scope_test' });
+  // The gate's own resolver, pointed at this suite's database, with no verdict cached between steps.
+  registerCapabilityParticipation('co-managed-seat', ({ tenantIds }) => coManagedSeatParticipants(tenantIds, db));
+  process.env.CAPABILITY_CACHE_TTL_MS = '0';
   dbRef.knex = db;
 
   // The seeded administrator: the MSP side of every assertion, with the permissions the seed gave it.
@@ -253,6 +263,7 @@ beforeAll(async () => {
 }, HOOK_TIMEOUT);
 
 afterAll(async () => {
+  delete process.env.CAPABILITY_CACHE_TTL_MS;
   await db?.destroy().catch(() => undefined);
 });
 

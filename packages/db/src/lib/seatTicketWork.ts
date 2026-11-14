@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { isCapabilityServed } from '@alga-psa/core/capability';
 import { prepareTicketResourceReassignment } from './reassignTicketResources';
 import { tenantDb, type TenantDb } from './tenantDb';
 
@@ -119,7 +120,7 @@ export interface SeatTicketPlacement { client_id?: string | null; board_id?: str
  * comments, shared notes included, are not touched.
  *
  * State-based and idempotent: it settles the ticket as it stands, whatever the writer changed.
- * A tenant with no seat arrangement pays one indexed read, and only on a move. Returns whether
+ * A tenant the `co-managed-seat` capability does not serve pays nothing, and only a move asks. Returns whether
  * the assignee was cleared, so the writer can report the ticket it now returns truthfully.
  */
 export async function releaseSeatTicketOnMove(
@@ -133,8 +134,9 @@ export async function releaseSeatTicketOnMove(
   if ((before.client_id ?? null) === (after.client_id ?? null) && (before.board_id ?? null) === (after.board_id ?? null)) return settled;
   if (![tenant, ticketId].every((id) => uuid.test(id))) return settled;
   const sponsor = tenantDb(trx, tenant);
-  // Served: a tenant that has never had a seat arrangement has no technician and no work row.
-  if (!await sponsor.table('co_managed_seat_arrangements').first('arrangement_id')) return settled;
+  // Served: a tenant outside the `co-managed-seat` capability has no technician and no work row,
+  // and pays no statement here (the verdict is cached per tenant).
+  if (!await isCapabilityServed('co-managed-seat', tenant)) return settled;
 
   const ticket = await sponsor.table('tickets').where('ticket_id', ticketId).forUpdate().first('client_id', 'board_id', 'assigned_to');
   if (!ticket) return settled;

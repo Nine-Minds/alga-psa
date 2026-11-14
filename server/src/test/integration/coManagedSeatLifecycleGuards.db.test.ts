@@ -6,11 +6,15 @@
  * told why; once the arrangement has ended all three go through. A ticket that changes client, or
  * moves to a board the arrangement does not share, loses a seat technician assignee and returns
  * to the MSP, keeping its shared notes; a move that keeps it shared changes nothing, MSP staff
- * stay assigned, and a tenant with no seat arrangement pays one read.
+ * stay assigned, and a tenant the co-managed-seat capability does not serve pays nothing and is never refused.
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
+import { coManagedSeatParticipants } from '@alga-psa/co-managed/seatCapability';
+import { registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const dbRef = vi.hoisted(() => ({
@@ -170,6 +174,9 @@ async function endArrangement(id: string): Promise<void> {
 beforeAll(async () => {
   db = await createTestDbConnection({ databaseName: 's39_seat_lifecycle_guards_test' });
   dbRef.knex = db;
+  // The gate's own resolver, pointed at this suite's database, with no verdict cached between steps.
+  registerCapabilityParticipation('co-managed-seat', ({ tenantIds }) => coManagedSeatParticipants(tenantIds, db));
+  process.env.CAPABILITY_CACHE_TTL_MS = '0';
 
   const seededUser = await tenantDb(db, '__test_discovery__')
     .unscoped('users', 'test discovery of seeded internal user for seat lifecycle guard integration')
@@ -195,11 +202,16 @@ beforeAll(async () => {
   await db('co_managed_entitlements').insert({ tenant: tenant(), source: 'hosted', source_reference: `sub_${randomUUID()}`, capacity: 20,
     verified_at: new Date(Date.now() - 400 * DAY), valid_until: new Date(Date.now() + 365 * DAY) });
   arrangementId = await enableSeats(fixture.clientId, [fixture.boardId, alsoShared.boardId]);
-  await db('co_managed_seat_assignments').insert({ tenant: tenant(), assignment_id: randomUUID(), arrangement_id: arrangementId,
-    user_id: technician, state: 'active' });
+  await db.transaction(async (trx) => {
+    await retainBuiltinResolverSubject(trx, { tenant: tenant(), userId: technician }, CO_MANAGED_SEAT_RESOLVER_ID);
+    await trx('co_managed_seat_assignments').insert({ tenant: tenant(), assignment_id: randomUUID(), arrangement_id: arrangementId,
+      user_id: technician, state: 'active' });
+  });
 }, HOOK_TIMEOUT);
 
 afterAll(async () => {
+  delete process.env.CAPABILITY_CACHE_TTL_MS;
+  delete process.env.FORCE_CAPABILITIES;
   await db?.destroy().catch(() => undefined);
 });
 
@@ -262,6 +274,19 @@ describe('a client with a live seat arrangement cannot be deleted, merged or mad
     await new ClientService().update(clientId, { notes: 'Still editable over REST', is_inactive: false } as any, serviceContext());
 
     expect((await client()).notes).toBe('Still editable over REST');
+  }, HOOK_TIMEOUT);
+
+  it('does not refuse a tenant the co-managed-seat capability does not serve, whatever rows it holds', async () => {
+    const closed = await insertClient('Capability closed');
+    await enableSeats(closed, [fixture.boardId]);
+    process.env.FORCE_CAPABILITIES = 'co-managed-seat:off';
+    try {
+      expect(await countLiveCoManagedSeatArrangementsForClient(db, { tenant: tenant(), entityId: closed })).toBe(0);
+      await db.transaction((trx) => ClientModel.updateClient(closed, { is_inactive: true } as any, tenant(), trx));
+      expect((await clientRow(closed)).is_inactive).toBe(true);
+    } finally {
+      delete process.env.FORCE_CAPABILITIES;
+    }
   }, HOOK_TIMEOUT);
 
   it('allows inactivation, merge and deletion once the arrangement has ended', async () => {
@@ -392,10 +417,26 @@ describe('a ticket that leaves its seat arrangement returns to the MSP (F094)', 
     await endArrangement(neighbourArrangement);
   }, HOOK_TIMEOUT);
 
-  it('a tenant with no seat arrangement pays one read on a move and nothing otherwise', async () => {
+  it('a tenant the capability does not serve pays no query on a move, and one with the capability forced off changes nothing', async () => {
+    process.env.FORCE_CAPABILITIES = 'co-managed-seat:off';
+    try {
+      const { ticketId } = await ticketWithClientIt();
+      await db.transaction((trx) => TicketModel.updateTicket(ticketId, { board_id: notShared.boardId, status_id: notShared.statusId } as any, tenant(), trx));
+      expect((await ticket(ticketId)).assigned_to).toBe(technician);
+      expect(await workRow(ticketId)).toMatchObject({ responsibility: 'client_it', revision: 1 });
+    } finally {
+      delete process.env.FORCE_CAPABILITIES;
+    }
+  }, HOOK_TIMEOUT);
+
+  it('a tenant with no seat arrangement is not served and pays no query, on a move or otherwise', async () => {
     const other = await createSecondaryTenant(db);
     const [ticketId, boardA, boardB, clientId] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
     const queries: string[] = [];
+    // The verdict is cached per tenant: one participation read to learn it, then nothing.
+    process.env.CAPABILITY_CACHE_TTL_MS = '30000';
+    await db.transaction((trx) => releaseSeatTicketOnMove(trx, other.tenantId, ticketId,
+      { client_id: clientId, board_id: boardA }, { client_id: clientId, board_id: boardB }));
     const record = (query: { sql: string }) => { if (!/^(BEGIN|COMMIT|ROLLBACK)/i.test(query.sql)) queries.push(query.sql); };
 
     db.on('query', record);
@@ -408,10 +449,10 @@ describe('a ticket that leaves its seat arrangement returns to the MSP (F094)', 
       const moved = await db.transaction((trx) => releaseSeatTicketOnMove(trx, other.tenantId, ticketId,
         { client_id: clientId, board_id: boardA }, { client_id: clientId, board_id: boardB }));
       expect(moved).toEqual({ assigneeCleared: false });
-      expect(queries).toHaveLength(1);
-      expect(queries[0]).toContain('co_managed_seat_arrangements');
+      expect(queries).toEqual([]);
     } finally {
       db.removeListener('query', record);
+      process.env.CAPABILITY_CACHE_TTL_MS = '0';
     }
   }, HOOK_TIMEOUT);
 });

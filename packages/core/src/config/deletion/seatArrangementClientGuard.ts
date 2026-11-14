@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { isCapabilityServed } from '../../lib/capability';
 
 /**
  * The one question every involuntary end of a client asks about the co-managed seat shape:
@@ -9,8 +10,10 @@ import type { Knex } from 'knex';
  * released. All three are refused until the arrangement is ended on purpose.
  *
  * Raw tenant scoping, like the rest of this folder: `@alga-psa/core` cannot depend on
- * `@alga-psa/db`. The arrangement row is itself the served condition, so a tenant that has never
- * enabled the seat shape pays one indexed read and is never refused.
+ * `@alga-psa/db`. Gated like the `co-managed` guards beside it: the `co-managed-seat` capability
+ * says whether the tenant is served at all (the verdict is cached per tenant), and only then does
+ * the live arrangement row decide the refusal. A tenant that is not served pays no statement here
+ * and is never refused.
  */
 const liveSeatArrangements = (trx: Knex | Knex.Transaction, tenant: string, clientId: string): Knex.QueryBuilder =>
   trx('co_managed_seat_arrangements')
@@ -21,6 +24,7 @@ export const countLiveCoManagedSeatArrangementsForClient = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
+  if (!(await isCapabilityServed('co-managed-seat', options.tenant))) return 0;
   const result = await liveSeatArrangements(trx, options.tenant, options.entityId)
     .count<{ count: string }>('* as count')
     .first();
@@ -58,6 +62,7 @@ export async function assertClientPatchKeepsSeatArrangement(
   patch: { is_inactive?: unknown },
 ): Promise<void> {
   if (patch.is_inactive !== true) return;
+  if (!(await isCapabilityServed('co-managed-seat', tenant))) return;
   await trx('clients').where({ 'clients.tenant': tenant, client_id: clientId }).forUpdate().first('client_id');
   if (await liveSeatArrangements(trx, tenant, clientId).first('arrangement_id')) throw new ClientSeatArrangementError();
 }
