@@ -262,6 +262,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
     const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
     const chargesById = expanded.charges;
     context = { ...context, lines: expanded.lines };
+    await this.applyRecurringSeatQuantities(knex, tenantId, chargesById, context.lines);
     const clientsById = await this.loadClients(knex, tenantId, invoicesById, context);
 
     const linesByInvoice = new Map<string, typeof context.lines>();
@@ -926,6 +927,73 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
+  }
+
+  /**
+   * The shared allocation expansion exports every fixed-plan member as one unit
+   * at its allocated amount. A "recurring seats/units" member bills quantity ×
+   * unit rate, so its Desktop split carries the stored seat count and rate when
+   * they multiply back to the allocation exactly; a prorated period keeps the
+   * single-unit line. Bundle-priced members are left as expanded.
+   */
+  private async applyRecurringSeatQuantities(
+    knex: Knex,
+    tenantId: string,
+    charges: Map<string, DbCharge>,
+    lines: AccountingExportAdapterContext['lines']
+  ): Promise<void> {
+    const parentByDetailId = new Map<string, string>();
+    for (const line of lines) {
+      const metadata = line.payload?.metadata as Record<string, unknown> | undefined;
+      const detailId = metadata?.allocation_detail_id;
+      const parentId = metadata?.allocation_parent_charge_id;
+      if (typeof detailId === 'string' && typeof parentId === 'string') {
+        parentByDetailId.set(detailId, parentId);
+      }
+    }
+    if (parentByDetailId.size === 0) {
+      return;
+    }
+
+    const db = tenantDb(knex, tenantId);
+    // The invoice-time bundle snapshot is authoritative; invoices generated
+    // before it existed fall back to the member's configured pricing basis.
+    const parents = await db.table('invoice_charges')
+      .whereIn('item_id', Array.from(new Set(parentByDetailId.values())))
+      .select('item_id', 'bundle_presentation');
+    const snapshotBasis = new Map<string, unknown>();
+    for (const parent of parents) {
+      const presentation = typeof parent.bundle_presentation === 'string'
+        ? JSON.parse(parent.bundle_presentation)
+        : parent.bundle_presentation;
+      for (const component of presentation?.components ?? []) {
+        for (const detailId of component.detailItemIds ?? []) {
+          snapshotBasis.set(detailId, component.pricingBasis);
+        }
+      }
+    }
+
+    const query = db.table('invoice_charge_details as d');
+    db.tenantJoin(query, 'contract_line_service_fixed_config as f', 'f.config_id', 'd.config_id', { type: 'left' });
+    const details = await query
+      .whereIn('d.item_detail_id', Array.from(parentByDetailId.keys()))
+      .select('d.item_detail_id', 'd.quantity', 'd.rate', 'f.pricing_basis');
+
+    for (const detail of details) {
+      const basis = snapshotBasis.has(detail.item_detail_id)
+        ? snapshotBasis.get(detail.item_detail_id)
+        : detail.pricing_basis;
+      const charge = charges.get(detail.item_detail_id);
+      if (basis !== 'unit' || !charge) {
+        continue;
+      }
+      const quantity = Number(detail.quantity);
+      const rate = Number(detail.rate);
+      if (!(quantity > 0) || !Number.isFinite(rate) || Math.round(quantity * rate) !== Number(charge.net_amount)) {
+        continue;
+      }
+      charges.set(detail.item_detail_id, { ...charge, quantity, unit_price: rate });
+    }
   }
 
   private async loadCharges(
