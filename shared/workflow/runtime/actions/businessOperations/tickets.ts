@@ -356,7 +356,10 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   additionalUsers: WorkflowTicketResolvedAdditionalUser[]
 ): Promise<void> => {
   // Human-work guard (R5.3): additional agents and the primary must be active internal users.
-  await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo, ...additionalUsers.map((u) => u.userId)]);
+  await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo, ...additionalUsers.map((u) => u.userId)], {
+    kind: 'ticket',
+    ticketId,
+  });
 
   await tenantScopedTable(tx, 'ticket_resources')
     .where('ticket_id', ticketId)

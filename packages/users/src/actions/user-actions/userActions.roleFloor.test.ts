@@ -52,6 +52,9 @@ vi.mock('@alga-psa/db', () => ({
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
   isUserRoleFloorError: (error: any) => error?.name === 'UserRoleFloorError',
   UserRoleFloorError: UserRoleFloorErrorStub,
+  // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
+  assertSeatTechnicianWrite: async () => undefined,
+  isSeatTechnicianGuardError: () => false,
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: vi.fn() }));

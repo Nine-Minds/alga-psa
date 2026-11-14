@@ -12,6 +12,7 @@ import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
 import { assertUserRoleFloor, isUserRoleFloorRejected, UserRoleFloorError } from '../lib/userRoleFloor';
+import { assertSeatTechnicianWrite } from '../lib/seatTechnicianGuard';
 import { verifyPassword } from '@alga-psa/core/encryption';
 
 interface IUserRoleWithOptionalTenant extends Omit<IUserRole, 'tenant'> {
@@ -612,6 +613,8 @@ const User = {
       if (isUserRoleFloorRejected(floor)) {
         throw new UserRoleFloorError(floor.message, floor.violation);
       }
+
+      await assertSeatTechnicianWrite(knexOrTrx, tenant, [user_id], { roleIds: roles.map((role) => role.role_id) });
 
       const db = tenantDb(knexOrTrx, tenant);
       await db.table('user_roles').where({ user_id }).del();

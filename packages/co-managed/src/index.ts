@@ -148,6 +148,8 @@ export * from './seatPeopleProjection';
 export * from './seatInvitation';
 // Seat shape (S38): ending an arrangement.
 export * from './seatArrangementEnd';
+// Seat shape (S10): revoking a seat and converting a technician to an MSP user.
+export * from './seatRevocation';
 // Seat shape (S23): ticket responsibility and the handoff in each direction.
 export * from './seatTicketHandoff';
 // Seat shape (S32): who a handoff and a shared IT note notify.
