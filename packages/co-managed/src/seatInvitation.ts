@@ -26,7 +26,7 @@ const TOKEN_DISCOVERY_REASON = 'seat invitation acceptance: the token is the onl
 
 type InvitationCode = 'INVALID_INVITATION' | 'ARRANGEMENT_NOT_FOUND' | 'ARRANGEMENT_ENDED' | 'ENTITLEMENT_LAPSED' |
   'EMAIL_IN_USE' | 'EMAIL_INVITED' | 'SEAT_LIMIT' | 'INVALID_ACCEPTANCE' | 'INVITATION_NOT_FOUND' |
-  'INVITATION_EXPIRED' | 'INVITATION_REVOKED';
+  'INVITATION_EXPIRED' | 'INVITATION_REVOKED' | 'ASSIGNMENT_NOT_PENDING';
 
 export class CoManagedSeatInvitationError extends Error {
   constructor(public readonly code: InvitationCode) {
@@ -42,6 +42,7 @@ export class CoManagedSeatInvitationError extends Error {
       INVITATION_NOT_FOUND: 'This invitation is not valid.',
       INVITATION_EXPIRED: 'This invitation has expired. Ask for a new one.',
       INVITATION_REVOKED: 'This invitation was withdrawn.',
+      ASSIGNMENT_NOT_PENDING: 'Only a pending invitation can be changed here.',
     } satisfies Record<InvitationCode, string>)[code]);
     this.name = 'CoManagedSeatInvitationError';
   }
@@ -365,6 +366,107 @@ export async function acceptCoManagedSeatInvitation(
     return {
       sponsor_tenant: sponsorTenant, assignment_id: assignment.assignment_id, arrangement_id: assignment.arrangement_id,
       user_id: userId, email, state: 'active' as const, created: true,
+    };
+  });
+}
+
+export interface CoManagedSeatInvitationChange {
+  sponsorTenant: string;
+  /** The seat assignment the invitation holds, as listed on the arrangement. */
+  assignmentId: string;
+}
+
+export interface CoManagedSeatInvitationRefresh {
+  assignment_id: string;
+  arrangement_id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  /** The new setup token. The caller delivers it after this command commits, never inside it. */
+  token: string;
+}
+
+/** Locks the pending invitation behind an assignment, in the arrangement, assignment, invitation order acceptance uses. */
+async function lockPendingSeatInvitation(trx: Knex.Transaction, input: CoManagedSeatInvitationChange) {
+  const sponsor = tenantDb(trx, input.sponsorTenant);
+  const located = await sponsor.table('co_managed_seat_assignments').where('assignment_id', input.assignmentId)
+    .first('arrangement_id');
+  if (!located) throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  const arrangement = await sponsor.table('co_managed_seat_arrangements')
+    .where('arrangement_id', located.arrangement_id).forUpdate().first('state');
+  const assignment = await sponsor.table('co_managed_seat_assignments').where('assignment_id', input.assignmentId)
+    .forUpdate().first('assignment_id', 'arrangement_id', 'invitation_id', 'state');
+  if (!arrangement || !assignment) throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  const invitation = assignment.invitation_id ? await sponsor.table('user_invitations')
+    .where('invitation_id', assignment.invitation_id).forUpdate().first('invitation_id', 'email', 'first_name', 'last_name', 'used_at') : undefined;
+  return { sponsor, arrangement, assignment, invitation };
+}
+
+/**
+ * Withdraws a pending seat invitation and gives its seat back to the arrangement: the assignment
+ * becomes `revoked`, so it no longer counts as committed, and the invitation's token is spent.
+ *
+ * Pending invitations only. An accepted technician is a user, not an invitation; revoking one
+ * deactivates the user and belongs to the revocation command, which refuses here with
+ * `ASSIGNMENT_NOT_PENDING`. Declarative: revoking an invitation that is already revoked changes
+ * nothing and reports `revoked: false`.
+ *
+ * Locks the arrangement, assignment and invitation rows, in the order acceptance takes them, and
+ * never the pool.
+ */
+export async function revokeCoManagedSeatInvitation(
+  db: Knex,
+  input: CoManagedSeatInvitationChange,
+): Promise<{ revoked: boolean }> {
+  if (![input.sponsorTenant, input.assignmentId].every((id) => typeof id === 'string' && uuid.test(id))) {
+    throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  }
+  return db.transaction(async (trx) => {
+    const { sponsor, assignment, invitation } = await lockPendingSeatInvitation(trx, input);
+    if (assignment.state === 'revoked') return { revoked: false };
+    if (assignment.state !== 'invited') throw new CoManagedSeatInvitationError('ASSIGNMENT_NOT_PENDING');
+    // write-admission: exempt — seat assignment lifecycle state, written by its owning command under the arrangement lock
+    await sponsor.table('co_managed_seat_assignments').where('assignment_id', assignment.assignment_id)
+      .update({ state: 'revoked', revoked_at: trx.fn.now(), updated_at: trx.fn.now() });
+    if (invitation && !invitation.used_at) {
+      // write-admission: exempt — seat invitation, spent by its owning command under the arrangement lock
+      await sponsor.table('user_invitations').where('invitation_id', invitation.invitation_id).update({
+        used_at: trx.fn.now(),
+        metadata: trx.raw('metadata || ?::jsonb', [JSON.stringify({ revoked: true, revoked_at: new Date().toISOString() })]),
+      });
+    }
+    return { revoked: true };
+  });
+}
+
+/**
+ * Sends a pending seat invitation again: a new setup token (the old link stops working) and a
+ * new 24 hours. It takes no further seat, since the invitation already holds one. The caller
+ * delivers the returned token after this command commits.
+ *
+ * Refuses with `ARRANGEMENT_ENDED` for an arrangement that has ended and with
+ * `ASSIGNMENT_NOT_PENDING` for a technician who has accepted or an invitation that was revoked.
+ */
+export async function refreshCoManagedSeatInvitation(
+  db: Knex,
+  input: CoManagedSeatInvitationChange,
+): Promise<CoManagedSeatInvitationRefresh> {
+  if (![input.sponsorTenant, input.assignmentId].every((id) => typeof id === 'string' && uuid.test(id))) {
+    throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  }
+  return db.transaction(async (trx) => {
+    const { sponsor, arrangement, assignment, invitation } = await lockPendingSeatInvitation(trx, input);
+    if (arrangement.state !== 'active') throw new CoManagedSeatInvitationError('ARRANGEMENT_ENDED');
+    if (assignment.state !== 'invited' || !invitation || invitation.used_at) {
+      throw new CoManagedSeatInvitationError('ASSIGNMENT_NOT_PENDING');
+    }
+    const token = randomBytes(32).toString('hex');
+    // write-admission: exempt — seat invitation, refreshed by its owning command under the arrangement lock
+    await sponsor.table('user_invitations').where('invitation_id', invitation.invitation_id)
+      .update({ token, expires_at: trx.raw("now() + interval '24 hours'") });
+    return {
+      assignment_id: assignment.assignment_id, arrangement_id: assignment.arrangement_id, token,
+      email: String(invitation.email), firstName: String(invitation.first_name ?? ''), lastName: String(invitation.last_name ?? ''),
     };
   });
 }

@@ -398,6 +398,107 @@
     "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Este espacio de trabajo no tiene un grupo cogestionado. Añada puestos cogestionados para usar esta función.",
+        "lapsed": "El grupo cogestionado ha caducado. Restáurelo antes de añadir puestos.",
+        "capacity": "El grupo no tiene puestos libres. Añada puestos al grupo o libere algunos de otro cliente.",
+        "clientInactive": "Reactive este cliente antes de activar la TI cogestionada.",
+        "clientNotFound": "Este cliente ya no está disponible.",
+        "hasArrangement": "Este cliente ya tiene TI cogestionada. Actualice para verlo."
+      },
+      "error": {
+        "operationConflict": "Esta solicitud ya se envió con datos distintos. Actualice e inicie de nuevo.",
+        "invalidSeats": "Introduzca un número entero de puestos, como mínimo 1.",
+        "invalidInvitation": "Introduzca un nombre y una dirección de correo válida.",
+        "emailInUse": "Este correo ya pertenece a una cuenta de usuario. Use otra dirección.",
+        "emailInvited": "Este correo ya tiene una invitación pendiente.",
+        "seatLimit": "Todos los puestos están en uso. Añada puestos o retire una invitación primero.",
+        "poolLimit": "El grupo no tiene tantos puestos disponibles.",
+        "allocationConflict": "Los puestos cambiaron mientras editaba. Actualice e inténtelo de nuevo.",
+        "board": "Un tablero seleccionado ya no está disponible. Actualice y elija de nuevo.",
+        "project": "Un proyecto seleccionado ya no está disponible. Actualice y elija de nuevo.",
+        "handoffUser": "La persona seleccionada ya no está disponible. Elija a otra persona.",
+        "notPending": "Este técnico ya aceptó, por lo que no se puede cambiar la invitación.",
+        "arrangementGone": "Este acuerdo de puestos ya no está activo. Actualice para ver su estado.",
+        "generic": "No funcionó. Actualice e inténtelo de nuevo.",
+        "load": "No se pudieron cargar las opciones. Actualice e inténtelo de nuevo.",
+        "submit": "Es posible que la solicitud no haya finalizado. Inténtelo de nuevo; no se aplicará dos veces."
+      },
+      "saved": "Guardado.",
+      "boards": {
+        "title": "Ámbito de tableros",
+        "hint": "Los técnicos trabajan los tickets de este cliente en los tableros marcados aquí. Si no hay ninguno marcado, no ven tickets.",
+        "save": "Guardar ámbito de tableros",
+        "none": "No hay tableros para elegir.",
+        "canCreate": "Puede crear tickets"
+      },
+      "projects": {
+        "title": "Proyectos compartidos",
+        "hint": "Proyectos de este cliente que sus técnicos pueden abrir.",
+        "none": "Este cliente no tiene proyectos que compartir.",
+        "save": "Guardar proyectos compartidos"
+      },
+      "handoff": {
+        "title": "Valores predeterminados de traspaso",
+        "assignee": "Asignar los tickets que se le traspasen a",
+        "nobody": "Dejar sin asignar",
+        "save": "Guardar valores de traspaso"
+      },
+      "client": {
+        "seatArrangement": "Acuerdo de puestos",
+        "summary": "Acuerdo de puestos: {{used}} de {{count}} puestos en uso"
+      },
+      "technicians": {
+        "sent": "Invitación enviada.",
+        "notSent": "El puesto está reservado, pero el correo no se envió. Reenvíelo.",
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "status": "Estado",
+        "active": "Activo",
+        "expired": "Invitación caducada",
+        "invited": "Invitado",
+        "resend": "Reenviar",
+        "withdraw": "Retirar",
+        "title": "Técnicos",
+        "none": "Aún no hay técnicos.",
+        "invite": "Invitar a un técnico",
+        "withdrawTitle": "Retirar invitación",
+        "withdrawMessage": "¿Retirar la invitación de {{email}}? El puesto vuelve a este acuerdo.",
+        "withdrawn": "Invitación retirada."
+      },
+      "panel": {
+        "title": "Acuerdo de puestos",
+        "usage": "{{used}} de {{count}} puestos en uso",
+        "allocation": "Puestos asignados",
+        "changeSeats": "Cambiar puestos"
+      },
+      "access": {
+        "title": "Acceso y traspaso"
+      },
+      "setup": {
+        "seats": "Número de puestos",
+        "boards": "Tableros en el ámbito",
+        "boardsHint": "Los técnicos solo ven los tickets de su empresa en estos tableros.",
+        "technicianName": "Nombre del primer técnico",
+        "technicianEmail": "Correo electrónico del primer técnico",
+        "submit": "Activar puestos",
+        "title": "Acuerdo de puestos"
+      },
+      "chooser": {
+        "seat": "Puesto",
+        "seatHint": "Los técnicos del cliente trabajan en su PSA, limitados a su empresa.",
+        "workspace": "Espacio de trabajo",
+        "workspaceHint": "El equipo de TI del cliente tiene su propio centro de servicio y escala a usted.",
+        "description": "Elija cómo trabaja con usted el equipo de TI de este cliente.",
+        "shape": "Modalidad cogestionada",
+        "pool": "{{available}} de {{purchased}} puestos disponibles. {{allocated}} asignados."
+      },
+      "states": {
+        "active": "Activo",
+        "ended": "Finalizado"
+      }
+    },
     "portableExport": {
       "title": "Exportar espacio de trabajo",
       "description": "Descargue un archivo portátil y cifrado con los registros y archivos de su espacio de trabajo.",
@@ -474,6 +575,10 @@
     },
     "loading": "Cargando la capacidad de puestos de cliente…",
     "overview": {
+      "shape": "Modalidad",
+      "state": "Estado",
+      "seatsUsed": "Puestos en uso",
+      "seatsAllocated": "Puestos asignados",
       "actions": "Acciones",
       "client": "Cliente",
       "empty": "Ningún cliente cogestionado coincide con esta búsqueda.",

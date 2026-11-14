@@ -398,6 +398,107 @@
     "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Dieser Arbeitsbereich hat keinen Co-Managed-Pool. Fügen Sie Co-Managed-Plätze hinzu, um dies zu nutzen.",
+        "lapsed": "Der Co-Managed-Pool ist abgelaufen. Stellen Sie ihn wieder her, bevor Sie Plätze hinzufügen.",
+        "capacity": "Im Pool sind keine Plätze mehr frei. Fügen Sie dem Pool Plätze hinzu oder geben Sie Plätze eines anderen Kunden frei.",
+        "clientInactive": "Reaktivieren Sie diesen Kunden, bevor Sie Co-Managed IT aktivieren.",
+        "clientNotFound": "Dieser Kunde ist nicht mehr verfügbar.",
+        "hasArrangement": "Dieser Kunde hat bereits Co-Managed IT. Aktualisieren Sie die Ansicht, um es zu sehen."
+      },
+      "error": {
+        "operationConflict": "Diese Anfrage wurde bereits mit anderen Angaben gesendet. Aktualisieren Sie die Ansicht und beginnen Sie neu.",
+        "invalidSeats": "Geben Sie eine ganze Zahl von Plätzen ein, mindestens 1.",
+        "invalidInvitation": "Geben Sie einen Namen und eine gültige E-Mail-Adresse ein.",
+        "emailInUse": "Diese E-Mail-Adresse gehört bereits zu einem Benutzerkonto. Verwenden Sie eine andere Adresse.",
+        "emailInvited": "Für diese E-Mail-Adresse besteht bereits eine offene Einladung.",
+        "seatLimit": "Alle Plätze sind belegt. Fügen Sie zuerst Plätze hinzu oder ziehen Sie eine Einladung zurück.",
+        "poolLimit": "Im Pool sind nicht so viele Plätze verfügbar.",
+        "allocationConflict": "Die Plätze wurden während der Bearbeitung geändert. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
+        "board": "Ein ausgewähltes Board ist nicht mehr verfügbar. Aktualisieren Sie die Ansicht und wählen Sie erneut.",
+        "project": "Ein ausgewähltes Projekt ist nicht mehr verfügbar. Aktualisieren Sie die Ansicht und wählen Sie erneut.",
+        "handoffUser": "Die ausgewählte Person ist nicht mehr verfügbar. Wählen Sie eine andere Person.",
+        "notPending": "Dieser Techniker hat bereits angenommen, die Einladung kann daher nicht geändert werden.",
+        "arrangementGone": "Diese Platzvereinbarung ist nicht mehr aktiv. Aktualisieren Sie die Ansicht, um den Status zu sehen.",
+        "generic": "Das hat nicht funktioniert. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
+        "load": "Die Auswahlmöglichkeiten konnten nicht geladen werden. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
+        "submit": "Die Anfrage ist möglicherweise nicht abgeschlossen. Versuchen Sie es erneut; sie wird nicht doppelt angewendet."
+      },
+      "saved": "Gespeichert.",
+      "boards": {
+        "title": "Board-Umfang",
+        "hint": "Techniker bearbeiten Tickets dieses Kunden auf den hier markierten Boards. Ist keines markiert, sehen sie keine Tickets.",
+        "save": "Board-Umfang speichern",
+        "none": "Es gibt keine Boards zur Auswahl.",
+        "canCreate": "Kann Tickets erstellen"
+      },
+      "projects": {
+        "title": "Gemeinsame Projekte",
+        "hint": "Projekte dieses Kunden, die seine Techniker öffnen können.",
+        "none": "Dieser Kunde hat keine Projekte zum Teilen.",
+        "save": "Gemeinsame Projekte speichern"
+      },
+      "handoff": {
+        "title": "Standardwerte für Übergaben",
+        "assignee": "An Sie übergebene Tickets zuweisen an",
+        "nobody": "Nicht zugewiesen lassen",
+        "save": "Standardwerte für Übergaben speichern"
+      },
+      "client": {
+        "seatArrangement": "Platzvereinbarung",
+        "summary": "Platzvereinbarung: {{used}} von {{count}} Plätzen belegt"
+      },
+      "technicians": {
+        "sent": "Einladung gesendet.",
+        "notSent": "Der Platz ist reserviert, aber die E-Mail wurde nicht gesendet. Senden Sie sie erneut.",
+        "name": "Name",
+        "email": "E-Mail",
+        "status": "Status",
+        "active": "Aktiv",
+        "expired": "Einladung abgelaufen",
+        "invited": "Eingeladen",
+        "resend": "Erneut senden",
+        "withdraw": "Zurückziehen",
+        "title": "Techniker",
+        "none": "Noch keine Techniker.",
+        "invite": "Techniker einladen",
+        "withdrawTitle": "Einladung zurückziehen",
+        "withdrawMessage": "Einladung für {{email}} zurückziehen? Der Platz geht an diese Vereinbarung zurück.",
+        "withdrawn": "Einladung zurückgezogen."
+      },
+      "panel": {
+        "title": "Platzvereinbarung",
+        "usage": "{{used}} von {{count}} Plätzen belegt",
+        "allocation": "Zugewiesene Plätze",
+        "changeSeats": "Plätze ändern"
+      },
+      "access": {
+        "title": "Zugriff und Übergabe"
+      },
+      "setup": {
+        "seats": "Anzahl der Plätze",
+        "boards": "Boards im Umfang",
+        "boardsHint": "Techniker sehen Tickets ihres Unternehmens nur auf diesen Boards.",
+        "technicianName": "Name des ersten Technikers",
+        "technicianEmail": "E-Mail-Adresse des ersten Technikers",
+        "submit": "Plätze aktivieren",
+        "title": "Platzvereinbarung"
+      },
+      "chooser": {
+        "seat": "Platz",
+        "seatHint": "Die Techniker des Kunden arbeiten in Ihrer PSA, beschränkt auf ihr Unternehmen.",
+        "workspace": "Arbeitsbereich",
+        "workspaceHint": "Das IT-Team des Kunden erhält einen eigenen Servicedesk und eskaliert an Sie.",
+        "description": "Wählen Sie, wie das IT-Team dieses Kunden mit Ihnen zusammenarbeitet.",
+        "shape": "Co-Managed-Form",
+        "pool": "{{available}} von {{purchased}} Plätzen verfügbar. {{allocated}} zugewiesen."
+      },
+      "states": {
+        "active": "Aktiv",
+        "ended": "Beendet"
+      }
+    },
     "portableExport": {
       "title": "Arbeitsbereich exportieren",
       "description": "Laden Sie ein verschlüsseltes, portables Archiv der Datensätze und Dateien Ihres Arbeitsbereichs herunter.",
@@ -474,6 +575,10 @@
     },
     "loading": "Kundenplatzkapazität wird geladen…",
     "overview": {
+      "shape": "Form",
+      "state": "Status",
+      "seatsUsed": "Belegte Plätze",
+      "seatsAllocated": "Zugewiesene Plätze",
       "actions": "Aktionen",
       "client": "Kunde",
       "empty": "Keine Co-Managed-Kunden entsprechen dieser Suche.",

@@ -398,6 +398,107 @@
     "accountManagementRead": "Permission denied: account_management read required"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "This workspace has no co-managed pool. Add co-managed seats to use this.",
+        "lapsed": "The co-managed pool has lapsed. Restore it before adding seats.",
+        "capacity": "The pool has no seats left. Add seats to the pool or free some from another client.",
+        "clientInactive": "Reactivate this client before enabling co-managed IT.",
+        "clientNotFound": "This client is no longer available.",
+        "hasArrangement": "This client already has co-managed IT. Refresh to see it."
+      },
+      "error": {
+        "operationConflict": "This request was already sent with different details. Refresh and start again.",
+        "invalidSeats": "Enter a whole number of seats, at least 1.",
+        "invalidInvitation": "Enter a name and a valid email address.",
+        "emailInUse": "This email already belongs to a user account. Use a different address.",
+        "emailInvited": "This email already has a pending invitation.",
+        "seatLimit": "Every seat is in use. Add seats, or withdraw an invitation, first.",
+        "poolLimit": "The pool does not have that many seats available.",
+        "allocationConflict": "The seats changed while you were editing. Refresh and try again.",
+        "board": "A selected board is no longer available. Refresh and choose again.",
+        "project": "A selected project is no longer available. Refresh and choose again.",
+        "handoffUser": "The selected person is no longer available. Choose someone else.",
+        "notPending": "This technician already accepted, so the invitation cannot be changed.",
+        "arrangementGone": "This seat arrangement is no longer active. Refresh to see its state.",
+        "generic": "That did not work. Refresh and try again.",
+        "load": "Could not load the choices. Refresh and try again.",
+        "submit": "The request may not have finished. Try again; it will not be applied twice."
+      },
+      "saved": "Saved.",
+      "boards": {
+        "title": "Board scope",
+        "hint": "Technicians work tickets of this client on the boards ticked here. With none ticked they see no tickets.",
+        "save": "Save board scope",
+        "none": "There are no boards to choose from.",
+        "canCreate": "Can create tickets"
+      },
+      "projects": {
+        "title": "Shared projects",
+        "hint": "Projects of this client that its technicians can open.",
+        "none": "This client has no projects to share.",
+        "save": "Save shared projects"
+      },
+      "handoff": {
+        "title": "Handoff defaults",
+        "assignee": "Assign tickets handed to you to",
+        "nobody": "Leave unassigned",
+        "save": "Save handoff defaults"
+      },
+      "client": {
+        "seatArrangement": "Seat arrangement",
+        "summary": "Seat arrangement: {{used}} of {{count}} seats used"
+      },
+      "technicians": {
+        "sent": "Invitation sent.",
+        "notSent": "The seat is held, but the email did not send. Resend it.",
+        "name": "Name",
+        "email": "Email",
+        "status": "Status",
+        "active": "Active",
+        "expired": "Invitation expired",
+        "invited": "Invited",
+        "resend": "Resend",
+        "withdraw": "Withdraw",
+        "title": "Technicians",
+        "none": "No technicians yet.",
+        "invite": "Invite technician",
+        "withdrawTitle": "Withdraw invitation",
+        "withdrawMessage": "Withdraw the invitation for {{email}}? The seat goes back to this arrangement.",
+        "withdrawn": "Invitation withdrawn."
+      },
+      "panel": {
+        "title": "Seat arrangement",
+        "usage": "{{used}} of {{count}} seats used",
+        "allocation": "Seats allocated",
+        "changeSeats": "Change seats"
+      },
+      "access": {
+        "title": "Access and handoff"
+      },
+      "setup": {
+        "seats": "Number of seats",
+        "boards": "Boards in scope",
+        "boardsHint": "Technicians see tickets of their company on these boards only.",
+        "technicianName": "First technician name",
+        "technicianEmail": "First technician email",
+        "submit": "Enable seats",
+        "title": "Seat arrangement"
+      },
+      "chooser": {
+        "seat": "Seat",
+        "seatHint": "The client's technicians work in your PSA, limited to their company.",
+        "workspace": "Workspace",
+        "workspaceHint": "The client's IT team gets its own service desk and escalates to you.",
+        "description": "Choose how this client's IT team works with you.",
+        "shape": "Co-managed shape",
+        "pool": "{{available}} of {{purchased}} seats available. {{allocated}} allocated."
+      },
+      "states": {
+        "active": "Active",
+        "ended": "Ended"
+      }
+    },
     "portableExport": {
       "title": "Export workspace",
       "description": "Download an encrypted, portable archive of your workspace records and files.",
@@ -474,6 +575,10 @@
     },
     "loading": "Loading customer seat capacity…",
     "overview": {
+      "shape": "Shape",
+      "state": "State",
+      "seatsUsed": "Seats used",
+      "seatsAllocated": "Seats allocated",
       "actions": "Actions",
       "client": "Client",
       "empty": "No co-managed clients match this search.",

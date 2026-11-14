@@ -398,6 +398,107 @@
     "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Questo spazio di lavoro non ha un pool cogestito. Aggiungi postazioni cogestite per usarlo.",
+        "lapsed": "Il pool cogestito è scaduto. Ripristinalo prima di aggiungere postazioni.",
+        "capacity": "Il pool non ha più postazioni disponibili. Aggiungi postazioni al pool o liberane alcune da un altro cliente.",
+        "clientInactive": "Riattiva questo cliente prima di abilitare l’IT cogestita.",
+        "clientNotFound": "Questo cliente non è più disponibile.",
+        "hasArrangement": "Questo cliente ha già l’IT cogestita. Aggiorna per vederla."
+      },
+      "error": {
+        "operationConflict": "Questa richiesta è già stata inviata con dettagli diversi. Aggiorna e ricomincia.",
+        "invalidSeats": "Inserisci un numero intero di postazioni, almeno 1.",
+        "invalidInvitation": "Inserisci un nome e un indirizzo email valido.",
+        "emailInUse": "Questa email appartiene già a un account utente. Usa un altro indirizzo.",
+        "emailInvited": "Questa email ha già un invito in sospeso.",
+        "seatLimit": "Tutte le postazioni sono in uso. Aggiungi postazioni o ritira prima un invito.",
+        "poolLimit": "Il pool non ha così tante postazioni disponibili.",
+        "allocationConflict": "Le postazioni sono cambiate durante la modifica. Aggiorna e riprova.",
+        "board": "Una bacheca selezionata non è più disponibile. Aggiorna e scegli di nuovo.",
+        "project": "Un progetto selezionato non è più disponibile. Aggiorna e scegli di nuovo.",
+        "handoffUser": "La persona selezionata non è più disponibile. Scegli un’altra persona.",
+        "notPending": "Questo tecnico ha già accettato, quindi l’invito non può essere modificato.",
+        "arrangementGone": "Questo accordo di postazioni non è più attivo. Aggiorna per vederne lo stato.",
+        "generic": "Non ha funzionato. Aggiorna e riprova.",
+        "load": "Impossibile caricare le opzioni. Aggiorna e riprova.",
+        "submit": "La richiesta potrebbe non essere stata completata. Riprova; non verrà applicata due volte."
+      },
+      "saved": "Salvato.",
+      "boards": {
+        "title": "Ambito delle bacheche",
+        "hint": "I tecnici lavorano i ticket di questo cliente sulle bacheche selezionate qui. Se non ne è selezionata nessuna, non vedono ticket.",
+        "save": "Salva ambito delle bacheche",
+        "none": "Non ci sono bacheche tra cui scegliere.",
+        "canCreate": "Può creare ticket"
+      },
+      "projects": {
+        "title": "Progetti condivisi",
+        "hint": "Progetti di questo cliente che i suoi tecnici possono aprire.",
+        "none": "Questo cliente non ha progetti da condividere.",
+        "save": "Salva progetti condivisi"
+      },
+      "handoff": {
+        "title": "Impostazioni predefinite del passaggio",
+        "assignee": "Assegna i ticket passati a te a",
+        "nobody": "Lascia non assegnato",
+        "save": "Salva impostazioni predefinite del passaggio"
+      },
+      "client": {
+        "seatArrangement": "Accordo di postazioni",
+        "summary": "Accordo di postazioni: {{used}} di {{count}} postazioni in uso"
+      },
+      "technicians": {
+        "sent": "Invito inviato.",
+        "notSent": "La postazione è riservata, ma l’email non è stata inviata. Invia di nuovo.",
+        "name": "Nome",
+        "email": "Email",
+        "status": "Stato",
+        "active": "Attivo",
+        "expired": "Invito scaduto",
+        "invited": "Invitato",
+        "resend": "Invia di nuovo",
+        "withdraw": "Ritira",
+        "title": "Tecnici",
+        "none": "Ancora nessun tecnico.",
+        "invite": "Invita tecnico",
+        "withdrawTitle": "Ritira invito",
+        "withdrawMessage": "Ritirare l’invito per {{email}}? La postazione torna a questo accordo.",
+        "withdrawn": "Invito ritirato."
+      },
+      "panel": {
+        "title": "Accordo di postazioni",
+        "usage": "{{used}} di {{count}} postazioni in uso",
+        "allocation": "Postazioni assegnate",
+        "changeSeats": "Modifica postazioni"
+      },
+      "access": {
+        "title": "Accesso e passaggio"
+      },
+      "setup": {
+        "seats": "Numero di postazioni",
+        "boards": "Bacheche nell’ambito",
+        "boardsHint": "I tecnici vedono i ticket della loro azienda solo su queste bacheche.",
+        "technicianName": "Nome del primo tecnico",
+        "technicianEmail": "Email del primo tecnico",
+        "submit": "Abilita postazioni",
+        "title": "Accordo di postazioni"
+      },
+      "chooser": {
+        "seat": "Postazione",
+        "seatHint": "I tecnici del cliente lavorano nel tuo PSA, limitati alla loro azienda.",
+        "workspace": "Spazio di lavoro",
+        "workspaceHint": "Il team IT del cliente ha un proprio service desk e inoltra in escalation a te.",
+        "description": "Scegli come il team IT di questo cliente lavora con te.",
+        "shape": "Formula cogestita",
+        "pool": "{{available}} di {{purchased}} postazioni disponibili. {{allocated}} assegnate."
+      },
+      "states": {
+        "active": "Attivo",
+        "ended": "Terminato"
+      }
+    },
     "portableExport": {
       "title": "Esporta area di lavoro",
       "description": "Scarica un archivio portabile e crittografato dei record e dei file della tua area di lavoro.",
@@ -474,6 +575,10 @@
     },
     "loading": "Caricamento della capacità di postazioni per i clienti…",
     "overview": {
+      "shape": "Formula",
+      "state": "Stato",
+      "seatsUsed": "Postazioni in uso",
+      "seatsAllocated": "Postazioni assegnate",
       "actions": "Azioni",
       "client": "Cliente",
       "empty": "Nessun cliente cogestito corrisponde a questa ricerca.",

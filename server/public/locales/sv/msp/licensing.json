@@ -398,6 +398,107 @@
     "accountManagementRead": "Åtkomst nekad: läsbehörighet för account_management krävs"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Den här arbetsytan har ingen samhanterad pool. Lägg till samhanterade platser för att använda detta.",
+        "lapsed": "Den samhanterade poolen har gått ut. Återställ den innan du lägger till platser.",
+        "capacity": "Poolen har inga platser kvar. Lägg till platser i poolen eller frigör några från en annan kund.",
+        "clientInactive": "Återaktivera kunden innan du aktiverar samhanterad IT.",
+        "clientNotFound": "Den här kunden är inte längre tillgänglig.",
+        "hasArrangement": "Den här kunden har redan samhanterad IT. Uppdatera för att se den."
+      },
+      "error": {
+        "operationConflict": "Begäran har redan skickats med andra uppgifter. Uppdatera och börja om.",
+        "invalidSeats": "Ange ett heltal för antal platser, minst 1.",
+        "invalidInvitation": "Ange ett namn och en giltig e-postadress.",
+        "emailInUse": "Den här e-postadressen tillhör redan ett användarkonto. Använd en annan adress.",
+        "emailInvited": "Den här e-postadressen har redan en väntande inbjudan.",
+        "seatLimit": "Alla platser används. Lägg till platser eller dra tillbaka en inbjudan först.",
+        "poolLimit": "Poolen har inte så många platser tillgängliga.",
+        "allocationConflict": "Platserna ändrades medan du redigerade. Uppdatera och försök igen.",
+        "board": "En vald tavla är inte längre tillgänglig. Uppdatera och välj igen.",
+        "project": "Ett valt projekt är inte längre tillgängligt. Uppdatera och välj igen.",
+        "handoffUser": "Den valda personen är inte längre tillgänglig. Välj någon annan.",
+        "notPending": "Den här teknikern har redan godkänt, så inbjudan kan inte ändras.",
+        "arrangementGone": "Det här platsavtalet är inte längre aktivt. Uppdatera för att se status.",
+        "generic": "Det fungerade inte. Uppdatera och försök igen.",
+        "load": "Det gick inte att läsa in valen. Uppdatera och försök igen.",
+        "submit": "Begäran kanske inte slutfördes. Försök igen; den tillämpas inte två gånger."
+      },
+      "saved": "Sparat.",
+      "boards": {
+        "title": "Tavelomfattning",
+        "hint": "Tekniker arbetar med den här kundens ärenden på tavlorna som är markerade här. Utan markering ser de inga ärenden.",
+        "save": "Spara tavelomfattning",
+        "none": "Det finns inga tavlor att välja bland.",
+        "canCreate": "Kan skapa ärenden"
+      },
+      "projects": {
+        "title": "Delade projekt",
+        "hint": "Den här kundens projekt som dess tekniker kan öppna.",
+        "none": "Den här kunden har inga projekt att dela.",
+        "save": "Spara delade projekt"
+      },
+      "handoff": {
+        "title": "Standardvärden för överlämning",
+        "assignee": "Tilldela ärenden som överlämnas till dig till",
+        "nobody": "Lämna otilldelade",
+        "save": "Spara standardvärden för överlämning"
+      },
+      "client": {
+        "seatArrangement": "Platsavtal",
+        "summary": "Platsavtal: {{used}} av {{count}} platser används"
+      },
+      "technicians": {
+        "sent": "Inbjudan skickad.",
+        "notSent": "Platsen är reserverad, men e-postmeddelandet skickades inte. Skicka det igen.",
+        "name": "Namn",
+        "email": "E-post",
+        "status": "Status",
+        "active": "Aktiv",
+        "expired": "Inbjudan har gått ut",
+        "invited": "Inbjuden",
+        "resend": "Skicka igen",
+        "withdraw": "Dra tillbaka",
+        "title": "Tekniker",
+        "none": "Inga tekniker ännu.",
+        "invite": "Bjud in tekniker",
+        "withdrawTitle": "Dra tillbaka inbjudan",
+        "withdrawMessage": "Dra tillbaka inbjudan till {{email}}? Platsen går tillbaka till det här avtalet.",
+        "withdrawn": "Inbjudan har dragits tillbaka."
+      },
+      "panel": {
+        "title": "Platsavtal",
+        "usage": "{{used}} av {{count}} platser används",
+        "allocation": "Tilldelade platser",
+        "changeSeats": "Ändra platser"
+      },
+      "access": {
+        "title": "Åtkomst och överlämning"
+      },
+      "setup": {
+        "seats": "Antal platser",
+        "boards": "Tavlor i omfattningen",
+        "boardsHint": "Tekniker ser sitt företags ärenden endast på dessa tavlor.",
+        "technicianName": "Första teknikerns namn",
+        "technicianEmail": "Första teknikerns e-postadress",
+        "submit": "Aktivera platser",
+        "title": "Platsavtal"
+      },
+      "chooser": {
+        "seat": "Plats",
+        "seatHint": "Kundens tekniker arbetar i ert PSA, begränsade till sitt företag.",
+        "workspace": "Arbetsyta",
+        "workspaceHint": "Kundens IT-team får en egen servicedesk och eskalerar till er.",
+        "description": "Välj hur den här kundens IT-team arbetar med er.",
+        "shape": "Samhanterad form",
+        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade."
+      },
+      "states": {
+        "active": "Aktiv",
+        "ended": "Avslutad"
+      }
+    },
     "portableExport": {
       "title": "Exportera arbetsyta",
       "description": "Ladda ned ett krypterat, portabelt arkiv med arbetsytans poster och filer.",
@@ -474,6 +575,10 @@
     },
     "loading": "Läser in kundlicenskapacitet…",
     "overview": {
+      "shape": "Form",
+      "state": "Status",
+      "seatsUsed": "Platser som används",
+      "seatsAllocated": "Tilldelade platser",
       "actions": "Åtgärder",
       "client": "Kund",
       "empty": "Inga samhanterade kunder matchar sökningen.",

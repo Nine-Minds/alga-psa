@@ -11,6 +11,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCapability } from '@alga-psa/ui/hooks';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { getCoManagedBillingState, getCoManagedClientOverviewAction } from '@/lib/actions/coManagedActions';
+import CoManagedCombinedOverview from './CoManagedCombinedOverview';
 
 type Page = Awaited<ReturnType<typeof getCoManagedClientOverviewAction>>;
 type Row = Page['rows'][number];
@@ -27,6 +28,9 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
   // Served shows what exists; the client record's co-managed tab (setup, seats)
   // only exists for an admitted sponsor, so links into it are admit-only.
   const { admitted } = useCapability('co-managed');
+  // With the seat capability open the table below is the combined one; closed, this is the workspace overview as it was.
+  const seatCapability = useCapability('co-managed-seat');
+  const seatOpen = seatCapability.enabled || seatCapability.admitted;
   const [capacity, setCapacity] = useState<Capacity | null>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -34,16 +38,17 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
   const [error, setError] = useState(false);
   const generation = useRef(0);
 
-  useEffect(() => { void getCoManagedBillingState().then(setCapacity, () => setCapacity(null)); }, []);
+  useEffect(() => { if (!seatOpen) void getCoManagedBillingState().then(setCapacity, () => setCapacity(null)); }, [seatOpen]);
 
   useEffect(() => {
+    if (seatOpen) return;
     const current = ++generation.current;
     void getCoManagedClientOverviewAction({ search, page, pageSize: PAGE_SIZE }).then(
       next => { if (generation.current === current) { setResult(next); setError(false); } },
       () => { if (generation.current === current) { setResult(null); setError(true); } },
     );
     return () => { generation.current += 1; };
-  }, [search, page]);
+  }, [search, page, seatOpen]);
 
   const hrefFor = useCallback((row: Row) =>
     `/msp/clients/${encodeURIComponent(row.clientId)}?tab=co-managed&relationshipId=${encodeURIComponent(row.relationshipId)}`, []);
@@ -84,7 +89,7 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
     {!admitted && <p id="co-managed-overview-readonly" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
       {t('coManaged.overview.readOnly', { defaultValue: 'Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.' })}
     </p>}
-    {capacity && <p id="co-managed-overview-capacity" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
+    {!seatOpen && capacity && <p id="co-managed-overview-capacity" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
       {t('coManaged.overview.capacity', { allocated: capacity.allocated, count: capacity.capacity,
         defaultValue: '{{allocated}} of {{count}} co-managed seats allocated.' })}
     </p>}
@@ -104,11 +109,14 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
       <Input id="co-managed-overview-search" type="search" maxLength={200} value={search}
         onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
     </div>
+    {seatOpen && <CoManagedCombinedOverview search={search} admitted={admitted || seatCapability.admitted} />}
+    {!seatOpen && <>
     {error && <Alert variant="destructive"><AlertDescription id="co-managed-overview-error">
       {t('coManaged.overview.loadError', { defaultValue: 'Could not load co-managed clients.' })}</AlertDescription></Alert>}
     {!result && !error && <p role="status">{t('coManaged.loading')}</p>}
     {result && result.rows.length === 0 && <p>{t('coManaged.overview.empty', { defaultValue: 'No co-managed clients match this search.' })}</p>}
     {result && result.rows.length > 0 && <DataTable id="co-managed-client-overview" data={result.rows} columns={columns}
       pagination currentPage={page} onPageChange={setPage} pageSize={PAGE_SIZE} totalItems={result.totalCount} />}
+    </>}
   </div>;
 }

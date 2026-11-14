@@ -398,6 +398,107 @@
     "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Cet espace de travail n’a pas de pool cogéré. Ajoutez des postes cogérés pour l’utiliser.",
+        "lapsed": "Le pool cogéré a expiré. Rétablissez-le avant d’ajouter des postes.",
+        "capacity": "Le pool n’a plus de postes disponibles. Ajoutez des postes au pool ou libérez-en chez un autre client.",
+        "clientInactive": "Réactivez ce client avant d’activer l’informatique cogérée.",
+        "clientNotFound": "Ce client n’est plus disponible.",
+        "hasArrangement": "Ce client dispose déjà de l’informatique cogérée. Actualisez pour la voir."
+      },
+      "error": {
+        "operationConflict": "Cette demande a déjà été envoyée avec des informations différentes. Actualisez et recommencez.",
+        "invalidSeats": "Saisissez un nombre entier de postes, au moins 1.",
+        "invalidInvitation": "Saisissez un nom et une adresse e-mail valide.",
+        "emailInUse": "Cette adresse e-mail appartient déjà à un compte utilisateur. Utilisez une autre adresse.",
+        "emailInvited": "Cette adresse e-mail a déjà une invitation en attente.",
+        "seatLimit": "Tous les postes sont utilisés. Ajoutez des postes ou retirez d’abord une invitation.",
+        "poolLimit": "Le pool ne compte pas autant de postes disponibles.",
+        "allocationConflict": "Les postes ont changé pendant votre modification. Actualisez et réessayez.",
+        "board": "Un tableau sélectionné n’est plus disponible. Actualisez et choisissez à nouveau.",
+        "project": "Un projet sélectionné n’est plus disponible. Actualisez et choisissez à nouveau.",
+        "handoffUser": "La personne sélectionnée n’est plus disponible. Choisissez quelqu’un d’autre.",
+        "notPending": "Ce technicien a déjà accepté ; l’invitation ne peut plus être modifiée.",
+        "arrangementGone": "Cet accord de postes n’est plus actif. Actualisez pour voir son état.",
+        "generic": "Cela n’a pas fonctionné. Actualisez et réessayez.",
+        "load": "Impossible de charger les choix. Actualisez et réessayez.",
+        "submit": "La demande n’a peut-être pas abouti. Réessayez ; elle ne sera pas appliquée deux fois."
+      },
+      "saved": "Enregistré.",
+      "boards": {
+        "title": "Périmètre des tableaux",
+        "hint": "Les techniciens traitent les tickets de ce client sur les tableaux cochés ici. Si aucun n’est coché, ils ne voient aucun ticket.",
+        "save": "Enregistrer le périmètre des tableaux",
+        "none": "Aucun tableau à choisir.",
+        "canCreate": "Peut créer des tickets"
+      },
+      "projects": {
+        "title": "Projets partagés",
+        "hint": "Projets de ce client que ses techniciens peuvent ouvrir.",
+        "none": "Ce client n’a aucun projet à partager.",
+        "save": "Enregistrer les projets partagés"
+      },
+      "handoff": {
+        "title": "Valeurs par défaut du transfert",
+        "assignee": "Assigner les tickets qui vous sont transférés à",
+        "nobody": "Laisser non assigné",
+        "save": "Enregistrer les valeurs par défaut du transfert"
+      },
+      "client": {
+        "seatArrangement": "Accord de postes",
+        "summary": "Accord de postes : {{used}} sur {{count}} postes utilisés"
+      },
+      "technicians": {
+        "sent": "Invitation envoyée.",
+        "notSent": "Le poste est réservé, mais l’e-mail n’a pas été envoyé. Renvoyez-le.",
+        "name": "Nom",
+        "email": "E-mail",
+        "status": "Statut",
+        "active": "Actif",
+        "expired": "Invitation expirée",
+        "invited": "Invité",
+        "resend": "Renvoyer",
+        "withdraw": "Retirer",
+        "title": "Techniciens",
+        "none": "Aucun technicien pour l’instant.",
+        "invite": "Inviter un technicien",
+        "withdrawTitle": "Retirer l’invitation",
+        "withdrawMessage": "Retirer l’invitation de {{email}} ? Le poste revient à cet accord.",
+        "withdrawn": "Invitation retirée."
+      },
+      "panel": {
+        "title": "Accord de postes",
+        "usage": "{{used}} sur {{count}} postes utilisés",
+        "allocation": "Postes alloués",
+        "changeSeats": "Modifier les postes"
+      },
+      "access": {
+        "title": "Accès et transfert"
+      },
+      "setup": {
+        "seats": "Nombre de postes",
+        "boards": "Tableaux dans le périmètre",
+        "boardsHint": "Les techniciens ne voient les tickets de leur entreprise que sur ces tableaux.",
+        "technicianName": "Nom du premier technicien",
+        "technicianEmail": "E-mail du premier technicien",
+        "submit": "Activer les postes",
+        "title": "Accord de postes"
+      },
+      "chooser": {
+        "seat": "Poste",
+        "seatHint": "Les techniciens du client travaillent dans votre PSA, limités à leur entreprise.",
+        "workspace": "Espace de travail",
+        "workspaceHint": "L’équipe informatique du client dispose de son propre centre de services et escalade vers vous.",
+        "description": "Choisissez comment l’équipe informatique de ce client travaille avec vous.",
+        "shape": "Modèle cogéré",
+        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués."
+      },
+      "states": {
+        "active": "Actif",
+        "ended": "Terminé"
+      }
+    },
     "portableExport": {
       "title": "Exporter l’espace de travail",
       "description": "Téléchargez une archive portable et chiffrée des enregistrements et fichiers de votre espace de travail.",
@@ -474,6 +575,10 @@
     },
     "loading": "Chargement de la capacité en postes client…",
     "overview": {
+      "shape": "Modèle",
+      "state": "État",
+      "seatsUsed": "Postes utilisés",
+      "seatsAllocated": "Postes alloués",
       "actions": "Actions",
       "client": "Client",
       "empty": "Aucun client cogéré ne correspond à cette recherche.",

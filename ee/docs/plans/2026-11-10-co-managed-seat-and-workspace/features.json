@@ -666,7 +666,7 @@
   {
     "id": "F084",
     "description": "On a client with no arrangement, the Co-managed IT tab offers Seat and Workspace with one line each, the pool's available seats and any eligibility blocker; choosing Workspace continues into the existing provisioning flow unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "The Co-managed IT overview lists arrangements of both shapes in one table with client, shape, state and seats used and allocated, alongside pool totals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]

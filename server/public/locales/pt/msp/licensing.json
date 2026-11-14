@@ -398,6 +398,107 @@
     "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Este espaço de trabalho não tem um conjunto cogerido. Adicione lugares cogeridos para usar esta função.",
+        "lapsed": "O conjunto cogerido expirou. Restaure-o antes de adicionar lugares.",
+        "capacity": "O conjunto não tem lugares livres. Adicione lugares ao conjunto ou libere alguns de outro cliente.",
+        "clientInactive": "Reative este cliente antes de ativar a TI cogerida.",
+        "clientNotFound": "Este cliente já não está disponível.",
+        "hasArrangement": "Este cliente já tem TI cogerida. Atualize para vê-la."
+      },
+      "error": {
+        "operationConflict": "Esta solicitação já foi enviada com detalhes diferentes. Atualize e comece novamente.",
+        "invalidSeats": "Informe um número inteiro de lugares, no mínimo 1.",
+        "invalidInvitation": "Informe um nome e um endereço de e-mail válido.",
+        "emailInUse": "Este e-mail já pertence a uma conta de usuário. Use outro endereço.",
+        "emailInvited": "Este e-mail já tem um convite pendente.",
+        "seatLimit": "Todos os lugares estão em uso. Adicione lugares ou retire um convite primeiro.",
+        "poolLimit": "O conjunto não tem tantos lugares disponíveis.",
+        "allocationConflict": "Os lugares mudaram durante a edição. Atualize e tente novamente.",
+        "board": "Um quadro selecionado já não está disponível. Atualize e escolha novamente.",
+        "project": "Um projeto selecionado já não está disponível. Atualize e escolha novamente.",
+        "handoffUser": "A pessoa selecionada já não está disponível. Escolha outra pessoa.",
+        "notPending": "Este técnico já aceitou, por isso o convite não pode ser alterado.",
+        "arrangementGone": "Este acordo de lugares já não está ativo. Atualize para ver o estado.",
+        "generic": "Não funcionou. Atualize e tente novamente.",
+        "load": "Não foi possível carregar as opções. Atualize e tente novamente.",
+        "submit": "A solicitação pode não ter sido concluída. Tente novamente; ela não será aplicada duas vezes."
+      },
+      "saved": "Salvo.",
+      "boards": {
+        "title": "Âmbito dos quadros",
+        "hint": "Os técnicos trabalham os tickets deste cliente nos quadros marcados aqui. Sem nenhum marcado, não veem tickets.",
+        "save": "Salvar âmbito dos quadros",
+        "none": "Não há quadros para escolher.",
+        "canCreate": "Pode criar tickets"
+      },
+      "projects": {
+        "title": "Projetos compartilhados",
+        "hint": "Projetos deste cliente que os seus técnicos podem abrir.",
+        "none": "Este cliente não tem projetos para compartilhar.",
+        "save": "Salvar projetos compartilhados"
+      },
+      "handoff": {
+        "title": "Padrões de transferência",
+        "assignee": "Atribuir os tickets transferidos para você a",
+        "nobody": "Deixar sem atribuição",
+        "save": "Salvar padrões de transferência"
+      },
+      "client": {
+        "seatArrangement": "Acordo de lugares",
+        "summary": "Acordo de lugares: {{used}} de {{count}} lugares em uso"
+      },
+      "technicians": {
+        "sent": "Convite enviado.",
+        "notSent": "O lugar está reservado, mas o e-mail não foi enviado. Reenvie-o.",
+        "name": "Nome",
+        "email": "E-mail",
+        "status": "Estado",
+        "active": "Ativo",
+        "expired": "Convite expirado",
+        "invited": "Convidado",
+        "resend": "Reenviar",
+        "withdraw": "Retirar",
+        "title": "Técnicos",
+        "none": "Ainda não há técnicos.",
+        "invite": "Convidar técnico",
+        "withdrawTitle": "Retirar convite",
+        "withdrawMessage": "Retirar o convite de {{email}}? O lugar volta para este acordo.",
+        "withdrawn": "Convite retirado."
+      },
+      "panel": {
+        "title": "Acordo de lugares",
+        "usage": "{{used}} de {{count}} lugares em uso",
+        "allocation": "Lugares atribuídos",
+        "changeSeats": "Alterar lugares"
+      },
+      "access": {
+        "title": "Acesso e transferência"
+      },
+      "setup": {
+        "seats": "Número de lugares",
+        "boards": "Quadros no âmbito",
+        "boardsHint": "Os técnicos veem os tickets da sua empresa apenas nestes quadros.",
+        "technicianName": "Nome do primeiro técnico",
+        "technicianEmail": "E-mail do primeiro técnico",
+        "submit": "Ativar lugares",
+        "title": "Acordo de lugares"
+      },
+      "chooser": {
+        "seat": "Lugar",
+        "seatHint": "Os técnicos do cliente trabalham no seu PSA, limitados à sua empresa.",
+        "workspace": "Espaço de trabalho",
+        "workspaceHint": "A equipe de TI do cliente tem o seu próprio service desk e escala para você.",
+        "description": "Escolha como a equipe de TI deste cliente trabalha com você.",
+        "shape": "Modelo cogerido",
+        "pool": "{{available}} de {{purchased}} lugares disponíveis. {{allocated}} atribuídos."
+      },
+      "states": {
+        "active": "Ativo",
+        "ended": "Encerrado"
+      }
+    },
     "portableExport": {
       "title": "Exportar espaço de trabalho",
       "description": "Baixe um arquivo portátil e criptografado com os registros e arquivos do seu espaço de trabalho.",
@@ -474,6 +575,10 @@
     },
     "loading": "Carregando a capacidade de assentos de cliente…",
     "overview": {
+      "shape": "Modelo",
+      "state": "Estado",
+      "seatsUsed": "Lugares em uso",
+      "seatsAllocated": "Lugares atribuídos",
       "actions": "Ações",
       "client": "Cliente",
       "empty": "Nenhum cliente cogerido corresponde a esta pesquisa.",

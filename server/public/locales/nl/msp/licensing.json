@@ -398,6 +398,107 @@
     "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Deze werkruimte heeft geen co-managed pool. Voeg co-managed plekken toe om dit te gebruiken.",
+        "lapsed": "De co-managed pool is verlopen. Herstel de pool voordat u plekken toevoegt.",
+        "capacity": "In de pool zijn geen plekken meer over. Voeg plekken toe aan de pool of maak er een aantal vrij bij een andere klant.",
+        "clientInactive": "Activeer deze klant opnieuw voordat u gezamenlijk beheerde IT inschakelt.",
+        "clientNotFound": "Deze klant is niet meer beschikbaar.",
+        "hasArrangement": "Deze klant heeft al gezamenlijk beheerde IT. Vernieuw de pagina om dit te zien."
+      },
+      "error": {
+        "operationConflict": "Dit verzoek is al met andere gegevens verzonden. Vernieuw de pagina en begin opnieuw.",
+        "invalidSeats": "Voer een geheel aantal plekken in, minimaal 1.",
+        "invalidInvitation": "Voer een naam en een geldig e-mailadres in.",
+        "emailInUse": "Dit e-mailadres hoort al bij een gebruikersaccount. Gebruik een ander adres.",
+        "emailInvited": "Voor dit e-mailadres staat al een uitnodiging open.",
+        "seatLimit": "Alle plekken zijn in gebruik. Voeg eerst plekken toe of trek een uitnodiging in.",
+        "poolLimit": "De pool heeft niet zoveel plekken beschikbaar.",
+        "allocationConflict": "De plekken zijn gewijzigd terwijl u bezig was. Vernieuw de pagina en probeer het opnieuw.",
+        "board": "Een geselecteerd bord is niet meer beschikbaar. Vernieuw de pagina en kies opnieuw.",
+        "project": "Een geselecteerd project is niet meer beschikbaar. Vernieuw de pagina en kies opnieuw.",
+        "handoffUser": "De geselecteerde persoon is niet meer beschikbaar. Kies iemand anders.",
+        "notPending": "Deze technicus heeft al geaccepteerd, dus de uitnodiging kan niet meer worden gewijzigd.",
+        "arrangementGone": "Deze plekkenregeling is niet meer actief. Vernieuw de pagina om de status te zien.",
+        "generic": "Dat is niet gelukt. Vernieuw de pagina en probeer het opnieuw.",
+        "load": "De keuzes konden niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
+        "submit": "Het verzoek is mogelijk niet voltooid. Probeer het opnieuw; het wordt niet dubbel toegepast."
+      },
+      "saved": "Opgeslagen.",
+      "boards": {
+        "title": "Bordbereik",
+        "hint": "Technici werken de tickets van deze klant af op de hier aangevinkte borden. Als er geen is aangevinkt, zien ze geen tickets.",
+        "save": "Bordbereik opslaan",
+        "none": "Er zijn geen borden om uit te kiezen.",
+        "canCreate": "Kan tickets aanmaken"
+      },
+      "projects": {
+        "title": "Gedeelde projecten",
+        "hint": "Projecten van deze klant die de technici kunnen openen.",
+        "none": "Deze klant heeft geen projecten om te delen.",
+        "save": "Gedeelde projecten opslaan"
+      },
+      "handoff": {
+        "title": "Standaardwaarden voor overdracht",
+        "assignee": "Aan u overgedragen tickets toewijzen aan",
+        "nobody": "Niet toegewezen laten",
+        "save": "Standaardwaarden voor overdracht opslaan"
+      },
+      "client": {
+        "seatArrangement": "Plekkenregeling",
+        "summary": "Plekkenregeling: {{used}} van {{count}} plekken in gebruik"
+      },
+      "technicians": {
+        "sent": "Uitnodiging verzonden.",
+        "notSent": "De plek is vastgehouden, maar de e-mail is niet verzonden. Verzend de uitnodiging opnieuw.",
+        "name": "Naam",
+        "email": "E-mail",
+        "status": "Status",
+        "active": "Actief",
+        "expired": "Uitnodiging verlopen",
+        "invited": "Uitgenodigd",
+        "resend": "Opnieuw verzenden",
+        "withdraw": "Intrekken",
+        "title": "Technici",
+        "none": "Nog geen technici.",
+        "invite": "Technicus uitnodigen",
+        "withdrawTitle": "Uitnodiging intrekken",
+        "withdrawMessage": "De uitnodiging voor {{email}} intrekken? De plek gaat terug naar deze regeling.",
+        "withdrawn": "Uitnodiging ingetrokken."
+      },
+      "panel": {
+        "title": "Plekkenregeling",
+        "usage": "{{used}} van {{count}} plekken in gebruik",
+        "allocation": "Toegewezen plekken",
+        "changeSeats": "Plekken wijzigen"
+      },
+      "access": {
+        "title": "Toegang en overdracht"
+      },
+      "setup": {
+        "seats": "Aantal plekken",
+        "boards": "Borden in bereik",
+        "boardsHint": "Technici zien de tickets van hun bedrijf alleen op deze borden.",
+        "technicianName": "Naam van eerste technicus",
+        "technicianEmail": "E-mailadres van eerste technicus",
+        "submit": "Plekken inschakelen",
+        "title": "Plekkenregeling"
+      },
+      "chooser": {
+        "seat": "Plek",
+        "seatHint": "De technici van de klant werken in uw PSA, beperkt tot hun eigen bedrijf.",
+        "workspace": "Werkruimte",
+        "workspaceHint": "Het IT-team van de klant krijgt een eigen servicedesk en escaleert naar u.",
+        "description": "Kies hoe het IT-team van deze klant met u samenwerkt.",
+        "shape": "Co-managed vorm",
+        "pool": "{{available}} van {{purchased}} plekken beschikbaar. {{allocated}} toegewezen."
+      },
+      "states": {
+        "active": "Actief",
+        "ended": "Beëindigd"
+      }
+    },
     "portableExport": {
       "title": "Werkruimte exporteren",
       "description": "Download een versleuteld, draagbaar archief van de records en bestanden in uw werkruimte.",
@@ -474,6 +575,10 @@
     },
     "loading": "Capaciteit aan klantplaatsen laden…",
     "overview": {
+      "shape": "Vorm",
+      "state": "Status",
+      "seatsUsed": "Plekken in gebruik",
+      "seatsAllocated": "Toegewezen plekken",
       "actions": "Acties",
       "client": "Klant",
       "empty": "Geen gezamenlijk beheerde klanten komen overeen met deze zoekopdracht.",
