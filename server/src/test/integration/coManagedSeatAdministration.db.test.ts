@@ -40,9 +40,17 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
     await db('boards').insert({ tenant, board_id: boardId, board_name: name, is_default: false });
     return boardId;
   };
+  // One project status per tenant: names and order numbers of non-ticket statuses are unique.
+  const projectStatus = async (tenant: string) => {
+    const existing = await db('statuses').where({ tenant, status_type: 'project' }).first('status_id');
+    if (existing) return existing.status_id as string;
+    const statusId = randomUUID();
+    await db('statuses').insert({ tenant, status_id: statusId, name: 'Open', status_type: 'project', item_type: 'project', order_number: 1, is_closed: false });
+    return statusId;
+  };
   const project = async (tenant: string, clientId: string, name = `Project ${randomUUID().slice(0, 8)}`) => {
     const projectId = randomUUID();
-    await db('projects').insert({ tenant, project_id: projectId, project_name: name, status: randomUUID(), wbs_code: '1', client_id: clientId, project_number: `P-${projectId.slice(0, 6)}` });
+    await db('projects').insert({ tenant, project_id: projectId, project_name: name, status: await projectStatus(tenant), wbs_code: projectId.slice(0, 8), client_id: clientId, project_number: `P-${projectId.slice(0, 6)}` });
     return projectId;
   };
   const address = () => `tech.${randomUUID().slice(0, 12)}@client.example`;

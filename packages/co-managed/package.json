@@ -22,6 +22,10 @@
       "types": "./src/seatArrangement.ts",
       "import": "./src/seatArrangement.ts"
     },
+    "./seatInvitation": {
+      "types": "./src/seatInvitation.ts",
+      "import": "./src/seatInvitation.ts"
+    },
     "./seatRole": {
       "types": "./src/seatRole.ts",
       "import": "./src/seatRole.ts"

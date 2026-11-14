@@ -298,7 +298,7 @@ async function clientOfTarget(knex: Knex, tenant: string, target: SeatTarget): P
  * Sends the setup link of a seat invitation. After the command committed: the seat is held whether or
  * not the email goes, and a failed send is reported so the administrator can resend.
  */
-// LEVERAGE: pattern team-invitation-delivery — base URL, MSP name lookup and sendTeamInvitationEmail repeat what sendUserInvitation does in @alga-psa/users; a shared "deliver an internal-user invitation" function would serve both, and the seat link needs the seat acceptance route (the team setup page refuses a seat token).
+// LEVERAGE: pattern team-invitation-delivery — base URL, MSP name lookup and sendTeamInvitationEmail repeat what sendUserInvitation does in @alga-psa/users; a shared "deliver an internal-user invitation" function would serve both, and the link opens /auth/team/setup, whose completion hands a seat token to acceptCoManagedSeatInvitation.
 async function deliverSeatInvitation(user: SeatUser, tenant: string, invitation: {
   email: string; firstName: string; lastName: string; token: string;
 }): Promise<Delivery> {
