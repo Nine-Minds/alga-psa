@@ -39,7 +39,7 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
   getApiKeyUserOverride: () => null,
   getSession: async () => null,
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@alga-psa/auth/rbac', async () => (await import('../../../../test-utils/rbacStandIn')).rbacStandIn(vi.fn(async () => true)));
 vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   ...(await importOriginal<any>()),
   publishEvent: vi.fn(async () => undefined),

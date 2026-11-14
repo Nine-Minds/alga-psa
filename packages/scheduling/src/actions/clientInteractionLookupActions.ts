@@ -1,5 +1,6 @@
 'use server';
 
+import { projectClientForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -26,7 +27,7 @@ export const getSchedulingClientById = withAuth(async (
   await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const result = await (tenantDb(trx, tenant) as any).table('clients')
       .select('*')
       .where({ client_id: clientId })
@@ -34,6 +35,7 @@ export const getSchedulingClientById = withAuth(async (
 
     return (result ?? null) as IClient | null;
   });
+  return projectClientForSubject(user, client);
 });
 
 export const getSchedulingInteractionById = withAuth(async (
