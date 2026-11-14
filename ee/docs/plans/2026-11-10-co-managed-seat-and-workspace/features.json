@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "A tenant not served by `co-managed-seat` runs zero additional queries on native ticket list, ticket detail, comment write and time-entry paths, recorded as query-budget entries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]

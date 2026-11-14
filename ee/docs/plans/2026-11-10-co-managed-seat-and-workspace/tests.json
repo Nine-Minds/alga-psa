@@ -181,7 +181,7 @@
   {
     "id": "T021",
     "description": "Query budget: native ticket list, ticket detail, comment write and time-entry paths for a tenant not served run the same statement count as on main.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
