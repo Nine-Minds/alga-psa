@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "The co-managed package registers a built-in rule resolver for seat subjects: own client on every client-owned resource, in-scope boards for tickets, shared projects for projects, client-visible only for documents, and a closed baseline; the rules are not editable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "A seat subject's client, board scope and project grants are resolved from the assignment and arrangement rows on every request, so a change takes effect on the next request with no sign-out.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "A contract test fails when a resource type in the kernel catalog is neither named by the seat resolver nor listed as denied for seat subjects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "Service catalog and eligible contract-line lookups require an internal user with the relevant permission, so neither a seat technician nor a portal user can read services, rates or contract lines.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "Client records read by a subject without billing permission omit billing columns (payment terms, billing cycle, credit limit, invoicing settings).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]

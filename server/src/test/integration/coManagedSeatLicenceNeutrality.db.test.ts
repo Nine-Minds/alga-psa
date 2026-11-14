@@ -9,7 +9,8 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
-import { createCoManagedSeatArrangement, inviteCoManagedSeatTechnician } from '@alga-psa/co-managed';
+import { acceptCoManagedSeatInvitation, createCoManagedSeatArrangement, inviteCoManagedSeatTechnician } from '@alga-psa/co-managed';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import {
   admitCoManagedSeatTechnician, countLicensedInternalUsers, findPendingInvitation, countLicensedPendingInvitations, getLicenseUsage,
 } from '@alga-psa/licensing';
@@ -48,13 +49,17 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
   const address = () => `tech.${randomUUID().slice(0, 12)}@client.example`;
   const invite = (sponsorTenant: string, arrangementId: string, email = address()) =>
     inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, email, firstName: 'Dana', lastName: 'Reyes' });
-  /** What acceptance leaves behind: the technician is an active internal user holding the assignment. */
-  const accept = async (sponsor: string, invitation: { assignment_id: string; invitation_id: string; email: string }) => {
-    const userId = await createUser(db, sponsor, { user_type: 'internal', email: invitation.email });
-    await db('user_invitations').where({ tenant: sponsor, invitation_id: invitation.invitation_id }).update({ used_at: new Date() });
-    await db('co_managed_seat_assignments').where({ tenant: sponsor, assignment_id: invitation.assignment_id })
-      .update({ state: 'active', user_id: userId });
-    return userId;
+  /**
+   * The technician accepts through the seat flow: an active internal user holding the assignment,
+   * a member of the seat resolver, the invitation spent. Hand-binding the assignment would skip the
+   * resolver membership its foreign key requires.
+   */
+  const accept = async (sponsor: string, invitation: { assignment_id: string; token: string }) => {
+    const accepted = await acceptCoManagedSeatInvitation(db, { token: invitation.token, password: 'Seat-Technician-Passw0rd!' });
+    expect(accepted).toMatchObject({ sponsor_tenant: sponsor, assignment_id: invitation.assignment_id, state: 'active', created: true });
+    expect(await db('authorization_resolver_subjects')
+      .where({ tenant: sponsor, resolver_id: CO_MANAGED_SEAT_RESOLVER_ID, user_id: accepted.user_id })).toHaveLength(1);
+    return accepted.user_id;
   };
 
   /** Every licence reading the MSP's own seat limit is decided on. */

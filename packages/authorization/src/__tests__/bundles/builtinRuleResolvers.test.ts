@@ -6,9 +6,15 @@ import {
   BUNDLE_CLOSED_BASELINE_DENIED_CODE,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
+  RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE,
   RESOLVER_CLOSED_BASELINE_DENIED_CODE,
   RESOLVER_TEMPLATE_DENIED_CODE,
+  builtinResolverFactSources,
+  builtinResolverFactsExpression,
+  builtinResolverSubjectsExistExpression,
   builtinResolversRestrict,
+  hasBuiltinRuleResolversWithoutFactSource,
+  loadBuiltinResolverFacts,
   compileResourceReadAuthorizationSql,
   createAuthorizationKernel,
   registerBuiltinRuleResolver,
@@ -281,5 +287,107 @@ describe('builtinResolversRestrict (consumers that skip per-record authorization
     resetBuiltinRuleResolversForTests();
     register('seat', [rr('s1', 'ticket', 'read')]); // open and not naming asset
     expect(builtinResolversRestrict(asset)).toBe(false);
+  });
+});
+
+// Co-managed seat plan S11: what a resolver needs beyond client and board templates.
+describe('selected_records template and client_visible_only guard on resolver rules', () => {
+  const adapter = { idColumn: 'r.id', clientVisibleColumn: 'r.is_client_visible', applyAssignedUsers: () => undefined };
+  const sqlFor = (resource: string, sqlAdapter: Record<string, unknown> = adapter) => {
+    const knex = knexFactory({ client: 'pg' });
+    const builder = knex('records as r');
+    const result = compileResourceReadAuthorizationSql(builder, {
+      resourceType: resource, action: 'read', builtinRules: [], bundleRules: [], ctx: { subject: seat, adapter: sqlAdapter as never },
+    });
+    expect(result.supported).toBe(true);
+    return builder.toQuery();
+  };
+
+  it('admits only the listed records, in JS and in SQL; an empty list and a missing id column deny', async () => {
+    register('seat', [
+      rr('p1', 'project', 'read', { templateKey: 'selected_records', selectedRecordIds: ['p-shared'] }),
+      rr('a1', 'asset', 'read', { templateKey: 'selected_records', selectedRecordIds: [] }),
+    ]);
+    const kernel = kernelFor(null, { relationshipRules: [] });
+    expect((await kernel.authorizeResource(inputFor(seat, 'project', 'read', { id: 'p-shared' }))).allowed).toBe(true);
+    const denied = await kernel.authorizeResource(inputFor(seat, 'project', 'read', { id: 'p-other' }));
+    expect(denied.allowed).toBe(false);
+    expect(denied.reasons.find((r) => r.code === RESOLVER_TEMPLATE_DENIED_CODE)).toMatchObject({ metadata: { ruleIds: ['p1'] } });
+    expect((await kernel.authorizeResource(inputFor(seat, 'asset', 'read', { id: 'anything' }))).allowed).toBe(false);
+
+    expect(sqlFor('project')).toBe(`select * from "records" as "r" where ("r"."id" in ('p-shared'))`);
+    expect(sqlFor('asset')).toBe('select * from "records" as "r" where (1 = 0)');
+    expect(sqlFor('project', { applyAssignedUsers: () => undefined })).toBe('select * from "records" as "r" where (1 = 0)');
+  });
+
+  it('client_visible_only denies a record that is not client-visible and names the rule', async () => {
+    register('seat', [rr('d1', 'document', 'read', { templateKey: null, constraintKey: 'client_visible_only' })]);
+    const kernel = kernelFor(null, { relationshipRules: [] });
+    expect((await kernel.authorizeResource(inputFor(seat, 'document', 'read', { id: 'd', is_client_visible: true }))).allowed).toBe(true);
+    for (const record of [{ id: 'd', is_client_visible: false }, { id: 'd' }]) {
+      const denied = await kernel.authorizeResource(inputFor(seat, 'document', 'read', record));
+      expect(denied.allowed).toBe(false);
+      expect(denied.reasons.find((r) => r.code === RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE))
+        .toMatchObject({ sourceType: 'resolver', sourceId: 'seat', metadata: { ruleIds: ['d1'] } });
+    }
+    expect(sqlFor('document')).toBe('select * from "records" as "r" where "r"."is_client_visible" = true');
+    expect(sqlFor('document', { applyAssignedUsers: () => undefined })).toBe('select * from "records" as "r" where 1 = 0');
+  });
+});
+
+describe('resolver fact sources', () => {
+  const source = {
+    tenantHasSubjects: (knex: any, tenant: string) => knex('seat_rows').where({ tenant }),
+    subjectFacts: (knex: any, subject: { tenant: string; userId: string }) =>
+      knex('seat_rows').where({ tenant: subject.tenant, user_id: subject.userId }).select(knex.raw('to_jsonb(seat_rows)')),
+  };
+  const withFacts = (id: string) => registerBuiltinRuleResolver({ id, facts: source, appliesTo: () => false, resolveRules: () => [] });
+
+  it('lists only resolvers that declare one, in id order, and composes one expression keyed by resolver id', () => {
+    const knex = knexFactory({ client: 'pg' });
+    expect(builtinResolverFactsExpression(knex, { tenant: 't1', userId: 'u1' })).toBeNull();
+    register('plain', []);
+    expect(builtinResolverFactSources()).toEqual([]);
+    expect(hasBuiltinRuleResolversWithoutFactSource()).toBe(true);
+
+    withFacts('zeta');
+    withFacts('alpha');
+    expect(builtinResolverFactSources().map((entry) => entry.id)).toEqual(['alpha', 'zeta']);
+    expect(builtinResolverFactsExpression(knex, { tenant: 't1', userId: 'u1' })!.toQuery()).toBe(
+      `jsonb_build_object('alpha'::text, (select to_jsonb(seat_rows) from "seat_rows" where "tenant" = 't1' and "user_id" = 'u1'), ` +
+      `'zeta'::text, (select to_jsonb(seat_rows) from "seat_rows" where "tenant" = 't1' and "user_id" = 'u1'))`
+    );
+    unregisterBuiltinRuleResolver('plain');
+    expect(hasBuiltinRuleResolversWithoutFactSource()).toBe(false);
+  });
+
+  it('gates on the tenant probe of every fact source, never on the tables the facts are read from', () => {
+    const knex = knexFactory({ client: 'pg' });
+    expect(builtinResolverSubjectsExistExpression(knex, 't1')).toBeNull();
+    register('plain', []);
+    expect(builtinResolverSubjectsExistExpression(knex, 't1')).toBeNull();
+
+    const gated = (table: string) => ({ ...source, tenantHasSubjects: (k: any, tenant: string) => k(table).where({ tenant }) });
+    registerBuiltinRuleResolver({ id: 'zeta', facts: gated('zeta_members'), appliesTo: () => false, resolveRules: () => [] });
+    registerBuiltinRuleResolver({ id: 'alpha', facts: gated('alpha_members'), appliesTo: () => false, resolveRules: () => [] });
+    const sql = builtinResolverSubjectsExistExpression(knex, 't1')!.toQuery();
+    expect(sql).toBe(
+      `(exists((select 1 from "alpha_members" where "tenant" = 't1')) or exists((select 1 from "zeta_members" where "tenant" = 't1')))`
+    );
+    expect(sql).not.toContain('seat_rows');
+  });
+
+  it('loads nothing when no resolver has a fact source, and a load that returns no facts is a failure', async () => {
+    const failing = { queryBuilder: () => { throw new Error('must not query'); } } as never;
+    await expect(loadBuiltinResolverFacts(failing, { tenant: 't1', userId: 'u1' })).resolves.toBeUndefined();
+
+    withFacts('alpha');
+    const knex = knexFactory({ client: 'pg' });
+    const answering = (row: unknown) => Object.assign((table: string) => knex(table),
+      { raw: knex.raw.bind(knex), queryBuilder: () => ({ select: () => ({ first: async () => row }) }) }) as never;
+    await expect(loadBuiltinResolverFacts(answering({ facts: { alpha: { ok: true } } }), { tenant: 't1', userId: 'u1' }))
+      .resolves.toEqual({ alpha: { ok: true } });
+    await expect(loadBuiltinResolverFacts(answering(undefined), { tenant: 't1', userId: 'u1' })).rejects.toThrow('Built-in resolver facts unavailable');
+    await expect(loadBuiltinResolverFacts(answering({ facts: null }), { tenant: 't1', userId: 'u1' })).rejects.toThrow('Built-in resolver facts unavailable');
   });
 });

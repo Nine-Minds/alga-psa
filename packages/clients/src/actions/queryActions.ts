@@ -5,6 +5,7 @@ import { queueContactCreated } from '../lib/contactEvents';
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { Knex } from 'knex';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import {
@@ -243,11 +244,11 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
     getEntityImageUrl('client', clientId, tenant, 'wide'),
   ]);
 
-  return withClientSinceDateString({
+  return projectClientForSubject(user, withClientSinceDateString({
     ...clientData,
     logoUrl,
     logoWideUrl,
-  }) as IClientWithLocation;
+  }) as IClientWithLocation);
 });
 
 export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
@@ -281,7 +282,8 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
     logoUrl: logoUrlsMap.get(client.client_id) || null,
   }));
 
-  return (await attachDisplayTags(db, tenant, user, 'client', clientsWithLogos, (client: any) => client.client_id)) as unknown as IClient[];
+  const taggedClients = (await attachDisplayTags(db, tenant, user, 'client', clientsWithLogos, (client: any) => client.client_id)) as unknown as IClient[];
+  return projectClientsForSubject(user, taggedClients);
 });
 
 // --- Contact query actions ---

@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import type { Knex } from 'knex';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
@@ -124,6 +126,10 @@ describe('comment audience in attachments, activity and search (integration)', (
 
     arrangementId = randomUUID();
     await t('co_managed_seat_arrangements').insert({ tenant, arrangement_id: arrangementId, client_id: clientId, allocation_id: randomUUID(), state: 'active' });
+    // The seat baseline is closed: a technician reads a ticket only on a board in the arrangement's scope.
+    const ticketBoard = await t('tickets').where({ ticket_id: ticketId }).first('board_id');
+    await t('co_managed_seat_board_scopes').insert({ tenant, arrangement_id: arrangementId, board_id: ticketBoard.board_id, can_create: false });
+    await knex.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant, userId: seatUser }, CO_MANAGED_SEAT_RESOLVER_ID));
     await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: seatUser, state: 'active' });
     expect(await resolveCommentAudienceReader(knex, tenant, { userId: mspUser, userType: 'internal' })).toEqual({ kind: 'staff', tenant });
     expect(await resolveCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal' })).toEqual({ kind: 'seat', tenant, clientId });
@@ -176,6 +182,7 @@ describe('comment audience in attachments, activity and search (integration)', (
         await t('comment_threads').where({ thread_id: c.thread_id }).delete().catch(() => undefined);
       }
       if (arrangementId) {
+        await t('co_managed_seat_board_scopes').where({ arrangement_id: arrangementId }).delete().catch(() => undefined);
         await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId }).delete().catch(() => undefined);
         await t('co_managed_seat_arrangements').where({ arrangement_id: arrangementId }).delete().catch(() => undefined);
       }
@@ -410,6 +417,13 @@ describe('comment audience in attachments, activity and search (integration)', (
 
   describe('who is read as staff', () => {
     /** Every statement `run` sends, as SQL text. */
+    /**
+     * The authorization kernel's own seat-facts load (BuiltinResolverFactSource, one statement per
+     * request in a tenant that has seat technicians) is not the audience reader. These tests pin
+     * the audience reader, which must run no seat SQL for a loaded staff row.
+     */
+    const isKernelSeatFacts = (text: string) => text.startsWith('select jsonb_build_object(') && text.includes(`'assignments'`);
+    const seatSqlOutsideKernel = (sql: string[]) => sql.filter(text => /co_managed_/.test(text) && !isKernelSeatFacts(text));
     async function statements(run: () => Promise<unknown>): Promise<string[]> {
       const seen: string[] = [];
       const listen = (query: { sql: string }) => { seen.push(query.sql); };
@@ -444,6 +458,11 @@ describe('comment audience in attachments, activity and search (integration)', (
       comments: sorted(mine()), privateAttachmentReadable: true, sharedAttachmentReadable: true,
       privateActivityEvents: 11, searchHits: sorted(mine()),
     });
+    /**
+     * A revoked technician reads comments and search as staff do (the audience reader), but stays in
+     * the seat authority class, which grants nothing: no ticket access, so no attachment bytes.
+     */
+    const revokedSeatSurfaces = () => ({ ...staffSurfaces(), privateAttachmentReadable: false, sharedAttachmentReadable: false });
     /** The seat technician, named by id and by loaded row, reads only its audiences on every surface. */
     const seatReadsOnlyItsAudiences = async () => {
       expect(await surfaces(seatUser)).toEqual(seatSurfaces());
@@ -457,7 +476,7 @@ describe('comment audience in attachments, activity and search (integration)', (
       expect(await admitCommentAudienceReader(knex, tenant, { userId: mspUser, userType: 'internal', seatReader: staff.seat_reader })).toEqual({ kind: 'staff', tenant });
       const sql = await statements(readEverySurface(staff));
       expect(sql.length).toBeGreaterThan(0);
-      expect(sql.filter(text => /co_managed_/.test(text))).toEqual([]);
+      expect(seatSqlOutsideKernel(sql)).toEqual([]);
       expect(await surfaces(staff)).toEqual(staffSurfaces());
     });
 
@@ -490,7 +509,7 @@ describe('comment audience in attachments, activity and search (integration)', (
         await seatReadsOnlyItsAudiences();
         const staff = await loaded(mspUser);
         expect(await surfaces(staff)).toEqual(staffSurfaces());
-        expect((await statements(readEverySurface(staff))).filter(text => /co_managed_/.test(text))).toEqual([]);
+        expect(seatSqlOutsideKernel(await statements(readEverySurface(staff)))).toEqual([]);
       } finally { restore(); }
     });
 
@@ -503,7 +522,7 @@ describe('comment audience in attachments, activity and search (integration)', (
       try {
         // The gate reads the tenant before its first entitlement row and caches the negative.
         expect((await serves('co-managed', tenant)).reasons.served).toBe('not-participating');
-        expect(await surfaces(await loaded(seatUser))).toEqual(staffSurfaces());
+        expect(await surfaces(await loaded(seatUser))).toEqual(revokedSeatSurfaces());
 
         await t('co_managed_entitlements').insert(entitlement);
         await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), ...assignment, state: 'active' });
@@ -561,6 +580,7 @@ describe('comment audience in attachments, activity and search (integration)', (
         await expect(knex.transaction(async (trx) => {
           const tt = (table: string) => tenantDb(trx, tenant).table(table);
           await trx.raw('ALTER TABLE co_managed_seat_assignments DISABLE TRIGGER co_managed_seat_assignment_marks_reader');
+          await retainBuiltinResolverSubject(trx, { tenant, userId: mspUser }, CO_MANAGED_SEAT_RESOLVER_ID);
           const binding = { tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: mspUser, state: 'active' };
           await trx.raw('SAVEPOINT unmarked');
           await expect(tt('co_managed_seat_assignments').insert(binding))
@@ -579,7 +599,7 @@ describe('comment audience in attachments, activity and search (integration)', (
         await live().update({ state: 'revoked', revoked_at: new Date() });
         try {
           expect(await marker(seatUser)).toBe(false);
-          expect(await surfaces(await loaded(seatUser))).toEqual(staffSurfaces());
+          expect(await surfaces(await loaded(seatUser))).toEqual(revokedSeatSurfaces());
 
           const assignmentId = randomUUID();
           await t('co_managed_seat_assignments').insert({ tenant, assignment_id: assignmentId, arrangement_id: arrangementId, user_id: seatUser, state: 'invited' });
