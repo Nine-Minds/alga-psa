@@ -351,7 +351,7 @@
   {
     "id": "T039",
     "description": "DB integration: a seat technician reads own-client assets with inventory fields and no billing profile or purchase cost, another client's asset answers not found, and no remote or script action is reachable; linking an asset to a ticket and creating a ticket from an asset succeed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074",
       "F075"

@@ -1,3 +1,4 @@
+import { useAssetSurfaceControls } from '../../context/AssetSurfaceAccessContext';
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -13,7 +14,13 @@ interface AssetNotesPanelProps {
   assetId: string;
 }
 
-export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
+/** Not rendered when the server's seat authority closes asset updates: the notes are edited in place. */
+export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = (props) => {
+  const { canUpdate } = useAssetSurfaceControls();
+  return canUpdate ? <AssetNotesPanelEditor {...props} /> : null;
+};
+
+const AssetNotesPanelEditor: React.FC<AssetNotesPanelProps> = ({
   assetId
 }) => {
   const { t } = useTranslation('msp/assets');

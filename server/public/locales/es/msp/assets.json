@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "Esta etiqueta de activo ya está en uso o reservada. Escanéela para encontrar el activo existente o introduzca otra etiqueta.",
       "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "ticketNotFound": "No se encontró el ticket. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "alreadyLinkedToTicket": "Este activo ya está vinculado al ticket.",
       "clientNotFound": "No se encontró el cliente. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "maintenanceNotFound": "No se encontró el plan de mantenimiento. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "maintenanceMismatch": "Este registro de mantenimiento no corresponde al activo seleccionado. Actualice la página e inténtelo de nuevo.",

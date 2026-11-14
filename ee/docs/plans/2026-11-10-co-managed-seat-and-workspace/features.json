@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "A seat technician lists and opens their own client's assets with RMM inventory fields, read-only, without billing profile or purchase cost, and with no remote or script action available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -594,7 +594,7 @@
   {
     "id": "F075",
     "description": "A seat technician links one of their client's assets to a visible ticket and creates a ticket from an asset.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]

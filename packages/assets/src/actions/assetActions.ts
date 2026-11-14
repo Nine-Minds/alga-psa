@@ -102,6 +102,8 @@ import {
     type AuthorizationDecision,
 } from '@alga-psa/authorization/kernel';
 import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
+import { authorizeTicketRecordAccessConcealed } from '@alga-psa/authorization/ticketRecordAuthorization';
+import { admits as admitsCapability } from '@alga-psa/core/capability';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
@@ -118,6 +120,11 @@ import {
     isAssetActionAllowed as isSharedAssetActionAllowed,
     isAssetReadAllowed as isSharedAssetReadAllowed,
     authorizeAssetsForAction,
+    assetClosedActions,
+    assetClosedFields,
+    assetColumnsOpenTo,
+    assetDenialsConcealed,
+    assetClosedOperations,
     projectReadableAssets,
     type AssetAuthUser as SharedAssetAuthUser,
     type AssetAuthorizationAction,
@@ -138,6 +145,13 @@ import {
 } from './assetActionErrors';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
+
+/** What the asset screens leave out for the signed-in user; see `getAssetSurfaceAccess`. */
+export interface AssetSurfaceAccess {
+    closedActions: string[];
+    closedOperations: string[];
+    closedFields: string[];
+}
 
 export interface AssetDetailBundle {
     asset: Asset;
@@ -609,6 +623,8 @@ async function assertAssetActionAllowed(
     }
     const allowed = await isSharedAssetActionAllowed(trx, tenant, context, asset, action);
     if (!allowed) {
+        // A seat technician is told an asset outside their client does not exist; everyone else is told they may not read it.
+        if (action === 'read' && assetDenialsConcealed(context.subject)) throw new Error('Asset not found');
         throw new Error(`Permission denied: Cannot ${action} assets`);
     }
 }
@@ -856,8 +872,8 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
     }
 
     const asset = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const asset = await getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser);
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        const asset = await getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser, false, assetClosedFields(context.subject));
         await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
         // Same normalisation every other read path applies (getAssetDetailBundle,
         // create, update): pg returns NUMERIC columns as strings and timestamps as
@@ -872,6 +888,22 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
         if (expected) return expected;
         throw error;
     }
+});
+
+/**
+ * What the asset screens must not render for the signed-in user, decided on the server from the same seat
+ * authority that enforces it: the asset actions a closed baseline denies outright and the operations (remote
+ * access, RMM commands) it shuts. Empty lists for everyone else, so the MSP screens render as they always have.
+ * The screens take this as data and omit the controls; a control that is merely disabled is not enough.
+ */
+export const getAssetSurfaceAccess = withAuth(async (user, { tenant }): Promise<AssetSurfaceAccess> => {
+    const { knex } = await createTenantKnex();
+    const subject = await resolveSharedAuthorizationSubject(knex, tenant, user as AssetAuthUser);
+    return {
+        closedActions: assetClosedActions(subject),
+        closedOperations: assetClosedOperations(subject),
+        closedFields: assetClosedFields(subject),
+    };
 });
 
 export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetFact[] | AssetActionError> => {
@@ -901,13 +933,14 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
     }
 
     return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
+        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        const closedFields = assetClosedFields(context.subject);
         const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
-            getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser),
+            getAssetWithExtensions(trx, tenant, asset_id, user as AssetAuthUser, false, closedFields),
             hasPermission(user, 'ticket', 'read', trx),
             hasPermission(user, 'document', 'read', trx)
         ]);
 
-        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
         await assertAssetReadAllowed(
             trx,
             tenant,
@@ -921,7 +954,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         // additionally intersects with their own resource-family authorization.
         const [maintenanceReport, history, tickets, documents] = await Promise.all([
             fetchAssetMaintenanceReport(trx, tenant, asset_id),
-            fetchAssetHistory(trx, tenant, asset_id),
+            fetchAssetHistory(trx, tenant, asset_id, closedFields),
             canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([]),
             canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, assetRecord.client_id ?? null, 15, context) : Promise.resolve([])
         ]);
@@ -2098,22 +2131,27 @@ async function getAssetWithExtensions(
     tenant: string,
     asset_id: string,
     groupSummaryUser?: AssetAuthUser,
-    trustedGroupSummaryRead = false
+    trustedGroupSummaryRead = false,
+    /** Fields a built-in resolver closes to the reader (`assetClosedFields`); left out of the query, not stripped after it. */
+    closedFields: readonly string[] = []
 ): Promise<Asset> {
     // Get base asset data with client info
     const db = tenantDb(knex, tenant);
+    const withBillingProfile = !closedFields.includes('billing_profile_name');
     const assetQuery = tenantScopedTable(knex, 'assets', tenant)
         .select(
-            'assets.*',
+            ...(await assetColumnsOpenTo(knex, closedFields) ?? ['assets.*']),
             'clients.client_name',
             'contacts.full_name as contact_name',
             'vendors.vendor_name',
-            'client_billing_profiles.name as billing_profile_name'
+            ...(withBillingProfile ? ['client_billing_profiles.name as billing_profile_name'] : [])
         );
     db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
     db.tenantJoin(assetQuery, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
     db.tenantJoin(assetQuery, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
-    db.tenantJoin(assetQuery, 'client_billing_profiles', 'client_billing_profiles.billing_profile_id', 'assets.billing_profile_id', { type: 'left' });
+    if (withBillingProfile) {
+        db.tenantJoin(assetQuery, 'client_billing_profiles', 'client_billing_profiles.billing_profile_id', 'assets.billing_profile_id', { type: 'left' });
+    }
     const asset = await assetQuery
         .where({ 'assets.asset_id': asset_id })
         .first();
@@ -2436,6 +2474,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 }
             }
 
+            // A seat subject's list never selects the commercial columns (see SEAT_AUTHORITY_PROJECTION).
+            const listColumns = await assetColumnsOpenTo(trx, assetClosedFields(context.subject)) ?? ['assets.*'];
             type AssetListQueryRow = Asset & { client_name: string | null };
             type AssetListScanRow = { asset: AssetListQueryRow; decision: AuthorizationDecision };
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
@@ -2451,7 +2491,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     throw new Error('Asset list count query returned an invalid count');
                 }
                 const rows: AssetListQueryRow[] = await listQuery.clone()
-                    .select<AssetListQueryRow[]>('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
+                    .select<AssetListQueryRow[]>(...listColumns, 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
@@ -3168,9 +3208,9 @@ export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: strin
                 throw new Error('Permission denied: Cannot read asset history');
             }
 
-            await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
+            const { context } = await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, asset_id, 'read');
 
-            return fetchAssetHistory(trx, tenant, asset_id);
+            return fetchAssetHistory(trx, tenant, asset_id, assetClosedFields(context.subject));
         });
     } catch (error) {
         console.error('Error getting asset history:', error);
@@ -3339,7 +3379,8 @@ async function fetchAssetMaintenanceReport(
 async function fetchAssetHistory(
     db: Knex | Knex.Transaction,
     tenant: string,
-    asset_id: string
+    asset_id: string,
+    closedFields: readonly string[] = []
 ): Promise<AssetHistory[]> {
     const historyQuery = tenantScopedTable(db, 'asset_history as ah', tenant);
     tenantDb(db, tenant).tenantJoin(historyQuery, 'users as u', 'ah.changed_by', 'u.user_id', { type: 'left' });
@@ -3349,6 +3390,10 @@ async function fetchAssetHistory(
             'ah.*',
             db.raw("CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as changed_by_name")
         )
+        // `changes` records the fields an update carried, so a closed field's old and new values are dropped in SQL.
+        .modify((query: Knex.QueryBuilder) => {
+            if (closedFields.length > 0) query.select(db.raw('ah.changes - ?::text[] as changes', [[...closedFields]]));
+        })
         .orderBy('ah.changed_at', 'desc');
 
     return history.map((record: any): AssetHistory => ({
@@ -3755,7 +3800,7 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
 
             const assets = await Promise.all(
                 authorizedAssetIds.map(async (authorizedAssetId): Promise<Asset> =>
-                    getAssetWithExtensions(trx, tenant, authorizedAssetId, user as AssetAuthUser)
+                    getAssetWithExtensions(trx, tenant, authorizedAssetId, user as AssetAuthUser, false, assetClosedFields(context.subject))
                 )
             );
 
@@ -3769,6 +3814,71 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
     }
 });
 
+/**
+ * Writes one asset association and tells the world about it. The caller has already decided that the actor may:
+ * `authorize` runs first inside the write transaction, so a refusal writes nothing. Shared by
+ * `createAssetAssociation` (the MSP path, authorized as an asset update) and `linkAssetToTicket` (a ticket
+ * link, authorized from the asset read and the ticket), so the row, the event and the revalidation stay one thing.
+ */
+async function persistAssetAssociation(
+    knex: Knex,
+    tenant: string,
+    user: { user_id: string },
+    data: { asset_id: string; entity_id: string; entity_type: 'ticket' | 'project'; relationship_type: string },
+    authorize: (trx: Knex.Transaction) => Promise<void>
+): Promise<AssetAssociation> {
+    const association = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        await authorize(trx);
+
+        // Create the association
+        const [createdAssociation] = await tenantScopedTable(trx, 'asset_associations', tenant)
+            .insert({
+                tenant,
+                ...data,
+                created_by: user.user_id,
+                created_at: trx.fn.now()
+            })
+            .returning('*');
+
+        return createdAssociation;
+    });
+
+    const occurredAt = new Date().toISOString();
+    await publishWorkflowEvent({
+        eventType: 'ASSET_ASSIGNED',
+        payload: buildAssetAssignedPayload({
+            assetId: data.asset_id,
+            newOwnerType: data.entity_type,
+            newOwnerId: data.entity_id,
+            assignedAt: occurredAt,
+        }),
+        ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
+        },
+    });
+
+    // Revalidate paths
+    revalidatePath('/assets');
+    revalidatePath(`/assets/${data.asset_id}`);
+    if (data.entity_type === 'ticket') {
+        revalidatePath(`/tickets/${data.entity_id}`);
+    } else {
+        revalidatePath(`/projects/${data.entity_id}`);
+    }
+
+    // Convert Date to ISO string for schema validation
+    const sanitizedAssociation = {
+        ...association,
+        created_at: association.created_at instanceof Date
+            ? association.created_at.toISOString()
+            : association.created_at
+    };
+
+    return validateData(assetAssociationSchema, sanitizedAssociation) as AssetAssociation;
+}
+
 export const createAssetAssociation = withAuth(async (user, { tenant }, data: CreateAssetAssociationRequest): Promise<AssetAssociation | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
@@ -3781,58 +3891,64 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
         // Validate the input data
         const validatedData = validateData(createAssetAssociationSchema, data);
 
-        const association = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await persistAssetAssociation(knex, tenant, user, validatedData, async (trx) => {
             await createAuthorizedAssetContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id, 'update');
-
-            // Create the association
-            const [createdAssociation] = await tenantScopedTable(trx, 'asset_associations', tenant)
-                .insert({
-                    tenant,
-                    ...validatedData,
-                    created_by: user.user_id,
-                    created_at: trx.fn.now()
-                })
-                .returning('*');
-
-            return createdAssociation;
         });
-
-        const occurredAt = new Date().toISOString();
-        await publishWorkflowEvent({
-            eventType: 'ASSET_ASSIGNED',
-            payload: buildAssetAssignedPayload({
-                assetId: validatedData.asset_id,
-                newOwnerType: validatedData.entity_type,
-                newOwnerId: validatedData.entity_id,
-                assignedAt: occurredAt,
-            }),
-            ctx: {
-                tenantId: tenant,
-                occurredAt,
-                actor: { actorType: 'USER', actorUserId: user.user_id },
-            },
-        });
-
-        // Revalidate paths
-        revalidatePath('/assets');
-        revalidatePath(`/assets/${data.asset_id}`);
-        if (data.entity_type === 'ticket') {
-            revalidatePath(`/tickets/${data.entity_id}`);
-        } else {
-            revalidatePath(`/projects/${data.entity_id}`);
-        }
-
-        // Convert Date to ISO string for schema validation
-        const sanitizedAssociation = {
-            ...association,
-            created_at: association.created_at instanceof Date
-                ? association.created_at.toISOString()
-                : association.created_at
-        };
-
-        return validateData(assetAssociationSchema, sanitizedAssociation) as AssetAssociation;
     } catch (error) {
         console.error('Error creating asset association:', error);
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
+});
+
+/**
+ * Links an asset to a ticket for someone who may read the asset and work the ticket, without being able to edit
+ * the asset: a seat technician linking their own client's device to a ticket on a board in their scope.
+ *
+ * Authority comes from two decisions the kernel already makes, so the seat policy needs no grant of its own
+ * (a grant would have to be `asset:update`, which would open every asset write to the seat):
+ *   - the asset: `asset:read`, which for a seat subject is own-client only. An asset the subject may not read
+ *     answers 'Asset not found', as everywhere else on the asset surface;
+ *   - the ticket: `ticket:update`, which for a seat subject is own-client and in-scope board, and which the
+ *     kernel only grants for a ticket the subject may read. A hidden ticket answers 'Ticket not found'.
+ * The link is a change to the ticket (it gains a linked device), which is why the ticket side asks for update.
+ * Behind `co-managed-seat`: with the capability not admitted nothing is linked and nothing is revealed.
+ * LEVERAGE: pattern ticket-asset-association-insert — same asset_associations row as linkAssetsToNewTicket and TicketService.linkAsset
+ */
+export const linkAssetToTicket = withAuth(async (
+    user,
+    { tenant },
+    data: { asset_id: string; ticket_id: string; relationship_type?: string }
+): Promise<AssetAssociation | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+
+    try {
+        if (!(await admitsCapability('co-managed-seat', tenant)).admitted) {
+            throw new Error('Asset not found');
+        }
+        const validated = validateData(createAssetAssociationSchema, {
+            asset_id: data.asset_id,
+            entity_id: data.ticket_id,
+            entity_type: 'ticket',
+            relationship_type: data.relationship_type ?? 'affected',
+        });
+
+        return await persistAssetAssociation(knex, tenant, user, validated, async (trx) => {
+            if (!await hasPermission(user, 'asset', 'read', trx) || !await hasPermission(user, 'ticket', 'update', trx)) {
+                throw new Error('Permission denied: Cannot link assets to tickets');
+            }
+            // Asset first, so an asset the subject cannot see answers 'Asset not found' whatever the ticket is.
+            await assertAssetReadAllowedById(trx, tenant, await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser), validated.asset_id);
+            await authorizeTicketRecordAccessConcealed({
+                trx, tenant, user: user as any, ticketId: validated.entity_id, action: 'update', conceal: 'all',
+            });
+            const existing = await tenantScopedTable(trx, 'asset_associations', tenant)
+                .where({ asset_id: validated.asset_id, entity_id: validated.entity_id, entity_type: 'ticket' })
+                .first('asset_id');
+            if (existing) throw new Error('Asset is already linked to this ticket');
+        });
+    } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
         throw error;
