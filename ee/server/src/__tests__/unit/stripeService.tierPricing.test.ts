@@ -11,7 +11,7 @@ vi.mock('@/lib/db/db', () => ({
 // The licensed internal user count (active internal users less seat technicians) is SQL owned by
 // @alga-psa/licensing and covered by its database tests; here it is a persistence result.
 vi.mock('@alga-psa/licensing', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/licensing')>()),
+  ...((await importOriginal()) as typeof import('@alga-psa/licensing')),
   countLicensedInternalUsers: countLicensedInternalUsersMock,
 }));
 
