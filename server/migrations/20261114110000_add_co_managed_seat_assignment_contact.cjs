@@ -13,9 +13,11 @@
  *   arrangement of the sponsor. A revoked assignment frees the contact. The index leads with `tenant`,
  *   the distribution column, as every key in this ledger does.
  *
- * Additive and idempotent. The column is metadata-only (no default, no rewrite).
+ * Additive and idempotent. The column is metadata-only (no default, no rewrite). The index is built
+ * CONCURRENTLY, so the migration runs without a wrapping transaction (each step is idempotent).
  */
 const { ensureCompositeFk } = require('./utils/citusDistribution.cjs');
+const { ensureConcurrentIndex } = require('./utils/ensureConcurrentIndex.cjs');
 
 const TABLE = 'co_managed_seat_assignments';
 const FK = 'co_managed_seat_assignments_contact_fk';
@@ -27,7 +29,7 @@ exports.up = async function up(knex) {
   if (!(await knex.schema.hasColumn(TABLE, 'contact_id'))) {
     await knex.schema.alterTable(TABLE, (table) => table.uuid('contact_id').nullable());
   }
-  await knex.raw(`CREATE UNIQUE INDEX IF NOT EXISTS ${INDEX}
+  await ensureConcurrentIndex(knex, INDEX, `CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ${INDEX}
     ON ${TABLE} (tenant, contact_id) WHERE state <> 'revoked' AND contact_id IS NOT NULL`);
   if (await knex.schema.hasTable('contacts')) {
     await ensureCompositeFk(knex, {
@@ -45,6 +47,9 @@ exports.down = async function down(knex) {
     throw new Error(`Cannot roll back ${TABLE}.contact_id while assignments name a contact`);
   }
   await knex.raw(`ALTER TABLE ${TABLE} DROP CONSTRAINT IF EXISTS ${FK}`);
-  await knex.raw(`DROP INDEX IF EXISTS ${INDEX}`);
+  await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${INDEX}`);
   await knex.schema.alterTable(TABLE, (table) => table.dropColumn('contact_id'));
 };
+
+// No wrapping transaction: CREATE/DROP INDEX CONCURRENTLY.
+exports.config = { transaction: false };
