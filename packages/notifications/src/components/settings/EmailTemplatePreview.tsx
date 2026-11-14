@@ -32,18 +32,26 @@ export function replaceTemplateVariables(
   // so the registry's per-item examples (e.g. credits.items.creditId) resolve.
   let result = content.replace(
     /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
-    (_match, path, blockContent: string) =>
-      blockContent.replace(
-        /(\{{2,3})(#if\s+)?this\.([^{}]+?)(\}{2,3})/g,
-        (_inner, open, ifTag, key, close) => `${open}${ifTag ?? ''}${path}.${key}${close}`
-      )
+    (_match, path, blockContent: string) => {
+      const qualified = blockContent.replace(
+        /(\{{2,3})(#if\s+)?(?:this\.)?([\w.]+)(\}{2,3})/g,
+        (inner, open, ifTag, key, close) => {
+          const samplePath = [`${path}[].${key}`, `${path}.${key}`].find((candidate) => candidate in data);
+          return samplePath ? `${open}${ifTag ?? ''}${samplePath}${close}` : inner;
+        }
+      );
+      return replaceTemplateVariables(qualified, data);
+    }
   );
 
   // Then, process {{#if condition}}...{{/if}} blocks.
   // For preview, show the block content (with variables replaced) since sample data is available.
+  // An {{else}} branch is dropped so templates can offer readable Yes/No text
+  // (e.g. {{#if billed}}Yes{{else}}No{{/if}}) without leaking both branches.
   result = result.replace(
     /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_match, _condition, blockContent) => blockContent
+    (_match, _condition, blockContent: string) =>
+      blockContent.replace(/\{\{else(?:\s+if[^}]*)?\}\}[\s\S]*$/, '')
   );
 
   // Then replace simple {{variable}} and raw-HTML {{{variable}}} placeholders.
