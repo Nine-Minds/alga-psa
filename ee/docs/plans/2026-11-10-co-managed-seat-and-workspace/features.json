@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "A seat technician's user lists, pickers and mention suggestions contain MSP staff who participate on tickets they can see (name and avatar only), technicians of their own client, and their client's contacts; no other user of the tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]
