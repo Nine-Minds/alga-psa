@@ -1462,6 +1462,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     }
                   }}
                   users={usersList}
+                  // LEVERAGE: pattern client-it-picker-group — TicketInfo and BentoHero each build the same Client IT userGroups from clientItUserIds
                   userGroups={clientItUserIds?.length
                     ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
                     : undefined}

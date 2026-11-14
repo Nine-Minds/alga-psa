@@ -4596,6 +4596,7 @@ const handleClose = () => {
                     priorityOptions={priorityOptions}
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
+                    clientItUserIds={clientItUserIds}
                     onSelectChange={handleSelectChange}
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     onUpdateDescription={handleUpdateDescription}
