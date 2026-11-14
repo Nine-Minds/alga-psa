@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../lib/avatarUtils';
 import { hasPermission } from '../lib/permissions';
+import { projectedPeopleAsUsers, projectedPeopleForCaller } from '../lib/seatPeople';
 import logger from '@alga-psa/core/logger';
 import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
@@ -82,6 +83,10 @@ export const getAllUsersBasic = withAuth(async (
     const {knex} = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician sees the people projection (their grant for it), whatever `user:read` says.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser);
+      if (projected) return projectedPeopleAsUsers(projected, tenant, { userType });
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
@@ -115,6 +120,10 @@ export const getAllUsers = withAuth(async (
     const {knex} = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician sees the people projection (their grant for it), whatever `user:read` says.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser);
+      if (projected) return projectedPeopleAsUsers(projected, tenant, { userType });
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
@@ -370,13 +379,20 @@ export const getUserWithRoles = withAuth(async (
 
 export const getMultipleUsersWithRoles = withAuth(async (
   currentUser,
-  _ctx,
+  { tenant },
   userIds: string[]
 ): Promise<IUserWithRoles[]> => {
   try {
     const {knex} = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician is answered from the people projection: only requested ids they may see, no roles.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser);
+      if (projected) {
+        const requested = new Set(userIds);
+        return projectedPeopleAsUsers(projected.filter((person) => person.userId !== null && requested.has(person.userId)), tenant);
+      }
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read multiple users with roles');
       }
@@ -570,6 +586,12 @@ export const getClientUsersForClient = withAuth(async (
 
     // Get all users associated with the client
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician sees the portal users of their own client's contacts, and no other client's.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser, { kinds: ['contact'] });
+      if (projected) {
+        return projectedPeopleAsUsers(projected.filter((person) => person.clientId === clientId), tenant, { userType: 'client' });
+      }
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read client users for client');
       }

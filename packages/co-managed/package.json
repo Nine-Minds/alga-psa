@@ -22,6 +22,10 @@
       "types": "./src/seatAuthority.ts",
       "import": "./src/seatAuthority.ts"
     },
+    "./seatPeopleProjection": {
+      "types": "./src/seatPeopleProjection.ts",
+      "import": "./src/seatPeopleProjection.ts"
+    },
     "./seatCapability": {
       "types": "./src/seatCapability.ts",
       "import": "./src/seatCapability.ts"

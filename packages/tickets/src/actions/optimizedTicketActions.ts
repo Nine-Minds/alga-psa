@@ -13,6 +13,7 @@ import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaborat
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { projectResponseUsers } from '../lib/responseUsers';
+import { projectedPeopleForCaller, projectedPersonToUser, projectedUsers } from '@alga-psa/user-composition/lib/seatPeople';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -2435,6 +2436,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         readableTickets.apply(ticketTagMappingsQuery, 't');
       }
 
+      const seatPeople = await projectedPeopleForCaller(trx, tenant, user, { kinds: ['msp_staff', 'client_technician'] });
+      const seatAssignees = seatPeople ? projectedUsers(seatPeople) : null;
+
       const [
         statuses,
         priorities,
@@ -2465,11 +2469,14 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('category_name', 'asc'),
       
       // Assignee and user options are internal staff only: a portal (client) user is never a valid assignee,
-      // for any client, whoever is asking.
-      tenantScopedTable(trx, 'users', tenant)
-        .where('user_type', 'internal')
-        .select(...USER_RESPONSE_FIELD_NAMES)
-        .orderBy('first_name', 'asc'),
+      // for any client, whoever is asking. A seat technician is offered the people projection instead of the
+      // tenant's staff (MSP staff by name only, and the technicians of their own client).
+      seatAssignees
+        ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
+        : tenantScopedTable(trx, 'users', tenant)
+          .where('user_type', 'internal')
+          .select(...USER_RESPONSE_FIELD_NAMES)
+          .orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
