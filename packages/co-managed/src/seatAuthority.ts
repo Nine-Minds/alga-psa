@@ -82,6 +82,32 @@ export const SEAT_AUTHORITY_POLICY: Readonly<Record<string, CoManagedSeatResourc
   schedule_entry: { denied: 'A seat technician is not scheduled or dispatched by the MSP.' },
 });
 
+/**
+ * What a seat subject may read of a resource it is granted, and which operations on it stay shut.
+ * `closedFields` are source column names the read paths leave out of their queries (the kernel also adds them to
+ * every decision's `redactedFields`). `closedOperations` name things no kernel action covers (opening a remote
+ * session, running a script) that the action layer refuses before it does any work, and that screens do not render.
+ * Writes need no entry here: an action the policy does not grant is already denied by the closed baseline.
+ */
+export interface CoManagedSeatResourceProjection {
+  closedFields?: readonly string[];
+  closedOperations?: readonly string[];
+}
+
+// LEVERAGE: friction seat-closed-baseline-non-kernel-permissions — remote-access link templates and RMM integration settings are
+// gated by the `system_settings` RBAC permission, which is not a kernel resource type, so the closed baseline cannot deny it to a
+// seat technician whose role was widened; only the seat role's closed grant list keeps it shut. A kernel-evaluated `system_settings`
+// (or `hasPermission` consulting the resolver registry) would close it the same way as every other resource.
+/** Keyed by resource type; each key must be a resource type the policy grants. Read-only devices (S30). */
+export const SEAT_AUTHORITY_PROJECTION: Readonly<Record<string, CoManagedSeatResourceProjection>> = Object.freeze({
+  asset: {
+    // Commercial data: purchase cost and the billing profile (the id and the name its join supplies).
+    closedFields: ['purchase_cost', 'purchase_cost_currency', 'billing_profile_id', 'billing_profile_name'],
+    // The PRD keeps remote control, script execution and any RMM write out of the seat surface.
+    closedOperations: ['remote_access', 'rmm_command', 'rmm_refresh', 'rmm_mapping'],
+  },
+});
+
 /** Catalog resource types the seat policy neither grants nor lists as denied. Empty when the policy is complete. */
 export function unclassifiedSeatResourceTypes(
   catalog: readonly string[],
@@ -244,6 +270,9 @@ export const coManagedSeatResolver: BuiltinRuleResolver = {
     const scope = coManagedSeatAuthority(input.subject)?.scope;
     return scope ? coManagedSeatRules(scope, SEAT_AUTHORITY_ACTIONS) : [];
   },
+  // Closed for every seat subject, live or not: the projection narrows what a read returns, never widens it.
+  closedFields: (input) => SEAT_AUTHORITY_PROJECTION[input.resource.type]?.closedFields ?? [],
+  closedOperations: (input) => SEAT_AUTHORITY_PROJECTION[input.resource.type]?.closedOperations ?? [],
 };
 
 /** Idempotent: registering again replaces the earlier registration. */

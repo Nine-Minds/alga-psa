@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "Den här tillgångsetiketten används redan eller är reserverad. Skanna den för att hitta den befintliga tillgången eller ange en annan etikett.",
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "ticketNotFound": "Ärendet hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
+      "alreadyLinkedToTicket": "Den här tillgången är redan kopplad till ärendet.",
       "clientNotFound": "Kunden hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "maintenanceNotFound": "Underhållsschemat hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
       "maintenanceMismatch": "Den här underhållsposten hör inte till den valda tillgången. Ladda om sidan och försök igen.",

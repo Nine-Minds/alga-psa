@@ -129,6 +129,9 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 }));
 
 vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
+  // No resolver closes anything for the users these tests act as.
+  assetClosedFields: () => [],
+  assetColumnsOpenTo: async () => null,
   resolveAuthorizationSubjectForUser: vi.fn(async (_knex, tenant, user) => ({
     tenant, userId: user.user_id, userType: 'internal',
   })),

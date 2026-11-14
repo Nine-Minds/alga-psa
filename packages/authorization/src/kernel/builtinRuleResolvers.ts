@@ -66,6 +66,21 @@ export interface BuiltinRuleResolver {
   facts?: BuiltinResolverFactSource;
   /** Rules for a subject in the class. Not called for subjects outside it. */
   resolveRules(input: AuthorizationEvaluationInput): BuiltinResolverRule[];
+  /**
+   * Fields of `input.resource.type` that are closed to a subject in the class, as source column names
+   * (`purchase_cost`, `client_billing_profiles.name`). Not called for subjects outside it.
+   * Two consumers: the kernel adds them to every decision's `redactedFields`, so each record projection hides
+   * them; and a read path asks `builtinClosedFields` before it builds its query, so a closed column is never
+   * selected (and a table joined only for it is never joined). Redaction after the query is the safety net,
+   * not the mechanism.
+   */
+  closedFields?(input: AuthorizationEvaluationInput): readonly string[];
+  /**
+   * Named operations on `input.resource.type` that are closed to a subject in the class: things a resource's
+   * reads do not cover and no kernel action names (opening a remote session, running a script). An operation
+   * that is not listed is open; the action layer asks `isBuiltinOperationClosed` before it does the work.
+   */
+  closedOperations?(input: AuthorizationEvaluationInput): readonly string[];
 }
 
 /** A resolver's rules for one subject, stamped with the resolver that supplied them. */
@@ -181,4 +196,57 @@ export function builtinResolversRestrict(input: AuthorizationEvaluationInput): b
       resolver.baseline === 'closed' ||
       matchRulesForAction(resolver.rules, input.resource.type, input.resource.action).length > 0
   );
+}
+
+/** Fields every applying resolver closes for this subject and resource type, deduplicated. Empty when none applies. */
+export function builtinClosedFields(input: AuthorizationEvaluationInput): string[] {
+  const resolvers = store();
+  if (resolvers.size === 0) return [];
+  const fields = new Set<string>();
+  for (const resolver of resolvers.values()) {
+    if (!resolver.closedFields || !resolver.appliesTo(input)) continue;
+    for (const field of resolver.closedFields(input)) fields.add(field);
+  }
+  return [...fields].sort();
+}
+
+/** Whether an applying resolver closes the operation named by `input.resource.action` on `input.resource.type`. */
+export function isBuiltinOperationClosed(input: AuthorizationEvaluationInput): boolean {
+  for (const resolver of store().values()) {
+    if (!resolver.closedOperations || !resolver.appliesTo(input)) continue;
+    if (resolver.closedOperations(input).includes(input.resource.action)) return true;
+  }
+  return false;
+}
+
+/** Every operation closed for this subject on `input.resource.type`, for a surface that decides what to render. */
+export function builtinClosedOperations(input: AuthorizationEvaluationInput): string[] {
+  const operations = new Set<string>();
+  for (const resolver of store().values()) {
+    if (!resolver.closedOperations || !resolver.appliesTo(input)) continue;
+    for (const operation of resolver.closedOperations(input)) operations.add(operation);
+  }
+  return [...operations].sort();
+}
+
+/**
+ * Whether a closed-baseline resolver denies this resource action outright for the subject: the resolver is closed
+ * and none of its rules names the action (alias-aware). The decision no record can change, which is what a screen
+ * needs to decide whether to render a control at all. False for a subject no closed resolver applies to.
+ */
+export function builtinResolversCloseAction(input: AuthorizationEvaluationInput): boolean {
+  return resolveAppliedBuiltinResolvers(input).some(
+    (resolver) =>
+      resolver.baseline === 'closed' &&
+      matchRulesForAction(resolver.rules, input.resource.type, input.resource.action).length === 0
+  );
+}
+
+/**
+ * Whether a registered resolver conceals records it denies: a subject governed by a closed-baseline resolver is
+ * told a record it may not read does not exist, instead of that it may not read it, so out-of-scope ids cannot
+ * be probed. False for every subject no closed resolver applies to, whose denials read as they always have.
+ */
+export function builtinResolversConcealDenials(input: AuthorizationEvaluationInput): boolean {
+  return resolveAppliedBuiltinResolvers(input).some((resolver) => resolver.baseline === 'closed');
 }

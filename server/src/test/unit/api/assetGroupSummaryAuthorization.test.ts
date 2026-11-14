@@ -50,6 +50,13 @@ vi.mock('@alga-psa/assets/lib/assetGroups', () => ({
   removeAssetFromAnyGroup: vi.fn(),
 }));
 
+// The fake database cannot resolve a subject; no resolver closes anything for these callers.
+vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
+  resolveAuthorizationSubjectForUser: vi.fn(async () => ({})),
+  assetClosedFields: () => [],
+  assetColumnsOpenTo: async () => null,
+}));
+
 import { AssetService } from '../../../lib/api/services/AssetService';
 import { getAuthorizedAssetGroupSummary } from '@alga-psa/assets/lib/assetGroups';
 

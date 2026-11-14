@@ -15,6 +15,7 @@ import { assignAssetContact } from '../actions/assetAssignmentActions';
 import { assetActionErrorMessage, isAssetActionError } from '../actions/assetActionErrors';
 import { getClientContactsForAssets } from '../actions/clientLookupActions';
 import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 
 /**
  * FR-C6 / FR-C7: the Identity tile's Assigned-to row.
@@ -45,6 +46,8 @@ export function AssetAssigneeRow({
   // Provided by MspContactDrawerProvider on the asset detail page. Optional by
   // design — fall back to a link where no provider is mounted.
   const contactDrawer = useContactDrawer();
+  // Assigning is an asset write: a read-only surface (a seat technician) shows the assignee without the Assign control.
+  const { canUpdate } = useAssetSurfaceControls();
   const [isOpen, setIsOpen] = useState(false);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [saving, setSaving] = useState(false);
@@ -146,16 +149,18 @@ export function AssetAssigneeRow({
               {t('assetBento.unassigned', { defaultValue: 'Unassigned' })}
             </span>
           )}
-          <Button
-            id="asset-assign-button"
-            variant="ghost"
-            size="sm"
-            className="h-6 px-1.5"
-            onClick={() => setIsOpen(true)}
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span className="sr-only">{t('assetBento.assign', { defaultValue: 'Assign' })}</span>
-          </Button>
+          {canUpdate && (
+            <Button
+              id="asset-assign-button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5"
+              onClick={() => setIsOpen(true)}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span className="sr-only">{t('assetBento.assign', { defaultValue: 'Assign' })}</span>
+            </Button>
+          )}
         </span>
       </div>
 
