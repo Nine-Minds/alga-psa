@@ -29,7 +29,11 @@ vi.mock('@alga-psa/auth', () => ({
     action({ ...testState.user, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
   getCurrentUser: vi.fn(),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+  checkMultiplePermissions: vi.fn(async (_user: unknown, checks: Array<{ resource: string; action: string }>) =>
+    checks.map((check) => ({ ...check, granted: true }))),
+}));
 // The seat role holds no `user:read`; the ordinary user in these tests does. The projection must decide the
 // seat technician's answer whichever way this goes, so it answers from the caller's role as the real one does.
 vi.mock('../../../../packages/user-composition/src/lib/permissions', () => ({

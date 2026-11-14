@@ -1,5 +1,6 @@
 'use server'
 
+import { CLIENT_BILLING_PERMISSION, canReadClientBilling, omitClientBillingColumns, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -17,6 +18,7 @@ import {
   assertMspPermission,
   hasMspOrClientPortalOwnClientPermission,
   hasMspPermission,
+  hasMspPermissions,
   isClientPortalUser,
 } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync, getClientWideLogoUrlAsync } from '../lib/documentsHelpers';
@@ -355,11 +357,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         }
       });
 
-      // Explicitly set fields to null if they're not in updateData but should be cleared
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
+      // Explicitly set fields to null if they're not in updateData but should be cleared.
+      // Absence only means "cleared" for a subject who was shown these columns: a subject without billing
+      // permission reads the client without them (clientBillingProjection), so saving that row back must
+      // leave them untouched.
+      const billingColumnsWereVisible = !isClientPortalUpdate && await canReadClientBilling(user, trx);
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
         updateObject.billing_contact_id = null;
       }
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_email')) {
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_email')) {
         updateObject.billing_email = null;
       }
 
@@ -530,7 +536,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     }
 
     console.log('Updated client data:', updatedClientWithLogo);
-    return updatedClientWithLogo;
+    // Client-portal updates return the portal user's own client unchanged; MSP callers get the billing projection.
+    return isClientPortalUpdate ? updatedClientWithLogo : projectClientForSubject(user, updatedClientWithLogo, db);
   } catch (error) {
     console.error('Error updating client:', error);
     if (error instanceof ClientStructuralError) {
@@ -735,7 +742,16 @@ async function clientListSearchPermissions(user: IUserWithRoles, searchTerm: str
 }
 
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+  // One roles load answers the read check and the billing projection, so the projection costs the
+  // client list (a budgeted hot path) no extra statement.
+  // LEVERAGE: pattern request-scoped-permissions — each hasPermission reloads the user's roles; hot paths batch by hand (here, getConsolidatedTicketData). A per-request permission set would make every later check free.
+  const [canReadClients, billingVisible] = await hasMspPermissions(user, [
+    { resource: 'client', action: 'read' },
+    CLIENT_BILLING_PERMISSION,
+  ]);
+  if (!canReadClients) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
 
   const {
     page = 1,
@@ -888,7 +904,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (billingVisible ? clientsWithLogos : clientsWithLogos.map(omitClientBillingColumns)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -1057,7 +1073,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (await projectClientsForSubject(user, clientsWithLogos)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -1636,7 +1652,7 @@ export const checkExistingClients = withAuth(async (
       .whereIn('client_name', clientNames)
   });
 
-  return existingClients;
+  return projectClientsForSubject(user, existingClients);
 });
 
 /**

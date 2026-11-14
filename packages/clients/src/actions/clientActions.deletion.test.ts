@@ -33,6 +33,13 @@ vi.mock('@alga-psa/auth', () => ({
     fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
 }));
 
+// The billing-column projection has its own DB suite (coManagedSeatCommercialLookups); here the subject may read billing.
+vi.mock('@alga-psa/auth/lib/clientBillingProjection', () => ({
+  canReadClientBilling: async () => true,
+  projectClientForSubject: async (_user: unknown, client: unknown) => client,
+  projectClientsForSubject: async (_user: unknown, clients: unknown) => clients,
+}));
+
 vi.mock('@alga-psa/core', () => ({
   deleteEntityWithValidation: deleteEntityWithValidationMock,
   unparseCSV: vi.fn(),

@@ -2,7 +2,8 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import type { IClientContractLine } from '@alga-psa/types';
+import type { IClientContractLine, IUser } from '@alga-psa/types';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 import { formatISO } from 'date-fns';
 import {
   resolveDeterministicContractLineSelection,
@@ -348,6 +349,9 @@ export interface EligibleContractLineForUI {
  * authenticated action (see `usageActions.getEligibleContractLinesForUI`) so
  * the tenant comes from the request, not from a bare server-action call.
  *
+ * Refuses any caller that is not an internal user holding a commercial read permission.
+ *
+ * @param user The caller; must be an internal user with service or billing read
  * @param knex The Knex instance
  * @param tenant The tenant ID
  * @param clientId The client ID
@@ -355,13 +359,16 @@ export interface EligibleContractLineForUI {
  * @param effectiveDate The effective date used to narrow eligibility
  * @returns Array of eligible contract lines with simplified structure
  */
+// LEVERAGE: pattern eligible-contract-lines-for-ui — three near-identical copies of this lookup (packages/billing/src/lib, packages/scheduling/src/lib, server/src/lib/utils); the guard is shared (@alga-psa/auth/lib/commercialAccess), the body is not. A package-direction-safe shared implementation would remove two.
 export async function getEligibleContractLinesForUI(
+  user: IUser,
   knex: Knex,
   tenant: string,
   clientId: string,
   serviceId: string,
   effectiveDate?: string | Date
 ): Promise<EligibleContractLineForUI[]> {
+  await assertCommercialReadPermission(user, knex);
   const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
   // Transform to the structure expected by the UI, including dates
