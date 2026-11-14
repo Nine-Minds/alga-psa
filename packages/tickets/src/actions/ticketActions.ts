@@ -1,7 +1,7 @@
 'use server';
 
 import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
-import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
   resolveSeatAssigneeAudience,
@@ -1714,10 +1714,6 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
         await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
       }
-      await assertTicketMoveKeepsSeatsInScope(
-        trx, tenant, id, pendingPlacement,
-        isChangingAssignment ? updateData.assigned_to : undefined
-      );
 
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.

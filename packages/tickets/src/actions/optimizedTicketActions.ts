@@ -1,6 +1,6 @@
 'use server';
 
-import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
   resolveSeatAssigneeAudience,
@@ -2957,10 +2957,6 @@ export async function updateTicketInTransaction(
       await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
       await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
     }
-    await assertTicketMoveKeepsSeatsInScope(
-      trx, tenant, id, pendingPlacement,
-      isChangingAssignment ? updateData.assigned_to : undefined
-    );
 
     let updatedTicket;
     
