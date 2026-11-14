@@ -1,18 +1,16 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 
 const released = vi.hoisted(() => vi.fn<(tenant: string) => Promise<boolean>>());
 const readWork = vi.hoisted(() => vi.fn());
-const syncPauseState = vi.hoisted(() => vi.fn());
-const dispatchSlaBackendActions = vi.hoisted(() => vi.fn(async () => undefined));
-const afterCommit = vi.hoisted(() => vi.fn());
+const reevaluateSlaPause = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock('../seatRelease', () => ({ coManagedSeatReleased: released }));
 vi.mock('../seatTicketHandoff', () => ({ readCoManagedSeatTicketWork: readWork }));
-vi.mock('@alga-psa/sla/services', () => ({ syncPauseState, dispatchSlaBackendActions }));
-vi.mock('@alga-psa/db', () => ({
-  registerAfterCommit: afterCommit, registerSeatResponsibilityObserver: vi.fn(), runWithTenant: (_t: string, fn: () => unknown) => fn(),
-}));
+vi.mock('@alga-psa/shared/lib/sla/slaPauseConditions', () => ({ reevaluateSlaPause, registerSlaPauseCondition: vi.fn() }));
+vi.mock('@alga-psa/db', () => ({ registerSeatResponsibilityObserver: vi.fn() }));
 
 import { clientItResponsibilityPauseCondition, onSeatResponsibility } from '../seatTicketSla';
 
@@ -43,33 +41,43 @@ describe('seat responsibility SLA pause condition', () => {
 describe('seat responsibility lifecycle handler', () => {
   beforeEach(() => { vi.clearAllMocks(); released.mockResolvedValue(true); });
 
-  it('does nothing when the seat shape is not released: no SLA write, no query', async () => {
+  it('does nothing when the seat shape is not released: no SLA re-evaluation', async () => {
     released.mockResolvedValue(false);
     await onSeatResponsibility(trx, event);
-    expect(syncPauseState).not.toHaveBeenCalled();
-    expect(afterCommit).not.toHaveBeenCalled();
+    expect(reevaluateSlaPause).not.toHaveBeenCalled();
   });
 
-  it('re-evaluates the pause state and tells the timer backend only after commit', async () => {
-    const backendActions = [{ kind: 'pause', ticketId: 'ticket', reason: 'client_it_responsibility' }];
-    syncPauseState.mockResolvedValue({ success: true, was_paused: false, is_now_paused: true, backendActions });
+  it('asks the SLA pause port to re-evaluate the ticket inside the handoff transaction', async () => {
     await onSeatResponsibility(trx, event);
-
-    expect(syncPauseState).toHaveBeenCalledWith(trx, 'tenant', 'ticket', 'actor');
-    expect(dispatchSlaBackendActions).not.toHaveBeenCalled();
-    expect(afterCommit).toHaveBeenCalledTimes(1);
-    await afterCommit.mock.calls[0][1]();
-    expect(dispatchSlaBackendActions).toHaveBeenCalledWith(backendActions);
+    expect(reevaluateSlaPause).toHaveBeenCalledWith(trx, 'tenant', 'ticket', 'actor');
   });
 
-  it('registers no after-commit work when the clock did not change', async () => {
-    syncPauseState.mockResolvedValue({ success: true, was_paused: true, is_now_paused: true });
-    await onSeatResponsibility(trx, event);
-    expect(afterCommit).not.toHaveBeenCalled();
-  });
-
-  it('throws when the SLA write failed, so the handoff rolls back with its clock fact', async () => {
-    syncPauseState.mockResolvedValue({ success: false, was_paused: false, is_now_paused: false, error: 'boom' });
+  it('throws when the re-evaluation failed, so the handoff rolls back with its clock fact', async () => {
+    reevaluateSlaPause.mockRejectedValueOnce(new Error('boom'));
     await expect(onSeatResponsibility(trx, event)).rejects.toThrow(/boom/);
+  });
+});
+
+// @alga-psa/sla depends on @alga-psa/notifications, which imports this package. Any edge from here
+// to the SLA package (declared or imported, static or dynamic) closes an Nx build-graph cycle and
+// stops every `nx run-many -t build` that reaches this package.
+describe('co-managed package boundary', () => {
+  const root = path.resolve(__dirname, '..', '..');
+  const sources = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const full = path.join(dir, name);
+    if (statSync(full).isDirectory()) return sources(full);
+    return /\.(ts|tsx)$/.test(name) ? [full] : [];
+  });
+
+  it('does not declare a dependency on @alga-psa/sla', () => {
+    const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+    const declared = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.peerDependencies };
+    expect(Object.keys(declared)).not.toContain('@alga-psa/sla');
+  });
+
+  it('does not import @alga-psa/sla from any source or test file', () => {
+    const importsSla = /(?:from\s+|import\s*\(\s*|require\s*\(\s*)['"]@alga-psa\/sla(?:\/[^'"]*)?['"]/;
+    const offenders = sources(path.join(root, 'src')).filter((file) => importsSla.test(readFileSync(file, 'utf8')));
+    expect(offenders.map((file) => path.relative(root, file))).toEqual([]);
   });
 });

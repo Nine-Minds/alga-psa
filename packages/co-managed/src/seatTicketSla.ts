@@ -8,14 +8,16 @@
  *    the client's live arrangement". Every SLA pause re-evaluation consults it, so a status or
  *    response-state change on a ticket that is with client IT cannot resume the clock, and a
  *    handback does not resume a clock that is still paused for another reason.
- *  - a lifecycle HANDLER for `seatResponsibility`: it only re-evaluates (`syncPauseState`), which
- *    pauses or resumes to match the conditions as they now stand.
+ *  - a lifecycle HANDLER for `seatResponsibility`: it only asks the SLA package to re-evaluate
+ *    (`reevaluateSlaPause`), which pauses or resumes to match the conditions as they now stand. It
+ *    goes through that port, never an import of `@alga-psa/sla`: the SLA package depends on
+ *    notifications, which depends on this package, so an import would close a build cycle.
  *
  * Neutrality: both stop at the release gate (flag AND `co-managed-seat` served), before any query.
  * Past the gate the condition reads the ticket's client and its live arrangement, then the work row.
  */
-import { registerAfterCommit, registerSeatResponsibilityObserver, runWithTenant } from '@alga-psa/db';
-import { registerSlaPauseCondition, type SlaPauseConditionContributor } from '@alga-psa/shared/lib/sla/slaPauseConditions';
+import { registerSeatResponsibilityObserver } from '@alga-psa/db';
+import { reevaluateSlaPause, registerSlaPauseCondition, type SlaPauseConditionContributor } from '@alga-psa/shared/lib/sla/slaPauseConditions';
 import { dispatchTicketLifecycle, registerTicketLifecycleHandler, type TicketLifecycleEvent } from '@alga-psa/tickets/lib/ticketLifecycleHooks';
 import type { Knex } from 'knex';
 import { coManagedSeatReleased } from './seatRelease';
@@ -30,20 +32,13 @@ export const clientItResponsibilityPauseCondition: SlaPauseConditionContributor 
 };
 
 /**
- * Re-evaluates the ticket's SLA pause state after responsibility changed. A failed write throws, so
- * with the `rollback` policy the handoff and its clock fact commit together or not at all.
+ * Re-evaluates the ticket's SLA pause state after responsibility changed. A failed write (or no
+ * re-evaluator registered) throws, so with the `rollback` policy the handoff and its clock fact
+ * commit together or not at all. The re-evaluator tells the timer backend after commit.
  */
 export async function onSeatResponsibility(trx: Knex.Transaction, event: Extract<TicketLifecycleEvent, { kind: 'seatResponsibility' }>): Promise<void> {
   if (!await coManagedSeatReleased(event.tenant)) return;
-  // Loaded only past the gate: an ordinary tenant never loads the SLA package for this.
-  const { syncPauseState, dispatchSlaBackendActions } = await import('@alga-psa/sla/services');
-  const result = await syncPauseState(trx, event.tenant, event.ticketId, event.actorUserId);
-  if (!result.success) throw new Error(`SLA pause state could not follow the responsibility change: ${result.error ?? 'unknown error'}`);
-  if (result.backendActions?.length) {
-    // The timer backend is told after the handoff commits, never from inside its transaction.
-    registerAfterCommit(trx, () => runWithTenant(event.tenant, () => dispatchSlaBackendActions(result.backendActions)),
-      `SEAT_RESPONSIBILITY_SLA ticket=${event.ticketId}`);
-  }
+  await reevaluateSlaPause(trx, event.tenant, event.ticketId, event.actorUserId);
 }
 
 export function registerCoManagedSeatSla(): void {

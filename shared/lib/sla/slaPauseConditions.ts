@@ -52,7 +52,47 @@ export async function activeSlaPauseCondition(
   return null;
 }
 
-/** Test-only. */
+/**
+ * Re-evaluates a ticket's SLA pause state inside the caller's transaction, and tells the timer
+ * backend after that transaction commits. Throws when the pause state could not be written.
+ */
+export type SlaPauseReevaluator = (
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  actorUserId?: string,
+) => Promise<void>;
+
+const REEVALUATOR_KEY = '__algaSlaPauseReevaluator';
+
+/**
+ * The SLA package registers the re-evaluator (importing `@alga-psa/sla/services` does it). A
+ * contributor whose condition just changed calls `reevaluateSlaPause` instead of importing the SLA
+ * package, which already depends on notifications and so on the contributor's own package: a
+ * direct import would close a build cycle.
+ */
+export function registerSlaPauseReevaluator(reevaluator: SlaPauseReevaluator): void {
+  (globalThis as Record<string, unknown>)[REEVALUATOR_KEY] = reevaluator;
+}
+
+/**
+ * Re-evaluates the ticket's pause state after a contributed condition changed. With no
+ * re-evaluator registered it throws, so a caller that commits its state change together with the
+ * clock fact rolls back rather than leaving the clock silently out of step.
+ */
+export async function reevaluateSlaPause(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  actorUserId?: string,
+): Promise<void> {
+  const reevaluator = (globalThis as Record<string, unknown>)[REEVALUATOR_KEY] as SlaPauseReevaluator | undefined;
+  if (!reevaluator) throw new Error('SLA pause re-evaluation is not registered: import @alga-psa/sla/services at startup');
+  await reevaluator(trx, tenant, ticketId, actorUserId);
+}
+
+/** Test-only. Clears contributors and the re-evaluator. */
 export function resetSlaPauseConditionsForTests(): void {
   contributors().clear();
+  delete (globalThis as Record<string, unknown>)[REEVALUATOR_KEY];
 }

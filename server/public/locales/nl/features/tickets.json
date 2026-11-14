@@ -1928,14 +1928,14 @@
       "audienceRequired": "Kies wie deze opmerking kan zien voordat u deze plaatst."
     },
     "seatHandoff": {
-      "invalidHandoff": "Schrijf een gedeelde notitie voor de IT van de klant voordat je dit ticket overdraagt.",
+      "invalidHandoff": "Schrijf een gedeelde notitie voor de IT van de klant voordat u dit ticket overdraagt.",
       "ticketNotFound": "Dit ticket is niet meer beschikbaar.",
       "noArrangement": "De klant van dit ticket heeft geen co-managed seat-overeenkomst meer.",
       "operationConflict": "Deze overdracht is met andere gegevens gestart. Probeer het opnieuw.",
-      "changed": "Dit ticket is overgedragen of opnieuw toegewezen. Vernieuw het ticket voordat je het opnieuw probeert.",
+      "changed": "Dit ticket is overgedragen of opnieuw toegewezen. Vernieuw het ticket voordat u het opnieuw probeert.",
       "alreadyResponsible": "De IT van de klant is al verantwoordelijk voor dit ticket. Vernieuw het ticket om de huidige status te zien.",
-      "actorNotAllowed": "Je kunt dit ticket niet overdragen aan de IT van de klant.",
-      "boardOutOfScope": "Het board van dit ticket wordt niet gedeeld met de IT van de klant, dus het kan niet worden overgedragen.",
+      "actorNotAllowed": "U kunt dit ticket niet overdragen aan de IT van de klant.",
+      "boardOutOfScope": "Het bord van dit ticket wordt niet gedeeld met de IT van de klant, dus het kan niet worden overgedragen.",
       "technicianNotAvailable": "De geselecteerde technicus is niet meer beschikbaar voor deze klant. Kies een andere of laat het ticket niet toegewezen.",
       "unavailable": "Tickets overdragen aan de IT van de klant is niet beschikbaar."
     }
@@ -3326,7 +3326,7 @@
     "handToClientIt": "Overdragen aan IT van de klant",
     "handedToClientIt": "Overgedragen aan IT van de klant",
     "handing": "Bezig met overdragen…",
-    "handPrompt": "De IT van de klant wordt verantwoordelijk voor dit ticket en je SLA-timers worden gepauzeerd tot het terugkomt. De notitie wordt gedeeld met de technici van de klant.",
+    "handPrompt": "De IT van de klant wordt verantwoordelijk voor dit ticket en uw SLA-timers worden gepauzeerd tot het terugkomt. De notitie wordt gedeeld met de technici van de klant.",
     "noteLabel": "Gedeelde notitie voor IT van de klant",
     "technicianLabel": "Technicus (optioneel)",
     "technicianPlaceholder": "Elke technicus van deze klant",

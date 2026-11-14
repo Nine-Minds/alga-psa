@@ -296,7 +296,6 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/types": "*",
     "@alga-psa/tickets": "*",
-    "@alga-psa/sla": "*",
     "@alga-psa/predicates": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/event-schemas": "*",
