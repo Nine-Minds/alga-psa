@@ -832,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Berechtigung verweigert: Die Verwaltung von API-Schlüsseln ist internen Benutzern vorbehalten",
+      "notAvailableForAccount": "API-Schlüssel sind für dieses Konto nicht verfügbar.",
       "configInternalOnly": "Berechtigung verweigert: Die Konfiguration von API-Schlüsseln ist internen Benutzern vorbehalten",
       "invalidExpiration": "Wählen Sie ein gültiges Ablaufdatum für diesen API-Schlüssel.",
       "notFound": "API-Schlüssel nicht gefunden.",

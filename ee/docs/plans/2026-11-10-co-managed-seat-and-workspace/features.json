@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "Routes, menu sections and product guards resolve per principal: a seat technician gets the operational surface (tickets, projects, devices, documents, time), and every other MSP route answers not found for them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "A seat technician cannot create an API key, and REST and MCP requests from a seat principal are refused.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment C — Seat authority and surface"
     ]

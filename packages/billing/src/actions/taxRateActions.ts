@@ -139,7 +139,7 @@ export const getTaxRatePermissions = withAuth(async (user, { tenant }): Promise<
   canCreate: boolean; canUpdate: boolean; canDelete: boolean;
 } | TaxRateActionError> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'read')) {
       return permissionError('Permission denied: Cannot read tax rates', 'msp/billing-settings:errors.permissions.readTaxRates');
     }
@@ -158,7 +158,7 @@ export const getTaxRatePermissions = withAuth(async (user, { tenant }): Promise<
 
 export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[] | TaxRateActionError> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'read')) {
       return permissionError('Permission denied: Cannot read tax rates', 'msp/billing-settings:errors.permissions.readTaxRates');
     }
@@ -185,7 +185,7 @@ export const addTaxRate = withAuth(async (
   taxRateData: Omit<ITaxRate, 'tax_rate_id'>
 ): Promise<ITaxRate | TaxRateActionError> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'create')) {
       return permissionError('Permission denied: Cannot create tax rates', 'msp/billing-settings:errors.permissions.createTaxRates');
     }
@@ -237,7 +237,7 @@ export const updateTaxRate = withAuth(async (
   taxRateData: ITaxRate
 ): Promise<ITaxRate | TaxRateActionError> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'update')) {
       return permissionError('Permission denied: Cannot update tax rates', 'msp/billing-settings:errors.permissions.updateTaxRates');
     }
@@ -334,7 +334,7 @@ export const updateTaxRate = withAuth(async (
 
 export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string): Promise<DeleteTaxRateResult> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'delete')) {
       return {
         success: false,

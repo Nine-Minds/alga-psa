@@ -24,6 +24,7 @@ export async function assertSessionProductAccess(args: {
   try {
     await assertTenantProductAccess({
       tenantId,
+      userId: session?.user?.id,
       capability: args.capability,
       allowedProducts: args.allowedProducts,
     });

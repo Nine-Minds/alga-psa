@@ -23,7 +23,8 @@ describe('product route boundary composition', () => {
       'utf8',
     );
 
-    expect(source).toContain('resolveProductRouteBehavior(productCode, pathname)');
+    // The MSP shell resolves per principal: the tenant's product plus the user's surface kind.
+    expect(source).toContain('resolveProductRouteBehavior({ productCode, surfaceKind }, pathname)');
     expect(source).toContain('<ProductRouteBoundary behavior={routeBehavior} scope="msp" />');
   });
 

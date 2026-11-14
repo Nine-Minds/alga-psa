@@ -834,6 +834,7 @@
     },
     "apiKeys": {
       "internalOnly": "Odmowa uprawnień: zarządzanie kluczami API jest zastrzeżone dla użytkowników wewnętrznych",
+      "notAvailableForAccount": "Klucze API nie są dostępne dla tego konta.",
       "configInternalOnly": "Odmowa uprawnień: konfiguracja kluczy API jest zastrzeżona dla użytkowników wewnętrznych",
       "invalidExpiration": "Wybierz prawidłową datę wygaśnięcia tego klucza API.",
       "notFound": "Nie znaleziono klucza API.",

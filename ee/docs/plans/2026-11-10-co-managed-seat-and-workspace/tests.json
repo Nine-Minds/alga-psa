@@ -147,7 +147,7 @@
   {
     "id": "T017",
     "description": "E2E: a seat technician's menu shows only the operational surface; requesting billing, settings, user administration, dispatch and reports routes answers not found; an API key cannot be created and a REST request is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030"

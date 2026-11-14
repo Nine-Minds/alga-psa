@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     }
     await assertTenantProductAccess({
       tenantId: user.tenant,
+      userId: user.user_id,
       capability: 'email_to_ticket',
       allowedProducts: ['psa', 'algadesk'],
     });

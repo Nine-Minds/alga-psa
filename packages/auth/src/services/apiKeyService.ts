@@ -3,6 +3,11 @@ import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
 import { isLicensedUserType } from '@alga-psa/types';
+import {
+  ApiCredentialsRefusedError,
+  mayHoldApiCredentials,
+  principalMemberColumns,
+} from '@alga-psa/authorization/subject/principalKind';
 
 interface ApiKey {
   api_key_id: string;
@@ -46,13 +51,15 @@ export class ApiKeyService {
     knex: Knex,
     tenant: string,
     userId: string
-  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended' | null> {
+  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'principal_refused' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
-      .first('is_inactive', 'user_type');
+      .first('is_inactive', 'user_type', ...principalMemberColumns(knex, { tenant, userId }));
     if (!user || user.is_inactive) return 'user_inactive';
     if (user.user_type === 'client') return 'client_owner';
+    // A key that predates the owner's principal kind (a technician who became a seat technician) stops here.
+    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: user.principal_member }))) return 'principal_refused';
     // Allow-list: an active internal owner passes. Any other owner type is
     // admitted only if the edition boundary approves it (the CE stub never does).
     if (user.user_type !== 'internal') {
@@ -141,9 +148,14 @@ export class ApiKeyService {
     const owner = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
-      .first('is_inactive', 'user_type');
+      .first('is_inactive', 'user_type', ...principalMemberColumns(knex, { tenant, userId }));
     if (!owner || owner.is_inactive || !isLicensedUserType(owner.user_type)) {
       throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
+    }
+    // Issuance boundary for every purpose and every caller (the profile action, mobile, MCP, temporary AI
+    // keys): a principal kind that may not hold API credentials is refused here, on the server.
+    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: owner.principal_member }))) {
+      throw new ApiCredentialsRefusedError();
     }
 
     try {

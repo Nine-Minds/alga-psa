@@ -340,6 +340,7 @@ export class FinancialService extends BaseService<ITransaction> {
   async listTaxRates(query: TaxRateListQuery, context: ServiceContext): Promise<ListResult<TaxRateResponse>> {
     await this.validatePermissions('read', 'billing', context);
     try {
+      // LEVERAGE: friction tenant-only-product-guard — a REST context is never a seat principal (its key is refused at validation), so this stays tenant-only; passing the principal would make the guard uniform.
       await assertPsaOnlyTenantAccess(context.tenant, 'billing_actions');
     } catch (error) {
       if (error instanceof ProductAccessError) throw new ForbiddenError('Billing tax rates are not available for this tenant.');

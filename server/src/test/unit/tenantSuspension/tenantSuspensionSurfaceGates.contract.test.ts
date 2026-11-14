@@ -51,7 +51,7 @@ describe('tenant suspension surface gates', () => {
     const source = read('server/src/lib/services/apiKeyServiceForApi.ts');
     expect(source.match(/getKeyGateReason\(/g)!.length).toBeGreaterThanOrEqual(3);
     expect(source).toContain(
-      "'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended'"
+      "'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'principal_refused' | 'tenant_suspended'"
     );
     expect(source).toContain('isTenantSuspended(knex, tenant)');
   });

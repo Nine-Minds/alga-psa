@@ -1,11 +1,14 @@
 import { getSession } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { cache } from 'react';
 import { NextResponse } from 'next/server';
 import {
   ProductCode,
   resolveProductCode,
 } from '@alga-psa/types';
+import { loadProductPrincipal } from '@shared/services/productPrincipal';
+import { surfaceAllowsCapability, type ProductPrincipal } from '@shared/services/productSurfaceKinds';
 
 /**
  * Product access gates one dimension of authorization.
@@ -87,6 +90,32 @@ export async function getCurrentTenantProduct(): Promise<ProductCode> {
   return getTenantProduct(tenantId);
 }
 
+/**
+ * The product and the principal kind of a user, from one statement (see `loadProductPrincipal`). Every
+ * per-principal decision (route guard, menu, API and action guards) starts here. With no user it is the
+ * tenant's product alone, exactly `getTenantProduct`.
+ */
+export async function getProductPrincipal(tenantId: string, userId?: string | null): Promise<ProductPrincipal> {
+  if (!userId) return { productCode: await getTenantProduct(tenantId) };
+  const { rawProductCode, surfaceKind } = await loadProductPrincipal({ tenantId, userId });
+  return {
+    productCode: resolveProductOrThrow(rawProductCode, 'tenant_product_resolution'),
+    surfaceKind,
+  };
+}
+
+/** The signed-in user's principal. With no session it is the PSA product, as `getCurrentTenantProduct`. */
+export const getCurrentProductPrincipal = cache(async (): Promise<ProductPrincipal> => {
+  const session = await getSession();
+  const tenantId = session?.user?.tenant;
+
+  if (!tenantId) {
+    return { productCode: 'psa' };
+  }
+
+  return getProductPrincipal(tenantId, session?.user?.id);
+});
+
 export function assertProductAccess(input: {
   capability: string;
   productCode: string | null | undefined;
@@ -101,15 +130,24 @@ export function assertProductAccess(input: {
   return productCode;
 }
 
+/**
+ * Refuses a principal whose product is not allowed, or whose principal kind's surface does not reach the
+ * capability. Omit `userId` where no user is in play; pass it wherever a signed-in user is.
+ */
 export async function assertTenantProductAccess(input: {
   tenantId: string;
+  userId?: string | null;
   capability: string;
   allowedProducts: readonly ProductCode[];
 }): Promise<ProductCode> {
-  const productCode = await getTenantProduct(input.tenantId);
-  return assertProductAccess({
+  const principal = await getProductPrincipal(input.tenantId, input.userId);
+  const productCode = assertProductAccess({
     capability: input.capability,
-    productCode,
+    productCode: principal.productCode,
     allowedProducts: input.allowedProducts,
   });
+  if (principal.surfaceKind && !surfaceAllowsCapability(principal.surfaceKind, input.capability)) {
+    throw new ProductAccessError(input.capability, productCode);
+  }
+  return productCode;
 }

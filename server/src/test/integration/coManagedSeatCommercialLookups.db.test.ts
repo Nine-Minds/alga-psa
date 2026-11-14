@@ -141,7 +141,7 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     expect(await hasCommercialReadPermission(people.technician)).toBe(false);
     expect(await hasCommercialReadPermission(people.custom)).toBe(false);
 
-    const migration = require('../../../migrations/20261113140000_grant_service_read_to_msp_roles.cjs');
+    const migration = require('../../../migrations/20261113140200_grant_service_read_to_msp_roles.cjs');
     await migration.up(db);
     expect(await hasCommercialReadPermission(people.technician)).toBe(true);
     expect(await hasCommercialReadPermission(people.custom)).toBe(true);
