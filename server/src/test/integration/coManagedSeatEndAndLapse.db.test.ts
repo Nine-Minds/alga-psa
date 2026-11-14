@@ -17,6 +17,7 @@ import {
   createCoManagedSeatArrangement, endCoManagedSeatArrangement, handCoManagedSeatTicketToClientIt, inviteCoManagedSeatTechnician,
   previewCoManagedSeatArrangementEnd, readCoManagedSeatTicketWork, setCoManagedSeatBoardScope,
 } from '@alga-psa/co-managed';
+import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { registerCoManagedSeatWriteAdmission } from '@alga-psa/co-managed/seatWriteAdmission';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
@@ -192,11 +193,41 @@ describeDb('ending a seat arrangement and lapse', { shuffle: false }, () => {
     expect((await kernel.authorizeMutation(as(w.staff, 'internal'))).allowed).toBe(true);
     expect((await kernel.authorizeMutation(as(randomUUID(), 'client'))).allowed).toBe(true);
 
+    // The real ticket write path, on the same ticket, in the same expired-grace state.
+    const contactId = randomUUID();
+    await db('contacts').insert({ tenant: w.sponsor, contact_name_id: contactId, full_name: 'Rita Requester',
+      email: `rita-${contactId}@example.com`, client_id: w.clientId });
+    await db('tickets').where({ tenant: w.sponsor, ticket_id: ticketId }).update({ contact_name_id: contactId });
+    const requesterUser = await createUser(db, w.sponsor, { user_type: 'client', contact_id: contactId });
+    const principal = (userId: string, userType: 'internal' | 'client', extra: Record<string, unknown> = {}) =>
+      ({ user_id: userId, tenant: w.sponsor, user_type: userType, roles: [], ...extra }) as any;
+    const ticketAccess = (user: any, action: 'read' | 'update') =>
+      db.transaction((trx) => authorizeTicketRecordAccess({ trx, tenant: w.sponsor, user, ticketId, action }));
+    const technicianUser = principal(technician, 'internal');
+    const writeError = await ticketAccess(technicianUser, 'update').then(() => null, (e) => e);
+    expect(isCoManagedLifecycleError(writeError)).toBe(true);
+    await expect(ticketAccess(technicianUser, 'read')).resolves.toMatchObject({ ticket_id: ticketId });
+    await expect(ticketAccess(principal(w.staff, 'internal'), 'update')).resolves.toMatchObject({ ticket_id: ticketId });
+    await expect(ticketAccess(principal(requesterUser, 'client', { contact_id: contactId }), 'update')).resolves.toMatchObject({ ticket_id: ticketId });
+
     // Renewal clears the lapse and the technician writes again; an ended arrangement refuses them for good.
     await lapse(null);
     expect((await kernel.authorizeMutation(as(technician, 'internal'))).allowed).toBe(true);
     await end(w);
     expect(isCoManagedLifecycleError(await refused(technician))).toBe(true);
     expect((await kernel.authorizeMutation(as(w.staff, 'internal'))).allowed).toBe(true);
+  });
+
+  it('does not lock out an MSP user whose only seat assignment is revoked', async () => {
+    registerCoManagedSeatWriteAdmission();
+    const w = await world();
+    const converted = await seat(w.sponsor, w.arrangementId, 'revoked');
+    await db('co_managed_entitlements').where({ tenant: w.sponsor })
+      .update({ lapse_started_at: new Date(Date.now() - 31 * DAY), read_only_after: new Date(Date.now() - DAY) });
+    const kernel = createAuthorizationKernel({ builtinProvider: new BuiltinAuthorizationKernelProvider(), rbacEvaluator: async () => true });
+    const write = (userId: string) => kernel.authorizeMutation({ subject: { tenant: w.sponsor, userId, userType: 'internal', roleIds: [] },
+      resource: { type: 'ticket', action: 'update' }, mutation: { kind: 'update' }, knex: db });
+    expect((await write(converted)).allowed).toBe(true);
+    await expect(write(w.technicians[0])).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
   });
 });

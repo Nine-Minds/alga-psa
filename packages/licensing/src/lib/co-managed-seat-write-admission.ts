@@ -9,7 +9,7 @@
  *
  * Reads and sign-in never reach this: it is called for mutations only.
  *
- * Cost: one indexed read of the user's seat assignments. A user with none (every MSP user in a
+ * Cost: one read of the user's live seat assignments, on the partial unique index. A user with none (every MSP user in a
  * tenant without seat arrangements) returns after that read and touches nothing else.
  */
 import type { Knex } from 'knex';
@@ -22,7 +22,7 @@ const TERMINATED: CoManagedOperationalState = { state: 'terminated', canWrite: f
 
 /**
  * Throws `CoManagedLifecycleError` when `userId` is a seat technician whose allocation has lapsed
- * past grace, or whose seat has been ended or revoked. Returns for anyone else.
+ * past grace, or whose arrangement ended. Returns for anyone else.
  *
  * `FORCE_CAPABILITIES=co-managed-seat:off` admits every write, like the workspace kill switch.
  */
@@ -33,14 +33,12 @@ export async function assertCoManagedSeatTechnicianWrite(
   const forced = forcedValue(typeof process !== 'undefined' ? process.env.FORCE_CAPABILITIES : undefined, 'co-managed-seat');
   if (forced === 'off' || forced === 'malformed') return;
   const sponsor = tenantDb(db, tenant);
-  const seats: Array<{ state: string; arrangement_id: string }> = await sponsor.table('co_managed_seat_assignments')
-    .where('user_id', userId).select('state', 'arrangement_id');
-  if (seats.length === 0) return;
-  const live = seats.find((seat) => seat.state === 'active');
-  // Only revoked seats remain: the arrangement ended or the seat was taken back, so the technician
-  // is no longer anyone's to write as. The account is deactivated too; this covers a session that
-  // outlives it until its next request.
-  if (!live) throw new CoManagedLifecycleError(TERMINATED);
+  // Non-revoked only: this is the `co_managed_one_live_seat_assignment (tenant, user_id)` index. A user
+  // whose seats are all revoked is not a seat technician (S9 admits them as the MSP's own user), so
+  // they, like every MSP user, return here.
+  const live: { arrangement_id: string } | undefined = await sponsor.table('co_managed_seat_assignments')
+    .where('user_id', userId).whereNot('state', 'revoked').first('arrangement_id');
+  if (!live) return;
   const arrangement = await sponsor.table('co_managed_seat_arrangements')
     .where('arrangement_id', live.arrangement_id).first('state', 'allocation_id');
   if (!arrangement || arrangement.state !== 'active') throw new CoManagedLifecycleError(TERMINATED);
