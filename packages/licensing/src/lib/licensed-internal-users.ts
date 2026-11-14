@@ -129,10 +129,11 @@ export async function admitCoManagedSeatTechnician(
     }
   }
   if (!held) return { seatTechnician: false };
+  const { assignment_id: assignmentId, arrangement_id: arrangementId } = held;
 
   const refuse = (reason: CoManagedSeatTechnicianRefusal): CoManagedSeatTechnicianAdmission =>
     ({ seatTechnician: true, ok: false, reason, error: REFUSALS[reason] });
-  const arrangements = () => scope.table('co_managed_seat_arrangements').where('arrangement_id', held.arrangement_id);
+  const arrangements = () => scope.table('co_managed_seat_arrangements').where('arrangement_id', arrangementId);
 
   // Unlocked: only to learn which allocation to lock. Re-read under its own lock below.
   const found = await arrangements().first('allocation_id');
@@ -147,8 +148,8 @@ export async function admitCoManagedSeatTechnician(
   const allocation = await scope.table('co_managed_allocations')
     .where({ allocation_id: arrangement.allocation_id, allocation_kind: 'seat' }).first('seats');
   const committed = toCount(await liveSeatAssignments(scope)
-    .where('seat_assignment.arrangement_id', held.arrangement_id).count('* as count').first() as { count?: string | number } | undefined);
+    .where('seat_assignment.arrangement_id', arrangementId).count('* as count').first() as { count?: string | number } | undefined);
   if (committed > Number(allocation?.seats ?? 0)) return refuse('SEAT_LIMIT');
 
-  return { seatTechnician: true, ok: true, assignmentId: held.assignment_id, arrangementId: held.arrangement_id };
+  return { seatTechnician: true, ok: true, assignmentId, arrangementId };
 }
