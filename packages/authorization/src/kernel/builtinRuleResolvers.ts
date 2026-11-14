@@ -115,6 +115,24 @@ export function hasBuiltinRuleResolversWithoutFactSource(): boolean {
 }
 
 /**
+ * Whether some fact source says the tenant has a subject of its class, as a boolean scalar expression to select
+ * (the fact sources' `tenantHasSubjects`, OR-ed). Null when no registered resolver has a fact source. It visits
+ * only what `tenantHasSubjects` names, never the tables `subjectFacts` reads, so a caller selects it alongside a
+ * statement it already issues and reads the facts only when it is not false.
+ */
+export function builtinResolverSubjectsExistExpression(
+  knex: Knex | Knex.Transaction,
+  tenant: string
+): Knex.Raw | null {
+  const sources = builtinResolverFactSources();
+  if (sources.length === 0) return null;
+  return knex.raw(
+    `(${sources.map(() => 'exists(?)').join(' or ')})`,
+    sources.map(({ facts }) => facts.tenantHasSubjects(knex, tenant).select(knex.raw('1')))
+  );
+}
+
+/**
  * One jsonb object of every fact source's facts for the subject, keyed by resolver id, as a scalar expression
  * to select. Null when no registered resolver has a fact source.
  */

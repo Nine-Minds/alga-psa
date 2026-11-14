@@ -208,6 +208,41 @@ describeDb('co-managed seat authority is resolved from rows on every request', {
     expect(deniedBy(denied)).toEqual(['seat:ticket:read:own_client']);
   });
 
+  // The hot-path budget forbids co_managed_ tables for a tenant without co-management: the ticket snapshot
+  // gates the seat facts on the tenant's resolver membership instead of reading them for everyone.
+  it('the ticket authorization context of a tenant with no seat technician never reads a seat table', async () => {
+    const plain = await sponsorWithPool();
+    const plainUser = await createUser(db, plain, { user_type: 'internal' });
+    const ticketContext = async () => {
+      const statements: string[] = [];
+      const onQuery = (query: { sql: string }) => { statements.push(query.sql); };
+      db.on('query', onQuery);
+      try {
+        const context = await db.transaction((trx) => createTicketAuthorizationContext(trx, plain,
+          { user_id: plainUser, user_type: 'internal', tenant: plain, roles: [] } as never));
+        return { statements, subject: context.authorizationSubject };
+      } finally {
+        db.removeListener('query', onQuery);
+      }
+    };
+
+    const registered = await ticketContext();
+    unregisterBuiltinRuleResolver(CO_MANAGED_SEAT_RESOLVER_ID);
+    const unregistered = await ticketContext();
+    registerBuiltinRuleResolver(coManagedSeatResolver);
+
+    expect(registered.statements.filter((sql) => /co_managed_/.test(sql))).toEqual([]);
+    expect(registered.statements.length).toBe(unregistered.statements.length);
+    expect(registered.subject).toEqual(unregistered.subject);
+    expect(registered.subject.resolverFacts).toBeUndefined();
+
+    // A seat technician's tenant still gets the facts, so the technician is still a seat subject.
+    const s = await seatArrangement();
+    const seat = await db.transaction((trx) => createTicketAuthorizationContext(trx, s.tenant,
+      { user_id: s.userId, user_type: 'internal', tenant: s.tenant, roles: [] } as never));
+    expect(isCoManagedSeatSubject(seat.authorizationSubject)).toBe(true);
+  });
+
   // Release posture: dark.
   it('MSP staff of the same tenant, and tenants with no seat technician, are untouched', async () => {
     const s = await seatArrangement();
