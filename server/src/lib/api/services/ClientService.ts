@@ -18,6 +18,7 @@ import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError } from '@alga-psa/core/config/deletion';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
 import {
   createLocation as createClientLocation,
@@ -732,6 +733,11 @@ export class ClientService extends BaseService<IClient> {
         delete updateData.properties;
       }
       const updatedFieldKeys = Object.keys(updateData);
+
+      // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+      await assertClientPatchKeepsSeatArrangement(trx, context.tenant, id, updateData).catch((error: unknown) => {
+        throw error instanceof ClientSeatArrangementError ? new ConflictError(error.message) : error;
+      });
 
       // Update client
       const [client] = await db.table('clients')

@@ -2008,7 +2008,8 @@
       "invalidValue": "One of the selected client values is invalid. Please refresh and try again.",
       "invalidData": "Invalid client data provided. Please check all fields and try again.",
       "missingField": "Missing required client field.",
-      "missingFieldNamed": "Missing required client field: {{field}}."
+      "missingFieldNamed": "Missing required client field: {{field}}.",
+      "hasSeatArrangement": "This client has a co-managed IT seat arrangement. End the arrangement before making the client inactive."
     },
     "permissions": {
       "readClients": "Permission denied: Cannot read clients",

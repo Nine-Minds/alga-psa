@@ -5,7 +5,9 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError } from '@alga-psa/core/config/deletion';
 import { tenantDb } from '@alga-psa/db';
+import { releaseSeatTicketOnMove } from '@alga-psa/db';
 import {
   createClientWithDefaults,
   type CreateClientWithDefaultsData,
@@ -272,6 +274,23 @@ async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: strin
     });
   }
   return client as ClientRow;
+}
+
+/** Refuses a client patch that would make a client with a live seat arrangement inactive. */
+async function refuseStrandingSeatArrangement(
+  ctx: any, tx: TenantTxContext, clientId: string, patch: { is_inactive?: unknown },
+): Promise<void> {
+  try {
+    await assertClientPatchKeepsSeatArrangement(tx.trx, tx.tenantId, clientId, patch);
+  } catch (error) {
+    if (!(error instanceof ClientSeatArrangementError)) throw error;
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: error.message,
+      details: { client_id: clientId, reason: error.code },
+    });
+  }
 }
 
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, any>> {
@@ -1488,6 +1507,8 @@ export function registerClientActions(): void {
         }
 
         if (Object.keys(clientPatch).length > 0) {
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await refuseStrandingSeatArrangement(ctx, tx, input.client_id, clientPatch);
           try {
             await tenantScopedTable(tx, 'clients')
               .where('client_id', input.client_id)
@@ -1588,6 +1609,8 @@ export function registerClientActions(): void {
         let archivedAt: string | null = null;
         if (!previousInactive) {
           archivedAt = new Date().toISOString();
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await refuseStrandingSeatArrangement(ctx, tx, input.client_id, { is_inactive: true });
           await tenantScopedTable(tx, 'clients')
             .where('client_id', input.client_id)
             .update({ is_inactive: true, updated_at: archivedAt });
@@ -2061,6 +2084,8 @@ export function registerClientActions(): void {
         }
 
         await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).update(patch);
+        // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+        await releaseSeatTicketOnMove(tx.trx, tx.tenantId, input.ticket_id, ticket, { ...ticket, client_id: input.client_id });
 
         const after = await ensureTicketExists(ctx, tx, input.ticket_id);
 

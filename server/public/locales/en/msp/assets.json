@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "This asset tag is already in use or reserved. Scan it to find the existing asset, or enter a different tag.",
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
+      "ticketNotFound": "Ticket not found. It may have been deleted. Please refresh and try again.",
+      "alreadyLinkedToTicket": "This asset is already linked to the ticket.",
       "clientNotFound": "Client not found. It may have been deleted. Please refresh and try again.",
       "maintenanceNotFound": "Maintenance schedule not found. It may have been deleted. Please refresh and try again.",
       "maintenanceMismatch": "This maintenance record does not match the selected asset. Please refresh and try again.",

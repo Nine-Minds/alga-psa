@@ -26,6 +26,33 @@ test('inventory identifies uncollected additions and moves independently of a su
   assert.ok(moved.failures.some((failure) => failure.includes('outside candidate inventory')));
 });
 
+test('child-process test workers are inventoried through a collected parent without hiding missing coverage', () => {
+  const worker = 'server/test-workers/cold.test.ts';
+  const parent = 'server/src/test/integration/api/coldParent.integration.test.ts';
+  const delegation = [{ file: worker, parent, reason: 'The parent launches this test in a fresh process.' }];
+  const candidates = ['tests/paid.test.ts', parent, worker];
+  const collections = [{ runner: 'database-integration', status: 'passed', files: [
+    '/repo/tests/paid.test.ts', `/repo/${parent}`,
+  ] }];
+
+  const covered = inspect({ candidates, collections, delegations: delegation });
+  assert.equal(covered.status, 'passed', covered.failures.join('\n'));
+  assert.deepEqual(covered.tests.find(({ file }) => file === worker), {
+    file: worker, runners: ['database-integration'], exclusion: null, delegatedBy: parent,
+  });
+
+  const missingParent = inspect({ candidates, collections: [
+    { runner: 'database-integration', status: 'passed', files: ['/repo/tests/paid.test.ts'] },
+  ], delegations: delegation });
+  assert.equal(missingParent.status, 'failed');
+  assert.ok(missingParent.failures.some((failure) => failure.includes(`No runner collects delegated test parent: ${parent}`)));
+
+  const directlyCollectedWorker = inspect({ candidates, collections: [{
+    runner: 'database-integration', status: 'passed', files: ['/repo/tests/paid.test.ts', `/repo/${parent}`, `/repo/${worker}`],
+  }], delegations: delegation });
+  assert.ok(directlyCollectedWorker.failures.some((failure) => failure.includes(`also directly collected: ${worker}`)));
+});
+
 test('empty, missing, failed and duplicate runner collections cannot satisfy discovery', () => {
   for (const override of [
     { candidates: [] }, { collections: [] },

@@ -1981,7 +1981,8 @@
       "invalidValue": "L’une des valeurs client sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
       "invalidData": "Données client non valides. Veuillez vérifier tous les champs et réessayer.",
       "missingField": "Un champ client obligatoire est manquant.",
-      "missingFieldNamed": "Un champ client obligatoire est manquant : {{field}}."
+      "missingFieldNamed": "Un champ client obligatoire est manquant : {{field}}.",
+      "hasSeatArrangement": "Ce client dispose d’un accord de postes d’informatique cogérée. Mettez fin à l’accord avant de désactiver le client."
     },
     "permissions": {
       "readClients": "Autorisation refusée : impossible de lire des clients",

@@ -9,7 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
-import { recordTicketAssigneeChange } from '@alga-psa/db';
+import { recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
@@ -1178,7 +1178,11 @@ export class TicketModel {
     };
 
     // Human-work guard: a ticket's primary assignee must be an active internal user.
-    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to]);
+    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to], {
+      kind: 'ticket_draft',
+      clientId: dbData.client_id,
+      boardId: dbData.board_id,
+    });
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
@@ -1231,6 +1235,8 @@ export class TicketModel {
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
             client_id: cleanedInput.client_id,
+            dueDate: cleanedInput.due_date ? new Date(cleanedInput.due_date).toISOString() : null,
+            ticketOrigin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
             ...(requester.clientName ? { clientName: requester.clientName } : {}),
             ...(requester.contactName ? { contactName: requester.contactName } : {}),
             ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),
@@ -1458,9 +1464,14 @@ export class TicketModel {
 
     // Human-work guard: validate assigned_to only when this write changes it, so legacy
     // references (e.g. a former agent user) never block unrelated edits.
-    if ('assigned_to' in updateData && updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+    const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
+    const reassigning = 'assigned_to' in updateData && updateData.assigned_to !== undefined
+      && updateData.assigned_to !== currentTicket.assigned_to;
+    if (reassigning && updateData.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId, pending: pendingPlacement });
     }
+    // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+    // after the write, clears and drops the seat technicians it strands (F094).
 
     // Update the ticket
     const [updatedTicket] = await db.table('tickets')
@@ -1479,6 +1490,11 @@ export class TicketModel {
     if ('assigned_to' in updateData && (updateData.assigned_to ?? null) !== (currentTicket.assigned_to ?? null)) {
       // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
       await recordTicketAssigneeChange(trx, tenant, ticketId);
+    }
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
     }
 
     // Publish update event if publisher provided
@@ -1612,6 +1628,11 @@ export class TicketModel {
 
     // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
     await recordTicketAssigneeChange(trx, tenant, ticketId);
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if (updatedTicket && (await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
+    }
 
     return updatedTicket;
   }

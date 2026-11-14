@@ -253,3 +253,29 @@ export async function assertInternalUserSeatsWithinLimit(
     throw new InternalUserSeatOverflowError(verdict.error, verdict.code);
   }
 }
+
+/**
+ * MSP seat admission for converting a co-managed seat technician into an ordinary MSP user
+ * (`convertCoManagedSeatTechnicianToMspUser` in `@alga-psa/co-managed`, which is a horizontal
+ * package and so receives this rather than importing it).
+ *
+ * While the technician's assignment is live they are excluded from the licensed count
+ * (`countLicensedInternalUsers`), so the count the check reads is the seats held by everyone
+ * else: exactly the "others" an arriving user is admitted against. Two traps follow:
+ *
+ * - `admit` takes no `existingUserId`. With it, admission would find the live assignment, treat the
+ *   user as a seat technician and answer from the arrangement's allocation, which is always
+ *   "yes" for someone who already holds the seat: the conversion would be admitted at any limit.
+ * - `admit` adds nothing to the count (no `reservedSeats`). The arriving user is not in it yet, and
+ *   the limit test is `used >= limit`; adding one would refuse a conversion that fits.
+ *
+ * The caller runs `admit` before it ends the assignment, and `assertWithinLimit` after the user
+ * has become a licensed user: the recount then includes them and asks whether the others already
+ * filled the limit, the same tripwire every seat-taking write ends with.
+ */
+export const mspSeatAdmissionForConversion = {
+  admit: (trx: Knex.Transaction, tenant: string): Promise<InternalUserLicenseLimitResult> =>
+    admitInternalUserSeat(trx, tenant),
+  assertWithinLimit: (trx: Knex.Transaction, tenant: string, admitted: InternalUserLicenseLimitResult): Promise<void> =>
+    assertInternalUserSeatsWithinLimit(trx, tenant, admitted),
+};

@@ -1996,6 +1996,8 @@
     "asset": {
       "tagAlreadyExists": "Ten identyfikator zasobu jest już używany lub zarezerwowany. Zeskanuj go, aby znaleźć istniejący zasób, albo wprowadź inny identyfikator.",
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "ticketNotFound": "Nie znaleziono zgłoszenia. Mogło zostać usunięte. Odśwież stronę i spróbuj ponownie.",
+      "alreadyLinkedToTicket": "Ten zasób jest już powiązany ze zgłoszeniem.",
       "clientNotFound": "Nie znaleziono klienta. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "maintenanceNotFound": "Nie znaleziono harmonogramu konserwacji. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "maintenanceMismatch": "Ten rekord konserwacji nie odpowiada wybranemu zasobowi. Odśwież stronę i spróbuj ponownie.",

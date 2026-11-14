@@ -11,7 +11,7 @@ import {
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -1635,6 +1635,9 @@ export const updateUserRoles = withAuth(async (
         } satisfies ActionResult & ActionResultMessageKey;
       }
 
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, tenant, [userId], { roleIds });
+
       // Delete existing roles
       await tenantDb(trx, tenant).table('user_roles')
         .where({ user_id: userId })
@@ -1678,6 +1681,9 @@ export const updateUserRoles = withAuth(async (
     }
     if (message === 'User not found') {
       return { success: false, error: 'User not found' };
+    }
+    if (isSeatTechnicianGuardError(error)) {
+      return { success: false, error: error.message };
     }
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02' || dbError?.code === '23503') {

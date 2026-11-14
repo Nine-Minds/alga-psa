@@ -32,6 +32,9 @@ vi.mock('../../../actions/ticketTemplateActions', () => ({
   updateTicketTemplate: (...args: unknown[]) => updateTemplateMock(...args),
   listSchedulesForTemplate: (...args: unknown[]) => listSchedulesMock(...args),
 }));
+vi.mock('../../../actions/externalLinks/externalLinkActions', () => ({
+  listExternalSystems: vi.fn().mockResolvedValue([]),
+}));
 vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({
   getAllPriorities: (...args: unknown[]) => getPrioritiesMock(...args),
 }));
@@ -184,6 +187,8 @@ describe('TicketTemplateEditor with ?fromTicket', () => {
         { item_name: 'Create accounts', description: 'AD', is_required: false, checklist_template_id: UUID(7) },
         { item_name: 'Print badge', description: null, is_required: true, checklist_template_id: null },
       ],
+      // A draft from a ticket carries no documentation links.
+      links: [],
     });
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith(`/msp/tickets/templates/${UUID(50)}`));
   });

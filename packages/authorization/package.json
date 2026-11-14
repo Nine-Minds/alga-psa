@@ -86,6 +86,10 @@
       "import": "./dist/clientReadScope.js",
       "types": "./src/clientReadScope.ts"
     },
+    "./knowledgeBaseReadAuthorization": {
+      "import": "./dist/knowledgeBaseReadAuthorization.js",
+      "types": "./src/knowledgeBaseReadAuthorization.ts"
+    },
     "./readScope": {
       "import": "./dist/readScope.js",
       "types": "./src/readScope.ts"
@@ -117,6 +121,10 @@
     "./recordProjection": {
       "import": "./dist/recordProjection.js",
       "types": "./src/recordProjection.ts"
+    },
+    "./recordProjectionDescriptors": {
+      "import": "./dist/recordProjectionDescriptors.js",
+      "types": "./src/recordProjectionDescriptors.ts"
     },
     "./rbac": {
       "import": "./dist/rbac.js",

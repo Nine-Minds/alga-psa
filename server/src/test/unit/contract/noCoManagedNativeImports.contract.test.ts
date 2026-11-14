@@ -15,8 +15,19 @@ function grep(pattern: string, paths: string[]): string[] {
 
 // L1a registers its six tables in the manifest and the deletion order. A bare table-name literal is
 // registration data, not coupling; a manifest registration line may also carry its `client_id` ownership
-// (required by tenantLifecycleLists). Any other mention (imports, product probes, logic) still fails.
-const isTableRegistration = (line: string) => /^[^:]+:\d+:\s*(\{ table: )?'co_manage(d|ment)_[a-z_]+'(, deletion: 'ordered'(, clientKeyed: \{ by: 'column', column: 'client_id'(, enforced: false)? \})? \},?|,)\s*$/.test(line);
+// (required by tenantLifecycleLists), or the parent chain through which its rows reach a client: the seat
+// arrangement tables reach theirs through `co_managed_seat_arrangements` (S39). Either is a declaration
+// inside the registration itself. Any other mention (imports, product probes, logic) still fails.
+const OWNERSHIP_HOP = String.raw`\{ column: '[a-z_]+', table: '[a-z_]+'(, enforced: false)? \}`;
+const OWNERSHIP_CHAIN = String.raw`\[${OWNERSHIP_HOP}(, ${OWNERSHIP_HOP})*\]`;
+const OWNERSHIP = [
+  String.raw`\{ by: 'column', column: 'client_id'(, enforced: false)? \}`,
+  String.raw`\{ by: 'parent', chain: ${OWNERSHIP_CHAIN} \}`,
+  String.raw`\{ by: 'alternatives', parents: \[${OWNERSHIP_CHAIN}(, ${OWNERSHIP_CHAIN})+\] \}`,
+].join('|');
+const TABLE_REGISTRATION = new RegExp(
+  String.raw`^[^:]+:\d+:\s*(\{ table: )?'co_manage(d|ment)_[a-z_]+'(, deletion: 'ordered'(, clientKeyed: (${OWNERSHIP}))? \},?|,)\s*$`);
+const isTableRegistration = (line: string) => TABLE_REGISTRATION.test(line);
 
 // The Temporal worker's provisioning slice is co-managed by definition: it runs the sponsor's
 // reserved operation. Exactly these files are carved out (kebab-case co-managed-* files plus the

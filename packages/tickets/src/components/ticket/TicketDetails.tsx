@@ -133,6 +133,14 @@ interface PendingCommentDelete {
 const LIVE_UPDATE_REFETCH_DEBOUNCE_MS = 200;
 const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
+/**
+ * A save that moves the ticket (its client or board) can be settled further by the server in the
+ * same write: a seat technician who may no longer work the ticket is unassigned. After such a save
+ * the screen re-reads the ticket instead of trusting its own merge of what it sent.
+ */
+const movesTicket = (fields: Iterable<string>): boolean =>
+    [...fields].some((field) => field === 'client_id' || field === 'board_id');
+
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
 
@@ -172,6 +180,8 @@ interface TicketDetailsProps {
     liveContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
+    /** Seat technicians of this ticket's client (MSP viewer, live arrangement only): the picker's Client IT group. */
+    clientItUserIds?: readonly string[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string; color?: string | null; is_from_itil_standard?: boolean }[];
     initialCategories?: ITicketCategory[];
@@ -313,6 +323,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     liveContactMap,
     statusOptions = [],
     agentOptions = [],
+    clientItUserIds,
     boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
@@ -2921,6 +2932,10 @@ const handleClose = () => {
                 // individual-save fallback below relies on handleSelectChange,
                 // which bumps per field on its own.
                 setActivityLogRefreshKey((value) => value + 1);
+                // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+                if (movesTicket(Object.keys(changes))) {
+                    await refreshTicketSnapshot(Object.keys(changes));
+                }
                 onSaved?.();
             }
             return success;
@@ -2950,6 +2965,10 @@ const handleClose = () => {
                 }));
                 setUpdatedByUser(localActor);
                 setActivityLogRefreshKey((value) => value + 1);
+                // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+                if (movesTicket(Object.keys(ticketChanges))) {
+                    await refreshTicketSnapshot(Object.keys(ticketChanges));
+                }
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
                 }
@@ -2975,6 +2994,7 @@ const handleClose = () => {
         handleSelectChange,
         localActor,
         onBatchTicketUpdate,
+        refreshTicketSnapshot,
         runWithPendingLiveFields,
         ticket.ticket_id,
     ]);
@@ -3160,6 +3180,8 @@ const handleClose = () => {
             setContacts(contactsData || []);
             setLocations(locationData || []);
             setContactInfo(null); // Reset contact info
+            // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+            await refreshTicketSnapshot(['client_id', 'contact_name_id', 'location_id']);
 
             setIsChangeClientDialogOpen(false);
             toast.success(t('messages.clientUpdated'));
@@ -4574,6 +4596,7 @@ const handleClose = () => {
                     priorityOptions={priorityOptions}
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
+                    clientItUserIds={clientItUserIds}
                     onSelectChange={handleSelectChange}
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     onUpdateDescription={handleUpdateDescription}
@@ -4646,7 +4669,7 @@ const handleClose = () => {
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
                     onChangeLocation={handleLocationChange}
-                    onChangeBillingProfile={handleBillingProfileChange}
+                    onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}
@@ -4707,6 +4730,7 @@ const handleClose = () => {
                                     conversations={conversations}
                                     statusOptions={statusOptions}
                                     agentOptions={agentOptions}
+                                    clientItUserIds={clientItUserIds}
                                     boardOptions={boardOptions}
                                     priorityOptions={priorityOptions}
                                     onSelectChange={handleSelectChange}
@@ -4889,7 +4913,7 @@ const handleClose = () => {
                                 onChangeContact={handleContactChange}
                                 onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
-                                onChangeBillingProfile={handleBillingProfileChange}
+                                onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}
@@ -4947,6 +4971,7 @@ const handleClose = () => {
                             conversations={conversations}
                             statusOptions={statusOptions}
                             agentOptions={agentOptions}
+                            clientItUserIds={clientItUserIds}
                             boardOptions={boardOptions}
                             priorityOptions={priorityOptions}
                             onSelectChange={handleSelectChange}

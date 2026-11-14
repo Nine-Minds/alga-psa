@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "Esta etiqueta de ativo já está em uso ou reservada. Digitalize-a para encontrar o ativo existente ou introduza outra etiqueta.",
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "ticketNotFound": "Ticket não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "alreadyLinkedToTicket": "Este ativo já está vinculado ao ticket.",
       "clientNotFound": "Cliente não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
       "maintenanceNotFound": "Agenda de manutenção não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
       "maintenanceMismatch": "Este registro de manutenção não corresponde ao ativo selecionado. Atualize a página e tente novamente.",

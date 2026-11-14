@@ -67,6 +67,49 @@ export const STEP_NAMES = [
 
 export type StepName = (typeof STEP_NAMES)[number];
 
+/**
+ * Neutrality fence (F034 / T021). The steps a seat-aware slice (D/E/F) is most
+ * likely to touch: native ticket list, ticket detail, comment write and
+ * time-entry create.
+ */
+export const NEUTRALITY_FENCED_STEPS = ['ticket.list', 'ticket.open', 'comment.add', 'timeEntry.create'] as const satisfies readonly StepName[];
+
+/**
+ * A named tenant posture is a scenario dimension: the same 18 steps run with
+ * the `co-managed-seat` gate's real inputs set to one of these states. Each
+ * posture is an "unserved" tenant, so each must cost exactly what the posture-less
+ * psa-canonical run costs. `expect` is what the real gate must answer for the
+ * fixture tenant; the runner probes it before measuring so a posture cannot
+ * silently degrade into some other state.
+ */
+export interface TenantPosture {
+  name: string;
+  description: string;
+  /** Value the release flag (`release-v2-0-feature`) evaluates to for the tenant. */
+  releaseFlag: boolean;
+  expect: { admitted: string; served: string };
+}
+
+export const UNSERVED_POSTURES: readonly TenantPosture[] = [
+  {
+    name: 'seat-flag-off',
+    description: 'release flag off: the gate never reaches eligibility or participation',
+    releaseFlag: false,
+    expect: { admitted: 'flag-off', served: 'not-participating' },
+  },
+  {
+    name: 'seat-flag-on-unentitled',
+    description: 'release flag on, tenant has no co-managed-seat entitlement or arrangement',
+    releaseFlag: true,
+    expect: { admitted: 'not-eligible', served: 'not-participating' },
+  },
+];
+
+export interface RunScenarioOptions {
+  /** Called once the fixture tenant exists and before any step is measured; not captured. */
+  afterFixture?: (tenant: string) => Promise<void>;
+}
+
 export interface StepResult {
   name: string;
   statements: number;
@@ -944,7 +987,10 @@ const STEPS: Record<StepName, StepFn> = {
  * Runs the whole scenario once, in one outer transaction that is always rolled
  * back, and returns per-step statement and lock counts.
  */
-export async function runHotPathScenarioOnce(connection: Knex): Promise<ScenarioResult> {
+export async function runHotPathScenarioOnce(
+  connection: Knex,
+  options: RunScenarioOptions = {},
+): Promise<ScenarioResult> {
   const product = await loadProduct();
   const trx = await connection.transaction();
   const capture = attachQueryCapture(connection);
@@ -953,6 +999,7 @@ export async function runHotPathScenarioOnce(connection: Knex): Promise<Scenario
     const fixture = await buildFixture(trx, product);
     scenarioRuntime.tenant = fixture.tenant;
     scenarioRuntime.session = fixture.admin;
+    await options.afterFixture?.(fixture.tenant);
 
     const steps: StepResult[] = [];
     for (const name of STEP_NAMES) {

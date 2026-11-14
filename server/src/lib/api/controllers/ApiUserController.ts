@@ -29,7 +29,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { assertUserRoleFloor, createSystemContext, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createSystemContext, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
 import { ApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError, withApiKeyAuth, withQueryValidation } from '../middleware/apiMiddleware';
 import { ZodError, z } from 'zod';
 
@@ -614,6 +614,9 @@ export class ApiUserController extends ApiBaseController {
                 ? new ConflictError(floor.message)
                 : new ValidationError(floor.message);
             }
+
+            // A live seat technician holds the seat role and no other.
+            await assertSeatTechnicianWrite(trx, apiRequest.context!.tenant, [targetUserId], { roleIds: role_ids });
 
             // First remove all existing roles
             await db.table('user_roles')

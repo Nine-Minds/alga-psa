@@ -22,7 +22,7 @@ export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
-export { advanceSeatTicketWork, liveSeatArrangement, prepareTicketAssigneeChange, recordTicketAssigneeChange, seatTicketWork } from './lib/seatTicketWork';
+export { advanceSeatTicketWork, liveSeatArrangement, prepareTicketAssigneeChange, recordTicketAssigneeChange, releaseSeatTicketOnMove, seatTicketWork } from './lib/seatTicketWork';
 export type { SeatArrangementRow, SeatTicketResponsibility, SeatTicketWork, SeatTicketWorkRow } from './lib/seatTicketWork';
 export { getTenantTableScope, parseTableExpression, registerTenantTables, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
@@ -107,6 +107,16 @@ export {
   lockUserRoleFloor,
 } from './lib/userRoleFloor';
 export type { UserRoleFloorChange, UserRoleFloorResult, UserRoleFloorViolation } from './lib/userRoleFloor';
+
+// A live co-managed seat technician holds only the seat role and joins no MSP team; every
+// user_roles / team_members writer runs this first.
+export {
+  CO_MANAGED_SEAT_ROLE_NAME,
+  SeatTechnicianGuardError,
+  assertSeatTechnicianWrite,
+  isSeatTechnicianGuardError,
+} from './lib/seatTechnicianGuard';
+export type { SeatTechnicianGuardCode, SeatTechnicianWrite } from './lib/seatTechnicianGuard';
 
 // QBO item-target advisory lock (shared by integrations mapping CRUD and billing item import)
 export { lockQboItemTarget, lockQboItemTargets, qboItemTargetLockKey } from './lib/qboItemTargetLock';

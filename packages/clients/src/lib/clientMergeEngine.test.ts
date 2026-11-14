@@ -325,7 +325,11 @@ vi.mock('@alga-psa/db/tenantDb', () => ({
 const coManagedWorkspaces = vi.hoisted(() => ({
   count: vi.fn(async (_trx: unknown, _options: { tenant: string; entityId: string }): Promise<number> => 0),
 }));
-vi.mock('@alga-psa/core/config/deletion', () => ({ countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count }));
+vi.mock('@alga-psa/core/config/deletion', () => ({
+  countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count,
+  // The seat arrangement half of the same blocker runs against real Postgres in coManagedSeatLifecycleGuards.db.test.ts.
+  countLiveCoManagedSeatArrangementsForClient: vi.fn(async () => 0),
+}));
 
 import { ClientMergeBlockedError, executeClientMerge, previewClientMerge } from './clientMergeEngine';
 

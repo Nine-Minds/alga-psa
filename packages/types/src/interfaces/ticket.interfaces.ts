@@ -147,6 +147,15 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   latest_activity_actor?: ITicketLatestActivityActor | null;
 }
 
+/** One named view of the ticket list, with the number of rows its filter returns under the current filters. */
+export interface ITicketListViewSummary {
+  key: string;
+  /** i18n key (features/tickets namespace) and its English default. */
+  labelKey: string;
+  defaultLabel: string;
+  count: number;
+}
+
 export interface ITicketListFilters {
   boardId?: string;                   // Legacy single-board include (deep links)
   boardIds?: string[];                // Boards to include ('no-board' sentinel matches tickets with no board)
@@ -175,6 +184,11 @@ export interface ITicketListFilters {
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
+  /**
+   * Key of a named view the caller's list offers (see `ITicketListViewSummary`). The server resolves it against
+   * the views the caller is entitled to; a key it does not offer is ignored.
+   */
+  listView?: string;
   /**
    * Predicate filters over the ticket query schema (packages/tickets/src/lib/ticketQuerySchema.ts):
    * one flat `and` group. New filter dimensions are expressed here, not as new keys on this interface.

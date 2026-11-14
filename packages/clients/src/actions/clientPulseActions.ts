@@ -8,6 +8,7 @@ import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/share
 import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTicketReadScope, type TicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
+import { resolveDocumentReadScope, type DocumentReadScope } from '@alga-psa/shared/lib/documentAuthorization';
 import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
 import { getContactCountsByLocation } from '../models/contactLocation';
@@ -1034,13 +1035,19 @@ async function fetchInstallBase(
   };
 }
 
+/**
+ * The client's documents card. `readable` is the subject's document read scope (null when nothing narrows it),
+ * so the count and the recent titles are of documents the subject may open: a co-managed seat technician sees
+ * client-visible documents only, the same set the client's Documents tab lists.
+ */
 async function fetchDocuments(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
+  readable: DocumentReadScope | null,
 ): Promise<ClientPulseDocuments> {
-  const baseQuery = () =>
-    trx('documents as d')
+  const baseQuery = () => {
+    const query = trx('documents as d')
       .join('document_associations as da', function joinDocumentAssociations() {
         this.on('d.document_id', '=', 'da.document_id').andOn('d.tenant', '=', 'da.tenant');
       })
@@ -1050,6 +1057,9 @@ async function fetchDocuments(
         'da.entity_id': clientId,
         'da.entity_type': 'client',
       });
+    readable?.apply(query, 'd');
+    return query;
+  };
 
   const [countRow, recentRows] = await Promise.all([
     baseQuery()
@@ -1194,7 +1204,7 @@ export const getClientPulse = withAuth(async (
       ? await optionalSection(trx, 'install_base', () => fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs))
       : null;
     const documents = canReadDocuments
-      ? await optionalSection(trx, 'documents', () => fetchDocuments(trx, tenant, clientId))
+      ? await optionalSection(trx, 'documents', async () => fetchDocuments(trx, tenant, clientId, await resolveDocumentReadScope(trx, tenant, user as IUserWithRoles)))
       : null;
 
     const attention = sortAttention([

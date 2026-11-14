@@ -2,7 +2,8 @@ import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
-import type { IUserWithRoles } from '@alga-psa/types';
+import type { IDocument, IUser, IUserWithRoles } from '@alga-psa/types';
+import { authorizeAndRedactDocuments } from '@alga-psa/shared/lib/documentAuthorization';
 import type { Knex } from 'knex';
 import {
   audiencesVisibleTo, commentAudienceSql, isCommentAudience, isCommentAudienceVisible, admitCommentAudienceReader,
@@ -10,6 +11,8 @@ import {
 } from '@alga-psa/shared/lib/commentAudience';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
+import { EXTERNAL_AUDIENCES } from '@alga-psa/authorization/kernel';
+import { canReadKnowledgeBaseArticle } from '@alga-psa/authorization/knowledgeBaseReadAuthorization';
 
 import { resolveClientScopes, type ClientScopedObjectType } from './clientScope';
 
@@ -198,10 +201,24 @@ function commentAudienceIndexSql(user: SearchAclPrincipal): SqlFragment {
   };
 }
 
+/**
+ * Knowledge base audience predicate over the index. An internal principal the kernel narrows (a seat technician)
+ * reads `client` and `public` articles only, the audiences of the kernel's `external_audience_only` guard. The
+ * indexer stores each article's audience in `metadata.audience`; a row with none fails closed.
+ */
+function kbAudienceIndexSql(user: SearchAclPrincipal): SqlFragment {
+  if (restrictedAudienceReader(user) === undefined) return { sql: 'TRUE', bindings: [] };
+  return {
+    sql: `(object_type <> 'kb_article' OR metadata->>'audience' = ANY(?::text[]))`,
+    bindings: [[...EXTERNAL_AUDIENCES]],
+  };
+}
+
 export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
   const clientAccess = user.clientAccess ?? { mode: 'all' };
   const clientScope = clientScopeSql(clientAccess);
   const commentAudience = commentAudienceIndexSql(user);
+  const kbAudience = kbAudienceIndexSql(user);
 
   const boardIds = clientAccess.boardIds;
   // `s` is the search index alias every query in query.ts uses. The correlated reads are tenant-joined.
@@ -241,6 +258,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
         AND (is_private = false OR visible_to_user_ids && ARRAY[?]::uuid[])
         AND ${clientScope.sql}
         AND ${commentAudience.sql}
+        AND ${kbAudience.sql}
         AND ${boardClause}
       )
     `,
@@ -252,6 +270,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
       user.userId,
       ...clientScope.bindings,
       ...commentAudience.bindings,
+      ...kbAudience.bindings,
       ...boardBindings,
     ],
   };
@@ -528,12 +547,36 @@ for (const objectType of ['client', 'contact', 'interaction', 'time_entry'] as c
 }
 
 registerSearchVisibilityVerifier('document', async (knex, user, row) => {
-  const document = await tenantScopedRoot<{ document_id: string }>(knex, user, 'documents')
-    .select('document_id')
+  const document = await tenantScopedRoot<{ document_id: string; created_by: string | null; is_client_visible: boolean | null }>(knex, user, 'documents')
+    .select('document_id', 'created_by', 'is_client_visible')
     .where('document_id', row.id)
     .first();
   if (!document) return false;
-  return clientOwnedRecordVisible(knex, user, 'document', row.id);
+  if (!(await clientOwnedRecordVisible(knex, user, 'document', row.id))) return false;
+  // A principal the kernel narrows beyond its clients (a seat technician: client-visible documents, and only
+  // those attached to tickets in scope) gets the document read decision itself. Everyone else is done above.
+  if (restrictedAudienceReader(user) === undefined || !user.tenant) return true;
+  const tenant = user.tenant;
+  const principal = { user_id: user.userId, user_type: 'internal', tenant } as unknown as IUser;
+  return knex.transaction(async (trx) =>
+    (await authorizeAndRedactDocuments(trx, tenant, principal, [document as unknown as IDocument])).length === 1);
+});
+
+// An article the kernel does not let this principal read is dropped even if its index row is stale or has no audience.
+// A principal no rule narrows (staff, the common case) is answered with no statement.
+registerSearchVisibilityVerifier('kb_article', async (knex, user, row) => {
+  if (!user.tenant || restrictedAudienceReader(user) === undefined) return true;
+  const article = await tenantScopedRoot<{ audience: string | null }>(knex, user, 'kb_articles')
+    .select('audience')
+    .where('article_id', row.id)
+    .first();
+  if (!article) return false;
+  return canReadKnowledgeBaseArticle(
+    knex,
+    user.tenant,
+    { user_id: user.userId, user_type: user.isInternal ? 'internal' : 'client' },
+    { article_id: row.id, audience: article.audience },
+  );
 });
 
 registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {

@@ -1544,7 +1544,7 @@ export const addTaskResourcesAction = withAuth(async (
             const toInsert = wanted.filter((id) => id !== primaryAgentId && !existingIds.has(id));
 
             // Human-work guard: only the resources this write adds.
-            await assertHumanWorkAssignee(trx, tenant, toInsert);
+            await assertHumanWorkAssignee(trx, tenant, toInsert, { kind: 'project_task', taskId });
 
             if (toInsert.length > 0) {
                 await tenantScopedTable(trx, 'task_resources', tenant).insert(
@@ -1644,7 +1644,7 @@ export const assignTeamToProjectTask = withAuth(async (
             const assignedTo: string = team.manager_id;
 
             // Human-work guard: the new primary agent (team lead) is set by this write.
-            await assertHumanWorkAssignee(trx, tenant, [assignedTo]);
+            await assertHumanWorkAssignee(trx, tenant, [assignedTo], { kind: 'project_task', taskId });
 
             // The new lead can't be both primary and an additional resource
             // (CHECK assigned_to != additional_user_id + unique index), so drop
@@ -1675,7 +1675,7 @@ export const assignTeamToProjectTask = withAuth(async (
                 const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
 
                 // Human-work guard: only the resources this write adds.
-                await assertHumanWorkAssignee(trx, tenant, toInsert);
+                await assertHumanWorkAssignee(trx, tenant, toInsert, { kind: 'project_task', taskId });
 
                 if (toInsert.length > 0) {
                     await tenantScopedTable(trx, 'task_resources', tenant).insert(

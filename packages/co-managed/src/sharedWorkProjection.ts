@@ -30,6 +30,11 @@ export const CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES = [
 export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES;
 /** The assignee display name; same aliases the ticket assignment surface uses for the assignee (users/teams are its sources). */
 export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'values.assignee_name', 'assignee', 'users', 'teams'] as const;
+/** Reader aliases for stored values whose source is represented by a derived display field. */
+export const CO_MANAGED_STORED_FIELD_ALIASES: Record<string, readonly string[]> = {
+  msp_assignee: CO_MANAGED_ASSIGNEE_NAME_ALIASES,
+  project_status_mapping_id: ['status', 'status_name', 'status_id', 'selectedStatus', 'statuses', 'standard_statuses', 'custom_name', 'project_status_mappings'],
+};
 
 export const CO_MANAGED_PHASE_NAME_ALIASES = PHASE_NAME_ALIASES;
 
@@ -113,9 +118,7 @@ export function isCoManagedResourceHidden(redactions: readonly string[], resourc
  * Audit fields that carry a DERIVED display value: hiding the derived value's source hides the field too. A future audit
  * field that embeds a display name gets an entry here, not a special case in the reader.
  */
-export const CO_MANAGED_AUDIT_DERIVED_ALIASES: Record<string, readonly string[]> = {
-  msp_assignee: CO_MANAGED_ASSIGNEE_NAME_ALIASES,
-};
+export const CO_MANAGED_AUDIT_DERIVED_ALIASES = CO_MANAGED_STORED_FIELD_ALIASES;
 
 /** Every alias a reader's redactions are matched against for one audit `changed_data` field. */
 export function coManagedAuditFieldAliases(field: string): readonly string[] {

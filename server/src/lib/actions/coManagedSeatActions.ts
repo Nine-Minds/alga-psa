@@ -15,6 +15,8 @@ import {
   readCoManagedSeatEnableState, readCoManagedSeatOverviewRows, refreshCoManagedSeatInvitation,
   revokeCoManagedSeatInvitation, setCoManagedSeatBoardScope, setCoManagedSeatHandoffDefaults,
   setCoManagedSeatProjectGrants, type CoManagedOverviewEntry,
+  endCoManagedSeatArrangement, previewCoManagedSeatArrangementEnd, readCoManagedSeatArrangementClientId,
+  type CoManagedSeatArrangementEndPreview, type CoManagedSeatArrangementEndResult,
 } from '@alga-psa/co-managed';
 import { admits, serves } from '@alga-psa/core/capability';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
@@ -332,3 +334,63 @@ async function deliverSeatInvitation(user: SeatUser, tenant: string, invitation:
     return { delivered: false };
   }
 }
+
+// Every seat surface resolves the `co-managed-seat` capability, never the raw release flag. Ending
+// an arrangement is a management action, so it gates on `admits` (flag and eligibility): with the
+// flag off nothing here is reachable, whether or not an arrangement exists.
+
+export type CoManagedSeatEndPreviewResult =
+  | { ok: true; preview: CoManagedSeatArrangementEndPreview }
+  | { ok: false; reason: 'denied' | 'not_found' };
+
+export type CoManagedSeatEndResult =
+  | { ok: true; result: CoManagedSeatArrangementEndResult }
+  | { ok: false; reason: 'denied' | 'not_found' };
+
+const mayManage = async (user: Parameters<typeof hasPermission>[0]) =>
+  user.user_type === 'internal' && await hasPermission(user, 'co_management', 'manage');
+
+/**
+ * An arrangement belongs to one client: the preview names it and ending hands that client's tickets back.
+ * An administrator whose client scope does not include it gets the same answer as for a missing
+ * arrangement, so neither the client nor the arrangement's existence leaks.
+ */
+const arrangementInClientScope = async (db: Knex, tenant: string, user: Parameters<typeof createClientScopeContext>[2], arrangementId: string) => {
+  const clientId = await readCoManagedSeatArrangementClientId(db, { sponsorTenant: tenant, arrangementId });
+  return clientId !== null && (await createClientScopeContext(db, tenant, user)).permits('client', clientId);
+};
+
+/** The effects of ending an arrangement, for the confirmation. Reads only. */
+export const getCoManagedSeatArrangementEndPreview = withAuth(async (user, { tenant },
+  input: { arrangementId: string }): Promise<CoManagedSeatEndPreviewResult> => {
+  await requireCapabilityForAction('co-managed-seat', tenant, 'admits');
+  if (!await mayManage(user)) return { ok: false, reason: 'denied' };
+  const { knex } = await createTenantKnex(tenant);
+  if (!await arrangementInClientScope(knex, tenant, user, input.arrangementId)) {
+    return { ok: false, reason: 'not_found' };
+  }
+  try {
+    return { ok: true, preview: await previewCoManagedSeatArrangementEnd(knex, { sponsorTenant: tenant, arrangementId: input.arrangementId }) };
+  } catch (error) {
+    if (error instanceof CoManagedSeatArrangementError && error.code === 'ARRANGEMENT_NOT_FOUND') return { ok: false, reason: 'not_found' };
+    throw error;
+  }
+});
+
+/** Ends the arrangement. Replaying it after it completed changes nothing and succeeds. */
+export const endCoManagedSeatArrangementAction = withAuth(async (user, { tenant },
+  input: { arrangementId: string }): Promise<CoManagedSeatEndResult> => {
+  await requireCapabilityForAction('co-managed-seat', tenant, 'admits');
+  if (!await mayManage(user)) return { ok: false, reason: 'denied' };
+  const { knex } = await createTenantKnex(tenant);
+  if (!await arrangementInClientScope(knex, tenant, user, input.arrangementId)) {
+    return { ok: false, reason: 'not_found' };
+  }
+  try {
+    return { ok: true, result: await endCoManagedSeatArrangement(knex, {
+      sponsorTenant: tenant, arrangementId: input.arrangementId, actorUserId: user.user_id }) };
+  } catch (error) {
+    if (error instanceof CoManagedSeatArrangementError && error.code === 'ARRANGEMENT_NOT_FOUND') return { ok: false, reason: 'not_found' };
+    throw error;
+  }
+});

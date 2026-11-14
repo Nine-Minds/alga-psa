@@ -11,6 +11,7 @@ import type { BundleNarrowingRule } from './providers/bundleProvider';
 import { matchRulesForAction } from './actionAliases';
 import { closedBundlesNotNaming, closedSourcesNotNaming } from './closedBaseline';
 import { resolveAppliedBuiltinResolvers } from './builtinRuleResolvers';
+import { compileRecordGuardSql, isRecordGuardKey, type AttachedTicketQuantifier, type TicketScope } from './recordGuards';
 import { applyTicketVisibilityFilter, ticketMatchesVisibility } from '../portal/visibility';
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,19 @@ export interface RelationshipSqlAdapter {
    * resource never exposes that field.
    */
   clientVisibleColumn?: string;
+  /**
+   * Column holding the record's audience (`internal` / `client` / `public`). When omitted, the
+   * `external_audience_only` record guard denies all rows (fail closed), as the JS guard does for a
+   * record that carries no audience.
+   */
+  audienceColumn?: string;
+  /**
+   * Narrow `builder` by the tickets a row is attached to. `every`: no attached ticket lies outside `scope`
+   * (a row attached to none passes). `some`: at least one attached ticket lies inside it. A ticket is inside
+   * when its client AND its board are listed; a ticket with no board is outside. When omitted, the guards
+   * that read attachments deny all rows.
+   */
+  applyAttachedTickets?(builder: Knex.QueryBuilder, scope: TicketScope, quantifier: AttachedTicketQuantifier): void;
   /**
    * Narrow `builder` to rows assigned to any of `userIds` (the primary assignee
    * column and/or a resource-specific co-assignee relation). Must deny (no rows)
@@ -443,6 +457,14 @@ export function compileBuiltinResolverReadNarrowingSql(
   }
   for (const resolver of applied) {
     for (const rule of matchRulesForAction(resolver.rules, resourceType, action)) {
+      // A record guard is a resolver-only condition: the bundle compiler never sees one.
+      if (isRecordGuardKey(rule.constraintKey)) {
+        const guardKey = rule.constraintKey;
+        builder.andWhere(function recordGuard(this: Knex.QueryBuilder) {
+          compileRecordGuardSql(this, guardKey, rule, ctx);
+        });
+        continue;
+      }
       const result = compileBundleRuleSql(builder, rule, ctx);
       if (!result.supported) return result;
     }

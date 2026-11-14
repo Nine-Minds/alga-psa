@@ -272,6 +272,29 @@ export const TICKET_WRITE_ACTION_CAPABILITIES: readonly TicketCapabilityKey[] = 
   'timerStart', 'timeEntryCreate', 'locationEdit', 'assetAdd', 'commentOwnEdit', 'reactionToggle',
 ] as TicketCapabilityKey[]);
 
+/**
+ * What a co-managed seat technician has on the native ticket screen. The conversation (already filtered by
+ * the audience predicate), status, assignment and time stay; everything that is billing, catalogue, MSP
+ * configuration or a destructive/administrative act is off. The server resolves the viewer's set once
+ * (`resolveTicketViewerCapabilities`), gates its preloads on it and hands the same object to the client.
+ */
+export const SEAT_TECHNICIAN_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.freeze({
+  ...NATIVE_TICKET_CAPABILITIES,
+  billing: false,
+  quickInvoice: false,
+  materials: false,
+  credentials: false,
+  bundles: false,
+  delete: false,
+  duplicate: false,
+  emailLogs: false,
+  survey: false,
+  scheduling: false,
+  createTemplate: false,
+  createWorkflow: false,
+  categoryCreate: false,
+});
+
 /** Every capability off: a convenient starting point for a reduced data source. */
 export const NO_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.freeze(
   Object.fromEntries(
@@ -368,6 +391,14 @@ export interface TicketConversationConfig {
    * resolution flow never offers it.
    */
   audiences?: readonly CommentAudience[];
+  /**
+   * The audience a fresh composer starts on, when it is one of `audiences`. Absent: no default, and
+   * submit stays blocked until the author chooses (the fail-closed default of shared tickets and
+   * co_managed workspaces).
+   */
+  defaultAudience?: CommentAudience;
+  /** Display names that replace an audience's stock label (already translated), e.g. `Private` for `organization_private`. */
+  audienceLabels?: Partial<Record<CommentAudience, string>>;
 }
 
 // ---------------------------------------------------------------------------
