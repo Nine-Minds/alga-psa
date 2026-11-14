@@ -32,9 +32,12 @@ export function replaceTemplateVariables(
 
   // Then, process {{#if condition}}...{{/if}} blocks.
   // For preview, show the block content (with variables replaced) since sample data is available.
+  // An {{else}} branch is dropped so templates can offer readable Yes/No text
+  // (e.g. {{#if billed}}Yes{{else}}No{{/if}}) without leaking both branches.
   result = result.replace(
     /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_match, _condition, blockContent) => blockContent
+    (_match, _condition, blockContent: string) =>
+      blockContent.replace(/\{\{else(?:\s+if[^}]*)?\}\}[\s\S]*$/, '')
   );
 
   // Then replace simple {{variable}} and raw-HTML {{{variable}}} placeholders.
