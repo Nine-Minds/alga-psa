@@ -575,6 +575,7 @@
     "deleteCommentOnly": "Usuń tylko komentarz",
     "cancelScheduledComment": "Anuluj zaplanowany komentarz",
     "cancelScheduledCommentConfirm": "Anulować ten zaplanowany komentarz?",
+    "scheduledCommentChangeFailed": "Nie można zmienić tego zaplanowanego komentarza. Odśwież stronę i spróbuj ponownie.",
     "invalidScheduleTime": "Wybierz jednoznaczny przyszły czas w tej strefie czasowej.",
     "publishAt": "Opublikuj o",
     "publishes": "Publikuje",

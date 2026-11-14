@@ -531,6 +531,7 @@
     "deleteCommentOnly": "Radera endast kommentar",
     "cancelScheduledComment": "Avbryt schemalagd kommentar",
     "cancelScheduledCommentConfirm": "Avbryta den här schemalagda kommentaren?",
+    "scheduledCommentChangeFailed": "Det gick inte att ändra den schemalagda kommentaren. Uppdatera sidan och försök igen.",
     "invalidScheduleTime": "Välj en entydig framtida tid i den här tidszonen.",
     "publishAt": "Publiceringstid",
     "publishes": "Publiceras",

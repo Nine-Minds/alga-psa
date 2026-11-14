@@ -573,6 +573,7 @@
     "deleteCommentOnly": "Alleen reactie verwijderen",
     "cancelScheduledComment": "Geplande reactie annuleren",
     "cancelScheduledCommentConfirm": "Deze geplande reactie annuleren?",
+    "scheduledCommentChangeFailed": "Deze geplande reactie kan niet worden gewijzigd. Vernieuw de pagina en probeer het opnieuw.",
     "invalidScheduleTime": "Kies een ondubbelzinnig toekomstig tijdstip in deze tijdzone.",
     "publishAt": "Publiceren op",
     "publishes": "Publiceert",

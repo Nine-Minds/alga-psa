@@ -531,6 +531,7 @@
     "deleteCommentOnly": "Nur Kommentar löschen",
     "cancelScheduledComment": "Geplanten Kommentar abbrechen",
     "cancelScheduledCommentConfirm": "Diesen geplanten Kommentar abbrechen?",
+    "scheduledCommentChangeFailed": "Der geplante Kommentar konnte nicht geändert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
     "invalidScheduleTime": "Wählen Sie einen eindeutigen zukünftigen Zeitpunkt in dieser Zeitzone.",
     "publishAt": "Veröffentlichen am",
     "publishes": "Veröffentlicht",

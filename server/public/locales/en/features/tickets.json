@@ -573,6 +573,7 @@
     "deleteCommentOnly": "Delete Comment Only",
     "cancelScheduledComment": "Cancel scheduled comment",
     "cancelScheduledCommentConfirm": "Cancel this scheduled comment?",
+    "scheduledCommentChangeFailed": "Unable to change this scheduled comment. Refresh and try again.",
     "invalidScheduleTime": "Choose an unambiguous future time in this time zone.",
     "publishAt": "Publish at",
     "publishes": "Publishes",
