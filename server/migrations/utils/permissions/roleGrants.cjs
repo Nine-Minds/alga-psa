@@ -63,6 +63,68 @@ const DEFAULT_ROLES = {
 };
 
 /**
+ * Roles that exist only where a release capability does. No product seed creates one: the
+ * capability's own admission command does, for the tenant it admits and no other, and grants
+ * it exactly `grants` (the application's copy of the list is pinned to this one by a unit
+ * test). The role editor hides the role from a tenant the capability does not serve.
+ *
+ * Unlike a default role, a capability role declares its grants here rather than on each
+ * catalog entry: the set is closed and reviewed in one place, and a permission added to the
+ * catalog never reaches it by default.
+ *
+ * Synchronization treats one like a `legacy` role: granted when the tenant has it, skipped
+ * silently (`capability-absent`) when it does not, never created.
+ *
+ * `msp:Seat Technician` is the role of a client's technician working inside the sponsoring
+ * MSP's workspace on a co-managed seat. Operational work only: it holds no sales, billing,
+ * accounting, settings or user-administration permission, and none may be added to it here.
+ */
+const CAPABILITY_ROLES = {
+  psa: [
+    {
+      key: 'msp:Seat Technician',
+      roleName: 'Seat Technician',
+      msp: true,
+      client: false,
+      capabilities: ['co-managed-seat'],
+      description: 'Client technician working this workspace on a co-managed seat',
+      grants: [
+        'asset:read',
+        'canned_response:read',
+        'client:read',
+        'contact:read',
+        'document:create',
+        'document:read',
+        'document:update',
+        'project:read',
+        'project_task:read',
+        'project_task:update',
+        'tag:create',
+        'tag:read',
+        'tag:update',
+        'ticket:create',
+        'ticket:read',
+        'ticket:update',
+        'time_entry:create',
+        'time_entry:delete',
+        'time_entry:read',
+        'time_entry:update',
+        'time_sheet:read',
+        'time_sheet:submit',
+        'time_sheet:update',
+      ],
+    },
+  ],
+  co_managed: [],
+  algadesk: [],
+};
+
+function getCapabilityRoles(product) {
+  getDefaultRoles(product);
+  return CAPABILITY_ROLES[product] || [];
+}
+
+/**
  * Role keys a historical migration granted that no product creates.
  * Documentation only — they are not grant targets, so nothing resolves to them.
  * Resolving them is part of the deferred role-model decision.
@@ -122,6 +184,20 @@ function compileRoleGrants(product, entries = ACTIVE_PERMISSIONS) {
     }
   }
 
+  // Capability roles name their grants themselves, by `resource:action` in their own scope.
+  for (const role of getCapabilityRoles(product)) {
+    const wanted = new Set(role.grants);
+    compiled.set(role.key, {
+      role,
+      allMsp: false,
+      identities: entries
+        .filter((entry) => entry.products.includes(product) && isEntryAvailable(entry, product, role.capabilities)
+          && entryScopeAllows(entry, role) && entry.msp === role.msp && entry.client === role.client
+          && wanted.has(`${entry.resource}:${entry.action}`))
+        .map(permissionIdentity),
+    });
+  }
+
   return compiled;
 }
 
@@ -162,11 +238,13 @@ function knownRoleKeys(product) {
 
 module.exports = {
   ALL_MSP,
+  CAPABILITY_ROLES,
   DEFAULT_ROLES,
   DEFERRED_ROLE_DECISIONS,
   compileLegacyRoleGrants,
   compileRoleGrants,
   entryScopeAllows,
+  getCapabilityRoles,
   getDefaultRole,
   getDefaultRoles,
   knownRoleKeys,

@@ -60,5 +60,22 @@
     },
     "retentionFailuresHeading": "Adjuntos no conservados",
     "retentionFailed": "Adjunto no conservado: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "¿Finalizar el acuerdo de asientos de {{name}}?",
+    "intro": "La finalización se aplica en la siguiente solicitud de cada técnico y no se puede deshacer desde aquí.",
+    "effectTechnicians": "Técnicos desactivados: {{count}}",
+    "effectInvitations": "Invitaciones pendientes retiradas: {{count}}",
+    "effectTickets": "Tickets devueltos a su equipo: {{count}}",
+    "effectSeats": "Asientos liberados al grupo: {{count}}",
+    "effectNotes": "Las notas compartidas siguen siendo legibles para su personal.",
+    "confirm": "Finalizar acuerdo",
+    "cancel": "Cancelar",
+    "start": "Finalizar acuerdo de asientos",
+    "done": "El acuerdo de asientos ha finalizado.",
+    "errorDenied": "No tiene permiso para finalizar este acuerdo.",
+    "errorNotFound": "No se encontró este acuerdo.",
+    "errorGeneric": "No se pudo procesar la solicitud.",
+    "loading": "Cargando…"
   }
 }

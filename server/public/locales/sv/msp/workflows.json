@@ -536,6 +536,7 @@
         "contractEnd": "avtalets slutdatum",
         "warrantyEnd": "tillgångens slutdatum för garantin",
         "maintenanceDue": "underhållets förfallodatum för tillgången",
+        "ticketDueDate": "ärendets förfallodatum",
         "ticketStatusAge": "dagen då ärendet når antalet dagar i status"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Organisationens tidszon (standard)",
       "searchTimezones": "Sök tidszoner",
       "inputDataEventPending": "Välj händelsen ovan; dina steg läser de data som händelsen skickar.",
+      "dateSourceTicketDueDate": "Ärendets förfallodatum",
       "dateSourceTicketStatusAge": "Ärende i status i N dagar",
       "statusAgeStatus": "Status",
       "statusAgeStatusPlaceholder": "Välj en status",

@@ -193,14 +193,9 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
         const purchaseDate = mapped.purchase_date ? String(mapped.purchase_date) : undefined;
         const warrantyEndDate = mapped.warranty_end_date ? String(mapped.warranty_end_date) : undefined;
 
-        const candidateTags = [
-          mapped.asset_tag,
-          serialNumber,
-          externalId,
-          `${importJobId}-${record.rowNumber}`
-        ].map((value) => (value ? String(value).trim() : null));
-
-        const assetTag = candidateTags.find((value) => value && value.length > 0) ?? `import-${record.rowNumber}`;
+        // Only a mapped physical tag is imported as the tag. Serial numbers
+        // and source row identifiers remain separate identity fields.
+        const assetTag = typeof mapped.asset_tag === 'string' ? mapped.asset_tag : '';
 
         const assetData: CreateAssetRequest = {
           asset_type: assetType,

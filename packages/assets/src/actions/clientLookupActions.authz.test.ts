@@ -98,6 +98,11 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (connection: any) => connection,
   withTransaction: async (_knex: any, callback: (trx: any) => unknown) => callback(h.connection),
 }));
+// The billing-column projection has its own DB suite (coManagedSeatCommercialLookups); here it passes rows through.
+vi.mock('@alga-psa/auth/lib/clientBillingProjection', () => ({
+  projectClientForSubject: async (_user: unknown, client: unknown) => client,
+  projectClientsForSubject: async (_user: unknown, clients: unknown) => clients,
+}));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => h.state.bundleRules),
 }));

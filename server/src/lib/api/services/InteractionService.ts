@@ -11,6 +11,8 @@ import {
   withTransaction,
 } from '@alga-psa/db';
 import type { IInteraction } from '@alga-psa/types';
+import { resolveInteractionReadScope } from '@alga-psa/clients/lib/interactionAuthorizationSql';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import {
   createInteractionWithSideEffects,
   createInteractionScheduleEntry,
@@ -156,6 +158,8 @@ export class InteractionService extends BaseService<InteractionApiRow> {
     const pageSize = options.page_size ?? options.limit ?? 25;
 
     const scopedDb = tenantDb(knex, context.tenant);
+    // Narrow data and count alike, before filters and pagination: the page and the total cover the readable set.
+    const readScope = await resolveInteractionReadScope(knex, context.tenant, subjectFromServiceContext(context), 'i');
     const dataQuery = applyInteractionFilters(
       buildHydratedInteractionQuery(knex, context.tenant),
       options,
@@ -171,6 +175,8 @@ export class InteractionService extends BaseService<InteractionApiRow> {
       options,
       scopedDb,
     );
+    readScope.apply(dataQuery);
+    readScope.apply(countQuery);
 
     const [data, countRow] = await Promise.all([
       dataQuery as Promise<InteractionApiRow[]>,
@@ -185,9 +191,9 @@ export class InteractionService extends BaseService<InteractionApiRow> {
 
   async getById(id: string, context: ServiceContext): Promise<InteractionApiRow | null> {
     const knex = await this.getDbForContext(context);
-    const interaction = await buildHydratedInteractionQuery(knex, context.tenant)
-      .where('i.interaction_id', id)
-      .first();
+    const hydrated = buildHydratedInteractionQuery(knex, context.tenant).where('i.interaction_id', id);
+    (await resolveInteractionReadScope(knex, context.tenant, subjectFromServiceContext(context), 'i')).apply(hydrated);
+    const interaction = await hydrated.first();
     return interaction
       ? normalizeInteractionRow(interaction as InteractionApiRow)
       : null;
@@ -294,10 +300,10 @@ export class InteractionService extends BaseService<InteractionApiRow> {
     const knex = await this.getDbForContext(context);
     const scopedDb = tenantDb(knex, context.tenant);
 
-    const existing = await scopedDb.table('interactions')
-      .where({ interaction_id: interactionId })
-      .select('interaction_id')
-      .first();
+    // An interaction outside the caller's scope is indistinguishable from a missing one.
+    const existingQuery = scopedDb.table('interactions').where({ interaction_id: interactionId });
+    (await resolveInteractionReadScope(knex, context.tenant, subjectFromServiceContext(context))).apply(existingQuery);
+    const existing = await existingQuery.select('interaction_id').first();
     if (!existing) {
       throw new NotFoundError('Interaction not found');
     }

@@ -94,6 +94,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.assetsAll',
       'nav.assetsMaintenance',
       'nav.assetsCustody',
+      'nav.assetsAudits',
       'nav.timeEntry',
       'nav.approvals',
       'nav.controlPanel',

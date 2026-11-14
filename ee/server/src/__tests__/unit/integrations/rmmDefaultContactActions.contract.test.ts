@@ -60,6 +60,6 @@ describe('RMM default contact action contracts', () => {
 
     expect(source).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)");
     expect(source).toContain('.where({ default_contact_id: contactId })');
-    expect(source).toContain('.update({ default_contact_id: null })');
+    expect(source).toContain('.update({ default_contact_id: null, updated_at: new Date().toISOString() })');
   });
 });

@@ -187,12 +187,12 @@ describe('asset statuses', () => {
     expect(assetActionErrorFrom(created)).toBeNull();
     expect(created.status).toBe('in_repair');
 
-    // An unknown slug throws the validation payload the form reads; the UI maps
-    // the throw back through assetActionErrorFrom.
-    const rejected = await createAsset(baseAsset(clientId, 'not_a_status') as any)
-      .catch((error: unknown) => error);
-    expect(rejected).toBeInstanceOf(Error);
-    expect((rejected as Error).message).toContain('unknown_status');
+    // Expected failures return the field-level validation payload consumed by the form.
+    const rejected = await createAsset(baseAsset(clientId, 'not_a_status') as any);
+    expect(rejected).toMatchObject({
+      validationIssues: [{ code: 'unknown_status', path: ['status'], message: 'Status \"not_a_status\" is not available' }],
+    });
+    expect(await table(tenantId, 'assets')).toHaveLength(1);
     expect(assetActionErrorFrom(rejected)).not.toBeNull();
   });
 

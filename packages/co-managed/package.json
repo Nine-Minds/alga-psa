@@ -18,6 +18,30 @@
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"
     },
+    "./seatArrangement": {
+      "types": "./src/seatArrangement.ts",
+      "import": "./src/seatArrangement.ts"
+    },
+    "./seatRole": {
+      "types": "./src/seatRole.ts",
+      "import": "./src/seatRole.ts"
+    },
+    "./seatAuthority": {
+      "types": "./src/seatAuthority.ts",
+      "import": "./src/seatAuthority.ts"
+    },
+    "./seatPeopleProjection": {
+      "types": "./src/seatPeopleProjection.ts",
+      "import": "./src/seatPeopleProjection.ts"
+    },
+    "./seatCapability": {
+      "types": "./src/seatCapability.ts",
+      "import": "./src/seatCapability.ts"
+    },
+    "./seatWriteAdmission": {
+      "types": "./src/seatWriteAdmission.ts",
+      "import": "./src/seatWriteAdmission.ts"
+    },
     "./permissionsCapability": {
       "types": "./src/permissionsCapability.ts",
       "import": "./src/permissionsCapability.ts"

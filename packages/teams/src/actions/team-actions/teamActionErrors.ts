@@ -1,3 +1,5 @@
+// From @alga-psa/types, not @alga-psa/db: client components import this module.
+import { isSeatTechnicianGuardError } from '@alga-psa/types';
 import {
   actionError,
   isAuthorizationThrow,
@@ -26,6 +28,10 @@ export function teamActionErrorFrom(error: unknown): TeamActionError | null {
     if (typeof candidate.actionError === 'string') {
       return actionError(candidate.actionError);
     }
+  }
+
+  if (isSeatTechnicianGuardError(error)) {
+    return actionError(error.message);
   }
 
   if (error instanceof Error) {

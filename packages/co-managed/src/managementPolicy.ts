@@ -13,6 +13,8 @@ const deny = (): never => { throw new CoManagedSharedWorkError(); };
 interface ManagementContext {
   trx: Knex.Transaction; actor: CoManagedSessionActor; subject: AuthorizationSubject;
   home: ReturnType<typeof tenantDb>; owner: any; action: 'read' | 'manage';
+  /** The subject's full assigned rule set; the queue policy derives closed bundles from it. */
+  allRules: BundleNarrowingRule[];
   clientRules: BundleNarrowingRule[]; boardRules: BundleNarrowingRule[]; managementRules: BundleNarrowingRule[];
   redactions: string[]; canManage: boolean;
 }
@@ -30,12 +32,13 @@ async function withManagement<T>(db: Knex, inputActor: CoManagedSessionActor, ac
     const credential = await lockCoManagedLocalAuthentication(trx, actor);
     for (const [resource, operation] of [['co_management', action], ['client', 'read'], ['ticket', 'read']])
       if (!await hasCoManagedLocalPermission(trx, actor, resource, operation, true)) deny();
-    const rules = async (type: string, operation: string) => (await resolveBundleNarrowingRulesForEvaluation(trx,
-      { subject: credential.subject, resource: { type, action: operation }, knex: trx }, { lock: true }))
-      .filter(rule => rule.resource === type && rule.action === operation);
-    const clientRules = await rules('client', 'read'), boardRules = await rules('ticket', 'read'), managementRules = await rules('co_management', action);
+    // One snapshot of the full assigned rule set (it does not depend on the resource asked about).
+    const allRules = await resolveBundleNarrowingRulesForEvaluation(trx,
+      { subject: credential.subject, resource: { type: 'co_management', action }, knex: trx }, { lock: true });
+    const rules = (type: string, operation: string) => allRules.filter(rule => rule.resource === type && rule.action === operation);
+    const clientRules = rules('client', 'read'), boardRules = rules('ticket', 'read'), managementRules = rules('co_management', action);
     const canManage = await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true);
-    const result = await work({ trx, actor, subject: credential.subject, home, owner, action, clientRules, boardRules, managementRules,
+    const result = await work({ trx, actor, subject: credential.subject, home, owner, action, allRules, clientRules, boardRules, managementRules,
       redactions: [...clientRules, ...boardRules, ...managementRules].flatMap(rule => rule.redactedFields ?? []), canManage });
     await credential.assertCurrent();
     return result;
@@ -45,9 +48,9 @@ async function withManagement<T>(db: Knex, inputActor: CoManagedSessionActor, ac
 const hidden = (context: ManagementContext, names: string[]) => isCoManagedReadFieldHidden(context.redactions, names);
 function authorizeProjection(context: ManagementContext, base: Knex.QueryBuilder) {
   const query = context.trx.from(base.as('q'));
-  for (const [resourceType, action, rules] of [
-    ['client', 'read', context.clientRules], ['ticket', 'read', context.boardRules], ['co_management', context.action, context.managementRules],
-  ] as const) applyCoManagedQueuePolicy(query, context.subject, rules, { resourceType, action, shared: true, ownerAvailable: false });
+  for (const [resourceType, action] of [
+    ['client', 'read'], ['ticket', 'read'], ['co_management', context.action],
+  ] as const) applyCoManagedQueuePolicy(query, context.subject, context.allRules, { resourceType, action, shared: true, ownerAvailable: false });
   if (hidden(context, ['client_id', 'clients.client_id', 'board_id', 'boards.board_id', 'tickets.board_id', 'operation_id', 'co_managed_provisioning_operations.operation_id'])) query.whereRaw('false');
   return query;
 }

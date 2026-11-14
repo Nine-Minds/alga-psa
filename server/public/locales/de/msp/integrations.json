@@ -2257,7 +2257,41 @@
         "outstandingItemsReconnect": "Über alle verknüpften Organisationen hinweg. Diese Elemente bleiben erhalten, bis Sie Xero erneut verbinden.",
         "refreshTokenValidUntilProvider": "{{provider}}-Autorisierung gültig bis {{date}}. Tokens werden automatisch erneuert.",
         "syncSucceeded": "Synchronisierung abgeschlossen",
-        "syncStopped": "Synchronisierung gestoppt"
+        "syncStopped": "Synchronisierung gestoppt",
+        "erroredOpsDialogTitle": "Fehlgeschlagene {{provider}}-Synchronisierungsvorgänge",
+        "erroredOpsDialogDescription": "Vorgänge, die nach wiederholten Versuchen fehlgeschlagen sind oder übersprungen wurden.",
+        "erroredOpsOpen": "Fehlgeschlagene Vorgänge anzeigen",
+        "erroredOpsColItem": "Eintrag",
+        "erroredOpsColOperation": "Vorgang",
+        "erroredOpsColError": "Fehler",
+        "erroredOpsColWhen": "Zeitpunkt",
+        "erroredOpsColBatch": "Exportstapel",
+        "erroredOpsLoading": "Fehlgeschlagene Vorgänge werden geladen…",
+        "erroredOpsEmpty": "Keine fehlgeschlagenen Vorgänge.",
+        "erroredOpsLoadError": "Fehlgeschlagene Vorgänge konnten nicht geladen werden.",
+        "erroredOpsNoError": "Es wurden keine Fehlerdetails erfasst.",
+        "erroredOpsBatchLink": "Stapel {{batch}} anzeigen",
+        "erroredOpsClose": "Schließen",
+        "erroredOpsDeleted": {
+          "invoice": "Gelöschte Rechnung",
+          "credit_memo": "Gelöschte Gutschrift",
+          "vendor_bill": "Gelöschte Lieferantenrechnung",
+          "payment": "Gelöschte Zahlung",
+          "credit_application": "Gelöschte Guthabenverrechnung",
+          "other": "Nicht verfügbarer Eintrag"
+        },
+        "erroredOpsItem": {
+          "payment": "Zahlung zu {{invoice}}",
+          "creditApplication": "Guthaben verrechnet mit {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Rechnung exportieren",
+          "export_credit_memo": "Gutschrift exportieren",
+          "export_vendor_bill": "Lieferantenrechnung exportieren",
+          "apply_credit": "Guthaben verrechnen",
+          "record_payment": "Zahlung erfassen",
+          "void_invoice": "Rechnung stornieren"
+        }
       },
       "itemImport": {
         "description": "Importieren Sie Ihre QuickBooks-Produkte und -Dienste für das verbundene QuickBooks-Unternehmen in den Alga-Servicekatalog. QuickBooks bleibt die maßgebliche Quelle für Namen, Sätze, SKUs, Beschreibungen und Kosten; Abrechnungsmethode, Maßeinheit und Diensttyp werden hier festgelegt und anschließend von Alga verwaltet. Dieser Schritt ist optional — überspringen Sie ihn mit „Weiter“.",

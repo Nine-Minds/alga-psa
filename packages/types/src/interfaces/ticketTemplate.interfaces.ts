@@ -18,6 +18,26 @@ export interface ITicketTemplateChecklistItem extends TicketTemplateChecklistIte
   order_number: number;
 }
 
+/**
+ * A documentation link a template carries. Always copied onto generated tickets as a `reference`
+ * external link; `url` is stored absolute and never re-resolved at ticket creation.
+ */
+export interface TicketTemplateLinkDraft {
+  /** Registry key: built-in or `custom:<slug>`. */
+  system: string;
+  external_id: string;
+  realm: string | null;
+  url: string | null;
+  title: string | null;
+  /** e.g. `{ hudu: { article_id, company_id } }` when picked through the Hudu picker. */
+  metadata: Record<string, unknown> | null;
+}
+
+export interface ITicketTemplateLink extends TicketTemplateLinkDraft {
+  template_link_id: string;
+  order_number: number;
+}
+
 /** The editor's shape; also what the from-ticket loader returns. */
 export interface TicketTemplateDraft {
   name: string;
@@ -38,9 +58,10 @@ export interface TicketTemplateDraft {
   tags: string[];
   custom_fields: Record<string, unknown>;
   checklist: TicketTemplateChecklistItemDraft[];
+  links: TicketTemplateLinkDraft[];
 }
 
-export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist'> {
+export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist' | 'links'> {
   tenant: string;
   template_id: string;
   is_active: boolean;
@@ -52,6 +73,7 @@ export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist'> 
   created_at: string;
   updated_at: string;
   checklist: ITicketTemplateChecklistItem[];
+  links: ITicketTemplateLink[];
 }
 
 /** A recurring schedule that uses a template (non-archived definitions only). */
@@ -124,6 +146,8 @@ export interface TicketTemplateForCreate {
     is_new: boolean;
   }[];
   checklist: { item_name: string; is_required: boolean }[];
+  /** Documentation links the created ticket will carry, resolved for display. Links are always copied. */
+  links: { title: string | null; href: string | null; systemLabel: string }[];
   custom_field_count: number;
   /** Dangling references that were dropped from the prefill (e.g. "Board no longer exists"). */
   warnings: string[];

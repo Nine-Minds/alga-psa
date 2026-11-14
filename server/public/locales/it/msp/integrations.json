@@ -2257,7 +2257,41 @@
         "outstandingItemsReconnect": "In tutte le organizzazioni collegate. Questi elementi vengono conservati fino alla riconnessione a Xero.",
         "refreshTokenValidUntilProvider": "Autorizzazione {{provider}} valida fino al {{date}}. I token vengono rinnovati automaticamente.",
         "syncSucceeded": "Sincronizzazione completata",
-        "syncStopped": "Sincronizzazione interrotta"
+        "syncStopped": "Sincronizzazione interrotta",
+        "erroredOpsDialogTitle": "Operazioni di sincronizzazione {{provider}} in errore",
+        "erroredOpsDialogDescription": "Operazioni non riuscite o ignorate dopo ripetuti tentativi.",
+        "erroredOpsOpen": "Visualizza operazioni in errore",
+        "erroredOpsColItem": "Elemento",
+        "erroredOpsColOperation": "Operazione",
+        "erroredOpsColError": "Errore",
+        "erroredOpsColWhen": "Data",
+        "erroredOpsColBatch": "Lotto di esportazione",
+        "erroredOpsLoading": "Caricamento delle operazioni in errore…",
+        "erroredOpsEmpty": "Nessuna operazione in errore.",
+        "erroredOpsLoadError": "Impossibile caricare le operazioni in errore.",
+        "erroredOpsNoError": "Nessun dettaglio dell’errore è stato registrato.",
+        "erroredOpsBatchLink": "Visualizza il lotto {{batch}}",
+        "erroredOpsClose": "Chiudi",
+        "erroredOpsDeleted": {
+          "invoice": "Fattura eliminata",
+          "credit_memo": "Nota di credito eliminata",
+          "vendor_bill": "Fattura fornitore eliminata",
+          "payment": "Pagamento eliminato",
+          "credit_application": "Applicazione del credito eliminata",
+          "other": "Elemento non disponibile"
+        },
+        "erroredOpsItem": {
+          "payment": "Pagamento di {{invoice}}",
+          "creditApplication": "Credito applicato a {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Esporta fattura",
+          "export_credit_memo": "Esporta nota di credito",
+          "export_vendor_bill": "Esporta fattura fornitore",
+          "apply_credit": "Applica credito",
+          "record_payment": "Registra pagamento",
+          "void_invoice": "Annulla fattura"
+        }
       },
       "itemImport": {
         "description": "Importa i prodotti e i servizi QuickBooks nel catalogo servizi Alga per l’azienda QuickBooks collegata. QuickBooks rimane la fonte autorevole per nomi, tariffe, SKU, descrizioni e costi; il metodo di fatturazione, l’unità di misura e il tipo di servizio vengono impostati qui e in seguito gestiti da Alga. Questo passaggio è facoltativo: ignoralo con Avanti.",

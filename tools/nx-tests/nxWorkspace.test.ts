@@ -62,6 +62,23 @@ describe('nx workspace', () => {
     expect(stat.size).toBeGreaterThan(0);
   });
 
+  it('generates a package graph that passes the circular dependency gate', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — graph fixtures repeat across build boundary checks
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-cycles-'));
+    try {
+      const outFile = path.join(tmpDir, 'graph.json');
+      await runNx(['graph', '--file', outFile]);
+      // Test-only fixtures and locale resources participate in Nx dependency
+      // analysis too, and must not introduce application build cycles.
+      await execFileAsync(process.execPath, [
+        'scripts/check-circular-deps.mjs', outFile,
+        '--baseline', '.github/known-cycles.json',
+      ], { cwd: process.cwd(), encoding: 'utf8' });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('plans standalone database builds without application or worker tasks', { timeout: 180_000 }, async () => {
     // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-db-build-'));

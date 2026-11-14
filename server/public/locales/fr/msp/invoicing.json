@@ -907,6 +907,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "aucun"
+    },
+    "syncFeedback": {
+      "synced": "Facture synchronisée avec {{provider}}.",
+      "failed": "Échec de la synchronisation avec {{provider}} : {{reason}}",
+      "failedNoReason": "Échec de la synchronisation avec {{provider}}. Consultez la liste des opérations en erreur sur la page de l’intégration comptable.",
+      "skipped": "La facture a été ignorée et n’a pas été envoyée à {{provider}} : {{reason}}",
+      "skippedNoReason": "La facture a été ignorée et n’a pas été envoyée à {{provider}}.",
+      "pending": "La facture est en file d’attente pour la synchronisation avec {{provider}} ; elle n’a pas encore été traitée.",
+      "unknown": "Impossible de déterminer si la facture a été synchronisée avec {{provider}}.",
+      "notRun": "La synchronisation avec {{provider}} n’a pas été exécutée : {{reason}}",
+      "notRunNoReason": "La synchronisation avec {{provider}} n’a pas été exécutée.",
+      "error": "Échec de la synchronisation : {{error}}",
+      "refusedNotFound": "Facture introuvable.",
+      "refusedPaid": "Les factures payées ne sont pas synchronisées avec {{provider}}.",
+      "refusedCancelled": "Les factures annulées ne sont pas synchronisées avec {{provider}}.",
+      "cycleFailed": "Échec de la synchronisation avec {{provider}} : {{reason}} La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation.",
+      "cycleFailedNoReason": "Échec de la synchronisation avec {{provider}}. La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation."
     }
   },
   "templateEditor": {

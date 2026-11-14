@@ -907,6 +907,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "geen"
+    },
+    "syncFeedback": {
+      "synced": "Factuur gesynchroniseerd met {{provider}}.",
+      "failed": "Synchronisatie met {{provider}} mislukt: {{reason}}",
+      "failedNoReason": "Synchronisatie met {{provider}} mislukt. Controleer de lijst met mislukte bewerkingen op de pagina van de boekhoudintegratie.",
+      "skipped": "De factuur is overgeslagen en niet naar {{provider}} verzonden: {{reason}}",
+      "skippedNoReason": "De factuur is overgeslagen en niet naar {{provider}} verzonden.",
+      "pending": "De factuur staat in de wachtrij voor synchronisatie met {{provider}}; deze is nog niet verwerkt.",
+      "unknown": "Kan niet bepalen of de factuur met {{provider}} is gesynchroniseerd.",
+      "notRun": "Synchronisatie met {{provider}} is niet uitgevoerd: {{reason}}",
+      "notRunNoReason": "Synchronisatie met {{provider}} is niet uitgevoerd.",
+      "error": "Synchronisatie mislukt: {{error}}",
+      "refusedNotFound": "Factuur niet gevonden.",
+      "refusedPaid": "Betaalde facturen worden niet met {{provider}} gesynchroniseerd.",
+      "refusedCancelled": "Ongeldig gemaakte of geannuleerde facturen worden niet met {{provider}} gesynchroniseerd.",
+      "cycleFailed": "Synchronisatie met {{provider}} mislukt: {{reason}} De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd.",
+      "cycleFailedNoReason": "Synchronisatie met {{provider}} mislukt. De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd."
     }
   },
   "templateEditor": {

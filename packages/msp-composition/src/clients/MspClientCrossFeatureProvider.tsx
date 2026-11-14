@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ClientRecurringTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput, RenderClientCoManagedIntegration } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientAuditsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ClientRecurringTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput, RenderClientCoManagedIntegration } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
@@ -23,6 +23,8 @@ import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointm
 import { scheduleTeamsMeeting as scheduleTeamsMeetingAction } from '@alga-psa/scheduling/actions/onlineMeetingSchedulingActions';
 import { refreshMeetingRecordings } from '@alga-psa/scheduling/actions/onlineMeetingArtifactActions';
 import { getClientSoftwareSummary } from '@alga-psa/assets/actions/softwareActions';
+import { hasAssetAuditReadAccess } from '@alga-psa/assets/actions/assetAuditActions';
+import { MspAssetAudits } from '../assets/MspAssetAudits';
 import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
@@ -64,6 +66,16 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
     ),
     []
   );
+
+  // Site audits are client-keyed, so the tenant list serves the client tab
+  // pre-filtered. The asset:read probe comes along the same seam: the clients
+  // package cannot import @alga-psa/assets to ask for itself.
+  const renderClientAudits = useCallback(
+    (props: ClientAuditsRenderProps) => <MspAssetAudits clientId={props.clientId} />,
+    []
+  );
+
+  const hasClientAuditsAccess = useCallback(() => hasAssetAuditReadAccess(), []);
 
   const renderHourBlocksSection = useCallback(
     (props: HourBlocksSectionRenderProps) => (
@@ -197,6 +209,8 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderClientAudits,
+      hasClientAuditsAccess,
       getClientSoftwareSummary,
       renderHourBlocksSection,
       renderClientOpportunities,
@@ -219,6 +233,8 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderClientAudits,
+      hasClientAuditsAccess,
       getClientSoftwareSummary,
       renderHourBlocksSection,
       renderClientOpportunities,

@@ -48,3 +48,40 @@ describe('ticketTemplateInputSchema', () => {
     expect(ticketTemplateInputSchema.parse({ name: 'N', title: 'T', offer_for_manual_use: false }).offer_for_manual_use).toBe(false);
   });
 });
+
+describe('ticketTemplateInputSchema links', () => {
+  const base = { name: 'N', title: 'T' };
+  const hudu = { system: 'hudu', external_id: '42', url: 'https://docs.example.com/a/42', title: ' Runbook ' };
+
+  it('defaults to no links and normalises optional fields', () => {
+    expect(ticketTemplateInputSchema.parse(base).links).toEqual([]);
+    expect(ticketTemplateInputSchema.parse({ ...base, links: [hudu] }).links).toEqual([
+      { system: 'hudu', external_id: '42', realm: null, url: 'https://docs.example.com/a/42', title: 'Runbook', metadata: null },
+    ]);
+  });
+
+  it('rejects a relationship (templates always copy references) and any other unknown key', () => {
+    expect(ticketTemplateInputSchema.safeParse({ ...base, links: [{ ...hudu, relationship: 'origin' }] }).success).toBe(false);
+    expect(ticketTemplateInputSchema.safeParse({ ...base, links: [{ ...hudu, portal_visible: true }] }).success).toBe(false);
+  });
+
+  it('rejects non-http(s) urls and a missing external id', () => {
+    expect(ticketTemplateInputSchema.safeParse({ ...base, links: [{ ...hudu, url: 'javascript:alert(1)' }] }).success).toBe(false);
+    expect(ticketTemplateInputSchema.safeParse({ ...base, links: [{ ...hudu, external_id: ' ' }] }).success).toBe(false);
+  });
+
+  it('allows at most 50 links', () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ ...hudu, external_id: String(i) }));
+    expect(ticketTemplateInputSchema.safeParse({ ...base, links: many(50) }).success).toBe(true);
+    expect(ticketTemplateInputSchema.safeParse({ ...base, links: many(51) }).success).toBe(false);
+  });
+
+  it('rejects the same system + external id twice, with a localizable key', () => {
+    const result = ticketTemplateInputSchema.safeParse({ ...base, links: [hudu, { ...hudu, title: 'again' }] });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toEqual(['links', 1]);
+      expect((result.error.issues[0] as any).params.messageKey).toBe('features/tickets:templates.errors.duplicateLink');
+    }
+  });
+});

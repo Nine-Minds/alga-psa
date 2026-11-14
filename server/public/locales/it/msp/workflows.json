@@ -536,6 +536,7 @@
         "contractEnd": "la data di fine del contratto",
         "warrantyEnd": "la data di fine garanzia dell’asset",
         "maintenanceDue": "la data di scadenza della manutenzione dell’asset",
+        "ticketDueDate": "la scadenza del ticket",
         "ticketStatusAge": "il giorno in cui il ticket raggiunge il numero di giorni nello stato"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Fuso orario del tenant (predefinito)",
       "searchTimezones": "Cerca fusi orari",
       "inputDataEventPending": "Scegli l’evento qui sopra; i tuoi passaggi leggeranno i dati inviati da quell’evento.",
+      "dateSourceTicketDueDate": "Scadenza del ticket",
       "dateSourceTicketStatusAge": "Ticket nello stato da N giorni",
       "statusAgeStatus": "Stato",
       "statusAgeStatusPlaceholder": "Seleziona uno stato",

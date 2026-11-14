@@ -6887,6 +6887,17 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/archive",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/archive/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/quotes/{id}/convert",
     "methods": [
       "POST"

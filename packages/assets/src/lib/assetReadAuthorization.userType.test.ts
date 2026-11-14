@@ -20,6 +20,9 @@ const h = vi.hoisted(() => {
           filter = criteria;
           return builder;
         },
+        orderBy() {
+          return builder;
+        },
         select: async () =>
           (tables[name] ?? []).filter((row) =>
             Object.entries(filter).every(([key, value]) => row[key] === value)

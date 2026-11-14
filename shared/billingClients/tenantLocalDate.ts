@@ -5,6 +5,7 @@ import { toLocalDateInTimeZone } from './clientContractStatus';
 // LEVERAGE: pattern tenant-timezone-loader — same tenant_settings.settings.timezone read as
 // packages/tickets/src/lib/recurring/tenantTimeZone.ts and tenancy's getTenantTimezone; a shared
 // low-level tenant timezone reader is missing (tenancy sits above shared).
+// Consolidation target: resolveTenantToday / resolveEffectiveTimeZone in packages/db/src/lib/workDate.ts.
 /**
  * Tenant IANA timezone from `tenant_settings.settings.timezone`, or null when unset/unreadable.
  */

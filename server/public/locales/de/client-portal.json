@@ -1165,6 +1165,10 @@
       "recordInvalid": "Einer der ausgewählten Sichtbarkeitsgruppen-Datensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
       "invalidData": "Ungültige Daten für die Sichtbarkeitsgruppe. Bitte überprüfen Sie die Angaben und die ausgewählten Boards."
+    },
+    "roles": {
+      "lastMspAdmin": "Ein Mandant muss mindestens einen aktiven MSP-Admin-Benutzer behalten.",
+      "lastRole": "Ein Benutzer muss mindestens eine Rolle behalten. Weisen Sie zuerst eine andere Rolle zu und entfernen Sie dann diese."
     }
   }
 }

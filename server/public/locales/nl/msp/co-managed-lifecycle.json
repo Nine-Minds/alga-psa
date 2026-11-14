@@ -60,5 +60,22 @@
     },
     "retentionFailuresHeading": "Niet bewaarde bijlagen",
     "retentionFailed": "Bijlage niet bewaard: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "De zetelovereenkomst voor {{name}} beëindigen?",
+    "intro": "Het einde gaat in bij het volgende verzoek van elke technicus en kan hier niet ongedaan worden gemaakt.",
+    "effectTechnicians": "Gedeactiveerde technici: {{count}}",
+    "effectInvitations": "Ingetrokken openstaande uitnodigingen: {{count}}",
+    "effectTickets": "Aan uw team teruggegeven tickets: {{count}}",
+    "effectSeats": "Aan de pool vrijgegeven zetels: {{count}}",
+    "effectNotes": "Gedeelde notities blijven leesbaar voor uw medewerkers.",
+    "confirm": "Overeenkomst beëindigen",
+    "cancel": "Annuleren",
+    "start": "Zetelovereenkomst beëindigen",
+    "done": "De zetelovereenkomst is beëindigd.",
+    "errorDenied": "U hebt geen toestemming om deze overeenkomst te beëindigen.",
+    "errorNotFound": "Deze overeenkomst is niet gevonden.",
+    "errorGeneric": "Het verzoek kon niet worden verwerkt.",
+    "loading": "Laden…"
   }
 }

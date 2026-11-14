@@ -115,6 +115,17 @@ export async function completePasswordReset(
       return { success: false, message: 'Invalid or expired reset token', error: 'Invalid token' };
     }
 
+    // Tenant login policy: a reset token minted before SSO became required (or by
+    // another path) must not let an internal non-break-glass user set a password.
+    // Answer exactly like an invalid token.
+    const { isPasswordResetPermitted } = await import('../../lib/passwordLoginGate');
+    if (!(await isPasswordResetPermitted(
+      { user_id: user.user_id, tenant: tenantFromToken, user_type: user.user_type },
+      'password_reset_complete',
+    ))) {
+      return { success: false, message: 'Invalid or expired reset token', error: 'Invalid token' };
+    }
+
     // Run the password update in the token's tenant context
     const result = await runWithTenant(tenantFromToken, async () => {
       const { knex, tenant } = await createTenantKnex(tenantFromToken);

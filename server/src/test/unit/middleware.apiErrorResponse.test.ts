@@ -18,3 +18,14 @@ it('returns the v1 API error contract when the API key is absent', async () => {
   expect(response.status).toBe(401);
   expect(await response.json()).toMatchObject({ error: { code: 'UNAUTHORIZED', message: 'API key required' } });
 });
+
+it('refuses with 413 a request that declares a body past the proxy cap, before auth or routing', async () => {
+  vi.stubEnv('NEXTAUTH_URL', 'http://localhost:3000');
+  const req = Object.assign(
+    new NextRequest('http://localhost:3000/api/v1/tickets', { method: 'POST', headers: { 'content-length': String(101 * 1024 * 1024) } }),
+    { auth: null },
+  );
+  const response = await (middleware as unknown as (req: NextRequest) => Promise<Response>)(req);
+  expect(response.status).toBe(413);
+  expect(await response.json()).toMatchObject({ error: { code: 'PAYLOAD_TOO_LARGE' } });
+});

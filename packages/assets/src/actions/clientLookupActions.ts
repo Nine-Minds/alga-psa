@@ -1,5 +1,6 @@
 'use server';
 
+import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { AuthorizationDecision } from '@alga-psa/authorization/kernel';
@@ -92,7 +93,7 @@ export const getAllClientsForAssets = withAuth(async (
   { tenant },
   includeInactive: boolean = true
 ): Promise<IClient[]> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -127,7 +128,7 @@ export const getAllClientsForAssets = withAuth(async (
 
   // Batch-resolve logo URLs once (no N+1) so the assets table can show real logos.
   const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c) => c.client_id), tenant);
-  return clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null }));
+  return projectClientsForSubject(user, clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null })));
 });
 
 export const getClientByIdForAssets = withAuth(async (
@@ -135,7 +136,7 @@ export const getClientByIdForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<IClient | null> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -158,7 +159,7 @@ export const getClientByIdForAssets = withAuth(async (
   // Resolve the uploaded logo so the client drawer/detail view shows the real
   // logo (matching the assets table), not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return withClientSinceDateString({ ...client, logoUrl });
+  return projectClientForSubject(user, withClientSinceDateString({ ...client, logoUrl }));
 });
 
 export const getClientLocationsForAssets = withAuth(async (
@@ -166,7 +167,7 @@ export const getClientLocationsForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<IClientLocation[]> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -197,7 +198,7 @@ export const getClientContactsForAssets = withAuth(async (
   clientId: string,
   currentContactId?: string | null
 ): Promise<IContact[]> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }
@@ -230,7 +231,7 @@ export const getVendorOptionsForAssets = withAuth(async (
   { tenant },
   currentVendorId?: string | null
 ): Promise<Array<{ vendor_id: string; vendor_name: string }>> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset vendor options');
   }
@@ -260,7 +261,7 @@ export const getClientBillingProfilesForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<Array<{ billing_profile_id: string; name: string; is_default: boolean }>> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
   if (!await assertAssetReadPermission(user)) {
     throw new Error('Permission denied: Cannot read asset client options');
   }

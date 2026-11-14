@@ -60,5 +60,22 @@
     },
     "retentionFailuresHeading": "Nicht aufbewahrte Anhänge",
     "retentionFailed": "Anhang nicht aufbewahrt: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "Sitzplatz-Vereinbarung für {{name}} beenden?",
+    "intro": "Das Ende gilt ab der nächsten Anfrage jedes Technikers und kann hier nicht rückgängig gemacht werden.",
+    "effectTechnicians": "Deaktivierte Techniker: {{count}}",
+    "effectInvitations": "Zurückgezogene ausstehende Einladungen: {{count}}",
+    "effectTickets": "An Ihr Team zurückgegebene Tickets: {{count}}",
+    "effectSeats": "An den Pool freigegebene Plätze: {{count}}",
+    "effectNotes": "Gemeinsame Notizen bleiben für Ihre Mitarbeitenden lesbar.",
+    "confirm": "Vereinbarung beenden",
+    "cancel": "Abbrechen",
+    "start": "Sitzplatz-Vereinbarung beenden",
+    "done": "Die Sitzplatz-Vereinbarung wurde beendet.",
+    "errorDenied": "Sie haben keine Berechtigung, diese Vereinbarung zu beenden.",
+    "errorNotFound": "Diese Vereinbarung wurde nicht gefunden.",
+    "errorGeneric": "Die Anfrage konnte nicht verarbeitet werden.",
+    "loading": "Wird geladen…"
   }
 }

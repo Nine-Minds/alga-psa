@@ -25,6 +25,11 @@ import type {
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
 
+// Spreadsheet import limit, not the storage upload limit (the preview is parsed in memory and
+// never stored through the ingest). It applies on the route (/api/import/preview, bounded by the
+// 100mb proxy cap); called as a server action the body is cut off earlier by Next's
+// serverActions.bodySizeLimit (26mb default), which answers its own 413.
+// LEVERAGE: friction import-preview-dual-transport - one function reachable by a route and a server action with different transport caps; a shared declared-limit would let this check match whichever transport carried it.
 const MAX_IMPORT_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
 const SUPPORTED_IMPORT_EXTENSIONS = ['.csv', '.xlsx'];
 const SUPPORTED_IMPORT_MIME_TYPES = new Set([

@@ -10,7 +10,7 @@ import {
 
 export type CapabilityBootstrap = Record<string, boolean>;
 
-const CAPABILITIES: readonly CapabilityKey[] = ['co-managed'];
+const CAPABILITIES: readonly CapabilityKey[] = ['co-managed', 'co-managed-seat'];
 
 /**
  * Server-evaluated values for `PostHogProvider initialFeatureFlags`.

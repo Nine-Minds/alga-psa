@@ -57,6 +57,17 @@ import {
   resolveInternalWatcherEmails,
 } from './watcherRecipients';
 import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipients';
+import {
+  NOTIFICATION_AUDIENCE_TOKEN_KEY,
+  TICKET_FACTS_AUDIENCE,
+  lazyAudience,
+  readTicketCommentAudience,
+  planTicketEnvelope,
+  selectAudienceContent,
+  recipientRendering,
+  type AudienceContent,
+  type TicketNotificationRecipient,
+} from '@shared/lib/notificationAudience';
 import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
 import type { EmailAddress } from '../../../types/email.types';
 import {
@@ -65,7 +76,13 @@ import {
   newInboundDeliveryOwner,
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
 
-type TicketNotificationParams = Omit<SendEmailParams, 'mailClass' | 'boardId'> & { boardId?: string };
+/**
+ * What a ticket email quotes, richest rendering first (`selectAudienceContent`). Every handler
+ * says it for every send: a message that does not is never mailed to a seat technician.
+ */
+type TicketEmailAudience = ReadonlyArray<AudienceContent<Record<string, unknown>>>;
+type AudiencedSendEmailParams = SendEmailParams & { audienceContent?: TicketEmailAudience };
+type TicketNotificationParams = Omit<AudiencedSendEmailParams, 'mailClass' | 'boardId'> & { boardId?: string };
 
 /** Stable ledger consumer id for the ticket email subscriber. */
 const INBOUND_OUTBOX_EMAIL_CONSUMER = 'ticket-email';
@@ -588,24 +605,124 @@ function selectOneOffEmailRecipients(
  *          or an invalid address silently skipped the send. Callers that need
  *          to know whether a recipient was reached — the per-comment Cc/Bcc
  *          fallback — depend on this being truthful.
+ *
+ * Recipient boundary (S33): the whole envelope is authorized, To, Cc and Bcc alike
+ * (`planTicketEnvelope`). With no seat technician on it, it is sent as built. Otherwise every
+ * seat technician is taken off the shared message and decided alone by `sendTicketEmailMessage`;
+ * a refused one drops out without holding back anyone else.
  */
 async function sendNotificationIfEnabled(
-  params: SendEmailParams,
+  audiencedParams: AudiencedSendEmailParams,
   subtypeName: string,
   recipientUserId?: string
 ): Promise<boolean> {
-  try {
-    if (!isValidEmail(params.to)) {
-      logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
-        recipient: params.to,
+  if (!isValidEmail(audiencedParams.to)) {
+    logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
+      recipient: audiencedParams.to,
+      subtypeName,
+      tenantId: audiencedParams.tenantId
+    });
+    return false;
+  }
+
+  const { knex } = await createTenantKnex();
+  const { cc, bcc, ...unaddressed } = audiencedParams;
+  const messages = await planTicketEnvelope(
+    knex,
+    audiencedParams.tenantId,
+    { ticketId: audiencedParams.entityType === 'ticket' ? audiencedParams.entityId : audiencedParams.replyContext?.ticketId },
+    { to: { userId: recipientUserId, email: audiencedParams.to }, cc, bcc },
+  );
+
+  let handedOff = false;
+  for (const message of messages) {
+    const copies = {
+      ...(message.cc.length > 0 ? { cc: message.cc } : {}),
+      ...(message.bcc.length > 0 ? { bcc: message.bcc } : {}),
+    };
+    let sent: boolean;
+    if (message.original) {
+      sent = await sendTicketEmailMessage(knex, { ...unaddressed, ...copies }, subtypeName, message.recipient, recipientUserId);
+    } else {
+      // A different person than the caller addressed: nothing that names the original `To`
+      // (their contact, their delivery claim, their sponsor identity) travels with it.
+      const { contactId: _contactId, delivery: _delivery, coManagedRecipient: _coManagedRecipient, ...shared } = unaddressed;
+      sent = await sendTicketEmailMessage(
+        knex,
+        { ...shared, to: message.to, ...copies },
         subtypeName,
-        tenantId: params.tenantId
+        message.recipient,
+        message.recipient.seat ? message.recipient.userId : undefined,
+      );
+    }
+    handedOff = sent || handedOff;
+  }
+  return handedOff;
+}
+
+/**
+ * One message of an authorized envelope: admits its `To` (`recipient`, already resolved), then
+ * applies the notification gates and sends. Everyone but a seat technician is untouched. A seat
+ * technician gets the first rendering their audience admits, with the audience recorded on the
+ * reply token so their reply is stored with it, or gets nothing: ticket out of scope, private
+ * content, or a message that does not declare what it quotes.
+ */
+async function sendTicketEmailMessage(
+  knex: Knex,
+  audiencedParams: AudiencedSendEmailParams,
+  subtypeName: string,
+  recipient: TicketNotificationRecipient,
+  recipientUserId?: string
+): Promise<boolean> {
+  // `audienceContent` is read here and never travels further (email service, retry queue).
+  const { audienceContent, ...unaudienced } = audiencedParams;
+  let params: SendEmailParams = unaudienced;
+  try {
+    const scopedDb = tenantDb(knex, params.tenantId);
+
+    const admission = await selectAudienceContent(recipient, audienceContent);
+    if (!admission.admitted) {
+      logger.info('[TicketEmailSubscriber] Skipping email outside the recipient audience:', {
+        subtypeName,
+        tenantId: params.tenantId,
+        recipientUserId: recipient.seat ? recipient.userId : recipientUserId,
       });
       return false;
     }
-
-    const { knex } = await createTenantKnex();
-    const scopedDb = tenantDb(knex, params.tenantId);
+    // An external party (a seat technician outside the ticket's scope) is never handed the MSP
+    // link, whichever path built the message (watcher, assignee, agent): it is swapped for the
+    // portal link here, where every recipient passes.
+    const externalTicketId = recipientRendering(recipient) === 'client' && recipient.seat
+      ? params.replyContext?.ticketId : undefined;
+    const externalLinks = externalTicketId ? await resolveTicketLinks(knex, params.tenantId, externalTicketId) : null;
+    const toPortal = <V,>(value: V): V => {
+      if (!externalLinks) return value;
+      const swap = (node: unknown): unknown => {
+        if (typeof node === 'string') return node.split(externalLinks.internalUrl).join(externalLinks.portalUrl);
+        if (Array.isArray(node)) return node.map(swap);
+        if (node && typeof node === 'object') {
+          return Object.fromEntries(Object.entries(node as Record<string, unknown>).map(([k, v]) => [k, swap(v)]));
+        }
+        return node;
+      };
+      return swap(value) as V;
+    };
+    if (externalLinks) params = { ...params, context: toPortal(params.context) };
+    if (admission.selected) {
+      params = {
+        ...params,
+        context: toPortal(admission.selected.content ?? params.context),
+        ...(params.replyContext ? {
+          replyContext: {
+            ...params.replyContext,
+            tokenMetadata: {
+              ...params.replyContext.tokenMetadata,
+              [NOTIFICATION_AUDIENCE_TOKEN_KEY]: admission.selected.audience,
+            },
+          },
+        } : {}),
+      };
+    }
 
     const gate = await resolveNotificationGate(knex, params.tenantId, subtypeName);
 
@@ -738,7 +855,7 @@ async function sendNotificationIfEnabled(
       }
     }
 
-    logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {
+    logger.error('[TicketEmailSubscriber] Error in sendTicketEmailMessage:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       subtypeName,
       recipient: params.to,
@@ -1263,13 +1380,11 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         { excludeUserIds: [ticket.assigned_to, creatorUserId] }
       );
       if (resolved.length > 0) {
-        const internalWatchers = await resolveInternalWatcherEmails(
-          db,
-          tenantId,
-          extractActiveWatcherEmails(ticket.attributes)
-        );
+        // Dedupe against EVERY active watcher, whatever their rendering: an out-of-scope seat
+        // technician who watches is mailed by the watcher block and must not get this one too.
+        const watchingEmails = new Set(extractActiveWatcherEmails(ticket.attributes).map(normalizeRecipientEmail));
         const notWatchers = resolved.filter(
-          (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+          (recipient) => !watchingEmails.has(normalizeRecipientEmail(recipient.email))
         );
         boardRuleRecipients = notWatchers.length > 0
           ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
@@ -1351,7 +1466,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
@@ -1418,7 +1533,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       });
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -1492,9 +1608,10 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
 
     // Active watchers already follow the ticket and get the standard update emails.
     const watcherEmails = extractActiveWatcherEmails(ticket.attributes);
-    const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails);
+    // Dedupe against every active watcher, whatever their rendering (see handleTicketCreated).
+    const watchingEmails = new Set(watcherEmails.map(normalizeRecipientEmail));
     const notWatchers = resolved.filter(
-      (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+      (recipient) => !watchingEmails.has(normalizeRecipientEmail(recipient.email))
     );
     // Only principals go through the visibility filter. Plain addresses have no principal to check.
     const recipients = notWatchers.length > 0
@@ -1555,6 +1672,7 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
         subject: statusSubject,
         template: 'ticket-board-status-entered',
         context,
+        audienceContent: TICKET_FACTS_AUDIENCE,
         mailClass: 'ticket',
         boardId: ticket.board_id,
       }, 'Board Ticket Status Entered', recipient.userId);
@@ -1575,6 +1693,7 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
         subject: statusSubject,
         template: 'ticket-board-status-entered',
         context,
+        audienceContent: TICKET_FACTS_AUDIENCE,
         mailClass: 'ticket',
         boardId: ticket.board_id,
         replyContext: {
@@ -1837,7 +1956,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Send to primary recipient (contact or client) - external user, no userId
@@ -1908,7 +2027,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -2264,7 +2384,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Build subject line indicating multiple updates if applicable
@@ -2332,7 +2452,8 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -2567,7 +2688,7 @@ async function sendTicketAssignedNotifications(
       }
       sentEmails.add(key);
       await sendNotificationIfEnabled(
-        { ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id },
+        { ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id },
         subtypeName,
         recipientUserId ?? undefined
       );
@@ -3035,6 +3156,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // TenantEmailService applies the board-name From fallback centrally.
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
+    // Every copy of this message quotes the comment, so the comment's stored audience is the
+    // message's. Read from the rows, and only if a seat technician is among the recipients.
+    const commentEmailAudience: TicketEmailAudience = [{
+      audience: lazyAudience(() => readTicketCommentAudience(db, tenantId, payload.comment?.id)),
+    }];
+
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
       params: TicketNotificationParams,
@@ -3056,7 +3183,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       // The returned flag reports whether a message really went out: a
       // notification gate can skip the send silently, and the Cc/Bcc fallback
       // must not treat that as "the requester was reached".
-      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      return sendNotificationIfEnabled({ ...params, audienceContent: commentEmailAudience, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
@@ -3354,7 +3481,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         }
       }
 
-      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+      // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
       await sendOneEmailPerWatcher(
         activeWatcherEmails,
         async (watcherEmail) => {
@@ -3680,6 +3808,18 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     };
 
+    // The internal rendering quotes the latest resolution of any visibility, so its audience is
+    // that comment's. A recipient whose audience does not admit it gets the client-visible
+    // resolution instead, still with the MSP link. Every other rendering is client-safe already.
+    const internalCloseAudience: TicketEmailAudience = [
+      {
+        audience: latestResolutionComment?.comment_id
+          ? lazyAudience(() => readTicketCommentAudience(db, tenantId, latestResolutionComment.comment_id))
+          : 'requester',
+      },
+      { audience: 'requester', content: { ticket: { ...externalContext.ticket, url: internalUrl } } },
+    ];
+
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
     const primaryContactId =
@@ -3708,7 +3848,12 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       sentEmails.add(key);
       // The flag reports whether a message really went out, so the Cc/Bcc
       // fallback below never treats a gated send as "the requester was reached".
-      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      return sendNotificationIfEnabled({
+        ...params,
+        audienceContent: params.context === internalContext ? internalCloseAudience : TICKET_FACTS_AUDIENCE,
+        mailClass: 'ticket',
+        boardId: params.boardId ?? ticket.board_id,
+      }, subtypeName, recipientUserId ?? undefined);
     };
 
     // The requester is the `To` of the close message, so they never belong in
@@ -3904,7 +4049,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {

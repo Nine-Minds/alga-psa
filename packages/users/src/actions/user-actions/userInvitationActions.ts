@@ -8,6 +8,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { findPendingInvitation } from '@alga-psa/licensing';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
 import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
@@ -33,6 +34,7 @@ export type UserInvitationErrorCode =
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
   | 'LICENSE_LIMIT_REACHED'
+  | 'SEAT_ARRANGEMENT_REFUSED'
   | 'CAPABILITY_UNAVAILABLE'
   | 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED'
   | 'CO_MANAGED_INVITATION_INVALID' | 'CO_MANAGED_ALLOCATION_CONFLICT' | 'CO_MANAGED_POOL_LIMIT';
@@ -64,7 +66,7 @@ function normalizeSendUserInvitationError(
   // invite-send limit check reports).
   if (error instanceof Error && error.name === 'LicenseLimitError') {
     const code = (error as Error & { code?: unknown }).code;
-    if (code === 'SOLO_PLAN_LIMIT' || code === 'LICENSE_LIMIT_REACHED') {
+    if (code === 'SOLO_PLAN_LIMIT' || code === 'LICENSE_LIMIT_REACHED' || code === 'SEAT_ARRANGEMENT_REFUSED') {
       return { message: error.message, errorCode: code };
     }
   }
@@ -180,6 +182,13 @@ export const sendUserInvitation = withAuth(async (
     const reservation: Reservation = await knex.transaction(async (trx): Promise<Reservation> => {
       // Lock before counting reserved seats: the count is part of the decision.
       await lockInternalUserSeats(trx, tenant);
+      // A seat technician's invitation holds a seat of its arrangement, not one of the MSP's. This
+      // flow would count it against the MSP limit and give it a role, so the seat flow keeps it.
+      // The same read tells whether this send creates the invitation or refreshes a pending one.
+      const pending = await findPendingInvitation(trx, tenant, normalizedEmail);
+      if (pending?.seatInvitation) {
+        return { rejected: { success: false as const, error: 'This email already holds a seat invitation.', errorCode: 'CO_MANAGED_INVITATION_INVALID' as const } };
+      }
       const reservedSeats = await countPendingInvitationSeats(trx, tenant, { excludeEmail: normalizedEmail });
 
       const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { reservedSeats, deferCoManaged: true });
@@ -190,11 +199,6 @@ export const sendUserInvitation = withAuth(async (
         return { rejected: { success: false as const, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' as const } };
       }
       if (licenseCheck.coManaged) await assertCoManagedSeatAdmission(trx, tenant, { email: normalizedEmail, kind: 'invitation' });
-
-      const refreshedExisting = await tenantDb(trx, tenant).table('user_invitations')
-        .where({ email: normalizedEmail, used_at: null })
-        .where('expires_at', '>', trx.fn.now())
-        .first('invitation_id');
 
       const invitationResult = await UserInvitationService.createInvitationWithTransaction(
         { email: normalizedEmail, firstName: params.firstName, lastName: params.lastName, roleId: params.roleId },
@@ -209,7 +213,7 @@ export const sendUserInvitation = withAuth(async (
       return {
         invitationId: invitationResult.invitationId,
         token: invitationResult.token || '',
-        created: !refreshedExisting,
+        created: !pending,
       };
     }).catch((error) => {
       console.error('Team invitation transaction failed:', error);

@@ -34,6 +34,10 @@ vi.mock('@alga-psa/licensing', () => {
   }
   return {
     CoManagedAdmissionError,
+    // The licensed count and the seat technician admission live in licensing; no seat assignments here.
+    countLicensedInternalUsers: async () => world.usedInternalUsers,
+    countLicensedPendingInvitations: async () => 0,
+    admitCoManagedSeatTechnician: async () => ({ seatTechnician: false }),
     assertCoManagedSeatAdmission: async (trx: any, _tenant: string, input: Row) => {
       world.gateCalls.push({ trxId: trx.__id, input });
       return world.gate ? world.gate(input) : { managed: false };

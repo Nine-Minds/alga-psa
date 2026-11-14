@@ -7,6 +7,12 @@ const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
@@ -174,6 +180,16 @@ function buildTrx(params: {
         where: vi.fn(() => builder),
         orderBy: vi.fn().mockResolvedValue(rows),
         then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
+      };
+      return builder;
+    }
+
+    if (table === 'user_roles' || table === 'team_members' || table === 'user_client_portfolios') {
+      // Authorization subject lookups (no roles, teams or stored portfolio); `tenantDb` pre-applies `.where({ tenant })`.
+      const builder: any = {
+        where: () => builder,
+        orderBy: () => builder,
+        select: async () => [],
       };
       return builder;
     }

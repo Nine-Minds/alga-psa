@@ -1163,6 +1163,10 @@
       "recordInvalid": "Um dos registros de grupo de visibilidade selecionados não é mais válido. Atualize a página e tente novamente.",
       "duplicate": "Já existe um grupo de visibilidade com estes dados para este cliente.",
       "invalidData": "Dados do grupo de visibilidade inválidos. Verifique os dados do grupo e os quadros selecionados."
+    },
+    "roles": {
+      "lastMspAdmin": "Um tenant deve manter pelo menos um usuário MSP Admin ativo.",
+      "lastRole": "Um usuário deve manter pelo menos uma função. Atribua outra função primeiro e depois remova esta."
     }
   },
   "tabs": {

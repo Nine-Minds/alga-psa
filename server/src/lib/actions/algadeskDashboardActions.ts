@@ -2,6 +2,8 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 
 export interface AlgaDeskDashboardSummary {
   openTickets: number;
@@ -25,37 +27,40 @@ export interface AlgaDeskDashboardSummary {
   };
 }
 
-export const getAlgaDeskDashboardSummary = withAuth(async (_user, { tenant }): Promise<AlgaDeskDashboardSummary> => {
+export const getAlgaDeskDashboardSummary = withAuth(async (user, { tenant }): Promise<AlgaDeskDashboardSummary> => {
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
+  // Every ticket tile and the recent list are computed over the tickets this user may read: the ticket list's
+  // own read narrowing applied to each query. Unrestricted users get exactly the previous queries.
+  const readable = await createTicketReadScope(knex, tenant, user as IUserWithRoles);
 
   const [openRow, awaitingCustomerRow, awaitingInternalRow, agingRows, recentRows, emailRows] = await Promise.all([
-    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
+    readable.apply(db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .count<{ count: string }[]>('* as count')
-      .first(),
-    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
+      .first(), 't'),
+    readable.apply(db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .where('t.response_state', 'awaiting_client')
       .count<{ count: string }[]>('* as count')
-      .first(),
-    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
+      .first(), 't'),
+    readable.apply(db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .where('t.response_state', 'awaiting_internal')
       .count<{ count: string }[]>('* as count')
-      .first(),
-    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
+      .first(), 't'),
+    readable.apply(db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .select(
         knex.raw("SUM(CASE WHEN t.entered_at >= NOW() - INTERVAL '2 days' THEN 1 ELSE 0 END)::int as under_2_days"),
         knex.raw("SUM(CASE WHEN t.entered_at < NOW() - INTERVAL '2 days' AND t.entered_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END)::int as days_2_to_7"),
         knex.raw("SUM(CASE WHEN t.entered_at < NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END)::int as over_7_days"),
       )
-      .first(),
-    db.table('tickets')
-      .select('ticket_id', 'ticket_number', 'title', 'updated_at')
-      .orderBy('updated_at', 'desc')
-      .limit(5),
+      .first(), 't'),
+    readable.apply(db.table('tickets as t')
+      .select('t.ticket_id', 't.ticket_number', 't.title', 't.updated_at')
+      .orderBy('t.updated_at', 'desc')
+      .limit(5), 't'),
     db.table('email_providers')
       .select('is_active', 'status'),
   ]);

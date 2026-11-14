@@ -60,5 +60,22 @@
     },
     "retentionFailuresHeading": "Pièces jointes non conservées",
     "retentionFailed": "Pièce jointe non conservée : {{reason}}"
+  },
+  "seatEnd": {
+    "title": "Mettre fin à l'accord de sièges de {{name}} ?",
+    "intro": "La fin prend effet à la prochaine requête de chaque technicien et ne peut pas être annulée ici.",
+    "effectTechnicians": "Techniciens désactivés : {{count}}",
+    "effectInvitations": "Invitations en attente retirées : {{count}}",
+    "effectTickets": "Tickets rendus à votre équipe : {{count}}",
+    "effectSeats": "Sièges libérés dans le pool : {{count}}",
+    "effectNotes": "Les notes partagées restent lisibles par votre personnel.",
+    "confirm": "Mettre fin à l'accord",
+    "cancel": "Annuler",
+    "start": "Mettre fin à l'accord de sièges",
+    "done": "L'accord de sièges est terminé.",
+    "errorDenied": "Vous n'avez pas l'autorisation de mettre fin à cet accord.",
+    "errorNotFound": "Cet accord est introuvable.",
+    "errorGeneric": "La requête n'a pas pu être traitée.",
+    "loading": "Chargement…"
   }
 }

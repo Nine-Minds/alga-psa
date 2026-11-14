@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => {
   const insert = vi.fn(async (_invoice: Record<string, unknown>) => undefined);
   const profileRow = vi.fn<() => Record<string, unknown>>(() => ({ client_id: 'client-1', is_active: true, payment_terms: 'net_15', preferred_payment_method: 'check' }));
 
+  // tenant_settings row read by the real resolveTenantToday (undefined = no saved timezone).
+  const tenantSettingsRow = vi.fn<() => Record<string, unknown> | undefined>(() => undefined);
+
   const makeBuilder = (table: string) => {
     const builder: any = {
       where: vi.fn((criteria: any) => {
@@ -31,6 +34,7 @@ const mocks = vi.hoisted(() => {
             ? { client_id: 'client-1', is_active: true }
             : profileRow();
         }
+        if (table === 'tenant_settings') return tenantSettingsRow();
         if (table === 'clients') {
           return { client_id: 'client-1', payment_terms: 'net_30', preferred_payment_method: 'credit_card' };
         }
@@ -73,6 +77,7 @@ const mocks = vi.hoisted(() => {
     hasPermission,
     insert,
     profileRow,
+    tenantSettingsRow,
     trx,
     transaction,
     knex,
@@ -152,6 +157,8 @@ const request = {
 describe('generateManualInvoice billing profile selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    mocks.tenantSettingsRow.mockReturnValue(undefined);
     mocks.hasPermission.mockResolvedValue(true);
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
     mocks.profileRow.mockReturnValue({ client_id: 'client-1', is_active: true, payment_terms: 'net_15', preferred_payment_method: 'check' });
@@ -184,6 +191,31 @@ describe('generateManualInvoice billing profile selection', () => {
     expect(invoice.due_date).toBe(
       Temporal.PlainDate.from(invoice.invoice_date).add({ days: 15 }).toString(),
     );
+  });
+
+  it('dates the invoice and its due date from the tenant-local calendar day (Sydney, 2026-10-18T22:00Z)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+    mocks.tenantSettingsRow.mockReturnValue({ settings: { timezone: 'Australia/Sydney' } });
+
+    const result = await generateManualInvoice({ ...request, billingProfileId: 'profile-merged' });
+
+    expect(result.success).toBe(true);
+    const invoice = mocks.insert.mock.calls[0][0] as any;
+    expect(invoice.invoice_date).toBe('2026-10-19');
+    expect(invoice.due_date).toBe('2026-11-03'); // net_15 from the 19th
+  });
+
+  it('falls back to the UTC date when the tenant has no saved timezone', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+
+    const result = await generateManualInvoice({ ...request, billingProfileId: 'profile-merged' });
+
+    expect(result.success).toBe(true);
+    const invoice = mocks.insert.mock.calls[0][0] as any;
+    expect(invoice.invoice_date).toBe('2026-10-18');
+    expect(invoice.due_date).toBe('2026-11-02');
   });
 
   it('keeps a per-line profile override ahead of the invoice profile', async () => {

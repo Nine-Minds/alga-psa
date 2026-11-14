@@ -832,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Åtkomst nekad: Endast interna användare får hantera API-nycklar",
+      "notAvailableForAccount": "API-nycklar är inte tillgängliga för det här kontot.",
       "configInternalOnly": "Åtkomst nekad: Endast interna användare får konfigurera API-nycklar",
       "invalidExpiration": "Välj ett giltigt utgångsdatum för denna API-nyckel.",
       "notFound": "API-nyckeln hittades inte.",

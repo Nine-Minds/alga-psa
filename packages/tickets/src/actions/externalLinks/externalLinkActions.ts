@@ -29,6 +29,7 @@ import { authorizeTicketRecordAccess } from '../../lib/ticketRecordAuthorization
 import {
   ExternalLinkValidationError,
   assertLinkDestination,
+  assertNoLinkConflict,
   insertExternalLink,
   loadTenantExternalSystems,
   prepareExternalLink,
@@ -73,6 +74,7 @@ export interface ITicketExternalLinkView {
   external_parent_id: string | null;
   realm: string | null;
   url: string | null;
+  title?: string | null;
   relationship: ExternalLinkRelationship;
   actor: ExternalSystemActor | null;
   external_status: string | null;
@@ -162,6 +164,7 @@ function toView(
     external_parent_id: row.external_parent_id ?? null,
     realm: row.realm ?? null,
     url: row.url ?? null,
+    title: row.title ?? null,
     relationship: row.relationship,
     actor: row.actor ?? null,
     external_status: row.external_status ?? null,
@@ -283,20 +286,21 @@ export const updateExternalLink = withAuth(
         }
 
         if (patch.relationship !== undefined && patch.relationship !== existing.relationship) {
-          if (patch.relationship === 'origin') {
-            const existingOrigin = await tenantTable(trx, tenant, 'external_entity_links')
-              .where({
-                entity_type: existing.entity_type,
-                entity_id: existing.entity_id,
-                relationship: 'origin',
-              })
-              .whereNot({ link_id: linkId })
-              .select('link_id')
-              .first();
-            if (existingOrigin) {
-              throw new ExternalLinkValidationError('origin_exists', 'This entity already has an origin link');
-            }
-          }
+          // Identity (origin/mirror) and citation (reference) links follow different uniqueness
+          // rules, so changing the relationship re-runs the pre-check for the new one.
+          await assertNoLinkConflict(
+            trx,
+            tenant,
+            {
+              entity_type: existing.entity_type,
+              entity_id: existing.entity_id,
+              system: existing.system,
+              external_id: existing.external_id,
+              external_parent_id: existing.external_parent_id ?? null,
+              relationship: patch.relationship,
+            },
+            linkId,
+          );
           updates.relationship = patch.relationship;
         }
 
@@ -311,6 +315,7 @@ export const updateExternalLink = withAuth(
             updates.url = safe;
           }
         }
+        if (patch.title !== undefined) updates.title = patch.title?.trim() || null;
         if (patch.actor !== undefined) updates.actor = patch.actor;
         if (patch.external_status !== undefined) updates.external_status = patch.external_status;
         if (patch.external_updated_at !== undefined) updates.external_updated_at = patch.external_updated_at;
@@ -548,7 +553,11 @@ export const deleteTenantExternalSystem = withAuth(
         .where({ system: key })
         .count<{ count: string }>('link_id as count')
         .first();
-      const count = Number(inUse?.count ?? 0);
+      const inUseByTemplates = await tenantTable(knex, tenant, 'ticket_template_links')
+        .where({ system: key })
+        .count<{ count: string }>('template_link_id as count')
+        .first();
+      const count = Number(inUse?.count ?? 0) + Number(inUseByTemplates?.count ?? 0);
       if (count > 0) {
         return externalLinkActionError('system_in_use', {
           messageKey: 'features/tickets:externalLinks.errors.systemInUseCount',

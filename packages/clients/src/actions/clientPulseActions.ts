@@ -6,6 +6,9 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { toCalendarDateString } from '@alga-psa/core';
 import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import type { Knex } from 'knex';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope, type TicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
+import { resolveDocumentReadScope, type DocumentReadScope } from '@alga-psa/shared/lib/documentAuthorization';
 import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
 import { getContactCountsByLocation } from '../models/contactLocation';
@@ -272,6 +275,7 @@ async function fetchLocations(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
+  canReadAssets: boolean,
 ): Promise<ClientPulseLocations> {
   const rows = await trx('client_locations')
     .where({ tenant, client_id: clientId, is_active: true })
@@ -295,6 +299,21 @@ async function fetchLocations(
   // reader having to open Manage Locations.
   const contactCounts = await getContactCountsByLocation(trx, tenant, rows.map((row: any) => row.location_id));
 
+  // Site audits are scoped to a location, so "when was this site last walked"
+  // belongs on the location row. One grouped query, and only for a reader who
+  // may see assets at all.
+  const lastAuditByLocation = new Map<string, string | null>();
+  if (canReadAssets && rows.length > 0) {
+    const auditRows = await trx('asset_audits')
+      .where({ tenant, client_id: clientId, status: 'completed' })
+      .whereIn('location_id', rows.map((row: any) => row.location_id))
+      .groupBy('location_id')
+      .select('location_id', trx.raw('MAX(completed_at) as last_audit_at'));
+    for (const row of auditRows as any[]) {
+      lastAuditByLocation.set(row.location_id, toIsoString(row.last_audit_at));
+    }
+  }
+
   return rows.map((row: any) => ({
     location_id: row.location_id,
     location_name: row.location_name ?? null,
@@ -308,6 +327,7 @@ async function fetchLocations(
     is_billing: Boolean(row.is_billing_address),
     is_shipping: Boolean(row.is_shipping_address),
     contact_count: contactCounts.get(row.location_id) ?? 0,
+    ...(canReadAssets ? { last_audit_at: lastAuditByLocation.get(row.location_id) ?? null } : {}),
   }));
 }
 
@@ -438,8 +458,11 @@ async function fetchService(
   tenant: string,
   clientId: string,
   nowMs: number,
+  readable: TicketReadScope,
 ): Promise<{ service: ClientPulseService; flags: ClientAttentionFlag[] }> {
-  const openRows = await trx('tickets as t')
+  // Every ticket figure on this card (open, overdue, unassigned, waiting, SLA flags) is computed over the
+  // tickets the viewer may read: the same narrowing as the ticket list, applied to these queries.
+  const openQuery = trx('tickets as t')
     .leftJoin('priorities as p', function joinPriorities() {
       this.on('t.priority_id', '=', 'p.priority_id').andOn('t.tenant', '=', 'p.tenant');
     })
@@ -479,6 +502,7 @@ async function fetchService(
       'assigned_user.username as assigned_username',
       'assigned_user.email as assigned_email',
     );
+  const openRows = await readable.apply(openQuery, 't');
 
   const overdueRows = openRows.filter((row: any) => row.due_date && new Date(row.due_date).getTime() < nowMs);
   const oldestOpen = openRows.reduce<unknown | null>((oldest, row: any) => {
@@ -593,7 +617,7 @@ async function fetchService(
     )
     .as('lc');
 
-  const waitingRows = await trx.from(latestComments)
+  const waitingQuery = trx.from(latestComments)
     .join('tickets as t', function joinTickets() {
       this.on('lc.ticket_id', '=', 't.ticket_id').andOn('lc.tenant', '=', 't.tenant');
     })
@@ -607,6 +631,7 @@ async function fetchService(
     .andWhere('lc.author_type', 'client')
     .select('t.ticket_id', 't.ticket_number', 'lc.created_at')
     .orderBy('lc.created_at', 'asc');
+  const waitingRows = await readable.apply(waitingQuery, 't');
 
   if (waitingRows.length > 0) {
     const longestWaiting = waitingRows[0] as any;
@@ -870,7 +895,7 @@ async function fetchInstallBase(
 ): Promise<{ installBase: ClientPulseInstallBase; flags: ClientAttentionFlag[] }> {
   const now = new Date(nowMs);
   const warrantySoon = new Date(nowMs + 90 * DAY_MS);
-  const [soldCountRow, recentRows, rmaRows, assetCountRow, partialSoRows, unitWarrantyRow, assetWarrantyRow] = await Promise.all([
+  const [soldCountRow, recentRows, rmaRows, assetCountRow, partialSoRows, unitWarrantyRow, assetWarrantyRow, lastAuditRow] = await Promise.all([
     trx('stock_units')
       .where({ tenant, client_id: clientId, status: DELIVERED_STOCK_UNIT_STATUS })
       .count<{ count: string }>('unit_id as count')
@@ -939,6 +964,16 @@ async function fetchInstallBase(
         )
         .first()
       : Promise.resolve(null),
+    // The client's most recent closed walk, for the tile's "Last audit" stat.
+    // idx_asset_audits_tenant_client_started narrows the (tenant, client_id)
+    // rows; the completed_at ordering is sorted on top of that handful.
+    canReadAssets
+      ? trx('asset_audits')
+        .where({ tenant, client_id: clientId, status: 'completed' })
+        .select('audit_id', 'completed_at', 'missing_count')
+        .orderByRaw('completed_at DESC NULLS LAST')
+        .first()
+      : Promise.resolve(null),
   ]);
 
   const flags: ClientAttentionFlag[] = [];
@@ -982,18 +1017,37 @@ async function fetchInstallBase(
         asset_id: row.asset_id ?? null,
       })),
       warranty: combineWarrantyRows([unitWarrantyRow as any, assetWarrantyRow as any]),
+      // Absent for a reader without asset:read; null when the client has never
+      // had a completed audit — "Never audited" is a fact, an empty stat is not.
+      ...(canReadAssets
+        ? {
+          lastAudit: lastAuditRow
+            ? {
+              audit_id: (lastAuditRow as any).audit_id,
+              completed_at: toIsoString((lastAuditRow as any).completed_at),
+              missing_count: toNumber((lastAuditRow as any).missing_count),
+            }
+            : null,
+        }
+        : {}),
     },
     flags,
   };
 }
 
+/**
+ * The client's documents card. `readable` is the subject's document read scope (null when nothing narrows it),
+ * so the count and the recent titles are of documents the subject may open: a co-managed seat technician sees
+ * client-visible documents only, the same set the client's Documents tab lists.
+ */
 async function fetchDocuments(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
+  readable: DocumentReadScope | null,
 ): Promise<ClientPulseDocuments> {
-  const baseQuery = () =>
-    trx('documents as d')
+  const baseQuery = () => {
+    const query = trx('documents as d')
       .join('document_associations as da', function joinDocumentAssociations() {
         this.on('d.document_id', '=', 'da.document_id').andOn('d.tenant', '=', 'da.tenant');
       })
@@ -1003,6 +1057,9 @@ async function fetchDocuments(
         'da.entity_id': clientId,
         'da.entity_type': 'client',
       });
+    readable?.apply(query, 'd');
+    return query;
+  };
 
   const [countRow, recentRows] = await Promise.all([
     baseQuery()
@@ -1129,7 +1186,7 @@ export const getClientPulse = withAuth(async (
       notes,
     ] = await Promise.all([
       fetchPeople(trx, tenant, clientId, defaultContactId),
-      fetchLocations(trx, tenant, clientId),
+      fetchLocations(trx, tenant, clientId, canReadAssets),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
       fetchNotes(trx, tenant, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
     ]);
@@ -1137,7 +1194,8 @@ export const getClientPulse = withAuth(async (
     // Each optional section degrades on its own (see optionalSection): one
     // broken rollup costs the client screen a card, not the whole page.
     const serviceResult = canReadTickets
-      ? await optionalSection(trx, 'service', () => fetchService(trx, tenant, clientId, nowMs))
+      ? await optionalSection(trx, 'service', async () =>
+          fetchService(trx, tenant, clientId, nowMs, await createTicketReadScope(trx, tenant, user as IUserWithRoles)))
       : null;
     const moneyResult = canReadBilling
       ? await optionalSection(trx, 'money', () => fetchMoney(trx, tenant, clientId, nowMs))
@@ -1146,7 +1204,7 @@ export const getClientPulse = withAuth(async (
       ? await optionalSection(trx, 'install_base', () => fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs))
       : null;
     const documents = canReadDocuments
-      ? await optionalSection(trx, 'documents', () => fetchDocuments(trx, tenant, clientId))
+      ? await optionalSection(trx, 'documents', async () => fetchDocuments(trx, tenant, clientId, await resolveDocumentReadScope(trx, tenant, user as IUserWithRoles)))
       : null;
 
     const attention = sortAttention([

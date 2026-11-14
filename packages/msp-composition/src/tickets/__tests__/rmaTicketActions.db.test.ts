@@ -1,7 +1,7 @@
 /**
  * C5: mirroring an RMA's vendor case onto its ticket goes through the REAL `addExternalLink` /
  * `updateExternalLink` path (real DB, real link persistence); only the session, the event bus and the
- * per-record authorization decision are stubbed, and `getRmaCase` is faked because the case row is not what is
+ * authorization policy snapshot are stubbed, and `getRmaCase` is faked because the case row is not what is
  * under test. Run it through scripts/run-workspace-db-tests.mjs (REQUIRE_DB=1, TEST_DB_NAME, DB_USER_ADMIN, DB_PASSWORD_ADMIN).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,7 @@ const holder = vi.hoisted(() => ({
   tenant: '',
   user: undefined as any,
   rma: undefined as any,
+  rules: [] as import('@alga-psa/authorization/bundles/service').AuthorizationEvaluationSnapshot['rules'],
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -32,13 +33,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/event-bus', () => ({ getEventBus: vi.fn(() => ({ publish: vi.fn() })), ServerEventPublisher: class {} }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: async () => [],
-  loadAuthorizationEvaluationSnapshot: async () => ({ roleIds: [], teamIds: [], managedUserIds: [], rules: [] }),
-}));
-vi.mock('@alga-psa/authorization/kernel', async (orig) => ({
+// Keep subject assembly, providers and the mutation kernel real; supply only policy facts.
+vi.mock('@alga-psa/authorization/bundles/service', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
+  loadAuthorizationEvaluationSnapshot: async () => ({ roleIds: [], teamIds: [], managedUserIds: [], rules: holder.rules }),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/inventory/actions/rmaActions', () => ({ getRmaCase: async () => holder.rma }));
@@ -79,6 +77,7 @@ beforeAll(async () => {
 });
 afterAll(async () => { await knex?.destroy(); });
 beforeEach(async () => {
+  holder.rules = [];
   // Each test starts from no links: the suite runs shuffled, so tests must not lean on one another's rows.
   if (holder.tenant) await knex('external_entity_links').where({ tenant: holder.tenant, ticket_id: ticketId }).del();
   holder.rma = { rma_id: rmaId, rma_number: 'RMA-00007', ticket_id: ticketId, rma_reference: 'DELL-7788', status: 'sent_to_vendor', vendor_name: 'Dell' };
@@ -87,6 +86,47 @@ beforeEach(async () => {
 const links = () => knex('external_entity_links').where({ tenant: holder.tenant, ticket_id: ticketId });
 
 describe('mirrorRmaToTicketLinks (real external-link persistence)', () => {
+  it.each(['read', 'update'] as const)('requires ticket %s access to create, refresh or replace a mirrored link', async (action) => {
+    const ticket = await knex('tickets').where({ tenant: holder.tenant, ticket_id: ticketId }).first();
+    const restrictToBoard = (boardId: string) => {
+      holder.rules = [{
+        rule_id: randomUUID(), resource_type: 'ticket', action,
+        template_key: 'selected_boards', constraint_key: null,
+        config: { selectedBoardIds: [boardId] },
+      }];
+    };
+    const denied = { permissionError: expect.stringMatching(/Permission denied/) };
+    const audits = () => knex('ticket_audit_logs')
+      .where({ tenant: holder.tenant, ticket_id: ticketId }).orderBy('audit_id');
+    const auditsBeforeCreate = await audits();
+
+    restrictToBoard(randomUUID());
+    expect(await mirrorRmaToTicketLinks(rmaId)).toMatchObject(denied);
+    expect(await links()).toEqual([]);
+    expect(await audits()).toEqual(auditsBeforeCreate);
+
+    restrictToBoard(ticket.board_id);
+    expect(await mirrorRmaToTicketLinks(rmaId)).toMatchObject({ link_id: expect.any(String) });
+    const linksBefore = await links();
+    expect(linksBefore).toHaveLength(1);
+    const auditsBefore = await audits();
+
+    restrictToBoard(randomUUID());
+    holder.rma = { ...holder.rma, status: 'received' };
+    expect(await mirrorRmaToTicketLinks(rmaId)).toMatchObject(denied);
+    expect(await links()).toEqual(linksBefore);
+    expect(await audits()).toEqual(auditsBefore);
+
+    holder.rma = { ...holder.rma, rma_reference: 'DELL-9999' };
+    expect(await mirrorRmaToTicketLinks(rmaId)).toMatchObject(denied);
+    expect(await links()).toEqual(linksBefore);
+    expect(await audits()).toEqual(auditsBefore);
+
+    restrictToBoard(ticket.board_id);
+    expect(await mirrorRmaToTicketLinks(rmaId)).toMatchObject({ link_id: expect.any(String) });
+    expect(await links()).toEqual([expect.objectContaining({ external_id: 'DELL-9999', external_status: 'received' })]);
+  });
+
   it('adds one generic link carrying the RMA record URL, and a second call upserts instead of adding another', async () => {
     const first: any = await mirrorRmaToTicketLinks(rmaId);
     expect(first.actionError ?? first.permissionError, JSON.stringify(first)).toBeUndefined();

@@ -4,6 +4,12 @@ import type { TemplateAst } from '@alga-psa/types';
 vi.mock('@alga-psa/db', () => ({
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   createTenantKnex: vi.fn(),
+  // BillingEngine -> @alga-psa/inventory/lib -> @alga-psa/assets/actions pulls in
+  // AssetAuditService, which extends BaseService at module scope; the barrel this
+  // test imports evaluates that whole chain even though it never calls into it.
+  BaseService: class {},
+  withTransaction: vi.fn(async (_knex: unknown, work: (trx: unknown) => Promise<unknown>) => work(undefined)),
+  tenantDb: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({

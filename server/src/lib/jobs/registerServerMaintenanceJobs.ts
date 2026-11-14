@@ -1,5 +1,6 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { recoverFileUploads } from '@alga-psa/storage/fileUploadTransaction';
+import { expireUploadSessions } from '@alga-psa/documents/lib/documentUploadSessions';
 import { registerMaintenanceJob } from '@alga-psa/jobs/fanout';
 import type { TenantSelector } from '@alga-psa/jobs/fanout';
 import { lowStockNotificationHandler } from './handlers/lowStockNotificationHandler';
@@ -46,6 +47,13 @@ export function registerServerMaintenanceJobs(): void {
     run: async tenant => {
       const { knex } = await createTenantKnex(tenant);
       await recoverFileUploads(knex, tenant);
+    },
+  });
+  registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.expireDocumentUploadSessions, {
+    scope: 'tenant',
+    run: async tenant => {
+      const { knex } = await createTenantKnex(tenant);
+      await expireUploadSessions(knex, tenant);
     },
   });
   registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.lowStockNotification, {

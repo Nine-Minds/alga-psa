@@ -401,6 +401,19 @@ export class AccountingExportRepository {
 
   async addError(input: CreateExportErrorInput): Promise<AccountingExportError> {
     const tenant = this.requireTenant();
+    // Idempotent for open rows: validation (ensureMappingsForBatch), failExecution
+    // and retries all report the same (batch, line, code) problem. line_id may be null.
+    if ((input.resolution_state ?? 'open') === 'open') {
+      const existingQuery = this.table<AccountingExportError>('accounting_export_errors', tenant)
+        .where({ batch_id: input.batch_id, code: input.code, resolution_state: 'open' });
+      if (input.line_id) {
+        existingQuery.where({ line_id: input.line_id });
+      } else {
+        existingQuery.whereNull('line_id');
+      }
+      const existing = await existingQuery.orderBy('created_at').first();
+      if (existing) return existing;
+    }
     const [error] = await this.table<AccountingExportError>('accounting_export_errors', tenant)
       .insert({
         ...input,

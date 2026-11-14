@@ -41,6 +41,16 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/inventory/rma/a/b/document')).toBe(false);
   });
 
+  it('lets the resumable document upload routes authenticate in their handlers, and only those shapes', () => {
+    const id = '0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c';
+    expect(shouldSkipApiKeyAuth('/api/documents/uploads')).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/complete`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/other`)).toBe(false);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/complete/extra`)).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/documents/uploadsevil')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });

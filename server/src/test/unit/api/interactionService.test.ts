@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/clients/lib/interactionAuthorizationSql', () => ({ resolveInteractionReadScope: async () => ({ narrowed: false, apply: () => undefined, applyWith: () => undefined, subject: null }) }));
+
 const mocks = vi.hoisted(() => ({
   createInteractionWithSideEffects: vi.fn(),
   createInteractionScheduleEntry: vi.fn(),

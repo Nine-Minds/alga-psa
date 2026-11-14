@@ -77,6 +77,8 @@ export function ticketToTemplateDraft(
         checklist_template_id: row.template_id ?? null,
       })
     ),
+    // Out of scope (plan §6): which of a ticket's references are template-worthy needs its own decision.
+    links: [],
   };
 }
 

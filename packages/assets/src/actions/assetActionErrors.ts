@@ -79,6 +79,13 @@ export function unwrapAssetActionResult<T>(value: T | AssetActionError): T {
 
 export function assetActionErrorFrom(error: unknown): AssetActionError | null {
   if (error && typeof error === 'object') {
+    if ((error as { code?: unknown }).code === 'ASSET_TAG_CONFLICT') {
+      return assetValidationError([{
+        code: 'custom', path: ['asset_tag'],
+        message: 'This asset tag is already in use or reserved. Scan it to find the existing asset, or enter a different tag.',
+        params: { messageKey: 'msp/assets:errors.asset.tagAlreadyExists' },
+      }]);
+    }
     const candidate = error as { permissionError?: unknown; actionError?: unknown };
     if (typeof candidate.permissionError === 'string') {
       return permissionError(candidate.permissionError);
@@ -95,6 +102,12 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
     }
     if (message === 'Asset not found') {
       return actionError('Asset not found. It may have been deleted. Please refresh and try again.', 'msp/assets:errors.asset.notFoundRefresh');
+    }
+    if (message === 'Ticket not found') {
+      return actionError('Ticket not found. It may have been deleted. Please refresh and try again.', 'msp/assets:errors.asset.ticketNotFound');
+    }
+    if (message === 'Asset is already linked to this ticket') {
+      return actionError('This asset is already linked to the ticket.', 'msp/assets:errors.asset.alreadyLinkedToTicket');
     }
     if (message === 'Client not found') {
       return actionError('Client not found. It may have been deleted. Please refresh and try again.', 'msp/assets:errors.asset.clientNotFound');

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useIsolatedEventBusModules } from './testing/isolatedEventBusModules';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 
@@ -52,6 +53,8 @@ function installMocks(configure: (client: FakeRedisClient) => void): Harness {
 }
 
 describe('EventBus NOGROUP self-heal', () => {
+  useIsolatedEventBusModules();
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -60,7 +63,6 @@ describe('EventBus NOGROUP self-heal', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.resetModules();
     vi.clearAllMocks();
   });
 

@@ -5,6 +5,13 @@ import {
 } from './assetActionErrors';
 
 describe('assetActionErrorFrom', () => {
+  it('returns a field-level conflict so a rejected scanned/manual tag stays editable', () => {
+    const result = assetActionErrorFrom(Object.assign(new Error('Asset tag is already claimed in this tenant'), { code: 'ASSET_TAG_CONFLICT' }));
+    expect(result).toMatchObject({
+      messageKey: 'msp/assets:errors.asset.tagAlreadyExists',
+      validationIssues: [{ path: ['asset_tag'], code: 'custom' }],
+    });
+  });
   it('maps expected asset permission and stale-record failures', () => {
     expect(assetActionErrorFrom(new Error('Permission denied: Cannot update assets'))).toEqual({
       permissionError: 'Permission denied: Cannot update assets',

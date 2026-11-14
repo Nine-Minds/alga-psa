@@ -1,4 +1,4 @@
-import { listAssets } from '@alga-psa/assets/actions/assetActions';
+import { getAssetSurfaceAccess, listAssets } from '@alga-psa/assets/actions/assetActions';
 import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -43,7 +43,9 @@ export default async function AssetsPage() {
       return <div>{assetActionErrorMessage(expected)}</div>;
     }
     const assets: AssetListResponse = assetsResult;
-    return <MspAssetDashboardClient initialAssets={assets} />;
+    // Read once on the server so a seat technician's screen is never rendered with controls and then stripped.
+    const surfaceAccess = await getAssetSurfaceAccess();
+    return <MspAssetDashboardClient initialAssets={assets} surfaceAccess={surfaceAccess} />;
   } catch (error) {
     console.error('Error fetching user or assets:', error);
     const { t } = await getServerTranslation(undefined, 'msp/assets');

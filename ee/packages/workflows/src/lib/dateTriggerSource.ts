@@ -31,7 +31,7 @@ export interface DateDomainEvent {
   emitOnce(knex: Knex, tenant: string, occurrence: DateOccurrence, daysUntil: number): Promise<boolean>;
 }
 
-/** What a source needs beyond a date window. Always passed for `mode: 'condition'` sources. */
+/** What a source needs beyond a date window. The launcher always passes it; condition sources require it. */
 export interface DateTriggerScanContext {
   /** The workflow trigger's `params`, validated by the launcher. */
   params?: Record<string, unknown>;
@@ -39,6 +39,8 @@ export interface DateTriggerScanContext {
   today: string;
   /** IANA timezone `today` was computed in. */
   timezone: string;
+  /** The scan's clock. Lets a window source tell what is still ahead (e.g. a due time later today). */
+  now?: Date;
 }
 
 export interface DateTriggerSource {

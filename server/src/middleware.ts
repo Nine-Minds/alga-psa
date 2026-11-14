@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
+import { bodySizeGuardResponse } from './middleware/bodySizeGuard';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
@@ -304,6 +305,10 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
+    // Resumable document uploads: create, chunk (PUT), offset (HEAD/GET), complete, abort. Each handler
+    // authenticates the session or API key itself and scopes the upload to tenant and uploader.
+    // Exactly these shapes; nothing deeper under /api/documents/uploads is exempted.
+    /^\/api\/documents\/uploads(?:\/[^/]+(?:\/complete)?)?$/.test(pathname) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
@@ -442,6 +447,10 @@ function maybeWarnForwardedHostRewrite(
 }
 
 const _middleware = auth(async (request) => {
+  // Next truncates (silently) a body past proxyClientMaxBodySize; refuse it loudly instead.
+  const tooLarge = bodySizeGuardResponse(request);
+  if (tooLarge) return tooLarge;
+
   const pathname = request.nextUrl.pathname;
   const deploymentCaps = resolveDeploymentCapabilities();
   const { hostname: requestHostname, hostHeader: requestHostHeader } = resolveRequestHost(request, deploymentCaps);

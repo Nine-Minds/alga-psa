@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Tickets",
-      "documents": "Documentos",
-      "time": "Tiempo",
-      "projects": "Proyectos",
-      "assets": "Activos",
-      "billing": "Facturación"
-    },
     "targetTypes": {
       "role": "Rol",
       "team": "Equipo",
@@ -453,11 +445,13 @@
         "custom": "Personalizado"
       },
       "badges": {
-        "starter": "Inicial"
+        "starter": "Inicial",
+        "closed": "Cerrado"
       },
       "descriptions": {
         "systemStarter": "Paquete inicial del sistema.",
-        "customBundle": "Paquete de restricción personalizado para asignaciones de rol, equipo, usuario o clave API."
+        "customBundle": "Paquete de restricción personalizado para asignaciones de rol, equipo, usuario o clave API.",
+        "closed": "Cerrado: deniega todo lo que no nombra."
       },
       "effectiveSummary": "Resumen efectivo: paquete {{status}} con {{count}} asignación(es) activa(s).",
       "empty": "No se encontraron paquetes de autorización.",
@@ -542,6 +536,17 @@
         "label": "Campos redactados",
         "placeholder": "internal_cost, margin",
         "helper": "Nombres de campo separados por comas que se redactarán cuando esta regla permita el acceso."
+      },
+      "baseline": {
+        "title": "Paquete cerrado",
+        "explanation": "Un paquete cerrado deniega todo tipo de registro y acción que no nombra. Un paquete abierto limita solo los que nombra.",
+        "closedToggle": "Publicar como cerrado",
+        "openBadge": "Abierto",
+        "previewTitle": "Este paquete cerrado denegará",
+        "previewIntro": "A los usuarios con este paquete se les deniegan estos tipos de registro y acciones, porque el paquete no tiene ninguna regla para ellos.",
+        "previewNothing": "El paquete nombra todos los tipos de registro y acciones, por lo que no deniega nada más allá de sus propias reglas.",
+        "deniedAll": "Todas las acciones",
+        "deniedActions": "Denegado: {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Registro",
       "useSynthetic": "Usar escenario de registro sintético",
       "syntheticOwnerPlaceholder": "ID de usuario propietario (opcional)",
-      "syntheticClientPlaceholder": "ID de cliente (opcional)",
+      "syntheticClientPlaceholder": "Cliente (opcional)",
       "syntheticBoardPlaceholder": "ID de tablero (opcional)",
       "clientVisible": "Visible para el cliente",
       "run": "Ejecutar simulación",
@@ -584,7 +589,18 @@
       "publishedRevision": "Revisión publicada",
       "allowed": "Permitido",
       "denied": "Denegado",
-      "empty": "Ejecute una simulación para comparar el comportamiento del borrador y el publicado."
+      "empty": "Ejecute una simulación para comparar el comportamiento del borrador y el publicado.",
+      "explanations": {
+        "closedBaseline": "El paquete es cerrado y no tiene ninguna regla para {{action}} en {{resource}}, por lo que se deniega el acceso.",
+        "clientPortfolio": "El registro pertenece a un cliente fuera de la cartera de clientes de este usuario, por lo que la regla de cartera lo deniega.",
+        "createOutOfScope": "Se deniega crear {{resource}} para este cliente: el cliente está fuera del alcance de este usuario.",
+        "readRequired": "{{action}} en {{resource}} también requiere acceso de lectura al registro, y las reglas de lectura lo deniegan.",
+        "templateDenied": "Una regla del paquete limita {{action}} en {{resource}} a registros con los que este usuario no coincide.",
+        "clientVisibleOnly": "El paquete permite {{action}} en {{resource}} solo cuando el registro es visible para el cliente.",
+        "notSelfApprover": "Los usuarios no pueden aprobar sus propios registros.",
+        "rulesUnavailable": "No se pudieron cargar las reglas del paquete, por lo que se deniega el acceso.",
+        "rbacDenied": "El rol del usuario no concede {{action}} en {{resource}}."
+      }
     },
     "createDialog": {
       "title": "Crear paquete de autorización",
@@ -622,9 +638,47 @@
       "selectRecord": "Seleccione un registro antes de ejecutar la simulación.",
       "runSimulation": "No se pudo ejecutar la simulación.",
       "simulator": {
-        "unsupportedAction": "El simulador actualmente solo admite comprobaciones de Lectura y Aprobación. Elija una de esas acciones y vuelva a intentarlo.",
+        "unsupportedAction": "El simulador admite comprobaciones de Leer, Crear, Actualizar, Eliminar y Aprobar. Elija una de esas acciones e inténtelo de nuevo.",
         "unsupportedResource": "Este tipo de registro aún no está disponible en el simulador. Elija un tipo de registro compatible y vuelva a intentarlo.",
-        "clientTicketNotSupported": "Las comprobaciones de tickets para usuarios cliente aún no están disponibles en el simulador porque la visibilidad del tablero de tickets no está incluida. Pruebe con un usuario interno o verifique el acceso de tickets de cliente en la aplicación."
+        "clientTicketNotSupported": "Las comprobaciones de tickets para usuarios cliente aún no están disponibles en el simulador porque la visibilidad del tablero de tickets no está incluida. Pruebe con un usuario interno o verifique el acceso de tickets de cliente en la aplicación.",
+        "syntheticRecordRequired": "Este tipo de registro no tiene registros almacenados para elegir. Use un escenario de registro sintético e inténtelo de nuevo."
+      },
+      "saveBaseline": "No se pudo cambiar si el paquete es cerrado."
+    },
+    "resourceTypes": {
+      "ticket": "Tickets",
+      "document": "Documentos",
+      "time_entry": "Tiempo",
+      "project": "Proyectos",
+      "asset": "Activos",
+      "billing": "Facturación",
+      "tag": "Etiquetas",
+      "client": "Clientes",
+      "contact": "Contactos",
+      "interaction": "Interacciones",
+      "schedule_entry": "Entradas de agenda"
+    },
+    "actions": {
+      "read": "Leer",
+      "create": "Crear",
+      "update": "Actualizar",
+      "delete": "Eliminar",
+      "approve": "Aprobar"
+    },
+    "portfolio": {
+      "title": "Cartera de clientes",
+      "description": "Los clientes para los que trabaja este usuario. Los paquetes con una regla de cartera de clientes limitan al usuario a estos clientes.",
+      "addClient": "Añadir un cliente",
+      "loading": "Cargando cartera de clientes...",
+      "empty": "Sin clientes. A un usuario con la cartera vacía se le deniega todo lo que cubre una regla de cartera de clientes.",
+      "removeClient": "Quitar {{client}}",
+      "save": "Guardar cartera",
+      "saving": "Guardando...",
+      "saved": "Cartera de clientes guardada.",
+      "errors": {
+        "load": "No se pudo cargar la cartera de clientes.",
+        "lookup": "No se pudo buscar el cliente.",
+        "save": "No se pudo guardar la cartera de clientes."
       }
     }
   },

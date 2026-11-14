@@ -130,7 +130,9 @@ export function mapLevelIoDeviceToSnapshot(args: {
     serialNumber: device.serial_number ?? null,
     status: isOnline ? 'active' : 'inactive',
     location,
-    assetTag: `levelio:${device.id}`,
+    // The provider key already travels in externalDeviceId and must never be
+    // used as a printed physical tag. Shared ingestion allocates a tenant tag.
+    assetTag: '',
     agentStatus: isOnline ? 'online' : 'offline',
     lastSeenAt: device.last_seen_at ?? null,
     extension: {

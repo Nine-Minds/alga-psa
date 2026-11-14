@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -121,7 +122,7 @@ async function seedFixture(): Promise<Fixture> {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
-  await table(tenantId, 'assets').insert([
+  await insertTestAssets(db, [
     baseAsset(assetId, 'ASSET-PRIMARY', 'Front desk workstation'),
     baseAsset(relatedAssetId, 'ASSET-DOCK', 'Docking station'),
   ]);

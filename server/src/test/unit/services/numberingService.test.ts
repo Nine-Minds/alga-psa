@@ -10,7 +10,7 @@ import { vi } from 'vitest';
 // logic, not the scoped-query plumbing.
 const mocks = vi.hoisted(() => ({
   settings: { prefix: 'PRJ-', prefix_date_format: null } as
-    | { prefix?: string | null; prefix_date_format?: string | null }
+    | { prefix?: string | null; prefix_date_format?: string | null; last_number?: number; initial_value?: number; padding_length?: number | null }
     | undefined,
   seedInserts: [] as Record<string, unknown>[],
   resolveEffectiveTimeZone: vi.fn(async (): Promise<string> => 'UTC'),
@@ -53,6 +53,34 @@ describe('SharedNumberingService', () => {
     mocks.seedInserts.length = 0;
     mocks.resolveEffectiveTimeZone.mockClear();
     mocks.resolveEffectiveTimeZone.mockResolvedValue('UTC');
+  });
+
+  describe('previewNextNumber', () => {
+    it('uses defaults without initializing or allocating a number', async () => {
+      mocks.settings = undefined;
+      expect(await SharedNumberingService.previewNextNumber('ASSET', { knex: mockKnex, tenant: mockTenant }))
+        .toEqual({ number: '00001', value: 1, padding: 5 });
+      expect(mocks.seedInserts).toHaveLength(0);
+      expect(mockKnex.raw).not.toHaveBeenCalled();
+    });
+
+    it('matches issuance with a date prefix and explicit initial value', async () => {
+      mocks.settings = { prefix: 'EQ-', prefix_date_format: '{YYYY}-', last_number: 0, initial_value: 42, padding_length: 4 };
+      const deps = { knex: mockKnex, tenant: mockTenant };
+      const clock = { date: new Date('2026-11-05T12:00:00Z'), timeZone: 'UTC' };
+      const preview = await SharedNumberingService.previewNextNumber('ASSET', deps, clock);
+      expect(preview).toEqual({ number: 'EQ-2026-0042', value: 42, padding: 4 });
+      expect(mocks.seedInserts).toHaveLength(0);
+      expect(mockKnex.raw).not.toHaveBeenCalled();
+      mockKnex.raw.mockResolvedValue({ rows: [{ number: 'EQ-0042' }] });
+      expect(await SharedNumberingService.getNextNumber('ASSET', deps, clock)).toBe(preview.number);
+    });
+
+    it('retains an existing unpadded numeric format', async () => {
+      mocks.settings = { prefix: null, prefix_date_format: null, last_number: 7, initial_value: 1, padding_length: null };
+      expect(await SharedNumberingService.previewNextNumber('TICKET', { knex: mockKnex, tenant: mockTenant }))
+        .toEqual({ number: '8', value: 8, padding: null });
+    });
   });
 
   describe('getNextNumber', () => {

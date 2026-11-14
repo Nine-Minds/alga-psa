@@ -907,6 +907,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "keine"
+    },
+    "syncFeedback": {
+      "synced": "Rechnung mit {{provider}} synchronisiert.",
+      "failed": "{{provider}}-Synchronisierung fehlgeschlagen: {{reason}}",
+      "failedNoReason": "{{provider}}-Synchronisierung fehlgeschlagen. Prüfen Sie die Liste der fehlgeschlagenen Vorgänge auf der Seite der Buchhaltungsintegration.",
+      "skipped": "Die Rechnung wurde übersprungen und nicht an {{provider}} gesendet: {{reason}}",
+      "skippedNoReason": "Die Rechnung wurde übersprungen und nicht an {{provider}} gesendet.",
+      "pending": "Die Rechnung steht zur Synchronisierung mit {{provider}} an; sie wurde noch nicht verarbeitet.",
+      "unknown": "Es konnte nicht ermittelt werden, ob die Rechnung mit {{provider}} synchronisiert wurde.",
+      "notRun": "{{provider}}-Synchronisierung wurde nicht ausgeführt: {{reason}}",
+      "notRunNoReason": "{{provider}}-Synchronisierung wurde nicht ausgeführt.",
+      "error": "Synchronisierung fehlgeschlagen: {{error}}",
+      "refusedNotFound": "Rechnung nicht gefunden.",
+      "refusedPaid": "Bezahlte Rechnungen werden nicht mit {{provider}} synchronisiert.",
+      "refusedCancelled": "Stornierte Rechnungen werden nicht mit {{provider}} synchronisiert.",
+      "cycleFailed": "{{provider}}-Synchronisierung fehlgeschlagen: {{reason}} Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht.",
+      "cycleFailedNoReason": "{{provider}}-Synchronisierung fehlgeschlagen. Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht."
     }
   },
   "templateEditor": {

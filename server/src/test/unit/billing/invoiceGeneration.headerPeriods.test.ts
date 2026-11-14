@@ -12,6 +12,8 @@ vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importO
 
 
 const mocks = vi.hoisted(() => {
+  // Tenant timezone the stubbed resolveTenantToday reads (null = no saved timezone).
+  const tenantTimeZone: { value: string | null } = { value: null };
   const state = {
     insertedInvoices: [] as Array<Record<string, any>>,
     invoiceUpdates: [] as Array<Record<string, any>>,
@@ -145,6 +147,7 @@ const mocks = vi.hoisted(() => {
     updateInvoiceTotalsAndRecordTransaction,
     getClientDetails,
     getDueDate,
+    tenantTimeZone,
     getClientDefaultTaxRegionCode,
     getInitialInvoiceTaxSource,
     shouldUseTaxDelegation,
@@ -181,6 +184,13 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  // Stubbed at the helper boundary: real conversion, clock from Temporal.Now.instant
+  // (fake timers), zone from mocks.tenantTimeZone.
+  resolveTenantToday: async () => {
+    const { localDateForInstant } = await import('../../../../../packages/db/src/lib/workDate');
+    const { Temporal: T } = await import('@js-temporal/polyfill');
+    return localDateForInstant(T.Now.instant(), mocks.tenantTimeZone.value);
+  },
   tenantDb: (conn: any, tenant: string) => ({
     table: (tableExpr: string) => {
       const builder = conn(tableExpr);
@@ -304,6 +314,7 @@ describe('invoice generation header billing periods', () => {
     mocks.state.invoiceUpdates.length = 0;
     mocks.state.materialUpdates.length = 0;
     vi.clearAllMocks();
+    mocks.tenantTimeZone.value = null;
 
     mocks.createTenantKnex.mockResolvedValue({ knex: mocks.knexStub });
     mocks.getNextNumber.mockResolvedValue('INV-1000');
@@ -465,13 +476,10 @@ describe('invoice generation header billing periods', () => {
     vi.useRealTimers();
   });
 
-  it('T-EC7: without an override the invoice is stamped on the server-host calendar date, unchanged', async () => {
+  it('T-EC7: without an override and no saved tenant timezone the invoice is stamped on the UTC date', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-01-30T22:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
     mocks.getDueDate.mockResolvedValue('2026-02-20');
-    // Temporal.Now.plainDateISO() resolves to the host's default timezone, so
-    // compute the expected date the same way the implementation does.
-    const expectedHostDate = Temporal.Now.plainDateISO().toString();
 
     await createInvoiceFromBillingResult(
       recurringBillingResult,
@@ -482,10 +490,48 @@ describe('invoice generation header billing periods', () => {
       'user-1',
     );
 
-    expect(mocks.state.insertedInvoices[0].invoice_date).toBe(expectedHostDate);
-    expect(mocks.state.insertedInvoices[0].due_date).toBe(
-      Temporal.PlainDate.from(expectedHostDate).add({ days: 30 }).toString(),
+    expect(mocks.state.insertedInvoices[0].invoice_date).toBe('2026-10-18');
+    expect(mocks.state.insertedInvoices[0].due_date).toBe('2026-11-17');
+    vi.useRealTimers();
+  });
+
+  it('T-EC8: a Sydney tenant at 2026-10-18T22:00Z is invoiced on the 19th and due 30 days from the 19th', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+    mocks.tenantTimeZone.value = 'Australia/Sydney';
+    mocks.getDueDate.mockResolvedValue('2026-02-20');
+
+    await createInvoiceFromBillingResult(
+      recurringBillingResult,
+      'client-1',
+      '2026-02-01',
+      '2026-03-01',
+      'cycle-1',
+      'user-1',
     );
+
+    expect(mocks.state.insertedInvoices[0].invoice_date).toBe('2026-10-19');
+    expect(mocks.state.insertedInvoices[0].due_date).toBe('2026-11-18');
+    vi.useRealTimers();
+  });
+
+  it('T-EC9: an explicit invoiceDate still wins over the tenant-local date', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+    mocks.tenantTimeZone.value = 'Australia/Sydney';
+
+    await createInvoiceFromBillingResult(
+      recurringBillingResult,
+      'client-1',
+      '2026-02-01',
+      '2026-03-01',
+      'cycle-1',
+      'user-1',
+      { invoiceDate: '2026-10-01' },
+    );
+
+    expect(mocks.state.insertedInvoices[0].invoice_date).toBe('2026-10-01');
+    expect(mocks.state.insertedInvoices[0].due_date).toBe('2026-10-31');
     vi.useRealTimers();
   });
 });

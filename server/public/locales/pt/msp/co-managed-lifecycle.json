@@ -60,5 +60,22 @@
     },
     "retentionFailuresHeading": "Anexos não retidos",
     "retentionFailed": "Anexo não retido: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "Encerrar o acordo de assentos de {{name}}?",
+    "intro": "O encerramento tem efeito na próxima solicitação de cada técnico e não pode ser desfeito aqui.",
+    "effectTechnicians": "Técnicos desativados: {{count}}",
+    "effectInvitations": "Convites pendentes retirados: {{count}}",
+    "effectTickets": "Tickets devolvidos à sua equipe: {{count}}",
+    "effectSeats": "Assentos liberados para o pool: {{count}}",
+    "effectNotes": "As notas compartilhadas continuam legíveis para a sua equipe.",
+    "confirm": "Encerrar acordo",
+    "cancel": "Cancelar",
+    "start": "Encerrar acordo de assentos",
+    "done": "O acordo de assentos foi encerrado.",
+    "errorDenied": "Você não tem permissão para encerrar este acordo.",
+    "errorNotFound": "Este acordo não foi encontrado.",
+    "errorGeneric": "Não foi possível processar a solicitação.",
+    "loading": "Carregando…"
   }
 }

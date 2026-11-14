@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-11-02T17:32:10.933Z",
+  "windowId": "window-1-1793580971518",
+  "windowFocused": false,
+  "activeSpaceIdBefore": "7bde1750-8419-4b2d-9003-2a7397645a1f",
+  "activeSpaceIdAfter": "7bde1750-8419-4b2d-9003-2a7397645a1f",
+  "activeTabIdBefore": "f536897d-f1ff-41ce-9106-420e0aafc2c8",
+  "activeTabIdAfter": "f536897d-f1ff-41ce-9106-420e0aafc2c8",
+  "focusedPaneBefore": "lightweight-review-guide-643ed6e3-de5e-48a4-9239-1255c6bcb257-ts_robert-X670E-Pro-RS",
+  "focusedPaneAfter": "lightweight-review-guide-643ed6e3-de5e-48a4-9239-1255c6bcb257-ts_robert-X670E-Pro-RS",
+  "cardSpaceId": "77c0c59a-5083-4842-b1cc-f20158ff6c11",
+  "cardSpaceActive": false,
+  "cardTabs": [
+    {
+      "tabId": "1d7870ad-c887-49a7-a763-0235776e06ea",
+      "region": "pinned-visible",
+      "tabVisible": true,
+      "containerId": "1211444d-f70d-4182-96b3-33fd9c33c18e",
+      "activeTabId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+      "tabs": [
+        {
+          "paneId": "376c175b-b142-46db-b907-5be706188acf",
+          "active": false,
+          "visible": false,
+          "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+        },
+        {
+          "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+          "active": true,
+          "visible": true,
+          "url": "about:blank"
+        }
+      ]
+    }
+  ]
+}

@@ -362,14 +362,6 @@
     }
   },
   "policyManagement": {
-    "resourceSections": {
-      "tickets": "Tickets",
-      "documents": "Documents",
-      "time": "Temps",
-      "projects": "Projets",
-      "assets": "Actifs",
-      "billing": "Facturation"
-    },
     "targetTypes": {
       "role": "Rôle",
       "team": "Équipe",
@@ -453,11 +445,13 @@
         "custom": "Personnalisé"
       },
       "badges": {
-        "starter": "Démarrage"
+        "starter": "Démarrage",
+        "closed": "Fermé"
       },
       "descriptions": {
         "systemStarter": "Bundle de démarrage système.",
-        "customBundle": "Bundle de restriction personnalisé pour les affectations de rôle, équipe, utilisateur ou clé API."
+        "customBundle": "Bundle de restriction personnalisé pour les affectations de rôle, équipe, utilisateur ou clé API.",
+        "closed": "Fermé : refuse tout ce qu’il ne nomme pas."
       },
       "effectiveSummary": "Résumé effectif : bundle {{status}} avec {{count}} affectation(s) active(s).",
       "empty": "Aucun bundle d'autorisation trouvé.",
@@ -542,6 +536,17 @@
         "label": "Champs masqués",
         "placeholder": "internal_cost, margin",
         "helper": "Noms de champs séparés par des virgules à masquer lorsque cette règle autorise l'accès."
+      },
+      "baseline": {
+        "title": "Bundle fermé",
+        "explanation": "Un bundle fermé refuse tout type d’enregistrement et toute action qu’il ne nomme pas. Un bundle ouvert limite uniquement ceux qu’il nomme.",
+        "closedToggle": "Publier comme fermé",
+        "openBadge": "Ouvert",
+        "previewTitle": "Ce bundle fermé refusera",
+        "previewIntro": "Les utilisateurs qui détiennent ce bundle se voient refuser ces types d’enregistrement et ces actions, car le bundle n’a aucune règle pour eux.",
+        "previewNothing": "Le bundle nomme tous les types d’enregistrement et toutes les actions, il ne refuse donc rien au-delà de ses propres règles.",
+        "deniedAll": "Toutes les actions",
+        "deniedActions": "Refusé : {{actions}}"
       }
     },
     "assignments": {
@@ -574,7 +579,7 @@
       "record": "Enregistrement",
       "useSynthetic": "Utiliser un scénario d'enregistrement synthétique",
       "syntheticOwnerPlaceholder": "ID utilisateur propriétaire (facultatif)",
-      "syntheticClientPlaceholder": "ID client (facultatif)",
+      "syntheticClientPlaceholder": "Client (facultatif)",
       "syntheticBoardPlaceholder": "ID tableau (facultatif)",
       "clientVisible": "Visible par le client",
       "run": "Lancer la simulation",
@@ -584,7 +589,18 @@
       "publishedRevision": "Révision publiée",
       "allowed": "Autorisé",
       "denied": "Refusé",
-      "empty": "Lancez une simulation pour comparer le comportement brouillon et publié."
+      "empty": "Lancez une simulation pour comparer le comportement brouillon et publié.",
+      "explanations": {
+        "closedBaseline": "Le bundle est fermé et n’a aucune règle pour {{action}} sur {{resource}}, l’accès est donc refusé.",
+        "clientPortfolio": "L’enregistrement appartient à un client hors du portefeuille de clients de cet utilisateur, la règle de portefeuille le refuse donc.",
+        "createOutOfScope": "La création de {{resource}} pour ce client est refusée : le client est hors du périmètre de cet utilisateur.",
+        "readRequired": "{{action}} sur {{resource}} exige aussi un accès en lecture à l’enregistrement, et les règles de lecture le refusent.",
+        "templateDenied": "Une règle du bundle limite {{action}} sur {{resource}} aux enregistrements auxquels cet utilisateur ne correspond pas.",
+        "clientVisibleOnly": "Le bundle autorise {{action}} sur {{resource}} uniquement lorsque l’enregistrement est visible par le client.",
+        "notSelfApprover": "Les utilisateurs ne peuvent pas approuver leurs propres enregistrements.",
+        "rulesUnavailable": "Les règles du bundle n’ont pas pu être chargées, l’accès est donc refusé.",
+        "rbacDenied": "Le rôle de l’utilisateur n’accorde pas {{action}} sur {{resource}}."
+      }
     },
     "createDialog": {
       "title": "Créer un bundle d'autorisation",
@@ -622,9 +638,47 @@
       "selectRecord": "Sélectionnez un enregistrement avant de lancer la simulation.",
       "runSimulation": "Échec de l'exécution de la simulation.",
       "simulator": {
-        "unsupportedAction": "Le simulateur ne prend actuellement en charge que les vérifications Lecture et Approbation. Choisissez l'une de ces actions et réessayez.",
+        "unsupportedAction": "Le simulateur prend en charge les vérifications Lire, Créer, Modifier, Supprimer et Approuver. Choisissez l’une de ces actions et réessayez.",
         "unsupportedResource": "Ce type d'enregistrement n'est pas encore disponible dans le simulateur. Choisissez un type d'enregistrement pris en charge et réessayez.",
-        "clientTicketNotSupported": "Les vérifications de tickets pour les utilisateurs clients ne sont pas encore disponibles dans le simulateur, car la visibilité du tableau de tickets n'est pas incluse. Essayez avec un utilisateur interne, ou vérifiez l'accès aux tickets client dans l'application."
+        "clientTicketNotSupported": "Les vérifications de tickets pour les utilisateurs clients ne sont pas encore disponibles dans le simulateur, car la visibilité du tableau de tickets n'est pas incluse. Essayez avec un utilisateur interne, ou vérifiez l'accès aux tickets client dans l'application.",
+        "syntheticRecordRequired": "Ce type d’enregistrement n’a pas d’enregistrements stockés à choisir. Utilisez un scénario d’enregistrement synthétique et réessayez."
+      },
+      "saveBaseline": "Impossible de modifier le statut fermé du bundle."
+    },
+    "resourceTypes": {
+      "ticket": "Tickets",
+      "document": "Documents",
+      "time_entry": "Temps",
+      "project": "Projets",
+      "asset": "Actifs",
+      "billing": "Facturation",
+      "tag": "Étiquettes",
+      "client": "Clients",
+      "contact": "Contacts",
+      "interaction": "Interactions",
+      "schedule_entry": "Entrées de planning"
+    },
+    "actions": {
+      "read": "Lire",
+      "create": "Créer",
+      "update": "Modifier",
+      "delete": "Supprimer",
+      "approve": "Approuver"
+    },
+    "portfolio": {
+      "title": "Portefeuille de clients",
+      "description": "Les clients pour lesquels cet utilisateur travaille. Les bundles avec une règle de portefeuille de clients limitent l’utilisateur à ces clients.",
+      "addClient": "Ajouter un client",
+      "loading": "Chargement du portefeuille de clients...",
+      "empty": "Aucun client. Un utilisateur dont le portefeuille est vide se voit refuser tout ce que couvre une règle de portefeuille de clients.",
+      "removeClient": "Retirer {{client}}",
+      "save": "Enregistrer le portefeuille",
+      "saving": "Enregistrement...",
+      "saved": "Portefeuille de clients enregistré.",
+      "errors": {
+        "load": "Impossible de charger le portefeuille de clients.",
+        "lookup": "Impossible de rechercher le client.",
+        "save": "Impossible d’enregistrer le portefeuille de clients."
       }
     }
   },

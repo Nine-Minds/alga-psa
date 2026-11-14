@@ -536,6 +536,7 @@
         "contractEnd": "a data de término do contrato",
         "warrantyEnd": "a data de término da garantia do ativo",
         "maintenanceDue": "a data de vencimento da manutenção do ativo",
+        "ticketDueDate": "a data de vencimento do ticket",
         "ticketStatusAge": "o dia em que o ticket atinge o número de dias no status"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Fuso horário do locatário (padrão)",
       "searchTimezones": "Pesquisar fusos horários",
       "inputDataEventPending": "Escolha o evento acima; suas etapas lerão os dados que esse evento envia.",
+      "dateSourceTicketDueDate": "Data de vencimento do ticket",
       "dateSourceTicketStatusAge": "Ticket no status há N dias",
       "statusAgeStatus": "Status",
       "statusAgeStatusPlaceholder": "Selecionar um status",

@@ -427,7 +427,13 @@ async function generateOccurrence(args: {
     actor: { type: 'system' },
     suppression: { suppressContactNotifications: !definition.notify_client_on_create },
     titleContext: { clientName: client.client_name, contactName: contact?.full_name ?? null, dueDate: candidate.due, locale: options.locale },
-    origin: { ticket_origin: 'recurring', source: RECURRING_TICKET_SOURCE },
+    // The occurrence row is claimed above but only linked to the ticket after it exists, so the ids
+    // are handed down for TICKET_CREATED instead of being looked up by ticket id.
+    origin: {
+      ticket_origin: 'recurring',
+      source: RECURRING_TICKET_SOURCE,
+      recurrence: { definitionId: definition.definition_id, occurrenceId, occurrenceDate: candidate.nominal },
+    },
     dueDate: candidate.dueAt,
   });
 

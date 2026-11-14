@@ -1,6 +1,9 @@
+import { assertTicketCreateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertActorMayAssign } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, silentTicketCreation, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -14,7 +17,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { admitInternalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -24,14 +27,14 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canWriteAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import {
   runAuthorizedTicketWatcherWrite,
   TicketWatcherPermissionError,
   TicketWatcherTicketNotFoundError,
 } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
-import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
@@ -152,8 +155,10 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
+import { generatePreviewsForDocument } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { attachDocument } from './documents/attachDocument';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -453,6 +458,15 @@ async function assertClosedByIsTenantUser(trx: Knex.Transaction, tenant: string,
 /** The request is made as a service principal itself (not acting as a human). */
 function isBareServicePrincipal(context: ServiceContext): boolean {
   return (context.user as { user_type?: string } | undefined)?.user_type === 'service' && !context.viaPrincipalUserId;
+}
+
+/**
+ * The reader a comment-audience check is made for: the verified user row when the transport
+ * loaded it for this user, otherwise the bare id (which is always checked against the seat tables).
+ */
+function audienceReader(context: ServiceContext): string | TicketServiceUser {
+  const user = context.user as TicketServiceUser | undefined;
+  return user && user.user_id === context.userId ? user : context.userId;
 }
 
 export class TicketService extends BaseService<ITicket> {
@@ -1057,7 +1071,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
+    return filterReadableCommentAttachments(knex, context.tenant, audienceReader(context), documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1320,7 +1334,11 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      const subject = buildAuthorizationPrincipalSubject(context.user ?? { user_id: context.userId, tenant: context.tenant }, context.apiKeyId);
+      const subject = await resolveAuthorizationSubject(knex, {
+        tenant: context.tenant,
+        user: context.user ?? { user_id: context.userId },
+        apiKeyId: context.apiKeyId,
+      });
       const kernel = await getAuthorizationKernel();
       result = await withTransaction(knex, (trx) =>
         runAuthorizedTicketWatcherWrite({
@@ -1541,7 +1559,7 @@ export class TicketService extends BaseService<ITicket> {
 
     // Validation, storage, the transaction, rollback cleanup, previews and events all
     // live in the shared upload core; the draft branch is a ticket-adapter option.
-    return attachDocumentFromBytes({
+    return attachDocument({
       knex,
       tenant: context.tenant,
       actorUserId: context.userId,
@@ -1550,7 +1568,8 @@ export class TicketService extends BaseService<ITicket> {
       file: {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
-        bytes: Buffer.from(await file.arrayBuffer()),
+        // The part is streamed into the ingest; no whole-file copy of it.
+        body: Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
       },
       source: 'multipart',
       options: { commentAttachmentDraft },
@@ -1586,7 +1605,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1630,7 +1649,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.*')
       .first() as IDocument | undefined;
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1638,9 +1657,14 @@ export class TicketService extends BaseService<ITicket> {
     let fileId = doc[column] ?? null;
 
     if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
-      const original = await StorageService.downloadFile(doc.file_id);
-      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
-      fileId = generated?.[column] ?? null;
+      // Lazy backfill for documents that predate previews: inline because this response needs the
+      // image. Reads from storage; the request never holds the original in memory.
+      try {
+        const generated = await generatePreviewsForDocument(doc.document_id);
+        fileId = generated[column] ?? null;
+      } catch (error) {
+        console.error(`[TicketService] Preview backfill failed for document ${doc.document_id}:`, error);
+      }
     }
 
     if (!fileId) {
@@ -1653,15 +1677,6 @@ export class TicketService extends BaseService<ITicket> {
       fileId,
       mimeType: result.metadata.mime_type ?? null,
     };
-  }
-
-  private persistDocumentPreviews(
-    knex: Knex,
-    document: IDocument,
-    buffer: Buffer,
-    tenant: string,
-  ): Promise<PreviewGenerationResult | null> {
-    return persistDocumentPreviews(knex, document, buffer, tenant);
   }
 
   async deleteTicketDocument(
@@ -1920,6 +1935,9 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
+        // Same create gate as the MSP ticket actions: the candidate ticket must be one the caller's scope includes.
+        await assertTicketCreateAllowed(trx, context.tenant, subjectFromServiceContext(context), data);
+
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1989,6 +2007,8 @@ export class TicketService extends BaseService<ITicket> {
         // read the newly-created ticket on their own connections.
         const analyticsTracker = new ServerAnalyticsTracker();
 
+        await assertActorMayAssign(trx, context.tenant, context.userId, [createTicketInput.assigned_to]);
+
         // Use shared TicketModel with retry logic and analytics
         const ticketResult = await TicketModel.createTicketWithRetry(
           createTicketInput,
@@ -2035,7 +2055,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           ticketResult.ticket_id,
           data.external_links ?? null,
-          context.userId,
+          context.userId ? { type: 'user', userId: context.userId } : { type: 'system' },
         );
 
         await stampViaPrincipalRow(trx, context, 'tickets', { ticket_id: ticketResult.ticket_id }, 'entered_via_principal_id');
@@ -2118,6 +2138,8 @@ export class TicketService extends BaseService<ITicket> {
           boardId: fullTicket.board_id,
           priorityId: fullTicket.priority_id,
           clientId: fullTicket.client_id,
+          dueDate: fullTicket.due_date ?? null,
+          ticketOrigin: fullTicket.ticket_origin,
           externalLinks,
           suppressContactNotifications,
           suppressInternalNotifications,
@@ -2434,8 +2456,15 @@ export class TicketService extends BaseService<ITicket> {
         cleanedData.assigned_to !== currentTicket.assigned_to;
       // Human-work guard: only when this write changes assigned_to (legacy references untouched).
       if (isChangingAssignment && (cleanedData as { assigned_to?: string | null }).assigned_to) {
-        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertActorMayAssign(trx, context.tenant, context.userId, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to], {
+          kind: 'ticket',
+          ticketId: id,
+          pending: { clientId: (cleanedData as { client_id?: string }).client_id, boardId: (cleanedData as { board_id?: string }).board_id },
+        });
       }
+      // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+      // after the write, clears and drops the seat technicians it strands (F094).
       const finalizeResourceReassignment = isChangingAssignment
         ? await prepareTicketResourceReassignment(
           trx,
@@ -2455,6 +2484,13 @@ export class TicketService extends BaseService<ITicket> {
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+        // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+        await recordTicketAssigneeChange(trx, context.tenant, id);
+      }
+
+      // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+      if (ticket && (await releaseSeatTicketOnMove(trx, context.tenant, id, currentTicket, ticket)).assigneeCleared) {
+        ticket.assigned_to = null;
       }
 
       if (clearsResponseStateOnClose) {
@@ -2782,6 +2818,10 @@ export class TicketService extends BaseService<ITicket> {
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);
         });
+    } else if (context.userId) {
+      // An internal reader sees only the audiences their organization may: MSP staff all of them, a seat technician never a private note.
+      const audience = admitInternalReaderAudienceSql(knex, context.tenant, audienceReader(context));
+      if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('tc.comment_id')]);
     }
 
     const comments = await commentsQuery
@@ -2992,16 +3032,11 @@ export class TicketService extends BaseService<ITicket> {
         apiCommentId = replyGeneratedId;
         apiThreadId = parent.thread_id;
         apiIsInternal = Boolean(parent.thread_is_internal);
-        if (parent.thread_audience != null) {
-          // Labelled thread: serialise against an audience change; the reply inherits it.
-          await lockLabelledThreadAudience(trx, context.tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
-          apiThreadAudience = {
-            collaboration_audience: assertReplyAudience(
-              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-              { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null },
-            ),
-          };
-        }
+        // Labelled thread: serialise against an audience change; the reply inherits it.
+        const apiReplyAudience = await nativeReplyAudience(trx, context.tenant,
+          { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+          { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null, ticketId });
+        if (apiReplyAudience) apiThreadAudience = { collaboration_audience: apiReplyAudience };
       } else {
         // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
         const apiCommentIds = await trx.raw(
@@ -3024,6 +3059,7 @@ export class TicketService extends BaseService<ITicket> {
           isInternal: apiIsInternal,
           authorType: apiAuthor.authorType,
           audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
+          ticketId,
         });
 
         await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
@@ -3115,7 +3151,7 @@ export class TicketService extends BaseService<ITicket> {
             entity_type: 'comment' as const,
             comment_id: comment.comment_id,
           })),
-          context.userId,
+          context.userId ? { type: 'user', userId: context.userId } : { type: 'system' },
         );
       }
 

@@ -33,7 +33,7 @@ export function portableConversationAudience(thread: { collaboration_audience?: 
   return thread.project_task_id ? projectTaskAudience(thread as { collaboration_audience?: string | null; is_internal?: boolean | null })
     : resolveCommentAudienceForRead(thread);
 }
-export const portableConversationVisible = (audience: CommentAudience, tenant: string) => isCommentAudienceVisible(audience, tenant, tenant);
+export const portableConversationVisible = (audience: CommentAudience, tenant: string) => isCommentAudienceVisible(audience, { tenant }, { kind: 'staff', tenant });
 
 export function validateCoManagedPortableConversationRecords(input: unknown, workspace?: PortableRecords): asserts input is PortableRecords {
   validatePortableRecordSection(input, { columns: CO_MANAGED_PORTABLE_CONVERSATION_COLUMNS, references: CO_MANAGED_PORTABLE_CONVERSATION_REFERENCES });

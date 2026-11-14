@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useIsolatedEventBusModules } from './testing/isolatedEventBusModules';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 
@@ -26,6 +27,8 @@ async function flushMicrotasks(limit: number = 50) {
 }
 
 describe('EventBus pending message recovery', () => {
+  useIsolatedEventBusModules();
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -34,7 +37,6 @@ describe('EventBus pending message recovery', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.resetModules();
     vi.clearAllMocks();
   });
 

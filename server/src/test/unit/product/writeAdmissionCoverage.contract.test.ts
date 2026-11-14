@@ -20,6 +20,7 @@ import { OPERATIONAL_WRITE_TABLES, RETAINED_COMMAND_TABLES } from '@alga-psa/db'
  * which is how raw SQL and bare builders are admitted without rewriting them.
  */
 
+// LEVERAGE: pattern ast-source-walk — source walk, importedSource and declaration are duplicated in support/sourceAnalysis.ts (read/permission coverage); move this test onto it once its results can be diffed
 const SOURCE_ROOTS = ['src', '../ee/server/src', '../ee/packages', '../packages', '../shared', '../services', '../ee/temporal-workflows/src'];
 const SKIP_DIRS = new Set(['test-utils', 'node_modules', '.next', '.turbo', 'dist', 'build', 'coverage', '__tests__', '__mocks__', 'test', 'tests', 'migrations', 'seeds', 'testing']);
 const SKIP_FILES = [/\.(test|spec)\.(t|j)sx?$/, /\.d\.ts$/, /\.generated\.ts$/, /\.stories\.(t|j)sx?$/, /\.contract\.test\./];
