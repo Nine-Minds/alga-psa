@@ -75,6 +75,7 @@ import { createCoManagedSeatArrangement, readCoManagedSeatTicketWork, setCoManag
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { tenantDb } from '@alga-psa/db';
+import { createAuthorizationBundle, createBundleAssignment, publishBundleRevision, upsertBundleRule } from '@alga-psa/authorization/bundles/service';
 import { updateTicketWithCache } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
 import { addTicket, updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
 import { TicketService } from '../../lib/api/services/TicketService';
@@ -345,5 +346,66 @@ describe.each(Object.entries(editVia))('control: an MSP administrator through %s
     expect(await ticketRow(ticketId)).toMatchObject({ board_id: outsideBoard.boardId });
     expect(await edit(mspUser, ticketId, { client_id: otherClientId, contact_name_id: otherContactId })).toMatchObject({ ok: true });
     expect(await ticketRow(ticketId)).toMatchObject({ client_id: otherClientId, contact_name_id: otherContactId });
+  }, HOOK_TIMEOUT);
+});
+
+// A real narrowing bundle (not a seat) that keeps an MSP user off the ticket's board. Legacy `updateTicket` and the REST
+// service judged the stored row not at all (the REST controller's own hook does that), and still do; the ticket screen
+// save has always refused. The seat work adds nothing for this user on any of them: the outcomes are origin/main's.
+describe('control: an MSP user a narrowing bundle keeps off the ticket\'s board gets the outcomes they always did', () => {
+  let bundleId: string;
+  beforeAll(async () => {
+    const created = await createAuthorizationBundle(db, { tenant: tenant(), name: `S21 board narrowing ${randomUUID()}`, actorUserId: mspUser.user_id });
+    bundleId = created.bundleId;
+    for (const action of ['read', 'update']) {
+      await upsertBundleRule(db, { tenant: tenant(), bundleId, revisionId: created.revisionId, resourceType: 'ticket', action,
+        templateKey: 'selected_boards', config: { selectedBoardIds: [randomUUID()] }, actorUserId: mspUser.user_id });
+    }
+    await publishBundleRevision(db as any, { tenant: tenant(), bundleId, revisionId: created.revisionId, actorUserId: mspUser.user_id });
+    await createBundleAssignment(db, { tenant: tenant(), bundleId, targetType: 'user', targetId: mspUser.user_id, actorUserId: mspUser.user_id });
+  }, HOOK_TIMEOUT);
+
+  afterAll(async () => {
+    const t = (table: string) => tenantDb(db, tenant()).table(table);
+    await t('authorization_bundle_assignments').where({ bundle_id: bundleId }).delete();
+    await t('authorization_bundle_rules').where({ bundle_id: bundleId }).delete();
+    await t('authorization_bundles').where({ bundle_id: bundleId }).update({ published_revision_id: null });
+    await t('authorization_bundle_revisions').where({ bundle_id: bundleId }).delete();
+    await t('authorization_bundles').where({ bundle_id: bundleId }).delete();
+  }, HOOK_TIMEOUT);
+
+  it.each([
+    ['the ticket form update action', editVia['the ticket form update action'], true],
+    ['the REST service', editVia['the REST service'], true],
+    ['the ticket screen save', editVia['the ticket screen save'], false],
+  ] as const)('%s', async (_name, edit, succeeds) => {
+    const ticketId = await insertTicket(db, fixture);
+    const outcome = await edit(mspUser, ticketId, { title: 'Edited under a narrowing bundle' });
+    expect(outcome.ok, JSON.stringify(outcome)).toBe(succeeds);
+  }, HOOK_TIMEOUT);
+});
+
+// Statement count for a non-seat update. The ticket screen save is held by hotPathQueryBudget's `ticket.update` step
+// (16 statements, unchanged). For legacy `updateTicket` and the REST service the seat gate stops at the cached tenant
+// probe and the subject's facts for a user no resolver governs: it never loads the policy snapshot (bundle rules) or
+// evaluates the stored row, which is what the earlier full-authorization version did.
+describe('control: the seat gate adds no authorization evaluation for a non-seat update', () => {
+  it.each([
+    ['the ticket form update action', editVia['the ticket form update action']],
+    ['the REST service', editVia['the REST service']],
+  ] as const)('%s loads no policy snapshot, only the tenant probe', async (_name, edit) => {
+    const ticketId = await insertTicket(db, fixture);
+    const statements: string[] = [];
+    const record = (query: { sql: string }) => statements.push(query.sql);
+    db.on('query', record);
+    try {
+      expect(await edit(mspUser, ticketId, { title: 'Counted' })).toMatchObject({ ok: true });
+    } finally {
+      db.removeListener('query', record);
+    }
+    // The one statement that touches bundle tables is the tenant probe (`publishedAssignments`), not a snapshot load.
+    const bundleReads = statements.filter((sql) => /authorization_bundle/.test(sql));
+    expect(bundleReads).toHaveLength(1);
+    expect(bundleReads[0]).toContain('publishedAssignments');
   }, HOOK_TIMEOUT);
 });

@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
-import { isClientUserType, type ITicket, type IUserWithRoles } from '@alga-psa/types';
-import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import { type ITicket, type IUserWithRoles } from '@alga-psa/types';
+import { assertRecordCreateAllowed, resolverGovernedEvaluation } from '@alga-psa/authorization/recordCreateAuthorization';
 import type { SubjectUserInput } from '@alga-psa/authorization/subject';
 import { authorizeTicketRecordAccess, toTicketAuthorizationRecord, type TicketProposedPlacement, type TicketRecordRow } from '@alga-psa/authorization/ticketRecordAuthorization';
 
@@ -26,9 +26,10 @@ function ticketReferences(record: { contactId?: string | null }) {
 }
 
 /**
- * The update counterpart of {@link assertTicketCreateAllowed}, for a write path that does not already pass through
- * `authorizeTicketRecordAccess`: the ticket as the write leaves it must stay where a scoped subject (a co-managed
- * seat technician) may work, as well as the ticket as it is stored. A no-op for everyone no built-in rule resolver governs.
+ * The update counterpart of {@link assertTicketCreateAllowed}, for a write path whose own authorization judges the
+ * stored row only: for a scoped subject (a co-managed seat technician), the stored ticket and the ticket as the write
+ * leaves it must both be where the subject may work. Returns before any kernel evaluation, and adds no rule, for
+ * every subject no built-in rule resolver governs.
  */
 export async function assertTicketUpdateAllowed(
   trx: Knex.Transaction,
@@ -37,7 +38,9 @@ export async function assertTicketUpdateAllowed(
   current: TicketRecordRow,
   proposed: TicketProposedPlacement,
 ): Promise<void> {
-  // Only an internal principal can be a scoped subject; a portal principal is judged by its own visibility rules elsewhere.
-  if (isClientUserType(user.user_type)) return;
+  const governed = await resolverGovernedEvaluation(trx, {
+    tenant, user, resourceType: 'ticket', action: 'update', record: toTicketAuthorizationRecord(current as Partial<ITicket>),
+  });
+  if (!governed) return;
   await authorizeTicketRecordAccess({ trx, tenant, user: user as IUserWithRoles, ticketId: current.ticket_id, action: 'update', ticketRow: current, proposed });
 }

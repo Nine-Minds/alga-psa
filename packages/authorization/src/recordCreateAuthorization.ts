@@ -102,6 +102,25 @@ export function isRecordCreateDeniedError(error: unknown): error is RecordCreate
 }
 
 /**
+ * The one "is this subject governed by a built-in rule resolver (a co-managed seat technician)?" gate, shared by every
+ * write check that only a governed subject is held to. Returns the subject's evaluation input for `record`, or null for
+ * everyone else. Neutral: a client principal, or a tenant the cached probe says no resolver has a subject in, returns
+ * before the subject is loaded, and a subject no registered resolver applies to returns before any rule is read.
+ */
+export async function resolverGovernedEvaluation(
+  conn: Knex | Knex.Transaction,
+  input: { tenant: string; user: SubjectUserInput; resourceType: string; action: string; record: AuthorizationRecord; requestCache?: AuthorizationRequestCache },
+) {
+  if (isClientUserType(input.user.user_type)) return null;
+  const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
+  const tenantScope = await probeTenantAuthorizationScope(conn, input.tenant, requestCache);
+  if (tenantScope.resolverSubjects === false) return null;
+  const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
+  const evaluation = { subject, resource: { type: input.resourceType, action: input.action }, record: input.record, requestCache, knex: conn };
+  return resolveAppliedBuiltinResolvers(evaluation).length > 0 ? evaluation : null;
+}
+
+/**
  * Throws `RecordCreateDeniedError` (`Permission denied: Cannot create <label>`) when the subject may not create the
  * candidate record, or, for a subject a built-in rule resolver governs (a co-managed seat technician), when a row the
  * candidate points at (`references`: a ticket's contact) does not belong to the candidate's own client. The reference
@@ -117,12 +136,11 @@ export async function assertRecordCreateAllowed(
   if (!decision.allowed) throw new RecordCreateDeniedError(input.resourceType, label);
 
   const references = (input.references ?? []).filter((reference) => reference.id);
-  if (references.length === 0 || typeof input.record === 'function' || isClientUserType(input.user.user_type)) return;
-  const tenantScope = await probeTenantAuthorizationScope(conn, input.tenant, requestCache);
-  if (tenantScope.resolverSubjects === false) return;
-  const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
-  const evaluation = { subject, resource: { type: input.resourceType, action: 'create' }, record: input.record, requestCache, knex: conn };
-  if (resolveAppliedBuiltinResolvers(evaluation).length === 0) return;
+  if (references.length === 0 || typeof input.record === 'function') return;
+  const governed = await resolverGovernedEvaluation(conn, {
+    tenant: input.tenant, user: input.user, resourceType: input.resourceType, action: 'create', record: input.record, requestCache,
+  });
+  if (!governed) return;
   for (const reference of references) {
     const row = await tenantDb(conn, input.tenant).table(reference.table)
       .where(reference.idColumn, reference.id as string).first(reference.clientColumn);
