@@ -9,13 +9,13 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
-import { recordTicketAssigneeChange } from '@alga-psa/db';
+import { recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
 } from '../lib/commentAudience';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
-import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -1178,7 +1178,11 @@ export class TicketModel {
     };
 
     // Human-work guard: a ticket's primary assignee must be an active internal user.
-    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to]);
+    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to], {
+      kind: 'ticket_draft',
+      clientId: dbData.client_id,
+      boardId: dbData.board_id,
+    });
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
@@ -1458,9 +1462,13 @@ export class TicketModel {
 
     // Human-work guard: validate assigned_to only when this write changes it, so legacy
     // references (e.g. a former agent user) never block unrelated edits.
-    if ('assigned_to' in updateData && updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+    const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
+    const reassigning = 'assigned_to' in updateData && updateData.assigned_to !== undefined
+      && updateData.assigned_to !== currentTicket.assigned_to;
+    if (reassigning && updateData.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId, pending: pendingPlacement });
     }
+    await assertTicketMoveKeepsSeatsInScope(trx, tenant, ticketId, pendingPlacement, reassigning ? updateData.assigned_to : undefined);
 
     // Update the ticket
     const [updatedTicket] = await db.table('tickets')
@@ -1479,6 +1487,11 @@ export class TicketModel {
     if ('assigned_to' in updateData && (updateData.assigned_to ?? null) !== (currentTicket.assigned_to ?? null)) {
       // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
       await recordTicketAssigneeChange(trx, tenant, ticketId);
+    }
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
     }
 
     // Publish update event if publisher provided
@@ -1612,6 +1625,11 @@ export class TicketModel {
 
     // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
     await recordTicketAssigneeChange(trx, tenant, ticketId);
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if (updatedTicket && (await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
+    }
 
     return updatedTicket;
   }

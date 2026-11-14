@@ -7,6 +7,7 @@ import type {
 import { RequestLocalAuthorizationCache } from './kernel/requestCache';
 import { matchRulesForAction } from './kernel/actionAliases';
 import { closedBundlesNotNaming } from './kernel/closedBaseline';
+import { builtinResolversRestrict } from './kernel/builtinRuleResolvers';
 import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import {
   compileResourceReadAuthorizationSql,
@@ -50,9 +51,10 @@ export async function resolveNarrowedReadScope(
   const action = input.action ?? 'read';
   const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
 
-  // Fast path: no published assignment in the tenant, so no subject has a bundle rule.
+  // Fast path: no published assignment in the tenant, so no subject has a bundle rule, and no built-in resolver
+  // (a co-managed seat, say) has a subject here either. The probe answers both in the one statement.
   const tenantScope = await probeTenantAuthorizationScope(conn, input.tenant, requestCache);
-  if (!tenantScope.publishedAssignments) return null;
+  if (!tenantScope.publishedAssignments && tenantScope.resolverSubjects === false) return null;
 
   // A fault in either load propagates: a scope that cannot be resolved must not read as "unrestricted".
   const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
@@ -65,7 +67,8 @@ export async function resolveNarrowedReadScope(
 
   const narrows =
     matchRulesForAction(bundleRules, input.resourceType, action).length > 0 ||
-    closedBundlesNotNaming(bundleRules, input.resourceType, action).length > 0;
+    closedBundlesNotNaming(bundleRules, input.resourceType, action).length > 0 ||
+    builtinResolversRestrict({ subject, resource: { type: input.resourceType, action } });
   return narrows ? { subject, bundleRules } : null;
 }
 

@@ -16,7 +16,11 @@ import {
   type BlockNoteBlock,
 } from '@alga-psa/jobs/handler-utils/kbImportBlocks';
 import { ListOptions } from '../controllers/types';
-import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import {
+  canMutateKnowledgeBaseArticles,
+  resolveKnowledgeBaseReadScope,
+} from '@alga-psa/authorization/knowledgeBaseReadAuthorization';
 import type { CreateKbArticleData, UpdateKbArticleData, UpdateKbArticleContentData } from '../schemas/kbArticle';
 
 const KB_ARTICLE_SELECT_COLUMNS = [
@@ -133,7 +137,22 @@ function convertApiMarkdown(content: string): BlockNoteBlock[] {
 // LEVERAGE: pattern kb-action-vs-rest-service — this service re-implements every KB write (create, update, publish,
 // archive) that kbArticleModel/kbArticleActions already implement; the model should be the single writer and both
 // surfaces thin adapters.
+/** The identity the kernel decides a request by: the user the transport loaded, else the id it authenticated. */
+const subjectOf = (context: ServiceContext) => context.user ?? { user_id: context.userId, user_type: 'internal' };
+
 export class KbArticleService extends BaseService<any> {
+  /** Narrow a query over `kb_articles` (as `alias`) to the articles the caller may read. No clause for an unnarrowed caller. */
+  private async applyReadScope(knex: Knex, context: ServiceContext, query: Knex.QueryBuilder, alias: string): Promise<void> {
+    (await resolveKnowledgeBaseReadScope(knex, context.tenant, subjectOf(context)))?.apply(query, alias);
+  }
+
+  /** Refuses a write by a subject whose rules do not let them change articles (a co-managed seat technician). */
+  private async assertMayWrite(knex: Knex, context: ServiceContext, action: 'create' | 'update' | 'delete'): Promise<void> {
+    if (!(await canMutateKnowledgeBaseArticles(knex, context.tenant, subjectOf(context), action))) {
+      throw new ForbiddenError('Permission denied: Cannot change knowledge base articles');
+    }
+  }
+
   /**
    * Runs a KB write in one transaction. Callers lock the kb_articles row with
    * forUpdate() before changing status/audience, then re-derive visibility.
@@ -143,7 +162,10 @@ export class KbArticleService extends BaseService<any> {
     work: (trx: Knex.Transaction, txContext: ServiceContext) => Promise<T>,
   ): Promise<T> {
     const db = await this.getDbForContext(context);
-    return withTransaction(db, (trx) => work(trx, { ...context, db: trx }));
+    return withTransaction(db, async (trx) => {
+      await this.assertMayWrite(trx, context, 'update');
+      return work(trx, { ...context, db: trx });
+    });
   }
 
   constructor() {
@@ -174,8 +196,11 @@ export class KbArticleService extends BaseService<any> {
         'd.document_name',
       ]);
     db.tenantJoin(dataQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+    await this.applyReadScope(knex, context, dataQuery, 'ka');
 
     let countQuery = this.buildTenantScopedQuery(knex, context);
+    // The count query is over the bare table, so its audience column is `kb_articles.audience`.
+    await this.applyReadScope(knex, context, countQuery, 'kb_articles');
 
     // Apply filters
     if (filters.status) {
@@ -241,6 +266,8 @@ export class KbArticleService extends BaseService<any> {
       ]);
     db.tenantJoin(articleQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
     db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+
+    await this.applyReadScope(knex, context, articleQuery, 'ka');
 
     const article = await articleQuery
       .andWhere('ka.article_id', id)
@@ -413,6 +440,7 @@ export class KbArticleService extends BaseService<any> {
 
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
+    await this.assertMayWrite(knex, context, 'delete');
 
     const article = await this.buildTenantScopedQuery(knex, context)
       .where('article_id', id)
@@ -507,6 +535,7 @@ export class KbArticleService extends BaseService<any> {
     const articleQuery = db.table('kb_articles as ka')
       .select({ block_data: 'dbc.block_data' });
     db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+    await this.applyReadScope(knex, context, articleQuery, 'ka');
 
     const article = await articleQuery
       .andWhere('ka.article_id', id)
@@ -532,6 +561,7 @@ export class KbArticleService extends BaseService<any> {
 
   async updateContent(id: string, data: UpdateKbArticleContentData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+    await this.assertMayWrite(knex, context, 'update');
 
     const article = await this.buildTenantScopedQuery(knex, context)
       .where('article_id', id)

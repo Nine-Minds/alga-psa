@@ -1,5 +1,6 @@
 'use client';
 
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 import { useCallback, useMemo, useState } from 'react';
 import { AlertCircle, ExternalLink, Loader2, Monitor, Terminal } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
@@ -34,7 +35,13 @@ function connectionLabel(type: AssetRemoteConnectionType, t: (key: string) => st
   return t(`remoteAccess.connectionTypes.${type}`);
 }
 
-export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '', hasTemplateLinks = false, iconOnly = false, surface = 'asset-header' }: RemoteAccessButtonProps) {
+/** Not rendered at all when the server's seat authority closes remote access to the signed-in user. */
+export function RemoteAccessButton(props: RemoteAccessButtonProps) {
+  const { canRemoteAccess } = useAssetSurfaceControls();
+  return canRemoteAccess ? <RemoteAccessButtonControl {...props} /> : null;
+}
+
+function RemoteAccessButtonControl({ asset, variant = 'default', size = 'sm', className = '', hasTemplateLinks = false, iconOnly = false, surface = 'asset-header' }: RemoteAccessButtonProps) {
   const { t } = useTranslation('msp/assets');
   const { rmm } = useAssetCrossFeature();
   const [availableTypes, setAvailableTypes] = useState<AssetRemoteConnectionType[] | null>(null);

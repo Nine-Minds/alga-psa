@@ -65,6 +65,12 @@ const makeQuery = (table: string) => {
 
 const hasPermissionMock = vi.fn(async () => true);
 
+// Staging an import is not what is under test; the kernel's say on KB writes has its own integration test (T040).
+vi.mock('@alga-psa/authorization/knowledgeBaseReadAuthorization', () => ({
+  canMutateKnowledgeBaseArticles: vi.fn(async () => true),
+  resolveKnowledgeBaseReadScope: vi.fn(async () => null),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
     (fn: any) =>

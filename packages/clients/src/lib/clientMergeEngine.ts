@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { countLiveCoManagedWorkspacesForClient } from '@alga-psa/core/config/deletion';
+import { countLiveCoManagedSeatArrangementsForClient, countLiveCoManagedWorkspacesForClient } from '@alga-psa/core/config/deletion';
 import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import { lockTenantBilling } from '@alga-psa/shared/billingClients/billingMutationLock';
@@ -239,8 +239,7 @@ async function readClientFacts(
     mergedIntoClientId: (row.merged_into_client_id as string | null) ?? null,
     isTenantDefault: Boolean(tenantDefault),
     hasLiveCoManagement: await countLiveCoManagedWorkspacesForClient(trx, { tenant, entityId: clientId }) > 0 ||
-      Boolean(await scoped(trx, tenant, 'co_managed_seat_arrangements')
-        .where({ client_id: clientId, state: 'active' }).first('arrangement_id')),
+      await countLiveCoManagedSeatArrangementsForClient(trx, { tenant, entityId: clientId }) > 0,
   };
 }
 

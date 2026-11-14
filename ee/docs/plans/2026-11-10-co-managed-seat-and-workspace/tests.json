@@ -111,7 +111,7 @@
   {
     "id": "T013",
     "description": "DB integration: revoking a seat deactivates the user and frees the seat; converting a seat technician to an MSP user is refused at the MSP seat limit and succeeds with a free seat; assigning a non-seat role or a team to a seat technician is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023",
@@ -181,7 +181,7 @@
   {
     "id": "T021",
     "description": "Query budget: native ticket list, ticket detail, comment write and time-entry paths for a tenant not served run the same statement count as on main.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -256,7 +256,7 @@
   {
     "id": "T029",
     "description": "DB integration: assigning a seat technician is accepted on an own-client in-scope ticket and refused on another client's ticket, an out-of-scope board and a task of an unshared project; the technician's picker lists no MSP user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F052"
@@ -351,7 +351,7 @@
   {
     "id": "T039",
     "description": "DB integration: a seat technician reads own-client assets with inventory fields and no billing profile or purchase cost, another client's asset answers not found, and no remote or script action is reachable; linking an asset to a ticket and creating a ticket from an asset succeed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074",
       "F075"
@@ -360,7 +360,7 @@
   {
     "id": "T040",
     "description": "DB integration: a seat technician reads client-visible documents and client-audience articles, and is refused an internal-only document, an internal-audience article and any stored credential.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F077",
@@ -450,7 +450,7 @@
   {
     "id": "T050",
     "description": "DB integration: client delete, merge and inactivate are refused while an arrangement is live; a contract test finds every arrangement table in the client-owned roster; changing a ticket's client or board clears the technician assignee and returns responsibility to the MSP.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093",
       "F094"

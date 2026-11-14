@@ -8,6 +8,7 @@ interface KbArticleSearchRow {
   article_id: string;
   document_id: string;
   document_name: string;
+  audience?: string | null;
   content: string | null;
   updated_at?: Date | string | null;
   created_at?: Date | string | null;
@@ -31,6 +32,9 @@ function toSearchDoc(tenant: string, row: KbArticleSearchRow): SearchDoc {
     title: row.document_name,
     body,
     url: `/msp/knowledge-base/${row.article_id}`,
+    // The audience rides with the row so a reader the kernel narrows to external audiences is answered in the index
+    // query itself (see `kbAudienceIndexSql`). A row without one is hidden from such a reader.
+    metadata: { ...(row.audience ? { audience: row.audience } : {}) },
     acl: {
       requiredPermission: 'kb:read',
     },
@@ -46,6 +50,7 @@ function baseKbArticleQuery(knex: Knex, tenant: string) {
     .select(
       'ka.article_id',
       'ka.document_id',
+      'ka.audience',
       'ka.created_at',
       'ka.updated_at',
       'd.document_name',

@@ -133,6 +133,14 @@ interface PendingCommentDelete {
 const LIVE_UPDATE_REFETCH_DEBOUNCE_MS = 200;
 const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
+/**
+ * A save that moves the ticket (its client or board) can be settled further by the server in the
+ * same write: a seat technician who may no longer work the ticket is unassigned. After such a save
+ * the screen re-reads the ticket instead of trusting its own merge of what it sent.
+ */
+const movesTicket = (fields: Iterable<string>): boolean =>
+    [...fields].some((field) => field === 'client_id' || field === 'board_id');
+
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
 
@@ -2921,6 +2929,10 @@ const handleClose = () => {
                 // individual-save fallback below relies on handleSelectChange,
                 // which bumps per field on its own.
                 setActivityLogRefreshKey((value) => value + 1);
+                // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+                if (movesTicket(Object.keys(changes))) {
+                    await refreshTicketSnapshot(Object.keys(changes));
+                }
                 onSaved?.();
             }
             return success;
@@ -2950,6 +2962,10 @@ const handleClose = () => {
                 }));
                 setUpdatedByUser(localActor);
                 setActivityLogRefreshKey((value) => value + 1);
+                // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+                if (movesTicket(Object.keys(ticketChanges))) {
+                    await refreshTicketSnapshot(Object.keys(ticketChanges));
+                }
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
                 }
@@ -2975,6 +2991,7 @@ const handleClose = () => {
         handleSelectChange,
         localActor,
         onBatchTicketUpdate,
+        refreshTicketSnapshot,
         runWithPendingLiveFields,
         ticket.ticket_id,
     ]);
@@ -3160,6 +3177,8 @@ const handleClose = () => {
             setContacts(contactsData || []);
             setLocations(locationData || []);
             setContactInfo(null); // Reset contact info
+            // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+            await refreshTicketSnapshot(['client_id', 'contact_name_id', 'location_id']);
 
             setIsChangeClientDialogOpen(false);
             toast.success(t('messages.clientUpdated'));

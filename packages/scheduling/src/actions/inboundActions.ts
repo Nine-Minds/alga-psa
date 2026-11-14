@@ -304,7 +304,7 @@ async function getOrCreateTimeSheetForWorkDate(
   }
 
   // Human-work guard (R5.3): never create a time sheet for a non-internal user.
-  await assertHumanWorkAssignee(trx, tenant, [userId]);
+  await assertHumanWorkAssignee(trx, tenant, [userId], { kind: 'unscoped', surface: 'time_sheet' });
   const [created] = await scopedDb.table('time_sheets')
     .insert({
       tenant,
