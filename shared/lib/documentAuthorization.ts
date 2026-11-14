@@ -139,7 +139,7 @@ async function resolveDocumentAuthorizationRecords(
     ticketIds.size > 0
       ? tenantScopedTable(trx, 'tickets', tenant)
           .whereIn('ticket_id', Array.from(ticketIds))
-          .select<{ ticket_id: string; client_id: string | null }[]>('ticket_id', 'client_id')
+          .select<{ ticket_id: string; client_id: string | null; board_id: string | null }[]>('ticket_id', 'client_id', 'board_id')
       : Promise.resolve([]),
     projectTaskIds.size > 0
       ? tenantScopedTable(trx, 'project_tasks as pt', tenant)
@@ -177,8 +177,10 @@ async function resolveDocumentAuthorizationRecords(
     contactClientById.set(row.contact_name_id, row.client_id ?? null);
   }
   const ticketClientById = new Map<string, string | null>();
+  const ticketBoardById = new Map<string, string | null>();
   for (const row of ticketClientRows) {
     ticketClientById.set(row.ticket_id, row.client_id ?? null);
+    ticketBoardById.set(row.ticket_id, row.board_id ?? null);
   }
   const projectTaskClientById = new Map<string, string | null>();
   for (const row of projectTaskClientRows) {
@@ -280,6 +282,11 @@ async function resolveDocumentAuthorizationRecords(
       clientId,
       teamIds: Array.from(new Set(teamAssociations.map((association) => association.entity_id))),
       is_client_visible: document.is_client_visible === true,
+      // The tickets the document is attached to, for the seat resolver's record guards. A ticket that no longer
+      // exists is not listed, as the SQL facet (`applyAttachedTickets`) joins to tickets.
+      attachedTickets: ticketAssociations.flatMap((association) => ticketClientById.has(association.entity_id)
+        ? [{ clientId: ticketClientById.get(association.entity_id) ?? null, boardId: ticketBoardById.get(association.entity_id) ?? null }]
+        : []),
     });
   }
 
@@ -376,6 +383,7 @@ export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
         id: document.document_id,
         ownerUserId: document.created_by ?? null,
         is_client_visible: document.is_client_visible === true,
+        attachedTickets: [],
       };
 
       // LEVERAGE: friction record-single-client — AuthorizationRecord carries one clientId, so "any client" has to be
@@ -486,6 +494,28 @@ export function createDocumentRelationshipSqlAdapter(options: DocumentSqlAdapter
 
   return {
     clientVisibleColumn: `${d}.is_client_visible`,
+    applyAttachedTickets(builder, scope, quantifier) {
+      // In scope = the ticket's client AND board are listed. `coalesce` makes a ticket with no board outside the
+      // scope instead of unknown, which is how the JS facet reads it. Arrays, so an empty list matches nothing.
+      const inScope = 'coalesce(t.client_id::text = any(?::text[]) and t.board_id::text = any(?::text[]), false)';
+      const params = [scope.clientIds, scope.boardIds];
+      const exists = (negate: boolean) => (this_: Knex.QueryBuilder) => {
+        const attached = function attachedTicket(this: Knex.QueryBuilder) {
+          this.select(this.client.raw('1'))
+            .from('document_associations as scope_dt')
+            .join('tickets as t', function ticketJoin(this: Knex.JoinClause) {
+              this.on('t.tenant', 'scope_dt.tenant').andOn('t.ticket_id', 'scope_dt.entity_id');
+            })
+            .whereRaw('?? = ??', ['scope_dt.tenant', `${d}.tenant`])
+            .whereRaw('?? = ??', ['scope_dt.document_id', `${d}.document_id`])
+            .where('scope_dt.entity_type', 'ticket')
+            .whereRaw(negate ? `not ${inScope}` : inScope, params);
+        };
+        if (negate) this_.whereNotExists(attached);
+        else this_.whereExists(attached);
+      };
+      exists(quantifier === 'every')(builder);
+    },
     applyClients: parentVisibleViaChildClients(
       { table: 'document_associations', parentKeyColumn: 'document_id', alias: 'scope_da' },
       { tenantRef: `${d}.tenant`, keyRef: `${d}.document_id` }

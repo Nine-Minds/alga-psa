@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import type { AuthorizationEvaluationInput, AuthorizationSubject, RelationshipTemplateKey, ScopeConstraint } from './contracts';
 import { matchRulesForAction } from './actionAliases';
+import type { RecordGuardKey } from './recordGuards';
 
 /**
  * Registry of package-registered built-in rule resolvers (F012).
@@ -25,8 +26,8 @@ export interface BuiltinResolverRule {
   action: string;
   /** Relationship template that must hold for a record (AND semantics, as for bundle rules). */
   templateKey?: RelationshipTemplateKey | null;
-  /** Record guard. Only `client_visible_only` is evaluated for resolver rules (JS and SQL). */
-  constraintKey?: 'client_visible_only' | null;
+  /** Record guard: `client_visible_only`, or one of the record guards of `./recordGuards` (JS and SQL). */
+  constraintKey?: 'client_visible_only' | RecordGuardKey | null;
   constraints?: ScopeConstraint[];
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
