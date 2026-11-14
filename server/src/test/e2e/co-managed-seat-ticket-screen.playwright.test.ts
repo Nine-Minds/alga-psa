@@ -6,8 +6,8 @@
  * request. The MSP admin opening the same ticket is the control: the affordances are there for them.
  *
  * STATUS: written, type-checked, NOT RUN. It needs the app server and the e2e database, which this slice was
- * built without starting. It also needs `release-v2-0-feature` and the `co-managed-seat` capability on for the
- * test tenant (the seat set is never produced otherwise; set FORCE_CAPABILITIES for the server under test).
+ * built without starting. The reduced set follows the seat principal alone (it fails closed), so no release
+ * flag is needed to see the reduction; seeding the seat rows is enough.
  * The server-side halves are covered by tests that did run:
  *   packages/tickets/src/lib/__tests__/ticketPreloads.test.ts    a gated loader is never called
  *   server/src/lib/tickets/ticketViewerCapabilities.test.ts       native / seat / flag-off resolution

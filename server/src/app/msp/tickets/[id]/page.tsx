@@ -132,7 +132,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
   try {
     // The viewer's capability set, derived once. It gates every preload below and is handed to the client
     // data source, so what the server reads and what the screen shows cannot disagree.
-    const capabilities = await getViewerTicketCapabilities(user.tenant);
+    const capabilities = await getViewerTicketCapabilities();
 
     // Gated reads the first paint awaits. A capability that is off never starts its loader.
     const firstPaintPreloads = runGatedPreloads(capabilities, {
@@ -156,7 +156,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       displaySettings,
       tags,
     ] = await Promise.all([
-      getConsolidatedTicketData(id),
+      getConsolidatedTicketData(id, capabilities),
       firstPaintPreloads.surveySummary,
       getTicketLayoutPreference().catch(() => null),
       getTicketChecklistItems(id).catch(() => null),

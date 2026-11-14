@@ -1,4 +1,3 @@
-import { admits } from '@alga-psa/core/capability';
 import { CO_MANAGED_SEAT_PRINCIPAL_KIND } from '@alga-psa/co-managed/seatAuthority';
 import {
   NATIVE_TICKET_CAPABILITIES,
@@ -16,26 +15,23 @@ const TICKET_CAPABILITIES_BY_PRINCIPAL_KIND: Readonly<Record<string, Readonly<Ti
 });
 
 /**
- * Pure decision. `seatCapabilityAdmitted` is the `co-managed-seat` release capability (behind
- * `release-v2-0-feature`): with it off no viewer is ever given the seat set.
+ * Pure decision. A principal whose kind has a reduced set always gets it: the release flag decides whether
+ * seats exist, never how much of the screen an existing seat technician may see, so it fails closed.
  */
 export function resolveTicketViewerCapabilities(input: {
   surfaceKind: string | null | undefined;
-  seatCapabilityAdmitted: boolean;
 }): Readonly<TicketCapabilities> {
-  if (!input.surfaceKind || !input.seatCapabilityAdmitted) return NATIVE_TICKET_CAPABILITIES;
+  if (!input.surfaceKind) return NATIVE_TICKET_CAPABILITIES;
   return Object.prototype.hasOwnProperty.call(TICKET_CAPABILITIES_BY_PRINCIPAL_KIND, input.surfaceKind)
     ? TICKET_CAPABILITIES_BY_PRINCIPAL_KIND[input.surfaceKind]
     : NATIVE_TICKET_CAPABILITIES;
 }
 
 /**
- * The signed-in viewer's ticket capabilities, derived once per request from the S12 principal. An ordinary
- * user (no principal kind) never touches the capability gate, so their request is unchanged.
+ * The signed-in viewer's ticket capabilities, derived once per request from the S12 principal. No release
+ * capability is consulted: an ordinary user is native, a seat technician is reduced.
  */
-export async function getViewerTicketCapabilities(tenant: string): Promise<Readonly<TicketCapabilities>> {
+export async function getViewerTicketCapabilities(): Promise<Readonly<TicketCapabilities>> {
   const principal = await getCurrentProductPrincipal();
-  if (!principal.surfaceKind) return NATIVE_TICKET_CAPABILITIES;
-  const decision = await admits('co-managed-seat', tenant);
-  return resolveTicketViewerCapabilities({ surfaceKind: principal.surfaceKind, seatCapabilityAdmitted: decision.admitted });
+  return resolveTicketViewerCapabilities({ surfaceKind: principal.surfaceKind });
 }
