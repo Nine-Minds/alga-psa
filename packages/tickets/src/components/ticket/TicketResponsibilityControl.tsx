@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -31,6 +31,13 @@ export default function TicketResponsibilityControl({ ticketId, state: initialSt
   const { t } = useTranslation('features/tickets');
   const { responsibility } = useTicketDataSource();
   const [state, setState] = useState<TicketResponsibilityState | null>(initialState ?? null);
+  // The screen re-fetches (refresh, live update after the seat technician hands the ticket back): follow the
+  // prop whenever what it says changes. Between prop updates only the action's own result overrides it.
+  const technicianKey = (initialState?.technicians ?? []).map((technician) => technician.user_id).join(',');
+  useEffect(() => {
+    setState(initialState ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the content of the prop, not its identity
+  }, [initialState?.revision, initialState?.responsibility, technicianKey, initialState == null]);
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState('');
   const [technicianId, setTechnicianId] = useState('');

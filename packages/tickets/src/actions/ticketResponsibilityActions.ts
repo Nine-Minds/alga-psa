@@ -7,6 +7,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveTicketResponsibility, TicketResponsibilityError, type TicketResponsibilityState } from '../lib/ticketResponsibility';
+import { assertTicketReadable } from './optimizedTicketActions';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 /** Each refusal of a handoff, as the user is told it. The key is translated by the caller's locale. */
@@ -35,7 +36,7 @@ export interface HandTicketToClientItInput {
 
 /**
  * MSP staff hand a ticket of a seat-arrangement client to client IT. Requires ticket update
- * permission and read access to the ticket; the provider's command refuses everyone who is not MSP
+ * permission and record-level read access to the ticket (`assertTicketReadable`); the provider's command refuses everyone who is not MSP
  * staff, a board the arrangement does not share, and a stale revision. Returns the ticket's
  * responsibility as it now stands, so the chip refreshes from the same answer.
  */
@@ -55,6 +56,11 @@ export const handTicketToClientIt = withAuth(async (
       }
       return resolveAuthorizationSubject(trx, { tenant, user, requestCache: new RequestLocalAuthorizationCache() });
     });
+    // Record-level authorization, as on the ticket screen: a ticket the caller cannot read is neither handed
+    // off nor confirmed to exist.
+    const readable = await assertTicketReadable(input.ticketId);
+    if (readable !== true) return readable;
+
     const provider = await resolveTicketResponsibility({ tenant, subject });
     if (!provider) return actionError('Handing tickets to client IT is not available.', 'features/tickets:errors.seatHandoff.unavailable');
 

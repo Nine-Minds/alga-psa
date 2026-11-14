@@ -489,6 +489,25 @@ type SafeConsolidatedUser = SafeApiUser; // Pick<IUserWithRoles, AllowlistedUser
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
+/**
+ * Whether the caller may read this specific ticket, by the same record-level authorization the ticket screen
+ * uses (the caller's authorization bundles can hide boards and clients). A ticket the caller cannot read and a
+ * ticket that does not exist answer identically, so a write action that calls this first neither acts on nor
+ * confirms the existence of a ticket outside the caller's reach.
+ */
+export const assertTicketReadable = withAuth(async (user, { tenant }, ticketId: string): Promise<true | TicketActionError> => {
+  if (user.user_type === 'client') {
+    return permissionError('Permission denied: Cannot view ticket');
+  }
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx) => {
+    const ticket = await tenantScopedTable(trx, 'tickets as t', tenant).where({ 't.ticket_id': ticketId }).first();
+    const authorizationContext = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+    const [readable] = ticket ? await authorizeTicketReads(trx, authorizationContext, [ticket]) : [];
+    return readable ? (true as const) : permissionError('Permission denied: Cannot view ticket');
+  });
+});
+
 export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string): Promise<any> => {
   const {knex: db} = await createTenantKnex();
 

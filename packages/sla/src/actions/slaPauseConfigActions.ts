@@ -3,6 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
+import { shouldSlaBePaused as shouldSlaBePausedForTicket } from '../services/slaPauseService';
 import {
   ISlaSettings,
   IStatusSlaPauseConfig,
@@ -446,52 +447,18 @@ export const shouldSlaBePaused = withAuth(async (
     try {
       const scopedDb = tenantDb(trx, tenant);
 
-      // Get the ticket's current state
       const ticket = await scopedDb.table('tickets')
         .where({ ticket_id: ticketId })
-        .select('status_id', 'response_state')
+        .select('ticket_id')
         .first();
 
       if (!ticket) {
         throw new Error(`Ticket ${ticketId} not found`);
       }
 
-      // Get SLA settings
-      let slaSettings = await scopedDb.table('sla_settings')
-        .first();
-
-      // Use default settings if none exist
-      if (!slaSettings) {
-        slaSettings = {
-          pause_on_awaiting_client: true,
-        };
-      }
-
-      // Check 1: Awaiting client response
-      if (slaSettings.pause_on_awaiting_client && ticket.response_state === 'awaiting_client') {
-        return {
-          paused: true,
-          reason: 'awaiting_client' as SlaPauseReason,
-        };
-      }
-
-      // Check 2: Status-based pause
-      const statusPauseConfig = await scopedDb.table('status_sla_pause_config')
-        .where({ status_id: ticket.status_id })
-        .first();
-
-      if (statusPauseConfig?.pauses_sla) {
-        return {
-          paused: true,
-          reason: 'status_pause' as SlaPauseReason,
-        };
-      }
-
-      // No pause conditions met
-      return {
-        paused: false,
-        reason: null,
-      };
+      // One definition of "should be paused": the service's, which also consults conditions other
+      // packages register (e.g. a ticket with client IT).
+      return await shouldSlaBePausedForTicket(trx, tenant, ticketId);
     } catch (error) {
       if (error instanceof Error && error.message === `Ticket ${ticketId} not found`) {
         throw error;
