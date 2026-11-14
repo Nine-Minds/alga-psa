@@ -38,7 +38,7 @@ import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { recordTicketAssigneeChange } from '@alga-psa/db';
+import { recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -1731,6 +1731,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
+    }
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, id, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
     }
 
       // Get the new status if it was updated

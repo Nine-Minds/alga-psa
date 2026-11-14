@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useIsolatedEventBusModules } from './testing/isolatedEventBusModules';
 
 const mocks = vi.hoisted(() => ({ createClient: vi.fn(), getSecret: vi.fn() }));
 vi.mock('redis', () => ({ createClient: mocks.createClient }));
@@ -9,8 +10,9 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 describe('EventBus correlated request completion', () => {
+  useIsolatedEventBusModules();
+
   afterEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
   });
 
