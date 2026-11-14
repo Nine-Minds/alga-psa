@@ -40,6 +40,12 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (db: any, tenant: string) => ({ table: (name: string) => db(name).where({ tenant }) }),
 }));
 
+// The document read scope: null (nothing narrows the caller) unless a test hands one in.
+const documentReadScopeMock = vi.hoisted(() => vi.fn(async (): Promise<unknown> => null));
+vi.mock('@alga-psa/shared/lib/documentAuthorization', () => ({
+  resolveDocumentReadScope: documentReadScopeMock,
+}));
+
 vi.mock('../lib/documentsHelpers', () => ({
   getContactAvatarUrlsBatchAsync: async () => new Map<string, string | null>(),
 }));
@@ -158,6 +164,23 @@ describe('getClientPulse', () => {
     ]);
 
     consoleError.mockRestore();
+  });
+
+  // A co-managed seat technician reads only some of a client's documents. The documents card counts and names
+  // what the caller's document read scope admits, not every document associated with the client.
+  it('narrows the documents card by the caller\'s document read scope', async () => {
+    const { knex, statements } = recordingKnex(defaultRespond);
+    createTenantKnexMock.mockResolvedValue({ knex });
+    const apply = vi.fn((query: any, alias: string) => query.whereRaw(`${alias}.is_client_visible = true /* scoped */`));
+    documentReadScopeMock.mockResolvedValueOnce({ apply, applyToEntityFolders: vi.fn() });
+
+    const pulse = await getClientPulse(CLIENT_ID) as any;
+
+    expect(pulse.documents).toBeDefined();
+    expect(apply).toHaveBeenCalledWith(expect.anything(), 'd');
+    const documentStatements = statements.filter((sql) => sql.includes('from "documents" as "d"'));
+    expect(documentStatements).toHaveLength(2);
+    for (const sql of documentStatements) expect(sql).toContain('/* scoped */');
   });
 
   it('still fails the whole snapshot when the client itself cannot be read', async () => {
