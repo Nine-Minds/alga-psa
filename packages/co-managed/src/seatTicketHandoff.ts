@@ -255,9 +255,21 @@ function receipt(row: ReceiptRow): CoManagedSeatHandoffReceipt {
  */
 async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManagedSeatHandToClientItRequest): Promise<CoManagedSeatHandoffReceipt> {
   const request = snapshotRequest(input);
-  const requestFingerprint = fingerprint(to, request);
+  const outcome = await db.transaction((trx) => recordHandoff(trx, to, DIRECTIONS[to], request));
+  // After commit and once per handoff: a replay returned the original receipt.
+  if (outcome.recorded) await announceCoManagedSeatHandoff(request.sponsorTenant, outcome.receipt);
+  return outcome.receipt;
+}
 
-  const outcome = await db.transaction(async (trx) => {
+/**
+ * The transition itself, in the caller's transaction, so a command that composes it (ending an
+ * arrangement) commits it with its own writes. Announcing is the caller's, after that commit.
+ */
+async function recordHandoff(
+  trx: Knex.Transaction, to: CoManagedSeatResponsibility, direction: HandoffDirection, request: CoManagedSeatHandToClientItRequest,
+): Promise<{ receipt: CoManagedSeatHandoffReceipt; recorded: boolean }> {
+  const requestFingerprint = fingerprint(to, request);
+  {
     const sponsor = tenantDb(trx, request.sponsorTenant);
     const ticket = await sponsor.table('tickets').where('ticket_id', request.ticketId).forUpdate()
       .first('client_id', 'board_id', 'assigned_to');
@@ -281,8 +293,8 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
     if (work.responsibility === to) throw new CoManagedSeatHandoffError('ALREADY_RESPONSIBLE');
 
     const context: HandoffContext = { sponsor, trx, request, ticket, arrangement };
-    await DIRECTIONS[to].admit(context);
-    const assignedTo = await DIRECTIONS[to].assignee(context);
+    await direction.admit(context);
+    const assignedTo = await direction.assignee(context);
 
     if (assignedTo !== ticket.assigned_to) {
       // LEVERAGE: friction seat-handoff-assignee — the assignee is set on the ticket row directly; the native assignment writer's side effects (events, workflow triggers) are not reachable from a seat command. Notifications are: the handoff is announced after commit and seatNotifications resolves who is told by the assignment and board rules.
@@ -297,10 +309,7 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
       request_fingerprint: requestFingerprint, note: request.note, actor_user_id: request.actorUserId,
       assigned_to: assignedTo }).returning('*');
     return { receipt: receipt(row), recorded: true };
-  });
-  // After commit and once per handoff: a replay returned the original receipt above.
-  if (outcome.recorded) await announceCoManagedSeatHandoff(request.sponsorTenant, outcome.receipt);
-  return outcome.receipt;
+  }
 }
 
 /**
@@ -327,4 +336,55 @@ export function handCoManagedSeatTicketToMsp(db: Knex, input: CoManagedSeatHando
  */
 export function handCoManagedSeatTicketToClientIt(db: Knex, input: CoManagedSeatHandToClientItRequest): Promise<CoManagedSeatHandoffReceipt> {
   return handOff(db, 'client_it', input);
+}
+
+/** What an arrangement ends with: every ticket it holds goes back to the MSP, whoever asked. */
+const ARRANGEMENT_END_DIRECTION: HandoffDirection = {
+  // The caller (the end command) has authorized sponsor administration; there is no technician to ask.
+  async admit() {},
+  assignee: (context) => DIRECTIONS.msp.assignee(context),
+};
+
+export interface CoManagedSeatArrangementReturnRequest {
+  sponsorTenant: string;
+  arrangementId: string;
+  /** The sponsor administrator ending the arrangement; recorded as the actor of each receipt. */
+  actorUserId: string;
+  /** Plain text shared note recorded with each handoff. */
+  note: string;
+}
+
+/** The operation id of one ticket's return at arrangement end: the same on every replay. */
+function arrangementReturnOperationId(arrangementId: string, ticketId: string): string {
+  const hex = createHash('sha256').update(`co-managed-seat-arrangement-end:${arrangementId}:${ticketId}`).digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+/**
+ * Hands every ticket the arrangement's client IT is responsible for back to the MSP, as ordinary
+ * recorded transitions (`client_it` to `msp`, a receipt and a revision each), in the caller's
+ * transaction and while the arrangement is still live. Returns the receipts it recorded.
+ *
+ * Idempotent in the state it moves: a ticket already with the MSP is not selected, and a ticket's
+ * operation id is derived from the arrangement and the ticket, so a replay finds the original
+ * receipt instead of recording a second one. No announcement is made: the technicians are going
+ * away with the arrangement, and the MSP is told by the end command's own result.
+ */
+export async function returnCoManagedSeatArrangementTicketsToMsp(
+  trx: Knex.Transaction, input: CoManagedSeatArrangementReturnRequest,
+): Promise<CoManagedSeatHandoffReceipt[]> {
+  const sponsor = tenantDb(trx, input.sponsorTenant);
+  const held: Array<{ ticket_id: string; revision: number }> = await sponsor.table('co_managed_seat_ticket_work')
+    .where({ arrangement_id: input.arrangementId, responsibility: 'client_it' }).orderBy('ticket_id').select('ticket_id', 'revision');
+  const receipts: CoManagedSeatHandoffReceipt[] = [];
+  for (const work of held) {
+    const request = snapshotRequest({
+      sponsorTenant: input.sponsorTenant, ticketId: work.ticket_id, actorUserId: input.actorUserId,
+      operationId: arrangementReturnOperationId(input.arrangementId, work.ticket_id),
+      expectedRevision: Number(work.revision), note: input.note, technicianUserId: null,
+    });
+    const outcome = await recordHandoff(trx, 'msp', ARRANGEMENT_END_DIRECTION, request);
+    if (outcome.recorded) receipts.push(outcome.receipt);
+  }
+  return receipts;
 }

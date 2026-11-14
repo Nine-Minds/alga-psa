@@ -16,4 +16,5 @@ export * from './actionAliases';
 export * from './closedBaseline';
 export * from './builtinRuleResolvers';
 export * from './candidateRecord';
+export * from './mutationAdmission';
 export * from './recordGuards';

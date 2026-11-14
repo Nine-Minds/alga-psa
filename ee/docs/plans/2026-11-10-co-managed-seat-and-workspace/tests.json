@@ -433,7 +433,7 @@
   {
     "id": "T048",
     "description": "DB integration: ending an arrangement deactivates technicians, releases the allocation once, returns responsibility to the MSP and leaves shared notes readable by MSP staff; a replay changes nothing; reactivating a technician without a live assignment is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091",
       "F095"
@@ -442,7 +442,7 @@
   {
     "id": "T049",
     "description": "DB integration: after grace expires a seat technician's write is refused with the lifecycle error while reads succeed, and an MSP user and a requester on the same ticket are unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]

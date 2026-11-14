@@ -12,6 +12,7 @@ import { ALLOW_ALL_SCOPE, DENY_ALL_SCOPE, intersectAuthorizationScopes } from '.
 import { evaluateBuiltinRuleResolvers } from './builtinResolverEvaluation';
 import { builtinClosedFields } from '../builtinRuleResolvers';
 import { resolveVisibleContactIds } from '../../portal/visibility';
+import { admitMutation } from '../mutationAdmission';
 
 export type BuiltinRelationshipRulesResolver = (
   input: AuthorizationEvaluationInput
@@ -194,6 +195,8 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
   }
 
   async authorizeMutation(input: AuthorizationEvaluationInput): Promise<MutationGuardResult> {
+    // The one principal-level write gate (a lapsed seat technician); throws its own refusal.
+    await admitMutation(input);
     for (const guard of this.mutationGuards) {
       const result = await guard(input);
       if (!result.allowed) {
