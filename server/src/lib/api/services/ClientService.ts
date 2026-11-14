@@ -3,6 +3,7 @@
  * Business logic for client-related operations
  */
 
+import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -347,14 +348,24 @@ export class ClientService extends BaseService<IClient> {
         { taggedType: 'client', ids: clientsWithLogos.map((client) => client.client_id) },
       ]);
 
+      const billingVisible = await this.clientBillingVisible(context, trx);
       return {
-        data: clientsWithLogos.map((client) => ({
-          ...client,
-          display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [],
-        })),
+        data: clientsWithLogos.map((client) => {
+          const row = { ...client, display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [] };
+          return billingVisible ? row : omitClientBillingColumns(row);
+        }),
         total: parseInt(count as string)
       };
     });
+  }
+
+  /**
+   * Whether the caller sees a client's billing columns (clientBillingProjection). Decided like every other
+   * API permission: the effective user and, when acting through a principal, the principal must both hold
+   * it; a context with no user sees none.
+   */
+  private clientBillingVisible(context: ServiceContext, trx: Knex.Transaction): Promise<boolean> {
+    return hasApiContextPermission(context, CLIENT_BILLING_PERMISSION.resource, CLIENT_BILLING_PERMISSION.action, trx);
   }
 
   /**
@@ -392,12 +403,13 @@ export class ClientService extends BaseService<IClient> {
         ]),
       ]);
 
-      return withClientSinceDateString({
+      const row = withClientSinceDateString({
         ...stripLegacyClientTaxId(client),
         logoUrl,
         // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
         display_tags: displayTags.get(displayTagKey('client', id)) ?? [],
       }) as unknown as IClient;
+      return (await this.clientBillingVisible(context, trx)) ? row : omitClientBillingColumns(row);
     });
   }
 

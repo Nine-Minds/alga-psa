@@ -87,7 +87,8 @@ async function createUser(tenantId: string): Promise<string> {
 
 function contextFor(tenantId: string) {
   const userId = uuidv4();
-  return { tenant: tenantId, userId, user: { user_id: userId, user_type: 'internal' } } as any;
+  // Shaped like an authenticated API user: the row carries its tenant, as SafeApiUser does.
+  return { tenant: tenantId, userId, user: { user_id: userId, tenant: tenantId, user_type: 'internal' } } as any;
 }
 
 function service<T>(Ctor: new () => T, tenantId: string): T {

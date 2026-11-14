@@ -40,6 +40,23 @@ export async function hasMspPermission(
   return hasPermissionAsync(user, resource, action, trx);
 }
 
+/**
+ * Several MSP permissions answered from one load of the user's roles (`checkMultiplePermissions`),
+ * in the order asked. A non-MSP user holds none of them.
+ */
+export async function hasMspPermissions(
+  user: IUserWithRoles,
+  checks: ReadonlyArray<{ resource: PermissionResource; action: string }>,
+  trx?: DbConnection
+): Promise<boolean[]> {
+  if (!isMspUser(user)) {
+    return checks.map(() => false);
+  }
+  const module = await import('@alga-psa/auth');
+  const results = await module.checkMultiplePermissions(user, checks.map(({ resource, action }) => ({ resource, action })), trx);
+  return results.map((result) => result.granted);
+}
+
 export async function assertMspPermission(
   user: IUserWithRoles,
   resource: PermissionResource,
