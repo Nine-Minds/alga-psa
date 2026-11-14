@@ -46,6 +46,50 @@ describe('time-source seam coverage (A1)', () => {
     for (const f of files) expect(importsOf(read(f)), f).not.toMatch(/@alga-psa\/co-managed/);
   });
 
+  // The seat (operational) time-entry mode is NOT a time source: it writes natively and is decided from the S12
+  // principal, so it does not travel through the seam. Its field set (`operationalTimeEntryFields`) and service
+  // rule live in @alga-psa/co-managed, and the seam call sites above may not import that package. The exception
+  // is explicit and closed: `lib/timeEntryMode.ts` is the one bridge, and it may import only the Next-free
+  // `@alga-psa/co-managed/timeEntryBillingMode` subpath. Call sites import the bridge, never the package.
+  // `context/TimeEntryModeContext.tsx` imports a TYPE from the same subpath. Anything else that imports
+  // @alga-psa/co-managed anywhere in this package fails below, so a new direct import is still caught.
+  const ALLOWED_CO_MANAGED_IMPORTERS: Record<string, { subpath: string; typeOnly: boolean }> = {
+    'lib/timeEntryMode.ts': { subpath: '@alga-psa/co-managed/timeEntryBillingMode', typeOnly: false },
+    'context/TimeEntryModeContext.tsx': { subpath: '@alga-psa/co-managed/timeEntryBillingMode', typeOnly: true },
+    'lib/timeSource/timeSource.ts': { subpath: '@alga-psa/co-managed', typeOnly: true },
+  };
+  const coManagedImports = (src: string) =>
+    (importsOf(src).match(/[^\n]*from\s+['"]@alga-psa\/co-managed[^'"]*['"]|import\(\s*['"]@alga-psa\/co-managed[^'"]*['"]\s*\)/g) ?? []);
+  const sourceFiles = (d: string): string[] =>
+    fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? (e.name === 'node_modules' || e.name === 'test' || e.name === '__tests__' ? [] : sourceFiles(path.join(d, e.name)))
+        : /\.(ts|tsx)$/.test(e.name) && !/\.test\./.test(e.name) ? [path.join(d, e.name)] : []);
+
+  /** Importers of @alga-psa/co-managed in `files` that are not on the allowlist, or that import beyond it. */
+  const violations = (files: Record<string, string>) =>
+    Object.entries(files).flatMap(([rel, src]) => {
+      const found = coManagedImports(src);
+      if (found.length === 0) return [];
+      const allowed = ALLOWED_CO_MANAGED_IMPORTERS[rel];
+      if (!allowed) return [`${rel} imports @alga-psa/co-managed and is not the bridge`];
+      return found
+        .filter((line) => !line.includes(`'${allowed.subpath}'`) && !line.includes(`"${allowed.subpath}"`)
+          || (allowed.typeOnly && !/^\s*(import|export)\s+type\b/.test(line)))
+        .map((line) => `${rel}: ${line.trim()}`);
+    });
+
+  it('only the explicit bridge (and a type-only context import) may import @alga-psa/co-managed', () => {
+    const files = Object.fromEntries(sourceFiles(pkg).map((f) => [path.relative(pkg, f).split(path.sep).join('/'), read(f)]));
+    expect(violations(files)).toEqual([]);
+  });
+
+  it('the allowlist check catches a new direct import', () => {
+    expect(violations({ 'lib/somethingNew.ts': "import { x } from '@alga-psa/co-managed';" })).not.toEqual([]);
+    expect(violations({ 'lib/timeEntryWriteCore.ts': "import { x } from '@alga-psa/co-managed/timeEntryBillingMode';" })).not.toEqual([]);
+    expect(violations({ 'lib/timeEntryMode.ts': "import { x } from '@alga-psa/co-managed/seatAuthority';" })).not.toEqual([]);
+    expect(violations({ 'context/TimeEntryModeContext.tsx': "import { x } from '@alga-psa/co-managed/timeEntryBillingMode';" })).not.toEqual([]);
+  });
+
   it('timeSource.ts has no runtime imports', () => {
     const src = read(path.join(pkg, 'lib/timeSource/timeSource.ts'));
     const imports = src.match(/^import\s.+$/gm) ?? [];

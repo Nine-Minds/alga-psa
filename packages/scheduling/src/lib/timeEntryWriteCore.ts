@@ -1,5 +1,6 @@
 import { clientResolvers } from '@alga-psa/authorization/kernel';
 import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { AuthorizationRequestCache } from '@alga-psa/authorization/kernel';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
@@ -105,6 +106,8 @@ export interface PersistTimeEntryInput {
    * minutes), and runs neither contract resolution nor billing allocation.
    */
   mode?: CoManagedTimeEntryMode;
+  /** Request cache the caller used to resolve `mode`; shared so the tenant authorization probe runs once. */
+  requestCache?: AuthorizationRequestCache;
 }
 
 export interface WorkItemBillingContext {
@@ -260,10 +263,12 @@ export async function assertTimeEntryCreateInScope(
   actor: IUser,
   entryUserId: string,
   entry: Pick<SaveTimeEntryParams, 'work_item_type' | 'work_item_id'>,
+  requestCache?: AuthorizationRequestCache,
 ): Promise<void> {
   await assertRecordCreateAllowed(trx, {
     tenant,
     user: actor,
+    requestCache,
     resourceType: 'time_entry',
     record: async () => {
       const clientId = await clientResolvers.resolveClient(trx, tenant, 'work_item', entry.work_item_type, entry.work_item_id);
@@ -327,7 +332,7 @@ export async function persistTimeEntry(
     } else {
       await assertHumanWorkOwner(trx, tenant, actorUserId, 'user_id');
     }
-    await assertTimeEntryCreateInScope(trx, tenant, actor, timeEntryUserId, validatedTimeEntry);
+    await assertTimeEntryCreateInScope(trx, tenant, actor, timeEntryUserId, validatedTimeEntry, input.requestCache);
   }
 
   // Extract only the fields that exist in the database schema

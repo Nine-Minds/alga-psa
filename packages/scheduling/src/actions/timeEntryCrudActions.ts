@@ -13,6 +13,7 @@ import {
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { formatISO } from 'date-fns';
 import { validateData } from '@alga-psa/validation';
 import {
@@ -360,7 +361,8 @@ export const saveTimeEntry = withAuth(async (
   // The billing mode is decided here from the authenticated principal, never from the payload: a seat
   // technician always writes operational, everyone else always commercial. A commercial field arriving
   // on a seat save is rejected by the write core (OPERATIONAL_TIME_COMMERCIAL_FIELDS), not dropped.
-  const mode = await resolveTimeEntryMode(tenant, user.user_id);
+  const requestCache = new RequestLocalAuthorizationCache();
+  const mode = await resolveTimeEntryMode(db, tenant, user.user_id, requestCache);
   const serviceRequired = serviceRequiredForTimeEntry({ participates: mode === 'operational', mode });
 
   // Validate input
@@ -388,7 +390,7 @@ export const saveTimeEntry = withAuth(async (
     }
     const persisted = await db.transaction(async (trx) => {
       if (!stopwatchSessionId) {
-        return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry, ...(mode === 'operational' ? { mode } : {}) });
+        return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry, requestCache, ...(mode === 'operational' ? { mode } : {}) });
       }
       const logged = await logSession(trx, tenant, user, stopwatchSessionId, {
         work_item_id: validatedTimeEntry.work_item_id,
