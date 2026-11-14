@@ -22,6 +22,27 @@ const require = createRequire(import.meta.url);
 const repositoryRoot = path.resolve(__dirname, "../../../../..");
 
 describe("email template variable registry", () => {
+  it("adds plain detail arrays only to the existing closed-ticket contract", () => {
+    const variables = templateVariableRegistry["ticket-closed"].variables;
+    for (const name of ["assets", "materials", "timeEntries"]) {
+      expect(variables.find(variable => variable.path === `ticket.${name}`)?.type).toBe("array");
+      for (const [template, entry] of Object.entries(templateVariableRegistry)) {
+        if (template !== "ticket-closed") {
+          expect(entry.variables.some(variable => variable.path === `ticket.${name}`)).toBe(false);
+        }
+      }
+    }
+    expect(variables.some(variable => /ticket\.(assets|materials|time)Html/.test(variable.path))).toBe(false);
+    expect(templateVariableRegistry["ticket-closed-client"]).toBeUndefined();
+    expect(templateVariableRegistry["ticket-closed-internal"]).toBeUndefined();
+    const data = getNestedTemplateExampleData("ticket-closed");
+    const html = Handlebars.compile(
+      "{{#each ticket.timeEntries}}{{date}} | {{technician}} | {{worked}} | {{billable}}{{/each}}",
+      { strict: true },
+    )(data);
+    expect(html).toBe("06/10/2025 | Jane Smith | 1 hr 30 min | 1 hr");
+  });
+
   it("records the corrected contracts and inferred templates", () => {
     expect(
       Object.values(templateVariableRegistry).filter(
