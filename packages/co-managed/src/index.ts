@@ -142,6 +142,8 @@ export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManag
 export * from './seatArrangement';
 // Seat shape (S8): the role a seat technician holds, seeded by the sponsor's first arrangement.
 export * from './seatRole';
+// Seat shape (S14): the people a seat technician can see.
+export * from './seatPeopleProjection';
 // Seat shape (S7): inviting a technician against the arrangement's allocation.
 export * from './seatInvitation';
 // Seat shape (S10): revoking a seat and converting a technician to an MSP user.

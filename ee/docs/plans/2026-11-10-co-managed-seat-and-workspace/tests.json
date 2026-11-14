@@ -147,7 +147,7 @@
   {
     "id": "T017",
     "description": "E2E: a seat technician's menu shows only the operational surface; requesting billing, settings, user administration, dispatch and reports routes answers not found; an API key cannot be created and a REST request is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030"
@@ -165,7 +165,7 @@
   {
     "id": "T019",
     "description": "DB integration: a seat technician's user list, assignee options and mention suggestions contain no user outside the projection and no MSP staff email or phone.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
