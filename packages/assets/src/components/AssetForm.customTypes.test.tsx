@@ -17,21 +17,36 @@ import AssetForm from './AssetForm';
 
 const mockGetAsset = vi.fn();
 const mockUpdateAsset = vi.fn();
+const mockCreateAsset = vi.fn();
+const mockPreviewAssetNumber = vi.fn();
 const mockGetAssetTypes = vi.fn();
 const mockPush = vi.fn();
 const mockToastError = vi.fn();
+const mockMutateCache = vi.fn();
+
+vi.mock('swr', () => ({ useSWRConfig: () => ({ mutate: mockMutateCache }) }));
 
 vi.mock('../actions/assetActions', () => ({
   getAsset: (...args: unknown[]) => mockGetAsset(...args),
   updateAsset: (...args: unknown[]) => mockUpdateAsset(...args),
+  createAsset: (...args: unknown[]) => mockCreateAsset(...args),
+}));
+
+vi.mock('../actions/assetNumberingActions', () => ({
+  previewAssetNumber: (...args: unknown[]) => mockPreviewAssetNumber(...args),
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: () => <div data-testid="client-picker" />,
+  ClientPicker: ({ selectedClientId, onSelect }: any) => <div data-testid="client-picker">
+    <select aria-label="Client" value={selectedClientId ?? ''} onChange={(event) => onSelect(event.target.value)}>
+      <option value="">Choose client</option><option value="b0000000-0000-4000-8000-00000000000b">Test client</option>
+    </select>
+  </div>,
 }));
 
 vi.mock('../actions/clientLookupActions', () => ({
   getVendorOptionsForAssets: vi.fn(async () => []),
+  getClientBillingProfilesForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
   getClientContactsForAssets: vi.fn(async () => [
     { contact_name_id: '11000000-0000-4000-8000-000000000001', client_id: 'b0000000-0000-4000-8000-00000000000b', full_name: 'Pat Person', email: null },
@@ -277,13 +292,79 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockGetAssetTypes.mockResolvedValue(REGISTRY);
   mockUpdateAsset.mockResolvedValue({ asset_id: ASSET_ID });
+  mockCreateAsset.mockResolvedValue({ ...baseAsset, asset_tag: 'FTS-00431' });
+  mockPreviewAssetNumber.mockResolvedValue({ tag: 'FTS-00431' });
 });
 
 afterEach(() => {
   cleanup();
 });
 
+describe('Full Add asset numbering', () => {
+  it('previews and cancels without creating an asset or consuming an identity', async () => {
+    const cancel = vi.fn();
+    const user = userEvent.setup();
+    render(<AssetForm createMode onCancel={cancel} />);
+    await user.selectOptions(await screen.findByLabelText('Client'), CLIENT_ID);
+    await screen.findByText(/Next tag preview: FTS-00431/);
+    expect(mockCreateAsset).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(mockCreateAsset).not.toHaveBeenCalled();
+  });
+
+  it('validates custom fields, creates automatically, and refreshes the next preview during repeated intake', async () => {
+    const user = userEvent.setup();
+    mockPreviewAssetNumber.mockResolvedValueOnce({ tag: 'FTS-00431' }).mockResolvedValue({ tag: 'FTS-00432' });
+    render(<AssetForm createMode />);
+    await user.selectOptions(await screen.findByLabelText('Client'), CLIENT_ID);
+    await screen.findByText(/Next tag preview: FTS-00431/);
+    await user.type(screen.getByLabelText('name'), 'New cloud account');
+    await user.selectOptions(screen.getByLabelText('asset-type-select'), 'cloud_account');
+    await user.click(screen.getByRole('checkbox', { name: 'Save and add another' }));
+    await user.click(screen.getByRole('button', { name: 'Create asset' }));
+    expect(mockCreateAsset).not.toHaveBeenCalled();
+    await user.type(await screen.findByLabelText('asset-edit-field-account_name'), 'FTS production');
+    await user.click(screen.getByRole('button', { name: 'Create asset' }));
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledOnce());
+    expect(mockCreateAsset.mock.calls[0][0]).toMatchObject({
+      client_id: CLIENT_ID, asset_tag: '', asset_type: 'cloud_account', attributes: { account_name: 'FTS production' },
+    });
+    await screen.findByText(/Next tag preview: FTS-00432/);
+    expect((screen.getByLabelText('name') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('asset-edit-field-account_name') as HTMLInputElement).value).toBe('');
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('preserves a deliberately scanned physical tag in manual mode', async () => {
+    const user = userEvent.setup();
+    render(<AssetForm createMode />);
+    await user.selectOptions(await screen.findByLabelText('Client'), CLIENT_ID);
+    await user.type(screen.getByLabelText('name'), 'Existing equipment');
+    await user.click(screen.getByRole('checkbox', { name: 'Assign next automatic tag' }));
+    await user.type(screen.getByLabelText('asset_tag'), 'Legacy-009');
+    await user.click(screen.getByRole('button', { name: 'Create asset' }));
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledOnce());
+    expect(mockCreateAsset.mock.calls[0][0].asset_tag).toBe('Legacy-009');
+    expect(mockPush).toHaveBeenCalledWith(`/msp/assets/${ASSET_ID}`);
+  });
+});
+
 describe('AssetForm custom asset types', () => {
+  it('invalidates every saved-asset cache entry while leaving other assets cached', async () => {
+    mockGetAsset.mockResolvedValue(workstationAsset);
+    await renderForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mockMutateCache).toHaveBeenCalledOnce());
+    const matches = mockMutateCache.mock.calls[0][0] as (key: unknown) => boolean;
+    for (const suffix of ['record', 'summary', 'history', 'notes', 'documents']) {
+      expect(matches(['asset', ASSET_ID, suffix])).toBe(true);
+      expect(matches(['asset', 'another-asset', suffix])).toBe(false);
+    }
+    expect(matches('assets')).toBe(false);
+    expect(matches(['ticket', ASSET_ID])).toBe(false);
+  });
+
   it('T310: edit type select sources the registry (six built-ins incl. unknown + customs)', async () => {
     mockGetAsset.mockResolvedValue(cloudAccountAsset);
     const { typeSelect } = await renderForm();

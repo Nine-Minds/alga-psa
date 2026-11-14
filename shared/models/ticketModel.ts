@@ -9,9 +9,10 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
-  assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
+  nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
 } from '../lib/commentAudience';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
@@ -152,7 +153,7 @@ export const createCommentSchema = z.object({
   parent_comment_id: z.string().guid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   // Names who may read a shared-work comment; native tenants never need it (see nativeThreadAudience).
-  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
+  collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
   is_resolution: z.boolean().optional(),
   is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
@@ -338,6 +339,10 @@ export interface CreateCommentInput {
    * `metadata.email_recipients`; rejected on internal comments.
    */
   emailRecipients?: { cc?: string[]; bcc?: string[] };
+  /** Who may read this comment (see `nativeThreadAudience`). */
+  collaboration_audience?: NativeCommentAudience;
+  /** The author's organization when the caller admits seat principals (see `NativeCommentAuthor`). */
+  audience_author?: CommentAudienceReader | null;
 }
 
 export interface CreateCommentOutput {
@@ -1471,6 +1476,11 @@ export class TicketModel {
       throw new Error('Ticket not found or update failed');
     }
 
+    if ('assigned_to' in updateData && (updateData.assigned_to ?? null) !== (currentTicket.assigned_to ?? null)) {
+      // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+      await recordTicketAssigneeChange(trx, tenant, ticketId);
+    }
+
     // Publish update event if publisher provided
     if (eventPublisher) {
       try {
@@ -1599,7 +1609,10 @@ export class TicketModel {
         assigned_to: updateData.assigned_to
       });
     }
-    
+
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, ticketId);
+
     return updatedTicket;
   }
 
@@ -1736,14 +1749,10 @@ export class TicketModel {
         commentIsInternal = Boolean(parent.thread_is_internal);
         // A reply inherits its thread's audience. Only a labelled (co-managed) thread
         // is re-read under lock, so legacy threads cost no extra statement.
-        if (parent.thread_audience != null) {
-          labelledAudience = parent.thread_audience;
-          await lockLabelledThreadAudience(trx, tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
-          assertReplyAudience(
-            { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-            { isInternal: validatedData.is_internal, audience: validatedData.collaboration_audience },
-          );
-        }
+        labelledAudience = await nativeReplyAudience(trx, tenant,
+          { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+          { isInternal: validatedData.is_internal, audience: validatedData.collaboration_audience,
+            author: input.audience_author, ticketId: validatedData.ticket_id }) ?? undefined;
       }
     }
 
@@ -1754,6 +1763,8 @@ export class TicketModel {
       isInternal: commentIsInternal,
       authorType: dbAuthorType,
       audience: validatedData.collaboration_audience,
+      author: input.audience_author,
+      ticketId: validatedData.ticket_id,
     });
     labelledAudience ??= threadAudience.collaboration_audience;
 

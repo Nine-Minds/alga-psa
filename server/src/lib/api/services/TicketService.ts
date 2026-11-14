@@ -1,5 +1,8 @@
+import { assertTicketCreateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import { createPredicateGuard, type PredicateGuard } from '../controllers/authorizationKernel';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -14,7 +17,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { admitInternalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -24,20 +27,22 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canWriteAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import {
   runAuthorizedTicketWatcherWrite,
   TicketWatcherPermissionError,
   TicketWatcherTicketNotFoundError,
 } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
-import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
+import type { IUserWithRoles as TicketServiceUser } from '@alga-psa/types';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
@@ -150,11 +155,12 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
+import { generatePreviewsForDocument } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { attachDocument } from './documents/attachDocument';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
-import { createPredicateGuard, type PredicateGuard } from '../controllers/authorizationKernel';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -350,6 +356,15 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+/**
+ * `authorize` runs inside the write transaction, on the locked ticket row, before any write.
+ * Throwing from it aborts the update and rolls the transaction back.
+ */
+export interface UpdateTicketOptions {
+  authorize?: (ticket: Record<string, any>, trx: Knex.Transaction) => Promise<void>;
+  honorSuppliedClosure?: boolean;
+}
+
 /** Historical timestamps require the same MSP permission as the owning API write. */
 async function validateHistoricalTimestampWrite(
   field: 'entered_at' | 'created_at',
@@ -445,8 +460,6 @@ function isBareServicePrincipal(context: ServiceContext): boolean {
   return (context.user as { user_type?: string } | undefined)?.user_type === 'service' && !context.viaPrincipalUserId;
 }
 
-// LEVERAGE: pattern filter-key-to-response-field — request filter key -> the response field it reads, so the policy
-// guard can gate filters the same way it gates search columns. Projects/assets/quotes repeat this shape inline.
 const TICKET_FILTER_RESPONSE_FIELD: Readonly<Record<string, string>> = {
   title: 'title', ticket_number: 'ticket_number', board_id: 'board_id', client_id: 'client_id', location_id: 'location_id',
   contact_name_id: 'contact_name_id', status_id: 'status_id', status_ids: 'status_id', category_id: 'category_id',
@@ -459,6 +472,15 @@ const TICKET_FILTER_RESPONSE_FIELD: Readonly<Record<string, string>> = {
   master_ticket_id: 'master_ticket_id', bundle_view: 'master_ticket_id',
 };
 
+/**
+ * The reader a comment-audience check is made for: the verified user row when the transport
+ * loaded it for this user, otherwise the bare id (which is always checked against the seat tables).
+ */
+function audienceReader(context: ServiceContext): string | TicketServiceUser {
+  const user = context.user as TicketServiceUser | undefined;
+  return user && user.user_id === context.userId ? user : context.userId;
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -469,6 +491,29 @@ export class TicketService extends BaseService<ITicket> {
       defaultSort: 'entered_at',
       defaultOrder: 'desc'
     });
+  }
+
+  private ticketResourceAuthorization(context: ServiceContext, trx: Knex.Transaction) {
+    const user = context.user as TicketServiceUser | undefined;
+    if (!user || user.user_id !== context.userId || !user.user_type) {
+      throw new ForbiddenError('Ticket resource operations require a verified user authorization context');
+    }
+    return {
+      kind: 'user' as const,
+      authorizeTicket: async (ticketId: string, action: 'read' | 'update') => {
+        try {
+          return await authorizeTicketRecordAccess({ trx, tenant: context.tenant, user, ticketId, action });
+        } catch (error) {
+          if (error instanceof Error && error.message === 'Ticket not found') {
+            throw new NotFoundError('Ticket not found');
+          }
+          if (error instanceof Error && error.message.startsWith('Permission denied')) {
+            throw new ForbiddenError(error.message);
+          }
+          throw error;
+        }
+      },
+    };
   }
 
   /**
@@ -538,6 +583,33 @@ export class TicketService extends BaseService<ITicket> {
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
+    const user = context.user as TicketServiceUser | undefined;
+    if (!user) {
+      throw new ForbiddenError('Authenticated user context is required to delete tickets');
+    }
+
+    const authorizeDelete = async (trx: Knex | Knex.Transaction, tenant: string) => {
+      try {
+        await authorizeTicketRecordAccessConcealed({
+          trx,
+          tenant,
+          user,
+          ticketId: id,
+          action: 'delete',
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Ticket not found') {
+          throw new NotFoundError('Ticket not found');
+        }
+        if (error instanceof Error && error.message.startsWith('Permission denied')) {
+          if (isClientUserType(user.user_type)) throw new NotFoundError('Ticket not found');
+          throw new ForbiddenError('Permission denied: Cannot delete ticket');
+        }
+        throw error;
+      }
+    };
+
+    await authorizeDelete(knex, context.tenant);
 
     const result = await deleteEntityWithValidation(
       'ticket',
@@ -545,6 +617,8 @@ export class TicketService extends BaseService<ITicket> {
       knex,
       context.tenant,
       async (trx, tenant) => {
+        await authorizeDelete(trx, tenant);
+
         const ticket = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
           .first();
@@ -605,10 +679,10 @@ export class TicketService extends BaseService<ITicket> {
     let dataQuery = dataScopedQuery.builder;
     let countQuery = countScopedQuery.builder;
 
-    // Apply filters (policy-aware: a filter over a field the caller's redactions hide matches nothing)
-    const guard = await createPredicateGuard(knex, context, 'ticket');
-    dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant, guard);
-    countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant, guard);
+    // A hidden response field cannot be probed through the matching set or total.
+    const predicateGuard = await createPredicateGuard(knex, context, 'ticket');
+    dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant, predicateGuard);
+    countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant, predicateGuard);
 
     // Client-portal scope: same-client AND visibility-board predicates on both
     // the data and count builders, before limit/offset. Kept separate from the
@@ -1010,7 +1084,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
+    return filterReadableCommentAttachments(knex, context.tenant, audienceReader(context), documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1124,6 +1198,11 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     return withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'read', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot view ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId, authorization);
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
         .first();
@@ -1131,7 +1210,6 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
-      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
       return this.buildTicketAgentsResponse(trx, context, ticket, resources);
     });
   }
@@ -1150,6 +1228,11 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { response, event } = await withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'update', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot update ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      await authorization.authorizeTicket(ticketId, 'update');
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
         .where({ user_id: data.user_id })
         .first();
@@ -1166,6 +1249,7 @@ export class TicketService extends BaseService<ITicket> {
           ticketId,
           data.user_id,
           data.role ?? 'support',
+          authorization,
           notificationSuppression,
           'api',
         );
@@ -1181,7 +1265,7 @@ export class TicketService extends BaseService<ITicket> {
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
         .first();
-      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId, authorization);
       return {
         response: await this.buildTicketAgentsResponse(trx, context, ticket, resources),
         event: added.event,
@@ -1263,7 +1347,11 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      const subject = buildAuthorizationPrincipalSubject(context.user ?? { user_id: context.userId, tenant: context.tenant }, context.apiKeyId);
+      const subject = await resolveAuthorizationSubject(knex, {
+        tenant: context.tenant,
+        user: context.user ?? { user_id: context.userId },
+        apiKeyId: context.apiKeyId,
+      });
       const kernel = await getAuthorizationKernel();
       result = await withTransaction(knex, (trx) =>
         runAuthorizedTicketWatcherWrite({
@@ -1318,6 +1406,11 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     await withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'update', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot update ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      await authorization.authorizeTicket(ticketId, 'update');
       const resource = await tenantScopedTable(trx, 'ticket_resources', context.tenant)
         .where({ ticket_id: ticketId, additional_user_id: userId })
         .first();
@@ -1325,7 +1418,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Additional agent not found on this ticket');
       }
 
-      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, 'api');
+      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, authorization, 'api');
     });
   }
 
@@ -1479,7 +1572,7 @@ export class TicketService extends BaseService<ITicket> {
 
     // Validation, storage, the transaction, rollback cleanup, previews and events all
     // live in the shared upload core; the draft branch is a ticket-adapter option.
-    return attachDocumentFromBytes({
+    return attachDocument({
       knex,
       tenant: context.tenant,
       actorUserId: context.userId,
@@ -1488,7 +1581,8 @@ export class TicketService extends BaseService<ITicket> {
       file: {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
-        bytes: Buffer.from(await file.arrayBuffer()),
+        // The part is streamed into the ingest; no whole-file copy of it.
+        body: Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
       },
       source: 'multipart',
       options: { commentAttachmentDraft },
@@ -1524,7 +1618,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1568,7 +1662,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.*')
       .first() as IDocument | undefined;
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1576,9 +1670,14 @@ export class TicketService extends BaseService<ITicket> {
     let fileId = doc[column] ?? null;
 
     if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
-      const original = await StorageService.downloadFile(doc.file_id);
-      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
-      fileId = generated?.[column] ?? null;
+      // Lazy backfill for documents that predate previews: inline because this response needs the
+      // image. Reads from storage; the request never holds the original in memory.
+      try {
+        const generated = await generatePreviewsForDocument(doc.document_id);
+        fileId = generated[column] ?? null;
+      } catch (error) {
+        console.error(`[TicketService] Preview backfill failed for document ${doc.document_id}:`, error);
+      }
     }
 
     if (!fileId) {
@@ -1591,15 +1690,6 @@ export class TicketService extends BaseService<ITicket> {
       fileId,
       mimeType: result.metadata.mime_type ?? null,
     };
-  }
-
-  private persistDocumentPreviews(
-    knex: Knex,
-    document: IDocument,
-    buffer: Buffer,
-    tenant: string,
-  ): Promise<PreviewGenerationResult | null> {
-    return persistDocumentPreviews(knex, document, buffer, tenant);
   }
 
   async deleteTicketDocument(
@@ -1858,6 +1948,9 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
+        // Same create gate as the MSP ticket actions: the candidate ticket must be one the caller's scope includes.
+        await assertTicketCreateAllowed(trx, context.tenant, subjectFromServiceContext(context), data);
+
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -2080,7 +2173,7 @@ export class TicketService extends BaseService<ITicket> {
    * then does a caller-supplied closed_at / closed_by replace now / context.userId
    * on an open -> closed crossing. Generic update always derives closure.
    */
-  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: { honorSuppliedClosure?: boolean } = {}): Promise<ITicket> {
+  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: UpdateTicketOptions = {}): Promise<ITicket> {
     const { knex } = await this.getKnex();
     const enteredAt = data.entered_at === undefined ? undefined
       : await validateHistoricalTimestampWrite('entered_at', data.entered_at, 'update', context, knex);
@@ -2090,13 +2183,21 @@ export class TicketService extends BaseService<ITicket> {
       // An update that carries `attributes` re-writes the stored watch_list mirror, so it
       // takes the same row lock as watcher writes (TicketWatcherService).
       const currentTicketQuery = tenantScopedTable(trx, 'tickets', context.tenant).where({ ticket_id: id });
-      if ((data as any).attributes !== undefined) {
+      // A caller-supplied authorization hook also needs the lock, so the decision is made
+      // against the exact row the write will modify.
+      if ((data as any).attributes !== undefined || options.authorize) {
         currentTicketQuery.forUpdate();
       }
       const currentTicket = await currentTicketQuery.first();
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
+      }
+
+      // Authorize against the locked row, before any write (including assigned_to /
+      // ticket_resources). A throw here rolls the transaction back untouched.
+      if (options.authorize) {
+        await options.authorize(currentTicket as Record<string, any>, trx);
       }
 
       if (enteredAt !== undefined) {
@@ -2385,6 +2486,8 @@ export class TicketService extends BaseService<ITicket> {
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+        // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+        await recordTicketAssigneeChange(trx, context.tenant, id);
       }
 
       if (clearsResponseStateOnClose) {
@@ -2712,6 +2815,10 @@ export class TicketService extends BaseService<ITicket> {
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);
         });
+    } else if (context.userId) {
+      // An internal reader sees only the audiences their organization may: MSP staff all of them, a seat technician never a private note.
+      const audience = admitInternalReaderAudienceSql(knex, context.tenant, audienceReader(context));
+      if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('tc.comment_id')]);
     }
 
     const comments = await commentsQuery
@@ -2922,16 +3029,11 @@ export class TicketService extends BaseService<ITicket> {
         apiCommentId = replyGeneratedId;
         apiThreadId = parent.thread_id;
         apiIsInternal = Boolean(parent.thread_is_internal);
-        if (parent.thread_audience != null) {
-          // Labelled thread: serialise against an audience change; the reply inherits it.
-          await lockLabelledThreadAudience(trx, context.tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
-          apiThreadAudience = {
-            collaboration_audience: assertReplyAudience(
-              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-              { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null },
-            ),
-          };
-        }
+        // Labelled thread: serialise against an audience change; the reply inherits it.
+        const apiReplyAudience = await nativeReplyAudience(trx, context.tenant,
+          { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+          { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null, ticketId });
+        if (apiReplyAudience) apiThreadAudience = { collaboration_audience: apiReplyAudience };
       } else {
         // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
         const apiCommentIds = await trx.raw(
@@ -2954,6 +3056,7 @@ export class TicketService extends BaseService<ITicket> {
           isInternal: apiIsInternal,
           authorType: apiAuthor.authorType,
           audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
+          ticketId,
         });
 
         await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
@@ -3317,37 +3420,36 @@ export class TicketService extends BaseService<ITicket> {
     query = scopedDb.tenantJoin(query, 'contacts as cont', 't.contact_name_id', 'cont.contact_name_id', { type: 'left' });
     query = scopedDb.tenantJoin(query, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
 
-    // Apply search filters. Every predicate goes through the policy guard: a column the caller's redactions hide
-    // is dropped from the match set (and a hidden filter matches nothing).
+    // Apply search filters only to fields the caller may read. A hidden default
+    // status filter is skipped; explicit hidden filters/search fields match nothing.
     const guard = await createPredicateGuard(knex, context, 'ticket');
-    // Implicit default (not a caller-supplied predicate): when the status is hidden it is skipped rather than
-    // turned into match-nothing; it can only add rows the caller is already authorized to read.
     if (!searchData.include_closed && guard.readable('status_is_closed')) {
       query = query.where('stat.is_closed', false);
     }
 
     if (searchData.status_ids && searchData.status_ids.length > 0) {
-      guard.filter(query, 't.status_id', (q, c) => { q.whereIn(c, searchData.status_ids!); });
+      guard.filter(query, 't.status_id', (q, column) => { q.whereIn(column, searchData.status_ids!); });
     }
 
     if (searchData.priority_ids && searchData.priority_ids.length > 0) {
-      guard.filter(query, 't.priority_id', (q, c) => { q.whereIn(c, searchData.priority_ids!); });
+      guard.filter(query, 't.priority_id', (q, column) => { q.whereIn(column, searchData.priority_ids!); });
     }
 
     if (searchData.client_ids && searchData.client_ids.length > 0) {
-      guard.filter(query, 't.client_id', (q, c) => { q.whereIn(c, searchData.client_ids!); });
+      guard.filter(query, 't.client_id', (q, column) => { q.whereIn(column, searchData.client_ids!); });
     }
 
     if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
-      guard.filter(query, 't.assigned_to', (q, c) => { q.whereIn(c, searchData.assigned_to_ids!); });
+      guard.filter(query, 't.assigned_to', (q, column) => { q.whereIn(column, searchData.assigned_to_ids!); });
     }
 
     // Apply search query
     const searchFields = searchData.fields || ['title', 'ticket_number'];
-    guard.search(query, searchFields.map(field =>
-      field === 'client_name' ? { column: 'comp.client_name', field: 'client_name' }
-      : field === 'contact_name' ? { column: 'cont.full_name', field: 'contact_name' }
-      : { column: `t.${field}`, field }), searchData.query);
+    guard.search(query, searchFields.map((field) => field === 'client_name'
+      ? { column: 'comp.client_name', field }
+      : field === 'contact_name'
+        ? { column: 'cont.full_name', field }
+        : { column: `t.${field}`, field }), searchData.query);
 
     // Execute query
     const tickets = await query
@@ -3528,9 +3630,8 @@ export class TicketService extends BaseService<ITicket> {
       if (value === undefined || value === null) return;
       if (handledExternalFilters.has(key)) return;
 
-      // Policy gate: the filter touches a response field the caller cannot read => it matches nothing.
-      const filteredField = TICKET_FILTER_RESPONSE_FIELD[key];
-      if (filteredField && !guard.readable(filteredField)) {
+      const responseField = TICKET_FILTER_RESPONSE_FIELD[key];
+      if (responseField && !guard.readable(responseField)) {
         query.whereRaw('1 = 0');
         return;
       }
@@ -3593,6 +3694,27 @@ export class TicketService extends BaseService<ITicket> {
             query.whereNull('t.assigned_to');
           }
           break;
+        case 'search': {
+          const searchColumns = guard.columns(this.searchableFields.map((field) => ({ column: `t.${field}`, field })));
+          const searchClient = guard.readable('client_name');
+          if (searchColumns.length === 0 && !searchClient) {
+            query.whereRaw('1 = 0');
+            break;
+          }
+          query.where((subQuery) => {
+            searchColumns.forEach((column) => subQuery.orWhereILike(column, `%${value}%`));
+            if (searchClient) {
+              subQuery.orWhereExists(
+                scopedDb.subquery('clients as c')
+                  .select('*')
+                  .whereRaw('c.tenant = t.tenant')
+                  .whereRaw('c.client_id = t.client_id')
+                  .andWhereILike('c.client_name', `%${value}%`)
+              );
+            }
+          });
+          break;
+        }
         case 'client_name':
           query.whereExists(
             scopedDb.subquery('clients as c')
@@ -3643,30 +3765,6 @@ export class TicketService extends BaseService<ITicket> {
               );
             scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
             query.whereExists(tagSubquery);
-          }
-          break;
-        case 'search':
-          if (this.searchableFields.length > 0) {
-            // Columns that may take part come from the policy guard; the client-name branch needs the derived
-            // `client_name` to be readable too.
-            const searchColumns = guard.columns(this.searchableFields.map(field => ({ column: `t.${field}`, field })));
-            const searchClient = guard.readable('client_name');
-            if (searchColumns.length === 0 && !searchClient) {
-              query.whereRaw('1 = 0');
-              break;
-            }
-            query.where(subQuery => {
-              searchColumns.forEach(column => subQuery.orWhereILike(column, `%${value}%`));
-              if (searchClient) {
-                subQuery.orWhereExists(
-                  scopedDb.subquery('clients as c')
-                    .select('*')
-                    .whereRaw('c.tenant = t.tenant')
-                    .whereRaw('c.client_id = t.client_id')
-                    .andWhereILike('c.client_name', `%${value}%`)
-                );
-              }
-            });
           }
           break;
         case 'updated_from':

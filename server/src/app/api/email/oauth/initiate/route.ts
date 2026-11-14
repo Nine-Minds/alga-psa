@@ -7,6 +7,7 @@ import {
   OAuthState
 } from '@/utils/email/oauthHelpers';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { resolveGoogleMailboxOAuthClient } from '@alga-psa/shared/services/email/providers/googleMailboxOAuthClient';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +48,11 @@ export async function POST(request: NextRequest) {
     // Microsoft was rejected above: only Google flows through this unsigned
     // HTTP initiate, and Google is always tenant-owned (CE and EE) — no
     // fallback to app-level secrets.
-    clientId = await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
+    try {
+      clientId = (await resolveGoogleMailboxOAuthClient({ tenant: user.tenant })).clientId;
+    } catch {
+      clientId = null;
+    }
 
     if (!effectiveRedirectUri) {
       const base =

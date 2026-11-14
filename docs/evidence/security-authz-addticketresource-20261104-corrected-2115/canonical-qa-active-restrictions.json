@@ -1,0 +1,26 @@
+[
+  {
+    "assignment_id": "922d92b5-cb15-462e-bbce-949ef98e06a6",
+    "bundle_id": "30220000-0000-4000-8000-000000000001",
+    "name": "Smoke 3022: ticket writes Mountain Dental only",
+    "status": "active"
+  },
+  {
+    "assignment_id": "1505321b-9d69-421a-af01-ab572ea07d30",
+    "bundle_id": "a4056000-0000-4000-8000-000000000005",
+    "name": "Smoke Authz 4056",
+    "status": "active"
+  },
+  {
+    "assignment_id": "49b5d147-8f46-4b10-812a-b43ee3c5c448",
+    "bundle_id": "e15ebf92-0287-40f5-8ad7-488d33e41a82",
+    "name": "Specialist3049-e15ebf92-0287-40f5-8ad7-488d33e41a82",
+    "status": "active"
+  },
+  {
+    "assignment_id": "981c9133-2ff8-4b65-8d4e-5e78b5716738",
+    "bundle_id": "90bdaca2-7ab6-40a6-9644-e7c2a997afc7",
+    "name": "Ticket workflow smoke scoped A",
+    "status": "active"
+  }
+]

@@ -18,6 +18,14 @@
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"
     },
+    "./seatAuthority": {
+      "types": "./src/seatAuthority.ts",
+      "import": "./src/seatAuthority.ts"
+    },
+    "./seatCapability": {
+      "types": "./src/seatCapability.ts",
+      "import": "./src/seatCapability.ts"
+    },
     "./permissionsCapability": {
       "types": "./src/permissionsCapability.ts",
       "import": "./src/permissionsCapability.ts"
@@ -66,6 +74,10 @@
       "types": "./src/sharedWorkRedaction.ts",
       "import": "./src/sharedWorkRedaction.ts"
     },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
+    },
     "./policy": {
       "types": "./src/policy.ts",
       "import": "./src/policy.ts"
@@ -73,10 +85,6 @@
     "./sharedWork": {
       "types": "./src/sharedWork.ts",
       "import": "./src/sharedWork.ts"
-    },
-    "./sharedWorkProjection": {
-      "types": "./src/sharedWorkProjection.ts",
-      "import": "./src/sharedWorkProjection.ts"
     },
     "./sharedWorkRead": {
       "types": "./src/sharedWorkRead.ts",

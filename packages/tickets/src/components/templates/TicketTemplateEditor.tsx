@@ -202,7 +202,7 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   // "New template" from a schedule passes the schedule it came from; after the first save we go back to it with the new template picked.
   const rawScheduleReturn = searchParams?.get('scheduleReturn') ?? null;
   const scheduleReturn = rawScheduleReturn && (rawScheduleReturn === 'new' || /^[0-9a-f-]{36}$/i.test(rawScheduleReturn)) ? rawScheduleReturn : null;
-  const reference = useTicketFieldReferenceData();
+  const reference = useTicketFieldReferenceData('ticket_template');
   const permissions = useTicketTemplatePermissions();
   // "Schedule this template…" creates a recurring ticket, so it follows `recurring_ticket:create`.
   const recurringPermissions = useRecurringTicketPermissions();

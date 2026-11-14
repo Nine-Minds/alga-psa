@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /** Database persistence cases extracted from the mixed unit suite. */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -36,8 +37,7 @@ describe('hudu asset mappings — DB persistence (T214/T215)', () => {
       .returning(['client_id']);
     clientA = client.client_id;
 
-    const inserted = await db('assets')
-      .insert([
+    const inserted = await insertTestAssets(db, [
         {
           tenant: tenantId,
           client_id: clientA,
@@ -56,8 +56,7 @@ describe('hudu asset mappings — DB persistence (T214/T215)', () => {
           asset_type: 'server',
           serial_number: null,
         },
-      ])
-      .returning(['asset_id', 'name']);
+      ]);
     assetA = inserted.find((a: any) => a.name === 'EC-WS-001').asset_id;
     assetB = inserted.find((a: any) => a.name === 'EC-SRV-01').asset_id;
   }, 300_000);

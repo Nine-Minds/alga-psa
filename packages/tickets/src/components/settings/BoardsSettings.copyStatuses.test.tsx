@@ -78,6 +78,11 @@ vi.mock('../../actions/close-rules/closeRuleActions', () => ({
   deleteBoardAutoCloseRule: vi.fn(),
 }));
 
+vi.mock('../../actions/board-actions/boardNotificationActions', () => ({
+  getBoardNotificationSettings: vi.fn().mockResolvedValue({ rules: [], default_watcher_user_ids: [] }),
+  saveBoardNotificationSettings: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@alga-psa/reference-data/actions', () => ({
   getAvailableReferenceData: vi.fn().mockResolvedValue([]),
   importReferenceData: vi.fn(),
@@ -310,6 +315,9 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     });
     vi.clearAllMocks();
+    checkCurrentUserPermissionsMock.mockImplementation(async (checks) =>
+      checks.map((check) => ({ ...check, granted: true }))
+    );
     useFeatureFlagMock.mockReturnValue({ enabled: false });
     getAllBoardsMock.mockResolvedValue([
       {
@@ -567,6 +575,9 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
     });
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    });
 
     expandSection('display');
     expect(screen.getByTestId('enable_live_ticket_timer')).toBeChecked();
@@ -727,6 +738,9 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
     });
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    });
 
     // Editor opened in edit mode with the clicked board's name loaded.
     expect(screen.getByDisplayValue('Support')).toBeInTheDocument();
@@ -823,6 +837,43 @@ describe('BoardsSettings ticket status copy flow', () => {
     // so the name now appears more than once. The assertion is still "the saved
     // name is reflected in the editor".
     expect(screen.getAllByText('Support Renamed').length).toBeGreaterThan(0);
+  });
+
+  it('keeps save disabled until the existing board editor data has loaded', async () => {
+    let resolveStatuses!: (statuses: Array<{
+      status_id: string;
+      name: string;
+      is_closed: boolean;
+      is_default: boolean;
+      order_number: number;
+    }>) => void;
+    getBoardTicketStatusesMock.mockReturnValueOnce(new Promise((resolve) => {
+      resolveStatuses = resolve;
+    }));
+
+    renderBoardsSettings();
+
+    await waitFor(() => {
+      expect(document.getElementById('board-row-board-source')).toBeTruthy();
+    });
+    fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
+
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+    expect(screen.getByTestId('save-board-button')).toBeDisabled();
+
+    resolveStatuses([{
+      status_id: 'status-open',
+      name: 'Support Open',
+      is_closed: false,
+      is_default: true,
+      order_number: 10,
+    }]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    });
   });
 
   it('shows an incomplete auto-close rule error inside the Automation section, not a top banner', async () => {

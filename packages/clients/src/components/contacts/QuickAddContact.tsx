@@ -32,7 +32,7 @@ import ContactLocationsEditor from './ContactLocationsEditor';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { parseContactActionError } from '../../lib/contactActionErrorCodes';
+import { isContactActionPermissionDenied, parseContactActionError } from '../../lib/contactActionErrorCodes';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
   validateContactPhoneNumbers,
@@ -380,6 +380,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
             errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
             break;
           default:
+            // An authorization refusal says why; the generic "unexpected error, try again" would invite a retry.
+            if (isContactActionPermissionDenied(submitError.message)) {
+              errorTitle = t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' });
+              errorDescription = submitError.message.trim();
+            }
             break;
         }
 
@@ -454,6 +459,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
             errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
             break;
           default:
+            // An authorization refusal says why; the generic "unexpected error, try again" would invite a retry.
+            if (isContactActionPermissionDenied(submitError.message)) {
+              errorTitle = t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' });
+              errorDescription = submitError.message.trim();
+            }
             break;
         }
 

@@ -389,6 +389,10 @@
       "title": "Ativos",
       "custody": {
         "title": "Equipamento sob custódia"
+      },
+      "audits": {
+        "title": "Auditorias de locais",
+        "detailTitle": "Auditoria de local"
       }
     },
     "createContact": {

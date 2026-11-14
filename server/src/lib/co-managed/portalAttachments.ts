@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import { commentAudienceVisibleSql } from '@alga-psa/shared/lib/commentAudience';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { applyTicketVisibilityFilter } from '@alga-psa/tickets/lib';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired,
@@ -37,7 +37,7 @@ async function withPortalComment<T>(db: Knex, inputActor: CoManagedSessionActor,
     owner.tenantJoin(query, 'comment_threads as t', 'c.thread_id', 't.thread_id', { on: join => join.andOn('t.ticket_id', '=', 'c.ticket_id') });
     owner.tenantJoin(query, 'comments as root', 't.root_comment_id', 'root.comment_id', { on: join => join.andOn('root.ticket_id', '=', 'c.ticket_id').andOn('root.thread_id', '=', 't.thread_id') });
     if (!await query.where({ 'c.publish_state': 'published', 'root.publish_state': 'published' }).whereNull('c.deleted_at')
-      .whereRaw('? = ?', [commentAudienceSql(trx, 't', 'root', 'c'), 'requester']).forShare('c', 't', 'root').first('c.comment_id')) deny();
+      .whereRaw('?', [commentAudienceVisibleSql(trx, { kind: 'requester', tenant: actor.tenant }, { thread: 't', root: 'root', comment: 'c', ownerTenant: 'c.tenant' })]).forShare('c', 't', 'root').first('c.comment_id')) deny();
     await assertCoManagedSessionUnexpired(trx, actor);
     // A root tombstone does not hide surviving requester-facing replies.
     const result = await work({ trx, resource: { tenant: actor.tenant, id: ticketId }, audience: 'requester', reader: { tenant: actor.tenant, requester: true },

@@ -64,7 +64,7 @@ export class MarkdownDocumentHandler extends BaseDocumentHandler {
       const htmlContent = await marked(markdownSnippet, { async: true });
 
       // Generate preview image
-      const imageBuffer = await this.renderHtmlToPng(htmlContent);
+      const imageBuffer = await this.renderHtmlToPng({ kind: 'rich-html', html: htmlContent });
 
       // Save to cache
       await this.saveToCache(document.document_id, imageBuffer, tenant);

@@ -288,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Ładowanie komentarzy...",
     "placeholder": "Dodaj komentarz...",
     "responsePlaceholder": "Odpowiedz na żądane zmiany...",
     "respondToChanges": "Reaguj na zmiany"
@@ -363,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Tabela danych arkusza czasu pracy",
+    "deleteWorkItem": {
+      "title": "Usuń element pracy",
+      "message": "Spowoduje to trwałe usunięcie wszystkich wpisów czasu dla tego elementu pracy. Tej akcji nie można cofnąć."
+    },
+    "bundled": "W pakiecie",
+    "bundledTo": "W pakiecie → {{ticketNumber}}",
+    "addEntryForCell": "Dodaj wpis czasu dla {{workItem}} w dniu {{date}}",
+    "saveTimeEntry": "Zapisz wpis czasu",
+    "weeklyTotal": "Suma tygodniowa",
     "empty": {
       "title": "Brak elementów pracy w arkuszu czasu pracy",
       "description": "Dodaj nowy element pracy, aby rozpocząć śledzenie czasu w tym tygodniu.",
@@ -425,6 +436,9 @@
     "viewEntryDetails": "Zobacz szczegóły wpisu"
   },
   "messages": {
+    "saveEntryFailed": "Nie udało się zapisać wpisu czasu",
+    "updateTaskFailed": "Nie udało się zaktualizować zadania",
+    "deleteWorkItemFailed": "Nie udało się usunąć elementu pracy",
     "serviceRequired": "Wybierz usługę przed zapisaniem wpisów czasu",
     "invalidService": "Nieprawidłowa wybrana usługa",
     "taxRegionRequired": "Wybierz region podatkowy dla usług opodatkowanych",
@@ -555,6 +569,11 @@
       "linksChanged": "zmieniono łącza",
       "updated": "zaktualizowano"
     }
+  },
+  "timeSheet": {
+    "reflectionLabel": "Zarządzanie arkuszami czasu pracy",
+    "delegationDisabledPrefix": "Delegowane wprowadzanie czasu jest obecnie wyłączone. Włącz flagę funkcji",
+    "delegationDisabledSuffix": "aby edytować arkusze czasu pracy innych użytkowników."
   },
   "stopwatch": {
     "pausedNotice_one": "Zarejestrowano {{active}} w {{count}} segmencie (wstrzymanie: {{paused}})",

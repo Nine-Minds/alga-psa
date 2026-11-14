@@ -1,0 +1,3 @@
+
+> @alga-psa/inventory@0.1.0 typecheck
+> tsc --noEmit

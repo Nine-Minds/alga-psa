@@ -46,6 +46,7 @@ vi.mock('@alga-psa/db', () => {
         const rec = (op: string) => state.statements.push({ conn: conn.label, table, op });
         const b: any = {
           where: (w: any) => { where = w; return b; },
+          whereIn: () => b,
           max: () => b,
           forUpdate: () => b,
           first: async () => {

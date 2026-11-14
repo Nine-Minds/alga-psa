@@ -107,6 +107,20 @@
     }
   },
   "contractDetail": {
+    "simulatorLoading": "Läser in simulatorn…",
+    "unnamedBoard": "Namnlös tavla",
+    "notFound": "Avtalet hittades inte",
+    "loadFailed": "Det gick inte att läsa in avtalet",
+    "invoicesLoadFailed": "Det gick inte att läsa in fakturorna för den här avtalstilldelningen.",
+    "deleteFailed": "Det gick inte att radera avtalet",
+    "backToContracts": "Tillbaka till avtal",
+    "viewSourceQuote": "Visa ursprunglig offert",
+    "clientDrawer": {
+      "loading": "Läser in…",
+      "notFound": "Kunden hittades inte.",
+      "openClient": "Öppna kund",
+      "loadFailed": "Det gick inte att läsa in kunduppgifterna."
+    },
     "alerts": {
       "saveSuccess": "Avtalet har sparats.",
       "unsavedChanges": "Du har osparade ändringar. Klicka på ”Spara ändringar” för att tillämpa dem."

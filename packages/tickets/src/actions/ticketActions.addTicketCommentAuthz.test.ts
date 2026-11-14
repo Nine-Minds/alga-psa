@@ -106,8 +106,13 @@ vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
     return ctx;
   },
 }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+  authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: [],
+  })),
 }));
 
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';

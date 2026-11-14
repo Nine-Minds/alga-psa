@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
@@ -483,7 +484,7 @@ async function seedAssetLookupFixture(): Promise<AssetLookupFixture> {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
-  await table(tenant, 'assets').insert([
+  await insertTestAssets(db, [
     baseAsset(clientAAssetId, clientAId, 'Client A laptop', clientASerial, `TAG-A-${suffix}`),
     baseAsset(clientBAssetId, clientBId, 'Client B laptop', clientBSerial, clientBTag),
     baseAsset(productCollisionAssetId, clientAId, 'Asset sharing a product SKU', serializedSku, `TAG-C-${suffix}`),

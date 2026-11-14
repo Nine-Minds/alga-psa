@@ -1,5 +1,9 @@
 import {
   ASSET_RECORD_SOURCE,
+  PHASE_NAME_ALIASES,
+  PROJECT_NAME_ALIASES,
+  TASK_NAME_ALIASES,
+  TASK_RESOURCE_ALIASES,
   createRecordProjectionPolicy,
   recordFieldAliases,
   type RedactableRecordSource,
@@ -16,19 +20,19 @@ interface CoManagedFieldSource {
 }
 const CO_MANAGED_PROJECT_FIELD_SOURCE: CoManagedFieldSource = {
   resource: ['projects'],
-  title: ['project_name', 'projectName', 'values.project_name', 'projects.project_name', 'project', 'project_id', 'projects'],
+  title: PROJECT_NAME_ALIASES,
   description: ['description', 'values.description', 'projects.description'],
   identifier: ['project_id', 'projects.project_id', 'project', 'projectId', 'project_id', 'projects.project_id'],
 };
 const CO_MANAGED_PHASE_FIELD_SOURCE: CoManagedFieldSource = {
   resource: ['project_phases'],
-  title: ['phase_name', 'values.phase_name', 'project_phases.phase_name', 'phaseName'],
+  title: PHASE_NAME_ALIASES,
   description: ['description', 'values.description', 'project_phases.description'],
   identifier: ['phase_id', 'project_phases.phase_id', 'project', 'projectId', 'project_id', 'projects.project_id'],
 };
 const CO_MANAGED_TASK_FIELD_SOURCE: CoManagedFieldSource = {
-  resource: ['tasks', 'project_tasks'],
-  title: ['task_name', 'values.task_name', 'project_tasks.task_name', 'tasks'],
+  resource: TASK_RESOURCE_ALIASES,
+  title: TASK_NAME_ALIASES,
   description: ['description', 'values.description', 'project_tasks.description', 'tasks.description'],
   identifier: ['task_id', 'taskId', 'project_tasks.task_id', 'tasks.task_id', 'project', 'projectId', 'project_id', 'projects.project_id'],
 };

@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Migration regression test for the 20260812110000 down path (Defect 2).
  *
@@ -206,15 +207,13 @@ describe('credentials associations expand migration — down preflight-abort (is
       })
       .returning('credential_id');
     credentialId = cred.credential_id;
-    const [asset] = await db('assets')
-      .insert({
+    const [asset] = await insertTestAssets(db, {
         tenant: tenantId,
         asset_tag: `MIG-${randomUUID().slice(0, 8)}`,
         name: 'Mig Asset',
         status: 'active',
         client_id: clientId,
-      })
-      .returning('asset_id');
+      });
     assetId = asset.asset_id;
   }
 

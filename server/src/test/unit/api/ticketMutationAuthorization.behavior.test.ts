@@ -26,9 +26,31 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
       state.seenActions.push(input.resource.action);
       return { allowed: !state.deniedActions.has(input.resource.action) };
     }),
+    // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+    authorizeMutation: vi.fn(async (input: any) => {
+      state.seenActions.push(input.resource.action);
+      return { allowed: !state.deniedActions.has('read') && !state.deniedActions.has(input.resource.action) };
+    }),
   })),
 }));
 
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (
+    _knex: unknown,
+    input: { tenant: string; user: { user_id: string; user_type?: string; role_ids?: string[] }; apiKeyId?: string | null },
+  ) => ({
+    tenant: input.tenant,
+    userId: input.user.user_id,
+    userType: input.user.user_type === 'client' ? 'client' : input.user.user_type === 'service' ? 'service' : 'internal',
+    roleIds: input.user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    clientId: null,
+    portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
 vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
   resolveAuthorizationSubjectForUser: vi.fn(async (
     _knex: unknown,
@@ -169,7 +191,12 @@ describe('ticket mutations are authorized against update/delete scope, not read'
     const entered_at = '2024-01-01T08:00:00-05:00';
     const created_at = '2024-01-02T08:00:00-05:00';
     expect((await PUT(req('PUT', '', { entered_at }), ctx as any)).status).toBe(200);
-    expect(svc.update).toHaveBeenCalledWith(TICKET, { entered_at }, expect.anything());
+    expect(svc.update).toHaveBeenCalledWith(
+      TICKET,
+      { entered_at },
+      expect.anything(),
+      { authorize: expect.any(Function) }
+    );
     expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at }), ctx as any)).status).toBe(201);
     expect(svc.addComment).toHaveBeenCalledWith(TICKET, expect.objectContaining({ created_at }), expect.anything());
   });

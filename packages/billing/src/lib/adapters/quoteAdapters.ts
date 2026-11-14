@@ -18,6 +18,7 @@ import {
 import { isPendingOptional, isQuoteItemIncluded, isSelected } from '../quoteItemInclusion';
 import { presentedTaxAmount } from '../quoteItemTax';
 import { allocateIncludedQuoteDiscounts, summarizeQuoteTotals } from '../quoteTotals';
+import { buildQuoteViewModelAcceptance, loadQuoteAcceptance, toAcceptanceIso, type QuoteAcceptanceDetails } from '../quoteAcceptance';
 
 /**
  * Every money figure below follows the shared inclusion rule
@@ -600,31 +601,59 @@ async function fetchContactParty(
 // fetchTenantParty is now imported from './tenantPartyAdapter' and used directly
 // as its return type (TenantParty) is compatible with QuoteViewModelParty.
 
-async function resolveAcceptedByName(
+export interface AcceptedByIdentity {
+  /** `quotes.accepted_by`: a users.user_id (portal client user or MSP user). */
+  acceptedBy?: string | null;
+  /** The name typed at acceptance, when the signer typed one. */
+  signerName?: string | null;
+  /** The signer's contact, for acceptances made through an emailed link. */
+  signerContactId?: string | null;
+}
+
+/**
+ * The one resolver behind `accepted_by_name` — the quote document binding and
+ * the quote detail screen both call it. Order: the name the signer typed, then
+ * the signer's contact, then the accepting user (through that user's contact
+ * when it has one, as portal client users do, else the user's own name).
+ */
+export async function resolveQuoteAcceptedByName(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  acceptedBy: string | null | undefined
+  identity: AcceptedByIdentity
 ): Promise<string | null> {
-  if (!acceptedBy) return null;
+  const typedName = asTrimmedString(identity.signerName);
+  if (typedName) return typedName;
+
+  if (!identity.signerContactId && !identity.acceptedBy) return null;
 
   try {
     const db = tenantDb(knexOrTrx, tenant);
+    const contactName = async (contactId: string): Promise<string | null> => {
+      const contact = await db.table<{ full_name?: string }>('contacts')
+        .select('full_name')
+        .where('contact_name_id', contactId)
+        .first();
+      return asTrimmedString(contact?.full_name) || null;
+    };
 
-    // Try contacts first (client portal users link to a contact)
-    const contact = await db.table<{ full_name?: string }>('contacts')
-      .select('full_name')
-      .where('contact_name_id', acceptedBy)
-      .first();
-    if (contact?.full_name) return contact.full_name;
-
-    // Fall back to internal users table
-    const user = await db.table<{ first_name?: string; last_name?: string }>('users')
-      .select('first_name', 'last_name')
-      .where('user_id', acceptedBy)
-      .first();
-    if (user) {
-      const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+    if (identity.signerContactId) {
+      const name = await contactName(identity.signerContactId);
       if (name) return name;
+    }
+
+    if (identity.acceptedBy) {
+      const user = await db.table<{ first_name?: string; last_name?: string; contact_id?: string | null }>('users')
+        .select('first_name', 'last_name', 'contact_id')
+        .where('user_id', identity.acceptedBy)
+        .first();
+      if (user?.contact_id) {
+        const name = await contactName(user.contact_id);
+        if (name) return name;
+      }
+      if (user) {
+        const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+        if (name) return name;
+      }
     }
   } catch {
     // Non-blocking — return null on any lookup error
@@ -633,11 +662,33 @@ async function resolveAcceptedByName(
   return null;
 }
 
-export async function mapLoadedQuoteToViewModel(
+async function loadRecordedAcceptanceForName(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quote: IQuote
+): Promise<QuoteAcceptanceDetails | null> {
+  if (!quote.accepted_at) {
+    return null;
+  }
+  try {
+    return await loadQuoteAcceptance(knexOrTrx, tenant, quote.quote_id);
+  } catch {
+    // Non-blocking: fall back to quotes.accepted_by.
+    return null;
+  }
+}
+
+export async function mapLoadedQuoteToViewModel(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quote: IQuote,
+  options: { acceptance?: QuoteAcceptanceDetails | null } = {}
 ): Promise<QuoteViewModel> {
+  // `acceptance` stamps the signed copy; only the signed-copy render passes it.
+  // Every other render still names the signer: the recorded decision is the
+  // only place a contact who accepted through an emailed link appears.
+  const acceptance = options.acceptance ?? null;
+  const signer = acceptance ?? (await loadRecordedAcceptanceForName(knexOrTrx, tenant, quote));
   const rawItems = quote.quote_items ?? [];
   const locationIds = Array.from(
     new Set(
@@ -651,7 +702,11 @@ export async function mapLoadedQuoteToViewModel(
     fetchClientParty(knexOrTrx, tenant, quote.client_id),
     fetchContactParty(knexOrTrx, tenant, quote.contact_id),
     fetchTenantParty(knexOrTrx, tenant),
-    resolveAcceptedByName(knexOrTrx, tenant, quote.accepted_by),
+    resolveQuoteAcceptedByName(knexOrTrx, tenant, {
+      acceptedBy: quote.accepted_by,
+      signerName: signer?.signerName,
+      signerContactId: signer?.signerContactId,
+    }),
     fetchQuoteItemLocations(knexOrTrx, tenant, locationIds),
   ]);
 
@@ -772,14 +827,16 @@ export async function mapLoadedQuoteToViewModel(
     optional_total: totals.optional_total,
     has_multiple_locations: locationsById.size >= 2,
     accepted_by_name: acceptedByName,
-    accepted_at: toIsoDateString(quote.accepted_at),
+    accepted_at: acceptance ? toAcceptanceIso(acceptance.acceptedAt) : toIsoDateString(quote.accepted_at),
+    acceptance: acceptance ? buildQuoteViewModelAcceptance(acceptance, acceptedByName) : null,
   };
 }
 
 export async function mapDbQuoteToViewModel(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  quoteId: string
+  quoteId: string,
+  options: { acceptance?: QuoteAcceptanceDetails | null } = {}
 ): Promise<QuoteViewModel | null> {
   const quote = await Quote.getById(knexOrTrx, tenant, quoteId);
 
@@ -787,5 +844,5 @@ export async function mapDbQuoteToViewModel(
     return null;
   }
 
-  return mapLoadedQuoteToViewModel(knexOrTrx, tenant, quote);
+  return mapLoadedQuoteToViewModel(knexOrTrx, tenant, quote, options);
 }

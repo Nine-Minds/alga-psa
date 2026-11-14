@@ -1,0 +1,14 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-addticketresource/server
+      Running tests with seed "1793771861991"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-addticketresource/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-addticketresource/.env.localtest
+ ✓ |node| src/test/integration/ticketAssignmentResources.integration.test.ts (24 tests) 1096ms 80 MB heap used
+ ✓ |node| src/test/integration/T043.humanWorkGuard.integration.test.ts (18 tests) 532ms 88 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  42 passed (42)
+   Start at  05:57:47
+   Duration  7.00s (transform 2.45s, setup 343ms, import 4.82s, tests 1.63s, environment 0ms)
+

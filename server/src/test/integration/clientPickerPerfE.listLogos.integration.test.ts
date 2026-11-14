@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * Client picker perf E: projects and assets lists carry `client_logo_url`, batched for the
  * distinct clients on the page, so the screens no longer fetch every client for logos.
@@ -72,7 +73,7 @@ async function seedProject(tenant: string, clientId: string, name: string, statu
   });
 }
 async function seedAsset(tenant: string, clientId: string, name: string) {
-  await db('assets').insert({
+  await insertTestAssets(db, {
     tenant, asset_id: randomUUID(), asset_tag: `TAG-${randomUUID().slice(0, 8)}`, name,
     status: 'active', client_id: clientId, asset_type: 'workstation',
   });

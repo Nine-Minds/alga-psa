@@ -4,6 +4,7 @@ import {
   openWarrantyClaimSchema, receiveVendorReplacementSchema, shipToVendorSchema,
   confirmVendorReceiptSchema, shipDeadUnitToVendorSchema,
   openWarrantyClaimForTicketSchema,
+  recordVendorNonReturnChargeSchema,
 } from './warrantySchemas';
 
 const id = '3f1c6a1e-8f0e-4a0b-9d3a-2f5b0c1d2e3f';
@@ -71,5 +72,31 @@ describe('warranty schemas', () => {
   });
   it('confirm vendor receipt takes only the common fields', () => {
     expect(confirmVendorReceiptSchema.safeParse({}).success).toBe(true);
+  });
+  it('validates positive vendor non-return amounts, supported currencies and currency precision', () => {
+    expect(recordVendorNonReturnChargeSchema.parse({ amount: '125.50', currency_code: 'usd' })).toMatchObject({ amount: '125.50', currency_code: 'USD' });
+    for (const amount of ['', '0', '-1', 'Infinity', 'NaN', '1e3', '1.001', '1000000000001']) {
+      expect(recordVendorNonReturnChargeSchema.safeParse({ amount, currency_code: 'USD' }).success).toBe(false);
+    }
+    expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '1.0', currency_code: 'XXX' }).success).toBe(false);
+    expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '10.01', currency_code: 'JPY' }).success).toBe(false);
+    expect(recordVendorNonReturnChargeSchema.safeParse({ amount: '10', currency_code: 'JPY' }).success).toBe(true);
+  });
+  it.each([
+    ['USD', '125.50', '125.501', 2],
+    ['EUR', '125.50', '125.501', 2],
+    ['JPY', '125', '125.1', 0],
+  ])('validates %s charges using the currency precision', (currency, valid, invalid, digits) => {
+    expect(recordVendorNonReturnChargeSchema.parse({
+      amount: ` ${valid} `, currency_code: ` ${currency.toLowerCase()} `,
+    })).toMatchObject({ amount: valid, currency_code: currency });
+
+    const result = recordVendorNonReturnChargeSchema.safeParse({ amount: invalid, currency_code: currency });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual([expect.objectContaining({
+        path: ['amount'], message: `Amount supports at most ${digits} decimal places for ${currency}`,
+      })]);
+    }
   });
 });

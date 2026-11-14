@@ -418,7 +418,10 @@
       "refreshing": "Actualisation...",
       "resend": "Renvoyer",
       "resending": "Renvoi...",
-      "revoke": "Révoquer"
+      "revoke": "Révoquer",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer"
     },
     "toast": {
       "successTitle": "Succès",
@@ -460,7 +463,8 @@
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
         "invitationNotFound": "Invitation introuvable ou déjà utilisée."
       },
-      "userNotFound": "Utilisateur du client introuvable"
+      "userNotFound": "Utilisateur du client introuvable",
+      "validationErrorTitle": "Erreur de validation"
     },
     "boardCount_few": "{{count}} tableaux",
     "boardCount_many": "{{count}} tableaux"
@@ -723,6 +727,118 @@
       "saved": "Contact mis a jour",
       "saveFailed": "Impossible de mettre a jour le contact",
       "saveFailedDescription": "Impossible de mettre à jour le contact. Réessayez."
+    },
+    "relative": {
+      "today": "aujourd’hui",
+      "yesterday": "hier",
+      "daysAgo": "il y a {{count}} j"
+    },
+    "emailType": {
+      "primary": "Principal",
+      "other": "autre"
+    },
+    "phoneType": {
+      "other": "Autre"
+    },
+    "ticketPill": {
+      "closed": "Fermé",
+      "urgent": "Urgent",
+      "open": "Ouvert"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "role": {
+      "add": "Ajouter un rôle",
+      "editTitle": "Cliquer pour modifier le rôle"
+    },
+    "atClient": "chez",
+    "noClient": "Aucun client",
+    "noPrimaryEmail": "Aucun e-mail principal",
+    "noPhoneNumber": "Aucun numéro de téléphone",
+    "contactSince": "Contact depuis le {{date}}",
+    "lastTouch": "Dernier échange",
+    "editContact": "Modifier le contact",
+    "openFullPage": "Ouvrir la page complète",
+    "viewAll": "Tout voir",
+    "viewAllCount": "Tout voir ({{count}})",
+    "reach": {
+      "title": "Coordonnées",
+      "add": "Ajouter un e-mail ou un numéro de téléphone",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "primaryMeta": "principal",
+      "noEmails": "Aucune adresse e-mail",
+      "addEmail": "Ajouter un e-mail",
+      "noPhones": "Aucun numéro de téléphone",
+      "addPhone": "Ajouter un numéro de téléphone"
+    },
+    "portalChip": {
+      "deactivated": "Portail · désactivé",
+      "signedIn": "Portail · connexion {{when}}",
+      "neverSignedIn": "Portail · aucune connexion",
+      "invited": "Portail · invité",
+      "noAccess": "Aucun accès au portail"
+    },
+    "portal": {
+      "title": "Accès au portail",
+      "manage": "Gérer",
+      "status": "Statut",
+      "role": "Rôle",
+      "clientAdmin": "Administrateur du client",
+      "standard": "Standard",
+      "lastSignIn": "Dernière connexion",
+      "invited": "Date d’invitation",
+      "noClientAssigned": "Aucun client attribué",
+      "deactivated": "Désactivé",
+      "activeAccount": "Compte actif",
+      "invitationSent": "Invitation envoyée",
+      "noAccess": "Aucun accès"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "create": "Créer un ticket",
+      "createFirst": "Créer un ticket",
+      "empty": "Aucun ticket pour le moment",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interactions",
+      "log": "Enregistrer une interaction",
+      "logFirst": "Enregistrer une interaction",
+      "empty": "Aucune interaction enregistrée",
+      "fallbackTitle": "Interaction",
+      "loadError": "Impossible de charger les interactions. Veuillez réessayer."
+    },
+    "documents": {
+      "title": "Documents",
+      "add": "Ajouter un document",
+      "addFirst": "Ajouter un document",
+      "empty": "Aucun document pour le moment",
+      "fallbackTitle": "Document",
+      "dialogTitle": "Documents du contact"
+    },
+    "relatedWork": {
+      "title": "Projets et devis associés",
+      "projects": "Projets",
+      "quotes": "Devis",
+      "noProjects": "Aucun projet",
+      "noQuotes": "Aucun devis",
+      "noStatus": "Aucun statut",
+      "noStatusLower": "aucun statut",
+      "projectFallback": "Projet {{number}}",
+      "quoteFallback": "Devis",
+      "empty": "Aucun projet ni devis associé"
+    },
+    "notes": {
+      "title": "Notes",
+      "edit": "Modifier",
+      "openDocument": "Ouvrir le document de notes",
+      "save": "Enregistrer les notes",
+      "cancel": "Annuler",
+      "empty": "Aucune note pour le moment",
+      "add": "Ajouter des notes"
     }
   },
   "errors": {
@@ -833,9 +949,32 @@
       "scopeSummaryAll": "Tous",
       "scopeSummaryOwn": "Propres",
       "managerScopeNote_one": "Sa vue inclut aussi les éléments de {{count}} personne qui lui est rattachée.",
-      "managerScopeNote_many": "Sa vue inclut aussi les éléments de {{count}} de personnes qui lui sont rattachées.",
       "managerScopeNote_other": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées.",
-      "managerScopeNote_few": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées."
+      "managerScopeNote_few": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées.",
+      "managerScopeNote_many": "Sa vue inclut aussi les éléments de {{count}} de personnes qui lui sont rattachées.",
+      "assignmentLabel": "Groupe de visibilité des tickets",
+      "assignmentPlaceholder": "Sélectionner une affectation de visibilité",
+      "assignmentUpdated": "Affectation de visibilité du contact mise à jour",
+      "assignFailed": "Impossible d’attribuer le groupe de visibilité",
+      "manageLabel": "Groupes de visibilité du client",
+      "manageHelp": "Créez ou modifiez des groupes de tableaux et utilisez-les pour les affectations des contacts.",
+      "nameLabel": "Nom du groupe",
+      "nameRequired": "Le nom du groupe de visibilité est obligatoire",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Description facultative",
+      "boardsLabel": "Tableaux",
+      "noBoards": "Aucun tableau disponible",
+      "createGroup": "Créer un groupe",
+      "updateGroup": "Mettre à jour le groupe",
+      "created": "Groupe de visibilité créé",
+      "updated": "Groupe de visibilité mis à jour",
+      "deleted": "Groupe de visibilité supprimé",
+      "deleteConfirm": "Supprimer ce groupe de visibilité ?",
+      "deleteFailed": "Impossible de supprimer le groupe de visibilité",
+      "saveFailed": "Impossible d’enregistrer le groupe de visibilité",
+      "loadFailed": "Impossible de charger le groupe de visibilité à modifier",
+      "empty": "Aucun groupe de visibilité pour le moment",
+      "fullAccess": "Accès complet"
     }
   },
   "messages": {

@@ -715,7 +715,8 @@
         "title": "Actions de workflow",
         "unavailable": "Indisponible",
         "unlimitedPlan": "Forfait illimité",
-        "unlimitedRemaining": "Illimité"
+        "unlimitedRemaining": "Illimité",
+        "unlimited": "Illimité"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Répéter tant que le ticket reste dans le statut",
       "statusAgeRepeatEvery": "Répéter tous les (jours)",
       "statusAgeNoActivity": "Uniquement s'il n'y a eu aucune activité (commentaires ou modifications par des personnes) pendant cette durée",
-      "statusAgeSummary": "S'exécute chaque jour à {{time}} ({{timezone}}) pour chaque ticket resté dans le statut choisi pendant le nombre de jours défini"
+      "statusAgeSummary": "S'exécute chaque jour à {{time}} ({{timezone}}) pour chaque ticket resté dans le statut choisi pendant le nombre de jours défini",
+      "saving": "Enregistrement...",
+      "saveSettings": "Enregistrer les paramètres"
     },
     "stepPanel": {
       "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",
@@ -877,7 +880,13 @@
       "durationSummary": "Attend {{duration}}.",
       "durationEmpty": "Saisissez la durée d’attente, dans l’une de ces unités.",
       "notFoundInTry": "Cette étape se trouve dans un bloc Tenter. Si rien n’est trouvé, elle continue actuellement, et la branche Capturer ne s’exécutera donc pas. Faites-la échouer pour que Capturer gère un enregistrement manquant.",
-      "notFoundFailAction": "Échouer pour que Capturer le gère"
+      "notFoundFailAction": "Échouer pour que Capturer le gère",
+      "operatorLabel": "Opérateur",
+      "removeFilter": "Supprimer",
+      "valuesCommaSeparated": "Valeurs (séparées par des virgules)",
+      "valueLabel": "Valeur",
+      "absoluteTimestampHint": "Enregistré sous forme d’horodatage absolu dans le fuseau horaire actuel de votre navigateur.",
+      "saveAsConflict": "« {{saveAs}} » entre en conflit avec un chemin de sortie d’étape existant"
     },
     "mappingExpr": {
       "add": "Ajouter",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Configuration du nœud",
       "stepSettings": "Paramètres de l’étape",
-      "missingRequired": "Champs requis manquants : {{fields}}"
+      "missingRequired": "Champs requis manquants : {{fields}}",
+      "advancedOptions": "Options avancées",
+      "invalidJson": "JSON non valide"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1096,7 +1107,10 @@
         "valid": "Valide",
         "unknown": "Inconnu"
       },
-      "errors": "Erreurs de validation"
+      "errors": "Erreurs de validation",
+      "errorsHeading": "Erreurs de validation",
+      "warningsHeading": "Avertissements de validation",
+      "stepFallbackName": "Étape {{index}}"
     },
     "discardDialog": {
       "title": "Abandonner les modifications non enregistrées ?",
@@ -1365,7 +1379,8 @@
       "publishFailed": "Échec de la publication du workflow",
       "publishValidationErrors": "Échec de la publication — corrigez les erreurs de validation",
       "systemEventMissingSchema": "Cet événement système n’a pas de schéma valide et ne peut pas être sélectionné tant qu’il n’est pas corrigé.",
-      "publishedVersion": "Version {{version}} publiée. Les nouvelles exécutions utilisent cette version."
+      "publishedVersion": "Version {{version}} publiée. Les nouvelles exécutions utilisent cette version.",
+      "copiedPath": "Copié : {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Redimensionner le panneau des propriétés",
@@ -1391,7 +1406,29 @@
       "mappingTitle": "Mappage du déclencheur",
       "mappingNotRequired": "Mappage : Non requis.",
       "mappingErrors": "Erreurs de mappage",
-      "mappingWarnings": "Avertissements de mappage"
+      "mappingWarnings": "Avertissements de mappage",
+      "eventSchemaTitle": "Schéma de l’événement déclencheur",
+      "effectiveSourceSchemaTitle": "Schéma source du déclencheur effectivement utilisé",
+      "eventMissingSchemaRef": "Cet événement ne possède pas de référence de schéma valide. La publication et l’exécution sont désactivées jusqu’à la correction du problème.",
+      "eventNotInCatalogPrefix": "L’événement déclencheur",
+      "eventNotInCatalogSuffix": "ne figure pas dans le catalogue d’événements. La publication et l’exécution sont désactivées jusqu’à la correction du problème.",
+      "eventCatalogLoadFailed": "Échec du chargement du catalogue d’événements. La publication et l’exécution des workflows déclenchés par un événement sont désactivées jusqu’à son chargement.",
+      "mappingCustomActive": "Le mappage personnalisé du déclencheur est actif.",
+      "mappingRequired": "Le mappage du déclencheur est requis pour exécuter ce workflow.",
+      "mappingOptionalActive": "Le mappage facultatif du déclencheur est actif.",
+      "usingTriggerPayload": "La charge utile du déclencheur est utilisée comme entrée du workflow.",
+      "triggerLabel": "Déclencheur :",
+      "noSourceSchemaPrefix": "Aucun schéma source n’est encore disponible pour cet événement. Ajoutez",
+      "noSourceSchemaSuffix": "dans le catalogue d’événements ou définissez un schéma de remplacement.",
+      "mappingRequiredMismatch": "Le mappage est requis car le schéma du déclencheur et le schéma d’entrée du workflow ne correspondent pas.",
+      "useEventSchema": "Utiliser le schéma de l’événement",
+      "configureMapping": "Configurer le mappage",
+      "hideMapping": "Masquer le mappage",
+      "showMapping": "Afficher le mappage",
+      "mapDataFromPrefix": "Mapper les données de",
+      "mapDataFromSuffix": "vers l’entrée du workflow.",
+      "viewSchema": "Voir le schéma",
+      "viewEffective": "Voir le schéma utilisé"
     },
     "schemaSettings": {
       "lockVersion": "Verrouiller la version du schéma",
@@ -1406,12 +1443,39 @@
       "notLoaded": "Schéma pas encore chargé.",
       "loadPreviewFailed": "Échec du chargement de l'aperçu du schéma.",
       "selectVersionPlaceholder": "Sélectionner la version du schéma…",
-      "payloadRefAdvanced": "Référence du schéma de charge utile (avancé)"
+      "payloadRefAdvanced": "Référence du schéma de charge utile (avancé)",
+      "triggerSchemaTitle": "Schéma du déclencheur",
+      "clockTriggerPinned": "Les déclencheurs temporels restent toujours épinglés au contrat fixe de l’horloge du workflow.",
+      "hide": "Masquer",
+      "edit": "Modifier",
+      "clear": "Effacer",
+      "hideFields": "Masquer les champs",
+      "previewFields": "Afficher les champs",
+      "viewJsonSchema": "Voir le schéma JSON",
+      "viewPublished": "Voir le schéma publié",
+      "noTopLevelProperties": "Aucune propriété de premier niveau.",
+      "hideAdvanced": "Masquer les paramètres avancés du schéma",
+      "modeLabel": "Mode :",
+      "modePinned": "Épinglé",
+      "modeInferred": "Inféré",
+      "close": "Fermer",
+      "loadingSchema": "Chargement du schéma…",
+      "publishedContractSchema": "Schéma du contrat publié",
+      "publishedSnapshot": "Instantané du schéma publié.",
+      "publishedSnapshotMissing": "L’instantané du schéma publié est manquant ; le schéma actuel fourni par le registre est affiché.",
+      "publishedLoadFailed": "Échec du chargement du schéma publié.",
+      "noPublishedSnapshot": "Aucun instantané du schéma publié n’est enregistré pour la version {{version}}.",
+      "noPublishedSnapshotWithRef": "Aucun instantané du schéma publié n’est enregistré pour la version {{version}}. (payloadSchemaRef : {{schemaRef}})"
     },
     "expression": {
       "insertField": "Insérer un champ",
       "enterPlaceholder": "Entrer l'expression...",
-      "conditionPlaceholder": "p. ex. payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "p. ex. payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Erreurs d’expression",
+      "warningsHeading": "Avertissements",
+      "infoHeading": "Informations sur l’expression",
+      "invalid": "Expression non valide",
+      "invalidWithReason": "Expression non valide : {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Données disponibles à cette étape",
@@ -1422,7 +1486,11 @@
       "outputSchemaUnavailable": "Schéma de sortie non disponible",
       "noFields": "Aucun champ",
       "copyAllPaths": "Copier tous les chemins",
-      "copyAllFieldPaths": "Copier tous les chemins de champ"
+      "copyAllFieldPaths": "Copier tous les chemins de champ",
+      "copyPath": "Copier {{path}}",
+      "copied": "Copié !",
+      "noPreviousSteps": "Aucune étape précédente avec l’option « Enregistrer le résultat sous » configurée",
+      "globals": "Variables globales"
     },
     "logoAlt": "Logo de l'éditeur de workflows",
     "nodes": {
@@ -1581,6 +1649,42 @@
         "loadError": "Impossible de charger les événements ignorés.",
         "empty": "Aucun événement ignoré sur cette période."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "est égal à",
+      "notEquals": "n’est pas égal à",
+      "in": "est dans",
+      "notIn": "n’est pas dans",
+      "exists": "existe",
+      "notExists": "n’existe pas",
+      "greaterThan": "est supérieur à",
+      "greaterThanOrEqual": "est supérieur ou égal à",
+      "lessThan": "est inférieur à",
+      "lessThanOrEqual": "est inférieur ou égal à",
+      "contains": "contient",
+      "startsWith": "commence par",
+      "endsWith": "se termine par"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "Le schéma de charge utile du déclencheur de date doit correspondre à la source sélectionnée.",
+      "eventCatalogLoadFailed": "Échec du chargement du catalogue d’événements. La publication et l’exécution sont désactivées jusqu’à son chargement.",
+      "triggerEventMissing": "L’événement déclencheur « {{eventName}} » ne figure pas dans le catalogue d’événements.",
+      "eventSchemaInvalid": "{{sourceLabel}} « {{eventName}} » {{schemaLabel}}. Corrigez l’entrée du catalogue d’événements pour y inclure un schéma valide avant de publier ou d’exécuter le workflow.",
+      "timeTriggerFixedContract": "Les workflows à déclenchement temporel utilisent le contrat fixe de charge utile de l’horloge ; ils ne peuvent ni en inférer un autre ni le remplacer par un schéma différent.",
+      "manualMustPin": "Les workflows manuels doivent avoir un schéma de charge utile épinglé avant leur publication ou leur exécution.",
+      "registryLoadFailed": "Échec du chargement du registre de schémas. La publication et l’exécution sont désactivées jusqu’à son chargement.",
+      "noSchemaForEvent": "Aucun schéma n’est disponible pour l’événement déclencheur « {{eventName}} ». La publication et l’exécution sont désactivées jusqu’à la correction du problème.",
+      "unknownSchemaRef": "La référence « {{ref}} » du schéma de charge utile du workflow est inconnue. La publication et l’exécution sont désactivées jusqu’à la correction du problème.",
+      "fixMappingErrors": "Corrigez les erreurs de mappage du workflow avant de le publier ou de l’exécuter.",
+      "fixValidationErrors": "Corrigez les erreurs de validation du workflow avant de le publier ou de l’exécuter.",
+      "eventCatalogLoading": "Le catalogue d’événements est toujours en cours de chargement. L’exécution est désactivée jusqu’à la fin du chargement.",
+      "registryLoading": "Le registre de schémas est toujours en cours de chargement. L’exécution est désactivée jusqu’à la fin du chargement.",
+      "eventCatalogLoadingPublish": "Le catalogue d’événements est toujours en cours de chargement. La publication est désactivée jusqu’à la fin du chargement.",
+      "registryLoadingPublish": "Le registre de schémas est toujours en cours de chargement. La publication est désactivée jusqu’à la fin du chargement.",
+      "systemEvent": "L’événement système",
+      "tenantEvent": "L’événement du locataire",
+      "missingSchemaRef": "ne possède pas de référence de schéma",
+      "unknownSchemaRefShort": "possède une référence de schéma inconnue"
     }
   },
   "actionInputFieldInfo": {

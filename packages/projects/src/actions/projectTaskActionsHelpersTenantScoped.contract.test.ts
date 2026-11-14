@@ -9,9 +9,9 @@ describe('project task action helper tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared status, authorization, assignee, and id-resolution helpers', () => {
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings as psm', tenant)");
     // The authorization subject is resolved by the one shared record-level helper (C6 extraction).
-    expect(sharedAuthorizationSource).toContain("tenantScopedTable(conn, 'user_roles', tenant)");
-    expect(sharedAuthorizationSource).toContain("tenantScopedTable(conn, 'team_members', tenant)");
-    expect(sharedAuthorizationSource).toContain("tenantScopedTable(conn, 'users', tenant)");
+    // The one resolver in packages/authorization (structurally tenant scoped via tenantDb) owns the lookups.
+    expect(sharedAuthorizationSource).toContain('resolveAuthorizationSubject(conn, { tenant, user, requestCache })');
+    expect(sharedAuthorizationSource).not.toContain('portfolioClientIds');
     expect(source).toContain("tenantScopedTable(trx, 'tickets', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");

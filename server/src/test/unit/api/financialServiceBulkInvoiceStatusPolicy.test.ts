@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
-  status: 'draft' as string | undefined,
   writes: [] as Array<{ table: string; op: string; data?: any }>,
 }));
 
@@ -10,7 +9,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   const makeChain = (table: string) => {
     const chain: any = {
       where: () => chain,
-      first: async () => (table === 'invoices' && h.status ? { invoice_id: 'x', status: h.status } : undefined),
+      first: async () => undefined,
       returning: async () => [],
       update: (data: any) => { h.writes.push({ table, op: 'update', data }); return chain; },
       insert: (data: any) => { h.writes.push({ table, op: 'insert', data }); return chain; },
@@ -19,13 +18,14 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
   return {
     ...actual,
-    tenantDb: () => ({ table: (t: string) => makeChain(t) }),
-    withTransaction: async (_k: any, cb: any) => cb({}),
+    tenantDb: () => ({ table: (table: string) => makeChain(table) }),
+    withTransaction: async (_knex: any, callback: any) => callback({}),
   };
 });
 vi.mock('../../../lib/logging/auditLog', () => ({ auditLog: vi.fn() }));
 
 import { FinancialService } from '../../../lib/api/services/FinancialService';
+import { InvoiceService } from '../../../lib/api/services/InvoiceService';
 
 const context = { tenant: 'tenant-1', userId: 'user-1' } as any;
 const ID = '11111111-1111-4111-8111-111111111111';
@@ -37,30 +37,36 @@ function makeService() {
   return service;
 }
 
-const invoiceWrites = () => h.writes.filter((w) => w.table === 'invoices');
-
-describe('FinancialService.bulkInvoiceOperation status policy', () => {
-  beforeEach(() => { h.writes.length = 0; h.status = 'draft'; });
+describe('FinancialService.bulkInvoiceOperation canonical dispatch', () => {
+  beforeEach(() => {
+    h.writes.length = 0;
+    vi.restoreAllMocks();
+  });
 
   it.each([
-    ['cancel', 'draft', /void.*invoice:void/],
-    ['cancel', 'paid', /Cannot modify paid invoice status/],
-    ['finalize', 'draft', /finalizeInvoice.*invoice:finalize/],
-    ['finalize', 'paid', /Cannot modify paid invoice status/],
-    ['finalize', 'pending', /finalizeInvoice.*invoice:finalize/],
-  ])('%s on a %s invoice writes nothing and returns a per-invoice error', async (operation, status, pattern) => {
-    h.status = status;
-    const { data } = await makeService().bulkInvoiceOperation({ operation, invoice_ids: [ID] } as any, context);
-    expect(data.successful).toBe(0);
-    expect(data.results[0].success).toBe(false);
-    expect(data.results[0].error).toMatch(pattern);
-    expect(invoiceWrites()).toEqual([]);
-  });
+    ['finalize', 'finalizeInvoice', 'sent', 'finalized'],
+    ['cancel', 'voidInvoice', 'cancelled', 'voided'],
+  ] as const)(
+    '%s returns the canonical invoice result without writing invoice state itself',
+    async (operation, command, status, outcome) => {
+      const canonicalResult = { invoice_id: ID, status, finalized_at: null };
+      const canonicalCommand = vi.spyOn(InvoiceService.prototype, command).mockResolvedValue(canonicalResult as any);
 
-  it('missing invoice is a per-invoice error with no write', async () => {
-    h.status = undefined;
-    const { data } = await makeService().bulkInvoiceOperation({ operation: 'cancel', invoice_ids: [ID] } as any, context);
-    expect(data.results[0].success).toBe(false);
-    expect(invoiceWrites()).toEqual([]);
-  });
+      const { data } = await makeService().bulkInvoiceOperation(
+        { operation, invoice_ids: [ID] } as any,
+        context,
+      );
+
+      expect(canonicalCommand).toHaveBeenCalledWith(
+        ...(operation === 'finalize' ? [{ invoice_id: ID }, context] : [ID, context, {}]),
+      );
+      expect(data).toMatchObject({
+        total_requested: 1,
+        successful: 1,
+        failed: 0,
+        results: [{ id: ID, success: true, outcome, result: canonicalResult }],
+      });
+      expect(h.writes.filter((write) => write.table === 'invoices')).toEqual([]);
+    },
+  );
 });

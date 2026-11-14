@@ -752,7 +752,7 @@ export function TimeSheet({
 
             toast.success(t('messages.entrySavedSuccess'));
         } catch (error) {
-            handleError(error, 'Failed to save time entry');
+            handleError(error, t('messages.saveEntryFailed', { defaultValue: 'Failed to save time entry' }));
             throw error;
         }
     };
@@ -879,7 +879,7 @@ export function TimeSheet({
             toast.success(t('messages.taskUpdated'));
             closeDrawer();
         } catch (error) {
-            handleError(error, 'Failed to update task');
+            handleError(error, t('messages.updateTaskFailed', { defaultValue: 'Failed to update task' }));
         }
     }, [closeDrawer, refreshTimeSheetData]);
 
@@ -903,7 +903,7 @@ export function TimeSheet({
             toast.success(t('messages.changesSaved'));
             closeDrawer();
         } catch (error) {
-            handleError(error, 'Failed to save changes');
+            handleError(error, t('messages.saveChangesFailed', { defaultValue: 'Failed to save changes' }));
         }
     }, [closeDrawer, refreshTimeSheetData]);
 
@@ -935,7 +935,7 @@ export function TimeSheet({
             });
             toast.success(t('messages.workItemDeleted'));
         } catch (error) {
-            handleError(error, 'Failed to delete work item');
+            handleError(error, t('messages.deleteWorkItemFailed', { defaultValue: 'Failed to delete work item' }));
         }
     }, [refreshTimeSheetData]);
 
@@ -996,13 +996,12 @@ export function TimeSheet({
     } as const;
 
     return (
-        <ReflectionContainer id="timesheet-main" label="Time Sheet Management">
+        <ReflectionContainer id="timesheet-main" label={t('timeSheet.reflectionLabel', { defaultValue: 'Time Sheet Management' })}>
             <div className="h-full overflow-y-auto" {...timeSheetAutomationProps}>
                 {delegatedEditingBlocked && (
                     <Alert variant="warning" className="mb-4">
                         <AlertDescription>
-                            Delegated time entry is currently disabled. Enable the <span className="font-mono">delegated-time-entry</span> feature flag to
-                            edit other users&#39; time sheets.
+                            {t('timeSheet.delegationDisabledPrefix', { defaultValue: 'Delegated time entry is currently disabled. Enable the' })} <span className="font-mono">delegated-time-entry</span> {t('timeSheet.delegationDisabledSuffix', { defaultValue: "feature flag to edit other users' time sheets." })}
                         </AlertDescription>
                     </Alert>
                 )}
@@ -1028,7 +1027,7 @@ export function TimeSheet({
             {(timeSheet.approval_status === 'CHANGES_REQUESTED' || comments.length > 0) && (
                 <div className="mb-8">
                     {isLoadingComments ? (
-                        <div>Loading comments...</div>
+                        <div>{t('comments.loading', { defaultValue: 'Loading comments...' })}</div>
                     ) : (
                         <TimeSheetComments 
                             comments={comments} 

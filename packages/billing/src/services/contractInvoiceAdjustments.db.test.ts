@@ -47,7 +47,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 });
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (handler: (...args: any[]) => unknown) => (...args: unknown[]) => handler(
-    { user_id: actionContext.userId },
+    { user_id: actionContext.userId, tenant: actionContext.tenant, user_type: 'internal' },
     { tenant: actionContext.tenant },
     ...args,
   ),
@@ -55,7 +55,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth: (handler: (...args: any[]) => unknown) => (...args: unknown[]) => handler(
-    { user_id: actionContext.userId },
+    { user_id: actionContext.userId, tenant: actionContext.tenant, user_type: 'internal' },
     { tenant: actionContext.tenant },
     ...args,
   ),

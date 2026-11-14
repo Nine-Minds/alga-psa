@@ -93,6 +93,7 @@ export async function assertCanActOnBehalf(
 
   const canReadAll = await hasPermission(actor, 'time_sheet', 'read_all', db);
   const managedUserIds = canReadAll ? [] : await resolveManagedSubjectUserIds(db, tenant, actor);
+  // LEVERAGE: pattern authorization-subject-resolution — delegated time entry hand-builds a subject with no roles or teams; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
   const authorizationSubject: AuthorizationSubject = {
     tenant,
     userId: actor.user_id,

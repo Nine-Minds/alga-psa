@@ -401,10 +401,19 @@ export function applyProjectVisibilityFilter(
 
 /** In-memory twin of `applyAssetVisibilityFilter` (client restriction included). Never throws. */
 export function assetMatchesVisibility(
-  record: { clientId?: string | null; contactId?: string | null } | null | undefined,
+  record: {
+    clientId?: string | null;
+    contactId?: string | null;
+    /** User contacts for a shared workspace containing this asset, when loaded. */
+    sharedWorkspaceContactIds?: string[];
+  } | null | undefined,
   visibility: ContactOwnedContext | null | undefined
 ): boolean {
-  return contactOwnedMatches(record, visibility, visibility?.effectiveAssetScope);
+  if (contactOwnedMatches(record, visibility, visibility?.effectiveAssetScope)) return true;
+  if (!record || !visibility || visibility.effectiveAssetScope === 'client') return false;
+  if (record.clientId !== visibility.clientId || !visibility.contactId) return false;
+  const visibleContactIds = resolveVisibleContactIds(visibility);
+  return (record.sharedWorkspaceContactIds ?? []).some((contactId) => visibleContactIds.includes(contactId));
 }
 
 /** In-memory twin of `applyProjectVisibilityFilter` (client restriction included). Never throws. */

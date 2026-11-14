@@ -40,6 +40,21 @@ describe('UniFiApiClient', () => {
     expect(calls[0].url).toContain('https://api.ui.com/v1/hosts');
   });
 
+  it('sends Site Manager and Cloud Connector calls to UNIFI_SITE_MANAGER_BASE_URL when set (simulator smoke)', async () => {
+    const previous = process.env.UNIFI_SITE_MANAGER_BASE_URL;
+    process.env.UNIFI_SITE_MANAGER_BASE_URL = 'http://172.17.0.1:18795/';
+    try {
+      const { client, calls } = makeClient([json({ data: [] }), json({ data: [], totalCount: 0 })]);
+      await client.testConnection();
+      await client.listSitesForHost({ hostId: 'h1', name: 'One' });
+      expect(calls[0].url).toContain('http://172.17.0.1:18795/v1/hosts');
+      expect(calls[1].url).toContain('http://172.17.0.1:18795/v1/connector/consoles/h1/proxy/network/integration/v1/sites');
+    } finally {
+      if (previous === undefined) delete process.env.UNIFI_SITE_MANAGER_BASE_URL;
+      else process.env.UNIFI_SITE_MANAGER_BASE_URL = previous;
+    }
+  });
+
   it('follows nextToken across Site Manager pages without truncating', async () => {
     const { client, calls } = makeClient([
       json({ data: [{ id: 'h1', reportedState: { name: 'One' } }], nextToken: 'tok1' }),

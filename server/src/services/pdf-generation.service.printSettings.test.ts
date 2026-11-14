@@ -4,6 +4,12 @@ import type { TemplateAst } from '@alga-psa/types';
 vi.mock('@alga-psa/db', () => ({
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   createTenantKnex: vi.fn(),
+  // BillingEngine -> @alga-psa/inventory/lib -> @alga-psa/assets/actions pulls in
+  // AssetAuditService, which extends BaseService at module scope; the barrel this
+  // test imports evaluates that whole chain even though it never calls into it.
+  BaseService: class {},
+  withTransaction: vi.fn(async (_knex: unknown, work: (trx: unknown) => Promise<unknown>) => work(undefined)),
+  tenantDb: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
@@ -104,12 +110,19 @@ describe('PDFGenerationService print settings', () => {
 
   it('passes resolved format and margin options to page.pdf(...)', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('pdf-output')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     const originalGetBrowser = browserPoolService.getBrowser;
     const originalReleaseBrowser = browserPoolService.releaseBrowser;
@@ -128,6 +141,10 @@ describe('PDFGenerationService print settings', () => {
     try {
       await (service as any).generatePDFBuffer('<html><body>Invoice</body></html>', templateAst);
 
+      expect(page.setJavaScriptEnabled).toHaveBeenCalledWith(false);
+      expect(page.setRequestInterception).toHaveBeenCalledWith(true);
+      expect(context.close).toHaveBeenCalledOnce();
+      expect(browserPoolService.releaseBrowser).toHaveBeenCalledWith(browser);
       expect(page.pdf).toHaveBeenCalledWith({
         format: 'Legal',
         printBackground: true,
@@ -146,12 +163,19 @@ describe('PDFGenerationService print settings', () => {
 
   it('generates a PDF successfully for a template with explicit paper preset and margin settings', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('pdf-output')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     const originalGetBrowser = browserPoolService.getBrowser;
     const originalReleaseBrowser = browserPoolService.releaseBrowser;
@@ -178,6 +202,7 @@ describe('PDFGenerationService print settings', () => {
       });
 
       expect(Buffer.isBuffer(pdfBuffer)).toBe(true);
+      expect(context.close).toHaveBeenCalledOnce();
       expect(page.pdf).toHaveBeenCalledWith({
         format: 'Letter',
         printBackground: true,

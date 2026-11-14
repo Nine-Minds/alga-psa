@@ -9,10 +9,16 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { portalAssetStatusLabel, portalAssetStatusVariant } from './portalAssetStatus';
 
 // Extension numerics are nullable ("unknown", never 0) — show that instead of a bare "null cores".
-const formatCpu = (model: string | null | undefined, cores: number | null | undefined): string => {
+const formatCpu = (
+  model: string | null | undefined,
+  cores: number | null | undefined,
+  t: (key: string, options: Record<string, unknown> & { defaultValue: string }) => string,
+): string => {
   const trimmedModel = model?.trim() ?? '';
-  if (cores == null) return trimmedModel || 'Not provided';
-  return trimmedModel ? `${trimmedModel} (${cores} cores)` : `${cores} cores`;
+  if (cores == null) return trimmedModel || t('assets.details.notProvided', { defaultValue: 'Not provided' });
+  return trimmedModel
+    ? t('assets.details.cpuWithModel', { defaultValue: '{{model}} ({{count}} cores)', model: trimmedModel, count: cores })
+    : t('assets.details.cpuCores', { defaultValue: '{{count}} cores', count: cores });
 };
 
 interface AssetDetailsProps {
@@ -28,7 +34,7 @@ export function AssetDetails({ asset, statusLabel, statusKind, onCreateTicket }:
   const { t } = useTranslation('client-portal');
   // Helper function to format dates
   const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('assets.details.notAvailable', { defaultValue: 'N/A' });
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -41,23 +47,23 @@ export function AssetDetails({ asset, statusLabel, statusKind, onCreateTicket }:
     if (asset.workstation) {
       return (
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-500">Workstation Details</h3>
+          <h3 className="text-sm font-medium text-gray-500">{t('assets.details.workstationTitle', { defaultValue: 'Workstation Details' })}</h3>
           <div className="mt-2 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">OS</p>
+              <p className="text-sm text-gray-500">{t('assets.details.os', { defaultValue: 'OS' })}</p>
               <p className="mt-1">{asset.workstation.os_type} {asset.workstation.os_version}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">CPU</p>
-              <p className="mt-1">{formatCpu(asset.workstation.cpu_model, asset.workstation.cpu_cores)}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.cpu', { defaultValue: 'CPU' })}</p>
+              <p className="mt-1">{formatCpu(asset.workstation.cpu_model, asset.workstation.cpu_cores, t)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">RAM</p>
-              <p className="mt-1">{asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb}GB` : 'Not provided'}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.ram', { defaultValue: 'RAM' })}</p>
+              <p className="mt-1">{asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb}GB` : t('assets.details.notProvided', { defaultValue: 'Not provided' })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Storage</p>
-              <p className="mt-1">{asset.workstation.storage_capacity_gb != null ? `${asset.workstation.storage_type} ${asset.workstation.storage_capacity_gb}GB` : (asset.workstation.storage_type || 'Not provided')}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.storage', { defaultValue: 'Storage' })}</p>
+              <p className="mt-1">{asset.workstation.storage_capacity_gb != null ? `${asset.workstation.storage_type} ${asset.workstation.storage_capacity_gb}GB` : (asset.workstation.storage_type || t('assets.details.notProvided', { defaultValue: 'Not provided' }))}</p>
             </div>
           </div>
         </div>
@@ -67,22 +73,22 @@ export function AssetDetails({ asset, statusLabel, statusKind, onCreateTicket }:
     if (asset.network_device) {
       return (
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-500">Network Device Details</h3>
+          <h3 className="text-sm font-medium text-gray-500">{t('assets.details.networkDeviceTitle', { defaultValue: 'Network Device Details' })}</h3>
           <div className="mt-2 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Device Type</p>
+              <p className="text-sm text-gray-500">{t('assets.details.deviceType', { defaultValue: 'Device Type' })}</p>
               <p className="mt-1">{asset.network_device.device_type}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">IP Address</p>
+              <p className="text-sm text-gray-500">{t('assets.details.ipAddress', { defaultValue: 'IP Address' })}</p>
               <p className="mt-1">{asset.network_device.management_ip}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Ports</p>
-              <p className="mt-1">{asset.network_device.port_count ?? 'Not provided'}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.ports', { defaultValue: 'Ports' })}</p>
+              <p className="mt-1">{asset.network_device.port_count ?? t('assets.details.notProvided', { defaultValue: 'Not provided' })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Firmware</p>
+              <p className="text-sm text-gray-500">{t('assets.details.firmware', { defaultValue: 'Firmware' })}</p>
               <p className="mt-1">{asset.network_device.firmware_version}</p>
             </div>
           </div>
@@ -93,23 +99,25 @@ export function AssetDetails({ asset, statusLabel, statusKind, onCreateTicket }:
     if (asset.server) {
       return (
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-500">Server Details</h3>
+          <h3 className="text-sm font-medium text-gray-500">{t('assets.details.serverTitle', { defaultValue: 'Server Details' })}</h3>
           <div className="mt-2 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">OS</p>
+              <p className="text-sm text-gray-500">{t('assets.details.os', { defaultValue: 'OS' })}</p>
               <p className="mt-1">{asset.server.os_type} {asset.server.os_version}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">CPU</p>
-              <p className="mt-1">{formatCpu(asset.server.cpu_model, asset.server.cpu_cores)}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.cpu', { defaultValue: 'CPU' })}</p>
+              <p className="mt-1">{formatCpu(asset.server.cpu_model, asset.server.cpu_cores, t)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">RAM</p>
-              <p className="mt-1">{asset.server.ram_gb != null ? `${asset.server.ram_gb}GB` : 'Not provided'}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.ram', { defaultValue: 'RAM' })}</p>
+              <p className="mt-1">{asset.server.ram_gb != null ? `${asset.server.ram_gb}GB` : t('assets.details.notProvided', { defaultValue: 'Not provided' })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Type</p>
-              <p className="mt-1">{asset.server.is_virtual ? 'Virtual' : 'Physical'}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.type', { defaultValue: 'Type' })}</p>
+              <p className="mt-1">{asset.server.is_virtual
+                ? t('assets.details.virtual', { defaultValue: 'Virtual' })
+                : t('assets.details.physical', { defaultValue: 'Physical' })}</p>
             </div>
           </div>
         </div>
@@ -124,18 +132,18 @@ export function AssetDetails({ asset, statusLabel, statusKind, onCreateTicket }:
       {/* Basic Information */}
       <Card>
         <div className="p-4">
-          <h2 className="text-lg font-medium text-gray-900">Basic Information</h2>
+          <h2 className="text-lg font-medium text-gray-900">{t('assets.details.basicInformation', { defaultValue: 'Basic Information' })}</h2>
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Asset Tag</p>
+              <p className="text-sm text-gray-500">{t('assets.details.assetTag', { defaultValue: 'Asset Tag' })}</p>
               <p className="mt-1">{asset.asset_tag}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Serial Number</p>
-              <p className="mt-1">{asset.serial_number || 'N/A'}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.serialNumber', { defaultValue: 'Serial Number' })}</p>
+              <p className="mt-1">{asset.serial_number || t('assets.details.notAvailable', { defaultValue: 'N/A' })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Status</p>
+              <p className="text-sm text-gray-500">{t('assets.details.status', { defaultValue: 'Status' })}</p>
               {/* A div, not a p: Badge renders a div, and a div inside a p is
                   invalid markup that React reports as a hydration error. */}
               <div className="mt-1">
@@ -161,15 +169,15 @@ export function AssetDetails({ asset, statusLabel, statusKind, onCreateTicket }:
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Location</p>
-              <p className="mt-1">{asset.location || 'N/A'}</p>
+              <p className="text-sm text-gray-500">{t('assets.details.location', { defaultValue: 'Location' })}</p>
+              <p className="mt-1">{asset.location || t('assets.details.notAvailable', { defaultValue: 'N/A' })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Purchase Date</p>
+              <p className="text-sm text-gray-500">{t('assets.details.purchaseDate', { defaultValue: 'Purchase Date' })}</p>
               <p className="mt-1">{formatDate(asset.purchase_date)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Warranty End Date</p>
+              <p className="text-sm text-gray-500">{t('assets.details.warrantyEndDate', { defaultValue: 'Warranty End Date' })}</p>
               <p className="mt-1">{formatDate(asset.warranty_end_date)}</p>
             </div>
           </div>

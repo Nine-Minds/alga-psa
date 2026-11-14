@@ -302,7 +302,8 @@ describe('tickets modal route infrastructure', () => {
     }
     expect(bulkActions).toContain('{ tenant }');
     expect(bulkActions).toContain('updateTicketInTransaction(trx, user as IUserWithRoles, tenant');
-    expect(bulkActions).toContain("createTagsForEntityWithTransaction(trx, tenant, ticketId, 'ticket'");
+    // Bulk tagging's tenant and transaction boundaries are exercised at runtime
+    // in ticketActions.moveToBoard.test.ts, independent of the tag helper used.
 
     expect(importActions).toContain('export const importTickets = withAuth(async (');
     expect(importActions).toContain('CreateTicketInput');

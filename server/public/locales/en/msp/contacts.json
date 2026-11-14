@@ -418,7 +418,10 @@
       "refreshing": "Refreshing...",
       "resend": "Resend",
       "resending": "Resending...",
-      "revoke": "Revoke"
+      "revoke": "Revoke",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete"
     },
     "toast": {
       "successTitle": "Success",
@@ -460,7 +463,8 @@
         "noBaseUrl": "Base URL is not configured for portal invitations.",
         "invitationNotFound": "Invitation not found or already used."
       },
-      "userNotFound": "Client user not found"
+      "userNotFound": "Client user not found",
+      "validationErrorTitle": "Validation Error"
     },
     "boardCount_few": "{{count}} boards",
     "boardCount_many": "{{count}} boards"
@@ -723,6 +727,118 @@
       "saved": "Contact updated",
       "saveFailed": "Could not update contact",
       "saveFailedDescription": "The contact could not be updated. Please try again."
+    },
+    "relative": {
+      "today": "today",
+      "yesterday": "yesterday",
+      "daysAgo": "{{count}}d ago"
+    },
+    "emailType": {
+      "primary": "Primary",
+      "other": "other"
+    },
+    "phoneType": {
+      "other": "Other"
+    },
+    "ticketPill": {
+      "closed": "Closed",
+      "urgent": "Urgent",
+      "open": "Open"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "role": {
+      "add": "Add role",
+      "editTitle": "Click to edit role"
+    },
+    "atClient": "at",
+    "noClient": "No client",
+    "noPrimaryEmail": "No primary email",
+    "noPhoneNumber": "No phone number",
+    "contactSince": "Contact since {{date}}",
+    "lastTouch": "Last touch",
+    "editContact": "Edit contact",
+    "openFullPage": "Open full page",
+    "viewAll": "View all",
+    "viewAllCount": "View all {{count}}",
+    "reach": {
+      "title": "Reach",
+      "add": "Add email or phone",
+      "email": "Email",
+      "phone": "Phone",
+      "primaryMeta": "primary",
+      "noEmails": "No email addresses",
+      "addEmail": "Add an email",
+      "noPhones": "No phone numbers",
+      "addPhone": "Add a phone number"
+    },
+    "portalChip": {
+      "deactivated": "Portal · deactivated",
+      "signedIn": "Portal · signed in {{when}}",
+      "neverSignedIn": "Portal · never signed in",
+      "invited": "Portal · invited",
+      "noAccess": "No portal access"
+    },
+    "portal": {
+      "title": "Portal access",
+      "manage": "Manage",
+      "status": "Status",
+      "role": "Role",
+      "clientAdmin": "Client admin",
+      "standard": "Standard",
+      "lastSignIn": "Last sign-in",
+      "invited": "Invited",
+      "noClientAssigned": "No client assigned",
+      "deactivated": "Deactivated",
+      "activeAccount": "Active account",
+      "invitationSent": "Invitation sent",
+      "noAccess": "No access"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "create": "Create ticket",
+      "createFirst": "Create a ticket",
+      "empty": "No tickets yet",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interactions",
+      "log": "Log interaction",
+      "logFirst": "Log an interaction",
+      "empty": "No interactions logged",
+      "fallbackTitle": "Interaction",
+      "loadError": "Interactions could not be loaded. Please try again."
+    },
+    "documents": {
+      "title": "Documents",
+      "add": "Add document",
+      "addFirst": "Add a document",
+      "empty": "No documents yet",
+      "fallbackTitle": "Document",
+      "dialogTitle": "Contact documents"
+    },
+    "relatedWork": {
+      "title": "Related work",
+      "projects": "Projects",
+      "quotes": "Quotes",
+      "noProjects": "No projects",
+      "noQuotes": "No quotes",
+      "noStatus": "No status",
+      "noStatusLower": "no status",
+      "projectFallback": "Project {{number}}",
+      "quoteFallback": "Quote",
+      "empty": "No related projects or quotes"
+    },
+    "notes": {
+      "title": "Notes",
+      "edit": "Edit",
+      "openDocument": "Open note document",
+      "save": "Save notes",
+      "cancel": "Cancel",
+      "empty": "No notes yet",
+      "add": "Add notes"
     }
   },
   "errors": {
@@ -835,7 +951,30 @@
       "managerScopeNote_one": "Their view also includes records of {{count}} person who reports to them.",
       "managerScopeNote_other": "Their view also includes records of {{count}} people who report to them.",
       "managerScopeNote_few": "Their view also includes records of {{count}} people who report to them.",
-      "managerScopeNote_many": "Their view also includes records of {{count}} people who report to them."
+      "managerScopeNote_many": "Their view also includes records of {{count}} people who report to them.",
+      "assignmentLabel": "Ticket visibility group",
+      "assignmentPlaceholder": "Select visibility assignment",
+      "assignmentUpdated": "Contact visibility assignment updated",
+      "assignFailed": "Failed to assign visibility group",
+      "manageLabel": "Visibility groups for client",
+      "manageHelp": "Create or edit groups of boards and use them for contact assignments.",
+      "nameLabel": "Group name",
+      "nameRequired": "Visibility group name is required",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional description",
+      "boardsLabel": "Boards",
+      "noBoards": "No boards available",
+      "createGroup": "Create group",
+      "updateGroup": "Update group",
+      "created": "Visibility group created",
+      "updated": "Visibility group updated",
+      "deleted": "Visibility group deleted",
+      "deleteConfirm": "Delete this visibility group?",
+      "deleteFailed": "Failed to delete visibility group",
+      "saveFailed": "Failed to save visibility group",
+      "loadFailed": "Failed to load visibility group for editing",
+      "empty": "No visibility groups yet",
+      "fullAccess": "Full access"
     }
   },
   "messages": {

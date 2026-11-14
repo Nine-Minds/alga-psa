@@ -7,7 +7,6 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -19,7 +18,6 @@ import {
   getUniFiConnectionSummary,
   getUniFiSettings,
   listUniFiSiteMappings,
-  saveUniFiConfiguration,
   syncUniFiSites,
   triggerUniFiFullSync,
   saveUniFiAlertingSettings,
@@ -27,10 +25,9 @@ import {
   testUniFiConnection,
   updateUniFiSiteMapping,
 } from '../../../lib/actions/integrations/uniFiActions';
+import UniFiCredentialsPanel, { type UniFiCredentialItem } from './UniFiCredentialsPanel';
 import { RmmAlertAutomationSettings } from '@alga-psa/integrations/components/settings/integrations/RmmAlertAutomationSettings';
 import { RmmDeviceSyncSettings } from '@alga-psa/integrations/components/settings/integrations/RmmDeviceSyncSettings';
-
-type ConnectionMode = 'site_manager' | 'local';
 
 type MappingRow = {
   mapping_id: string;
@@ -46,11 +43,10 @@ type MappingRow = {
 export default function UniFiIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
 
-  // The key is write-only: this state only ever holds what the user is typing now.
-  const [apiKey, setApiKey] = useState('');
+  // Keys are write-only and live in UniFiCredentialsPanel; here only labels/statuses are held.
   const [hasApiKey, setHasApiKey] = useState(false);
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('site_manager');
-  const [localBaseUrl, setLocalBaseUrl] = useState('');
+  const [credentialItems, setCredentialItems] = useState<UniFiCredentialItem[]>([]);
+  const [unreachableConsoles, setUnreachableConsoles] = useState<Array<{ name: string }>>([]);
   const [reconnectRequired, setReconnectRequired] = useState(false);
 
   const [integrationId, setIntegrationId] = useState<string | null>(null);
@@ -70,7 +66,6 @@ export default function UniFiIntegrationSettings() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [isSaving, startSaving] = useTransition();
   const [isTesting, startTesting] = useTransition();
   const [isDisconnecting, startDisconnecting] = useTransition();
   const [isSiteSyncing, startSiteSyncing] = useTransition();
@@ -103,11 +98,11 @@ export default function UniFiIntegrationSettings() {
         setConnectedAt(config?.connectedAt || null);
         setSyncStatus(config?.syncStatus || 'pending');
         setSyncError(config?.syncError || null);
-        setConnectionMode(config?.connectionMode === 'local' ? 'local' : 'site_manager');
-        setLocalBaseUrl(config?.localBaseUrl || '');
         setReconnectRequired(Boolean(config?.reconnectRequired));
         if (typeof config?.offlineGraceMinutes === 'number') setGraceMinutes(String(config.offlineGraceMinutes));
         setHasApiKey(Boolean(settingsResult.credentials?.hasApiKey));
+        setCredentialItems((settingsResult.credentials?.items ?? []) as UniFiCredentialItem[]);
+        setUnreachableConsoles(settingsResult.credentials?.unreachableConsoles ?? []);
       }
 
       if (!mappingResult.success) {
@@ -139,25 +134,6 @@ export default function UniFiIntegrationSettings() {
       ? <Badge variant="default">{t('integrations.rmm.unifi.status.connected', { defaultValue: 'Connected' })}</Badge>
       : <Badge variant="outline">{t('integrations.rmm.unifi.status.disconnected', { defaultValue: 'Not connected' })}</Badge>;
   const syncStatusLabel = syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1);
-
-  const handleSave = () => {
-    startSaving(async () => {
-      setError(null);
-      setSuccess(null);
-      const result = await saveUniFiConfiguration({
-        apiKey: apiKey.trim() || undefined,
-        connectionMode,
-        localBaseUrl: connectionMode === 'local' ? localBaseUrl.trim() : undefined,
-      });
-      if (result.success) {
-        setApiKey('');
-        setSuccess(t('integrations.rmm.unifi.success.configurationSaved', { defaultValue: 'UniFi configuration saved' }));
-        await refresh(true);
-      } else {
-        setError(result.error || t('integrations.rmm.unifi.errors.saveConfiguration', { defaultValue: 'Failed to save UniFi configuration' }));
-      }
-    });
-  };
 
   const handleTest = () => {
     startTesting(async () => {
@@ -292,11 +268,6 @@ export default function UniFiIntegrationSettings() {
     })();
   };
 
-  const modeOptions = [
-    { value: 'site_manager', label: t('integrations.rmm.unifi.fields.modeSiteManager', { defaultValue: 'Site Manager (cloud)' }) },
-    { value: 'local', label: t('integrations.rmm.unifi.fields.modeLocal', { defaultValue: 'Local controller' }) },
-  ];
-
   const columns: ColumnDefinition<MappingRow>[] = [
     {
       title: t('integrations.rmm.unifi.mappings.site', { defaultValue: 'UniFi Site' }),
@@ -304,11 +275,21 @@ export default function UniFiIntegrationSettings() {
       render: (_v, mapping) => (
         <>
           <div className="font-medium">{mapping.external_organization_name || mapping.external_organization_id}</div>
-          <div className="text-xs text-muted-foreground">
-            {t('integrations.rmm.unifi.mappings.siteIdLabel', { defaultValue: 'ID: {{id}}', id: mapping.external_organization_id })}
-          </div>
+          {mapping.metadata?.hostName ? (
+            <div className="text-xs text-muted-foreground">{mapping.metadata.hostName}</div>
+          ) : null}
         </>
       ),
+    },
+    {
+      title: t('integrations.rmm.unifi.mappings.reachedBy', { defaultValue: 'Reached by' }),
+      dataIndex: 'metadata',
+      sortable: false,
+      render: (_v, mapping) => {
+        const hostName = mapping.metadata?.hostName;
+        const owner = hostName ? credentialItems.find((item) => item.consoles.includes(hostName)) : undefined;
+        return owner ? owner.label : <span className="text-muted-foreground">—</span>;
+      },
     },
     {
       title: t('integrations.rmm.unifi.mappings.mappedClient', { defaultValue: 'Mapped Client' }),
@@ -372,7 +353,7 @@ export default function UniFiIntegrationSettings() {
         <Alert variant="destructive" id="unifi-reconnect-alert">
           <AlertDescription>
             {t('integrations.rmm.unifi.errors.reconnectRequired', {
-              defaultValue: 'UniFi rejected the saved API key. Paste a new key and save to resume syncing.',
+              defaultValue: 'UniFi rejected every saved API key. Replace a key below to resume syncing.',
             })}
           </AlertDescription>
         </Alert>
@@ -383,7 +364,7 @@ export default function UniFiIntegrationSettings() {
           <CardTitle>{t('integrations.rmm.unifi.connection.title', { defaultValue: 'UniFi Connection' })}</CardTitle>
           <CardDescription>
             {t('integrations.rmm.unifi.connection.description', {
-              defaultValue: 'Connect with a UniFi API key. Use Site Manager to reach every console on your account, or Local controller for a controller you can reach directly. Adopted gateways, switches and access points are synced.',
+              defaultValue: 'Connect with one or more UniFi API keys. A Site Manager key created under Independent reaches your independent consoles; a key created under a fabric reaches only that fabric, so add one key per fabric. Local controller keys work for a controller you can reach directly. Adopted gateways, switches and access points are synced.',
             })}
           </CardDescription>
         </CardHeader>
@@ -399,59 +380,24 @@ export default function UniFiIntegrationSettings() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="unifi-connection-mode">
-              {t('integrations.rmm.unifi.fields.connectionMode', { defaultValue: 'Connection mode' })}
-            </label>
-            <CustomSelect
-              id="unifi-connection-mode"
-              options={modeOptions}
-              value={connectionMode}
-              onValueChange={(value) => setConnectionMode(value === 'local' ? 'local' : 'site_manager')}
-            />
-          </div>
-
-          {connectionMode === 'local' ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="unifi-local-base-url">
-                {t('integrations.rmm.unifi.fields.localBaseUrl', { defaultValue: 'Controller URL' })}
-              </label>
-              <Input
-                id="unifi-local-base-url"
-                value={localBaseUrl}
-                onChange={(e) => setLocalBaseUrl(e.target.value)}
-                placeholder={t('integrations.rmm.unifi.fields.localBaseUrlPlaceholder', { defaultValue: 'https://unifi.example.com' })}
-              />
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="unifi-api-key">
-              {t('integrations.rmm.unifi.fields.apiKey', {
-                defaultValue: 'API key ({{state}})',
-                state: hasApiKey
-                  ? t('integrations.rmm.unifi.fields.apiKeyStateSaved', { defaultValue: 'saved' })
-                  : t('integrations.rmm.unifi.fields.apiKeyStateRequired', { defaultValue: 'required' }),
-              })}
-            </label>
-            <Input
-              id="unifi-api-key"
-              type="password"
-              autoComplete="off"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={hasApiKey
-                ? t('integrations.rmm.unifi.fields.apiKeyPlaceholderExisting', { defaultValue: 'Key saved. Enter a new key to replace it' })
-                : t('integrations.rmm.unifi.fields.apiKeyPlaceholderNew', { defaultValue: 'Paste your UniFi API key' })}
-            />
-          </div>
+          <UniFiCredentialsPanel
+            items={credentialItems}
+            unreachableConsoles={unreachableConsoles}
+            disabled={isLoading}
+            onChanged={async (message) => {
+              setError(null);
+              setSuccess(message ?? null);
+              await refresh(true);
+            }}
+            onError={(message) => {
+              setSuccess(null);
+              setError(message);
+            }}
+          />
 
           <div className="flex flex-wrap gap-2">
-            <Button id="unifi-save-config" onClick={handleSave} disabled={isSaving || isLoading || (!apiKey.trim() && !hasApiKey)}>
-              {t('integrations.rmm.unifi.actions.saveConfiguration', { defaultValue: 'Save Configuration' })}
-            </Button>
             <Button id="unifi-test-connection" variant="outline" onClick={handleTest} disabled={isTesting || isLoading || !hasApiKey}>
-              {t('integrations.rmm.unifi.actions.testConnection', { defaultValue: 'Test Connection' })}
+              {t('integrations.rmm.unifi.actions.testConnection', { defaultValue: 'Re-check all keys' })}
             </Button>
             <Button id="unifi-disconnect" variant="outline" onClick={handleDisconnect} disabled={isDisconnecting || isLoading || (!isActive && !hasApiKey)}>
               {t('integrations.rmm.unifi.actions.disconnect', { defaultValue: 'Disconnect' })}

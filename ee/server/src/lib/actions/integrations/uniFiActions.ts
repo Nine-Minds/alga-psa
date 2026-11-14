@@ -12,14 +12,25 @@ import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { runRmmSyncWithTransport } from '../../integrations/rmm/sync/syncOrchestration';
 import {
   createUniFiClient,
-  normalizeLocalBaseUrl,
-  UniFiApiClient,
   UniFiApiError,
-  UNIFI_API_KEY_SECRET,
   UNIFI_CLOUD_BASE_URL,
-  UNIFI_LOCAL_BASE_URL_SECRET,
   type UniFiConnectionMode,
 } from '../../integrations/unifi/unifiApiClient';
+import {
+  addCredential,
+  listCredentialViews,
+  removeCredential,
+  replaceCredentialKey,
+  updateCredential,
+  UniFiCredentialError,
+} from '../../integrations/unifi/credentials/credentialService';
+import {
+  clearRoutes,
+  deleteCredentialSecrets,
+  LEGACY_API_KEY_SECRET,
+  LEGACY_LOCAL_BASE_URL_SECRET,
+  listCredentialRecords,
+} from '../../integrations/unifi/credentials/credentialStore';
 import { reconcileUniFiAlertsNow } from '../../integrations/unifi/alerts/uniFiAlertReconcile';
 import { clearReconnectRequired } from '../../integrations/unifi/reconnect';
 import { runUniFiDeviceSync, runUniFiFullSync, runUniFiScopeSync } from '../../integrations/unifi/sync/syncEngine';
@@ -33,10 +44,14 @@ const PROVIDER = 'unifi' as const;
 const DEFAULT_OFFLINE_GRACE_MINUTES = 5;
 
 function sanitizeError(error: unknown, fallback = 'Unable to complete the UniFi request.'): string {
+  // Validation text from the credential service is written for the user.
+  if (error instanceof UniFiCredentialError) return error.message;
   if (error instanceof UniFiApiError) {
     switch (error.kind) {
       case 'auth':
         return 'UniFi rejected the API key. Create a new key and save it in the integration settings.';
+      case 'credential_unavailable':
+        return error.message;
       case 'console_forbidden':
         return 'UniFi denied access to a console. It may be offline or not shared with this API key.';
       case 'rate_limited':
@@ -164,9 +179,10 @@ export const getUniFiSettings = withAdvancedAssetsAccess(async (user, { tenant }
 
   try {
     const { integration } = await getUniFiIntegration(tenant);
-    const secretProvider = await getSecretProviderInstance();
-    const apiKey = await secretProvider.getTenantSecret(tenant, UNIFI_API_KEY_SECRET);
-    const localBaseUrl = await secretProvider.getTenantSecret(tenant, UNIFI_LOCAL_BASE_URL_SECRET);
+    const { knex } = await createTenantKnex();
+    const credentialList = integration?.integration_id
+      ? await listCredentialViews(knex, tenant, integration.integration_id)
+      : { credentials: [], unreachableConsoles: [] };
     const settings = parseSettings(integration?.settings);
     const lifecycle = (settings.tokenLifecycle ?? {}) as { status?: string };
     const grace = Number(settings.offlineGraceMinutes);
@@ -182,12 +198,15 @@ export const getUniFiSettings = withAdvancedAssetsAccess(async (user, { tenant }
         syncStatus: integration?.sync_status || 'pending',
         syncError: integration?.sync_error || null,
         connectionMode: resolveMode(settings),
-        localBaseUrl: localBaseUrl || null,
         reconnectRequired: lifecycle.status === 'reconnect_required',
         offlineGraceMinutes: Number.isFinite(grace) && grace >= 0 ? grace : DEFAULT_OFFLINE_GRACE_MINUTES,
       },
-      // Only a boolean ever leaves the server; the stored key is never returned.
-      credentials: { hasApiKey: Boolean(apiKey) },
+      // Only labels, modes and statuses leave the server; no key and no controller URL.
+      credentials: {
+        hasApiKey: credentialList.credentials.length > 0,
+        items: credentialList.credentials,
+        unreachableConsoles: credentialList.unreachableConsoles,
+      },
     };
   } catch (error) {
     return { success: false, error: sanitizeError(error, 'Unable to load UniFi settings.') };
@@ -223,37 +242,63 @@ async function convergePollingSchedulesBestEffort(): Promise<void> {
   }
 }
 
+/**
+ * First connect (and the single-key form): creates the 'Default' credential when
+ * the tenant has none. Later keys go through addUniFiCredential.
+ */
 export const saveUniFiConfiguration = withAdvancedAssetsAccess(async (
   user,
   { tenant },
-  input: { apiKey?: string; connectionMode?: UniFiConnectionMode; localBaseUrl?: string }
+  input: { apiKey?: string; connectionMode?: UniFiConnectionMode; localBaseUrl?: string; label?: string }
 ) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   try {
     const mode: UniFiConnectionMode = input.connectionMode === 'local' ? 'local' : 'site_manager';
-    const secretProvider = await getSecretProviderInstance();
-    const newKey = input.apiKey?.trim() || '';
-    const candidateKey = newKey || (await secretProvider.getTenantSecret(tenant, UNIFI_API_KEY_SECRET)) || '';
-    if (!candidateKey) {
-      return { success: false, error: 'A UniFi API key is required.' };
+    const { knex } = await createTenantKnex();
+
+    // The integration row must exist before a credential can reference it. It is
+    // created inactive; it is only activated after the key has been verified.
+    // An existing row is left untouched until validation passes (a rejected mode change
+    // must not rewrite settings.connectionMode).
+    const found = await getUniFiIntegration(tenant);
+    const integrationId = (found.integration?.integration_id ??
+      (await upsertUniFiIntegrationRow({ tenant, mode })).integration_id) as string;
+    const existing = await listCredentialRecords(knex, tenant, integrationId);
+
+    if (existing.length === 0) {
+      await addCredential(knex, tenant, {
+        integrationId,
+        label: input.label?.trim() || 'Default',
+        mode,
+        apiKey: input.apiKey,
+        localBaseUrl: input.localBaseUrl,
+      });
+    } else {
+      // Single-key form against an existing integration edits the oldest credential.
+      // Destination binding is enforced inside: a URL or mode change needs a new key.
+      const target = existing[0];
+      if (mode !== target.mode) {
+        throw new UniFiCredentialError(
+          'A key cannot change its connection mode. Remove it and add a new key in the other mode.'
+        );
+      }
+      if (input.apiKey?.trim()) {
+        await replaceCredentialKey(knex, tenant, {
+          integrationId,
+          credentialId: target.credentialId,
+          apiKey: input.apiKey,
+          localBaseUrl: input.localBaseUrl,
+        });
+      } else {
+        await updateCredential(knex, tenant, {
+          integrationId,
+          credentialId: target.credentialId,
+          localBaseUrl: input.localBaseUrl,
+        });
+      }
     }
-
-    let localBaseUrl: string | undefined;
-    if (mode === 'local') {
-      const rawUrl =
-        input.localBaseUrl?.trim() || (await secretProvider.getTenantSecret(tenant, UNIFI_LOCAL_BASE_URL_SECRET)) || '';
-      if (!rawUrl) return { success: false, error: 'A controller URL is required for local mode.' };
-      localBaseUrl = normalizeLocalBaseUrl(rawUrl);
-    }
-
-    // Validate against the live API before persisting anything.
-    const client = new UniFiApiClient({ apiKey: candidateKey, mode, localBaseUrl });
-    await client.testConnection();
-
-    if (newKey) await secretProvider.setTenantSecret(tenant, UNIFI_API_KEY_SECRET, newKey);
-    if (localBaseUrl) await secretProvider.setTenantSecret(tenant, UNIFI_LOCAL_BASE_URL_SECRET, localBaseUrl);
 
     const row = await upsertUniFiIntegrationRow({
       tenant,
@@ -271,15 +316,122 @@ export const saveUniFiConfiguration = withAdvancedAssetsAccess(async (
   }
 });
 
+async function requireIntegrationId(tenant: string): Promise<{ knex: any; integrationId: string; mode: UniFiConnectionMode }> {
+  const { knex, integration } = await getUniFiIntegration(tenant);
+  if (!integration?.integration_id) throw new Error('UniFi integration is not configured.');
+  return {
+    knex,
+    integrationId: integration.integration_id as string,
+    mode: resolveMode(parseSettings(integration.settings)),
+  };
+}
+
+/** Adds a key. The key is verified against the destination it was entered for before anything is saved. */
+export const addUniFiCredential = withAdvancedAssetsAccess(async (
+  user,
+  { tenant },
+  input: { label: string; apiKey: string; connectionMode?: UniFiConnectionMode; localBaseUrl?: string }
+) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex, integrationId, mode: integrationMode } = await requireIntegrationId(tenant);
+    const credential = await addCredential(knex, tenant, {
+      integrationId,
+      label: input.label,
+      mode: input.connectionMode === 'local' ? 'local' : input.connectionMode === 'site_manager' ? 'site_manager' : integrationMode,
+      apiKey: input.apiKey,
+      localBaseUrl: input.localBaseUrl,
+    });
+    return { success: true, credentialId: credential.credentialId };
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to add the UniFi key.') };
+  }
+});
+
+export const replaceUniFiCredentialKey = withAdvancedAssetsAccess(async (
+  user,
+  { tenant },
+  input: { credentialId: string; apiKey: string; localBaseUrl?: string }
+) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex, integrationId } = await requireIntegrationId(tenant);
+    await replaceCredentialKey(knex, tenant, { integrationId, ...input });
+    // A replaced key revives a parked integration only through the normal connect path.
+    const { integration } = await getUniFiIntegration(tenant);
+    await upsertUniFiIntegrationRow({
+      tenant,
+      mode: resolveMode(parseSettings(integration?.settings)),
+      isActive: true,
+      connectedAt: new Date(),
+      syncError: null,
+    });
+    await convergePollingSchedulesBestEffort();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to replace the UniFi key.') };
+  }
+});
+
+export const updateUniFiCredential = withAdvancedAssetsAccess(async (
+  user,
+  { tenant },
+  input: { credentialId: string; label?: string; connectionMode?: UniFiConnectionMode; localBaseUrl?: string; apiKey?: string }
+) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex, integrationId } = await requireIntegrationId(tenant);
+    await updateCredential(knex, tenant, {
+      integrationId,
+      credentialId: input.credentialId,
+      label: input.label,
+      mode: input.connectionMode,
+      localBaseUrl: input.localBaseUrl,
+      apiKey: input.apiKey,
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to update the UniFi key.') };
+  }
+});
+
+/** First call without `confirm` lists the mapped sites that would lose their key; the UI asks, then repeats with confirm. */
+export const removeUniFiCredential = withAdvancedAssetsAccess(async (
+  user,
+  { tenant },
+  input: { credentialId: string; confirm?: boolean }
+) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex, integrationId } = await requireIntegrationId(tenant);
+    const outcome = await removeCredential(knex, tenant, { integrationId, ...input });
+    return { success: true, ...outcome };
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to remove the UniFi key.') };
+  }
+});
+
+/** Manual re-check: forgets console routes and tests every key against its own destination. */
 export const testUniFiConnection = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   try {
-    const { integration } = await getUniFiIntegration(tenant);
+    const { knex, integration } = await getUniFiIntegration(tenant);
     const mode = resolveMode(parseSettings(integration?.settings));
+    if (integration?.integration_id) await clearRoutes(knex, tenant, integration.integration_id);
     const client = await createUniFiClient(tenant, mode);
     await client.testConnection();
+    // Run the consoles through discovery so routes and unreachable consoles are fresh.
+    await client.listSites().catch(() => undefined);
 
     await upsertUniFiIntegrationRow({
       tenant,
@@ -316,9 +468,15 @@ export const disconnectUniFiIntegration = withAdvancedAssetsAccess(async (user, 
     const { knex, integration } = await getUniFiIntegration(tenant);
 
     const secretProvider = await getSecretProviderInstance();
+    if (integration?.integration_id) {
+      const credentials = await listCredentialRecords(knex, tenant, integration.integration_id);
+      await Promise.all(credentials.map((credential) => deleteCredentialSecrets(tenant, credential.credentialId)));
+      await tenantDb(knex, tenant).table('unifi_console_routes').where({ integration_id: integration.integration_id }).delete();
+      await tenantDb(knex, tenant).table('unifi_credentials').where({ integration_id: integration.integration_id }).delete();
+    }
     await Promise.all([
-      secretProvider.deleteTenantSecret(tenant, UNIFI_API_KEY_SECRET),
-      secretProvider.deleteTenantSecret(tenant, UNIFI_LOCAL_BASE_URL_SECRET),
+      secretProvider.deleteTenantSecret(tenant, LEGACY_API_KEY_SECRET),
+      secretProvider.deleteTenantSecret(tenant, LEGACY_LOCAL_BASE_URL_SECRET),
     ]);
 
     await tenantDb(knex, tenant)

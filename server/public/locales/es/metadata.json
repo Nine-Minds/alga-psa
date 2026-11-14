@@ -374,6 +374,10 @@
       "title": "Activos",
       "custody": {
         "title": "Equipos en custodia"
+      },
+      "audits": {
+        "title": "Auditorías de sitios",
+        "detailTitle": "Auditoría de sitio"
       }
     },
     "chat": {

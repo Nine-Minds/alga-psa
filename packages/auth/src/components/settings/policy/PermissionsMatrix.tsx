@@ -2,7 +2,7 @@
 
 // Auth-owned permissions matrix UI.
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -32,9 +32,12 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ViewMode = 'msp' | 'client';
 
-const viewOptions: ViewSwitcherOption<ViewMode>[] = [
+const buildViewOptions = (
+  t: (key: string, options: Record<string, unknown> & { defaultValue: string }) => string,
+): ViewSwitcherOption<ViewMode>[] => [
+  // 'MSP' is an acronym, identical in every shipped locale.
   { value: 'msp', label: 'MSP' },
-  { value: 'client', label: 'Client Portal' },
+  { value: 'client', label: t('permissions.views.clientPortal', { defaultValue: 'Client Portal' }) },
 ];
 
 const isReturnedActionError = (value: unknown) =>
@@ -62,6 +65,10 @@ interface RolePermissionRow {
 
 export default function PermissionsMatrix() {
   const { t } = useTranslation('msp/settings');
+  // Fetchers read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers them and reset the saved-permission baseline.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [permissions, setPermissions] = useState<IPermission[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('all');
@@ -87,7 +94,7 @@ export default function PermissionsMatrix() {
       setPermissions(data);
     } catch (err) {
       console.error('Error fetching permissions:', err);
-      setError('Failed to fetch permissions');
+      setError(tRef.current('permissions.errors.fetchPermissions', { defaultValue: 'Failed to fetch permissions' }));
     }
   }, []);
 
@@ -97,7 +104,7 @@ export default function PermissionsMatrix() {
       setRoles(data);
     } catch (err) {
       console.error('Error fetching roles:', err);
-      setError('Failed to fetch roles');
+      setError(tRef.current('permissions.errors.fetchRoles', { defaultValue: 'Failed to fetch roles' }));
     }
   }, []);
 
@@ -107,7 +114,7 @@ export default function PermissionsMatrix() {
       setRolePermissions(data.map((p: IPermission) => p.permission_id));
     } catch (err) {
       console.error('Error fetching role permissions:', err);
-      setError('Failed to fetch role permissions');
+      setError(tRef.current('permissions.errors.fetchRolePermissions', { defaultValue: 'Failed to fetch role permissions' }));
     }
   }, []);
 
@@ -164,7 +171,7 @@ export default function PermissionsMatrix() {
       setOriginalRolePermissions(new Map(rolePermissionsMap));
     } catch (err) {
       console.error('Error fetching all role permissions:', err);
-      setError('Failed to fetch role permissions');
+      setError(tRef.current('permissions.errors.fetchRolePermissions', { defaultValue: 'Failed to fetch role permissions' }));
     }
   }, [filteredRoles]);
 
@@ -182,7 +189,7 @@ export default function PermissionsMatrix() {
     const sortedResources = Array.from(resources).sort();
     
     return [
-      { value: 'all', label: 'All Resources' },
+      { value: 'all', label: t('permissions.filters.allResources', { defaultValue: 'All Resources' }) },
       ...sortedResources.map(resource => ({
         value: resource,
         label: resource.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -375,8 +382,8 @@ export default function PermissionsMatrix() {
       
       toast.success(t('permissions.messages.permissionsUpdated'));
     } catch (err) {
-      setError('Failed to save permissions');
-      handleError(err, 'Failed to save permissions');
+      setError(t('permissions.errors.savePermissions', { defaultValue: 'Failed to save permissions' }));
+      handleError(err, t('permissions.errors.savePermissions', { defaultValue: 'Failed to save permissions' }));
     } finally {
       setIsSaving(false);
       setShowConfirmDialog(false);
@@ -532,7 +539,7 @@ export default function PermissionsMatrix() {
   // Define columns for role-based view
   const roleColumns: ColumnDefinition<PermissionRow>[] = [
     {
-      title: 'Resource',
+      title: t('permissions.columns.resource', { defaultValue: 'Resource' }),
       dataIndex: 'resource',
       width: '30%',
       render: (value: string) => (
@@ -542,7 +549,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Create',
+      title: t('permissions.columns.create', { defaultValue: 'Create' }),
       dataIndex: 'create',
       width: '10%',
       render: (value: IPermission | undefined) => (
@@ -552,7 +559,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Read',
+      title: t('permissions.columns.read', { defaultValue: 'Read' }),
       dataIndex: 'read',
       width: '10%',
       render: (value: IPermission | undefined) => (
@@ -562,7 +569,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Update',
+      title: t('permissions.columns.update', { defaultValue: 'Update' }),
       dataIndex: 'update',
       width: '10%',
       render: (value: IPermission | undefined) => (
@@ -572,7 +579,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Delete',
+      title: t('permissions.columns.delete', { defaultValue: 'Delete' }),
       dataIndex: 'delete',
       width: '10%',
       render: (value: IPermission | undefined) => (
@@ -582,12 +589,12 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Special Actions',
+      title: t('permissions.columns.specialActions', { defaultValue: 'Special Actions' }),
       dataIndex: 'specialActions',
       width: '30%',
       render: (value: IPermission[], record: PermissionRow) => {
         if (value.length === 0) {
-          return <span className="text-sm text-gray-400">None</span>;
+          return <span className="text-sm text-gray-400">{t('permissions.none', { defaultValue: 'None' })}</span>;
         }
 
         const isExpanded = expandedRows.has(record.resource);
@@ -599,7 +606,7 @@ export default function PermissionsMatrix() {
               className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              {value.length} actions
+              {t('permissions.actionCount', { defaultValue: '{{count}} actions', count: value.length })}
             </button>
             {isExpanded && (
               <div className="mt-2 space-y-1">
@@ -625,7 +632,7 @@ export default function PermissionsMatrix() {
   // Define columns for resource-based view
   const resourceColumns: ColumnDefinition<RolePermissionRow>[] = [
     {
-      title: 'Role',
+      title: t('permissions.columns.role', { defaultValue: 'Role' }),
       dataIndex: 'role_name',
       width: '30%',
       render: (value: string) => (
@@ -635,7 +642,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Create',
+      title: t('permissions.columns.create', { defaultValue: 'Create' }),
       dataIndex: 'create',
       width: '10%',
       render: (value: IPermission | undefined, record: RolePermissionRow) => (
@@ -645,7 +652,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Read',
+      title: t('permissions.columns.read', { defaultValue: 'Read' }),
       dataIndex: 'read',
       width: '10%',
       render: (value: IPermission | undefined, record: RolePermissionRow) => (
@@ -655,7 +662,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Update',
+      title: t('permissions.columns.update', { defaultValue: 'Update' }),
       dataIndex: 'update',
       width: '10%',
       render: (value: IPermission | undefined, record: RolePermissionRow) => (
@@ -665,7 +672,7 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Delete',
+      title: t('permissions.columns.delete', { defaultValue: 'Delete' }),
       dataIndex: 'delete',
       width: '10%',
       render: (value: IPermission | undefined, record: RolePermissionRow) => (
@@ -675,12 +682,12 @@ export default function PermissionsMatrix() {
       )
     },
     {
-      title: 'Special Actions',
+      title: t('permissions.columns.specialActions', { defaultValue: 'Special Actions' }),
       dataIndex: 'specialActions',
       width: '30%',
       render: (value: IPermission[], record: RolePermissionRow) => {
         if (value.length === 0) {
-          return <span className="text-sm text-gray-400">None</span>;
+          return <span className="text-sm text-gray-400">{t('permissions.none', { defaultValue: 'None' })}</span>;
         }
         
         const isExpanded = expandedRows.has(record.role_id);
@@ -692,7 +699,7 @@ export default function PermissionsMatrix() {
               className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              {value.length} actions
+              {t('permissions.actionCount', { defaultValue: '{{count}} actions', count: value.length })}
             </button>
             {isExpanded && (
               <div className="mt-2 space-y-1">
@@ -721,9 +728,9 @@ export default function PermissionsMatrix() {
         <div className="flex items-center justify-between">
           {/* Left: Title and Description */}
           <div>
-            <CardTitle>Manage Permissions</CardTitle>
+            <CardTitle>{t('permissions.title', { defaultValue: 'Manage Permissions' })}</CardTitle>
             <CardDescription>
-              Configure access permissions for different roles and resources
+              {t('permissions.description', { defaultValue: 'Configure access permissions for different roles and resources' })}
             </CardDescription>
           </div>
           
@@ -731,7 +738,7 @@ export default function PermissionsMatrix() {
           <ViewSwitcher
             currentView={viewMode}
             onChange={setViewMode}
-            options={viewOptions}
+            options={buildViewOptions(t)}
           />
         </div>
       </CardHeader>
@@ -744,13 +751,13 @@ export default function PermissionsMatrix() {
               value={selectedRole}
               onValueChange={setSelectedRole}
               options={[
-                { value: 'all', label: 'All Roles' },
+                { value: 'all', label: t('permissions.filters.allRoles', { defaultValue: 'All Roles' }) },
                 ...filteredRoles.map(role => ({
                   value: role.role_id,
                   label: role.role_name
                 }))
               ]}
-              placeholder="Select a role"
+              placeholder={t('permissions.filters.selectRole', { defaultValue: 'Select a role' })}
               className="w-full"
             />
           </div>
@@ -761,7 +768,7 @@ export default function PermissionsMatrix() {
               value={selectedResource}
               onValueChange={setSelectedResource}
               options={resourceOptions}
-              placeholder="Filter by resource"
+              placeholder={t('permissions.filters.filterByResource', { defaultValue: 'Filter by resource' })}
               className="w-full"
               customStyles={{
                 content: 'max-h-[256px]'
@@ -772,9 +779,9 @@ export default function PermissionsMatrix() {
 
         {/* Stats */}
         <div className="text-sm text-gray-600">
-          {viewType === 'empty' ? 'Select a role or resource to view permissions' :
-           viewType === 'all-roles-specific-resource' ? `${tableData.length} roles for ${selectedResource}` :
-           `${tableData.length} resources • ${stats.assigned}/${stats.total} permissions`}
+          {viewType === 'empty' ? t('permissions.stats.empty', { defaultValue: 'Select a role or resource to view permissions' }) :
+           viewType === 'all-roles-specific-resource' ? t('permissions.stats.rolesForResource', { defaultValue: '{{count}} roles for {{resource}}', count: tableData.length, resource: selectedResource }) :
+           t('permissions.stats.resourcesAndPermissions', { defaultValue: '{{count}} resources • {{assigned}}/{{total}} permissions', count: tableData.length, assigned: stats.assigned, total: stats.total })}
         </div>
 
         {/* Error Message */}
@@ -787,7 +794,7 @@ export default function PermissionsMatrix() {
         {/* Permissions Table */}
         {viewType === 'empty' ? (
           <div className="text-center py-12 text-gray-500">
-            Please select a role or resource to manage permissions
+            {t('permissions.selectPrompt', { defaultValue: 'Please select a role or resource to manage permissions' })}
           </div>
         ) : viewType === 'all-roles-specific-resource' ? (
           <DataTable
@@ -811,9 +818,9 @@ export default function PermissionsMatrix() {
         {hasUnsavedChanges && (
           <div className="flex items-center justify-between mt-6 pt-6 border-t">
             <div className="text-sm text-muted-foreground">
-              {hasAdminRoleChanges 
-                ? "Admin role permissions cannot be modified" 
-                : "You have unsaved changes"}
+              {hasAdminRoleChanges
+                ? t('permissions.messages.adminLocked', { defaultValue: 'Admin role permissions cannot be modified' })
+                : t('permissions.unsavedChanges', { defaultValue: 'You have unsaved changes' })}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -822,17 +829,17 @@ export default function PermissionsMatrix() {
                 onClick={handleCancelChanges}
                 disabled={isSaving}
               >
-                Cancel
+                {t('permissions.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
               {hasAdminRoleChanges ? (
-                <Tooltip content="Admin role permissions are system-defined and cannot be changed">
+                <Tooltip content={t('permissions.adminLockedTooltip', { defaultValue: 'Admin role permissions are system-defined and cannot be changed' })}>
                   <span>
                     <Button
                       id="save-changes-button"
                       disabled={true}
                       className="flex items-center gap-2"
                     >
-                      Save changes
+                      {t('permissions.actions.saveChanges', { defaultValue: 'Save changes' })}
                     </Button>
                   </span>
                 </Tooltip>
@@ -846,11 +853,11 @@ export default function PermissionsMatrix() {
                   {isSaving ? (
                     <>
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Saving...
+                      {t('permissions.actions.saving', { defaultValue: 'Saving...' })}
                     </>
                   ) : (
                     <>
-                      Save changes
+                      {t('permissions.actions.saveChanges', { defaultValue: 'Save changes' })}
                     </>
                   )}
                 </Button>
@@ -864,11 +871,11 @@ export default function PermissionsMatrix() {
       <ConfirmationDialog
         isOpen={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
-        title="Confirm Permission Changes"
-        message="Are you sure you want to save these permission changes?"
+        title={t('permissions.confirm.title', { defaultValue: 'Confirm Permission Changes' })}
+        message={t('permissions.confirm.message', { defaultValue: 'Are you sure you want to save these permission changes?' })}
         onConfirm={performSave}
-        confirmLabel="Save Changes"
-        cancelLabel="Cancel"
+        confirmLabel={t('permissions.confirm.confirmLabel', { defaultValue: 'Save Changes' })}
+        cancelLabel={t('permissions.actions.cancel', { defaultValue: 'Cancel' })}
         isConfirming={isSaving}
       />
     </Card>

@@ -16,10 +16,11 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import type { UserRoleFloorChange } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
-import { unservedPermissionResources } from '@alga-psa/auth/lib/permissionCapabilities';
+import { unservedPermissionResources, unservedRoles } from '@alga-psa/auth/lib/permissionCapabilities';
 import { 
   IRole, 
   IPermission, 
@@ -62,6 +63,25 @@ import User from '@alga-psa/db/models/user';
 import { hasPermission, checkMultiplePermissions } from '../../auth/rbac';
 import logger from '@alga-psa/core/logger';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+
+/**
+ * Both role floors, reported the API way: a last-role refusal is a 400 the
+ * caller fixes by assigning another role first, a last-admin refusal is a 409
+ * on the tenant's state. Runs inside the caller's write transaction.
+ */
+async function enforceUserRoleFloor(
+  trx: Knex.Transaction,
+  tenant: string,
+  change: UserRoleFloorChange
+): Promise<void> {
+  const floor = await assertUserRoleFloor(trx, tenant, change);
+  if (isUserRoleFloorRejected(floor)) {
+    if (floor.violation === 'last_msp_admin') {
+      throw new ConflictError(floor.message);
+    }
+    throw new ValidationError(floor.message);
+  }
+}
 
 export interface HateoasLink {
   rel: string;
@@ -392,6 +412,15 @@ export class PermissionRoleService extends BaseService<IRole> {
     dataQuery = scopedDb.tenantJoin(dataQuery, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' });
 
     let countQuery = scopedDb.table('roles as r');
+
+    // A role that exists only for a capability is listed only for tenants served for it
+    // (an ended arrangement or a kill switch leaves the row in place).
+    for (const hidden of await unservedRoles(context.tenant)) {
+      const visible = (query: Knex.QueryBuilder) => query.whereNot((role) =>
+        role.where({ 'r.role_name': hidden.role_name, 'r.msp': hidden.msp, 'r.client': hidden.client }));
+      dataQuery = visible(dataQuery);
+      countQuery = visible(countQuery);
+    }
 
     // Common created_*/updated_* range filters (qualified to the roles alias).
     this.applyRangeFilters(dataQuery, filters);
@@ -1133,21 +1162,15 @@ export class PermissionRoleService extends BaseService<IRole> {
         throw new NotFoundError('User not found');
       }
 
+      // Refuse before the delete: leaving the user with no role, or the tenant
+      // with no active MSP admin, is not a warning but a rejection.
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
+
       // Remove the roles
       const deletedCount = await tenantDb(trx, context.tenant).table('user_roles')
         .where('user_id', userId)
         .whereIn('role_id', roleIds)
         .delete();
-
-      // Check if user still has at least one role
-      const remainingRoles = await tenantDb(trx, context.tenant).table('user_roles')
-        .where('user_id', userId)
-        .count('* as count')
-        .first();
-      
-      if (parseInt(remainingRoles?.count as string) === 0) {
-        logger.warn(`User ${userId} has no roles after role removal`);
-      }
 
       // Log audit event
       await this.logAuditEvent({
@@ -1200,6 +1223,9 @@ export class PermissionRoleService extends BaseService<IRole> {
           throw new ValidationError(`Roles not found: ${missingRoles.join(', ')}`);
         }
       }
+
+      // The final set decides, which is also what rejects an empty roleIds.
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
 
       // Remove all current roles
       await tenantDb(trx, context.tenant).table('user_roles')

@@ -1,0 +1,7 @@
+{
+  "attemptedAt": "2026-11-02T17:31:44.179Z",
+  "command": "node ~/.alga-xo/bin/cli.mjs pane-new-tab --paneId=376c175b-b142-46db-b907-5be706188acf --type=browser",
+  "exitStatus": 0,
+  "stdout": "{\"paneId\":\"376c175b-b142-46db-b907-5be706188acf\",\"success\":true,\"newPaneId\":\"c8403826-ff91-488f-aa28-8447b4f96c06\",\"scopedTo\":\"ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series\"}\n",
+  "stderr": ""
+}

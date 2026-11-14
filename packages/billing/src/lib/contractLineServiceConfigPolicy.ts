@@ -46,6 +46,19 @@ export function resolveContractLineServiceConfigurationType(
   return configurationType;
 }
 
+/** Shared eligibility checks for attaching a catalog service to a live or template line. */
+export function assertServiceEligibleForContractLine(
+  service: { service_name?: string | null; item_kind?: string | null; is_active?: boolean | null },
+  lineType: string,
+): void {
+  if (service.is_active === false) {
+    throw new Error(`"${service.service_name ?? 'Service'}" is inactive and cannot be attached to contract lines.`);
+  }
+  if (service.item_kind === 'product' && lineType !== 'Fixed') {
+    throw new Error('Products can only be added to fixed-fee contract lines.');
+  }
+}
+
 /**
  * Resolve the configuration type for a service on a contract line and fill in
  * the per-type defaults that do not depend on the storage shape. Live contract

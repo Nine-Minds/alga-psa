@@ -71,6 +71,13 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// The sender-organization lookup is a database read of its own (covered against the real schema by
+// the seat technician journey test). Here every internal sender is ordinary MSP staff.
+vi.mock('@alga-psa/shared/lib/notificationAudience', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/shared/lib/notificationAudience')>()),
+  resolveInboundReplyAudience: vi.fn(async () => ({ seat: false })),
+}));
+
 vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
   parseEmailReplyBody: (...args: any[]) => parseEmailReplyBodyMock(...args),
   findTicketByReplyToken: (...args: any[]) => findTicketByReplyTokenMock(...args),

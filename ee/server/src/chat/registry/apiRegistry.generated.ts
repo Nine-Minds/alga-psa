@@ -3831,13 +3831,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -4072,13 +4074,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -4183,7 +4187,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       }
     },
@@ -4561,7 +4566,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       }
     },
@@ -5776,13 +5782,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -6201,7 +6209,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, name, and status are required. A blank or omitted asset_tag is allocated from the tenant-wide sequence, optionally using asset_number_reservation_id. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
     "tags": [
       "Assets"
     ],
@@ -6233,9 +6241,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_tag": {
           "type": "string",
-          "minLength": 1,
           "maxLength": 255,
-          "description": "Required tenant-specific asset tag."
+          "description": "Optional physical tag. Omit or send blank to allocate from the tenant-wide asset sequence."
+        },
+        "asset_number_reservation_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional durable reservation to commit to this new asset."
         },
         "name": {
           "type": "string",
@@ -6340,7 +6352,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "client_id",
         "asset_type",
-        "asset_tag",
         "name",
         "status"
       ]
@@ -10161,7 +10172,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/asset-audits",
     "displayName": "List site audits",
     "summary": "List site audits",
-    "description": "Returns the tenant audits newest first, optionally narrowed to one client.",
+    "description": "Returns the tenant audits newest first, optionally narrowed by client, location (or \"no location\"), status and a started_at range.",
     "tags": [
       "Asset audits"
     ],
@@ -10196,6 +10207,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "Only audits of this client."
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Only audits scoped to this client location.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only audits scoped to this client location."
+        }
+      },
+      {
+        "name": "no_location",
+        "in": "query",
+        "required": false,
+        "description": "true returns only audits scoped to the assets that have no location. Wins over location_id.",
+        "schema": {
+          "type": "string",
+          "description": "true returns only audits scoped to the assets that have no location. Wins over location_id."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Only audits in this state.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "in_progress",
+            "completed",
+            "cancelled"
+          ],
+          "description": "Only audits in this state."
+        }
+      },
+      {
+        "name": "started_from",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone."
+        }
+      },
+      {
+        "name": "started_to",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or before it.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or before it."
         }
       },
       {
@@ -10300,6 +10367,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
+              "started_by_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "items": {
                 "type": "array",
                 "items": {
@@ -10361,6 +10434,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "null"
                       ]
                     },
+                    "asset_type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "client_id": {
                       "type": [
                         "string",
@@ -10376,6 +10455,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "format": "uuid"
                     },
                     "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marked_by_name": {
                       "type": [
                         "string",
                         "null"
@@ -10583,6 +10668,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -10644,6 +10735,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -10659,6 +10756,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -10820,6 +10923,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -10881,6 +10990,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -10896,6 +11011,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11087,6 +11208,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11148,6 +11275,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11163,6 +11296,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11335,6 +11474,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11396,6 +11541,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11411,6 +11562,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11572,6 +11729,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11633,6 +11796,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11648,6 +11817,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11809,6 +11984,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11870,6 +12051,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11885,6 +12072,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -22142,7 +22335,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/financial/bulk/invoices",
     "displayName": "Run bulk invoice operation",
     "summary": "Run bulk invoice operation",
-    "description": "FinancialService.bulkInvoiceOperation() supports send/finalize/cancel/mark_paid operations.",
+    "description": "FinancialService.bulkInvoiceOperation() runs finalize or cancel against the canonical invoice engines (1–50 ids). finalize requires invoice:finalize; cancel voids eligible invoices through the canonical void engine (invoice:update, plus accounting_integrations:remote_mutate when an accounting integration is connected). Each id runs independently; per-id results carry success, error and outcome (finalized/voided). Bulk send is unsupported until canonical recipient delivery is implemented; standalone invoice send behavior is unchanged. apply_credit is unsupported: use POST /api/v1/financial/invoices/{id}/credit.",
     "tags": [
       "Financial"
     ],
@@ -22166,10 +22359,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "operation": {
           "type": "string",
           "enum": [
-            "send",
             "finalize",
-            "cancel",
-            "mark_paid"
+            "cancel"
           ]
         },
         "invoice_ids": {
@@ -22178,9 +22369,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string",
             "format": "uuid"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 50
         },
-        "options": {
+        "parameters": {
           "type": "object",
           "additionalProperties": {}
         }
@@ -25961,7 +26153,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices",
     "displayName": "Create invoice",
     "summary": "Create invoice",
-    "description": "Creates an invoice record via ApiBaseController.create() and invoice create schema.",
+    "description": "Creates a draft invoice. Header totals are derived from the items; lifecycle, credit and provenance fields are owned by dedicated commands and rejected when set.",
     "tags": [
       "Invoices"
     ],
@@ -25984,7 +26176,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "client_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Must be a client in the caller's tenant."
         },
         "invoice_date": {
           "type": "string"
@@ -25992,40 +26185,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "due_date": {
           "type": "string"
         },
-        "subtotal": {
-          "type": "integer",
-          "minimum": 0
+        "payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "credit_card",
+            "bank_transfer",
+            "check",
+            null
+          ]
         },
-        "tax": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "total_amount": {
-          "type": "integer",
-          "minimum": 0
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         },
         "status": {
           "type": "string",
           "enum": [
-            "draft",
-            "sent",
-            "paid",
-            "overdue",
-            "cancelled",
-            "pending",
-            "prepayment",
-            "partially_applied"
-          ]
-        },
-        "credit_applied": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "is_manual": {
-          "type": "boolean"
-        },
-        "is_prepayment": {
-          "type": "boolean"
+            "draft"
+          ],
+          "description": "Optional; invoices are always created as drafts. Use the finalize/send/payment commands to change status."
         },
         "items": {
           "type": "array",
@@ -26038,13 +26222,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "client_id",
         "invoice_date",
-        "due_date",
-        "subtotal",
-        "tax",
-        "total_amount",
-        "status"
+        "due_date"
       ],
-      "additionalProperties": {}
+      "additionalProperties": {},
+      "description": "New draft invoice. Totals are computed from the items. status (other than draft), credit_applied, is_manual, is_prepayment and billing_cycle_id are server-owned and rejected with 400."
     },
     "responseBodySchema": {
       "type": "object",
@@ -65019,7 +65200,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/quotes",
     "displayName": "Create quote",
     "summary": "Create quote",
-    "description": "Creates quote via ApiQuoteController.create().",
+    "description": "Creates quote via ApiQuoteController.create(). Notes and terms are internal_notes and terms_and_conditions; the previously documented notes/terms aliases still map onto them for one release, quote_number is server-assigned and ignored, and any other unknown key is rejected with 400.",
     "tags": [
       "Quotes & Contracts v1"
     ],
@@ -65116,36 +65297,162 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "client_id": {
-          "type": "string",
-          "format": "uuid"
-        },
         "title": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Quote title. The only required field."
         },
-        "quote_number": {
-          "type": "string"
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Owning client. Required before the quote can be converted, and required when any item carries a location_id."
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Primary contact at the client."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Internal summary of the quote."
+        },
+        "quote_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Quote issue date. Calendar date as YYYY-MM-DD."
         },
         "valid_until": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Expiry date. Calendar date as YYYY-MM-DD."
         },
-        "notes": {
-          "type": "string"
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Client purchase-order number."
         },
-        "terms": {
-          "type": "string"
+        "recurring_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the recurring section on the rendered quote."
+        },
+        "onetime_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the one-time section on the rendered quote."
+        },
+        "opportunity_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Opportunity this quote belongs to."
+        },
+        "internal_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes kept internal to the MSP. This is the real field name; the published `notes` alias is deprecated."
+        },
+        "client_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes shown to the client on the quote."
+        },
+        "terms_and_conditions": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Terms text rendered on the quote. This is the real field name; the published `terms` alias is deprecated."
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code. Resolved from the client default, then the tenant billing default, when omitted."
+        },
+        "tax_source": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "external",
+            "pending_external"
+          ],
+          "description": "Where tax figures come from. Defaults to internal."
+        },
+        "is_template": {
+          "type": "boolean",
+          "description": "Creates a reusable template instead of a live quote. Defaults to false."
+        },
+        "template_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Template this quote was created from."
         },
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": {}
-          }
+            "$ref": "#/components/schemas/QuoteItemBodyV1"
+          },
+          "description": "Line items created with the quote, in order."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DEPRECATED alias for internal_notes, honoured for one release. Previously documented here but never persisted."
+        },
+        "terms": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DEPRECATED alias for terms_and_conditions, honoured for one release. Previously documented here but never persisted."
+        },
+        "quote_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DEPRECATED and ignored: quote numbers are assigned by the server."
         }
       },
       "required": [
-        "client_id"
-      ]
+        "title"
+      ],
+      "description": "Create body for POST /api/v1/quotes. Unknown keys other than the deprecated aliases are rejected with 400 rather than silently dropped."
     },
     "responseBodySchema": {
       "type": "object",
@@ -65275,8 +65582,132 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Quote title."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Owning client. Required before the quote can be converted, and required when any item carries a location_id."
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Primary contact at the client."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Internal summary of the quote."
+        },
+        "quote_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Quote issue date. Calendar date as YYYY-MM-DD."
+        },
+        "valid_until": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Expiry date. Calendar date as YYYY-MM-DD."
+        },
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Client purchase-order number."
+        },
+        "recurring_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the recurring section on the rendered quote."
+        },
+        "onetime_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the one-time section on the rendered quote."
+        },
+        "opportunity_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Opportunity this quote belongs to."
+        },
+        "internal_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes kept internal to the MSP. This is the real field name; the published `notes` alias is deprecated."
+        },
+        "client_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes shown to the client on the quote."
+        },
+        "terms_and_conditions": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Terms text rendered on the quote. This is the real field name; the published `terms` alias is deprecated."
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code. Resolved from the client default, then the tenant billing default, when omitted."
+        },
+        "tax_source": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "external",
+            "pending_external"
+          ],
+          "description": "Where tax figures come from. Defaults to internal."
+        },
+        "is_template": {
+          "type": "boolean",
+          "description": "Creates a reusable template instead of a live quote. Defaults to false."
+        },
+        "template_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Template this quote was created from."
+        }
+      },
+      "description": "Update body for PUT /api/v1/quotes/{id}. Every field is optional and absent keys are left untouched. Items are not updatable here: use the /quotes/{id}/items endpoints. status is not an update field (400 if sent): use a lifecycle command (submit-for-approval, approve, send, cancel, archive)."
     },
     "responseBodySchema": {
       "type": "object",
@@ -65376,6 +65807,69 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "displayName": "List quote activities",
     "summary": "List quote activities",
     "description": "Lists quote activity history via listActivities().",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_quotes_id_archive",
+    "method": "post",
+    "path": "/api/v1/quotes/{id}/archive",
+    "displayName": "Archive quote",
+    "summary": "Archive quote",
+    "description": "Archives a quote via archive(): allowed from draft, cancelled, rejected and expired; sets status archived plus archived_at and writes a status_changed activity. Any other source status returns 409. This is the Archive alternative offered when DELETE is refused with DEPENDENCIES_EXIST.",
     "tags": [
       "Quotes & Contracts v1"
     ],
@@ -65731,8 +66225,202 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+      "properties": {
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Catalog service to snapshot name, SKU, unit, cost and tax treatment from. Omit for a custom or discount line."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Line description shown on the quote."
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Integer quantity, >= 1."
+        },
+        "unit_price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Integer price in minor units (cents), >= 0. A fixed discount is NOT a negative price: send a positive unit_price with is_discount: true and discount_type: \"fixed\", optionally naming the line it reduces via applies_to_item_id."
+        },
+        "unit_of_measure": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Human-readable unit label, e.g. \"hours\"."
+        },
+        "unit_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "UN/CEFACT REC 20 unit code, e.g. C62 (each) or HUR (hour). Resolved from unit_of_measure when omitted."
+        },
+        "phase": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Free-text grouping label for the line."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "client_locations.location_id the line is delivered to. Must belong to the quote's client, otherwise the request is rejected with 400."
+        },
+        "cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Integer cost in minor units, used for margin display. Snapshotted from the catalog for product lines."
+        },
+        "cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code for cost."
+        },
+        "is_optional": {
+          "type": "boolean",
+          "description": "Marks the line as optional on the quote. Defaults to false."
+        },
+        "is_selected": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether an optional line is selected. Defaults to true."
+        },
+        "is_recurring": {
+          "type": "boolean",
+          "description": "Recurring (contract) line rather than one-time. Defaults to false."
+        },
+        "billing_frequency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Required by the editor for recurring lines, e.g. \"monthly\"."
+        },
+        "billing_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Billing method, e.g. fixed or per_unit. Falls back to the service default."
+        },
+        "is_discount": {
+          "type": "boolean",
+          "description": "Marks the line as a discount. Defaults to false."
+        },
+        "discount_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "percentage",
+            "fixed",
+            null
+          ],
+          "description": "With is_discount: \"percentage\" uses discount_percentage, \"fixed\" uses the positive unit_price."
+        },
+        "discount_percentage": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage discount, 0-100."
+        },
+        "applies_to_item_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to one quote item; omit to spread it across the quote."
+        },
+        "applies_to_service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to lines of one service."
+        },
+        "is_taxable": {
+          "type": "boolean",
+          "description": "Omit to derive the treatment from the service tax configuration; an explicit value overrides it."
+        },
+        "tax_region": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Tax region override for the line."
+        },
+        "tax_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Tax rate percentage override; fractional values are kept as sent."
+        },
+        "service_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Overrides the snapshotted catalog service name."
+        },
+        "service_sku": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Overrides the snapshotted catalog SKU."
+        },
+        "service_item_kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Item kind, e.g. product or service. Falls back to the catalog value."
+        }
+      },
+      "required": [
+        "description",
+        "quantity",
+        "unit_price"
+      ],
+      "description": "Quote item body for POST /quotes/{id}/items. PUT /quotes/{id}/items/{itemId} takes any subset of the same fields. catalog_description is a server-captured snapshot and is ignored if sent."
     },
     "responseBodySchema": {
       "type": "object",
@@ -65808,8 +66496,202 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+      "properties": {
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Catalog service to snapshot name, SKU, unit, cost and tax treatment from. Omit for a custom or discount line."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Line description shown on the quote."
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Integer quantity, >= 1."
+        },
+        "unit_price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Integer price in minor units (cents), >= 0. A fixed discount is NOT a negative price: send a positive unit_price with is_discount: true and discount_type: \"fixed\", optionally naming the line it reduces via applies_to_item_id."
+        },
+        "unit_of_measure": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Human-readable unit label, e.g. \"hours\"."
+        },
+        "unit_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "UN/CEFACT REC 20 unit code, e.g. C62 (each) or HUR (hour). Resolved from unit_of_measure when omitted."
+        },
+        "phase": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Free-text grouping label for the line."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "client_locations.location_id the line is delivered to. Must belong to the quote's client, otherwise the request is rejected with 400."
+        },
+        "cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Integer cost in minor units, used for margin display. Snapshotted from the catalog for product lines."
+        },
+        "cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code for cost."
+        },
+        "is_optional": {
+          "type": "boolean",
+          "description": "Marks the line as optional on the quote. Defaults to false."
+        },
+        "is_selected": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether an optional line is selected. Defaults to true."
+        },
+        "is_recurring": {
+          "type": "boolean",
+          "description": "Recurring (contract) line rather than one-time. Defaults to false."
+        },
+        "billing_frequency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Required by the editor for recurring lines, e.g. \"monthly\"."
+        },
+        "billing_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Billing method, e.g. fixed or per_unit. Falls back to the service default."
+        },
+        "is_discount": {
+          "type": "boolean",
+          "description": "Marks the line as a discount. Defaults to false."
+        },
+        "discount_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "percentage",
+            "fixed",
+            null
+          ],
+          "description": "With is_discount: \"percentage\" uses discount_percentage, \"fixed\" uses the positive unit_price."
+        },
+        "discount_percentage": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage discount, 0-100."
+        },
+        "applies_to_item_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to one quote item; omit to spread it across the quote."
+        },
+        "applies_to_service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to lines of one service."
+        },
+        "is_taxable": {
+          "type": "boolean",
+          "description": "Omit to derive the treatment from the service tax configuration; an explicit value overrides it."
+        },
+        "tax_region": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Tax region override for the line."
+        },
+        "tax_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Tax rate percentage override; fractional values are kept as sent."
+        },
+        "service_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Overrides the snapshotted catalog service name."
+        },
+        "service_sku": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Overrides the snapshotted catalog SKU."
+        },
+        "service_item_kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Item kind, e.g. product or service. Falls back to the catalog value."
+        }
+      },
+      "required": [
+        "description",
+        "quantity",
+        "unit_price"
+      ],
+      "description": "Quote item body for POST /quotes/{id}/items. PUT /quotes/{id}/items/{itemId} takes any subset of the same fields. catalog_description is a server-captured snapshot and is ignored if sent."
     },
     "responseBodySchema": {
       "type": "object",
@@ -65918,6 +66800,74 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "displayName": "Reorder quote items",
     "summary": "Reorder quote items",
     "description": "Reorders quote item sequence via reorderItems().",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_quotes_id_cancel",
+    "method": "post",
+    "path": "/api/v1/quotes/{id}/cancel",
+    "displayName": "Cancel quote",
+    "summary": "Cancel quote",
+    "description": "Cancels quote via cancel(); requires billing:update. Quote status is not editable through PUT /api/v1/quotes/{id}.",
     "tags": [
       "Quotes & Contracts v1"
     ],

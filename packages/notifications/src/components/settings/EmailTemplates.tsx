@@ -398,7 +398,7 @@ export function EmailTemplates() {
                 </div>
                 {templateVariableRegistry[tplRecord.name]?.contractInferred && (
                   <div className="mt-1 text-xs text-[rgb(var(--badge-warning-text))]">
-                    Not currently sent
+                    {t('notifications.emailTemplatesUi.list.notCurrentlySent', 'Not currently sent')}
                   </div>
                 )}
               </div>
@@ -515,7 +515,7 @@ export function EmailTemplates() {
             onClick={() => setIsVariableReferenceOpen(true)}
           >
             <BookOpen className="h-4 w-4" />
-            Variable reference
+            {t('notifications.emailTemplatesUi.actions.variableReference', 'Variable reference')}
           </Button>
 
           {/* Language Filter */}
@@ -706,8 +706,8 @@ function ViewTemplateDialog({
           <Label>{t('notifications.emailTemplatesUi.fields.htmlContent', 'HTML Content')}</Label>
           <Tabs value={htmlTab} onValueChange={setHtmlTab}>
             <TabsList>
-              <TabsTrigger value="source">Source</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
+              <TabsTrigger value="source">{t('notifications.emailTemplatesUi.tabs.source', 'Source')}</TabsTrigger>
+              <TabsTrigger value="preview">{t('notifications.emailTemplatesUi.tabs.preview', 'Preview')}</TabsTrigger>
             </TabsList>
             <TabsContent value="source">
               <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto mt-2">
@@ -933,7 +933,7 @@ function EditTemplateDialog({
       className="fixed z-[100] max-h-64 w-80 overflow-y-auto rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-1 shadow-lg"
       style={{ left: autocomplete.position.left, top: autocomplete.position.top }}
       role="listbox"
-      aria-label="Template variable suggestions"
+      aria-label={t('notifications.emailTemplatesUi.edit.variableSuggestions', 'Template variable suggestions')}
     >
       {autocompleteChoices.map((variable) => (
         <button

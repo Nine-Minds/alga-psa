@@ -715,7 +715,8 @@
         "title": "Arbetsflödesåtgärder",
         "unavailable": "Inte tillgängligt",
         "unlimitedPlan": "Obegränsat abonnemang",
-        "unlimitedRemaining": "Obegränsat"
+        "unlimitedRemaining": "Obegränsat",
+        "unlimited": "Obegränsat"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Upprepa så länge ärendet är i status",
       "statusAgeRepeatEvery": "Upprepa var (dagar)",
       "statusAgeNoActivity": "Endast om det inte har förekommit någon aktivitet (kommentarer eller ändringar av personer) under den tiden",
-      "statusAgeSummary": "Körs dagligen kl. {{time}} ({{timezone}}) för varje ärende som har varit i den valda statusen under det angivna antalet dagar"
+      "statusAgeSummary": "Körs dagligen kl. {{time}} ({{timezone}}) för varje ärende som har varit i den valda statusen under det angivna antalet dagar",
+      "saving": "Sparar…",
+      "saveSettings": "Spara inställningar"
     },
     "stepPanel": {
       "readOnly": "Skrivskyddad åtkomst: stegredigering är inaktiverad.",
@@ -877,7 +880,13 @@
       "durationSummary": "Väntar {{duration}}.",
       "durationEmpty": "Ange hur länge det ska vänta, i valfri av de här enheterna.",
       "notFoundInTry": "Det här steget finns i ett Try. Om inget hittas fortsätter det just nu, så Catch-grenen körs inte. Låt det misslyckas i stället så att Catch kan hantera en post som saknas.",
-      "notFoundFailAction": "Misslyckas så att Catch kan hantera det"
+      "notFoundFailAction": "Misslyckas så att Catch kan hantera det",
+      "operatorLabel": "Operator",
+      "removeFilter": "Ta bort",
+      "valuesCommaSeparated": "Värden (kommaseparerade)",
+      "valueLabel": "Värde",
+      "absoluteTimestampHint": "Sparas som en absolut tidsstämpel utifrån webbläsarens aktuella tidszon.",
+      "saveAsConflict": "”{{saveAs}}” står i konflikt med en befintlig sökväg för stegutdata"
     },
     "mappingExpr": {
       "add": "Lägg till",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Nodkonfiguration",
       "stepSettings": "Steginställningar",
-      "missingRequired": "Obligatoriska fält saknas: {{fields}}"
+      "missingRequired": "Obligatoriska fält saknas: {{fields}}",
+      "advancedOptions": "Avancerade alternativ",
+      "invalidJson": "Ogiltig JSON"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1042,7 +1053,10 @@
         "valid": "Giltigt",
         "unknown": "Okänt"
       },
-      "errors": "Valideringsfel"
+      "errors": "Valideringsfel",
+      "errorsHeading": "Valideringsfel",
+      "warningsHeading": "Valideringsvarningar",
+      "stepFallbackName": "Steg {{index}}"
     },
     "discardDialog": {
       "title": "Kasta osparade ändringar?",
@@ -1243,7 +1257,8 @@
       "publishFailed": "Det gick inte att publicera arbetsflödet",
       "publishValidationErrors": "Publiceringen misslyckades – åtgärda valideringsfelen",
       "systemEventMissingSchema": "Den här systemhändelsen saknar ett giltigt schema och kan inte väljas förrän det har åtgärdats.",
-      "publishedVersion": "Version {{version}} har publicerats. Nya körningar använder den här versionen."
+      "publishedVersion": "Version {{version}} har publicerats. Nya körningar använder den här versionen.",
+      "copiedPath": "Kopierat: {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Ändra storlek på egenskapspanelen",
@@ -1269,7 +1284,29 @@
       "mappingTitle": "Utlösarmappning",
       "mappingNotRequired": "Mappning: Krävs inte.",
       "mappingErrors": "Mappningsfel",
-      "mappingWarnings": "Mappningsvarningar"
+      "mappingWarnings": "Mappningsvarningar",
+      "eventSchemaTitle": "Schema för utlösarhändelsen",
+      "effectiveSourceSchemaTitle": "Gällande källschema för utlösaren",
+      "eventMissingSchemaRef": "Den här händelsen saknar en giltig schemareferens. Publicering och körning är inaktiverade tills det har åtgärdats.",
+      "eventNotInCatalogPrefix": "Utlösarhändelsen",
+      "eventNotInCatalogSuffix": "finns inte i händelsekatalogen. Publicering och körning är inaktiverade tills det har åtgärdats.",
+      "eventCatalogLoadFailed": "Det gick inte att läsa in händelsekatalogen. Publicering och körning är inaktiverade för händelseutlösta arbetsflöden tills katalogen har lästs in.",
+      "mappingCustomActive": "Anpassad utlösarmappning är aktiv.",
+      "mappingRequired": "Utlösarmappning krävs för att köra det här arbetsflödet.",
+      "mappingOptionalActive": "Valfri utlösarmappning är aktiv.",
+      "usingTriggerPayload": "Utlösarens nyttolast används som indata till arbetsflödet.",
+      "triggerLabel": "Utlösare:",
+      "noSourceSchemaPrefix": "Det finns inget källschema för den här händelsen ännu. Lägg till",
+      "noSourceSchemaSuffix": "i händelsekatalogen eller ange ett åsidosättande.",
+      "mappingRequiredMismatch": "Mappning krävs eftersom utlösarschemat och arbetsflödets indataschema inte matchar.",
+      "useEventSchema": "Använd händelseschema",
+      "configureMapping": "Konfigurera mappning",
+      "hideMapping": "Dölj mappning",
+      "showMapping": "Visa mappning",
+      "mapDataFromPrefix": "Mappa data från",
+      "mapDataFromSuffix": "till arbetsflödets indata.",
+      "viewSchema": "Visa schema",
+      "viewEffective": "Visa gällande schema"
     },
     "schemaSettings": {
       "lockVersion": "Lås schemaversion",
@@ -1284,12 +1321,39 @@
       "notLoaded": "Schemat har inte lästs in ännu.",
       "loadPreviewFailed": "Det gick inte att läsa in schemaförhandsgranskningen.",
       "selectVersionPlaceholder": "Välj schemaversion…",
-      "payloadRefAdvanced": "Nyttolastschemareferens (avancerat)"
+      "payloadRefAdvanced": "Nyttolastschemareferens (avancerat)",
+      "triggerSchemaTitle": "Utlösarschema",
+      "clockTriggerPinned": "Tidsutlösare är alltid låsta till arbetsflödets fasta datakontrakt för klockan.",
+      "hide": "Dölj",
+      "edit": "Redigera",
+      "clear": "Rensa",
+      "hideFields": "Dölj fält",
+      "previewFields": "Förhandsgranska fält",
+      "viewJsonSchema": "Visa JSON-schema",
+      "viewPublished": "Visa publicerat schema",
+      "noTopLevelProperties": "Inga egenskaper på översta nivån.",
+      "hideAdvanced": "Dölj avancerade schemainställningar",
+      "modeLabel": "Läge:",
+      "modePinned": "Låst",
+      "modeInferred": "Härlett",
+      "close": "Stäng",
+      "loadingSchema": "Läser in schema…",
+      "publishedContractSchema": "Publicerat datakontraktsschema",
+      "publishedSnapshot": "Publicerad ögonblicksbild av schemat.",
+      "publishedSnapshotMissing": "Publicerad ögonblicksbild av schemat saknas. Aktuellt schema från schemaregistret visas.",
+      "publishedLoadFailed": "Det gick inte att läsa in det publicerade schemat.",
+      "noPublishedSnapshot": "Ingen publicerad ögonblicksbild av schemat finns sparad för version {{version}}.",
+      "noPublishedSnapshotWithRef": "Ingen publicerad ögonblicksbild av schemat finns sparad för version {{version}}. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Infoga fält",
       "enterPlaceholder": "Ange uttryck…",
-      "conditionPlaceholder": "t.ex. payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "t.ex. payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Uttrycksfel",
+      "warningsHeading": "Varningar",
+      "infoHeading": "Uttrycksinformation",
+      "invalid": "Ogiltigt uttryck",
+      "invalidWithReason": "Ogiltigt uttryck: {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Tillgängliga data i det här steget",
@@ -1300,7 +1364,11 @@
       "outputSchemaUnavailable": "Utdataschema är inte tillgängligt",
       "noFields": "Inga fält",
       "copyAllPaths": "Kopiera alla sökvägar",
-      "copyAllFieldPaths": "Kopiera alla fältsökvägar"
+      "copyAllFieldPaths": "Kopiera alla fältsökvägar",
+      "copyPath": "Kopiera {{path}}",
+      "copied": "Kopierat",
+      "noPreviousSteps": "Inga tidigare steg med ”Spara resultat som” konfigurerat",
+      "globals": "Globala variabler"
     },
     "logoAlt": "Arbetsflödesredigerarens logotyp",
     "nodes": {
@@ -1459,6 +1527,42 @@
         "loadError": "Det gick inte att läsa in överhoppade händelser.",
         "empty": "Inga överhoppade händelser under denna period."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "är lika med",
+      "notEquals": "är inte lika med",
+      "in": "ingår i",
+      "notIn": "ingår inte i",
+      "exists": "finns",
+      "notExists": "finns inte",
+      "greaterThan": "är större än",
+      "greaterThanOrEqual": "är större än eller lika med",
+      "lessThan": "är mindre än",
+      "lessThanOrEqual": "är mindre än eller lika med",
+      "contains": "innehåller",
+      "startsWith": "börjar med",
+      "endsWith": "slutar med"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "Datumutlösarens nyttolastschema måste matcha den valda källan.",
+      "eventCatalogLoadFailed": "Det gick inte att läsa in händelsekatalogen. Publicering och körning är inaktiverade tills katalogen har lästs in.",
+      "triggerEventMissing": "Utlösarhändelsen ”{{eventName}}” finns inte i händelsekatalogen.",
+      "eventSchemaInvalid": "{{sourceLabel}} ”{{eventName}}” {{schemaLabel}}. Lägg till ett giltigt schema i händelsekatalogens post före publicering eller körning.",
+      "timeTriggerFixedContract": "Tidsutlösta arbetsflöden använder det fasta datakontraktet för klocknyttolasten och kan inte härleda eller åsidosätta det med ett annat schema.",
+      "manualMustPin": "Manuella arbetsflöden måste ha ett låst nyttolastschema före publicering eller körning.",
+      "registryLoadFailed": "Det gick inte att läsa in schemaregistret. Publicering och körning är inaktiverade tills registret har lästs in.",
+      "noSchemaForEvent": "Inget schema är tillgängligt för utlösarhändelsen ”{{eventName}}”. Publicering och körning är inaktiverade tills det har åtgärdats.",
+      "unknownSchemaRef": "Schemareferensen ”{{ref}}” för arbetsflödets nyttolast är okänd. Publicering och körning är inaktiverade tills det har åtgärdats.",
+      "fixMappingErrors": "Åtgärda arbetsflödets mappningsfel före publicering eller körning.",
+      "fixValidationErrors": "Åtgärda arbetsflödets valideringsfel före publicering eller körning.",
+      "eventCatalogLoading": "Läser fortfarande in händelsekatalogen. Körning är inaktiverad tills katalogen har lästs in.",
+      "registryLoading": "Läser fortfarande in schemaregistret. Körning är inaktiverad tills registret har lästs in.",
+      "eventCatalogLoadingPublish": "Läser fortfarande in händelsekatalogen. Publicering är inaktiverad tills katalogen har lästs in.",
+      "registryLoadingPublish": "Läser fortfarande in schemaregistret. Publicering är inaktiverad tills registret har lästs in.",
+      "systemEvent": "Systemhändelsen",
+      "tenantEvent": "Organisationshändelsen",
+      "missingSchemaRef": "saknar en schemareferens",
+      "unknownSchemaRefShort": "har en okänd schemareferens"
     }
   },
   "actionInputFieldInfo": {

@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -2722,13 +2723,20 @@ describe('Quote infrastructure', () => {
     // with only the browser print mocked.
     const capturedHtml: { value: string } = { value: '' };
     const pageMock = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn(async (_html: string) => {
         capturedHtml.value = _html;
       }),
       pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-quote-lines')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browserMock = { newPage: vi.fn().mockResolvedValue(pageMock) };
+    const contextMock = {
+      newPage: vi.fn().mockResolvedValue(pageMock),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browserMock = { createBrowserContext: vi.fn().mockResolvedValue(contextMock) };
     const getBrowserSpy = vi.spyOn(browserPoolService, 'getBrowser').mockResolvedValue(browserMock as never);
     const releaseSpy = vi.spyOn(browserPoolService, 'releaseBrowser').mockResolvedValue(undefined);
 
@@ -2736,9 +2744,16 @@ describe('Quote infrastructure', () => {
       const pdf = await service.generatePDF({ quoteId: quote.quote_id, userId: context.userId });
       expect(Buffer.isBuffer(pdf)).toBe(true);
       expect(pdf.toString('utf8')).toContain('%PDF-quote-lines');
-      expect(capturedHtml.value).toContain('<!doctype html>');
+      expect(pageMock.setJavaScriptEnabled).toHaveBeenCalledWith(false);
+      expect(pageMock.setRequestInterception).toHaveBeenCalledWith(true);
+      expect(contextMock.close).toHaveBeenCalledOnce();
+      const document = new JSDOM(capturedHtml.value).window.document;
+      expect(document.doctype?.name).toBe('html');
       expect(capturedHtml.value).toContain('Monthly');
-      expect(capturedHtml.value).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support A</div>');
+      const descriptionLine = Array.from(document.querySelectorAll<HTMLElement>('.ast-table-cell-line'))
+        .find((line) => line.textContent === 'Managed Support A');
+      expect(descriptionLine?.style.fontWeight).toBe('600');
+      expect(descriptionLine?.style.lineHeight).toBe('1.3');
       expect(capturedHtml.value).toContain('-$5.00');
       expect(capturedHtml.value).toContain('$50.00');
     } finally {

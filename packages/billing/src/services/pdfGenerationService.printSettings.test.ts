@@ -65,12 +65,19 @@ describe('billing PDFGenerationService print settings', () => {
 
   it('passes resolved format and margin options to page.pdf(...)', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -96,16 +103,24 @@ describe('billing PDFGenerationService print settings', () => {
         left: '0mm',
       },
     });
+    expect(context.close).toHaveBeenCalledOnce();
   });
 
   it('generates a PDF successfully for a template with explicit paper preset and margin settings', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -143,12 +158,19 @@ describe('billing PDFGenerationService print settings', () => {
 
   it('preserves legacy templates without explicit print metadata by inferring fallback PDF options', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);

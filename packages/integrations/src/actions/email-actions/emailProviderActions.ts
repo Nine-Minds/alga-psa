@@ -590,7 +590,9 @@ async function persistGoogleConfig(
     })
     .onConflict(['email_provider_id', 'tenant'])
     .merge({
-      client_id: configPayload.client_id,
+      // client_id is deliberately not merged: the OAuth callback records the
+      // client that issued the refresh token there, and a settings save must
+      // not erase it.
       client_secret: configPayload.client_secret,
       project_id: configPayload.project_id,
       redirect_uri: configPayload.redirect_uri,

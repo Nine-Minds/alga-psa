@@ -8,16 +8,16 @@ const mocks = vi.hoisted(() => ({
   coManagedWorkspace: vi.fn(),
   systemOne: vi.fn(),
   fakeKnex: { current: null as unknown },
+  resolveSearchPrincipal: vi.fn(),
+  aclPredicateSql: vi.fn(),
 }));
 
 vi.mock('@alga-psa/projects/actions/projectActions', () => ({
   authorizeProjectIdsWithRedactions: mocks.authorizeProjectIdsWithRedactions,
   loadProjectListItemsByIds: mocks.loadProjectListItemsByIds,
 }));
-vi.mock('@alga-psa/search/acl', () => ({
-  aclPredicateSql: () => ({ sql: 'true', bindings: [] }),
-  resolveSearchAclPrincipal: async () => ({}),
-}));
+vi.mock('@alga-psa/search/acl', () => ({ aclPredicateSql: mocks.aclPredicateSql }));
+vi.mock('@alga-psa/search/runAppSearch', () => ({ resolveSearchPrincipal: mocks.resolveSearchPrincipal }));
 vi.mock('@alga-psa/core/capability', () => ({ serves: mocks.served }));
 vi.mock('@alga-psa/co-managed/coManagedWorkspace', () => ({ isCoManagedWorkspace: mocks.coManagedWorkspace }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } }));
@@ -87,12 +87,16 @@ function fakeDb() {
   return { db: db as unknown as Knex.Transaction, queries, raw: db };
 }
 
+const NARROWED_PRINCIPAL = { userId: 'narrowed', clientAccess: { mode: 'by_resource', clientIdsByResource: { project: ['client-a'] } } };
+
 const HIDDEN = ['description', 'project_tasks.task_name', 'project_tasks.description', 'client_name'];
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.served.mockResolvedValue({ served: true });
   mocks.coManagedWorkspace.mockResolvedValue(true);
+  mocks.resolveSearchPrincipal.mockResolvedValue(NARROWED_PRINCIPAL);
+  mocks.aclPredicateSql.mockReturnValue({ sql: 'true', bindings: [] });
 });
 
 describe('project smart search candidate loading for a redacted co-managed reader', () => {
@@ -147,6 +151,14 @@ describe('project smart search candidate loading for a redacted co-managed reade
     const native = fakeDb();
     const [nativeCandidate] = await loadProjectCandidates(native.db, TENANT, user, [PROJECT], new Map());
     expect(nativeCandidate.state.comments).toEqual([{ task: 'HIDDEN-TASK-NAME', text: 'HIDDEN-COMMENT-TEXT' }]);
+  });
+
+  it('reads comment text through the principal narrowed by the subject\'s client restriction', async () => {
+    mocks.served.mockResolvedValue({ served: false });
+    const { db } = fakeDb();
+    await loadProjectCandidates(db, TENANT, user, [PROJECT], new Map());
+    expect(mocks.resolveSearchPrincipal).toHaveBeenCalledWith(db, TENANT, user);
+    expect(mocks.aclPredicateSql).toHaveBeenCalledWith(NARROWED_PRINCIPAL);
   });
 
   it('a native tenant keeps every field, task and comment unchanged', async () => {

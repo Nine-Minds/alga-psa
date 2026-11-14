@@ -101,16 +101,18 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
+  checkMultiplePermissions: async (user: any, checks: Array<{ resource: string; action: string }>, conn?: unknown) =>
+    Promise.all(checks.map(async (check) => ({ ...check, granted: Boolean(await hasPermissionMock(user, check.resource, check.action, conn)) }))),
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
-  tenantDb: () => ({
+  tenantDb: (_conn: unknown, tenant: string) => ({
     table: (table: string) => makeBuilder(table),
     unscoped: (table: string) => makeBuilder(table),
     tenantJoin: (builder: unknown) => builder,
-    scoped: (table: string) => makeBuilder(table),
+    scoped: (table: string) => ({ tenant, builder: makeBuilder(table) }),
   }),
   registerAfterCommit: vi.fn(),
   getConnection: vi.fn(),

@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Native credentials store integration tests against the REAL dev DB:
  * CRUD round-trip, tenant isolation, restricted-row hiding in list for
@@ -671,7 +672,7 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
         return row.ticket_id;
       }
       case 'asset': {
-        const [row] = await assocDb('assets').insert({ tenant: assocTenant, asset_tag: `AST-${randomUUID().slice(0, 8)}`, name: 'Test Asset', status: 'active', client_id: clientForEntity }).returning('asset_id');
+        const [row] = await insertTestAssets(assocDb, { tenant: assocTenant, asset_tag: `AST-${randomUUID().slice(0, 8)}`, name: 'Test Asset', status: 'active', client_id: clientForEntity });
         return row.asset_id;
       }
       case 'contact': {

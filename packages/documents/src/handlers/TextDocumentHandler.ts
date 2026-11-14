@@ -58,15 +58,8 @@ export class TextDocumentHandler extends BaseDocumentHandler {
 
       // Get a snippet of the text content
       const textSnippet = docContent.content.substring(0, 500);
-      const escapedTextContent = textSnippet
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-      const htmlContent = `<pre>${escapedTextContent}</pre>`;
-
       // Generate preview image
-      const imageBuffer = await this.renderHtmlToPng(htmlContent);
+      const imageBuffer = await this.renderHtmlToPng({ kind: 'text', text: textSnippet });
 
       // Save to cache
       await this.saveToCache(document.document_id, imageBuffer, tenant);

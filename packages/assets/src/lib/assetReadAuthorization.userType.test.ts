@@ -20,6 +20,9 @@ const h = vi.hoisted(() => {
           filter = criteria;
           return builder;
         },
+        orderBy() {
+          return builder;
+        },
         select: async () =>
           (tables[name] ?? []).filter((row) =>
             Object.entries(filter).every(([key, value]) => row[key] === value)
@@ -69,7 +72,6 @@ describe('resolveAuthorizationSubjectForUser user types', () => {
       tenant: TENANT,
       userId: user.user_id,
       userType: 'service',
-      apiKeyId: null,
       roleIds: ['r-service'],
       teamIds: ['team-1'],
       managedUserIds: [],

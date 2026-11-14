@@ -17,6 +17,12 @@ export interface IContractLineServiceConfiguration extends TenantEntity {
   updated_at: Date;
 }
 
+/** Base values callers may change after a configuration has been created. */
+export type ContractLineServiceConfigurationMutableValues = Pick<
+  IContractLineServiceConfiguration,
+  'custom_rate' | 'quantity'
+>;
+
 /**
  * What a stored fixed-member `base_rate` means (same values as
  * `FixedRateBasis` in `@alga-psa/shared/billingClients/fixedMemberRate`, which

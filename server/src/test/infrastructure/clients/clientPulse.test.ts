@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { getCurrentUser } from '@alga-psa/auth';
 
 const mockedTenantConnection = vi.hoisted(() => ({
@@ -1014,12 +1015,11 @@ describe('client pulse infrastructure', () => {
     await seedDeliveredUnit(context, serviceId, `SN-T008-SOON-${id}`, 30);
     await seedDeliveredUnit(context, serviceId, `SN-T008-NONE-${id}`, null);
 
-    await context.db('assets').insert({
+    await insertTestAssets(context.db, {
       tenant: context.tenantId,
-      asset_id: randomUUID(),
+      asset_tag: `AST-T008-${id}`,
       client_id: context.clientId,
       asset_type: 'workstation',
-      asset_tag: `AST-T008-${id}`,
       name: 'Warranty tracked workstation',
       status: 'active',
       warranty_end_date: isoOffset(200),
@@ -1063,12 +1063,11 @@ describe('client pulse infrastructure', () => {
       updated_at: NOW.toISOString(),
     });
 
-    await context.db('assets').insert({
+    await insertTestAssets(context.db, {
       tenant: context.tenantId,
-      asset_id: randomUUID(),
+      asset_tag: `AST-T008-NONE-${id}`,
       client_id: clientWithoutWarrantyId,
       asset_type: 'workstation',
-      asset_tag: `AST-T008-NONE-${id}`,
       name: 'Warranty untracked workstation',
       status: 'active',
       warranty_end_date: null,

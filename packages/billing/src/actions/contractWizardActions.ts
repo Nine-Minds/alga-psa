@@ -2128,7 +2128,7 @@ export const createClientContractFromWizard = withAuth(async (
           hourly_rate: normalizedHourlyRate,
           minimum_billable_time: submission.minimum_billable_time ?? 15,
           round_up_to_nearest: submission.round_up_to_nearest ?? 15,
-        });
+        }, user);
 
         if (service.bucket_overlay) {
           await upsertBucketOverlayInTransaction(
@@ -2186,7 +2186,7 @@ export const createClientContractFromWizard = withAuth(async (
           unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           unit_rate: normalizedUnitRate,
           enable_tiered_pricing: false,
-        });
+        }, user);
 
         if (service.bucket_overlay) {
           await upsertBucketOverlayInTransaction(
@@ -2252,7 +2252,7 @@ export const createClientContractFromWizard = withAuth(async (
           hourly_rate: normalizedHourlyRate,
           minimum_billable_time: submission.minimum_billable_time ?? 15,
           round_up_to_nearest: submission.round_up_to_nearest ?? 15,
-        });
+        }, user);
       }
 
       await upsertContractLinePrepaidBlockInTransaction(trx, tenant, blockLineId, entry.block);

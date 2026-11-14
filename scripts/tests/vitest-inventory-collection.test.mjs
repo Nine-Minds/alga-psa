@@ -53,7 +53,7 @@ test('renewed email and invoice reviews collect real cases after the previous de
   }
 });
 
-for (const name of ['maintenance-fanout-activities', 'tenant-deletion-prepaid-block-order']) {
+for (const name of ['maintenance-fanout-activities', 'tenant-deletion-prepaid-block-order', 'worker-email-resolution']) {
   test(`Temporal readiness collects the ${name} behavioral regression`, t => {
     const root = fileURLToPath(new URL('../../', import.meta.url));
     const output = mkdtempSync(path.join(tmpdir(), 'temporal-readiness-inventory-'));

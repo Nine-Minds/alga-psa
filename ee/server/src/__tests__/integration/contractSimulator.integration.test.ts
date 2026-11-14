@@ -31,6 +31,7 @@ import {
 import { assumptionKey } from "@ee/lib/billing/simulator/syntheticActivity";
 import { generateInvoiceForNormalizedSelectionInputs } from "@alga-psa/billing/actions/invoiceGeneration";
 import { buildContractCadenceDueSelectionInput } from "@alga-psa/shared/billingClients/recurringRunExecutionIdentity";
+import { fingerprintTenantTables } from "../utils/tableFingerprint";
 
 process.env.DB_PORT =
   process.env.DB_PORT === "6432" ? "5432" : process.env.DB_PORT;
@@ -1426,31 +1427,6 @@ async function insertSupportedRows(
       ),
     ),
   );
-}
-
-async function fingerprintTenantTables(
-  db: Knex,
-  tenant: string,
-  tables: string[],
-): Promise<Record<string, string>> {
-  const result: Record<string, string> = {};
-  for (const table of tables) {
-    if (!(await db.schema.hasTable(table))) continue;
-    const columns = await db(table).columnInfo();
-    const query = db(table).select("*");
-    if ("tenant" in columns) query.where({ tenant });
-    const rows = await query;
-    result[table] = JSON.stringify(
-      rows.map((row) =>
-        Object.fromEntries(
-          Object.entries(row).sort(([left], [right]) =>
-            left.localeCompare(right),
-          ),
-        ),
-      ),
-    );
-  }
-  return result;
 }
 
 async function persistScenarioServicePeriods(

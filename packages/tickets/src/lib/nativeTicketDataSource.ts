@@ -130,6 +130,7 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     applyChecklistTemplate: lazy(() => import('../actions/checklists'), 'applyChecklistTemplate'),
     deleteChecklistItem: lazy(() => import('../actions/checklists'), 'deleteChecklistItem'),
     getChecklistTemplates: lazy(() => import('../actions/checklists'), 'getChecklistTemplates'),
+    getChecklistTemplatesForTicket: lazy(() => import('../actions/checklists'), 'getChecklistTemplatesForTicket'),
     reorderChecklistItems: lazy(() => import('../actions/checklists'), 'reorderChecklistItems'),
     setChecklistItemCompleted: lazy(() => import('../actions/checklists'), 'setChecklistItemCompleted'),
     updateChecklistItem: lazy(() => import('../actions/checklists'), 'updateChecklistItem'),

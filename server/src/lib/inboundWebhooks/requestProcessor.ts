@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  EvaluationBudgetExceededError,
+  EvaluationBusyError,
+  runWithEvaluationRequestBudget,
+} from '@alga-psa/workflows/runtime/expressionEngine';
+import { installExpressionAdmissionTelemetry } from '@alga-psa/workflows/runtime/expressionAdmissionTelemetry';
 
 import { getConnection } from '@/lib/db/db';
 import { runWithTenant } from '@/lib/db';
@@ -19,7 +25,23 @@ interface ProcessInboundWebhookRequestInput {
   webhookSlug: string;
 }
 
+installExpressionAdmissionTelemetry();
+
 const JSON_RESPONSE_HEADERS = { 'content-type': 'application/json' };
+
+// One inbound delivery's total expression work (idempotency extraction + every
+// field mapping) is capped as a whole; the per-evaluation 250ms/2s limits still apply.
+// 3s CPU fits a few dozen worst-case mappings but not hundreds; 15s wall stays well under
+// typical sender/proxy delivery timeouts (30s+) so the sender sees our 4xx, not a timeout.
+const WEBHOOK_REQUEST_BUDGET = { cpuBudgetMs: 3_000, wallBudgetMs: 15_000 } as const;
+
+// The expression evaluator had no free slot: retryable, so 429 + Retry-After (not a mapping failure).
+function busyResponse(error: EvaluationBusyError, deliveryId?: string): NextResponse {
+  return NextResponse.json(
+    { ...(deliveryId ? { delivery_id: deliveryId } : {}), error: 'evaluator_busy' },
+    { status: 429, headers: { 'retry-after': String(error.retryAfterSeconds) } },
+  );
+}
 
 export async function processInboundWebhookRequest(input: ProcessInboundWebhookRequestInput): Promise<NextResponse> {
   const { request, tenantSlug, webhookSlug } = input;
@@ -150,20 +172,81 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
       );
     }
 
-    const idempotencyKey = await extractInboundWebhookIdempotencyKey({
-      source: mapIdempotencySource(webhook.idempotency_source),
-      headers: request.headers,
-      body,
-    });
-    const duplicate = await findDuplicateInboundDelivery({
-      knex,
-      tenant,
-      inboundWebhookId: webhook.inbound_webhook_id,
-      idempotencyKey,
-      windowSeconds: webhook.idempotency_window_seconds,
-    });
+    return runWithEvaluationRequestBudget(WEBHOOK_REQUEST_BUDGET, async () => {
+      let idempotencyKey: string | null;
+      try {
+        idempotencyKey = await extractInboundWebhookIdempotencyKey({
+          source: mapIdempotencySource(webhook.idempotency_source),
+          headers: request.headers,
+          body,
+        });
+      } catch (error) {
+        if (error instanceof EvaluationBusyError) return busyResponse(error);
+        if (error instanceof EvaluationBudgetExceededError) {
+          // Request-level budget overrun: non-retryable mapping failure, not a 429.
+          const { deliveryId } = await createInboundDelivery(knex, {
+            tenant,
+            inboundWebhookId: webhook.inbound_webhook_id,
+            requestMethod: request.method,
+            requestPath,
+            requestHeaders: request.headers,
+            requestBody: body,
+            sourceIp,
+            userAgent,
+            authStatus: 'verified',
+            dispatchStatus: 'failed',
+            responseStatus: 400,
+            responseBody: { error: 'mapping_failed' },
+          });
+          await updateInboundDeliveryOutcome(knex, {
+            tenant,
+            deliveryId,
+            dispatchStatus: 'failed',
+            handlerOutcome: { error: error.message },
+            responseStatus: 400,
+            responseBody: { error: 'mapping_failed' },
+            durationMs: Date.now() - startedAt,
+          });
+          return NextResponse.json({ delivery_id: deliveryId, error: 'mapping_failed' }, { status: 400 });
+        }
+        throw error;
+      }
+      const duplicate = await findDuplicateInboundDelivery({
+        knex,
+        tenant,
+        inboundWebhookId: webhook.inbound_webhook_id,
+        idempotencyKey,
+        windowSeconds: webhook.idempotency_window_seconds,
+      });
 
-    if (duplicate) {
+      if (duplicate) {
+        const { deliveryId } = await createInboundDelivery(knex, {
+          tenant,
+          inboundWebhookId: webhook.inbound_webhook_id,
+          idempotencyKey,
+          requestMethod: request.method,
+          requestPath,
+          requestHeaders: request.headers,
+          requestBody: body,
+          sourceIp,
+          userAgent,
+          authStatus: 'verified',
+          dispatchStatus: 'duplicate',
+          responseStatus: 200,
+          responseBody: { delivery_id: duplicate.deliveryId, duplicate: true },
+        });
+        await updateInboundDeliveryOutcome(knex, {
+          tenant,
+          deliveryId,
+          dispatchStatus: 'duplicate',
+          handlerOutcome: { duplicate_of: duplicate.deliveryId },
+          responseStatus: 200,
+          responseBody: { delivery_id: duplicate.deliveryId, duplicate: true },
+          durationMs: Date.now() - startedAt,
+        });
+        return NextResponse.json({ delivery_id: duplicate.deliveryId, duplicate: true });
+      }
+
       const { deliveryId } = await createInboundDelivery(knex, {
         tenant,
         inboundWebhookId: webhook.inbound_webhook_id,
@@ -175,88 +258,75 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
         sourceIp,
         userAgent,
         authStatus: 'verified',
-        dispatchStatus: 'duplicate',
-        responseStatus: 200,
-        responseBody: { delivery_id: duplicate.deliveryId, duplicate: true },
       });
-      await updateInboundDeliveryOutcome(knex, {
+
+      await captureInboundWebhookSampleIfRequested({
+        knex,
         tenant,
-        deliveryId,
-        dispatchStatus: 'duplicate',
-        handlerOutcome: { duplicate_of: duplicate.deliveryId },
-        responseStatus: 200,
-        responseBody: { delivery_id: duplicate.deliveryId, duplicate: true },
-        durationMs: Date.now() - startedAt,
-      });
-      return NextResponse.json({ delivery_id: duplicate.deliveryId, duplicate: true });
-    }
-
-    const { deliveryId } = await createInboundDelivery(knex, {
-      tenant,
-      inboundWebhookId: webhook.inbound_webhook_id,
-      idempotencyKey,
-      requestMethod: request.method,
-      requestPath,
-      requestHeaders: request.headers,
-      requestBody: body,
-      sourceIp,
-      userAgent,
-      authStatus: 'verified',
-    });
-
-    await captureInboundWebhookSampleIfRequested({
-      knex,
-      tenant,
-      inboundWebhookId: webhook.inbound_webhook_id,
-      body,
-    });
-
-    try {
-      const outcome = await dispatchInboundWebhookHandler({
-        webhook,
-        deliveryId,
-        idempotencyKey,
+        inboundWebhookId: webhook.inbound_webhook_id,
         body,
-        headers: headersToRecord(request.headers),
       });
-      const responseBody = { delivery_id: deliveryId };
-      await updateInboundDeliveryOutcome(knex, {
-        tenant,
-        deliveryId,
-        dispatchStatus: 'dispatched',
-        handlerOutcome: outcome,
-        responseStatus: 200,
-        responseBody,
-        durationMs: Date.now() - startedAt,
-      });
-      return NextResponse.json(responseBody);
-    } catch (error) {
-      const isMappingError = error instanceof InboundWebhookMappingError;
-      const responseStatus = isMappingError ? 400 : 500;
-      const responseBody = {
-        delivery_id: deliveryId,
-        error: isMappingError ? 'mapping_failed' : 'dispatch_failed',
-      };
-      const handlerOutcome =
-        error instanceof InboundWebhookActionError
-          ? error.toOutcome()
-          : isMappingError
-            ? { error: error.message }
-            : { error: 'Inbound webhook dispatch failed' };
-      await updateInboundDeliveryOutcome(knex, {
-        tenant,
-        deliveryId,
-        dispatchStatus: 'failed',
-        handlerOutcome,
-        responseStatus,
-        responseBody,
-        durationMs: Date.now() - startedAt,
-      });
-      return new NextResponse(JSON.stringify(responseBody), {
-        status: responseStatus,
-        headers: JSON_RESPONSE_HEADERS,
-      });
-    }
+
+      try {
+        const outcome = await dispatchInboundWebhookHandler({
+          webhook,
+          deliveryId,
+          idempotencyKey,
+          body,
+          headers: headersToRecord(request.headers),
+        });
+        const responseBody = { delivery_id: deliveryId };
+        await updateInboundDeliveryOutcome(knex, {
+          tenant,
+          deliveryId,
+          dispatchStatus: 'dispatched',
+          handlerOutcome: outcome,
+          responseStatus: 200,
+          responseBody,
+          durationMs: Date.now() - startedAt,
+        });
+        return NextResponse.json(responseBody);
+      } catch (error) {
+        if (error instanceof EvaluationBusyError) {
+          const responseBody = { delivery_id: deliveryId, error: 'evaluator_busy' };
+          await updateInboundDeliveryOutcome(knex, {
+            tenant,
+            deliveryId,
+            dispatchStatus: 'failed',
+            handlerOutcome: { error: 'evaluator_busy' },
+            responseStatus: 429,
+            responseBody,
+            durationMs: Date.now() - startedAt,
+          });
+          return busyResponse(error, deliveryId);
+        }
+        const isMappingError = error instanceof InboundWebhookMappingError;
+        const responseStatus = isMappingError ? 400 : 500;
+        const responseBody = {
+          delivery_id: deliveryId,
+          error: isMappingError ? 'mapping_failed' : 'dispatch_failed',
+        };
+        const handlerOutcome =
+          error instanceof InboundWebhookActionError
+            ? error.toOutcome()
+            : isMappingError
+              ? { error: error.message }
+              : { error: 'Inbound webhook dispatch failed' };
+        await updateInboundDeliveryOutcome(knex, {
+          tenant,
+          deliveryId,
+          dispatchStatus: 'failed',
+          handlerOutcome,
+          responseStatus,
+          responseBody,
+          durationMs: Date.now() - startedAt,
+        });
+        return new NextResponse(JSON.stringify(responseBody), {
+          status: responseStatus,
+          headers: JSON_RESPONSE_HEADERS,
+        });
+      }
+    });
   });
 }
 

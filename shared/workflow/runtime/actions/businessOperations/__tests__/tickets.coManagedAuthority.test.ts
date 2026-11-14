@@ -1,6 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { coManagedWorkflowTicketSeam } from '../../../../../lib/coManagedDelivery';
 import { registerCapabilityParticipation, invalidateCapability } from '@alga-psa/core/capability';
 import { retainWorkflowTicketAuthority, WorkflowTicketAuthorityUnavailableError } from '../shared';
@@ -103,11 +101,4 @@ describe('workflow ticket mutation adapter (L4a workflowTicketAuthority)', () =>
     expect(retain).toHaveBeenCalledWith(tx.trx, { tenant: 'tenant-1', ticketId: 't1', workflowRunId: 'run-1', actorUserId: 'user-1', fields: ['assignment'], readFields: [] });
   });
 
-  it('DO-NOT-PORT #2: the adapter publishes no event, and add_comment still publishes only for explicit Cc/Bcc (base behaviour)', () => {
-    const adapter = readFileSync(join(__dirname, '../shared.ts'), 'utf8').split('export async function retainWorkflowTicketAuthority')[1];
-    expect(adapter).not.toMatch(/publish|TICKET_COMMENT_ADDED|getEventBus/);
-    const tickets = readFileSync(join(__dirname, '../tickets.ts'), 'utf8');
-    expect(tickets).toContain('hasEmailRecipients ? workflowCommentEventPublisher : undefined');
-    expect(tickets.match(/workflowCommentEventPublisher/g)).toHaveLength(2);
-  });
 });

@@ -288,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Chargement des commentaires...",
     "placeholder": "Ajouter un commentaire...",
     "responsePlaceholder": "Répondre aux modifications demandées...",
     "respondToChanges": "Répondre aux changements"
@@ -363,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Tableau des données de la feuille de temps",
+    "deleteWorkItem": {
+      "title": "Supprimer l’élément de travail",
+      "message": "Cela supprimera définitivement toutes les entrées de temps pour cet élément de travail. Cette action ne peut pas être annulée."
+    },
+    "bundled": "Groupé",
+    "bundledTo": "Groupé → {{ticketNumber}}",
+    "addEntryForCell": "Ajouter une entrée de temps pour {{workItem}} le {{date}}",
+    "saveTimeEntry": "Enregistrer l’entrée de temps",
+    "weeklyTotal": "Total hebdomadaire",
     "empty": {
       "title": "Aucun élément de travail sur votre feuille de temps",
       "description": "Ajoutez un nouvel élément de travail pour commencer à suivre votre temps cette semaine.",
@@ -425,6 +436,9 @@
     "viewEntryDetails": "Afficher les détails de l'entrée"
   },
   "messages": {
+    "saveEntryFailed": "Impossible d’enregistrer l’entrée de temps",
+    "updateTaskFailed": "Impossible de mettre à jour la tâche",
+    "deleteWorkItemFailed": "Impossible de supprimer l’élément de travail",
     "serviceRequired": "Veuillez sélectionner un service avant d'enregistrer les saisies de temps",
     "invalidService": "Service sélectionné invalide",
     "taxRegionRequired": "Veuillez sélectionner une région fiscale pour les services imposables",
@@ -555,6 +569,11 @@
     },
     "activitySummary_few": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})",
     "activitySummary_many": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Gestion des feuilles de temps",
+    "delegationDisabledPrefix": "La saisie de temps déléguée est actuellement désactivée. Activez l’indicateur de fonctionnalité",
+    "delegationDisabledSuffix": "pour modifier les feuilles de temps des autres utilisateurs."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} suivi en {{count}} segment (pause : {{paused}})",

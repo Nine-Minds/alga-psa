@@ -715,7 +715,8 @@
         "title": "Akcje workflow",
         "unavailable": "Niedostępne",
         "unlimitedPlan": "Plan bez limitu",
-        "unlimitedRemaining": "Bez limitu"
+        "unlimitedRemaining": "Bez limitu",
+        "unlimited": "Bez limitu"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Powtarzaj, dopóki zgłoszenie jest w statusie",
       "statusAgeRepeatEvery": "Powtarzaj co (dni)",
       "statusAgeNoActivity": "Tylko jeśli w tym czasie nie było aktywności (komentarzy ani zmian wprowadzonych przez osoby)",
-      "statusAgeSummary": "Uruchamiany codziennie o {{time}} ({{timezone}}) dla każdego zgłoszenia, które jest w wybranym statusie przez ustaloną liczbę dni"
+      "statusAgeSummary": "Uruchamiany codziennie o {{time}} ({{timezone}}) dla każdego zgłoszenia, które jest w wybranym statusie przez ustaloną liczbę dni",
+      "saving": "Zapisywanie...",
+      "saveSettings": "Zapisz ustawienia"
     },
     "stepPanel": {
       "readOnly": "Dostęp tylko do odczytu: edycja kroków jest wyłączona.",
@@ -877,7 +880,13 @@
       "durationSummary": "Czeka {{duration}}.",
       "durationEmpty": "Wpisz, jak długo czekać, w dowolnej z tych jednostek.",
       "notFoundInTry": "Ten krok znajduje się wewnątrz Try. Jeśli nic nie zostanie znalezione, działanie obecnie jest kontynuowane, więc gałąź Catch nie zostanie uruchomiona. Zamiast tego spraw, aby krok kończył się błędem, by Catch mógł obsłużyć brakujący rekord.",
-      "notFoundFailAction": "Zakończ błędem, aby Catch mógł to obsłużyć"
+      "notFoundFailAction": "Zakończ błędem, aby Catch mógł to obsłużyć",
+      "operatorLabel": "Operator",
+      "removeFilter": "Usuń",
+      "valuesCommaSeparated": "Wartości (oddzielone przecinkami)",
+      "valueLabel": "Wartość",
+      "absoluteTimestampHint": "Zapisywane jako bezwzględny znacznik czasu z użyciem bieżącej strefy czasowej przeglądarki.",
+      "saveAsConflict": "„{{saveAs}}” koliduje z istniejącą ścieżką wyniku kroku"
     },
     "mappingExpr": {
       "add": "Dodaj",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Konfiguracja węzła",
       "stepSettings": "Ustawienia kroku",
-      "missingRequired": "Brakujące wymagane pola: {{fields}}"
+      "missingRequired": "Brakujące wymagane pola: {{fields}}",
+      "advancedOptions": "Opcje zaawansowane",
+      "invalidJson": "Nieprawidłowy JSON"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1014,6 +1025,26 @@
         "label": "Wyświetl przestrzenie nazw powiązań",
         "description": "Wyświetl przestrzenie nazw powiązań encji workflow używane przez tego dzierżawcę."
       },
+      "assets.get_maintenance": {
+        "label": "Pobierz konserwację zasobu",
+        "description": "Znajdź plan i wystąpienie według planu, wystąpienia lub powiązanego zgłoszenia."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Utwórz zgłoszenie konserwacji",
+        "description": "Utwórz i powiąż zgłoszenie dla otwartego wystąpienia konserwacji."
+      },
+      "assets.complete_maintenance": {
+        "label": "Zakończ konserwację zasobu",
+        "description": "Zapisz konserwację i otwórz następne wystąpienie."
+      },
+      "assets.skip_maintenance": {
+        "label": "Pomiń konserwację zasobu",
+        "description": "Pomiń wystąpienie z podaniem powodu i otwórz następne."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Wstrzymaj lub wznów konserwację",
+        "description": "Wstrzymaj lub wznów plan konserwacji."
+      },
       "ai": {
         "infer": {
           "label": "Wnioskuj ustrukturyzowane dane wyjściowe",
@@ -1067,26 +1098,6 @@
           "label": "Wyświetl przestrzenie nazw powiązań",
           "description": "Wyświetl przestrzenie nazw powiązań encji workflow używane przez tego tenanta."
         }
-      },
-      "assets.get_maintenance": {
-        "label": "Pobierz konserwację zasobu",
-        "description": "Znajdź plan i wystąpienie według planu, wystąpienia lub powiązanego zgłoszenia."
-      },
-      "assets.create_maintenance_ticket": {
-        "label": "Utwórz zgłoszenie konserwacji",
-        "description": "Utwórz i powiąż zgłoszenie dla otwartego wystąpienia konserwacji."
-      },
-      "assets.complete_maintenance": {
-        "label": "Zakończ konserwację zasobu",
-        "description": "Zapisz konserwację i otwórz następne wystąpienie."
-      },
-      "assets.skip_maintenance": {
-        "label": "Pomiń konserwację zasobu",
-        "description": "Pomiń wystąpienie z podaniem powodu i otwórz następne."
-      },
-      "assets.set_maintenance_paused": {
-        "label": "Wstrzymaj lub wznów konserwację",
-        "description": "Wstrzymaj lub wznów plan konserwacji."
       }
     },
     "validation": {
@@ -1096,7 +1107,10 @@
         "valid": "Prawidłowy",
         "unknown": "Nieznany"
       },
-      "errors": "Błędy walidacji"
+      "errors": "Błędy walidacji",
+      "errorsHeading": "Błędy walidacji",
+      "warningsHeading": "Ostrzeżenia walidacji",
+      "stepFallbackName": "Krok {{index}}"
     },
     "discardDialog": {
       "title": "Odrzucić niezapisane zmiany?",
@@ -1365,7 +1379,8 @@
       "publishFailed": "Nie udało się opublikować workflow",
       "publishValidationErrors": "Publikacja nie powiodła się — proszę naprawić błędy walidacji",
       "systemEventMissingSchema": "To zdarzenie systemowe nie ma prawidłowego schematu i nie może zostać wybrane do czasu naprawy.",
-      "publishedVersion": "Opublikowano wersję {{version}}. Nowe uruchomienia używają tej wersji."
+      "publishedVersion": "Opublikowano wersję {{version}}. Nowe uruchomienia używają tej wersji.",
+      "copiedPath": "Skopiowano: {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Zmień rozmiar panelu właściwości",
@@ -1391,7 +1406,29 @@
       "mappingTitle": "Mapowanie wyzwalacza",
       "mappingNotRequired": "Mapowanie: Niewymagane.",
       "mappingErrors": "Błędy mapowania",
-      "mappingWarnings": "Ostrzeżenia mapowania"
+      "mappingWarnings": "Ostrzeżenia mapowania",
+      "eventSchemaTitle": "Schemat zdarzenia wyzwalającego",
+      "effectiveSourceSchemaTitle": "Obowiązujący schemat źródłowy wyzwalacza",
+      "eventMissingSchemaRef": "To zdarzenie nie ma prawidłowego odniesienia do schematu. Publikowanie i uruchamianie są wyłączone do czasu naprawienia tego błędu.",
+      "eventNotInCatalogPrefix": "Zdarzenie wyzwalające",
+      "eventNotInCatalogSuffix": "nie występuje w katalogu zdarzeń. Publikowanie i uruchamianie są wyłączone do czasu naprawienia tego błędu.",
+      "eventCatalogLoadFailed": "Nie udało się załadować katalogu zdarzeń. Publikowanie i uruchamianie workflow wyzwalanych zdarzeniami są wyłączone do czasu załadowania katalogu.",
+      "mappingCustomActive": "Niestandardowe mapowanie wyzwalacza jest aktywne.",
+      "mappingRequired": "Mapowanie wyzwalacza jest wymagane do uruchomienia tego workflow.",
+      "mappingOptionalActive": "Opcjonalne mapowanie wyzwalacza jest aktywne.",
+      "usingTriggerPayload": "Ładunek wyzwalacza jest używany jako dane wejściowe workflow.",
+      "triggerLabel": "Wyzwalacz:",
+      "noSourceSchemaPrefix": "Schemat źródłowy dla tego zdarzenia nie jest jeszcze dostępny. Dodaj",
+      "noSourceSchemaSuffix": "w katalogu zdarzeń lub ustaw schemat zastępczy.",
+      "mappingRequiredMismatch": "Mapowanie jest wymagane, ponieważ schemat wyzwalacza i schemat danych wejściowych workflow nie są zgodne.",
+      "useEventSchema": "Użyj schematu zdarzenia",
+      "configureMapping": "Skonfiguruj mapowanie",
+      "hideMapping": "Ukryj mapowanie",
+      "showMapping": "Pokaż mapowanie",
+      "mapDataFromPrefix": "Mapuj dane z",
+      "mapDataFromSuffix": "na dane wejściowe workflow.",
+      "viewSchema": "Zobacz schemat",
+      "viewEffective": "Zobacz obowiązujący schemat"
     },
     "schemaSettings": {
       "lockVersion": "Zablokuj wersję schematu",
@@ -1406,12 +1443,39 @@
       "notLoaded": "Schemat jeszcze nie załadowany.",
       "loadPreviewFailed": "Nie udało się załadować podglądu schematu.",
       "selectVersionPlaceholder": "Wybierz wersję schematu…",
-      "payloadRefAdvanced": "Odniesienie do schematu ładunku (zaawansowane)"
+      "payloadRefAdvanced": "Odniesienie do schematu ładunku (zaawansowane)",
+      "triggerSchemaTitle": "Schemat wyzwalacza",
+      "clockTriggerPinned": "Wyzwalacze zegarowe są zawsze przypięte do stałego kontraktu zegara workflow.",
+      "hide": "Ukryj",
+      "edit": "Edytuj",
+      "clear": "Wyczyść",
+      "hideFields": "Ukryj pola",
+      "previewFields": "Podgląd pól",
+      "viewJsonSchema": "Zobacz schemat JSON",
+      "viewPublished": "Zobacz opublikowany schemat",
+      "noTopLevelProperties": "Brak właściwości najwyższego poziomu.",
+      "hideAdvanced": "Ukryj zaawansowane ustawienia schematu",
+      "modeLabel": "Tryb:",
+      "modePinned": "Przypięty",
+      "modeInferred": "Wywnioskowany",
+      "close": "Zamknij",
+      "loadingSchema": "Ładowanie schematu…",
+      "publishedContractSchema": "Opublikowany schemat kontraktu",
+      "publishedSnapshot": "Opublikowana migawka schematu.",
+      "publishedSnapshotMissing": "Brak opublikowanej migawki schematu; wyświetlane są bieżące dane z rejestru schematów.",
+      "publishedLoadFailed": "Nie udało się załadować opublikowanego schematu.",
+      "noPublishedSnapshot": "Nie zapisano opublikowanej migawki schematu dla wersji {{version}}.",
+      "noPublishedSnapshotWithRef": "Nie zapisano opublikowanej migawki schematu dla wersji {{version}}. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Wstaw pole",
       "enterPlaceholder": "Wprowadź wyrażenie...",
-      "conditionPlaceholder": "np. payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "np. payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Błędy wyrażenia",
+      "warningsHeading": "Ostrzeżenia",
+      "infoHeading": "Informacje o wyrażeniu",
+      "invalid": "Nieprawidłowe wyrażenie",
+      "invalidWithReason": "Nieprawidłowe wyrażenie: {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Dostępne dane w tym kroku",
@@ -1422,7 +1486,11 @@
       "outputSchemaUnavailable": "Schemat wyjścia niedostępny",
       "noFields": "Brak pól",
       "copyAllPaths": "Kopiuj wszystkie ścieżki",
-      "copyAllFieldPaths": "Kopiuj wszystkie ścieżki pól"
+      "copyAllFieldPaths": "Kopiuj wszystkie ścieżki pól",
+      "copyPath": "Kopiuj {{path}}",
+      "copied": "Skopiowano!",
+      "noPreviousSteps": "Brak wcześniejszych kroków ze skonfigurowaną opcją „Zapisz wynik jako”",
+      "globals": "Zmienne globalne"
     },
     "logoAlt": "Logo edytora workflow",
     "nodes": {
@@ -1581,6 +1649,42 @@
         "loadError": "Nie udało się wczytać pominiętych zdarzeń.",
         "empty": "Brak pominiętych zdarzeń w tym przedziale czasu."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "równa się",
+      "notEquals": "nie równa się",
+      "in": "należy do",
+      "notIn": "nie należy do",
+      "exists": "istnieje",
+      "notExists": "nie istnieje",
+      "greaterThan": "większe niż",
+      "greaterThanOrEqual": "większe lub równe",
+      "lessThan": "mniejsze niż",
+      "lessThanOrEqual": "mniejsze lub równe",
+      "contains": "zawiera",
+      "startsWith": "zaczyna się od",
+      "endsWith": "kończy się na"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "Schemat ładunku wyzwalacza daty musi być zgodny z wybranym źródłem.",
+      "eventCatalogLoadFailed": "Nie udało się załadować katalogu zdarzeń. Publikowanie i uruchamianie są wyłączone do czasu załadowania katalogu.",
+      "triggerEventMissing": "Zdarzenie wyzwalające „{{eventName}}” nie występuje w katalogu zdarzeń.",
+      "eventSchemaInvalid": "{{sourceLabel}} „{{eventName}}” {{schemaLabel}}. Przed opublikowaniem lub uruchomieniem popraw wpis w katalogu zdarzeń, aby zawierał prawidłowy schemat.",
+      "timeTriggerFixedContract": "Workflow wyzwalane czasowo korzystają ze stałego kontraktu ładunku zegara i nie mogą wywnioskować ani zastosować innego schematu jako zastępczego.",
+      "manualMustPin": "Workflow uruchamiane ręcznie wymagają przypięcia schematu ładunku przed opublikowaniem lub uruchomieniem.",
+      "registryLoadFailed": "Nie udało się załadować rejestru schematów. Publikowanie i uruchamianie są wyłączone do czasu załadowania rejestru.",
+      "noSchemaForEvent": "Brak schematu dla zdarzenia wyzwalającego „{{eventName}}”. Publikowanie i uruchamianie są wyłączone do czasu naprawienia tego błędu.",
+      "unknownSchemaRef": "Odniesienie do schematu ładunku workflow „{{ref}}” jest nieznane. Publikowanie i uruchamianie są wyłączone do czasu naprawienia tego błędu.",
+      "fixMappingErrors": "Popraw błędy mapowania workflow przed opublikowaniem lub uruchomieniem.",
+      "fixValidationErrors": "Popraw błędy walidacji workflow przed opublikowaniem lub uruchomieniem.",
+      "eventCatalogLoading": "Trwa ładowanie katalogu zdarzeń. Uruchamianie jest wyłączone do czasu załadowania katalogu.",
+      "registryLoading": "Trwa ładowanie rejestru schematów. Uruchamianie jest wyłączone do czasu załadowania rejestru.",
+      "eventCatalogLoadingPublish": "Trwa ładowanie katalogu zdarzeń. Publikowanie jest wyłączone do czasu załadowania katalogu.",
+      "registryLoadingPublish": "Trwa ładowanie rejestru schematów. Publikowanie jest wyłączone do czasu załadowania rejestru.",
+      "systemEvent": "Zdarzenie systemowe",
+      "tenantEvent": "Zdarzenie organizacji",
+      "missingSchemaRef": "nie ma odniesienia do schematu",
+      "unknownSchemaRefShort": "ma nieznane odniesienie do schematu"
     }
   },
   "actionInputFieldInfo": {

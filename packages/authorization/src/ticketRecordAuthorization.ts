@@ -1,7 +1,9 @@
+import { assembleAuthorizationSubject } from './subject/assemble';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { hasPermission } from './rbac';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -12,7 +14,11 @@ import {
   type RelationshipRule,
 } from './kernel';
 import type { AuthorizationKernel } from './kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
+import {
+  authorizationEvaluationSnapshotQuery, bundleNarrowingRuleFromRow, loadAuthorizationEvaluationSnapshot,
+  type AuthorizationEvaluationSnapshot,
+} from './bundles/service';
+import { builtinResolverSubjectsExistExpression, loadBuiltinResolverFacts } from './kernel/builtinRuleResolvers';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
@@ -39,73 +45,7 @@ function tenantScopedTable(conn: Conn, tenant: string, table: string): Knex.Quer
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
-function extractRoleIdsFromUser(user: unknown): string[] {
-  const roles = (user as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      if (role && typeof role === 'object' && 'role_id' in role) {
-        const roleId = (role as { role_id?: unknown }).role_id;
-        return typeof roleId === 'string' ? roleId : null;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Conn,
-  tenant: string,
-  user: IUserWithRoles,
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, tenant, 'user_roles')
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, tenant, 'team_members')
-      .where({ user_id: user.user_id })
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, tenant, 'users')
-      .where({ reports_to: user.user_id })
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
-}
-
-function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
+export function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
   // Only the primary assignee grants ticket read authorization. Do not trust
   // `ticket_resources.additional_user_id` as an authorization assignment because
   // time-entry workflows can create those rows without ticket row-level access.
@@ -125,7 +65,7 @@ function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRec
   };
 }
 
-async function resolveClientVisibility(
+export async function resolveClientVisibility(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
@@ -149,13 +89,52 @@ interface TicketAuthorizationContext {
   requestCache: RequestLocalAuthorizationCache;
 }
 
+/**
+ * The evaluation snapshot and, when a built-in rule resolver may have a subject in the tenant, its facts for the
+ * subject. The snapshot statement carries the resolvers' tenant gate (the same one the subject resolver's tenant
+ * probe asks), so a tenant with no resolver subject issues that one statement and never reads a resolver's
+ * feature tables. Only a tenant the gate does not rule out pays a second statement for the facts. With no fact
+ * source registered this is exactly the snapshot load.
+ */
+async function loadSnapshotWithResolverFacts(
+  trx: Conn,
+  subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
+): Promise<{ snapshot: AuthorizationEvaluationSnapshot; resolverFacts?: Record<string, unknown> }> {
+  const subjectsExist = builtinResolverSubjectsExistExpression(trx, subject.tenant);
+  if (!subjectsExist) return { snapshot: await loadAuthorizationEvaluationSnapshot(trx, subject) };
+  const row = await trx.queryBuilder()
+    .select(authorizationEvaluationSnapshotQuery(trx, subject).as('snapshot'), trx.raw('? as "resolverSubjects"', [subjectsExist]))
+    .first();
+  // A missing part is a failed load, never "no facts": the subject gets no decision.
+  if (!row?.snapshot || typeof row.resolverSubjects !== 'boolean') throw new Error('Authorization context unavailable');
+  const snapshot = row.snapshot as AuthorizationEvaluationSnapshot;
+  if (!row.resolverSubjects) return { snapshot };
+  return { snapshot, resolverFacts: await loadBuiltinResolverFacts(trx, subject) };
+}
+
 // LEVERAGE: pattern ticket-authorization-context — near-duplicate of createTicketAuthorizationContext in actions/optimizedTicketActions.ts (and ticketActions.ts); a shared builder would remove the drift that dropped contact visibility here.
 export async function createTicketAuthorizationContext(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
 ): Promise<TicketAuthorizationContext> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const { snapshot, resolverFacts } = await loadSnapshotWithResolverFacts(trx, {
+    tenant,
+    userId: user.user_id,
+    apiKeyId: (user as IUserWithRoles & { api_key_id?: string | null }).api_key_id ?? null,
+  });
+  // The snapshot is the loaded facts; the subject is assembled by the shared resolver step.
+  const authorizationSubject: AuthorizationSubject = assembleAuthorizationSubject({
+    tenant,
+    user,
+    facts: {
+      roleIds: snapshot.roleIds,
+      teamIds: snapshot.teamIds,
+      managedUserIds: snapshot.managedUserIds,
+      storedPortfolioClientIds: snapshot.portfolioClientIds ?? [],
+      resolverFacts,
+    },
+  });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds =
     contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
@@ -170,13 +149,8 @@ export async function createTicketAuthorizationContext(
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
-        } catch {
-          return [];
-        }
-      },
+      // A policy lookup failure must not become an empty rule set that grants access.
+      resolveRules: async () => snapshot.rules.map(bundleNarrowingRuleFromRow),
     }),
     rbacEvaluator: async () => true,
   });
@@ -236,7 +210,7 @@ export async function authorizeTicketRecordAccess(input: {
   tenant: string;
   user: IUserWithRoles;
   ticketId: string;
-  action: 'read' | 'update';
+  action: 'read' | 'update' | 'delete';
   /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
   ticketRow?: TicketRecordRow;
 }): Promise<TicketRecordRow> {
@@ -247,7 +221,7 @@ export async function authorizeTicketRecordAccess(input: {
   }
 
   const context = await createTicketAuthorizationContext(input.trx, input.tenant, input.user);
-  const decision = await context.authorizationKernel.authorizeResource({
+  const evaluation = {
     subject: context.authorizationSubject,
     resource: {
       type: 'ticket',
@@ -259,10 +233,24 @@ export async function authorizeTicketRecordAccess(input: {
     contactVisibility: context.contactVisibility,
     requestCache: context.requestCache,
     knex: input.trx as Knex,
-  });
+  };
+  // A write goes through the kernel's mutation path, which refuses a ticket the
+  // principal's read rules do not allow before it evaluates the write rules.
+  const decision = input.action === 'read'
+    ? await context.authorizationKernel.authorizeResource(evaluation)
+    : await context.authorizationKernel.authorizeMutation(evaluation);
 
   if (!decision.allowed) {
     throw new Error('Permission denied: Cannot access ticket');
+  }
+
+  if (input.action === 'delete' && !(await hasPermission(
+    { ...input.user, tenant: input.tenant },
+    'ticket',
+    'delete',
+    input.trx,
+  ))) {
+    throw new Error('Permission denied: Cannot delete ticket');
   }
 
   return ticket;

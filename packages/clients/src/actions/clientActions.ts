@@ -1,14 +1,16 @@
 'use server'
 
+import { CLIENT_BILLING_PERMISSION, canReadClientBilling, omitClientBillingColumns, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
-import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
+import type { DeletionValidationResult, IClient, IClientWithLocation, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
@@ -16,6 +18,7 @@ import {
   assertMspPermission,
   hasMspOrClientPortalOwnClientPermission,
   hasMspPermission,
+  hasMspPermissions,
   isClientPortalUser,
 } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync, getClientWideLogoUrlAsync } from '../lib/documentsHelpers';
@@ -354,11 +357,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         }
       });
 
-      // Explicitly set fields to null if they're not in updateData but should be cleared
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
+      // Explicitly set fields to null if they're not in updateData but should be cleared.
+      // Absence only means "cleared" for a subject who was shown these columns: a subject without billing
+      // permission reads the client without them (clientBillingProjection), so saving that row back must
+      // leave them untouched.
+      const billingColumnsWereVisible = !isClientPortalUpdate && await canReadClientBilling(user, trx);
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
         updateObject.billing_contact_id = null;
       }
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_email')) {
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_email')) {
         updateObject.billing_email = null;
       }
 
@@ -529,7 +536,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     }
 
     console.log('Updated client data:', updatedClientWithLogo);
-    return updatedClientWithLogo;
+    // Client-portal updates return the portal user's own client unchanged; MSP callers get the billing projection.
+    return isClientPortalUpdate ? updatedClientWithLogo : projectClientForSubject(user, updatedClientWithLogo, db);
   } catch (error) {
     console.error('Error updating client:', error);
     if (error instanceof ClientStructuralError) {
@@ -721,14 +729,28 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
     .as('cl');
 }
 
+/**
+ * Which record kinds the client-list search may match through. Asked only when
+ * there is a search term: an unfiltered list never reads these permissions.
+ */
+async function clientListSearchPermissions(user: IUserWithRoles, searchTerm: string | undefined): Promise<string[]> {
+  if (!searchTerm?.trim()) return [];
+  const permissions = ['client:read'];
+  if (await hasMspPermission(user, 'document', 'read')) permissions.push('document:read');
+  if (await hasMspPermission(user, 'interaction', 'read')) permissions.push('interaction:read');
+  return permissions;
+}
+
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
-  const searchPermissions = ['client:read'];
-  if (await hasMspPermission(user, 'document', 'read')) {
-    searchPermissions.push('document:read');
-  }
-  if (await hasMspPermission(user, 'interaction', 'read')) {
-    searchPermissions.push('interaction:read');
+  // One roles load answers the read check and the billing projection, so the projection costs the
+  // client list (a budgeted hot path) no extra statement.
+  // LEVERAGE: pattern request-scoped-permissions — each hasPermission reloads the user's roles; hot paths batch by hand (here, getConsolidatedTicketData). A per-request permission set would make every later check free.
+  const [canReadClients, billingVisible] = await hasMspPermissions(user, [
+    { resource: 'client', action: 'read' },
+    CLIENT_BILLING_PERMISSION,
+  ]);
+  if (!canReadClients) {
+    throw new Error('Permission denied: Cannot read clients');
   }
 
   const {
@@ -745,6 +767,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     sortDirection = 'asc'
   } = params;
 
+  const searchPermissions = await clientListSearchPermissions(user, searchTerm);
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -755,6 +778,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       // Build the base query with client_locations join
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -879,7 +904,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (billingVisible ? clientsWithLogos : clientsWithLogos.map(omitClientBillingColumns)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -897,13 +922,6 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
   params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
 ): Promise<PaginatedClientsResponse> => {
   await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
-  const searchPermissions = ['client:read'];
-  if (await hasMspPermission(user, 'document', 'read')) {
-    searchPermissions.push('document:read');
-  }
-  if (await hasMspPermission(user, 'interaction', 'read')) {
-    searchPermissions.push('interaction:read');
-  }
 
   const {
     page = 1,
@@ -919,6 +937,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     dateRange
   } = params;
 
+  const searchPermissions = await clientListSearchPermissions(user, searchTerm);
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -927,6 +946,8 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -1052,7 +1073,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (await projectClientsForSubject(user, clientsWithLogos)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -1257,6 +1278,15 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       // settings, cycles, contracts, locations — and before the client itself.
       // A restrict-mode FK means a missed reference surfaces here rather than
       // leaving an orphan.
+      // RMM organisations stay mapped to nothing; the client's maintenance
+      // windows go with it. Neither foreign key acts on its own on Citus.
+      await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
+        .where({ client_id: clientId })
+        .update({ client_id: null, billing_profile_id: null, updated_at: new Date().toISOString() });
+      await tenantScopedTable(trx, 'rmm_maintenance_windows', tenantId)
+        .where({ client_id: clientId })
+        .delete();
+
       const deletedBillingProfiles = await tenantScopedTable(trx, 'client_billing_profiles', tenantId)
         .where({ client_id: clientId })
         .delete();
@@ -1374,8 +1404,25 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
   const { knex } = await createTenantKnex();
 
   const exportData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Fetch location data for all clients
-    const clientIds = clients.map(c => c.client_id);
+    // The browser names WHICH clients to export; it is never trusted for WHAT they contain or whether the caller
+    // may read them. Re-read the requested clients through the same narrowed client query the list uses: an id
+    // outside the caller's client scope (or one that does not exist) is dropped, and every exported value comes
+    // from the database. Rows keep the order the caller asked for.
+    const requestedIds = Array.from(new Set(
+      (Array.isArray(clients) ? clients : [])
+        .map((client) => client?.client_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ));
+    const readableQuery = tenantDb(trx, tenant).table('clients as c').whereIn('c.client_id', requestedIds);
+    (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(readableQuery);
+    const readableRows: IClient[] = requestedIds.length > 0 ? await readableQuery.select('c.*') : [];
+    const readableById = new Map(readableRows.map((row) => [row.client_id, row]));
+    const exportClients = requestedIds
+      .map((id) => readableById.get(id))
+      .filter((client): client is IClient => Boolean(client));
+
+    // Fetch location data for the readable clients
+    const clientIds = exportClients.map(c => c.client_id);
     const locations = await tenantScopedTable(trx, 'client_locations', tenant)
       .whereIn('client_id', clientIds)
       .andWhere('is_default', true);
@@ -1404,7 +1451,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
     });
 
     // Prepare export data with location fields
-    return clients.map(client => {
+    return exportClients.map(client => {
       const location = locationMap.get(client.client_id) || {};
       const clientTags = tagMap.get(client.client_id) || [];
       const tagNames = clientTags.join(', ');
@@ -1528,6 +1575,8 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
       // Build the base query - same filtering logic as getAllClientsPaginated
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
 
       // Join with locations for search if needed
       if (searchTerm) {
@@ -1603,7 +1652,7 @@ export const checkExistingClients = withAuth(async (
       .whereIn('client_name', clientNames)
   });
 
-  return existingClients;
+  return projectClientsForSubject(user, existingClients);
 });
 
 /**

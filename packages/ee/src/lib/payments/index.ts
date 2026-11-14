@@ -113,3 +113,6 @@ export class AutopayService {
   async enroll(): Promise<never> { throw new Error('Auto-pay requires Enterprise Edition'); }
   async disenroll(): Promise<never> { throw new Error('Auto-pay requires Enterprise Edition'); }
 }
+
+/** CE no-op: on-demand Stripe webhook endpoint migration is Enterprise-only. */
+export async function migrateStripeWebhookEndpointOnDemand(_tenantId: string): Promise<void> {}

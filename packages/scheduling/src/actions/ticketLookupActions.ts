@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { narrowTicketsToReadable } from '../lib/ticketReadNarrowing';
 import { workItemDescriptionParagraphs } from '../lib/workItemDescription';
 
 export interface SchedulingTicketDetailsRecord {
@@ -23,7 +24,7 @@ export interface SchedulingTicketDetailsRecord {
 }
 
 export const getSchedulingTicketById = withAuth(async (
-  _user,
+  user,
   { tenant },
   ticketId: string
 ): Promise<SchedulingTicketDetailsRecord | null> => {
@@ -38,10 +39,10 @@ export const getSchedulingTicketById = withAuth(async (
     scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+    query.where({ 't.ticket_id': ticketId });
+    // A ticket the reader may not read looks the same as a missing one.
+    await narrowTicketsToReadable(trx, tenant, user, query);
     return query
-      .where({
-        't.ticket_id': ticketId,
-      })
       .select(
         't.ticket_id',
         't.ticket_number',

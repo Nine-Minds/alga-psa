@@ -69,10 +69,10 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
       if (result.linked) {
         onLinked();
       } else {
-        setFeedback(result.error ?? 'Failed to link.');
+        setFeedback(result.error ?? t('integrations.accounting.customerMapping.linkFailed', { defaultValue: 'Failed to link.' }));
       }
     } catch (err) {
-      setFeedback(err instanceof Error ? err.message : 'Failed to link.');
+      setFeedback(err instanceof Error ? err.message : t('integrations.accounting.customerMapping.linkFailed', { defaultValue: 'Failed to link.' }));
     } finally {
       setWorking(false);
     }
@@ -91,7 +91,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
       setConfirmingUnlink(false);
       onLinked();
     } catch (err) {
-      setFeedback(err instanceof Error ? err.message : 'Failed to unlink.');
+      setFeedback(err instanceof Error ? err.message : t('integrations.accounting.customerMapping.unlinkFailed', { defaultValue: 'Failed to unlink.' }));
     } finally {
       setWorking(false);
     }
@@ -113,10 +113,10 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
       if (result.created) {
         onLinked();
       } else {
-        setFeedback(result.error ?? 'Failed to create in QuickBooks.');
+        setFeedback(result.error ?? t('integrations.accounting.customerMapping.createFailedInQbo', { defaultValue: 'Failed to create in QuickBooks.' }));
       }
     } catch (err) {
-      setFeedback(err instanceof Error ? err.message : 'Failed to create.');
+      setFeedback(err instanceof Error ? err.message : t('integrations.accounting.customerMapping.createFailed', { defaultValue: 'Failed to create.' }));
     } finally {
       setWorking(false);
     }
@@ -139,7 +139,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
           disabled={working}
           onClick={() => setMode(mode === 'pick' ? 'default' : 'pick')}
         >
-          Re-link
+          {t('integrations.accounting.customerMapping.relink', { defaultValue: 'Re-link' })}
         </Button>
         {/* A client linked to the wrong customer must be able to go back to
             being unmapped, not only be pointed somewhere else. */}
@@ -195,7 +195,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
   if (row.suggestion?.exact) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Exact: {row.suggestion.externalName}</span>
+        <span className="text-xs text-muted-foreground">{t('integrations.accounting.customerMapping.exact', { defaultValue: 'Exact: {{name}}', name: row.suggestion.externalName })}</span>
         <Button
           id={`qbo-customer-link-${row.billingProfileId ?? row.clientId}`}
           type="button"
@@ -203,7 +203,9 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
           disabled={working}
           onClick={() => void doLink(row.suggestion!.externalId, row.suggestion!.externalName)}
         >
-          {working ? 'Linking…' : 'Accept'}
+          {working
+            ? t('integrations.accounting.customerMapping.linking', { defaultValue: 'Linking…' })
+            : t('integrations.accounting.customerMapping.accept', { defaultValue: 'Accept' })}
         </Button>
       </div>
     );
@@ -214,7 +216,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Suggestion: {row.suggestion.externalName}</span>
+          <span className="text-xs text-muted-foreground">{t('integrations.accounting.customerMapping.suggestion', { defaultValue: 'Suggestion: {{name}}', name: row.suggestion.externalName })}</span>
           <Button
             id={`qbo-customer-link-${row.billingProfileId ?? row.clientId}`}
             type="button"
@@ -223,7 +225,9 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
             disabled={working}
             onClick={() => void doLink(row.suggestion!.externalId, row.suggestion!.externalName)}
           >
-            {working ? 'Linking…' : 'Confirm'}
+            {working
+              ? t('integrations.accounting.customerMapping.linking', { defaultValue: 'Linking…' })
+              : t('integrations.accounting.customerMapping.confirm', { defaultValue: 'Confirm' })}
           </Button>
           <Button
             id={`qbo-customer-search-${row.billingProfileId ?? row.clientId}`}
@@ -232,7 +236,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
             variant="ghost"
             onClick={() => setMode(mode === 'pick' ? 'default' : 'pick')}
           >
-            Search
+            {t('integrations.accounting.customerMapping.search', { defaultValue: 'Search' })}
           </Button>
         </div>
         {mode === 'pick' && (
@@ -259,7 +263,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
           variant="outline"
           onClick={() => setMode(mode === 'pick' ? 'default' : 'pick')}
         >
-          Link to QBO Customer
+          {t('integrations.accounting.customerMapping.linkToCustomer', { defaultValue: 'Link to QBO Customer' })}
         </Button>
         <Button
           id={`qbo-customer-create-${row.billingProfileId ?? row.clientId}`}
@@ -269,10 +273,12 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
           disabled={working}
           onClick={() => void doCreate()}
         >
-          {working ? 'Creating…' : 'Create in QuickBooks'}
+          {working
+            ? t('integrations.accounting.customerMapping.creating', { defaultValue: 'Creating…' })
+            : t('integrations.accounting.customerMapping.createInQbo', { defaultValue: 'Create in QuickBooks' })}
         </Button>
         <Button id={`qbo-customer-leave-${row.billingProfileId ?? row.clientId}`} type="button" size="sm" variant="ghost" disabled={working}>
-          Leave
+          {t('integrations.accounting.customerMapping.leave', { defaultValue: 'Leave' })}
         </Button>
       </div>
       {mode === 'pick' && (
@@ -301,17 +307,18 @@ function PickerInline({
   onSelect: (c: QboCustomer) => void;
   working: boolean;
 }) {
+  const { t } = useTranslation('msp/integrations');
   return (
     <div className="flex flex-col gap-1">
       <Input
-        placeholder="Search QBO customers…"
+        placeholder={t('integrations.accounting.customerMapping.searchPlaceholder', { defaultValue: 'Search QBO customers…' })}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="h-8 text-sm"
       />
       <div className="max-h-40 overflow-y-auto rounded border bg-background shadow-sm">
         {filtered.length === 0 ? (
-          <p className="p-2 text-xs text-muted-foreground">No customers found.</p>
+          <p className="p-2 text-xs text-muted-foreground">{t('integrations.accounting.customerMapping.noCustomers', { defaultValue: 'No customers found.' })}</p>
         ) : (
           filtered.map((c) => (
             <button
@@ -331,6 +338,7 @@ function PickerInline({
 }
 
 export function QboCustomerMappingPanel() {
+  const { t } = useTranslation('msp/integrations');
   const { t: tCommon } = useTranslation('common');
   const [rows, setRows] = React.useState<Candidate[]>([]);
   const [qboCustomers, setQboCustomers] = React.useState<QboCustomer[]>([]);
@@ -366,11 +374,11 @@ export function QboCustomerMappingPanel() {
     } catch (err) {
       if (!isCurrentLoad()) return;
       console.error('Failed to load customer mappings:', err);
-      setError('Failed to load customer mappings.');
+      setError(t('integrations.accounting.customerMapping.loadFailed', { defaultValue: 'Failed to load customer mappings.' }));
     } finally {
       if (isCurrentLoad()) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     mounted.current = true;
@@ -390,10 +398,10 @@ export function QboCustomerMappingPanel() {
     setBulkFeedback(null);
     try {
       const result = await bulkLinkExactCustomerMatches();
-      setBulkFeedback(`Linked ${result.linked} exact matches.`);
+      setBulkFeedback(t('integrations.accounting.customerMapping.bulkLinked', { defaultValue: 'Linked {{count}} exact matches.', count: result.linked }));
       void load();
     } catch (err) {
-      setBulkFeedback(err instanceof Error ? err.message : 'Bulk accept failed.');
+      setBulkFeedback(err instanceof Error ? err.message : t('integrations.accounting.customerMapping.bulkFailed', { defaultValue: 'Bulk accept failed.' }));
     } finally {
       setBulkWorking(false);
     }
@@ -416,7 +424,7 @@ export function QboCustomerMappingPanel() {
       {exactCount > 0 && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-2">
           <span className="text-sm">
-            <span className="font-medium">{exactCount}</span> exact name match{exactCount !== 1 ? 'es' : ''} ready to accept
+            {t('integrations.accounting.customerMapping.exactReady', { defaultValue: '{{count}} exact name matches ready to accept', count: exactCount })}
           </span>
           <Button
             id="qbo-customer-bulk-accept"
@@ -425,7 +433,9 @@ export function QboCustomerMappingPanel() {
             disabled={bulkWorking}
             onClick={() => void handleBulkAccept()}
           >
-            {bulkWorking ? 'Accepting…' : `Accept ${exactCount} exact match${exactCount !== 1 ? 'es' : ''}`}
+            {bulkWorking
+              ? t('integrations.accounting.customerMapping.accepting', { defaultValue: 'Accepting…' })
+              : t('integrations.accounting.customerMapping.acceptExact', { defaultValue: 'Accept {{count}} exact matches', count: exactCount })}
           </Button>
         </div>
       )}
@@ -433,15 +443,15 @@ export function QboCustomerMappingPanel() {
       {loading ? (
         <p className="text-sm text-muted-foreground">{tCommon('status.loading', { defaultValue: 'Loading...' })}</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No clients found.</p>
+        <p className="text-sm text-muted-foreground">{t('integrations.accounting.customerMapping.noClients', { defaultValue: 'No clients found.' })}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs text-muted-foreground">
-                <th className="pb-2 pr-4 font-medium">Client</th>
-                <th className="pb-2 pr-4 font-medium">QBO Customer</th>
-                <th className="pb-2 font-medium">Action</th>
+                <th className="pb-2 pr-4 font-medium">{t('integrations.accounting.customerMapping.columns.client', { defaultValue: 'Client' })}</th>
+                <th className="pb-2 pr-4 font-medium">{t('integrations.accounting.customerMapping.columns.customer', { defaultValue: 'QBO Customer' })}</th>
+                <th className="pb-2 font-medium">{t('integrations.accounting.customerMapping.columns.action', { defaultValue: 'Action' })}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -454,7 +464,7 @@ export function QboCustomerMappingPanel() {
                         second, unrelated customer. */}
                     {row.billingProfileId && (
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        sub-customer
+                        {t('integrations.accounting.customerMapping.subCustomer', { defaultValue: 'sub-customer' })}
                       </span>
                     )}
                   </td>
@@ -464,7 +474,7 @@ export function QboCustomerMappingPanel() {
                         {row.mappedExternalName}
                       </Badge>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Not mapped</span>
+                      <span className="text-xs text-muted-foreground">{t('integrations.accounting.customerMapping.notMapped', { defaultValue: 'Not mapped' })}</span>
                     )}
                   </td>
                   <td className="py-2">

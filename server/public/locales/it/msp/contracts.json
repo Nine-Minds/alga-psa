@@ -107,6 +107,20 @@
     }
   },
   "contractDetail": {
+    "simulatorLoading": "Caricamento del simulatore...",
+    "unnamedBoard": "Bacheca senza nome",
+    "notFound": "Contratto non trovato",
+    "loadFailed": "Impossibile caricare il contratto",
+    "invoicesLoadFailed": "Impossibile caricare le fatture per questa assegnazione del contratto.",
+    "deleteFailed": "Impossibile eliminare il contratto",
+    "backToContracts": "Torna ai contratti",
+    "viewSourceQuote": "Visualizza preventivo di origine",
+    "clientDrawer": {
+      "loading": "Caricamento…",
+      "notFound": "Cliente non trovato.",
+      "openClient": "Apri cliente",
+      "loadFailed": "Impossibile caricare i dettagli del cliente."
+    },
     "alerts": {
       "saveSuccess": "Contratto salvato con successo!",
       "unsavedChanges": "Sono presenti modifiche non salvate. Fai clic su \"Salva modifiche\" per applicarle."

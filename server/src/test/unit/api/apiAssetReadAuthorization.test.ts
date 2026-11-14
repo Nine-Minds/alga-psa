@@ -55,13 +55,17 @@ vi.mock('@/lib/auth/rbac', () => ({
 
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => () => {
   // This fixture has no persisted roles, team memberships, or direct reports.
-  const query = { where: () => query, select: async () => [] };
+  const query = { where: () => query, orderBy: () => query, select: async () => [] };
   return query;
 }) }));
 
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
     authorizeResource: vi.fn(async ({ resource }: { resource: { type: 'asset' | 'ticket' } }) => {
+      state.calls.push('record-level');
+      return { allowed: state.recordLevelAllowed, redactedFields: state.redactions[resource.type] };
+    }),
+    authorizeMutation: vi.fn(async ({ resource }: { resource: { type: 'asset' | 'ticket' } }) => {
       state.calls.push('record-level');
       return { allowed: state.recordLevelAllowed, redactedFields: state.redactions[resource.type] };
     }),

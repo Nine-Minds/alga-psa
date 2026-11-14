@@ -25,11 +25,19 @@ import { PDFGenerationService } from './pdfGenerationService';
 
 const stubBrowser = () => {
   const page = {
+    setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+    setRequestInterception: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
     setContent: vi.fn().mockResolvedValue(undefined),
     pdf: vi.fn().mockResolvedValue(Buffer.from('pdf')),
     close: vi.fn().mockResolvedValue(undefined),
   };
-  getBrowserMock.mockResolvedValue({ newPage: vi.fn().mockResolvedValue(page) });
+  getBrowserMock.mockResolvedValue({
+    createBrowserContext: vi.fn().mockResolvedValue({
+      newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    }),
+  });
   releaseBrowserMock.mockResolvedValue(undefined);
   return page;
 };

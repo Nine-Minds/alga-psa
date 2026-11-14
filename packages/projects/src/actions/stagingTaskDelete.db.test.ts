@@ -18,8 +18,6 @@ const testState = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', async () => ({
   ...(await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db')),
   createTenantKnex: vi.fn(async () => ({ knex: testState.trx })),
-  withTransaction: vi.fn(async (_db: unknown, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-    testState.trx.transaction(callback)),
 }));
 vi.mock('@alga-psa/auth', async () => ({
   ...(await vi.importActual<typeof import('@alga-psa/auth')>('@alga-psa/auth')),

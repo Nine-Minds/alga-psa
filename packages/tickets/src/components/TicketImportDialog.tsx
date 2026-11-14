@@ -74,6 +74,28 @@ function isReturnedActionError(value: unknown): value is ActionMessageError | Ac
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
+// TICKET_IMPORT_FIELDS carries English display labels, so the mapping step
+// rendered them untranslated. Keys mirror TicketExportDialog's EXPORT_FIELDS,
+// which also puts the same two date columns under enteredAt/closedAt.
+const FIELD_LABELS: Record<MappableTicketField, { labelKey: string; fallback: string }> = {
+  title: { labelKey: 'fields.title', fallback: 'Title' },
+  description: { labelKey: 'fields.description', fallback: 'Description' },
+  status: { labelKey: 'fields.status', fallback: 'Status' },
+  priority: { labelKey: 'fields.priority', fallback: 'Priority' },
+  board: { labelKey: 'fields.board', fallback: 'Board' },
+  category: { labelKey: 'fields.category', fallback: 'Category' },
+  subcategory: { labelKey: 'fields.subcategory', fallback: 'Subcategory' },
+  client: { labelKey: 'fields.client', fallback: 'Client' },
+  contact: { labelKey: 'fields.contact', fallback: 'Contact' },
+  assigned_to: { labelKey: 'fields.assignedTo', fallback: 'Assigned To' },
+  assigned_team: { labelKey: 'fields.assignedTeam', fallback: 'Assigned Team' },
+  due_date: { labelKey: 'fields.dueDate', fallback: 'Due Date' },
+  entered_at: { labelKey: 'fields.enteredAt', fallback: 'Entered At' },
+  closed_at: { labelKey: 'fields.closedAt', fallback: 'Closed At' },
+  is_closed: { labelKey: 'fields.isClosed', fallback: 'Is Closed' },
+  tags: { labelKey: 'fields.tags', fallback: 'Tags' },
+};
+
 interface TicketImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -244,11 +266,11 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       setStep('board_selection');
     } catch (error) {
       setFile(null);
-      setErrors([error instanceof Error ? error.message : 'Error reading CSV file']);
+      setErrors([error instanceof Error ? error.message : t('importDialog.errors.readCsv', { defaultValue: 'Error reading CSV file' })]);
     } finally {
       setIsProcessing(false);
     }
-  }, []);
+  }, [t]);
 
   // -------------------------------------------------------------------------
   // Step 2: Board Selection
@@ -256,12 +278,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
 
   const handleBoardNext = useCallback(() => {
     if (!defaultBoardId) {
-      setErrors(['Please select a default board']);
+      setErrors([t('importDialog.errors.selectDefaultBoard', { defaultValue: 'Please select a default board' })]);
       return;
     }
     setErrors([]);
     setStep('mapping');
-  }, [defaultBoardId]);
+  }, [defaultBoardId, t]);
 
   // -------------------------------------------------------------------------
   // Step 3: Column Mapping
@@ -272,11 +294,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     const requiredFields: MappableTicketField[] = ['title', 'client'];
     for (const requiredField of requiredFields) {
       if (!columnMappings.some(mapping => mapping.ticketField === requiredField)) {
-        errors.push(`Required field "${TICKET_IMPORT_FIELDS[requiredField].label}" is not mapped`);
+        const { labelKey, fallback } = FIELD_LABELS[requiredField];
+        errors.push(t('importDialog.errors.requiredFieldNotMapped', { defaultValue: 'Required field "{{field}}" is not mapped', field: t(labelKey, { defaultValue: fallback }) }));
       }
     }
     return errors;
-  }, [columnMappings]);
+  }, [columnMappings, t]);
 
   // -------------------------------------------------------------------------
   // Step 4: Preview & Validation
@@ -490,11 +513,11 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
 
       setStep('preview');
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Error processing CSV data']);
+      setErrors([error instanceof Error ? error.message : t('importDialog.errors.processCsv', { defaultValue: 'Error processing CSV data' })]);
     } finally {
       setIsProcessing(false);
     }
-  }, [fullCSVData, columnMappings, validateMappings, defaultBoardId]);
+  }, [fullCSVData, columnMappings, validateMappings, defaultBoardId, t]);
 
   // -------------------------------------------------------------------------
   // Resolution handlers
@@ -582,12 +605,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       });
       setStep('complete');
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Error importing tickets']);
+      setErrors([error instanceof Error ? error.message : t('importDialog.errors.importTickets', { defaultValue: 'Error importing tickets' })]);
       setStep('preview');
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, referenceData, mappedRows, defaultBoardId, clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions, dateFormatResolutions, importOptions.skipInvalidRows]);
+  }, [isProcessing, referenceData, mappedRows, defaultBoardId, clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions, dateFormatResolutions, importOptions.skipInvalidRows, t]);
 
   // -------------------------------------------------------------------------
   // Close
@@ -645,9 +668,11 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       .filter(b => !b.is_inactive && b.board_id)
       .map(b => ({
         value: b.board_id!,
-        label: (b.board_name || 'Unnamed Board') + (b.is_default ? ' (default)' : ''),
+        label: b.is_default
+          ? t('importDialog.boardOptionDefault', { defaultValue: '{{board}} (default)', board: b.board_name || t('importDialog.unnamedBoard', { defaultValue: 'Unnamed Board' }) })
+          : (b.board_name || t('importDialog.unnamedBoard', { defaultValue: 'Unnamed Board' })),
       }));
-  }, [initialBoards]);
+  }, [initialBoards, t]);
 
   // Available statuses for the selected default board (for status resolution)
   const boardStatuses = useMemo(() => {
@@ -749,9 +774,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
 
   // Next step label for preview
   const nextStepLabel = useMemo(() => {
-    if (hasAnyUnmatched) return 'Resolve Unmatched Data';
+    if (hasAnyUnmatched) return t('importDialog.resolveUnmatchedData', { defaultValue: 'Resolve Unmatched Data' });
     return t('importDialog.importTickets', { defaultValue: 'Import {{count}} Tickets', count: totalTickets });
-  }, [hasAnyUnmatched, totalTickets]);
+  }, [hasAnyUnmatched, totalTickets, t]);
 
   // Check for incomplete mappings across all resolution types
   const hasIncompleteMappings = useMemo(() => {
@@ -783,14 +808,14 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             variant="outline"
             onClick={() => setStep('upload')}
           >
-            Back
+            {t('importDialog.actions.back', { defaultValue: 'Back' })}
           </Button>
           <Button
             id="board-next-btn"
             onClick={handleBoardNext}
             disabled={!defaultBoardId}
           >
-            Next
+            {t('importDialog.actions.next', { defaultValue: 'Next' })}
           </Button>
         </div>
       );
@@ -804,10 +829,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             onClick={() => setStep('board_selection')}
             disabled={isProcessing}
           >
-            Back
+            {t('importDialog.actions.back', { defaultValue: 'Back' })}
           </Button>
           <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
-            {isProcessing ? 'Processing...' : 'Preview'}
+            {isProcessing
+              ? t('importDialog.actions.processing', { defaultValue: 'Processing...' })
+              : t('importDialog.actions.preview', { defaultValue: 'Preview' })}
           </Button>
         </div>
       );
@@ -820,7 +847,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             variant="outline"
             onClick={() => setStep('mapping')}
           >
-            Back
+            {t('importDialog.actions.back', { defaultValue: 'Back' })}
           </Button>
           <Button
             id="preview-next-btn"
@@ -838,9 +865,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     if (step === 'resolve_data') {
       return (
         <div className="flex justify-end space-x-2">
-          <Button id="resolve-back-btn" variant="outline" onClick={() => setStep('preview')}>Back</Button>
+          <Button id="resolve-back-btn" variant="outline" onClick={() => setStep('preview')}>{t('importDialog.actions.back', { defaultValue: 'Back' })}</Button>
           <Button id="resolve-import-btn" onClick={handleImport} disabled={hasIncompleteMappings || !canProceedWithImport}>
-            Import Tickets
+            {t('importDialog.actions.import', { defaultValue: 'Import Tickets' })}
           </Button>
         </div>
       );
@@ -849,7 +876,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       return (
         <div className="flex justify-end space-x-2">
           <Button id="import-done-btn" onClick={handleClose}>
-            Done
+            {t('actions.done', { defaultValue: 'Done' })}
           </Button>
         </div>
       );
@@ -861,7 +888,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
-      title="Import Tickets"
+      title={t('importDialog.title', { defaultValue: 'Import Tickets' })}
       className="max-w-5xl"
       disableFocusTrap
       footer={footer}
@@ -886,12 +913,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
           <div className="text-center p-8 border-2 border-dashed border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-lg">
             <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-[rgb(var(--color-text-500))]" />
             <p className="mt-2 text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-              Upload a CSV file with ticket data
+              {t('importDialog.upload.prompt', { defaultValue: 'Upload a CSV file with ticket data' })}
             </p>
             <p className="mt-1 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
-              <strong>Required:</strong> title, client<br />
-              <strong>Optional:</strong> description, status, priority, category, contact, assigned_to, assigned_team, due_date, entered_at, closed_at, is_closed, tags<br />
-              <strong>Tip:</strong> Column names from other PSAs (ConnectWise, Autotask, HaloPSA, Zendesk, Freshdesk) are auto-detected
+              <strong>{t('importDialog.upload.requiredLabel', { defaultValue: 'Required:' })}</strong> title, client<br />
+              <strong>{t('importDialog.upload.optionalLabel', { defaultValue: 'Optional:' })}</strong> description, status, priority, category, contact, assigned_to, assigned_team, due_date, entered_at, closed_at, is_closed, tags<br />
+              <strong>{t('importDialog.upload.tipLabel', { defaultValue: 'Tip:' })}</strong> {t('importDialog.upload.tip', { defaultValue: 'Column names from other PSAs (ConnectWise, Autotask, HaloPSA, Zendesk, Freshdesk) are auto-detected' })}
             </p>
             <div className="mt-4 space-y-3">
               <Input
@@ -920,7 +947,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 className="w-full"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Download CSV Template
+                {t('importDialog.actions.downloadTemplate', { defaultValue: 'Download CSV Template' })}
               </Button>
             </div>
           </div>
@@ -932,10 +959,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         {step === 'board_selection' && (
           <div>
             <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-              Select Board
+              {t('importDialog.board.heading', { defaultValue: 'Select Board' })}
             </h3>
             <p className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] mb-4">
-              All tickets will be imported to this board. Statuses and categories are board-specific, so this determines which are available.
+              {t('importDialog.board.description', { defaultValue: 'All tickets will be imported to this board. Statuses and categories are board-specific, so this determines which are available.' })}
             </p>
 
             <div className="mb-6">
@@ -943,7 +970,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 options={boardOptions}
                 value={defaultBoardId}
                 onValueChange={(value) => setDefaultBoardId(value)}
-                placeholder="Select a board..."
+                placeholder={t('importDialog.board.placeholder', { defaultValue: 'Select a board...' })}
               />
             </div>
 
@@ -956,18 +983,20 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         {step === 'mapping' && previewData && (
           <div>
             <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-              Map Ticket Fields to CSV Columns
+              {t('importDialog.mapping.heading', { defaultValue: 'Map Ticket Fields to CSV Columns' })}
             </h3>
             <p className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] mb-4">
-              Select which CSV column contains the data for each field. Fields marked with * are required.
+              {t('importDialog.mapping.description', { defaultValue: 'Select which CSV column contains the data for each field. Fields marked with * are required.' })}
             </p>
             <div className="max-h-[60vh] overflow-y-auto pr-2">
               <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-gray-700 dark:text-[rgb(var(--color-text-200))]">
-                <span className="w-1/3">Field</span>
-                <span className="w-2/3">Select CSV Column</span>
+                <span className="w-1/3">{t('importDialog.mapping.fieldColumn', { defaultValue: 'Field' })}</span>
+                <span className="w-2/3">{t('importDialog.mapping.csvColumn', { defaultValue: 'Select CSV Column' })}</span>
               </div>
               <div className="border-t dark:border-[rgb(var(--color-border-200))] pt-4 space-y-3">
-                {Object.entries(TICKET_IMPORT_FIELDS).filter(([fieldKey]) => fieldKey !== 'board' && fieldKey !== 'subcategory').map(([fieldKey, { label, required }]) => {
+                {Object.entries(TICKET_IMPORT_FIELDS).filter(([fieldKey]) => fieldKey !== 'board' && fieldKey !== 'subcategory').map(([fieldKey, { required }]) => {
+                  const { labelKey, fallback } = FIELD_LABELS[fieldKey as MappableTicketField];
+                  const label = `${t(labelKey, { defaultValue: fallback })}${required ? ' *' : ''}`;
                   const currentMapping = columnMappings.find(m => m.ticketField === fieldKey);
                   const csvHeader = currentMapping?.csvHeader || 'unassigned';
 
@@ -987,7 +1016,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                       <span className="text-gray-400 dark:text-[rgb(var(--color-text-500))]">&#8592;</span>
                       <CustomSelect
                         options={[
-                          { value: 'unassigned', label: 'Not mapped' },
+                          { value: 'unassigned', label: t('importDialog.mapping.notMapped', { defaultValue: 'Not mapped' }) },
                           ...previewData.headers
                             .filter(header => !mappedHeaders.includes(header))
                             .map(header => ({
@@ -1038,13 +1067,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         {step === 'preview' && validationResults.length > 0 && (
           <div>
             <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-              Preview Import
+              {t('importDialog.preview.heading', { defaultValue: 'Preview Import' })}
             </h3>
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                <strong>Total rows:</strong> {validationResults.length} |
-                <strong className="ml-2">Valid:</strong> {validCount} |
-                <strong className="ml-2">Invalid:</strong> {invalidCount}
+                <strong>{t('importDialog.preview.totalRows', { defaultValue: 'Total rows:' })}</strong> {validationResults.length} |
+                <strong className="ml-2">{t('importDialog.preview.valid', { defaultValue: 'Valid:' })}</strong> {validCount} |
+                <strong className="ml-2">{t('importDialog.preview.invalid', { defaultValue: 'Invalid:' })}</strong> {invalidCount}
               </AlertDescription>
             </Alert>
 
@@ -1053,12 +1082,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               <div className="mb-4">
                 <div className="flex items-center justify-between py-3 border-b dark:border-[rgb(var(--color-border-200))]">
                   <div>
-                    <div className="text-gray-900 dark:text-[rgb(var(--color-text-100))] font-medium">Skip invalid rows</div>
-                    <div className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">Continue import even if some rows have validation errors</div>
+                    <div className="text-gray-900 dark:text-[rgb(var(--color-text-100))] font-medium">{t('importDialog.preview.skipInvalidRows', { defaultValue: 'Skip invalid rows' })}</div>
+                    <div className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">{t('importDialog.preview.skipInvalidRowsHelp', { defaultValue: 'Continue import even if some rows have validation errors' })}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-700 dark:text-[rgb(var(--color-text-300))]">
-                      {importOptions.skipInvalidRows ? 'Yes' : 'No'}
+                      {importOptions.skipInvalidRows ? t('importDialog.preview.yes', { defaultValue: 'Yes' }) : t('importDialog.preview.no', { defaultValue: 'No' })}
                     </span>
                     <Switch
                       checked={importOptions.skipInvalidRows}
@@ -1098,23 +1127,23 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                     render: (value: boolean) =>
                       value ? (
                         <div className="flex justify-center">
-                          <Tooltip content="Valid">
+                          <Tooltip content={t('importDialog.preview.rowValid', { defaultValue: 'Valid' })}>
                             <Check className="h-4 w-4 text-[rgb(var(--badge-success-text))] cursor-help" />
                           </Tooltip>
                         </div>
                       ) : (
                         <div className="flex justify-center">
-                          <Tooltip content="Has errors">
+                          <Tooltip content={t('importDialog.preview.rowHasErrors', { defaultValue: 'Has errors' })}>
                             <AlertTriangle className="h-4 w-4 text-destructive cursor-help" />
                           </Tooltip>
                         </div>
                       ),
                   },
-                  { title: 'Row', dataIndex: 'rowNumber' },
-                  { title: 'Title', dataIndex: 'title' },
-                  { title: 'Client', dataIndex: 'client' },
+                  { title: t('importDialog.preview.columns.row', { defaultValue: 'Row' }), dataIndex: 'rowNumber' },
+                  { title: t('fields.title', { defaultValue: 'Title' }), dataIndex: 'title' },
+                  { title: t('fields.client', { defaultValue: 'Client' }), dataIndex: 'client' },
                   {
-                    title: 'Issues',
+                    title: t('importDialog.preview.columns.issues', { defaultValue: 'Issues' }),
                     dataIndex: 'issues',
                     width: '35%',
                     render: (_value: unknown, record: Record<string, unknown>) => {
@@ -1151,7 +1180,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             {hasAnyUnmatched && (
               <Alert variant="info" className="mt-4">
                 <AlertDescription>
-                  <strong>{totalUnmatchedCount} value(s)</strong> from your CSV don&apos;t match existing data
+                  <strong>{t('importDialog.preview.unmatchedCount', { defaultValue: '{{count}} value(s)', count: totalUnmatchedCount })}</strong> {t('importDialog.preview.unmatchedIntro', { defaultValue: "from your CSV don't match existing data" })}
                   ({[
                     unmatchedClients.length > 0 && t('importDialog.unmatchedClients', { defaultValue: '{{count}} clients', count: unmatchedClients.length }),
                     unmatchedPriorities.length > 0 && t('importDialog.unmatchedPriorities', { defaultValue: '{{count}} priorities', count: unmatchedPriorities.length }),
@@ -1162,7 +1191,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                     effectiveUnmatchedContacts.length > 0 && t('importDialog.unmatchedContacts', { defaultValue: '{{count}} contacts', count: effectiveUnmatchedContacts.length }),
                     unparsableDateGroups.length > 0 && t('importDialog.unmatchedDateFormats', { defaultValue: '{{count}} date formats', count: unparsableDateGroups.length }),
                   ].filter(Boolean).join(', ')}).
-                  You&apos;ll resolve these in the next step.
+                  {' '}{t('importDialog.preview.unmatchedNextStep', { defaultValue: "You'll resolve these in the next step." })}
                 </AlertDescription>
               </Alert>
             )}
@@ -1171,8 +1200,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             {invalidCount > 0 && !importOptions.skipInvalidRows && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  <strong>{invalidCount} row(s)</strong> have validation errors.
-                  Enable "Skip invalid rows" to proceed, or go back and fix your CSV.
+                  <strong>{t('importDialog.preview.invalidRowCount', { defaultValue: '{{count}} row(s)', count: invalidCount })}</strong>{' '}
+                  {t('importDialog.preview.invalidRowsHelp', { defaultValue: 'have validation errors. Enable "Skip invalid rows" to proceed, or go back and fix your CSV.' })}
                 </AlertDescription>
               </Alert>
             )}
@@ -1190,10 +1219,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                     />
                     <div>
                       <span className="font-medium">
-                        Confirm large import ({totalTickets} tickets)
+                        {t('importDialog.confirmLargeImport', { defaultValue: 'Confirm large import ({{count}} tickets)', count: totalTickets })}
                       </span>
                       <p className="text-sm mt-1">
-                        I understand this will create {totalTickets} ticket(s). This may take a while.
+                        {t('importDialog.confirmLargeImportHelp', { defaultValue: 'I understand this will create {{count}} ticket(s). This may take a while.', count: totalTickets })}
                       </p>
                     </div>
                   </label>
@@ -1210,11 +1239,11 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         {step === 'resolve_data' && (
           <div>
             <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-              Resolve Unmatched Data
+              {t('importDialog.resolveUnmatchedData', { defaultValue: 'Resolve Unmatched Data' })}
             </h3>
             <p className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] mb-4">
               {t('importDialog.unmatchedValuesIntro', { defaultValue: "{{count}} values from your CSV couldn't be automatically matched.", count: totalUnmatchedCount })}
-              Choose how to handle each one below.
+              {' '}{t('importDialog.resolve.chooseHandling', { defaultValue: 'Choose how to handle each one below.' })}
             </p>
 
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
@@ -1222,9 +1251,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unmatchedClients.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('clients')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Clients ({unmatchedClients.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.clients', { defaultValue: 'Clients ({{count}} unmatched)', count: unmatchedClients.length })}</span>
                     <span className="flex items-center gap-2">
-                      <Badge variant="error" size="sm">Required</Badge>
+                      <Badge variant="error" size="sm">{t('importDialog.resolve.required', { defaultValue: 'Required' })}</Badge>
                       <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('clients') ? '' : '-rotate-90'}`} />
                     </span>
                   </button>
@@ -1243,19 +1272,19 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'create', label: 'Create new' },
-                                { value: 'map_to_existing', label: 'Map to existing' },
+                                { value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) },
+                                { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
                                 { value: 'skip', label: t('importDialog.skipDropped', { defaultValue: 'Skip ({{count}} tickets dropped)', count: info.ticketCount }) },
                               ]}
                             />
                             {res.action === 'create' && (
                               <div className="ml-1 w-fit">
-                                <CustomSelect options={[{ value: 'company', label: 'Company' }, { value: 'individual', label: 'Individual' }]} value={res.clientType || 'company'} onValueChange={(v) => handleClientResolutionChange(info.name, 'create', undefined, v as 'company' | 'individual')} placeholder="Client type" />
+                                <CustomSelect options={[{ value: 'company', label: t('importDialog.resolve.clientTypeCompany', { defaultValue: 'Company' }) }, { value: 'individual', label: t('importDialog.resolve.clientTypeIndividual', { defaultValue: 'Individual' }) }]} value={res.clientType || 'company'} onValueChange={(v) => handleClientResolutionChange(info.name, 'create', undefined, v as 'company' | 'individual')} placeholder={t('importDialog.resolve.clientTypePlaceholder', { defaultValue: 'Client type' })} />
                               </div>
                             )}
                             {res.action === 'map_to_existing' && (
                               <div className="ml-1 w-fit">
-                                <ClientPicker id={`client-res-${info.name}`} searchClients={searchClientsForPicker} onSelect={(id) => handleClientResolutionChange(info.name, 'map_to_existing', id || undefined)} selectedClientId={res.mappedClientId || null} filterState="active" onFilterStateChange={() => {}} clientTypeFilter="all" onClientTypeFilterChange={() => {}} placeholder="Select client..." fitContent />
+                                <ClientPicker id={`client-res-${info.name}`} searchClients={searchClientsForPicker} onSelect={(id) => handleClientResolutionChange(info.name, 'map_to_existing', id || undefined)} selectedClientId={res.mappedClientId || null} filterState="active" onFilterStateChange={() => {}} clientTypeFilter="all" onClientTypeFilterChange={() => {}} placeholder={t('importDialog.resolve.selectClient', { defaultValue: 'Select client...' })} fitContent />
                               </div>
                             )}
                           </div>
@@ -1270,9 +1299,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unmatchedPriorities.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('priorities')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Priorities ({unmatchedPriorities.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.priorities', { defaultValue: 'Priorities ({{count}} unmatched)', count: unmatchedPriorities.length })}</span>
                     <span className="flex items-center gap-2">
-                      {isItilBoard && <Badge variant="warning" size="sm">ITIL board — create disabled</Badge>}
+                      {isItilBoard && <Badge variant="warning" size="sm">{t('importDialog.resolve.itilCreateDisabled', { defaultValue: 'ITIL board — create disabled' })}</Badge>}
                       <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('priorities') ? '' : '-rotate-90'}`} />
                     </span>
                   </button>
@@ -1291,13 +1320,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                ...(!isItilBoard ? [{ value: 'create', label: 'Create new' }] : []),
-                                { value: 'map_to_existing', label: 'Map to existing' },
-                                { value: 'use_default', label: 'Use default' },
+                                ...(!isItilBoard ? [{ value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) }] : []),
+                                { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
+                                { value: 'use_default', label: t('importDialog.resolve.useDefault', { defaultValue: 'Use default' }) },
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && (
-                              <div className="ml-1 w-fit"><CustomSelect options={referenceData.priorities.filter(p => !isItilBoard || p.is_from_itil_standard).map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select priority..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={referenceData.priorities.filter(p => !isItilBoard || p.is_from_itil_standard).map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder={t('importDialog.resolve.selectPriority', { defaultValue: 'Select priority...' })} /></div>
                             )}
                           </div>
                         );
@@ -1311,7 +1340,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unmatchedStatuses.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('statuses')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Statuses ({unmatchedStatuses.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.statuses', { defaultValue: 'Statuses ({{count}} unmatched)', count: unmatchedStatuses.length })}</span>
                     <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('statuses') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('statuses') && (
@@ -1329,13 +1358,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'create', label: 'Create new' },
-                                { value: 'map_to_existing', label: 'Map to existing' },
-                                { value: 'use_default', label: 'Use board default' },
+                                { value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) },
+                                { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
+                                { value: 'use_default', label: t('importDialog.resolve.useBoardDefault', { defaultValue: 'Use board default' }) },
                               ]}
                             />
                             {res.action === 'map_to_existing' && (
-                              <div className="ml-1 w-fit"><CustomSelect options={boardStatuses.map(s => ({ value: s.status_id, label: s.name + (s.is_closed ? ' (closed)' : '') }))} value={res.mappedStatusId || ''} onValueChange={(v) => handleStatusResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select status..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={boardStatuses.map(s => ({ value: s.status_id, label: s.name + (s.is_closed ? ' (closed)' : '') }))} value={res.mappedStatusId || ''} onValueChange={(v) => handleStatusResolutionChange(info.name, 'map_to_existing', v)} placeholder={t('importDialog.resolve.selectStatus', { defaultValue: 'Select status...' })} /></div>
                             )}
                           </div>
                         );
@@ -1349,7 +1378,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unmatchedCategories.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('categories')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Categories ({unmatchedCategories.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.categories', { defaultValue: 'Categories ({{count}} unmatched)', count: unmatchedCategories.length })}</span>
                     <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('categories') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('categories') && (
@@ -1367,13 +1396,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'create', label: 'Create new' },
-                                { value: 'map_to_existing', label: 'Map to existing' },
-                                { value: 'skip', label: 'Skip (leave uncategorized)' },
+                                { value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) },
+                                { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
+                                { value: 'skip', label: t('importDialog.resolve.skipUncategorized', { defaultValue: 'Skip (leave uncategorized)' }) },
                               ]}
                             />
                             {res.action === 'map_to_existing' && (
-                              <div className="ml-1 w-fit"><CustomSelect options={boardCategories.filter(c => !c.parent_category).map(c => ({ value: c.category_id, label: c.category_name }))} value={res.mappedCategoryId || ''} onValueChange={(v) => handleCategoryResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select category..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={boardCategories.filter(c => !c.parent_category).map(c => ({ value: c.category_id, label: c.category_name }))} value={res.mappedCategoryId || ''} onValueChange={(v) => handleCategoryResolutionChange(info.name, 'map_to_existing', v)} placeholder={t('importDialog.resolve.selectCategory', { defaultValue: 'Select category...' })} /></div>
                             )}
                           </div>
                         );
@@ -1387,7 +1416,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unmatchedAgents.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('agents')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Agents ({unmatchedAgents.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.agents', { defaultValue: 'Agents ({{count}} unmatched)', count: unmatchedAgents.length })}</span>
                     <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('agents') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('agents') && (
@@ -1405,8 +1434,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'skip', label: 'Skip (leave unassigned)' },
-                                { value: 'map_to_existing', label: 'Map to existing' },
+                                { value: 'skip', label: t('importDialog.resolve.skipUnassigned', { defaultValue: 'Skip (leave unassigned)' }) },
+                                { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
                               ]}
                             />
                             {res.action === 'map_to_existing' && (
@@ -1426,7 +1455,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unmatchedTeams.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('teams')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Teams ({unmatchedTeams.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.teams', { defaultValue: 'Teams ({{count}} unmatched)', count: unmatchedTeams.length })}</span>
                     <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('teams') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('teams') && (
@@ -1444,12 +1473,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'skip', label: 'Skip (no team assigned)' },
-                                { value: 'map_to_existing', label: 'Map to existing' },
+                                { value: 'skip', label: t('importDialog.resolve.skipNoTeam', { defaultValue: 'Skip (no team assigned)' }) },
+                                { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && (
-                              <div className="ml-1 w-fit"><CustomSelect options={referenceData.teams.map(t => ({ value: t.team_id, label: t.team_name }))} value={res.mappedTeamId || ''} onValueChange={(v) => handleTeamResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select team..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={referenceData.teams.map(t => ({ value: t.team_id, label: t.team_name }))} value={res.mappedTeamId || ''} onValueChange={(v) => handleTeamResolutionChange(info.name, 'map_to_existing', v)} placeholder={t('importDialog.resolve.selectTeam', { defaultValue: 'Select team...' })} /></div>
                             )}
                           </div>
                         );
@@ -1463,7 +1492,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {effectiveUnmatchedContacts.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('contacts')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Contacts ({effectiveUnmatchedContacts.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.contacts', { defaultValue: 'Contacts ({{count}} unmatched)', count: effectiveUnmatchedContacts.length })}</span>
                     <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('contacts') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('contacts') && (
@@ -1486,7 +1515,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               <span className="text-xs text-gray-500"> {t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span>
                               {clientLabel && (
                                 <span className="text-xs text-[rgb(var(--color-text-500))] ml-1">
-                                  — on {clientLabel}
+                                  {t('importDialog.resolve.onClient', { defaultValue: '— on {{client}}', client: clientLabel })}
                                 </span>
                               )}
                             </div>
@@ -1497,9 +1526,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'create', label: 'Create new' },
-                                ...(canMapToExisting ? [{ value: 'map_to_existing', label: 'Map to existing' }] : []),
-                                { value: 'skip', label: 'Skip (leave blank)' },
+                                { value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) },
+                                ...(canMapToExisting ? [{ value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) }] : []),
+                                { value: 'skip', label: t('importDialog.resolve.skipLeaveBlank', { defaultValue: 'Skip (leave blank)' }) },
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && canMapToExisting && (
@@ -1514,7 +1543,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                                   })}
                                   value={res.mappedContactId || ''}
                                   onValueChange={(v) => handleContactResolutionChange(info.resolutionKey, 'map_to_existing', v)}
-                                  placeholder="Select contact..."
+                                  placeholder={t('importDialog.resolve.selectContact', { defaultValue: 'Select contact...' })}
                                 />
                               </div>
                             )}
@@ -1530,48 +1559,48 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unparsableDateGroups.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('dates')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Date Formats ({unparsableDateGroups.length} unrecognized)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.dateFormats', { defaultValue: 'Date Formats ({{count}} unrecognized)', count: unparsableDateGroups.length })}</span>
                     <span className="flex items-center gap-2">
-                      <Badge variant="warning" size="sm">Needs interpretation</Badge>
+                      <Badge variant="warning" size="sm">{t('importDialog.resolve.needsInterpretation', { defaultValue: 'Needs interpretation' })}</Badge>
                       <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('dates') ? '' : '-rotate-90'}`} />
                     </span>
                   </button>
                   {expandedSections.has('dates') && (
                     <div className="px-4 pb-4 space-y-4 border-t dark:border-[rgb(var(--color-border-200))]">
                       <p className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))] pt-2">
-                        Some dates in your CSV couldn&apos;t be automatically read. Tell us how to interpret them.
+                        {t('importDialog.resolve.dates.help', { defaultValue: "Some dates in your CSV couldn't be automatically read. Tell us how to interpret them." })}
                       </p>
                       {unparsableDateGroups.map(group => {
                         const res = dateFormatResolutions.find(r => r.patternKey === group.patternKey);
                         return (
                           <div key={group.patternKey} className="pt-3 space-y-2 border-t dark:border-[rgb(var(--color-border-200))] first:border-t-0">
                             <div className="text-sm">
-                              <span className="text-gray-500 dark:text-[rgb(var(--color-text-500))]">Your dates look like:</span>
+                              <span className="text-gray-500 dark:text-[rgb(var(--color-text-500))]">{t('importDialog.resolve.dates.lookLike', { defaultValue: 'Your dates look like:' })}</span>
                               <span className="ml-2 font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">
                                 {group.sampleValues.slice(0, 3).join(', ')}
                               </span>
                               {group.sampleValues.length > 3 && <span className="text-gray-400"> ...</span>}
-                              <span className="text-xs text-gray-500 ml-2">({group.totalCount} total)</span>
+                              <span className="text-xs text-gray-500 ml-2">{t('importDialog.resolve.dates.totalCount', { defaultValue: '({{count}} total)', count: group.totalCount })}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] shrink-0">This means:</span>
+                              <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] shrink-0">{t('importDialog.resolve.dates.thisMeans', { defaultValue: 'This means:' })}</span>
                               <CustomSelect
                                 options={group.possibleFormats.map(f => ({
                                   value: f,
-                                  label: f === 'skip' ? 'Skip these dates' :
-                                    f === 'MM/DD/YYYY' ? 'Month/Day/Year (US)' :
-                                    f === 'DD/MM/YYYY' ? 'Day/Month/Year (International)' :
-                                    f === 'MM/DD/YY' ? 'Month/Day/Year (2-digit year, US)' :
-                                    f === 'DD/MM/YY' ? 'Day/Month/Year (2-digit year, International)' :
-                                    f === 'MM-DD-YYYY' ? 'Month-Day-Year (US)' :
-                                    f === 'DD-MM-YYYY' ? 'Day-Month-Year (International)' :
-                                    f === 'YYYY.MM.DD' ? 'Year.Month.Day' :
-                                    f === 'DD.MM.YYYY' ? 'Day.Month.Year' :
+                                  label: f === 'skip' ? t('importDialog.resolve.dates.formats.skip', { defaultValue: 'Skip these dates' }) :
+                                    f === 'MM/DD/YYYY' ? t('importDialog.resolve.dates.formats.mdySlash', { defaultValue: 'Month/Day/Year (US)' }) :
+                                    f === 'DD/MM/YYYY' ? t('importDialog.resolve.dates.formats.dmySlash', { defaultValue: 'Day/Month/Year (International)' }) :
+                                    f === 'MM/DD/YY' ? t('importDialog.resolve.dates.formats.mdySlashShort', { defaultValue: 'Month/Day/Year (2-digit year, US)' }) :
+                                    f === 'DD/MM/YY' ? t('importDialog.resolve.dates.formats.dmySlashShort', { defaultValue: 'Day/Month/Year (2-digit year, International)' }) :
+                                    f === 'MM-DD-YYYY' ? t('importDialog.resolve.dates.formats.mdyDash', { defaultValue: 'Month-Day-Year (US)' }) :
+                                    f === 'DD-MM-YYYY' ? t('importDialog.resolve.dates.formats.dmyDash', { defaultValue: 'Day-Month-Year (International)' }) :
+                                    f === 'YYYY.MM.DD' ? t('importDialog.resolve.dates.formats.ymdDot', { defaultValue: 'Year.Month.Day' }) :
+                                    f === 'DD.MM.YYYY' ? t('importDialog.resolve.dates.formats.dmyDot', { defaultValue: 'Day.Month.Year' }) :
                                     f,
                                 }))}
                                 value={res?.selectedFormat || group.possibleFormats[0]}
                                 onValueChange={(v) => handleDateFormatChange(group.patternKey, v as DateFormatInterpretation)}
-                                placeholder="Select format..."
+                                placeholder={t('importDialog.resolve.dates.selectFormat', { defaultValue: 'Select format...' })}
                               />
                             </div>
                           </div>
@@ -1586,7 +1615,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             {skippedDueToClients > 0 && (
               <Alert variant="warning" className="mt-4">
                 <AlertDescription>
-                  <strong>{skippedDueToClients} ticket(s)</strong> will be skipped due to skipped client resolutions.
+                  <strong>{t('importDialog.resolve.skippedTicketCount', { defaultValue: '{{count}} ticket(s)', count: skippedDueToClients })}</strong> {t('importDialog.resolve.skippedDueToClients', { defaultValue: 'will be skipped due to skipped client resolutions.' })}
                 </AlertDescription>
               </Alert>
             )}
@@ -1597,8 +1626,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" checked={importConfirmed} onChange={(e) => setImportConfirmed(e.target.checked)} className="mt-1 text-primary-500" />
                     <div>
-                      <span className="font-medium">Confirm large import ({totalTickets} tickets)</span>
-                      <p className="text-sm mt-1">I understand this will create up to {totalTickets} ticket(s). This may take a while.</p>
+                      <span className="font-medium">{t('importDialog.confirmLargeImport', { defaultValue: 'Confirm large import ({{count}} tickets)', count: totalTickets })}</span>
+                      <p className="text-sm mt-1">{t('importDialog.confirmLargeImportUpToHelp', { defaultValue: 'I understand this will create up to {{count}} ticket(s). This may take a while.', count: totalTickets })}</p>
                     </div>
                   </label>
                 </AlertDescription>
@@ -1614,9 +1643,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         {step === 'importing' && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">Importing tickets...</p>
+            <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">{t('importDialog.importing.title', { defaultValue: 'Importing tickets...' })}</p>
             <p className="text-sm text-gray-400 dark:text-[rgb(var(--color-text-600))] mt-2">
-              This may take a moment for large imports.
+              {t('importDialog.importing.help', { defaultValue: 'This may take a moment for large imports.' })}
             </p>
           </div>
         )}
@@ -1632,7 +1661,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                   <Check className="h-6 w-6 text-[rgb(var(--badge-success-text))]" />
                 </div>
                 <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-                  Import Complete
+                  {t('importDialog.complete.heading', { defaultValue: 'Import Complete' })}
                 </h3>
                 <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
                   {t('importDialog.createdSuccess', { defaultValue: 'Successfully created {{count}} tickets.', count: importResult.ticketsCreated })}
@@ -1642,8 +1671,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 </p>
                 {importResult.ticketNumbers.length > 0 && (
                   <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))] mt-2">
-                    Ticket numbers: {importResult.ticketNumbers.slice(0, 20).join(', ')}
-                    {importResult.ticketNumbers.length > 20 && ` ... and ${importResult.ticketNumbers.length - 20} more`}
+                    {t('importDialog.complete.ticketNumbers', { defaultValue: 'Ticket numbers:' })} {importResult.ticketNumbers.slice(0, 20).join(', ')}
+                    {importResult.ticketNumbers.length > 20 && ` ${t('importDialog.complete.andMore', { defaultValue: '... and {{count}} more', count: importResult.ticketNumbers.length - 20 })}`}
                   </p>
                 )}
               </>
@@ -1653,12 +1682,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                   <AlertTriangle className="h-6 w-6 text-[rgb(var(--badge-error-text))]" />
                 </div>
                 <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-                  Import Failed
+                  {t('importDialog.complete.failedHeading', { defaultValue: 'Import Failed' })}
                 </h3>
                 <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-                  No tickets were created.
+                  {t('importDialog.complete.noneCreated', { defaultValue: 'No tickets were created.' })}
                   {importResult.ticketsSkipped > 0 && (
-                    <> All <strong>{importResult.ticketsSkipped}</strong> ticket{importResult.ticketsSkipped === 1 ? ' was' : 's were'} skipped due to errors.</>
+                    <> {t('importDialog.complete.allSkipped', { defaultValue: 'All {{count}} tickets were skipped due to errors.', count: importResult.ticketsSkipped })}</>
                   )}
                 </p>
               </>
@@ -1674,7 +1703,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         <div key={i} className="mb-1">&#8226; {error}</div>
                       ))}
                       {importResult.errors.length > 20 && (
-                        <div className="text-gray-500 mt-1">... and {importResult.errors.length - 20} more</div>
+                        <div className="text-gray-500 mt-1">{t('importDialog.complete.andMore', { defaultValue: '... and {{count}} more', count: importResult.errors.length - 20 })}</div>
                       )}
                     </div>
                   </AlertDescription>
@@ -1692,7 +1721,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         <div key={i} className="mb-1">&#8226; {warning}</div>
                       ))}
                       {importResult.warnings.length > 20 && (
-                        <div className="text-gray-500 mt-1">... and {importResult.warnings.length - 20} more</div>
+                        <div className="text-gray-500 mt-1">{t('importDialog.complete.andMore', { defaultValue: '... and {{count}} more', count: importResult.warnings.length - 20 })}</div>
                       )}
                     </div>
                   </AlertDescription>

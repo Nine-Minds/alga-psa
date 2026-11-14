@@ -19,6 +19,7 @@ import {
 import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { toDateOnly } from '../lib/billing/dateOnly';
+import { assertContractLineMutationAuthorized, ContractScopeError } from '../lib/billing/contractAuthorization';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -40,7 +41,7 @@ function contractLineMappingActionErrorFrom(error: unknown): ContractLineMapping
     return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
   }
 
-  if (error instanceof ContractLineMappingDomainError) {
+  if (error instanceof ContractLineMappingDomainError || error instanceof ContractScopeError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
     }
@@ -761,9 +762,7 @@ export const updateContractLineAssociation = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'update', trx)) {
-        throw new ContractLineMappingDomainError('Permission denied: Cannot update contract line associations');
-      }
+      await assertContractLineMutationAuthorized(trx, user, tenant, contractId, contractLineId);
 
       // Prepare data specifically for the database update
       // Use a more generic type to allow assigning null
@@ -834,7 +833,7 @@ export const updateContractLineAssociation = withAuth(async (
       await assertContractIsAuthorable(trx, tenant, contractId);
 
       return normalizeContractLineMapping(
-        await ContractLineMapping.updateContractLineAssociation(contractId, contractLineId, dbUpdateData),
+        await ContractLineMapping.updateContractLineAssociation(trx, tenant, contractId, contractLineId, dbUpdateData),
       );
     });
   } catch (error) {

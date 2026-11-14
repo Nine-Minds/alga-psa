@@ -1,11 +1,25 @@
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
+import {
+  admitCoManagedSeatTechnician, assertCoManagedSeatAdmission, countLicensedInternalUsers, countLicensedPendingInvitations,
+} from '@alga-psa/licensing';
 
-export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED';
+/**
+ * Why an internal-user seat was refused. `SEAT_ARRANGEMENT_REFUSED` is a seat
+ * technician refused by its arrangement (ended, pool lapsed, allocation full):
+ * the MSP's own licence played no part, so it is never reported as
+ * `LICENSE_LIMIT_REACHED`, which tells an administrator to buy MSP licences.
+ */
+export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED' | 'SEAT_ARRANGEMENT_REFUSED';
 
 export type InternalUserLicenseLimitResult =
-  | { ok: true; coManaged?: boolean; invitation?: { invitation_id: string; role_id: string; email: string } }
+  | {
+      ok: true;
+      coManaged?: boolean;
+      /** Admitted against a seat arrangement's allocation: the MSP's licensed seat limit was not consulted. */
+      seatTechnician?: boolean;
+      invitation?: { invitation_id: string; role_id: string; email: string };
+    }
   | { ok: false; code: InternalUserLicenseLimitCode; error: string };
 
 // ee/server typechecks this package's sources with strictNullChecks off, where
@@ -24,18 +38,16 @@ export function isInternalUserLicenseLimitRejected(
  * expire. The one definition of "pending": sendUserInvitation reserves it and
  * the onboarding wizard reports it. `excludeEmail` leaves out the invitee being
  * (re)invited so a resend never blocks itself.
+ *
+ * A seat technician's invitation is not one of these: it holds a seat of its
+ * arrangement, not one of the MSP's (`countLicensedPendingInvitations`).
  */
 export async function countPendingInvitationSeats(
   trx: Knex.Transaction | Knex,
   tenant: string,
   options?: { excludeEmail?: string }
 ): Promise<number> {
-  let query = tenantDb(trx, tenant).table('user_invitations')
-    .whereNull('used_at')
-    .where('expires_at', '>', trx.fn.now());
-  if (options?.excludeEmail !== undefined) query = query.whereNot('email', options.excludeEmail);
-  const row = await query.count('* as count').first();
-  return parseInt(String(row?.count ?? '0'), 10);
+  return countLicensedPendingInvitations(trx, tenant, options);
 }
 
 /**
@@ -118,7 +130,13 @@ async function evaluateSeatLimits(
  * (`assertCoManagedSeatAdmission`) alone: that result is final and the static
  * `licensed_user_count` check is skipped, because the count is a one-time copy
  * of the allocation that goes stale once the sponsor's entitlement changes.
- * Every other tenant falls through to the ordinary / solo / appliance limit.
+ *
+ * A seat technician (an existing user holding a live seat assignment, or the
+ * holder of a seat invitation) is admitted against the arrangement's
+ * allocation (`admitCoManagedSeatTechnician`) and that result is final too:
+ * the MSP's own limits are never consulted for them.
+ *
+ * Every other subject falls through to the ordinary / solo / appliance limit.
  *
  * Co-managed refusals throw `CoManagedAdmissionError` (rolling the caller's
  * transaction back); limit refusals are returned as `{ ok: false }`. The row
@@ -145,17 +163,15 @@ export async function admitInternalUserSeat(
   if (admission.managed) {
     return { ok: true, coManaged: true, ...(admission.invitation ? { invitation: admission.invitation } : {}) };
   }
+  // Takes the entitlement, allocation and arrangement row locks only for a seat
+  // technician, after the seat lock above: the order seat invitation uses.
+  const seat = await admitCoManagedSeatTechnician(trx, tenant, coManagedInput);
+  if (seat.seatTechnician) {
+    return seat.ok === true
+      ? { ok: true, seatTechnician: true }
+      : { ok: false, code: 'SEAT_ARRANGEMENT_REFUSED', error: seat.error };
+  }
   return checkInternalUserLicenseLimit(trx, tenant, { reservedSeats });
-}
-
-async function countActiveInternalUsers(trx: Knex.Transaction, tenant: string): Promise<number> {
-  const usedResult = await tenantDb(trx, tenant).table('users')
-    .where({
-      user_type: 'internal',
-      is_inactive: false,
-    })
-    .count('* as count');
-  return parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
 }
 
 /**
@@ -192,7 +208,7 @@ export async function checkInternalUserLicenseLimit(
   }
   if (options?.deferCoManaged && tenantRow.product_code === 'co_managed') return { ok: true, coManaged: true };
 
-  const used = (await countActiveInternalUsers(trx, tenant)) + (options?.reservedSeats ?? 0);
+  const used = (await countLicensedInternalUsers(trx, tenant)) + (options?.reservedSeats ?? 0);
   return evaluateSeatLimits(trx, tenant, tenantRow, used);
 }
 
@@ -210,12 +226,17 @@ export class InternalUserSeatOverflowError extends Error {
  * write left the tenant over its limits, throws so the transaction rolls back.
  * A backstop for the lock (e.g. a path that forgot it), not the mechanism.
  * Do not call for co-managed seat admissions, which have their own accounting.
+ *
+ * Pass the admission the write was made under: a seat technician took no
+ * licensed seat, so there is nothing of the MSP's to recount.
  */
 export async function assertInternalUserSeatsWithinLimit(
   trx: Knex.Transaction | Knex,
-  tenant: string
+  tenant: string,
+  admission?: InternalUserLicenseLimitResult | null
 ): Promise<void> {
   assertTransaction(trx, 'assertInternalUserSeatsWithinLimit');
+  if (admission?.ok === true && admission.seatTechnician) return;
   const tenantRow = await tenantDb(trx, tenant).table('tenants')
     .first('licensed_user_count', 'plan', 'product_code');
   if (!tenantRow) {
@@ -226,7 +247,7 @@ export async function assertInternalUserSeatsWithinLimit(
   if (tenantRow.product_code === 'co_managed') return;
   // The new seat is already in the count; the check asks "was there room for
   // it", i.e. whether the seats held by everyone else already hit a limit.
-  const others = Math.max((await countActiveInternalUsers(trx, tenant)) - 1, 0);
+  const others = Math.max((await countLicensedInternalUsers(trx, tenant)) - 1, 0);
   const verdict = await evaluateSeatLimits(trx, tenant, tenantRow, others);
   if (isInternalUserLicenseLimitRejected(verdict)) {
     throw new InternalUserSeatOverflowError(verdict.error, verdict.code);

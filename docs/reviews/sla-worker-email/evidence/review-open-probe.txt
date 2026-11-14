@@ -1,0 +1,6 @@
+Date: 2026-11-08
+Project: 3d5269d8-fb7c-43a7-b95d-b2ec48600992
+Command: alga-dev workflow-open-review --projectId=3d5269d8-fb7c-43a7-b95d-b2ec48600992 --activate=false
+Initial result: Error: Unknown workflow command: workflow-open-review
+Follow-up result: Error: [app] A service operation is already in progress. Check again shortly.
+Conclusion: the connected workflow runtime has not returned a successful Open Review result; no review activation or approval was recorded. The command is still an external blocker.

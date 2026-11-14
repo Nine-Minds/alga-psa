@@ -14,6 +14,9 @@ const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
+// The role floors have their own suite (packages/db userRoleFloor.test.ts);
+// here they allow everything unless a case says otherwise.
+const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true })));
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
@@ -49,6 +52,15 @@ vi.mock('@alga-psa/db', () => ({
     table: (t: string) => conn(t),
     unscoped: (t: string, _reason?: string) => conn(t),
   }),
+  assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
+  isUserRoleFloorRejected: (result: any) => result?.ok === false,
+  isUserRoleFloorError: (error: any) => error?.name === 'UserRoleFloorError',
+  UserRoleFloorError: class UserRoleFloorError extends Error {
+    readonly name = 'UserRoleFloorError';
+    constructor(message: string, readonly violation: string) {
+      super(message);
+    }
+  },
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -177,7 +189,8 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
     if (table === 'users') {
       return {
         where: (_criteria: Record<string, any>) => ({
-          count: async () => [{ count: String(input.usedInternalUsers) }],
+          // The licensed count leaves out users holding a live seat assignment.
+          whereNotExists: () => ({ count: () => ({ first: async () => ({ count: String(input.usedInternalUsers) }) }) }),
           select: (..._fields: any[]) => ({
             first: async () => insertedUser,
           }),
@@ -189,6 +202,11 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
           },
         }),
       };
+    }
+
+    if (table === 'co_managed_seat_assignments as seat_assignment') {
+      const subquery: any = { whereNot: () => subquery, select: () => subquery, whereRaw: () => subquery };
+      return subquery;
     }
 
     if (table === 'user_roles') {

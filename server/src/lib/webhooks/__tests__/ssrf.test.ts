@@ -27,6 +27,10 @@ const REJECTED_TARGETS: Array<[string, string]> = [
   ['http://0.0.0.0', 'unspecified 0.0.0.0/8'],
   ['http://[::ffff:127.0.0.1]', 'IPv4-mapped loopback'],
   ['http://[fd12::1]', 'IPv6 ULA'],
+  ['http://[fec0::1]', 'deprecated IPv6 site-local'],
+  ['http://[100::1]', 'IPv6 discard-only'],
+  ['http://[2001::1]', 'IPv6 IETF protocol assignment'],
+  ['http://[2002:7f00:1::1]', 'IPv6 6to4 transition address'],
   ['http://224.0.0.1', 'multicast'],
   ['file:///etc/passwd', 'non-http(s) file scheme'],
   ['ftp://example.com', 'non-http(s) ftp scheme'],
@@ -78,6 +82,11 @@ describe('assertSafeWebhookTarget (T024)', () => {
   it('accepts https://example.com when DNS resolves to a public address', async () => {
     await expect(assertSafeWebhookTarget('https://example.com')).resolves.toBeUndefined();
     expect(dnsState.lookupMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a public IPv6 literal', async () => {
+    await expect(assertSafeWebhookTarget('https://[2606:4700::1111]/hook')).resolves.toBeUndefined();
+    expect(dnsState.lookupMock).not.toHaveBeenCalled();
   });
 
   it('allows the private addresses when WEBHOOK_SSRF_ALLOW_PRIVATE=true', async () => {

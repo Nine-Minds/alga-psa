@@ -6,10 +6,10 @@ import { ITicket } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorRejected, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
-import { filterPermissionsByServedCapabilities } from '../lib/permissionCapabilities';
+import { filterPermissionsByServedCapabilities, filterRolesByServedCapabilities } from '../lib/permissionCapabilities';
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -191,6 +191,20 @@ async function checkClientPortalRoleScope(
   return null;
 }
 
+/**
+ * Role-floor refusals are reported in the caller's own namespace: a client
+ * portal admin never sees msp/settings copy.
+ */
+function userRoleFloorActionError(
+  currentUser: IUserWithRoles,
+  violation: UserRoleFloorViolation,
+  message: string
+): AuthActionMessageError {
+  const namespace = isClientUserType(currentUser.user_type) ? 'client-portal:errors' : 'msp/settings:errors';
+  const key = violation === 'last_msp_admin' ? 'roles.lastMspAdmin' : 'roles.lastRole';
+  return actionError(message, `${namespace}.${key}`);
+}
+
 // Role actions
 export const createRole = withAuth(async (user, { tenant }, roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole | AuthActionError> => {
   try {
@@ -344,10 +358,12 @@ export const deleteRole = withAuth(async (
 
 export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const roles = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await tenantScopedTable(trx, 'roles', tenant)
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
+    // A role that exists only for a capability is never listed for a tenant not served for it.
+    return filterRolesByServedCapabilities(tenant, roles);
 });
 
 // Role-Permission actions
@@ -503,6 +519,12 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
         const clientScopeError = await checkClientPortalRoleScope(currentUser, tenant, trx, targetUser, role);
         if (clientScopeError) {
             return clientScopeError;
+        }
+
+        // LEVERAGE: pattern user-role-floor — the same guard runs in users roleActions.removeRoleFromUser and every other role/user write path
+        const floor = await assertUserRoleFloor(trx, tenant, { kind: 'remove_roles', userId, roleIds: [roleId] });
+        if (isUserRoleFloorRejected(floor)) {
+            return userRoleFloorActionError(currentUser, floor.violation, floor.message);
         }
 
         await tenantScopedTable(trx, 'user_roles', tenant).where({ user_id: userId, role_id: roleId }).del();

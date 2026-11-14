@@ -715,7 +715,8 @@
         "title": "Ações de fluxo de trabalho",
         "unavailable": "Indisponível",
         "unlimitedPlan": "Plano ilimitado",
-        "unlimitedRemaining": "Ilimitado"
+        "unlimitedRemaining": "Ilimitado",
+        "unlimited": "Ilimitado"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Repetir enquanto estiver no status",
       "statusAgeRepeatEvery": "Repetir a cada (dias)",
       "statusAgeNoActivity": "Somente se não houve atividade (comentários ou alterações feitas por pessoas) nesse período",
-      "statusAgeSummary": "Executa diariamente às {{time}} ({{timezone}}) para cada ticket que esteja no status escolhido pelo número de dias definido"
+      "statusAgeSummary": "Executa diariamente às {{time}} ({{timezone}}) para cada ticket que esteja no status escolhido pelo número de dias definido",
+      "saving": "Salvando...",
+      "saveSettings": "Salvar configurações"
     },
     "stepPanel": {
       "readOnly": "Acesso somente leitura: a edição de etapas está desativada.",
@@ -877,7 +880,13 @@
       "durationSummary": "Aguarda {{duration}}.",
       "durationEmpty": "Informe quanto tempo esperar, em qualquer uma destas unidades.",
       "notFoundInTry": "Esta etapa está dentro de um Try. Se nada for encontrado, ela atualmente continua, então o ramo Catch não será executado. Faça-a falhar para que o Catch trate um registro ausente.",
-      "notFoundFailAction": "Falhar para o Catch tratar"
+      "notFoundFailAction": "Falhar para o Catch tratar",
+      "operatorLabel": "Operador",
+      "removeFilter": "Remover",
+      "valuesCommaSeparated": "Valores (separados por vírgulas)",
+      "valueLabel": "Valor",
+      "absoluteTimestampHint": "Armazenado como data e hora absolutas usando o fuso horário atual do navegador.",
+      "saveAsConflict": "\"{{saveAs}}\" entra em conflito com um caminho de saída de etapa existente"
     },
     "mappingExpr": {
       "add": "Adicionar",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Configuração do nó",
       "stepSettings": "Configurações de etapas",
-      "missingRequired": "Obrigatório ausente: {{fields}}"
+      "missingRequired": "Obrigatório ausente: {{fields}}",
+      "advancedOptions": "Opções avançadas",
+      "invalidJson": "JSON inválido"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1042,7 +1053,10 @@
         "valid": "Válido",
         "unknown": "Desconhecido"
       },
-      "errors": "Erros de validação"
+      "errors": "Erros de validação",
+      "errorsHeading": "Erros de validação",
+      "warningsHeading": "Avisos de validação",
+      "stepFallbackName": "Etapa {{index}}"
     },
     "discardDialog": {
       "title": "Descartar alterações não salvas?",
@@ -1243,7 +1257,8 @@
       "publishFailed": "Falha ao publicar o fluxo de trabalho",
       "publishValidationErrors": "Falha na publicação – corrija erros de validação",
       "systemEventMissingSchema": "Este evento do sistema não possui um esquema válido e não pode ser selecionado até ser corrigido.",
-      "publishedVersion": "Versão {{version}} publicada. Novas execuções usam esta versão."
+      "publishedVersion": "Versão {{version}} publicada. Novas execuções usam esta versão.",
+      "copiedPath": "Copiado: {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Redimensionar painel de propriedades",
@@ -1269,7 +1284,29 @@
       "mappingTitle": "Mapeamento de gatilho",
       "mappingNotRequired": "Mapeamento: Não obrigatório.",
       "mappingErrors": "Erros de mapeamento",
-      "mappingWarnings": "Mapeando avisos"
+      "mappingWarnings": "Mapeando avisos",
+      "eventSchemaTitle": "Esquema do evento de gatilho",
+      "effectiveSourceSchemaTitle": "Esquema de origem efetivo do gatilho",
+      "eventMissingSchemaRef": "Este evento não tem uma referência de esquema válida. A publicação e a execução ficam desabilitadas até que isso seja corrigido.",
+      "eventNotInCatalogPrefix": "O evento de gatilho",
+      "eventNotInCatalogSuffix": "não está no catálogo de eventos. A publicação e a execução ficam desabilitadas até que isso seja corrigido.",
+      "eventCatalogLoadFailed": "Falha ao carregar o catálogo de eventos. A publicação e a execução de fluxos de trabalho acionados por eventos ficam desabilitadas até que o catálogo seja carregado.",
+      "mappingCustomActive": "O mapeamento personalizado do gatilho está ativo.",
+      "mappingRequired": "O mapeamento do gatilho é obrigatório para executar este fluxo de trabalho.",
+      "mappingOptionalActive": "O mapeamento opcional do gatilho está ativo.",
+      "usingTriggerPayload": "Usando a carga útil do gatilho como entrada do fluxo de trabalho.",
+      "triggerLabel": "Gatilho:",
+      "noSourceSchemaPrefix": "Ainda não há um esquema de origem disponível para este evento. Adicione",
+      "noSourceSchemaSuffix": "ao catálogo de eventos ou defina uma substituição.",
+      "mappingRequiredMismatch": "O mapeamento é obrigatório porque o esquema do gatilho e o esquema de entrada do fluxo de trabalho não correspondem.",
+      "useEventSchema": "Usar esquema do evento",
+      "configureMapping": "Configurar mapeamento",
+      "hideMapping": "Ocultar mapeamento",
+      "showMapping": "Mostrar mapeamento",
+      "mapDataFromPrefix": "Mapear dados de",
+      "mapDataFromSuffix": "para a entrada do fluxo de trabalho.",
+      "viewSchema": "Ver esquema",
+      "viewEffective": "Ver esquema efetivo"
     },
     "schemaSettings": {
       "lockVersion": "Bloquear versão do esquema",
@@ -1284,12 +1321,39 @@
       "notLoaded": "Esquema ainda não carregado.",
       "loadPreviewFailed": "Falha ao carregar a visualização do esquema.",
       "selectVersionPlaceholder": "Selecione a versão do esquema…",
-      "payloadRefAdvanced": "Referência do esquema de carga útil (avançado)"
+      "payloadRefAdvanced": "Referência do esquema de carga útil (avançado)",
+      "triggerSchemaTitle": "Esquema do gatilho",
+      "clockTriggerPinned": "Gatilhos de relógio permanecem sempre fixados ao contrato fixo de relógio do fluxo de trabalho.",
+      "hide": "Ocultar",
+      "edit": "Editar",
+      "clear": "Limpar",
+      "hideFields": "Ocultar campos",
+      "previewFields": "Pré-visualizar campos",
+      "viewJsonSchema": "Ver esquema JSON",
+      "viewPublished": "Ver esquema publicado",
+      "noTopLevelProperties": "Nenhuma propriedade no nível superior.",
+      "hideAdvanced": "Ocultar configurações avançadas do esquema",
+      "modeLabel": "Modo:",
+      "modePinned": "Fixado",
+      "modeInferred": "Inferido",
+      "close": "Fechar",
+      "loadingSchema": "Carregando esquema…",
+      "publishedContractSchema": "Esquema do contrato publicado",
+      "publishedSnapshot": "Instantâneo do esquema publicado.",
+      "publishedSnapshotMissing": "O instantâneo do esquema publicado está ausente; exibindo o resultado atual do registro de esquemas.",
+      "publishedLoadFailed": "Falha ao carregar o esquema publicado.",
+      "noPublishedSnapshot": "Nenhum instantâneo do esquema publicado está armazenado para a versão {{version}}.",
+      "noPublishedSnapshotWithRef": "Nenhum instantâneo do esquema publicado está armazenado para a versão {{version}}. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Inserir campo",
       "enterPlaceholder": "Digite a expressão...",
-      "conditionPlaceholder": "ex.: payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "ex.: payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Erros de expressão",
+      "warningsHeading": "Avisos",
+      "infoHeading": "Informações da expressão",
+      "invalid": "Expressão inválida",
+      "invalidWithReason": "Expressão inválida: {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Dados disponíveis nesta etapa",
@@ -1300,7 +1364,11 @@
       "outputSchemaUnavailable": "Esquema de saída não disponível",
       "noFields": "Nenhum campo",
       "copyAllPaths": "Copie todos os caminhos",
-      "copyAllFieldPaths": "Copie todos os caminhos de campo"
+      "copyAllFieldPaths": "Copie todos os caminhos de campo",
+      "copyPath": "Copiar {{path}}",
+      "copied": "Copiado!",
+      "noPreviousSteps": "Nenhuma etapa anterior com \"Salvar saída como\" configurado",
+      "globals": "Variáveis globais"
     },
     "logoAlt": "Logotipo do editor de fluxos de trabalho",
     "nodes": {
@@ -1459,6 +1527,42 @@
         "loadError": "Falha ao carregar os eventos ignorados.",
         "empty": "Nenhum evento ignorado neste período."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "igual a",
+      "notEquals": "diferente de",
+      "in": "está em",
+      "notIn": "não está em",
+      "exists": "existe",
+      "notExists": "não existe",
+      "greaterThan": "maior que",
+      "greaterThanOrEqual": "maior ou igual a",
+      "lessThan": "menor que",
+      "lessThanOrEqual": "menor ou igual a",
+      "contains": "contém",
+      "startsWith": "começa com",
+      "endsWith": "termina com"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "O esquema da carga útil do gatilho de data deve corresponder à origem selecionada.",
+      "eventCatalogLoadFailed": "Falha ao carregar o catálogo de eventos. A publicação e a execução ficam desabilitadas até que ele seja carregado.",
+      "triggerEventMissing": "O evento de gatilho \"{{eventName}}\" não está no catálogo de eventos.",
+      "eventSchemaInvalid": "{{sourceLabel}} \"{{eventName}}\" {{schemaLabel}}. Corrija a entrada do catálogo de eventos para incluir um esquema válido antes de publicar ou executar.",
+      "timeTriggerFixedContract": "Fluxos de trabalho acionados por tempo usam o contrato fixo de carga útil de relógio e não podem inferir nem substituir esse esquema por outro.",
+      "manualMustPin": "Fluxos de trabalho manuais devem fixar um esquema de carga útil antes de publicar ou executar.",
+      "registryLoadFailed": "Falha ao carregar o registro de esquemas. A publicação e a execução ficam desabilitadas até que ele seja carregado.",
+      "noSchemaForEvent": "Não há esquema disponível para o evento de gatilho \"{{eventName}}\". A publicação e a execução ficam desabilitadas até que isso seja corrigido.",
+      "unknownSchemaRef": "A referência \"{{ref}}\" do esquema de carga útil do fluxo de trabalho é desconhecida. A publicação e a execução ficam desabilitadas até que isso seja corrigido.",
+      "fixMappingErrors": "Corrija os erros de mapeamento do fluxo de trabalho antes de publicar ou executar.",
+      "fixValidationErrors": "Corrija os erros de validação do fluxo de trabalho antes de publicar ou executar.",
+      "eventCatalogLoading": "O catálogo de eventos ainda está carregando. A execução fica desabilitada até que ele seja carregado.",
+      "registryLoading": "O registro de esquemas ainda está carregando. A execução fica desabilitada até que ele seja carregado.",
+      "eventCatalogLoadingPublish": "O catálogo de eventos ainda está carregando. A publicação fica desabilitada até que ele seja carregado.",
+      "registryLoadingPublish": "O registro de esquemas ainda está carregando. A publicação fica desabilitada até que ele seja carregado.",
+      "systemEvent": "O evento do sistema",
+      "tenantEvent": "O evento do tenant",
+      "missingSchemaRef": "não tem uma referência de esquema",
+      "unknownSchemaRefShort": "tem uma referência de esquema desconhecida"
     }
   },
   "actionInputFieldInfo": {

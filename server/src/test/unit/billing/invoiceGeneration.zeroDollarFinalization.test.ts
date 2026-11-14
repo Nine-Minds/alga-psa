@@ -293,6 +293,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  resolveTenantToday: async () => (await import('@js-temporal/polyfill')).Temporal.Now.plainDateISO('UTC'),
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => conn(t).where({ tenant }),
     scoped: (t: string) => conn(t),

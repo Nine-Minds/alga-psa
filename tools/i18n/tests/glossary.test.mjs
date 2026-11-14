@@ -157,6 +157,24 @@ test('ticket conversation audience strings use the formal register in es and nl'
   }
 });
 
+test('Spanish quote acceptance title uses the glossary term for a sales quote', () => {
+  const locale = 'es';
+  const config = registry[locale];
+  const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+  const matchers = forbiddenMatchers(glossary, config.dialect);
+  const en = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/en/documents.json'), 'utf8'));
+  const strings = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/es/documents.json'), 'utf8'));
+  const source = en.labels.quoteAcceptance.title;
+  const translation = strings.labels.quoteAcceptance.title;
+
+  nonEmptyString(translation, 'es: documents:labels.quoteAcceptance.title must exist');
+  assert.deepEqual(
+    findForbiddenTerms(translation, matchers, config.dialect, source, 'documents:labels.quoteAcceptance.title'),
+    [],
+    `es: documents:labels.quoteAcceptance.title = ${translation}`,
+  );
+});
+
 test('Microsoft calendar provider strings respect every locale glossary', () => {
   // The bring-your-own Microsoft app copy talks about single-/multitenant apps and
   // the directory (tenant) ID; locales must render "tenant" with the glossary term
@@ -180,6 +198,47 @@ test('Microsoft calendar provider strings respect every locale glossary', () => 
       nonEmptyString(value, `${locale}: msp/calendar:${key} must exist`);
       const hits = findForbiddenTerms(value, matchers, config.dialect, lookup(en, key), `msp/calendar:${key}`);
       assert.deepEqual(hits.map((hit) => hit.term), [], `${locale}: msp/calendar:${key} = ${value}`);
+    }
+  }
+});
+
+test('policy administration strings respect every locale glossary and leave no English behind', () => {
+  // Closed bundles, client portfolios and denial explanations talk about users,
+  // records and contacts; pt must use the Brazilian forms (usuário, registro,
+  // contatos), and no locale may ship an English label such as nl "Tags".
+  const lookup = (obj, key) => key.split('.').reduce((node, part) => node?.[part], obj);
+  const leaves = (node, prefix) => Object.entries(node).flatMap(([name, value]) => {
+    const key = `${prefix}.${name}`;
+    return typeof value === 'string' ? [key] : leaves(value, key);
+  });
+  const en = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/en/msp/admin.json'), 'utf8'));
+  const keys = leaves(lookup(en, 'policyManagement'), 'policyManagement');
+  for (const required of [
+    'policyManagement.editor.baseline.previewIntro',
+    'policyManagement.simulator.explanations.clientPortfolio',
+    'policyManagement.portfolio.empty',
+    'policyManagement.resourceTypes.contact',
+    'policyManagement.resourceTypes.tag',
+  ]) {
+    assert.ok(keys.includes(required), `en: ${required} must exist`);
+  }
+
+  for (const [locale, config] of Object.entries(registry)) {
+    if (locale === 'en' || !config.glossary) continue;
+    const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+    const matchers = forbiddenMatchers(glossary, config.dialect);
+    const allowlist = allowlistMatchers(glossary, config.dialect);
+    const strings = JSON.parse(readFileSync(join(repoRoot, `server/public/locales/${locale}/msp/admin.json`), 'utf8'));
+    for (const key of keys) {
+      const value = lookup(strings, key);
+      const enValue = lookup(en, key);
+      nonEmptyString(value, `${locale}: msp/admin:${key} must exist`);
+      const hits = findForbiddenTerms(value, matchers, config.dialect, enValue, `msp/admin:${key}`);
+      assert.deepEqual(hits.map((hit) => hit.term), [], `${locale}: msp/admin:${key} = ${value}`);
+      assert.ok(
+        value.trim() !== enValue.trim() || allowlist.isAllowed(value),
+        `${locale}: msp/admin:${key} is still English: ${value}`,
+      );
     }
   }
 });

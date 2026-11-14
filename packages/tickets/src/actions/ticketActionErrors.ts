@@ -159,6 +159,11 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
   }
 
   const audienceCode = (error as { code?: unknown } | null)?.code;
+  if (audienceCode === 'HUMAN_WORK_ASSIGNEE_INVALID') {
+    return actionError(
+      'One or more selected agents cannot be assigned. Choose active internal agents and try again.',
+    );
+  }
   if (audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED' || audienceCode === 'COMMENT_AUDIENCE_INVALID') {
     return actionError(
       (error as Error).message,

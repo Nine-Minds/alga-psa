@@ -15,6 +15,7 @@ import {
   createQuoteItemSchema,
   updateQuoteItemSchema,
   sendQuoteSchema,
+  cancelQuoteSchema,
   approvalRequestChangesSchema,
   convertQuoteSchema,
   reorderQuoteItemsSchema,
@@ -655,6 +656,46 @@ export class ApiQuoteController extends ApiBaseController {
           return createSuccessResponse(this.serializeQuote(gate, quote));
         });
       } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  archive() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const quote = await this.quoteService.archive(id, apiRequest.context);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  cancel() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const data = cancelQuoteSchema.parse(await req.json().catch(() => ({})));
+          const quote = await this.quoteService.cancel(id, data.reason, apiRequest.context);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
+        });
+      } catch (error) {
+        if (error instanceof ZodError) {
+          return handleApiError(new ValidationError('Validation failed', error.issues));
+        }
         return handleApiError(error);
       }
     };

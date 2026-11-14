@@ -34,6 +34,10 @@ interface MigrationJobDetailProps {
 
 const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Loaders read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [details, setDetails] = useState<MigrationJobDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -58,7 +62,7 @@ const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps)
       return next;
     } catch (error) {
       if (isMountedRef.current) {
-        setLoadError(migrationErrorMessage(error, 'Failed to load the migration job.'));
+        setLoadError(migrationErrorMessage(error, tRef.current('importExport.migration.errors.loadJob', { defaultValue: 'Failed to load the migration job.' })));
       }
       return null;
     } finally {
@@ -117,7 +121,7 @@ const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps)
       <Card>
         <CardContent className="space-y-4 pt-6">
           <Alert variant="destructive">
-            <AlertDescription>{loadError ?? 'Migration job not found.'}</AlertDescription>
+            <AlertDescription>{loadError ?? t('importExport.migration.errors.jobNotFound', { defaultValue: 'Migration job not found.' })}</AlertDescription>
           </Alert>
           <Button id="amp-job-error-back-button" variant="outline" onClick={onBack}>
             {t('importExport.migration.actions.back', { defaultValue: 'Back to migrations' })}
@@ -139,13 +143,15 @@ const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps)
               <Badge variant={badge.variant}>{badge.label}</Badge>
             </div>
             <CardDescription>
-              {details.sourceSystem ? `Source: ${details.sourceSystem}` : 'Source system not declared'}
-              {details.producer ? ` · Producer: ${details.producer}` : ''}
-              {` · Uploaded ${formatMigrationTimestamp(details.createdAt)}`}
+              {details.sourceSystem
+                ? t('importExport.migration.detail.source', { defaultValue: 'Source: {{system}}', system: details.sourceSystem })
+                : t('importExport.migration.detail.sourceNotDeclared', { defaultValue: 'Source system not declared' })}
+              {details.producer ? ` · ${t('importExport.migration.detail.producer', { defaultValue: 'Producer: {{producer}}', producer: details.producer })}` : ''}
+              {` · ${t('importExport.migration.detail.uploaded', { defaultValue: 'Uploaded {{timestamp}}', timestamp: formatMigrationTimestamp(details.createdAt) })}`}
             </CardDescription>
           </div>
           <Button id="amp-back-to-jobs-button" variant="outline" onClick={onBack} className="w-full md:w-auto">
-            Back to migrations
+            {t('importExport.migration.actions.back', { defaultValue: 'Back to migrations' })}
           </Button>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -193,10 +199,11 @@ const MigrationStepper = ({
   availableSteps: MigrationStep[];
   onSelectStep: (step: MigrationStep) => void;
 }): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const activeIndex = activeStep ? MIGRATION_STEPS.indexOf(activeStep) : -1;
 
   return (
-    <ol className="flex flex-wrap items-center gap-2" aria-label="Migration lifecycle">
+    <ol className="flex flex-wrap items-center gap-2" aria-label={t('importExport.migration.detail.lifecycleAria', { defaultValue: 'Migration lifecycle' })}>
       {MIGRATION_STEPS.map((step, index) => {
         const isActive = step === activeStep;
         const isPast = activeIndex >= 0 && index < activeIndex;
@@ -231,32 +238,37 @@ const MigrationStepper = ({
   );
 };
 
-const InspectPanel = ({ details }: { details: MigrationJobDetails }): React.JSX.Element => (
-  <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-4">
-    <Spinner size="sm" />
-    <p className="text-sm text-muted-foreground">
-      The package is being inspected and staged
-      {details.packageId ? ` (package ${details.packageId})` : ''}. This view refreshes
-      automatically.
-    </p>
-  </div>
-);
+const InspectPanel = ({ details }: { details: MigrationJobDetails }): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
+  return (
+    <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-4">
+      <Spinner size="sm" />
+      <p className="text-sm text-muted-foreground">
+        {t('importExport.migration.detail.inspecting', { defaultValue: 'The package is being inspected and staged' })}
+        {details.packageId ? ` ${t('importExport.migration.detail.packageSuffix', { defaultValue: '(package {{packageId}})', packageId: details.packageId })}` : ''}
+        {t('importExport.migration.detail.inspectingRefresh', { defaultValue: '. This view refreshes automatically.' })}
+      </p>
+    </div>
+  );
+};
 
-const RejectionPanel = ({ details }: { details: MigrationJobDetails }): React.JSX.Element => (
-  <div className="space-y-4">
-    <Alert variant="destructive">
-      <AlertDescription>
-        This package was rejected during inspection; nothing was staged and nothing will be
-        imported from it. Fix the package in the source system and upload a new one.
-      </AlertDescription>
-    </Alert>
-    {details.error && (
-      <div className="rounded-md border border-border bg-muted/40 p-4">
-        <h4 className="text-sm font-semibold text-foreground">Rejection details</h4>
-        <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{details.error}</p>
-      </div>
-    )}
-  </div>
-);
+const RejectionPanel = ({ details }: { details: MigrationJobDetails }): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
+  return (
+    <div className="space-y-4">
+      <Alert variant="destructive">
+        <AlertDescription>
+          {t('importExport.migration.detail.rejectedBody', { defaultValue: 'This package was rejected during inspection; nothing was staged and nothing will be imported from it. Fix the package in the source system and upload a new one.' })}
+        </AlertDescription>
+      </Alert>
+      {details.error && (
+        <div className="rounded-md border border-border bg-muted/40 p-4">
+          <h4 className="text-sm font-semibold text-foreground">{t('importExport.migration.detail.rejectionDetails', { defaultValue: 'Rejection details' })}</h4>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{details.error}</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default MigrationJobDetail;

@@ -25,6 +25,23 @@ export function registerAssetAuditRoutes(registry: ApiOpenApiRegistry) {
       page: zOpenApi.string().optional().describe('Page number. Defaults to 1.'),
       limit: zOpenApi.string().optional().describe('Page size, 1 through 100. Defaults to 25.'),
       client_id: zOpenApi.string().uuid().optional().describe('Only audits of this client.'),
+      location_id: zOpenApi.string().uuid().optional().describe('Only audits scoped to this client location.'),
+      no_location: zOpenApi
+        .string()
+        .optional()
+        .describe('true returns only audits scoped to the assets that have no location. Wins over location_id.'),
+      status: zOpenApi
+        .enum(['in_progress', 'completed', 'cancelled'])
+        .optional()
+        .describe('Only audits in this state.'),
+      started_from: zOpenApi
+        .string()
+        .optional()
+        .describe('ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone.'),
+      started_to: zOpenApi
+        .string()
+        .optional()
+        .describe('ISO timestamp; only audits started at or before it.'),
     }),
   );
 
@@ -70,9 +87,11 @@ export function registerAssetAuditRoutes(registry: ApiOpenApiRegistry) {
     asset_name: zOpenApi.string().nullable().optional(),
     asset_tag: zOpenApi.string().nullable().optional(),
     serial_number: zOpenApi.string().nullable().optional(),
+    asset_type: zOpenApi.string().nullable().optional(),
     client_id: zOpenApi.string().uuid().nullable().optional(),
     location_id: zOpenApi.string().uuid().nullable().optional(),
     location: zOpenApi.string().nullable().optional(),
+    marked_by_name: zOpenApi.string().nullable().optional(),
   });
 
   const Audit = zOpenApi.object({
@@ -92,6 +111,7 @@ export function registerAssetAuditRoutes(registry: ApiOpenApiRegistry) {
     notes: zOpenApi.string().nullable().optional(),
     client_name: zOpenApi.string().nullable().optional(),
     location_name: zOpenApi.string().nullable().optional(),
+    started_by_name: zOpenApi.string().nullable().optional(),
     items: zOpenApi.array(AuditItem).optional(),
   });
 
@@ -165,7 +185,8 @@ export function registerAssetAuditRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/asset-audits',
     summary: 'List site audits',
-    description: 'Returns the tenant audits newest first, optionally narrowed to one client.',
+    description:
+      'Returns the tenant audits newest first, optionally narrowed by client, location (or "no location"), status and a started_at range.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: AuditListQuery },

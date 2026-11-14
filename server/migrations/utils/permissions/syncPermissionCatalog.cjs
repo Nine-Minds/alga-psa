@@ -23,7 +23,7 @@ const {
   getProductPermissions,
   permissionIdentity,
 } = require('./catalog.cjs');
-const { compileRoleGrants, getDefaultRoles } = require('./roleGrants.cjs');
+const { compileRoleGrants, getCapabilityRoles, getDefaultRoles } = require('./roleGrants.cjs');
 const { assertCatalogIsValid } = require('./catalogValidation.cjs');
 
 const PERMISSION_COLUMNS = ['permission_id', 'resource', 'action', 'msp', 'client', 'description'];
@@ -119,7 +119,9 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
   const errors = [];
   let extraGrants = 0;
 
-  for (const role of getDefaultRoles(product)) {
+  // A capability role is a grant target only in a tenant its capability admitted.
+  const catalogRoles = [...getDefaultRoles(product), ...getCapabilityRoles(product)];
+  for (const role of catalogRoles) {
     const matches = roles.filter((candidate) =>
       candidate.role_name === role.roleName
       && candidate.msp === role.msp
@@ -130,7 +132,7 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
     // grants, so one missing Technician or client User role cannot stall the
     // permission rollout for the whole tenant.
     if (matches.length === 0) {
-      roleResolution.push({ roleKey: role.key, status: role.legacy ? 'legacy-absent' : 'missing', roleId: null });
+      roleResolution.push({ roleKey: role.key, status: role.legacy ? 'legacy-absent' : role.capabilities ? 'capability-absent' : 'missing', roleId: null });
       if (role.required) {
         errors.push(
           `Tenant ${tenantId} has no ${product} default role (role_name="${role.roleName}", msp=${role.msp}, client=${role.client}). `
@@ -178,7 +180,7 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
     }
   }
 
-  const customRoles = roles.filter((candidate) => !getDefaultRoles(product).some((role) =>
+  const customRoles = roles.filter((candidate) => !catalogRoles.some((role) =>
     candidate.role_name === role.roleName
     && candidate.msp === role.msp
     && candidate.client === role.client)).length;

@@ -107,6 +107,20 @@
     }
   },
   "contractDetail": {
+    "simulatorLoading": "Chargement du simulateur...",
+    "unnamedBoard": "Tableau sans nom",
+    "notFound": "Contrat introuvable",
+    "loadFailed": "Impossible de charger le contrat",
+    "invoicesLoadFailed": "Impossible de charger les factures pour cette affectation de contrat.",
+    "deleteFailed": "Impossible de supprimer le contrat",
+    "backToContracts": "Retour aux contrats",
+    "viewSourceQuote": "Voir le devis d’origine",
+    "clientDrawer": {
+      "loading": "Chargement…",
+      "notFound": "Client introuvable.",
+      "openClient": "Ouvrir la fiche client",
+      "loadFailed": "Impossible de charger les détails du client."
+    },
     "alerts": {
       "saveSuccess": "Contrat enregistré avec succès !",
       "unsavedChanges": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer."

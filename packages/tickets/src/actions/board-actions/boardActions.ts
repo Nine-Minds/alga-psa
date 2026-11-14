@@ -370,6 +370,8 @@ async function boardMutationGuard(
   trx?: Knex | Knex.Transaction
 ): Promise<BoardGuardResult<any>> {
   const decision = await evaluateBoardMutationPolicy(user, action, hasPermission, trx);
+  // Keep explicit discriminant checks: the EE app's tsconfig disables
+  // strictNullChecks, where negated booleans do not narrow this union.
   if (decision.allowed === false) {
     const denial = BOARD_PERMISSION_DENIED[action];
     return {

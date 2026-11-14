@@ -83,6 +83,11 @@ export interface MintQuoteAccessLinkInput {
   quote: Pick<IQuote, 'quote_id' | 'valid_until'>;
   recipient: { contactId?: string | null; email: string };
   createdBy?: string | null;
+  /**
+   * Tenant-configured lifetime. When set it replaces the valid_until / 30-day
+   * default; the 24h floor and 90-day cap still apply.
+   */
+  lifetimeHours?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,19 +106,26 @@ export function isWellFormedQuoteAccessToken(token: unknown): token is string {
   return typeof token === 'string' && TOKEN_PATTERN.test(token);
 }
 
+const HOUR_MS = 60 * 60 * 1000;
+
 /**
  * expires_at = min(valid_until ?? now+30d, now+90d), floored at now+24h.
  * valid_until is treated as the end of that UTC day (the quote is valid through
  * the whole day, matching isExpiredOnAccess), i.e. the start of the next UTC day.
+ * A finite positive `lifetimeHours` replaces that default candidate (now + hours);
+ * the same floor and cap apply.
  */
 export function computeQuoteAccessExpiry(
   validUntil: string | Date | null | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  lifetimeHours?: number | null
 ): Date {
   const nowMs = now.getTime();
   let candidate = nowMs + DEFAULT_VALIDITY_MS;
 
-  if (validUntil) {
+  if (typeof lifetimeHours === 'number' && Number.isFinite(lifetimeHours) && lifetimeHours > 0) {
+    candidate = nowMs + lifetimeHours * HOUR_MS;
+  } else if (validUntil) {
     const parsed = new Date(validUntil);
     if (!Number.isNaN(parsed.getTime())) {
       candidate = Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate() + 1);
@@ -173,7 +185,7 @@ export async function mint(
     throw new Error('Tenant context is required for minting a quote access link');
   }
   const token = generateQuoteAccessToken();
-  const expiresAt = computeQuoteAccessExpiry(input.quote.valid_until);
+  const expiresAt = computeQuoteAccessExpiry(input.quote.valid_until, new Date(), input.lifetimeHours);
 
   const [link] = await links(knexOrTrx, tenant)
     .insert({
@@ -222,23 +234,47 @@ export async function resolve(
 
   // 4. Tenant-scoped reads. expiry is evaluated on the DB clock.
   const db = tenantDb(knex, tenant);
-  const link = await db
+  const candidate = await db
     .table<IQuoteAccessLink & { is_expired: boolean }>(TABLE)
     .select('*', knex.raw('(expires_at <= now()) as is_expired'))
     .where({ token_hash: hash })
     .first();
-  if (!link) {
-    return { status: 'not_found' };
-  }
-  const quote = await db.table<IQuote>('quotes').where({ quote_id: link.quote_id }).first();
-  if (!quote) {
+  if (!candidate) {
     return { status: 'not_found' };
   }
 
-  // 5. Status mapping.
-  if (link.is_expired) {
-    return { status: 'expired' };
+  // 5. Claim a usage atomically before authorizing the link. The guarded UPDATE
+  // takes the link row lock and rechecks revocation/expiry after any lock wait.
+  // This orders resolution against resend/reminder revocation: whichever write
+  // gets the row lock first determines whether this request may proceed.
+  const [link] = await db
+    .table<IQuoteAccessLink>(TABLE)
+    .where({ link_id: candidate.link_id })
+    .whereNull('revoked_at')
+    .whereRaw('expires_at > now()')
+    .update({ last_used_at: knex.fn.now(), use_count: knex.raw('use_count + 1') })
+    .returning('*');
+
+  if (!link) {
+    // The candidate may have been revoked or expired while the UPDATE waited.
+    const current = await db
+      .table<IQuoteAccessLink & { is_expired: boolean }>(TABLE)
+      .select('*', knex.raw('(expires_at <= now()) as is_expired'))
+      .where({ link_id: candidate.link_id })
+      .first();
+    if (!current) return { status: 'not_found' };
+    if (current.is_expired) return { status: 'expired' };
+    if (current.revoked_at && current.revoked_reason === 'superseded') return { status: 'superseded' };
+    if (current.revoked_at) return { status: 'revoked' };
+    return { status: 'not_found' };
   }
+
+  // The UPDATE predicate itself evaluates expiry on the database clock and has
+  // just succeeded while holding the row lock.
+  const quote = await db.table<IQuote>('quotes').where({ quote_id: link.quote_id }).first();
+  if (!quote) return { status: 'not_found' };
+
+  // 6. Status mapping, using the row returned by the guarded UPDATE.
   if (link.revoked_at && link.revoked_reason === 'superseded') {
     return { status: 'superseded' };
   }
@@ -251,18 +287,11 @@ export async function resolve(
 
   const readOnly = quote.status === 'accepted' || quote.status === 'rejected' || quote.status === 'converted';
 
-  // 7. Usage bump (only these two columns).
-  await db
-    .table(TABLE)
-    .where({ link_id: link.link_id })
-    .update({ last_used_at: knex.fn.now(), use_count: knex.raw('use_count + 1') });
-
-  const { is_expired: _isExpired, ...cleanLink } = link;
   return {
     status: 'ok',
     tenant,
     quote,
-    link: cleanLink as IQuoteAccessLink,
+    link,
     recipient: { contactId: link.contact_id ?? null, email: link.recipient_email },
     readOnly,
   };
@@ -271,15 +300,23 @@ export async function resolve(
 export async function revoke(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  target: { quoteId: string } | { linkId: string },
+  target: { quoteId: string } | { linkId: string } | { quoteId: string; recipientEmail: string },
   reason: QuoteAccessLinkRevokeReason
 ): Promise<number> {
   if (!tenant) {
     throw new Error('Tenant context is required for revoking quote access links');
   }
-  const where = 'quoteId' in target ? { quote_id: target.quoteId } : { link_id: target.linkId };
-  const count = await links(knexOrTrx, tenant)
-    .where(where)
+  let query = links(knexOrTrx, tenant);
+  if ('linkId' in target) {
+    query = query.where({ link_id: target.linkId });
+  } else {
+    query = query.where({ quote_id: target.quoteId });
+    if ('recipientEmail' in target) {
+      // Recipient match is case-insensitive; other recipients' links are untouched.
+      query = query.whereRaw('lower(recipient_email) = ?', [target.recipientEmail.trim().toLowerCase()]);
+    }
+  }
+  const count = await query
     .whereNull('revoked_at')
     .update({ revoked_at: knexOrTrx.fn.now(), revoked_reason: reason } as any);
   return Number(count);

@@ -107,6 +107,20 @@
     }
   },
   "contractDetail": {
+    "simulatorLoading": "Simulator laden...",
+    "unnamedBoard": "Naamloos bord",
+    "notFound": "Contract niet gevonden",
+    "loadFailed": "Kan contract niet laden",
+    "invoicesLoadFailed": "Kan facturen voor deze contracttoewijzing niet laden.",
+    "deleteFailed": "Kan contract niet verwijderen",
+    "backToContracts": "Terug naar contracten",
+    "viewSourceQuote": "Oorspronkelijke offerte bekijken",
+    "clientDrawer": {
+      "loading": "Laden…",
+      "notFound": "Klant niet gevonden.",
+      "openClient": "Klant openen",
+      "loadFailed": "Kan klantgegevens niet laden."
+    },
     "alerts": {
       "saveSuccess": "Contract succesvol opgeslagen!",
       "unsavedChanges": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen."

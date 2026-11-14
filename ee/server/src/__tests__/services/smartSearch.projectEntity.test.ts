@@ -4,7 +4,8 @@ vi.mock('@alga-psa/projects/actions/projectActions', () => ({
   authorizeProjectIdsWithRedactions: vi.fn(),
   loadProjectListItemsByIds: vi.fn(),
 }));
-vi.mock('@alga-psa/search/acl', () => ({ aclPredicateSql: vi.fn(), resolveSearchAclPrincipal: vi.fn() }));
+vi.mock('@alga-psa/search/acl', () => ({ aclPredicateSql: vi.fn() }));
+vi.mock('@alga-psa/search/runAppSearch', () => ({ resolveSearchPrincipal: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn() }));
 
 import { buildRelevanceRequest } from '../../services/smartSearch/scoreBatch';

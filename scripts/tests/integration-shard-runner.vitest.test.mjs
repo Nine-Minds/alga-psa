@@ -29,6 +29,13 @@ test('actual integration runner partitions, executes and rejects missing or stal
   for (const file of files) write(`server/src/test/integration/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
   write('server/src/amount.ts', 'export const amount = () => 5;\n');
   write('server/src/test/integration/extra.test.ts', "import { amount } from '../../amount'; test('observes affected behavior', () => expect(amount()).toBeGreaterThan(0));\n");
+  // This is collected by the same directory and affected-import filters, but
+  // needs the workspace DB runner's environment and schema bootstrap.
+  write('server/src/test/integration/authorization/fixture.db.test.ts', `
+    import { amount } from '../../../amount';
+    beforeAll(() => { throw new Error('Workspace DB setup must not run in an integration shard'); });
+    test('uses the workspace database', () => expect(amount()).toBeGreaterThan(0));
+  `);
   write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/billing/invoices/invoiceDueDate.test.ts'] }));
   symlinkSync(path.join(source, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });

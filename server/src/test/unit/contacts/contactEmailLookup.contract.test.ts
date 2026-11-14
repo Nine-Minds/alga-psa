@@ -8,6 +8,12 @@ const testState = vi.hoisted(() => ({
   withTransactionMock: vi.fn(),
   getContactByEmailMock: vi.fn(),
   createContactMock: vi.fn(),
+  assertRecordCreateAllowedMock: vi.fn(),
+}));
+
+// The client-scope create gate needs a real connection; its decisions are covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({
+  assertRecordCreateAllowed: testState.assertRecordCreateAllowedMock,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -67,6 +73,7 @@ function makeQuery(firstRow: any): FakeQuery {
 describe('contact email lookup query actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    testState.assertRecordCreateAllowedMock.mockResolvedValue(undefined);
     testState.trx = ((table: string) => {
       if (table === 'clients') {
         return makeQuery({ client_name: 'Acme Client' });
@@ -126,6 +133,14 @@ describe('contact email lookup query actions', () => {
       testState.trx
     );
     expect(testState.createContactMock.mock.calls[0]?.[0]).not.toHaveProperty('additional_email_addresses');
+    expect(testState.assertRecordCreateAllowedMock).toHaveBeenCalledWith(
+      testState.trx,
+      expect.objectContaining({ tenant: testState.tenant, resourceType: 'contact', record: { clientId: 'client-1' } }),
+      'contact',
+    );
+    expect(testState.assertRecordCreateAllowedMock.mock.invocationCallOrder[0]).toBeLessThan(
+      testState.createContactMock.mock.invocationCallOrder[0],
+    );
     expect(result).toMatchObject({
       isNew: true,
       contact: expect.objectContaining({
@@ -133,5 +148,18 @@ describe('contact email lookup query actions', () => {
         client_name: 'Acme Client',
       }),
     });
+  });
+
+  it('T032: createOrFindContactByEmail creates nothing when the create gate refuses the candidate client', async () => {
+    testState.getContactByEmailMock.mockResolvedValue(null);
+    testState.assertRecordCreateAllowedMock.mockRejectedValue(new Error('Permission denied: Cannot create contact'));
+
+    await expect(createOrFindContactByEmail({
+      email: 'outside@other.com',
+      name: 'Outside Contact',
+      clientId: 'client-out-of-scope',
+    })).rejects.toThrow('Permission denied: Cannot create contact');
+
+    expect(testState.createContactMock).not.toHaveBeenCalled();
   });
 });

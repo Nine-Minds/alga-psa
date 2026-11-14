@@ -91,7 +91,7 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     addChecklistItem,
     applyChecklistTemplate,
     deleteChecklistItem,
-    getChecklistTemplates,
+    getChecklistTemplatesForTicket,
     getTicketChecklistItems,
     reorderChecklistItems,
     setChecklistItemCompleted,
@@ -364,7 +364,7 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     if (templatesLoaded || templatesLoading) return;
     setTemplatesLoading(true);
     try {
-      const fetched = await getChecklistTemplates({ forTicketId: ticketId });
+      const fetched = await getChecklistTemplatesForTicket(ticketId);
       setTemplates(fetched);
       setTemplatesLoaded(true);
     } catch (error) {

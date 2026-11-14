@@ -1,9 +1,15 @@
 'use server';
 
+import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  isClientUserType,
+  isMspPrincipalUserType,
+  type AllowlistedUserField,
+} from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { projectResponseUsers, sanitizeResponseUsers } from '../lib/responseUsers';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -21,7 +27,6 @@ import type {
   ITicketResource,
   IUser,
   IUserWithRoles,
-  PendingTag,
   TicketResponseState,
   TicketTemplateDraftFromTicket,
 } from '@alga-psa/types';
@@ -33,13 +38,14 @@ import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
+import { bulkApplyTagsToEntities } from '@alga-psa/tags/actions/tagActions';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
-import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
@@ -92,6 +98,8 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -130,6 +138,7 @@ import {
   type UpdateTicketInTransactionOptions,
 } from './optimizedTicketActions';
 import { createTicketRichTextParagraph } from '../lib/ticketRichText';
+import { assertAllowedTicketUpdateOptions } from '../lib/ticketUpdateAuthorization';
 import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
@@ -141,6 +150,8 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
+import { addTicketResourceCore, publishTicketResourceEvent } from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
@@ -204,6 +215,13 @@ export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
   };
 };
 
+const TICKET_NOTIFICATION_OPTION_KEYS = ['suppressContactNotifications', 'suppressInternalNotifications'] as const;
+const TICKET_BULK_STATUS_OPTION_KEYS = [
+  ...TICKET_NOTIFICATION_OPTION_KEYS,
+  'propagateToChildren',
+  'resolutionComment',
+] as const;
+
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -214,72 +232,6 @@ function tenantScopedTable(
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
-}
-
-function extractRoleIdsFromUser(user: unknown): string[] {
-  const roles = (user as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      if (role && typeof role === 'object' && 'role_id' in role) {
-        const roleId = (role as { role_id?: unknown }).role_id;
-        return typeof roleId === 'string' ? roleId : null;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-      .where({ user_id: user.user_id })
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, 'users', tenant)
-      .where({ reports_to: user.user_id })
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
 }
 
 function toTicketAuthorizationRecord(
@@ -332,7 +284,18 @@ async function authorizeTicketRead(
   user: IUserWithRoles,
   ticket: Partial<ITicket>
 ): Promise<boolean> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  return (await decideTicketRead(trx, tenant, user, ticket)).allowed;
+}
+
+/** The read decision with the fields it redacts, for reads that return the ticket itself. */
+async function decideTicketRead(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  ticket: Partial<ITicket>
+): Promise<{ allowed: boolean; redactedFields: string[] }> {
+  const requestCache = new RequestLocalAuthorizationCache();
+  const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
@@ -352,11 +315,10 @@ async function authorizeTicketRead(
     }),
     rbacEvaluator: async () => true,
   });
-  const requestCache = new RequestLocalAuthorizationCache();
 
   if (user.user_type === 'client' && user.clientId) {
     if (ticket.client_id !== user.clientId) {
-      return false;
+      return { allowed: false, redactedFields: [] };
     }
   }
 
@@ -374,7 +336,7 @@ async function authorizeTicketRead(
     knex: trx,
   });
 
-  return authorizationDecision.allowed;
+  return { allowed: authorizationDecision.allowed, redactedFields: authorizationDecision.redactedFields ?? [] };
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -536,6 +498,12 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             const eventPublisher = new TicketModelEventPublisher(trx);
             const analyticsTracker = new TicketModelAnalyticsTracker();
 
+            await assertTicketCreateAllowed(trx, tenant, user, {
+              client_id: data.client_id,
+              board_id: data.board_id,
+              entered_by: user.user_id,
+            });
+
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
                 data,
@@ -628,7 +596,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Optional create extras (linked assets, watchers). Parsed and validated before anything is
       // written; both are optional so callers that send none behave as before.
       const extras = parseTicketCreateExtras(data);
-      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0;
+      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0 || extras.additionalAgentIds.length > 0;
       if (hasCreateExtras) {
         if (user.user_type !== 'internal') {
           throw new Error('Permission denied: operation not available in client portal');
@@ -818,6 +786,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const eventPublisher = new TicketModelEventPublisher(trx);
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
+      await assertTicketCreateAllowed(trx, tenant, user, {
+        client_id: createTicketInput.client_id,
+        board_id: createTicketInput.board_id,
+        contact_name_id: createTicketInput.contact_id,
+        assigned_to: createTicketInput.assigned_to,
+        assigned_team_id: createTicketInput.assigned_team_id,
+        entered_by: user.user_id,
+      });
+
       // Use shared TicketModel with retry logic
       // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
       const ticketResult = await TicketModel.createTicketWithRetry(
@@ -842,6 +819,16 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           // single `asset_id` on its own keeps its old behaviour (existence only).
           clientId: extras.assetIds.length > 0 ? createTicketInput.client_id : undefined,
         });
+      }
+
+      // Additional agents are part of the authorized create operation. Validate and persist
+      // them before commit so a caller lacking later ticket-update access cannot lose staffing.
+      const creationAuthorization = { kind: 'creation' as const, ticketId: ticketResult.ticket_id };
+      for (const additionalAgentId of extras.additionalAgentIds) {
+        const { event } = await addTicketResourceCore(
+          trx, tenant, user.user_id, ticketResult.ticket_id, additionalAgentId, 'support', creationAuthorization,
+        );
+        registerAfterCommit(trx, () => publishTicketResourceEvent(event), `${event.eventType} ticket=${ticketResult.ticket_id}`);
       }
 
       // Server-specific: Handle assigned ticket event
@@ -1241,6 +1228,14 @@ export const duplicateTicketBatch = withAuth(async (
         const result = await withTransaction(db, async (trx: Knex.Transaction) => {
           // Re-authorize inside this copy's transaction: a source deleted mid-batch fails the rest cleanly.
           const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, sourceTicketId);
+
+          await assertTicketCreateAllowed(trx, tenant, user, {
+            client_id: source.client_id,
+            board_id: source.board_id,
+            contact_name_id: copy.contactId,
+            assigned_to: source.assigned_to,
+            entered_by: user.user_id,
+          });
 
           // LEVERAGE: pattern ticket-create-composition — single Duplicate still composes creation by hand in addTicket; moving it onto createTicketWithSideEffects removes this second composition (batch-duplicate plan, R1)
           const createdTicket = await createTicketWithSideEffects(trx, tenant, {
@@ -1730,6 +1725,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+        // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+        await recordTicketAssigneeChange(trx, tenant, id);
       }
 
     if (!updatedTicket) {
@@ -2097,11 +2094,12 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         throw new Error('Permission denied: Cannot view tickets');
       }
 
-      const authorizationSubject = await resolveAuthorizationSubjectForUser(
-        trx,
+      const requestCache = new RequestLocalAuthorizationCache();
+      const authorizationSubject = await resolveAuthorizationSubject(trx, {
         tenant,
-        user as IUserWithRoles
-      );
+        user: user as IUserWithRoles,
+        requestCache,
+      });
       const contactVisibility = await resolveClientVisibility(trx, tenant, user as IUserWithRoles);
       const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
       const relationshipRules =
@@ -2121,7 +2119,6 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         }),
         rbacEvaluator: async () => true,
       });
-      const requestCache = new RequestLocalAuthorizationCache();
 
       const tenantFacade = tenantDb(trx, tenant);
       let query = tenantFacade.table('tickets as t')
@@ -2271,10 +2268,17 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           })
         )
       );
-      const authorizedTickets = tickets.filter((_ticket: any, index: number) => decisions[index]?.allowed);
+      // A redaction that hides the ticket's identity hides the ticket, as on REST.
+      const authorizedTickets = tickets.flatMap((ticket: any, index: number) => {
+        const redactedFields: string[] = decisions[index]?.redactedFields ?? [];
+        return decisions[index]?.allowed && projectReadableRecord('ticket', ticket, redactedFields)
+          ? [{ ticket, redactedFields }]
+          : [];
+      });
 
-      // Transform and validate the data
-      const ticketListItems = authorizedTickets.map((ticket: any): ITicketListItem => {
+      // Transform and validate the data. The projection runs on the mapped row, so a display
+      // default ('Unknown') is never emitted in place of a redacted field.
+      const ticketListItems = authorizedTickets.flatMap(({ ticket, redactedFields }: { ticket: any; redactedFields: string[] }): ITicketListItem[] => {
         const {
           status_id,
           priority_id,
@@ -2291,7 +2295,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           ...rest
         } = ticket;
 
-        return {
+        const item: ITicketListItem = {
           status_id: status_id || null,
           priority_id: priority_id || null,
           board_id: board_id || null,
@@ -2313,6 +2317,8 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           estimated_hours: rest.estimated_hours === null || rest.estimated_hours === undefined ? undefined : rest.estimated_hours,
           due_date: rest.due_date === null || rest.due_date === undefined ? undefined : rest.due_date
         };
+        const readable = projectReadableRecord('ticket', item, redactedFields);
+        return readable ? [readable] : [];
       });
 
       return ticketListItems as ITicketListItem[];
@@ -2374,11 +2380,9 @@ async function performTicketDelete(
   trx: Knex.Transaction,
   ticketId: string,
   tenant: string,
-  user: IUser
+  user: IUserWithRoles
 ): Promise<void> {
-  if (!await hasPermission(user, 'ticket', 'delete', trx)) {
-    throw new Error('Permission denied: Cannot delete ticket');
-  }
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId, action: 'delete' });
 
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({
@@ -2422,6 +2426,7 @@ export const deleteTicket = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex } = await createTenantKnex();
+    await authorizeTicketRecordAccessConcealed({ trx: knex, tenant, user, ticketId, action: 'delete' });
     const result = await deleteEntityWithValidation('ticket', ticketId, knex, tenant, async (trx, tenantId) => {
       await performTicketDelete(trx, ticketId, tenantId, user);
     });
@@ -2472,6 +2477,13 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
   for (const ticketId of uniqueIds) {
     try {
+      await authorizeTicketRecordAccessConcealed({
+        trx: ticketKnex,
+        tenant,
+        user,
+        ticketId,
+        action: 'delete',
+      });
       const result = await deleteEntityWithValidation('ticket', ticketId, ticketKnex, tenant, async (trx, tenantId) => {
         await performTicketDelete(trx, ticketId, tenantId, user);
       });
@@ -2518,6 +2530,7 @@ export const moveTicketsToBoard = withAuth(async (
   movedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2619,6 +2632,7 @@ export const bulkAssignTickets = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2692,66 +2706,59 @@ export const bulkAddTagsToTickets = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
-  // Tag writes don't go through updateTicketWithCache, so authorize explicitly here.
-  const { knex: authKnex } = await createTenantKnex();
-  if (!(await hasPermission(user, 'ticket', 'update', authKnex))) {
+  if (!isMspPrincipalUserType(user.user_type)) {
     return {
       updatedIds: [],
-      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: Cannot update tickets'),
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: operation not available in client portal'),
     };
   }
 
-  const existingByTicket = new Map<string, Set<string>>();
+  const { knex } = await createTenantKnex();
   try {
-    const existing = await findTagsByEntityIds(uniqueIds, 'ticket');
-    if (isTagActionError(existing)) {
-      console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', existing);
-    } else {
-      for (const tag of existing) {
-        const set = existingByTicket.get(tag.tagged_id) ?? new Set<string>();
-        set.add(tag.tag_text.toLowerCase());
-        existingByTicket.set(tag.tagged_id, set);
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!(await hasPermission(user, 'ticket', 'update', trx))) {
+        throw new Error('Permission denied: Cannot update tickets');
       }
-    }
-  } catch (error) {
-    console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', error);
+      if (!(await hasPermission(user, 'tag', 'create', trx))) {
+        throw new Error('Permission denied: Cannot create tags');
+      }
+
+      // Authorize the complete target set before reading or mutating tag state.
+      for (const ticketId of uniqueIds) {
+        await authorizeTicketRecordAccess({ trx, tenant, user: user as IUserWithRoles, ticketId, action: 'update' });
+      }
+
+      const existingTags = await TagMapping.getByEntities(trx, tenant, uniqueIds, 'ticket');
+      const existingTextsByTicket = new Map<string, string[]>();
+      for (const tag of existingTags) {
+        const texts = existingTextsByTicket.get(tag.tagged_id) ?? [];
+        texts.push(tag.tag_text);
+        existingTextsByTicket.set(tag.tagged_id, texts);
+      }
+
+      await bulkApplyTagsToEntities(
+        trx,
+        tenant,
+        'ticket',
+        uniqueIds.map((entityId) => ({
+          entityId,
+          newTexts: normalizedTexts,
+          existingTexts: existingTextsByTicket.get(entityId) ?? [],
+        })),
+      );
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error && error.message.startsWith('Permission denied')
+      ? error.message
+      : await ticketBulkFailureMessage(error, 'Failed to add tags to tickets');
+    return { updatedIds: [], failed: ticketBulkFailuresForAll(uniqueIds, message) };
   }
 
-  const { knex: ticketKnex } = await createTenantKnex();
-  const updatedIds: string[] = [];
-  const failed: Array<{ ticketId: string; message: string }> = [];
-
-  for (const ticketId of uniqueIds) {
-    try {
-      const alreadyOnTicket = existingByTicket.get(ticketId) ?? new Set<string>();
-      const newTexts = normalizedTexts.filter((t) => !alreadyOnTicket.has(t.toLowerCase()));
-      if (newTexts.length === 0) {
-        updatedIds.push(ticketId);
-        continue;
-      }
-      const pendingTags: PendingTag[] = newTexts.map((text) => ({
-        tag_text: text,
-        background_color: null,
-        text_color: null,
-        isNew: true,
-      }));
-      await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
-        await createTagsForEntityWithTransaction(trx, tenant, ticketId, 'ticket', pendingTags);
-      });
-      updatedIds.push(ticketId);
-    } catch (error: unknown) {
-      failed.push({
-        ticketId,
-        message: await ticketBulkFailureMessage(error, 'Failed to add tags to ticket'),
-      });
-    }
-  }
-
-  if (updatedIds.length > 0) {
+  if (uniqueIds.length > 0) {
     revalidatePath('/msp/tickets');
   }
 
-  return { updatedIds, failed };
+  return { updatedIds: uniqueIds, failed: [] };
 });
 
 export const bulkUpdateTicketDueDate = withAuth(async (
@@ -2764,6 +2771,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2814,6 +2822,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_BULK_STATUS_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2916,6 +2925,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -3038,8 +3048,14 @@ export type DetailedTicket = ITicket & {
   client_name?: string;
 
   additionalAgents?: ITicketResource[];
-  availableAgents?: IUser[];
+  /**
+   * Assignable-agent directory, allow-listed user columns only (never credential material).
+   * Omitted for client-portal principals, who have no use for the MSP agent directory.
+   */
+  availableAgents?: TicketAgentOption[];
 };
+
+export type TicketAgentOption = Pick<IUserWithRoles, AllowlistedUserField>;
 
 export const getTicketById = withAuth(async (user, { tenant }, id: string): Promise<DetailedTicket> => {
   try {
@@ -3093,19 +3109,29 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         throw new Error('Ticket not found');
       }
 
-      if (!await authorizeTicketRead(trx, tenant, user as IUserWithRoles, ticket)) {
+      const ticketRead = await decideTicketRead(trx, tenant, user as IUserWithRoles, ticket);
+      if (!ticketRead.allowed) {
         throw new Error('Permission denied: Cannot view ticket');
       }
 
+      // Client-portal principals are admitted to their own ticket but do not receive the MSP
+      // agent directory, so the users table is not queried for them at all.
+      const includeAgentDirectory = !isClientUserType(user.user_type);
+
       // Fetch additional resources and available agents in parallel
-      const [additionalAgents, availableAgents] = await Promise.all([
+      const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
             ticket_id: id
           }),
-        tenantScopedTable(trx, 'users', tenant)
-          .orderBy('first_name', 'asc')
+        includeAgentDirectory
+          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
+              .where({ is_inactive: false })
+              .orderBy('first_name', 'asc')
+              .then(sanitizeResponseUsers)
+          : Promise.resolve(undefined)
       ]);
+      const availableAgents: TicketAgentOption[] | undefined = agentRows;
 
 
     const assigned_to_name = (ticket.assigned_to_first_name || ticket.assigned_to_last_name)
@@ -3123,7 +3149,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       contact_name: ticket.contact_name || undefined,
       client_name: ticket.client_name || undefined,
       additionalAgents: additionalAgents,
-      availableAgents: availableAgents,
+      ...(availableAgents ? { availableAgents } : {}),
     };
 
     delete (detailedTicket as any).assigned_to_first_name;
@@ -3146,7 +3172,13 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       view_source: 'ticket_by_id'
     }, user.user_id);
 
-      return convertDates(detailedTicket);
+      // Fields the decision redacts are omitted the way the REST ticket endpoints omit them;
+      // a redaction that hides the ticket's identity hides the ticket.
+      const readableTicket = projectReadableRecord('ticket', convertDates(detailedTicket), ticketRead.redactedFields);
+      if (!readableTicket) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+      return readableTicket;
     });
 
     return result;
@@ -3176,6 +3208,14 @@ export const getTicketAppointmentRequests = withAuth(async (
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied');
       }
+
+      await authorizeTicketRecordAccessConcealed({
+        trx,
+        tenant,
+        user: user as IUserWithRoles,
+        ticketId,
+        action: 'read',
+      });
 
       const tenantFacade = tenantDb(trx, tenant);
       const appointmentQuery = tenantFacade.table('appointment_requests as ar');

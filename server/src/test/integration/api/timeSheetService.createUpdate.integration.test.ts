@@ -141,6 +141,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     const ctx = contextFor(f.tenantId, f.actor);
     const created = await service.create({ period_id: f.periodId }, ctx);
 
+    const updatedNotes = await service.update(created.id, { notes: 'updated notes' }, ctx);
     grants.byUser.set(f.actor, new Set(['time_sheet:update']));
     await tenantTable(f.tenantId, 'time_entries').insert({
       tenant: f.tenantId, entry_id: uuidv4(), user_id: f.actor, time_sheet_id: created.id,
@@ -151,8 +152,10 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
     const updated = await service.update(created.id, { approval_status: 'SUBMITTED' }, ctx);
 
-    expect(updated).toMatchObject({ id: created.id, approval_status: 'SUBMITTED' });
+    expect(updatedNotes).toMatchObject({ id: created.id, notes: 'updated notes', approval_status: 'DRAFT' });
+    expect(updated).toMatchObject({ id: created.id, notes: 'updated notes', approval_status: 'SUBMITTED' });
     const [row] = await sheetsFor(f.tenantId, f.actor);
+    expect(row.notes).toBe('updated notes');
     expect(row.approval_status).toBe('SUBMITTED');
   });
 

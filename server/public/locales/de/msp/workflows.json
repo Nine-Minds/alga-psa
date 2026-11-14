@@ -715,7 +715,8 @@
         "title": "Workflow-Aktionen",
         "unavailable": "Nicht verfügbar",
         "unlimitedPlan": "Unbegrenzter Plan",
-        "unlimitedRemaining": "Unbegrenzt"
+        "unlimitedRemaining": "Unbegrenzt",
+        "unlimited": "Unbegrenzt"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Wiederholen, solange im Status",
       "statusAgeRepeatEvery": "Wiederholen alle (Tage)",
       "statusAgeNoActivity": "Nur wenn in dieser Zeit keine Aktivität (Kommentare oder Änderungen durch Personen) stattgefunden hat",
-      "statusAgeSummary": "Läuft täglich um {{time}} ({{timezone}}) für jedes Ticket, das die festgelegte Anzahl von Tagen im gewählten Status war"
+      "statusAgeSummary": "Läuft täglich um {{time}} ({{timezone}}) für jedes Ticket, das die festgelegte Anzahl von Tagen im gewählten Status war",
+      "saving": "Wird gespeichert...",
+      "saveSettings": "Einstellungen speichern"
     },
     "stepPanel": {
       "readOnly": "Schreibgeschützter Zugriff: Schrittbearbeitung ist deaktiviert.",
@@ -877,7 +880,13 @@
       "durationSummary": "Wartet {{duration}}.",
       "durationEmpty": "Geben Sie an, wie lange gewartet werden soll, in einer dieser Einheiten.",
       "notFoundInTry": "Dieser Schritt befindet sich in einem Try. Wenn nichts gefunden wird, läuft er derzeit weiter, sodass der Catch-Zweig nicht ausgeführt wird. Lassen Sie ihn stattdessen fehlschlagen, damit Catch einen fehlenden Datensatz behandeln kann.",
-      "notFoundFailAction": "Fehlschlagen, damit Catch es behandeln kann"
+      "notFoundFailAction": "Fehlschlagen, damit Catch es behandeln kann",
+      "operatorLabel": "Operator",
+      "removeFilter": "Entfernen",
+      "valuesCommaSeparated": "Werte (durch Kommas getrennt)",
+      "valueLabel": "Wert",
+      "absoluteTimestampHint": "Wird als absoluter Zeitstempel in der aktuellen Zeitzone Ihres Browsers gespeichert.",
+      "saveAsConflict": "„{{saveAs}}“ steht im Konflikt mit einem vorhandenen Ausgabepfad eines Schritts"
     },
     "mappingExpr": {
       "add": "Hinzufügen",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Knoten-Konfiguration",
       "stepSettings": "Schritt-Einstellungen",
-      "missingRequired": "Pflichtfelder fehlen: {{fields}}"
+      "missingRequired": "Pflichtfelder fehlen: {{fields}}",
+      "advancedOptions": "Erweiterte Optionen",
+      "invalidJson": "Ungültiges JSON"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1096,7 +1107,10 @@
         "valid": "Gültig",
         "unknown": "Unbekannt"
       },
-      "errors": "Validierungsfehler"
+      "errors": "Validierungsfehler",
+      "errorsHeading": "Validierungsfehler",
+      "warningsHeading": "Validierungswarnungen",
+      "stepFallbackName": "Schritt {{index}}"
     },
     "discardDialog": {
       "title": "Nicht gespeicherte Änderungen verwerfen?",
@@ -1365,7 +1379,8 @@
       "publishFailed": "Workflow konnte nicht veröffentlicht werden",
       "publishValidationErrors": "Veröffentlichung fehlgeschlagen — Validierungsfehler beheben",
       "systemEventMissingSchema": "Für dieses Systemereignis fehlt ein gültiges Schema und es kann erst nach Behebung ausgewählt werden.",
-      "publishedVersion": "Version {{version}} veröffentlicht. Neue Ausführungen verwenden diese Version."
+      "publishedVersion": "Version {{version}} veröffentlicht. Neue Ausführungen verwenden diese Version.",
+      "copiedPath": "Kopiert: {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Eigenschaftenbereich anpassen",
@@ -1391,7 +1406,29 @@
       "mappingTitle": "Trigger-Zuordnung",
       "mappingNotRequired": "Zuordnung: Nicht erforderlich.",
       "mappingErrors": "Zuordnungsfehler",
-      "mappingWarnings": "Zuordnungswarnungen"
+      "mappingWarnings": "Zuordnungswarnungen",
+      "eventSchemaTitle": "Schema des auslösenden Ereignisses",
+      "effectiveSourceSchemaTitle": "Wirksames Quellschema des Auslösers",
+      "eventMissingSchemaRef": "Diesem Ereignis fehlt eine gültige Schemareferenz. Bis zur Behebung sind Veröffentlichung und Ausführung deaktiviert.",
+      "eventNotInCatalogPrefix": "Das auslösende Ereignis",
+      "eventNotInCatalogSuffix": "ist nicht im Ereigniskatalog vorhanden. Bis zur Behebung sind Veröffentlichung und Ausführung deaktiviert.",
+      "eventCatalogLoadFailed": "Der Ereigniskatalog konnte nicht geladen werden. Bis er geladen ist, sind Veröffentlichung und Ausführung für ereignisgesteuerte Workflows deaktiviert.",
+      "mappingCustomActive": "Die benutzerdefinierte Auslöserzuordnung ist aktiv.",
+      "mappingRequired": "Zum Ausführen dieses Workflows ist eine Auslöserzuordnung erforderlich.",
+      "mappingOptionalActive": "Die optionale Auslöserzuordnung ist aktiv.",
+      "usingTriggerPayload": "Die Nutzdaten des Auslösers werden als Workflow-Eingabe verwendet.",
+      "triggerLabel": "Auslöser:",
+      "noSourceSchemaPrefix": "Für dieses Ereignis ist noch kein Quellschema verfügbar. Fügen Sie",
+      "noSourceSchemaSuffix": "im Ereigniskatalog hinzu oder legen Sie eine Überschreibung fest.",
+      "mappingRequiredMismatch": "Eine Zuordnung ist erforderlich, da das Auslöserschema und das Workflow-Eingabeschema nicht übereinstimmen.",
+      "useEventSchema": "Ereignisschema verwenden",
+      "configureMapping": "Zuordnung konfigurieren",
+      "hideMapping": "Zuordnung ausblenden",
+      "showMapping": "Zuordnung anzeigen",
+      "mapDataFromPrefix": "Ordnen Sie Daten aus",
+      "mapDataFromSuffix": "der Workflow-Eingabe zu.",
+      "viewSchema": "Schema anzeigen",
+      "viewEffective": "Wirksames Schema anzeigen"
     },
     "schemaSettings": {
       "lockVersion": "Schemaversion sperren",
@@ -1406,12 +1443,39 @@
       "notLoaded": "Schema noch nicht geladen.",
       "loadPreviewFailed": "Schema-Vorschau konnte nicht geladen werden.",
       "selectVersionPlaceholder": "Schemaversion auswählen…",
-      "payloadRefAdvanced": "Payload-Schemareferenz (erweitert)"
+      "payloadRefAdvanced": "Payload-Schemareferenz (erweitert)",
+      "triggerSchemaTitle": "Auslöserschema",
+      "clockTriggerPinned": "Zeitauslöser bleiben stets an den festen Nutzdatenvertrag der Workflow-Zeitsteuerung gebunden.",
+      "hide": "Ausblenden",
+      "edit": "Bearbeiten",
+      "clear": "Löschen",
+      "hideFields": "Felder ausblenden",
+      "previewFields": "Felder anzeigen",
+      "viewJsonSchema": "JSON-Schema anzeigen",
+      "viewPublished": "Veröffentlichtes Schema anzeigen",
+      "noTopLevelProperties": "Keine Eigenschaften auf oberster Ebene.",
+      "hideAdvanced": "Erweiterte Schemaeinstellungen ausblenden",
+      "modeLabel": "Modus:",
+      "modePinned": "Angepinnt",
+      "modeInferred": "Abgeleitet",
+      "close": "Schließen",
+      "loadingSchema": "Schema wird geladen…",
+      "publishedContractSchema": "Veröffentlichtes Vertragsschema",
+      "publishedSnapshot": "Veröffentlichter Schema-Snapshot.",
+      "publishedSnapshotMissing": "Der veröffentlichte Schema-Snapshot fehlt; die aktuelle Ausgabe der Schema-Registry wird angezeigt.",
+      "publishedLoadFailed": "Das veröffentlichte Schema konnte nicht geladen werden.",
+      "noPublishedSnapshot": "Für Version {{version}} ist kein veröffentlichter Schema-Snapshot gespeichert.",
+      "noPublishedSnapshotWithRef": "Für Version {{version}} ist kein veröffentlichter Schema-Snapshot gespeichert. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Feld einfügen",
       "enterPlaceholder": "Ausdruck eingeben...",
-      "conditionPlaceholder": "z. B. payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "z. B. payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Ausdrucksfehler",
+      "warningsHeading": "Warnungen",
+      "infoHeading": "Informationen zum Ausdruck",
+      "invalid": "Ungültiger Ausdruck",
+      "invalidWithReason": "Ungültiger Ausdruck: {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Verfügbare Daten in diesem Schritt",
@@ -1422,7 +1486,11 @@
       "outputSchemaUnavailable": "Ausgabeschema nicht verfügbar",
       "noFields": "Keine Felder",
       "copyAllPaths": "Alle Pfade kopieren",
-      "copyAllFieldPaths": "Alle Feldpfade kopieren"
+      "copyAllFieldPaths": "Alle Feldpfade kopieren",
+      "copyPath": "{{path}} kopieren",
+      "copied": "Kopiert!",
+      "noPreviousSteps": "Keine vorherigen Schritte mit konfigurierter Option „Ergebnis speichern als“",
+      "globals": "Globale Variablen"
     },
     "logoAlt": "Workflow-Editor-Logo",
     "nodes": {
@@ -1581,6 +1649,42 @@
         "loadError": "Übersprungene Ereignisse konnten nicht geladen werden.",
         "empty": "Keine übersprungenen Ereignisse in diesem Zeitraum."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "gleich",
+      "notEquals": "ungleich",
+      "in": "enthalten in",
+      "notIn": "nicht enthalten in",
+      "exists": "vorhanden",
+      "notExists": "nicht vorhanden",
+      "greaterThan": "größer als",
+      "greaterThanOrEqual": "größer oder gleich",
+      "lessThan": "kleiner als",
+      "lessThanOrEqual": "kleiner oder gleich",
+      "contains": "enthält",
+      "startsWith": "beginnt mit",
+      "endsWith": "endet mit"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "Das Nutzdatenschema des Datumsauslösers muss mit der ausgewählten Quelle übereinstimmen.",
+      "eventCatalogLoadFailed": "Der Ereigniskatalog konnte nicht geladen werden. Bis er geladen ist, sind Veröffentlichung und Ausführung deaktiviert.",
+      "triggerEventMissing": "Das auslösende Ereignis „{{eventName}}“ ist nicht im Ereigniskatalog vorhanden.",
+      "eventSchemaInvalid": "{{sourceLabel}} „{{eventName}}“ {{schemaLabel}}. Ergänzen Sie vor der Veröffentlichung oder Ausführung ein gültiges Schema im Ereigniskatalogeintrag.",
+      "timeTriggerFixedContract": "Zeitgesteuerte Workflows verwenden den festen Nutzdatenvertrag der Zeitsteuerung. Ein anderes Schema kann weder abgeleitet noch durch Überschreibung festgelegt werden.",
+      "manualMustPin": "Bei manuellen Workflows muss vor der Veröffentlichung oder Ausführung ein Nutzdatenschema angepinnt werden.",
+      "registryLoadFailed": "Die Schema-Registry konnte nicht geladen werden. Bis sie geladen ist, sind Veröffentlichung und Ausführung deaktiviert.",
+      "noSchemaForEvent": "Für das auslösende Ereignis „{{eventName}}“ ist kein Schema verfügbar. Bis zur Behebung sind Veröffentlichung und Ausführung deaktiviert.",
+      "unknownSchemaRef": "Die Nutzdaten-Schemareferenz „{{ref}}“ des Workflows ist unbekannt. Bis zur Behebung sind Veröffentlichung und Ausführung deaktiviert.",
+      "fixMappingErrors": "Beheben Sie vor der Veröffentlichung oder Ausführung die Zuordnungsfehler im Workflow.",
+      "fixValidationErrors": "Beheben Sie vor der Veröffentlichung oder Ausführung die Validierungsfehler im Workflow.",
+      "eventCatalogLoading": "Der Ereigniskatalog wird noch geladen. Bis er geladen ist, ist die Ausführung deaktiviert.",
+      "registryLoading": "Die Schema-Registry wird noch geladen. Bis sie geladen ist, ist die Ausführung deaktiviert.",
+      "eventCatalogLoadingPublish": "Der Ereigniskatalog wird noch geladen. Bis er geladen ist, ist die Veröffentlichung deaktiviert.",
+      "registryLoadingPublish": "Die Schema-Registry wird noch geladen. Bis sie geladen ist, ist die Veröffentlichung deaktiviert.",
+      "systemEvent": "Systemereignis",
+      "tenantEvent": "Mandantenereignis",
+      "missingSchemaRef": "hat keine Schemareferenz",
+      "unknownSchemaRefShort": "hat eine unbekannte Schemareferenz"
     }
   },
   "actionInputFieldInfo": {

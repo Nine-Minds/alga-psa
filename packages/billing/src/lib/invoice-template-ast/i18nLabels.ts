@@ -144,3 +144,27 @@ export const localizeTemplateAstForLocale = async (
     return { ast };
   }
 };
+
+/**
+ * The `documents` label translator for one locale, for renderers that write
+ * their own labels outside a template AST (e.g. the quote acceptance block).
+ * Undefined when the locale is unsupported or its pack will not load, so the
+ * caller keeps its English defaults — the same fallback as the AST seam above.
+ */
+export const loadDocumentLabelTranslator = async (
+  locale: string | null | undefined
+): Promise<TemplateLabelTranslator | undefined> => {
+  const normalized = normalizeLocale(locale) ?? undefined;
+  if (!normalized) {
+    return undefined;
+  }
+
+  try {
+    const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
+    const { t } = await getServerTranslation(normalized, DOCUMENT_LABEL_NAMESPACE);
+    return (key, options) => String(t(key, options));
+  } catch (error) {
+    console.error('Failed to load document label translations:', error);
+    return undefined;
+  }
+};

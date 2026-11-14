@@ -1,11 +1,12 @@
 'use server';
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { AssetRemoteAccessLink } from '@alga-psa/types';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { AssetActionError } from './assetActionErrors';
 import { hasLiteralHttpAuthority, renderRemoteAccessTemplate, SUPPORTED_ASSET_PLACEHOLDER_KEYS } from '../lib/remoteAccessTemplate';
+import { createAssetReadContext, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 
 type RemoteAccessLinkInput = Partial<AssetRemoteAccessLink> & {
   label: string;
@@ -146,32 +147,43 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
     return permissionError('Permission denied: Cannot read assets.', 'msp/assets:remoteAccess.errors.readPermission');
   }
   const { knex } = await createTenantKnex();
-  const db = tenantDb(knex, tenant);
-  const assetQuery = db.table('assets')
-    .select(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.rmm_device_id', 'assets.rmm_provider', 'assets.rmm_organization_id', 'assets.attributes', 'clients.client_name']);
-  // pattern tenant-safe-client-join — tenantJoin scopes client rows to the same tenant as the asset.
-  db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
-  const asset = await assetQuery
-    .where({ 'assets.asset_id': assetId })
-    .first();
-  if (!asset) return [];
+  return withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const assetIdentity = await db.table('assets')
+      .select('asset_id', 'client_id')
+      .where({ asset_id: assetId })
+      .first();
+    if (!assetIdentity) return [];
 
-  const links = await db.table('asset_remote_access_links')
-    .orderBy('label');
-  const fields = asset.attributes && typeof asset.attributes === 'object' ? asset.attributes : {};
-  return links.map((link): RenderedRemoteAccessLink => {
-    const url = renderRemoteAccessTemplate(link.url_template, {
-      asset: {
-        name: asset.name,
-        asset_tag: asset.asset_tag,
-        serial_number: asset.serial_number,
-        rmm_device_id: asset.rmm_device_id,
-        rmm_provider: asset.rmm_provider,
-        rmm_organization_id: asset.rmm_organization_id,
-      },
-      client: { name: asset.client_name ?? '' },
-      field: fields,
+    const readContext = await createAssetReadContext(trx, tenant, user as any);
+    if (!await isAssetReadAllowed(trx, tenant, readContext, assetIdentity)) return [];
+
+    const assetQuery = db.table('assets')
+      .select(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.rmm_device_id', 'assets.rmm_provider', 'assets.rmm_organization_id', 'assets.attributes', 'clients.client_name']);
+    // pattern tenant-safe-client-join — tenantJoin scopes client rows to the same tenant as the asset.
+    db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
+    const asset = await assetQuery
+      .where({ 'assets.asset_id': assetId })
+      .first();
+    if (!asset) return [];
+
+    const links = await db.table('asset_remote_access_links')
+      .orderBy('label');
+    const fields = asset.attributes && typeof asset.attributes === 'object' ? asset.attributes : {};
+    return links.map((link): RenderedRemoteAccessLink => {
+      const url = renderRemoteAccessTemplate(link.url_template, {
+        asset: {
+          name: asset.name,
+          asset_tag: asset.asset_tag,
+          serial_number: asset.serial_number,
+          rmm_device_id: asset.rmm_device_id,
+          rmm_provider: asset.rmm_provider,
+          rmm_organization_id: asset.rmm_organization_id,
+        },
+        client: { name: asset.client_name ?? '' },
+        field: fields,
+      });
+      return { label: link.label, url };
     });
-    return { label: link.label, url };
   });
 });

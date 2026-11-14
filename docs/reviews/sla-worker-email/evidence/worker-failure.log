@@ -1,0 +1,8 @@
+1180:SLA escalation email delivery failed {
+1181-  ticketId: '3d5269d8-0000-4000-8000-00000000030e',
+1182-  auditLogId: 'e39cf4e4-343c-4f17-bdf6-145374542cbc',
+1183-  error: Error: Email provider not ready: SMTP initialization failed: connect ECONNREFUSED 127.0.0.1:1
+1184-      at EmailNotificationService.sendNotification (file:///home/robert/alga-copies/feature-sla-escalation-email-worker-email-stub-drops-mai/ee/temporal-workflows/dist/packages/notifications/src/notifications/email.js:298:23)
+1185-      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+1186-      at async Object.connectionHook (file:///home/robert/alga-copies/feature-sla-escalation-email-worker-email-stub-drops-mai/ee/temporal-workflows/dist/packages/sla/src/services/escalationService.js:336:23)
+1187-      at async flushAfterCommitHooks (file:///home/robert/alga-copies/feature-sla-escalation-email-worker-email-stub-drops-mai/ee/temporal-workflows/dist/packages/db/src/lib/afterCommit.js:100:21)

@@ -1,0 +1,24 @@
+{
+  "session": {
+    "id": "2582ac47-d979-4d61-8a58-cc79b944de80",
+    "type": "client"
+  },
+  "results": {
+    "before": {
+      "name": "getTicketResources",
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:[]\n"
+    },
+    "add": {
+      "name": "addTicketResource",
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"tenant\":\"6d178771-ad9a-4d43-8809-83992745f8f9\",\"assignment_id\":\"88a12866-8fdf-49a9-83fa-d0dab032940a\",\"ticket_id\":\"b9c37b04-7c26-4c10-a0d2-737c6b77278c\",\"assigned_to\":\"6fb0c1d5-c732-45b2-96a1-96bbc6a639f1\",\"additional_user_id\":\"20a52aa7-137c-4a42-ab3e-5b75050d54d7\",\"role\":\"support\",\"assigned_at\":\"$D2026-11-04T21:13:45.867Z\"}\n"
+    },
+    "after": {
+      "name": "getTicketResources",
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:[{\"tenant\":\"6d178771-ad9a-4d43-8809-83992745f8f9\",\"assignment_id\":\"88a12866-8fdf-49a9-83fa-d0dab032940a\",\"ticket_id\":\"b9c37b04-7c26-4c10-a0d2-737c6b77278c\",\"assigned_to\":\"6fb0c1d5-c732-45b2-96a1-96bbc6a639f1\",\"additional_user_id\":\"20a52aa7-137c-4a42-ab3e-5b75050d54d7\",\"role\":\"support\",\"assigned_at\":\"$D2026-11-04T21:13:45.867Z\"}]\n"
+    },
+    "remove": {
+      "name": "removeTicketResource",
+      "skipped": true
+    }
+  }
+}

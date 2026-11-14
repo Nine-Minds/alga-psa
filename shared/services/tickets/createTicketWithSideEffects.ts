@@ -265,6 +265,7 @@ export async function createTicketWithSideEffects(
       ticketId,
       agentId,
       ADDITIONAL_AGENT_ROLE,
+      { kind: 'creation', ticketId },
       suppressionPayload,
     );
     if (result.resource && result.event.eventType === 'TICKET_ADDITIONAL_AGENT_ASSIGNED') agentEvents.push(result.event);

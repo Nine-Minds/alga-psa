@@ -6,6 +6,7 @@ import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
@@ -13,7 +14,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { getQuoteApprovalSettings, listQuotes, updateQuoteApprovalSettings } from '../../../actions/quoteActions';
+import { getQuoteApprovalSettings, listQuotes, updateQuoteApprovalSettings, updateQuoteEmailLinkReviewSettings } from '../../../actions/quoteActions';
 import QuoteDetail from './QuoteDetail';
 import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
@@ -40,6 +41,10 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
   // can approve their own quotes (alga-2026-0002597).
   const [isSoleApprover, setIsSoleApprover] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [emailLinkReviewEnabled, setEmailLinkReviewEnabled] = useState(true);
+  // Saved lifetime (null = default) and the text currently in the input.
+  const [savedLifetimeHours, setSavedLifetimeHours] = useState<number | null>(null);
+  const [lifetimeInput, setLifetimeInput] = useState('');
 
   useEffect(() => {
     void loadQuotes(statusFilter);
@@ -80,6 +85,33 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     if (!isReturnedActionError(result)) {
       setApprovalRequired(result.approvalRequired === true);
       setIsSoleApprover(result.currentUserIsSoleApprover === true);
+      setEmailLinkReviewEnabled(result.emailLinkReview?.enabled !== false);
+      setSavedLifetimeHours(result.emailLinkReview?.linkLifetimeHours ?? null);
+      setLifetimeInput(result.emailLinkReview?.linkLifetimeHours?.toString() ?? '');
+    }
+  };
+
+  const saveEmailLinkReview = async (enabled: boolean, lifetimeText: string) => {
+    const trimmed = lifetimeText.trim();
+    const hours = trimmed === '' ? null : Number(trimmed);
+    try {
+      setIsSavingSettings(true);
+      const result = await updateQuoteEmailLinkReviewSettings({ enabled, linkLifetimeHours: hours });
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
+      setEmailLinkReviewEnabled(result.enabled);
+      setSavedLifetimeHours(result.linkLifetimeHours);
+      setLifetimeInput(result.linkLifetimeHours?.toString() ?? '');
+      setError(null);
+    } catch (settingsError) {
+      // Roll the inputs back to what is saved.
+      setLifetimeInput(savedLifetimeHours?.toString() ?? '');
+      setError(settingsError instanceof Error ? settingsError.message : t('quoteApproval.errors.settings', {
+        defaultValue: 'Failed to update quote approval settings',
+      }));
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -195,6 +227,49 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
                   })}
               </span>
             </div>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="quote-email-link-review-switch"
+                checked={emailLinkReviewEnabled}
+                onCheckedChange={(checked) => void saveEmailLinkReview(checked, lifetimeInput)}
+                disabled={isSavingSettings}
+              />
+              <label htmlFor="quote-email-link-review-switch" className="text-sm font-medium text-foreground">
+                {t('quoteApproval.emailLinkReview.label', {
+                  defaultValue: 'Let clients review and approve quotes from the email link without signing in',
+                })}
+              </label>
+            </div>
+            {emailLinkReviewEnabled && (
+              <div className="max-w-[260px]">
+                <Input
+                  id="quote-email-link-review-lifetime"
+                  type="number"
+                  min={24}
+                  max={2160}
+                  step={1}
+                  label={t('quoteApproval.emailLinkReview.lifetimeLabel', { defaultValue: 'Link lifetime (hours)' })}
+                  placeholder={t('quoteApproval.emailLinkReview.lifetimePlaceholder', {
+                    defaultValue: 'Default: until the quote expires',
+                  })}
+                  value={lifetimeInput}
+                  disabled={isSavingSettings}
+                  onChange={(event) => setLifetimeInput(event.target.value)}
+                  onBlur={() => {
+                    if (lifetimeInput.trim() !== (savedLifetimeHours?.toString() ?? '')) {
+                      void saveEmailLinkReview(emailLinkReviewEnabled, lifetimeInput);
+                    }
+                  }}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('quoteApproval.emailLinkReview.lifetimeHelp', {
+                    defaultValue: 'Between 24 and 2160 hours. Leave empty to use the quote expiry date (30 days when it has none).',
+                  })}
+                </p>
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
             <label htmlFor="quote-approvals-status-filter">

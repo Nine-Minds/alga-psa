@@ -107,6 +107,20 @@
     }
   },
   "contractDetail": {
+    "simulatorLoading": "Ładowanie symulatora...",
+    "unnamedBoard": "Tablica bez nazwy",
+    "notFound": "Nie znaleziono umowy",
+    "loadFailed": "Nie udało się wczytać umowy",
+    "invoicesLoadFailed": "Nie udało się wczytać faktur dla tego przypisania umowy.",
+    "deleteFailed": "Nie udało się usunąć umowy",
+    "backToContracts": "Wróć do umów",
+    "viewSourceQuote": "Zobacz ofertę źródłową",
+    "clientDrawer": {
+      "loading": "Ładowanie…",
+      "notFound": "Nie znaleziono klienta.",
+      "openClient": "Otwórz klienta",
+      "loadFailed": "Nie udało się wczytać szczegółów klienta."
+    },
     "alerts": {
       "saveSuccess": "Umowa zapisana pomyślnie!",
       "unsavedChanges": "Masz niezapisane zmiany. Kliknij „Zapisz zmiany”, aby je zastosować."

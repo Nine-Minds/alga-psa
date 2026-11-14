@@ -14,3 +14,18 @@ it('returns the public statistics shape for authorized rows, including the unava
     average_resolution_time: null,
   });
 });
+
+it('omits dependency-sensitive aggregates for mixed policies instead of emitting redacted or fabricated counts', () => {
+  const controller = new ApiTicketController();
+  const stats = (controller as any).buildTicketStatsFromAuthorizedRows([
+    { record: { ticket_id: 't1', status_name: 'Open', status_is_closed: false, priority_name: 'High', category_name: 'Support', board_name: 'Helpdesk', assigned_to: null, entered_at: new Date() }, redactedFields: [] },
+    { record: { ticket_id: 't2', status_name: undefined, status_is_closed: undefined, priority_name: undefined, category_name: undefined, board_name: undefined, entered_at: new Date() }, redactedFields: ['values.status_id', 'tickets.priority_id', 'tickets.category_id', 'values.board_id'] },
+  ]);
+  expect(stats.total_tickets).toBe(2);
+  expect(stats).not.toHaveProperty('open_tickets');
+  expect(stats).not.toHaveProperty('closed_tickets');
+  expect(stats).not.toHaveProperty('tickets_by_status');
+  expect(stats).not.toHaveProperty('tickets_by_priority');
+  expect(stats).not.toHaveProperty('tickets_by_category');
+  expect(stats).not.toHaveProperty('tickets_by_board');
+});

@@ -157,6 +157,8 @@
         "ghost": "usage fantôme",
         "rmaAging": "RMA en attente",
         "rmaClient": "remplacement",
+        "rmaVendorReturnOverdue": "retour fournisseur en retard",
+        "rmaVendorReturnApproaching": "retour fournisseur bientôt dû",
         "priceCreep": "dérive de prix",
         "billCreep": "dérive de facturation",
         "billsOverdue": "factures en retard",
@@ -165,7 +167,8 @@
         "stockOut": "rupture de stock",
         "poPartial": "PO partiel",
         "warranty": "garantie",
-        "deadStock": "stock dormant"
+        "deadStock": "stock dormant",
+        "rmaVendorReturn": "Retour fournisseur en retard"
       },
       "fact": {
         "unbilledSo": "expédié, toujours pas facturé",
@@ -177,6 +180,8 @@
         "ghostTech": "{{count}} tickets matériel fermés, aucune pièce facturée",
         "rmaVendor": "doit un crédit — aucune réponse depuis {{days}} jours",
         "rmaClient": "unité de remplacement toujours due",
+        "rmaVendorReturnOverdue": "retour fournisseur dû le {{date}} — {{days}} j de retard",
+        "rmaVendorReturnApproaching": "retour fournisseur dû le {{date}} — encore {{days}} j",
         "priceCreepSo": "toujours à l'ancien coût",
         "priceCreepQuotes": "{{count}} devis ouvert(s) désormais sous le coût actuel",
         "priceCreepBill": "la facture dépasse le PO correspondant",
@@ -186,7 +191,8 @@
         "stockLow": "{{service}} sous le point de réapprovisionnement",
         "poPartial": "PO partiellement réceptionné toujours ouvert",
         "warranty": "{{count}} unités dont la garantie expire <30 j",
-        "deadStock": "aucun mouvement depuis 90 jours"
+        "deadStock": "aucun mouvement depuis 90 jours",
+        "rmaVendorReturn": "Retour fournisseur dû le {{date}} — {{days}} jours de retard"
       },
       "meta": {
         "unbilledSo": "{{so}} · {{lines}} lignes · expédié il y a {{days}} j",
@@ -207,7 +213,8 @@
         "stockLevel": "disponible {{available}} · point de réappro {{reorder}}",
         "poPartial": "{{po}} · {{received}} sur {{ordered}} réceptionnés · {{vendor}}",
         "warranty": "{{count}} clients",
-        "deadStock": "{{locations}} emplacement(s) immobilisent du fonds de roulement"
+        "deadStock": "{{locations}} emplacement(s) immobilisent du fonds de roulement",
+        "rmaVendorReturn": "{{ref}} · date limite de retour fournisseur"
       },
       "metric": {
         "ageDays": "{{days}} j",
@@ -1378,6 +1385,7 @@
       "confirmShipDeadUnit": "Renvoyez l'unité défectueuse au fournisseur. L'appareil en garde est enregistré comme chez le fournisseur.",
       "confirmVendorReceipt": "Confirmez que le fournisseur a reçu l'unité défectueuse. Le dossier est clos comme résolu et la garde comme retournée au fournisseur.",
       "deadUnitNotShipped": "Unité défectueuse pas encore expédiée, échéance : {{date}}",
+      "deadUnitApproaching": "Retour de l’unité défectueuse bientôt dû : {{date}}",
       "deadUnitShippedLate": "Unité défectueuse expédiée en retard, échéance : {{date}}",
       "returnByHint": "Date limite d'expédition de l'unité défectueuse au fournisseur, comptée à partir de la livraison de ce remplacement. Laissez-la telle quelle pour conserver la date de l'approbation.",
       "actions": {
@@ -1393,7 +1401,8 @@
         "returnToClient": "Retourner au client",
         "shipDeadUnitToVendor": "Expédier l'unité défectueuse au fournisseur",
         "confirmVendorReceipt": "Le fournisseur a reçu l'unité défectueuse",
-        "close": "Clôturer le RMA"
+        "close": "Clôturer le RMA",
+        "chargeVendorNonReturn": "Enregistrer les frais de non-retour fournisseur"
       },
       "events": {
         "opened": "Demande ouverte",
@@ -1409,7 +1418,8 @@
         "deadUnitShipped": "Unité défectueuse expédiée au fournisseur",
         "vendorReceiptConfirmed": "Le fournisseur a reçu l'unité défectueuse",
         "closed": "Fermé",
-        "note": "Note"
+        "note": "Note",
+        "vendorNonReturnCharge": "Frais de non-retour fournisseur enregistrés"
       },
       "outcome": {
         "covered": "Couvert",
@@ -1444,7 +1454,10 @@
         "inboundTracking": "Numéro de suivi entrant",
         "counterparty": "Retourné à",
         "closeReason": "Motif de clôture",
-        "note": "Note"
+        "note": "Note",
+        "vendorChargeAmount": "Montant des frais",
+        "vendorChargeCurrency": "Devise",
+        "selectCurrency": "Sélectionner une devise"
       },
       "claim": {
         "title": "Nouvelle demande de garantie",
@@ -1460,7 +1473,8 @@
         "track": "Suivre",
         "stockHint": "Les appareils vendus depuis le stock ne peuvent pas être réclamés ici. Utilisez plutôt Ouvrir un RMA depuis l'unité de stock.",
         "submit": "Ouvrir la demande"
-      }
+      },
+      "vendorChargeHint": "L’enregistrement de ces frais clôt l’obligation de retour fournisseur en retard. Il n’enregistre ni l’expédition ni la réception."
     }
   },
   "salesOrders": {

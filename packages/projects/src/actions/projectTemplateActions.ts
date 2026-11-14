@@ -1,5 +1,6 @@
 'use server';
 
+import { assertProjectCreateAllowed } from '../lib/projectReadAuthorization';
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -475,6 +476,10 @@ export const applyTemplate = withAuth(async (
     const { knex } = await createTenantKnex();
     const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
       await checkPermission(user, 'project', 'create', trx);
+      await assertProjectCreateAllowed(trx, tenant, user, {
+        client_id: projectData.client_id,
+        assigned_to: projectData.assigned_to,
+      });
       return applyProjectTemplate(trx, tenant, templateId, projectData);
     });
 

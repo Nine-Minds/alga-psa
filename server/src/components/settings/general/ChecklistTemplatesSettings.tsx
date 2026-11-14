@@ -456,7 +456,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const handleAddRule = async () => {
     if (!editingTemplate) return;
     try {
-      const created = await createChecklistTemplateApplyRule(editingTemplate.template_id, { where: { join: 'and', clauses: [] }, is_enabled: false });
+      const created = await createChecklistTemplateApplyRule(editingTemplate.template_id, { where: { join: 'or', clauses: [] }, is_enabled: false });
       if (isReturnedActionError(created)) {
         toast.error(getErrorMessage(created));
         return;

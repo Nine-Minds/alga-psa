@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
-import { resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { RequestLocalAuthorizationCache, type AuthorizationRequestCache } from '@alga-psa/authorization/kernel';
 import {
   ASSET_RECORD_SOURCE,
   PROJECT_RECORD_SOURCE,
@@ -109,7 +110,7 @@ export function buildAuthorizationPrincipalSubject(
 
 /** Authorize a resource action with the shared kernel for mutation admission. */
 export async function authorizeApiResource(input: {
-  knex: Knex;
+  knex: Knex | Knex.Transaction;
   tenant: string;
   user: any;
   apiKeyId?: string;
@@ -118,29 +119,20 @@ export async function authorizeApiResource(input: {
   recordContext: AuthorizationRecord;
 }): Promise<boolean> {
   const kernel = await getAuthorizationKernel();
-  const subject = await resolveAuthorizationSubjectForUser(
-    input.knex,
-    input.tenant,
-    {
-      ...input.user,
-      user_id: input.user?.user_id,
-      user_type: input.user?.user_type === 'client' ? 'client' : input.user?.user_type === 'service' ? 'service' : 'internal',
-      clientId: input.user?.client_id ?? input.user?.clientId,
-      role_ids: [
-        ...normalizeStringArray(input.user?.role_ids),
-        ...normalizeIdArrayFromObjects(input.user?.roles, 'role_id'),
-      ],
-    },
-    input.apiKeyId,
-  );
-  subject.tenant = input.tenant;
-
-  const decision = await kernel.authorizeResource({
+  const requestCache = new RequestLocalAuthorizationCache();
+  const subject = await resolveAuthorizationSubject(input.knex, {
+    tenant: input.tenant, user: input.user, apiKeyId: input.apiKeyId, requestCache,
+  });
+  const evaluation = {
     knex: input.knex as any,
     subject,
+    requestCache,
     resource: { type: input.resource, action: input.action },
     record: input.recordContext,
-  });
+  };
+  const decision = input.action === 'read'
+    ? await kernel.authorizeResource(evaluation)
+    : await kernel.authorizeMutation(evaluation);
   return decision.allowed;
 }
 
@@ -153,19 +145,22 @@ export async function authorizeApiResource(input: {
  *  3. Otherwise there is no principal at all: an internal call with no identity is unrestricted, so the kernel is
  *     skipped (returns null). An empty-string user id must never reach the kernel.
  */
-function resolveReadSubject(input: { tenant: string; user?: any; userId?: string; apiKeyId?: string }): AuthorizationSubject | null {
+async function resolveReadSubject(
+  input: { knex: Knex | Knex.Transaction; tenant: string; user?: any; userId?: string; apiKeyId?: string },
+  requestCache: AuthorizationRequestCache = new RequestLocalAuthorizationCache(),
+): Promise<AuthorizationSubject | null> {
   const hasUser = typeof input.user?.user_id === 'string' && input.user.user_id.length > 0;
   const hasApiKey = typeof input.apiKeyId === 'string' && input.apiKeyId.trim().length > 0;
-  let subject: AuthorizationSubject;
-  if (hasUser || hasApiKey) {
-    subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
-  } else if (typeof input.userId === 'string' && input.userId.length > 0) {
-    subject = buildAuthorizationPrincipalSubject({ user_id: input.userId, tenant: input.tenant });
-  } else {
+  const hasUserId = typeof input.userId === 'string' && input.userId.length > 0;
+  if (!hasUser && !hasApiKey && !hasUserId) {
     return null;
   }
-  subject.tenant = input.tenant;
-  return subject;
+  return resolveAuthorizationSubject(input.knex, {
+    tenant: input.tenant,
+    user: input.user ?? (hasUserId ? { user_id: input.userId } : undefined),
+    apiKeyId: input.apiKeyId,
+    requestCache,
+  });
 }
 
 declare const authorizedProjectionBrand: unique symbol;
@@ -288,6 +283,7 @@ export interface ApiResourceReadInput<T extends Record<string, any>> {
   recordContext?: AuthorizationRecord;
   /** Optional response shape for records copied from this resource (for example flattened related-asset rows). */
   source?: RedactableRecordSource;
+  requestCache?: AuthorizationRequestCache;
 }
 
 /**
@@ -303,24 +299,15 @@ export async function projectApiResourceRead<T extends Record<string, any>>(
     throw new Error(`projectApiResourceRead: a recordContext is required for kind "${input.kind}"`);
   }
 
-  const principal = resolveReadSubject(input);
-  // Asset relationship templates require the same database-backed membership
-  // as mutation admission and SQL scoping, not just the API user's role snapshot.
-  const subject = principal && input.kind === 'asset'
-    ? { ...await resolveAuthorizationSubjectForUser(input.knex, input.tenant, {
-      user_id: principal.userId,
-      user_type: principal.userType,
-      role_ids: principal.roleIds,
-      clientId: principal.clientId,
-      portfolioClientIds: principal.portfolioClientIds,
-    }, principal.apiKeyId ?? undefined), apiKeyId: principal.apiKeyId }
-    : principal;
+  const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
+  const subject = await resolveReadSubject(input, requestCache);
   let redactedFields: readonly string[] = [];
   if (subject) {
     const kernel = await getAuthorizationKernel();
     const decision = await kernel.authorizeResource({
       knex: input.knex as any,
       subject,
+      requestCache,
       resource: { type: kind.resource, action: 'read' },
       record: recordContext,
     });
@@ -346,10 +333,11 @@ export async function projectApiResourceReads<T extends Record<string, any>>(
   }
 ): Promise<AuthorizedProjection<T>[]> {
   const { records, recordContextForRecord, ...rest } = input;
+  const requestCache = rest.requestCache ?? new RequestLocalAuthorizationCache();
   const projected = await Promise.all(records.map((record) => {
     const recordContext = recordContextForRecord?.(record);
     if (recordContextForRecord && !recordContext) return null;
-    return projectApiResourceRead<T>({ ...rest, record, ...(recordContext ? { recordContext } : {}) });
+    return projectApiResourceRead<T>({ ...rest, requestCache, record, ...(recordContext ? { recordContext } : {}) });
   }));
   const rows: AuthorizedProjection<T>[] = [];
   for (const row of projected) {
@@ -366,14 +354,16 @@ export async function projectApiResourceReads<T extends Record<string, any>>(
  * exactly that union. This is approach (b): a column is unsearchable whenever any applicable rule redacts it.
  */
 export async function resolveApiReadRedactions(input: {
-  knex: Knex; tenant: string; user?: any; userId?: string; apiKeyId?: string; kind: ApiReadKind;
+  knex: Knex; tenant: string; user?: any; userId?: string; apiKeyId?: string; kind: ApiReadKind; requestCache?: AuthorizationRequestCache;
 }): Promise<readonly string[]> {
-  const subject = resolveReadSubject(input);
+  const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
+  const subject = await resolveReadSubject(input, requestCache);
   if (!subject) return [];
   const kernel = await getAuthorizationKernel();
   const decision = await kernel.authorizeResource({
     knex: input.knex as any,
     subject,
+    requestCache,
     resource: { type: API_READ_KINDS[input.kind].resource, action: 'read' },
   });
   return decision.redactedFields ?? [];

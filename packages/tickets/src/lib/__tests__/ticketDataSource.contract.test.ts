@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 const getTicketById = vi.fn().mockResolvedValue({ ticket_id: 't1' });
 const getTicketChecklistItems = vi.fn().mockResolvedValue([]);
+const getChecklistTemplatesForTicket = vi.fn();
+const getChecklistTemplates = vi.fn();
 vi.mock('../../actions/ticketActions', () => ({ getTicketById }));
 vi.mock('../../actions/checklists/ticketChecklistActions', () => ({ getTicketChecklistItems }));
+vi.mock('../../actions/checklists', () => ({ getChecklistTemplatesForTicket, getChecklistTemplates }));
 
 import { nativeTicketDataSource } from '../nativeTicketDataSource';
 import {
@@ -45,7 +48,7 @@ describe('native ticket data source contract', () => {
         methods += 1;
       }
     }
-    expect(methods).toBe(99);
+    expect(methods).toBe(100);
   });
 
   it('forwards arguments and results unchanged, resolving the action at call time', async () => {
@@ -53,6 +56,20 @@ describe('native ticket data source contract', () => {
     expect(getTicketById).toHaveBeenCalledWith('t1');
     await nativeTicketDataSource.checklist.getTicketChecklistItems('t1');
     expect(getTicketChecklistItems).toHaveBeenCalledWith('t1');
+  });
+
+  it('loads checklist picker choices for the requested ticket without administrative reads', async () => {
+    const templates = [{ template_id: 'template-1', name: 'Client checklist' }];
+    getChecklistTemplatesForTicket.mockResolvedValueOnce(templates);
+
+    await expect(nativeTicketDataSource.checklist.getChecklistTemplatesForTicket('t1')).resolves.toBe(templates);
+    expect(getChecklistTemplatesForTicket).toHaveBeenCalledWith('t1');
+    expect(getChecklistTemplates).not.toHaveBeenCalled();
+
+    const denied = new Error('Permission denied: Cannot access ticket');
+    getChecklistTemplatesForTicket.mockRejectedValueOnce(denied);
+    await expect(nativeTicketDataSource.checklist.getChecklistTemplatesForTicket('hidden-ticket')).rejects.toBe(denied);
+    expect(getChecklistTemplates).not.toHaveBeenCalled();
   });
 
   it('composes one level deep and switches write capabilities off for a read-only screen', () => {

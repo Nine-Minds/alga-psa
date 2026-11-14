@@ -22,11 +22,31 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 export const UNIFI_API_KEY_SECRET = 'unifi_api_key';
 export const UNIFI_LOCAL_BASE_URL_SECRET = 'unifi_local_base_url';
 export const UNIFI_CLOUD_BASE_URL = 'https://api.ui.com';
+
+/**
+ * Site Manager origin. `UNIFI_SITE_MANAGER_BASE_URL` points Site Manager mode at a
+ * simulator for smoke tests (tools/smoke-sim/unifi-sim/unifi-site-manager-sim.mjs),
+ * the same deployment-level override Huntress and Level offer. It is server
+ * configuration only: no tenant input can change it.
+ */
+export function unifiSiteManagerBaseUrl(): string {
+  const override = process.env.UNIFI_SITE_MANAGER_BASE_URL?.trim();
+  return override ? override.replace(/\/+$/, '') : UNIFI_CLOUD_BASE_URL;
+}
 /** `hostId` used for every site in local mode (there is exactly one controller). */
 export const UNIFI_LOCAL_HOST_ID = 'local';
 
 export type UniFiConnectionMode = 'site_manager' | 'local';
-export type UniFiApiErrorKind = 'auth' | 'console_forbidden' | 'rate_limited' | 'http' | 'network' | 'invalid_response' | 'config';
+export type UniFiApiErrorKind =
+  | 'auth'
+  | 'console_forbidden'
+  /** One credential of several is unusable (rejected or missing key); other keys keep working. */
+  | 'credential_unavailable'
+  | 'rate_limited'
+  | 'http'
+  | 'network'
+  | 'invalid_response'
+  | 'config';
 
 export class UniFiApiError extends Error {
   readonly status?: number;
@@ -269,7 +289,7 @@ export class UniFiApiClient {
   // ── URL construction (endpoint assumptions) ──────────────────────────────
 
   private cloudUrl(path: string, params: Record<string, string | undefined> = {}): URL {
-    return this.withParams(new URL(`${UNIFI_CLOUD_BASE_URL}${path}`), params);
+    return this.withParams(new URL(`${unifiSiteManagerBaseUrl()}${path}`), params);
   }
 
   private withParams(url: URL, params: Record<string, string | undefined>): URL {
@@ -286,7 +306,7 @@ export class UniFiApiClient {
     }
     return this.withParams(
       new URL(
-        `${UNIFI_CLOUD_BASE_URL}/v1/connector/consoles/${encodeURIComponent(hostId)}/proxy/network/integration/v1${path}`
+        `${unifiSiteManagerBaseUrl()}/v1/connector/consoles/${encodeURIComponent(hostId)}/proxy/network/integration/v1${path}`
       ),
       params
     );
@@ -481,25 +501,50 @@ export async function readUniFiCredentials(tenant: string): Promise<UniFiStoredC
 }
 
 /**
- * Builds a client from the tenant's stored secrets. `mode` comes from
- * rmm_integrations.settings.connectionMode and defaults to Site Manager.
+ * The surface the sync engine, alert fetcher and device strategy consume. Both
+ * the single-key UniFiApiClient and the multi-key UniFiFleetClient satisfy it.
+ * `unreachable` and the fleet helpers are only populated by the fleet.
+ */
+export interface UniFiClientSurface {
+  testConnection(): Promise<void>;
+  listConsoles(): Promise<UniFiConsole[]>;
+  listSites(): Promise<{
+    sites: UniFiSite[];
+    failures: UniFiSiteListFailure[];
+    unreachable?: Array<{ hostId: string; name: string; suggestedAction: string }>;
+  }>;
+  listSitesForHost(console: Pick<UniFiConsole, 'hostId' | 'name'>): Promise<UniFiSite[]>;
+  listDevices(site: Pick<UniFiSite, 'hostId' | 'siteId'>): Promise<UniFiDevice[]>;
+  getDevice(site: Pick<UniFiSite, 'hostId' | 'siteId'>, deviceId: string): Promise<UniFiDevice>;
+  /** Forget persisted console routes so the next call per console probes again. */
+  invalidateRoutes?(): void;
+  getFleetReport?(): Promise<{
+    credentials: Array<{ label: string; status: string; consolesReached: number }>;
+    unreachableConsoles: Array<{ hostId: string; name: string; suggestedAction: string }>;
+  }>;
+}
+
+/**
+ * Builds the tenant's client. Since the multi-key change this is a
+ * UniFiFleetClient composed of one single-key UniFiApiClient per credential;
+ * the signature is unchanged. `mode` is only used when the tenant has no
+ * credential rows yet (legacy single-key secrets). `options.onAuthFailure`
+ * replaces the integration-level reconnect marker, which the fleet only fires
+ * when every credential has been rejected.
  */
 export async function createUniFiClient(
   tenant: string,
   mode: UniFiConnectionMode = 'site_manager',
   options: UniFiClientFactoryOptions = {}
-): Promise<UniFiApiClient> {
-  const credentials = await readUniFiCredentials(tenant);
-  if (!credentials.apiKey) {
-    throw new UniFiApiError('UniFi API key is not configured for this tenant.', 'config');
-  }
-  return new UniFiApiClient({
-    apiKey: credentials.apiKey,
-    mode,
-    localBaseUrl: credentials.localBaseUrl ?? undefined,
-    onAuthFailure: options.onAuthFailure ?? (async () => {
-      const { markUniFiReconnectRequired } = await import('./reconnect');
-      await markUniFiReconnectRequired(tenant);
-    }),
+): Promise<UniFiClientSurface> {
+  // Dynamic imports: fleetClient imports this module's values.
+  const [{ UniFiFleetClient }, { createPersistentFleetStore }] = await Promise.all([
+    import('./fleetClient'),
+    import('./credentials/credentialStore'),
+  ]);
+  const store = createPersistentFleetStore(tenant, { legacyMode: mode });
+  return new UniFiFleetClient({
+    store,
+    onIntegrationAuthFailure: options.onAuthFailure ? () => options.onAuthFailure?.(401) : undefined,
   });
 }

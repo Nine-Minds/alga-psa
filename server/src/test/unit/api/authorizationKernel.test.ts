@@ -8,18 +8,19 @@ const resolveSubjectMock = vi.hoisted(() => vi.fn());
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
     authorizeResource: authorizeResourceMock,
+    authorizeMutation: authorizeResourceMock,
   })),
 }));
 
-vi.mock('@alga-psa/authorization/assetReadAuthorization', async (original) => ({
-  ...await original<typeof import('@alga-psa/authorization/assetReadAuthorization')>(),
-  resolveAuthorizationSubjectForUser: (...args: unknown[]) => resolveSubjectMock(...args),
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (...args: unknown[]) => resolveSubjectMock(...args),
 }));
 
 describe('api authorization kernel helper', () => {
   beforeEach(() => {
     authorizeResourceMock.mockReset();
-    resolveSubjectMock.mockImplementation(async (_knex, tenant, user, apiKeyId) => ({
+    resolveSubjectMock.mockImplementation(async (_knex, { tenant, user, apiKeyId }) => ({
       tenant,
       userId: user.user_id,
       userType: 'internal',

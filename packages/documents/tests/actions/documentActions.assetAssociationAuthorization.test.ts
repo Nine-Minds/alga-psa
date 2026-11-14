@@ -14,8 +14,11 @@ const h = vi.hoisted(() => ({
     shared_document_types: [{ tenant: 'tenant-1', type_id: 'type-1', type_name: 'application/octet-stream' }],
   } as Record<string, Array<Record<string, any>>>,
   permissions: new Map<string, boolean>(),
+  activeTransaction: null as object | null,
   assetReadable: true,
   assetUpdatable: true,
+  assetDeletable: true,
+  deniedDocuments: new Set<string>(),
   authorizationRequests: [] as Array<{ action: string; id: string }>,
   generatedId: 0,
   deletedStorageFileIds: [] as string[],
@@ -36,6 +39,8 @@ class Query {
   whereIn(column: string, values: unknown[]) { this.filters.push((row) => values.includes(row[column])); return this; }
   orderBy(_column: string, _direction: 'asc' | 'desc') { return this; }
   select(..._columns: string[]) { return this; }
+  // Single-threaded fixture queries do not contend for row locks.
+  forUpdate() { return this; }
   clone() { const query = new Query(this.tableName, this.tenant); query.filters = [...this.filters]; return query; }
   private rows() {
     return (h.rows[this.tableName] ?? []).filter((row) => row.tenant === this.tenant && this.filters.every((filter) => filter(row)));
@@ -63,12 +68,26 @@ class Query {
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn(h.user, { tenant: 'tenant-1' }, ...args),
-  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) => h.permissions.get(`${resource}:${action}`) ?? true),
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string, connection?: unknown) => {
+    // Model a pool with one connection: authorization must reuse the open transaction.
+    if (h.activeTransaction && connection !== h.activeTransaction) {
+      throw new Error('Permission check tried to acquire a second pooled connection');
+    }
+    return h.permissions.get(`${resource}:${action}`) ?? true;
+  }),
   checkMultiplePermissions: vi.fn(async (_user: unknown, checks: Array<{ resource: string; action: string }>) => checks.map((check) => ({ ...check, granted: true }))),
 }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
-  withTransaction: vi.fn(async (_knex: unknown, fn: (trx: unknown) => unknown) => fn({ fn: { now: () => new Date() } })),
+  withTransaction: vi.fn(async (_knex: unknown, fn: (trx: unknown) => unknown) => {
+    const trx = { fn: { now: () => new Date() } };
+    h.activeTransaction = trx;
+    try {
+      return await fn(trx);
+    } finally {
+      h.activeTransaction = null;
+    }
+  }),
   tenantDb: (_conn: unknown, tenant: string) => ({ table: (table: string) => new Query(table, tenant) }),
 }));
 vi.mock('@alga-psa/storage/StorageService', () => ({
@@ -78,7 +97,8 @@ vi.mock('@alga-psa/storage/StorageService', () => ({
     deleteFile: vi.fn(async (fileId: string) => { h.deletedStorageFileIds.push(fileId); }),
   },
 }));
-vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({ generateDocumentPreviews: vi.fn(async () => ({})) }));
+vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({ generatePreviewsForDocument: vi.fn(async () => ({})) }));
+vi.mock('@alga-psa/documents/lib/documentPreviewJob', () => ({ scheduleDocumentPreviews: vi.fn(async () => true) }));
 vi.mock('../../src/lib/documentPermissions', () => ({
   applyDocumentProductReadScope: vi.fn(),
   canReadDocument: vi.fn(async () => true),
@@ -103,25 +123,45 @@ vi.mock('@alga-psa/documents/models/documentAssociation', () => ({
   },
 }));
 vi.mock('uuid', () => ({ v4: vi.fn(() => `generated-${++h.generatedId}`) }));
+// The client-scope create gate runs against a real connection (covered by T008); this file's fake trx has no query builder.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({
+  isDocumentAssociationCreateAllowed: vi.fn(async () => true),
+}));
 vi.mock('@alga-psa/authorization/assetReadAuthorization', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/authorization/assetReadAuthorization')>();
+  const { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider, RequestLocalAuthorizationCache } =
+    await import('@alga-psa/authorization/kernel');
   return {
     ...actual,
     createAssetReadContext: vi.fn(async () => ({
       subject: { tenant: 'tenant-1', userId: 'user-1', userType: 'internal', roleIds: [], teamIds: [], managedUserIds: [], clientId: null, portfolioClientIds: [] },
-      authorizationKernel: {
-        authorizeResource: vi.fn(async (request: { resource: { action: string; id: string } }) => {
-          h.authorizationRequests.push({ action: request.resource.action, id: request.resource.id });
-          return { allowed: request.resource.action === 'read' ? h.assetReadable : h.assetUpdatable };
+      // Exercise the real read prerequisite and action evaluation, controlling only policy data.
+      authorizationKernel: createAuthorizationKernel({
+        builtinProvider: new BuiltinAuthorizationKernelProvider(),
+        bundleProvider: new BundleAuthorizationKernelProvider({
+          resolveRules: async ({ resource }) => {
+            h.authorizationRequests.push({ action: resource.action, id: resource.id! });
+            return (['read', 'update', 'delete'] as const).map((action) => ({
+              id: `asset-${action}`,
+              resource: 'asset' as const,
+              action,
+              templateKey: 'selected_clients' as const,
+              selectedClientIds: [
+                { read: h.assetReadable, update: h.assetUpdatable, delete: h.assetDeletable }[action]
+                  ? 'client-1' : 'other-client',
+              ],
+            }));
+          },
         }),
-      },
-      requestCache: {},
+        rbacEvaluator: async () => true,
+      }),
+      requestCache: new RequestLocalAuthorizationCache(),
     })),
   };
 });
 vi.mock('@shared/lib/documentAuthorization', () => ({
-  authorizeAndRedactDocuments: vi.fn(async (_trx: unknown, _tenant: string, _user: unknown, docs: Array<{ document_id: string }>) =>
-    docs.filter((doc) => h.rows.documents.some((row) => row.document_id === doc.document_id && row.tenant === 'tenant-1'))),
+  authorizeAndRedactDocumentsForAction: vi.fn(async (_trx: unknown, _tenant: string, _user: unknown, docs: Array<{ document_id: string }>) =>
+    docs.filter((doc) => !h.deniedDocuments.has(doc.document_id) && h.rows.documents.some((row) => row.document_id === doc.document_id && row.tenant === 'tenant-1'))),
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(), publishWorkflowEvent: vi.fn() }));
 vi.mock('@alga-psa/workflow-streams', () => ({
@@ -149,6 +189,8 @@ describe('generic document asset association actions', () => {
     h.permissions.clear();
     h.assetReadable = true;
     h.assetUpdatable = true;
+    h.assetDeletable = true;
+    h.deniedDocuments.clear();
     h.authorizationRequests = [];
     h.generatedId = 0;
     h.deletedStorageFileIds = [];
@@ -187,7 +229,7 @@ describe('generic document asset association actions', () => {
   it.each([
     ['attach', () => attach()],
     ['detach', () => detach()],
-  ])('%s succeeds when the shared read and update decisions allow the asset', async (_operation, invoke) => {
+  ])('%s succeeds with one pooled connection when the asset decisions allow it', async (_operation, invoke) => {
     const result = await invoke();
     expect(result).toMatchObject({ success: true });
     expect(h.authorizationRequests).toContainEqual({ action: 'update', id: 'asset-1' });
@@ -222,6 +264,32 @@ describe('generic document asset association actions', () => {
     expect(result).toHaveProperty('permissionError');
     expect(h.rows.document_associations).toEqual(before);
     expect(h.authorizationRequests.some(({ action }) => action === 'update')).toBe(true);
+  });
+
+  it('detach requires delete scope even when asset read and update are allowed', async () => {
+    h.assetDeletable = false;
+    const before = structuredClone(h.rows.document_associations);
+    expect(await detach()).toHaveProperty('permissionError');
+    expect(h.authorizationRequests).toContainEqual({ action: 'delete', id: 'asset-1' });
+    expect(h.rows.document_associations).toEqual(before);
+  });
+
+  it('detach requires coarse asset:delete permission even when asset:update is allowed', async () => {
+    h.permissions.set('asset:delete', false);
+    const before = structuredClone(h.rows.document_associations);
+    expect(await detach()).toHaveProperty('permissionError');
+    expect(h.rows.document_associations).toEqual(before);
+  });
+
+  it.each([
+    ['attach', () => attach(['doc-1', 'doc-2'])],
+    ['detach', () => detach(['doc-1', 'doc-2'])],
+  ])('%s authorizes every document before changing any association', async (_operation, invoke) => {
+    h.rows.document_associations.push({ association_id: 'association-second', document_id: 'doc-2', entity_id: 'asset-1', entity_type: 'asset', tenant: 'tenant-1' });
+    h.deniedDocuments.add('doc-2');
+    const before = structuredClone(h.rows.document_associations);
+    expect(await invoke()).toHaveProperty('permissionError');
+    expect(h.rows.document_associations).toEqual(before);
   });
 
   it('asset upload leaves no document or association and deletes the uploaded file when update is denied', async () => {

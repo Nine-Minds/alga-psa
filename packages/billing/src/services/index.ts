@@ -13,6 +13,7 @@ export {
 export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
+export { getClientIdFromPortalUser, hasClientBillingReadPermission } from './clientPortalAccess';
 export {
   decideQuote,
   listQuoteDecisions,
@@ -40,6 +41,11 @@ export {
   type InvoicePdfDeliveryStage,
   type InvoicePdfDeliveryOptions,
 } from './invoicePdfDeliveryService';
+export {
+  finalizeLinkAcceptedQuote,
+  type FinalizeLinkAcceptedQuoteResult,
+} from './quoteAcceptanceFinalizationService';
+export { loadQuoteAcceptance, type QuoteAcceptanceDetails } from '../lib/quoteAcceptance';
 export {
   buildQuoteConversionPreview,
   convertQuoteToDraftContract,
@@ -205,4 +211,6 @@ export {
   type QuoteLinkDecisionOutcome,
   type QuoteLinkInputProblem,
   type QuoteLinkRequestContext,
+  type CommittedQuoteLinkDecision,
+  type QuoteLinkDecisionHooks,
 } from './quoteLinkDecisionService';

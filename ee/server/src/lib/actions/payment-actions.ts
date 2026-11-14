@@ -14,53 +14,13 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import Stripe from 'stripe';
-import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents } from '../payments/stripeWebhookEvents';
-import * as fs from 'fs';
+import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents, stripeWebhookUrls, getStripeBaseUrl } from '../payments/stripeWebhookEvents';
 import {
   IPaymentProviderConfig,
   PaymentSettings,
   mergePaymentSettings,
   validatePaymentSettingsInput,
 } from '@alga-psa/types';
-
-// Path to ngrok URL file (written by ngrok-sync container)
-const NGROK_URL_FILE = '/app/ngrok/url';
-
-// Check if running in development mode
-const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
-
-/**
- * Gets the base URL for Stripe webhooks.
- * Priority:
- * 1. Explicit STRIPE_WEBHOOK_BASE_URL override
- * 2. ngrok URL file in development mode
- * 3. NEXT_PUBLIC_APP_URL / NEXTAUTH_URL / APP_BASE_URL fallback
- */
-const getStripeBaseUrl = (): string => {
-  // If explicitly set, use that
-  if (process.env.STRIPE_WEBHOOK_BASE_URL) {
-    return process.env.STRIPE_WEBHOOK_BASE_URL;
-  }
-
-  // In development mode, check for ngrok URL file first
-  if (isDevelopment) {
-    try {
-      if (fs.existsSync(NGROK_URL_FILE)) {
-        const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
-        if (ngrokUrl) {
-          console.log(`[PaymentActions] Using ngrok URL for Stripe webhook: ${ngrokUrl}`);
-          return ngrokUrl;
-        }
-      }
-    } catch (error) {
-      // Ignore file read errors, fall back to env vars
-      console.debug('[PaymentActions] Could not read ngrok URL file, using environment variables');
-    }
-  }
-
-  // Fall back to environment variables
-  return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
-};
 
 /**
  * Result of a payment action.
@@ -115,7 +75,7 @@ export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise
 
     // Get webhook URL for display
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     // Determine webhook status - verify the secret actually exists, not just the path
     const configuration = config.configuration as any;
@@ -213,7 +173,7 @@ export const connectStripeAction = withAuth(async (
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl, legacyUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     // Check for existing webhook endpoints to avoid duplicates
     let webhookEndpointId: string | null = null;
@@ -224,7 +184,7 @@ export const connectStripeAction = withAuth(async (
       // List existing webhooks to check for duplicates
       const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
       const existingEndpoint = existingWebhooks.data.find(
-        (endpoint) => endpoint.url === webhookUrl
+        (endpoint) => endpoint.url === webhookUrl || endpoint.url === legacyUrl
       );
 
       if (existingEndpoint) {
@@ -242,6 +202,7 @@ export const connectStripeAction = withAuth(async (
           });
 
           await stripe.webhookEndpoints.update(existingEndpoint.id, {
+            url: webhookUrl,
             enabled_events: STRIPE_WEBHOOK_EVENTS,
             description: `AlgaPSA payment webhook for tenant ${tenant}`,
           });
@@ -566,7 +527,7 @@ export const testStripeConnectionAction = withAuth(async (user, { tenant }): Pro
 export const getStripeWebhookUrlAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ webhookUrl: string }>> => {
   try {
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     console.log('[PaymentActions] Generated Stripe webhook URL:', webhookUrl);
 
@@ -665,7 +626,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl, legacyUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     let webhookEndpointId: string | null = null;
     let webhookSecret: string | null = null;
@@ -673,7 +634,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
     // Check for existing webhook endpoints
     const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
     const existingEndpoint = existingWebhooks.data.find(
-      (endpoint) => endpoint.url === webhookUrl
+      (endpoint) => endpoint.url === webhookUrl || endpoint.url === legacyUrl
     );
 
     if (existingEndpoint) {

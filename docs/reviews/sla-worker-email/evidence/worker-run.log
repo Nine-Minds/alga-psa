@@ -1,0 +1,71 @@
+Filtered from the raw worker stdout/stderr captured during the live run. Secrets and unrelated scheduled-workflow logs were excluded.
+Entrypoint: node dist/ee/temporal-workflows/src/worker.js
+Temporal namespace: sla-email-repair-20261108
+Task queue for SLA executions: sla-workflows
+
+[32minfo[39m: Worker starting... {"taskQueue":"sla-workflows","timestamp":"2026-11-08T16:56:27.004Z"}
+[32minfo[39m: Worker starting... {"taskQueue":"alga-jobs","timestamp":"2026-11-08T16:56:27.004Z"}
+2026-11-08T16:56:27.004Z [INFO] Worker state changed {
+  sdkComponent: 'worker',
+  taskQueue: 'sla-workflows',
+  state: 'RUNNING'
+}
+2026-11-08T16:56:27.005Z [INFO] No Nexus services registered, not polling for Nexus tasks { sdkComponent: 'worker', taskQueue: 'sla-workflows' }
+
+[32minfo[39m: Worker starting... {"taskQueue":"alga-jobs","timestamp":"2026-11-08T16:56:27.004Z"}
+2026-11-08T16:56:27.004Z [INFO] Worker state changed {
+  sdkComponent: 'worker',
+  taskQueue: 'sla-workflows',
+  state: 'RUNNING'
+}
+2026-11-08T16:56:27.005Z [INFO] No Nexus services registered, not polling for Nexus tasks { sdkComponent: 'worker', taskQueue: 'sla-workflows' }
+2026-11-08T16:56:27.006Z [INFO] Worker state changed { sdkComponent: 'worker', taskQueue: 'alga-jobs', state: 'RUNNING' }
+
+2026-11-08T16:57:27.091Z [INFO] SLA escalation completed {
+  sdkComponent: 'activity',
+  taskQueue: 'sla-workflows',
+  isLocal: false,
+  attempt: 1,
+  namespace: 'sla-email-repair-20261108',
+  workflowId: 'human-review-3d5269d8-0000-4000-8000-00000000020b',
+
+2026-11-08T16:57:27.093Z [INFO] SLA escalation completed {
+  sdkComponent: 'activity',
+  taskQueue: 'sla-workflows',
+  isLocal: false,
+  attempt: 1,
+  namespace: 'sla-email-repair-20261108',
+  workflowId: 'human-review-3d5269d8-0000-4000-8000-00000000020a',
+
+2026-11-08T17:01:24.311Z [INFO] SLA escalation completed {
+  sdkComponent: 'activity',
+  taskQueue: 'sla-workflows',
+  isLocal: false,
+  attempt: 1,
+  namespace: 'sla-email-repair-20261108',
+  workflowId: 'sla-email-repair-failure-20261108-30c',
+
+2026-11-08T17:04:48.268Z [INFO] SLA escalation completed {
+  sdkComponent: 'activity',
+  taskQueue: 'sla-workflows',
+  isLocal: false,
+  attempt: 1,
+  namespace: 'sla-email-repair-20261108',
+  workflowId: 'sla-email-repair-failure-final-20261108-30d',
+
+2026-11-08T17:09:48.711Z [INFO] SLA escalation completed {
+  sdkComponent: 'activity',
+  taskQueue: 'sla-workflows',
+  isLocal: false,
+  attempt: 1,
+  namespace: 'sla-email-repair-20261108',
+  workflowId: 'sla-email-repair-failure-final-20261108-30e',
+
+SLA escalation email delivery failed {
+  ticketId: '3d5269d8-0000-4000-8000-00000000030e',
+  auditLogId: 'e39cf4e4-343c-4f17-bdf6-145374542cbc',
+  error: Error: Email provider not ready: SMTP initialization failed: connect ECONNREFUSED 127.0.0.1:1
+      at EmailNotificationService.sendNotification (file:///home/robert/alga-copies/feature-sla-escalation-email-worker-email-stub-drops-mai/ee/temporal-workflows/dist/packages/notifications/src/notifications/email.js:298:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Object.connectionHook (file:///home/robert/alga-copies/feature-sla-escalation-email-worker-email-stub-drops-mai/ee/temporal-workflows/dist/packages/sla/src/services/escalationService.js:336:23)
+      at async flushAfterCommitHooks (file:///home/robert/alga-copies/feature-sla-escalation-email-worker-email-stub-drops-mai/ee/temporal-workflows/dist/packages/db/src/lib/afterCommit.js:100:21)

@@ -374,7 +374,7 @@ export const updateContractLineService = withAuth(async (
         throw new Error(`Configuration for service ${serviceId} in contract line ${contractLineId} not found`);
       }
 
-      const baseUpdates: Partial<IContractLineServiceConfiguration> = {};
+      const baseUpdates: Pick<IContractLineServiceConfiguration, 'quantity' | 'custom_rate'> = {};
       if (updates.quantity !== undefined) {
         baseUpdates.quantity = updates.quantity;
       }

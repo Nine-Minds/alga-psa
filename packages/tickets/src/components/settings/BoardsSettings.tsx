@@ -1616,6 +1616,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
 
   const saveDisabled =
     isLoadingBoardStatuses ||
+    isLoadingCloseRules ||
+    !formSnapshot ||
     !trimmedBoardName ||
     isDuplicateBoardName ||
     (shouldManageTicketStatuses && Boolean(ticketStatusValidationError)) ||

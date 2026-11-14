@@ -360,6 +360,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  resolveTenantToday: async () => (await import('@js-temporal/polyfill')).Temporal.Now.plainDateISO('UTC'),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   requireTenantId: vi.fn(),

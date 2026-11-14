@@ -1078,6 +1078,7 @@ async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<Au
   const clientId = parseNullableUuid(actor?.client_id ?? actor?.clientId);
   const userType = actor?.user_type === 'internal' || actor?.user_type === 'client' || actor?.user_type === 'service' ? actor.user_type : 'internal';
   return {
+    // LEVERAGE: pattern authorization-subject-resolution — workflow project actions hand-build a subject (under a transaction lock); the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
     tenant: tx.tenantId,
     userId: tx.actorUserId,
     userType,

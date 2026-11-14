@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -86,7 +87,8 @@ async function createUser(tenantId: string): Promise<string> {
 
 function contextFor(tenantId: string) {
   const userId = uuidv4();
-  return { tenant: tenantId, userId, user: { user_id: userId, user_type: 'internal' } } as any;
+  // Shaped like an authenticated API user: the row carries its tenant, as SafeApiUser does.
+  return { tenant: tenantId, userId, user: { user_id: userId, tenant: tenantId, user_type: 'internal' } } as any;
 }
 
 function service<T>(Ctor: new () => T, tenantId: string): T {
@@ -289,7 +291,7 @@ const supportedCases: SupportedCase[] = [
     updatedColumn: 'updated_at',
     insert: async (tenantId, fixtures) => {
       const assetId = uuidv4();
-      await tenantTable(tenantId, 'assets').insert({
+      await insertTestAssets(db, {
         tenant: tenantId,
         asset_id: assetId,
         asset_tag: `A-${assetId.slice(0, 8)}`,
@@ -487,7 +489,7 @@ describe('list range filters across BaseService-backed resources (real schema)',
     const tenantId = await createTenant();
     const clientId = await createClient(tenantId);
     const assetId = uuidv4();
-    await tenantTable(tenantId, 'assets').insert({
+    await insertTestAssets(db, {
       tenant: tenantId,
       asset_id: assetId,
       asset_tag: `A-${assetId.slice(0, 8)}`,

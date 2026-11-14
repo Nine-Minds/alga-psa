@@ -83,6 +83,21 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
     authorizeResource: authorizeResourceMock,
+    authorizeMutation: authorizeResourceMock,
+  })),
+}));
+
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (_knex, { tenant, user, apiKeyId }) => ({
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type ?? 'internal',
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    portfolioClientIds: [],
+    ...(apiKeyId ? { apiKeyId } : {}),
   })),
 }));
 

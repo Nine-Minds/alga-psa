@@ -107,6 +107,20 @@
     }
   },
   "contractDetail": {
+    "simulatorLoading": "Simulator wird geladen...",
+    "unnamedBoard": "Unbenanntes Board",
+    "notFound": "Vertrag nicht gefunden",
+    "loadFailed": "Vertrag konnte nicht geladen werden",
+    "invoicesLoadFailed": "Rechnungen für diese Vertragszuweisung konnten nicht geladen werden.",
+    "deleteFailed": "Vertrag konnte nicht gelöscht werden",
+    "backToContracts": "Zurück zu Verträgen",
+    "viewSourceQuote": "Ursprüngliches Angebot anzeigen",
+    "clientDrawer": {
+      "loading": "Wird geladen…",
+      "notFound": "Kunde nicht gefunden.",
+      "openClient": "Kunde öffnen",
+      "loadFailed": "Kundendetails konnten nicht geladen werden."
+    },
     "alerts": {
       "saveSuccess": "Vertrag erfolgreich gespeichert!",
       "unsavedChanges": "Sie haben nicht gespeicherte Änderungen. Klicken Sie auf \"Änderungen speichern\", um sie anzuwenden."

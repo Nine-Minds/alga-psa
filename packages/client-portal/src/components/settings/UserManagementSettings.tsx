@@ -443,7 +443,7 @@ export function UserManagementSettings() {
           <span className="text-sm">
             {roles.length > 0
               ? roles.map(role => role.role_name).join(', ')
-              : 'No roles assigned'}
+              : tProfile('clientSettings.users.noRolesAssigned', 'No roles assigned')}
           </span>
         );
       },
@@ -497,7 +497,7 @@ export function UserManagementSettings() {
                 variant="ghost"
                 className="h-8 w-8 p-0"
               >
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{tCommon('actions.openMenu', 'Open menu')}</span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -655,7 +655,7 @@ export function UserManagementSettings() {
         onClose={resetDeleteState}
         onConfirmDelete={confirmDelete}
         onAlternativeAction={handleDeleteAlternativeAction}
-        entityName={userToDelete ? `${userToDelete.first_name ?? ''} ${userToDelete.last_name ?? ''}`.trim() || 'this user' : 'this user'}
+        entityName={userToDelete ? `${userToDelete.first_name ?? ''} ${userToDelete.last_name ?? ''}`.trim() || tProfile('clientSettings.users.thisUser', 'this user') : tProfile('clientSettings.users.thisUser', 'this user')}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
@@ -664,7 +664,7 @@ export function UserManagementSettings() {
         id="client-portal-deactivate-user-disposition"
         isOpen={Boolean(userToDeactivate && openWorkCounts)}
         onClose={resetDispositionState}
-        title="Deactivate user and dispose of open work"
+        title={tProfile('clientSettings.users.deactivate.title', 'Deactivate user and dispose of open work')}
         className="max-w-lg"
         allowOverflow
         footer={
@@ -689,7 +689,9 @@ export function UserManagementSettings() {
                   !taskDisposition.assigneeId)
               }
             >
-              {isDeleteProcessing ? "Deactivating…" : "Deactivate user"}
+              {isDeleteProcessing
+                ? tProfile('clientSettings.users.deactivate.deactivating', 'Deactivating…')
+                : tProfile('clientSettings.users.deactivate.confirm', 'Deactivate user')}
             </Button>
           </div>
         }
@@ -698,10 +700,9 @@ export function UserManagementSettings() {
           <p className="text-sm text-[rgb(var(--color-text-700))]">
             {userToDeactivate
               ? `${userToDeactivate.first_name ?? ""} ${userToDeactivate.last_name ?? ""}`.trim() ||
-                "This user"
-              : "This user"}{" "}
-            has open work. Choose what should happen before they are
-            deactivated.
+                tProfile('clientSettings.users.deactivate.thisUserCapitalized', 'This user')
+              : tProfile('clientSettings.users.deactivate.thisUserCapitalized', 'This user')}{" "}
+            {tProfile('clientSettings.users.deactivate.openWorkPrompt', 'has open work. Choose what should happen before they are deactivated.')}
           </p>
 
           <div className="mt-4 space-y-4">
@@ -712,6 +713,7 @@ export function UserManagementSettings() {
                 disposition={ticketDisposition}
                 onChange={changeDisposition}
                 disableReassign={activeAssignees.length === 0}
+                t={tProfile}
               />
             )}
             {openWorkCounts && openWorkCounts.openProjectTasks > 0 && (
@@ -721,6 +723,7 @@ export function UserManagementSettings() {
                 disposition={taskDisposition}
                 onChange={changeDisposition}
                 disableReassign={activeAssignees.length === 0}
+                t={tProfile}
               />
             )}
 
@@ -728,7 +731,7 @@ export function UserManagementSettings() {
               taskDisposition.action === "reassign") && (
               <div>
                 <Label htmlFor="deactivation-reassignment-user">
-                  Reassign open work to
+                  {tProfile('clientSettings.users.deactivate.reassignTo', 'Reassign open work to')}
                 </Label>
                 <CustomSelect
                   id="deactivation-reassignment-user"
@@ -746,13 +749,13 @@ export function UserManagementSettings() {
                       `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() ||
                       user.email,
                   }))}
-                  placeholder="Select an active internal user"
+                  placeholder={tProfile('clientSettings.users.deactivate.selectAssignee', 'Select an active internal user')}
                   disabled={activeAssignees.length === 0}
                   className="mt-1"
                 />
                 {activeAssignees.length === 0 && (
                   <p className="mt-1 text-sm text-destructive">
-                    No active internal user is available for reassignment.
+                    {tProfile('clientSettings.users.deactivate.noAssignee', 'No active internal user is available for reassignment.')}
                   </p>
                 )}
               </div>
@@ -777,6 +780,7 @@ export function UserManagementSettings() {
                   ticketDisposition,
                   taskDisposition,
                   activeAssignees,
+                  tProfile,
                 )}
               </span>
             </label>
@@ -787,12 +791,15 @@ export function UserManagementSettings() {
   );
 }
 
+type DispositionT = (key: string, options: Record<string, unknown> & { defaultValue: string }) => string;
+
 function DispositionBucket({
   bucket,
   count,
   disposition,
   onChange,
   disableReassign,
+  t,
 }: {
   bucket: "tickets" | "tasks";
   count: number;
@@ -802,12 +809,15 @@ function DispositionBucket({
     action: OpenWorkDisposition["action"],
   ) => void;
   disableReassign: boolean;
+  t: DispositionT;
 }) {
-  const label = bucket === "tickets" ? "Tickets" : "Project tasks";
+  const label = bucket === "tickets"
+    ? t("clientSettings.users.deactivate.buckets.tickets", { defaultValue: "Tickets" })
+    : t("clientSettings.users.deactivate.buckets.tasks", { defaultValue: "Project tasks" });
   return (
     <fieldset className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
       <legend className="px-1 text-sm font-medium text-[rgb(var(--color-text-900))]">
-        {count} open {label.toLowerCase()}
+        {t("clientSettings.users.deactivate.openCount", { defaultValue: "{{count}} open {{label}}", count, label: label.toLowerCase() })}
       </legend>
       <div className="mt-2 flex flex-wrap gap-4">
         {(["reassign", "unassign", "archive"] as const).map((action) => (
@@ -826,10 +836,10 @@ function DispositionBucket({
               onChange={() => onChange(bucket, action)}
             />
             {action === "reassign"
-              ? "Reassign"
+              ? t("clientSettings.users.deactivate.actions.reassign", { defaultValue: "Reassign" })
               : action === "unassign"
-                ? "Unassign"
-                : "Archive"}
+                ? t("clientSettings.users.deactivate.actions.unassign", { defaultValue: "Unassign" })
+                : t("clientSettings.users.deactivate.actions.archive", { defaultValue: "Archive" })}
           </label>
         ))}
       </div>
@@ -844,6 +854,7 @@ function buildDispositionSummary(
   assignees: Array<
     Pick<IUser, "user_id" | "first_name" | "last_name" | "email">
   >,
+  t: DispositionT,
 ): string {
   const describe = (
     count: number,
@@ -852,28 +863,32 @@ function buildDispositionSummary(
   ) => {
     if (count === 0) return null;
     if (disposition.action === "archive")
-      return `${count} ${label} will be archived`;
+      return t("clientSettings.users.deactivate.summary.archived", { defaultValue: "{{count}} {{label}} will be archived", count, label });
     if (disposition.action === "unassign")
-      return `${count} ${label} will be unassigned`;
+      return t("clientSettings.users.deactivate.summary.unassigned", { defaultValue: "{{count}} {{label}} will be unassigned", count, label });
     const assignee = assignees.find(
       (user) => user.user_id === disposition.assigneeId,
     );
     const name = assignee
       ? `${assignee.first_name ?? ""} ${assignee.last_name ?? ""}`.trim() ||
         assignee.email
-      : "the selected user";
-    return `${count} ${label} will be reassigned to ${name}`;
+      : t("clientSettings.users.deactivate.selectedUser", { defaultValue: "the selected user" });
+    return t("clientSettings.users.deactivate.summary.reassigned", { defaultValue: "{{count}} {{label}} will be reassigned to {{name}}", count, label, name });
   };
   return (
     [
       describe(
         counts.openTickets,
-        counts.openTickets === 1 ? "ticket" : "tickets",
+        counts.openTickets === 1
+          ? t("clientSettings.users.deactivate.labels.ticket", { defaultValue: "ticket" })
+          : t("clientSettings.users.deactivate.labels.tickets", { defaultValue: "tickets" }),
         tickets,
       ),
       describe(
         counts.openProjectTasks,
-        counts.openProjectTasks === 1 ? "project task" : "project tasks",
+        counts.openProjectTasks === 1
+          ? t("clientSettings.users.deactivate.labels.projectTask", { defaultValue: "project task" })
+          : t("clientSettings.users.deactivate.labels.projectTasks", { defaultValue: "project tasks" }),
         tasks,
       ),
     ]

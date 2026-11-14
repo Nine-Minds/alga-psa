@@ -77,7 +77,8 @@ export const createUserSchema = z.object({
   two_factor_enabled: z.boolean().optional().default(false),
   is_google_user: z.boolean().optional().default(false),
   is_inactive: z.boolean().optional().default(false),
-  role_ids: z.array(uuidSchema).min(1, 'At least one role is required').optional()
+  // Required: a user is never created without a role (there is no zero-role state).
+  role_ids: z.array(uuidSchema).min(1, 'At least one role is required')
 });
 
 // Update user schema (all fields optional except constraints)

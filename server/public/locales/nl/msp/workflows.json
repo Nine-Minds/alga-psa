@@ -715,7 +715,8 @@
         "title": "Workflowacties",
         "unavailable": "Niet beschikbaar",
         "unlimitedPlan": "Onbeperkt abonnement",
-        "unlimitedRemaining": "Onbeperkt"
+        "unlimitedRemaining": "Onbeperkt",
+        "unlimited": "Onbeperkt"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Herhalen zolang in status",
       "statusAgeRepeatEvery": "Herhaal elke (dagen)",
       "statusAgeNoActivity": "Alleen als er in die tijd geen activiteit is geweest (reacties of wijzigingen door personen)",
-      "statusAgeSummary": "Wordt dagelijks om {{time}} ({{timezone}}) uitgevoerd voor elk ticket dat het ingestelde aantal dagen in de gekozen status staat"
+      "statusAgeSummary": "Wordt dagelijks om {{time}} ({{timezone}}) uitgevoerd voor elk ticket dat het ingestelde aantal dagen in de gekozen status staat",
+      "saving": "Opslaan...",
+      "saveSettings": "Instellingen opslaan"
     },
     "stepPanel": {
       "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
@@ -877,7 +880,13 @@
       "durationSummary": "Wacht {{duration}}.",
       "durationEmpty": "Voer in hoe lang er gewacht moet worden, in een van deze eenheden.",
       "notFoundInTry": "Deze stap staat binnen een Try. Als er niets wordt gevonden, gaat de workflow nu door, dus de Catch-tak wordt niet uitgevoerd. Laat de stap in plaats daarvan mislukken zodat Catch een ontbrekend record kan afhandelen.",
-      "notFoundFailAction": "Laten mislukken zodat Catch het kan afhandelen"
+      "notFoundFailAction": "Laten mislukken zodat Catch het kan afhandelen",
+      "operatorLabel": "Operator",
+      "removeFilter": "Verwijderen",
+      "valuesCommaSeparated": "Waarden (gescheiden door komma's)",
+      "valueLabel": "Waarde",
+      "absoluteTimestampHint": "Opgeslagen als een absoluut tijdstempel in de huidige tijdzone van uw browser.",
+      "saveAsConflict": "\"{{saveAs}}\" conflicteert met een bestaand uitvoerpad van een stap"
     },
     "mappingExpr": {
       "add": "Toevoegen",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Knooppuntconfiguratie",
       "stepSettings": "Stapinstellingen",
-      "missingRequired": "Ontbrekende verplichte velden: {{fields}}"
+      "missingRequired": "Ontbrekende verplichte velden: {{fields}}",
+      "advancedOptions": "Geavanceerde opties",
+      "invalidJson": "Ongeldige JSON"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1096,7 +1107,10 @@
         "valid": "Geldig",
         "unknown": "Onbekend"
       },
-      "errors": "Validatiefouten"
+      "errors": "Validatiefouten",
+      "errorsHeading": "Validatiefouten",
+      "warningsHeading": "Validatiewaarschuwingen",
+      "stepFallbackName": "Stap {{index}}"
     },
     "discardDialog": {
       "title": "Niet-opgeslagen wijzigingen negeren?",
@@ -1365,7 +1379,8 @@
       "publishFailed": "Kan workflow niet publiceren",
       "publishValidationErrors": "Publiceren mislukt - corrigeer validatiefouten",
       "systemEventMissingSchema": "Deze systeemgebeurtenis heeft geen geldig schema en kan niet worden geselecteerd totdat dit is opgelost.",
-      "publishedVersion": "Versie {{version}} gepubliceerd. Nieuwe uitvoeringen gebruiken deze versie."
+      "publishedVersion": "Versie {{version}} gepubliceerd. Nieuwe uitvoeringen gebruiken deze versie.",
+      "copiedPath": "Gekopieerd: {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Eigenschappenpaneel vergroten/verkleinen",
@@ -1391,7 +1406,29 @@
       "mappingTitle": "Trigger-mapping",
       "mappingNotRequired": "Mapping: Niet vereist.",
       "mappingErrors": "Mapping-fouten",
-      "mappingWarnings": "Mapping-waarschuwingen"
+      "mappingWarnings": "Mapping-waarschuwingen",
+      "eventSchemaTitle": "Schema van de triggergebeurtenis",
+      "effectiveSourceSchemaTitle": "Effectief bronschema van de trigger",
+      "eventMissingSchemaRef": "Deze gebeurtenis heeft geen geldige schemareferentie. Publiceren en uitvoeren zijn uitgeschakeld totdat dit is opgelost.",
+      "eventNotInCatalogPrefix": "Triggergebeurtenis",
+      "eventNotInCatalogSuffix": "staat niet in de gebeurteniscatalogus. Publiceren en uitvoeren zijn uitgeschakeld totdat dit is opgelost.",
+      "eventCatalogLoadFailed": "Laden van de gebeurteniscatalogus mislukt. Voor workflows met een gebeurtenistrigger zijn publiceren en uitvoeren uitgeschakeld totdat de catalogus is geladen.",
+      "mappingCustomActive": "Aangepaste triggermapping is actief.",
+      "mappingRequired": "Triggermapping is vereist om deze workflow uit te voeren.",
+      "mappingOptionalActive": "Optionele triggermapping is actief.",
+      "usingTriggerPayload": "De triggerpayload wordt gebruikt als workflowinvoer.",
+      "triggerLabel": "Trigger:",
+      "noSourceSchemaPrefix": "Er is nog geen bronschema beschikbaar voor deze gebeurtenis. Voeg",
+      "noSourceSchemaSuffix": "toe in de gebeurteniscatalogus of stel een overschrijving in.",
+      "mappingRequiredMismatch": "Mapping is vereist omdat het triggerschema en het invoerschema van de workflow niet overeenkomen.",
+      "useEventSchema": "Gebeurtenisschema gebruiken",
+      "configureMapping": "Mapping configureren",
+      "hideMapping": "Mapping verbergen",
+      "showMapping": "Mapping weergeven",
+      "mapDataFromPrefix": "Koppel gegevens uit",
+      "mapDataFromSuffix": "aan de workflowinvoer.",
+      "viewSchema": "Schema bekijken",
+      "viewEffective": "Effectief schema bekijken"
     },
     "schemaSettings": {
       "lockVersion": "Schemaversie vergrendelen",
@@ -1406,12 +1443,39 @@
       "notLoaded": "Schema nog niet geladen.",
       "loadPreviewFailed": "Voorbeeld van schema laden mislukt.",
       "selectVersionPlaceholder": "Schemaversie selecteren…",
-      "payloadRefAdvanced": "Payload-schemareferentie (geavanceerd)"
+      "payloadRefAdvanced": "Payload-schemareferentie (geavanceerd)",
+      "triggerSchemaTitle": "Triggerschema",
+      "clockTriggerPinned": "Kloktriggers blijven altijd vastgezet op het vaste klokcontract van de workflow.",
+      "hide": "Verbergen",
+      "edit": "Bewerken",
+      "clear": "Wissen",
+      "hideFields": "Velden verbergen",
+      "previewFields": "Velden weergeven",
+      "viewJsonSchema": "JSON-schema bekijken",
+      "viewPublished": "Gepubliceerd schema bekijken",
+      "noTopLevelProperties": "Geen eigenschappen op het hoogste niveau.",
+      "hideAdvanced": "Geavanceerde schema-instellingen verbergen",
+      "modeLabel": "Modus:",
+      "modePinned": "Vastgezet",
+      "modeInferred": "Afgeleid",
+      "close": "Sluiten",
+      "loadingSchema": "Schema laden…",
+      "publishedContractSchema": "Gepubliceerd contractschema",
+      "publishedSnapshot": "Momentopname van het gepubliceerde schema.",
+      "publishedSnapshotMissing": "De momentopname van het gepubliceerde schema ontbreekt; de huidige uitvoer van het schemaregister wordt weergegeven.",
+      "publishedLoadFailed": "Laden van het gepubliceerde schema mislukt.",
+      "noPublishedSnapshot": "Er is geen momentopname van het gepubliceerde schema opgeslagen voor versie {{version}}.",
+      "noPublishedSnapshotWithRef": "Er is geen momentopname van het gepubliceerde schema opgeslagen voor versie {{version}}. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Veld invoegen",
       "enterPlaceholder": "Expressie invoeren...",
-      "conditionPlaceholder": "bijv. payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "bijv. payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Expressiefouten",
+      "warningsHeading": "Waarschuwingen",
+      "infoHeading": "Expressie-informatie",
+      "invalid": "Ongeldige expressie",
+      "invalidWithReason": "Ongeldige expressie: {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Beschikbare gegevens bij deze stap",
@@ -1422,7 +1486,11 @@
       "outputSchemaUnavailable": "Uitvoerschema niet beschikbaar",
       "noFields": "Geen velden",
       "copyAllPaths": "Alle paden kopiëren",
-      "copyAllFieldPaths": "Alle veldpaden kopiëren"
+      "copyAllFieldPaths": "Alle veldpaden kopiëren",
+      "copyPath": "{{path}} kopiëren",
+      "copied": "Gekopieerd!",
+      "noPreviousSteps": "Geen eerdere stappen waarvoor \"Resultaat opslaan als\" is ingesteld",
+      "globals": "Globale variabelen"
     },
     "logoAlt": "Logo van de workfloweditor",
     "nodes": {
@@ -1581,6 +1649,42 @@
         "loadError": "Overgeslagen gebeurtenissen laden mislukt.",
         "empty": "Geen overgeslagen gebeurtenissen in deze periode."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "is gelijk aan",
+      "notEquals": "is niet gelijk aan",
+      "in": "komt voor in",
+      "notIn": "komt niet voor in",
+      "exists": "bestaat",
+      "notExists": "bestaat niet",
+      "greaterThan": "groter dan",
+      "greaterThanOrEqual": "groter dan of gelijk aan",
+      "lessThan": "kleiner dan",
+      "lessThanOrEqual": "kleiner dan of gelijk aan",
+      "contains": "bevat",
+      "startsWith": "begint met",
+      "endsWith": "eindigt op"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "Het payload-schema van de datumtrigger moet overeenkomen met de geselecteerde bron.",
+      "eventCatalogLoadFailed": "Laden van de gebeurteniscatalogus mislukt. Publiceren en uitvoeren zijn uitgeschakeld totdat de catalogus is geladen.",
+      "triggerEventMissing": "Triggergebeurtenis \"{{eventName}}\" staat niet in de gebeurteniscatalogus.",
+      "eventSchemaInvalid": "{{sourceLabel}} \"{{eventName}}\" {{schemaLabel}}. Voeg een geldig schema toe aan de vermelding in de gebeurteniscatalogus voordat u publiceert of uitvoert.",
+      "timeTriggerFixedContract": "Workflows met een tijdtrigger gebruiken het vaste klok-payloadcontract en kunnen geen ander schema afleiden of overschrijven.",
+      "manualMustPin": "Voor handmatige workflows moet een payload-schema worden vastgezet voordat u publiceert of uitvoert.",
+      "registryLoadFailed": "Laden van het schemaregister mislukt. Publiceren en uitvoeren zijn uitgeschakeld totdat het register is geladen.",
+      "noSchemaForEvent": "Er is geen schema beschikbaar voor triggergebeurtenis \"{{eventName}}\". Publiceren en uitvoeren zijn uitgeschakeld totdat dit is opgelost.",
+      "unknownSchemaRef": "De payload-schemareferentie \"{{ref}}\" van de workflow is onbekend. Publiceren en uitvoeren zijn uitgeschakeld totdat dit is opgelost.",
+      "fixMappingErrors": "Los de mappingfouten in de workflow op voordat u publiceert of uitvoert.",
+      "fixValidationErrors": "Los de validatiefouten in de workflow op voordat u publiceert of uitvoert.",
+      "eventCatalogLoading": "De gebeurteniscatalogus wordt nog geladen. Uitvoeren is uitgeschakeld totdat de catalogus is geladen.",
+      "registryLoading": "Het schemaregister wordt nog geladen. Uitvoeren is uitgeschakeld totdat het register is geladen.",
+      "eventCatalogLoadingPublish": "De gebeurteniscatalogus wordt nog geladen. Publiceren is uitgeschakeld totdat de catalogus is geladen.",
+      "registryLoadingPublish": "Het schemaregister wordt nog geladen. Publiceren is uitgeschakeld totdat het register is geladen.",
+      "systemEvent": "Systeemgebeurtenis",
+      "tenantEvent": "Tenantgebeurtenis",
+      "missingSchemaRef": "heeft geen schemareferentie",
+      "unknownSchemaRefShort": "heeft een onbekende schemareferentie"
     }
   },
   "actionInputFieldInfo": {

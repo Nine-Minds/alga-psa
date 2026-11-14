@@ -20,6 +20,7 @@ export default defineConfig({
       'src/{app,components,lib,services}/**/*.{db,integration}.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'src/test/unit/**/*.db.test.?(c|m)[jt]s?(x)',
+      'src/test/integration/**/*.db.test.?(c|m)[jt]s?(x)',
       'src/test/contract/**/*.db.test.?(c|m)[jt]s?(x)',
       '../packages/**/*.db.test.?(c|m)[jt]s?(x)',
       '../shared/**/*.db.test.?(c|m)[jt]s?(x)',

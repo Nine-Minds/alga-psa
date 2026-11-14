@@ -715,7 +715,8 @@
         "title": "Workflow actions",
         "unavailable": "Unavailable",
         "unlimitedPlan": "Unlimited plan",
-        "unlimitedRemaining": "Unlimited"
+        "unlimitedRemaining": "Unlimited",
+        "unlimited": "Unlimited"
       }
     },
     "toolbar": {
@@ -831,7 +832,9 @@
       "statusAgeRepeat": "Repeat while in status",
       "statusAgeRepeatEvery": "Repeat every (days)",
       "statusAgeNoActivity": "Only if there has been no activity (comments or changes by people) for that long",
-      "statusAgeSummary": "Runs daily at {{time}} ({{timezone}}) for each ticket that has been in the chosen status for the set number of days"
+      "statusAgeSummary": "Runs daily at {{time}} ({{timezone}}) for each ticket that has been in the chosen status for the set number of days",
+      "saving": "Saving...",
+      "saveSettings": "Save Settings"
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",
@@ -877,7 +880,13 @@
       "durationSummary": "Waits {{duration}}.",
       "durationEmpty": "Enter how long to wait, in any of these units.",
       "notFoundInTry": "This step is inside a Try. If nothing is found it currently continues, so the Catch branch won’t run. Make it fail instead to let Catch handle a missing record.",
-      "notFoundFailAction": "Fail so Catch can handle it"
+      "notFoundFailAction": "Fail so Catch can handle it",
+      "operatorLabel": "Operator",
+      "removeFilter": "Remove",
+      "valuesCommaSeparated": "Values (comma separated)",
+      "valueLabel": "Value",
+      "absoluteTimestampHint": "Stored as an absolute timestamp using your current browser timezone.",
+      "saveAsConflict": "\"{{saveAs}}\" conflicts with an existing step output path"
     },
     "mappingExpr": {
       "add": "Add",
@@ -889,7 +898,9 @@
     "schemaForm": {
       "sectionTitle": "Node Configuration",
       "stepSettings": "Step settings",
-      "missingRequired": "Missing required: {{fields}}"
+      "missingRequired": "Missing required: {{fields}}",
+      "advancedOptions": "Advanced Options",
+      "invalidJson": "Invalid JSON"
     },
     "fieldMetadata": {
       "actionId": {
@@ -1042,7 +1053,10 @@
         "valid": "Valid",
         "unknown": "Unknown"
       },
-      "errors": "Validation errors"
+      "errors": "Validation errors",
+      "errorsHeading": "Validation Errors",
+      "warningsHeading": "Validation Warnings",
+      "stepFallbackName": "Step {{index}}"
     },
     "discardDialog": {
       "title": "Discard unsaved changes?",
@@ -1243,7 +1257,8 @@
       "publishFailed": "Failed to publish workflow",
       "publishValidationErrors": "Publish failed - fix validation errors",
       "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed.",
-      "publishedVersion": "Published version {{version}}. New runs use this version."
+      "publishedVersion": "Published version {{version}}. New runs use this version.",
+      "copiedPath": "Copied: {{path}}"
     },
     "propsPanel": {
       "resizeAria": "Resize properties panel",
@@ -1269,7 +1284,29 @@
       "mappingTitle": "Trigger mapping",
       "mappingNotRequired": "Mapping: Not required.",
       "mappingErrors": "Mapping errors",
-      "mappingWarnings": "Mapping warnings"
+      "mappingWarnings": "Mapping warnings",
+      "eventSchemaTitle": "Trigger event schema",
+      "effectiveSourceSchemaTitle": "Effective trigger source schema",
+      "eventMissingSchemaRef": "This event is missing a valid schema reference. Publishing and running are disabled until it is fixed.",
+      "eventNotInCatalogPrefix": "Trigger event",
+      "eventNotInCatalogSuffix": "is not present in the event catalog. Publishing and running are disabled until it is fixed.",
+      "eventCatalogLoadFailed": "Failed to load the event catalog. Publishing and running are disabled for event-triggered workflows until this loads.",
+      "mappingCustomActive": "Custom trigger mapping is active.",
+      "mappingRequired": "Trigger mapping is required to run this workflow.",
+      "mappingOptionalActive": "Optional trigger mapping is active.",
+      "usingTriggerPayload": "Using trigger payload as workflow input.",
+      "triggerLabel": "Trigger:",
+      "noSourceSchemaPrefix": "No source schema available for this event yet. Add",
+      "noSourceSchemaSuffix": "in the event catalog or set an override.",
+      "mappingRequiredMismatch": "Mapping is required because trigger schema and workflow input schema do not match.",
+      "useEventSchema": "Use event schema",
+      "configureMapping": "Configure mapping",
+      "hideMapping": "Hide mapping",
+      "showMapping": "Show mapping",
+      "mapDataFromPrefix": "Map data from",
+      "mapDataFromSuffix": "to workflow input.",
+      "viewSchema": "View schema",
+      "viewEffective": "View effective"
     },
     "schemaSettings": {
       "lockVersion": "Lock schema version",
@@ -1284,12 +1321,39 @@
       "notLoaded": "Schema not loaded yet.",
       "loadPreviewFailed": "Failed to load schema preview.",
       "selectVersionPlaceholder": "Select schema version…",
-      "payloadRefAdvanced": "Payload schema ref (advanced)"
+      "payloadRefAdvanced": "Payload schema ref (advanced)",
+      "triggerSchemaTitle": "Trigger schema",
+      "clockTriggerPinned": "Clock triggers always stay pinned to the fixed workflow clock contract.",
+      "hide": "Hide",
+      "edit": "Edit",
+      "clear": "Clear",
+      "hideFields": "Hide fields",
+      "previewFields": "Preview fields",
+      "viewJsonSchema": "View JSON schema",
+      "viewPublished": "View published",
+      "noTopLevelProperties": "No top-level properties.",
+      "hideAdvanced": "Hide advanced schema settings",
+      "modeLabel": "Mode:",
+      "modePinned": "Pinned",
+      "modeInferred": "Inferred",
+      "close": "Close",
+      "loadingSchema": "Loading schema…",
+      "publishedContractSchema": "Published contract schema",
+      "publishedSnapshot": "Published schema snapshot.",
+      "publishedSnapshotMissing": "Published schema snapshot missing; showing current schema registry output.",
+      "publishedLoadFailed": "Failed to load published schema.",
+      "noPublishedSnapshot": "No published schema snapshot is stored for version {{version}}.",
+      "noPublishedSnapshotWithRef": "No published schema snapshot is stored for version {{version}}. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Insert field",
       "enterPlaceholder": "Enter expression...",
-      "conditionPlaceholder": "e.g. payload.status = \"open\" and payload.count > 3"
+      "conditionPlaceholder": "e.g. payload.status = \"open\" and payload.count > 3",
+      "errorsHeading": "Expression errors",
+      "warningsHeading": "Warnings",
+      "infoHeading": "Expression info",
+      "invalid": "Invalid expression",
+      "invalidWithReason": "Invalid expression: {{reason}}"
     },
     "dataContext": {
       "availableDataAtStep": "Available Data at This Step",
@@ -1300,7 +1364,11 @@
       "outputSchemaUnavailable": "Output schema not available",
       "noFields": "No fields",
       "copyAllPaths": "Copy all paths",
-      "copyAllFieldPaths": "Copy all field paths"
+      "copyAllFieldPaths": "Copy all field paths",
+      "copyPath": "Copy {{path}}",
+      "copied": "Copied!",
+      "noPreviousSteps": "No previous steps with \"Save output as\" configured",
+      "globals": "Globals"
     },
     "logoAlt": "Workflow Editor Logo",
     "nodes": {
@@ -1459,6 +1527,42 @@
         "loadError": "Failed to load skipped events.",
         "empty": "No skipped events in this window."
       }
+    },
+    "waitFilterOperators": {
+      "equals": "equals",
+      "notEquals": "not equals",
+      "in": "in",
+      "notIn": "not in",
+      "exists": "exists",
+      "notExists": "not exists",
+      "greaterThan": "greater than",
+      "greaterThanOrEqual": "greater than or equal",
+      "lessThan": "less than",
+      "lessThanOrEqual": "less than or equal",
+      "contains": "contains",
+      "startsWith": "starts with",
+      "endsWith": "ends with"
+    },
+    "schemaPolicy": {
+      "dateTriggerMismatch": "Date trigger payload schema must match its selected source.",
+      "eventCatalogLoadFailed": "Event catalog failed to load. Publishing and running are disabled until it loads.",
+      "triggerEventMissing": "Trigger event \"{{eventName}}\" is not present in the event catalog.",
+      "eventSchemaInvalid": "{{sourceLabel}} \"{{eventName}}\" {{schemaLabel}}. Fix the event catalog entry to include a valid schema before publishing or running.",
+      "timeTriggerFixedContract": "Time-triggered workflows use the fixed clock payload contract and cannot infer or override a different schema.",
+      "manualMustPin": "Manual workflows must pin a payload schema before publishing or running.",
+      "registryLoadFailed": "Schema registry failed to load. Publishing and running are disabled until it loads.",
+      "noSchemaForEvent": "No schema is available for trigger event \"{{eventName}}\". Publishing and running are disabled until it is fixed.",
+      "unknownSchemaRef": "Workflow payload schema ref \"{{ref}}\" is unknown. Publishing and running are disabled until it is fixed.",
+      "fixMappingErrors": "Fix workflow mapping errors before publishing or running.",
+      "fixValidationErrors": "Fix workflow validation errors before publishing or running.",
+      "eventCatalogLoading": "Event catalog is still loading. Running is disabled until it loads.",
+      "registryLoading": "Schema registry is still loading. Running is disabled until it loads.",
+      "eventCatalogLoadingPublish": "Event catalog is still loading. Publishing is disabled until it loads.",
+      "registryLoadingPublish": "Schema registry is still loading. Publishing is disabled until it loads.",
+      "systemEvent": "System event",
+      "tenantEvent": "Tenant event",
+      "missingSchemaRef": "is missing a schema ref",
+      "unknownSchemaRefShort": "has an unknown schema ref"
     }
   },
   "actionInputFieldInfo": {

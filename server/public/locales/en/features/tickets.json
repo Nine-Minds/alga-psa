@@ -65,7 +65,136 @@
     "unmatchedValuesIntro_few": "{{count}} values from your CSV couldn't be automatically matched.",
     "unmatchedValuesIntro_many": "{{count}} values from your CSV couldn't be automatically matched.",
     "warningCount_few": "{{count}} warnings:",
-    "warningCount_many": "{{count}} warnings:"
+    "warningCount_many": "{{count}} warnings:",
+    "title": "Import Tickets",
+    "errors": {
+      "readCsv": "Error reading CSV file",
+      "selectDefaultBoard": "Please select a default board",
+      "requiredFieldNotMapped": "Required field \"{{field}}\" is not mapped",
+      "processCsv": "Error processing CSV data",
+      "importTickets": "Error importing tickets"
+    },
+    "unnamedBoard": "Unnamed Board",
+    "boardOptionDefault": "{{board}} (default)",
+    "resolveUnmatchedData": "Resolve Unmatched Data",
+    "actions": {
+      "back": "Back",
+      "next": "Next",
+      "processing": "Processing...",
+      "preview": "Preview",
+      "import": "Import Tickets",
+      "downloadTemplate": "Download CSV Template"
+    },
+    "upload": {
+      "prompt": "Upload a CSV file with ticket data",
+      "requiredLabel": "Required:",
+      "optionalLabel": "Optional:",
+      "tipLabel": "Tip:",
+      "tip": "Column names from other PSAs (ConnectWise, Autotask, HaloPSA, Zendesk, Freshdesk) are auto-detected"
+    },
+    "board": {
+      "heading": "Select Board",
+      "description": "All tickets will be imported to this board. Statuses and categories are board-specific, so this determines which are available.",
+      "placeholder": "Select a board..."
+    },
+    "mapping": {
+      "heading": "Map Ticket Fields to CSV Columns",
+      "description": "Select which CSV column contains the data for each field. Fields marked with * are required.",
+      "fieldColumn": "Field",
+      "csvColumn": "Select CSV Column",
+      "notMapped": "Not mapped"
+    },
+    "preview": {
+      "heading": "Preview Import",
+      "totalRows": "Total rows:",
+      "valid": "Valid:",
+      "invalid": "Invalid:",
+      "skipInvalidRows": "Skip invalid rows",
+      "skipInvalidRowsHelp": "Continue import even if some rows have validation errors",
+      "yes": "Yes",
+      "no": "No",
+      "rowValid": "Valid",
+      "rowHasErrors": "Has errors",
+      "columns": {
+        "row": "Row",
+        "issues": "Issues"
+      },
+      "unmatchedCount": "{{count}} value(s)",
+      "unmatchedIntro": "from your CSV don't match existing data",
+      "unmatchedNextStep": "You'll resolve these in the next step.",
+      "invalidRowCount": "{{count}} row(s)",
+      "invalidRowsHelp": "have validation errors. Enable \"Skip invalid rows\" to proceed, or go back and fix your CSV."
+    },
+    "confirmLargeImport": "Confirm large import ({{count}} tickets)",
+    "confirmLargeImportHelp": "I understand this will create {{count}} ticket(s). This may take a while.",
+    "confirmLargeImportUpToHelp": "I understand this will create up to {{count}} ticket(s). This may take a while.",
+    "resolve": {
+      "chooseHandling": "Choose how to handle each one below.",
+      "sections": {
+        "clients": "Clients ({{count}} unmatched)",
+        "priorities": "Priorities ({{count}} unmatched)",
+        "statuses": "Statuses ({{count}} unmatched)",
+        "categories": "Categories ({{count}} unmatched)",
+        "agents": "Agents ({{count}} unmatched)",
+        "teams": "Teams ({{count}} unmatched)",
+        "contacts": "Contacts ({{count}} unmatched)",
+        "dateFormats": "Date Formats ({{count}} unrecognized)"
+      },
+      "required": "Required",
+      "itilCreateDisabled": "ITIL board — create disabled",
+      "needsInterpretation": "Needs interpretation",
+      "createNew": "Create new",
+      "mapToExisting": "Map to existing",
+      "useDefault": "Use default",
+      "useBoardDefault": "Use board default",
+      "skipUncategorized": "Skip (leave uncategorized)",
+      "skipUnassigned": "Skip (leave unassigned)",
+      "skipNoTeam": "Skip (no team assigned)",
+      "skipLeaveBlank": "Skip (leave blank)",
+      "clientTypeCompany": "Company",
+      "clientTypeIndividual": "Individual",
+      "clientTypePlaceholder": "Client type",
+      "selectClient": "Select client...",
+      "selectPriority": "Select priority...",
+      "selectStatus": "Select status...",
+      "selectCategory": "Select category...",
+      "selectTeam": "Select team...",
+      "selectContact": "Select contact...",
+      "onClient": "— on {{client}}",
+      "skippedTicketCount": "{{count}} ticket(s)",
+      "skippedDueToClients": "will be skipped due to skipped client resolutions.",
+      "dates": {
+        "help": "Some dates in your CSV couldn't be automatically read. Tell us how to interpret them.",
+        "lookLike": "Your dates look like:",
+        "totalCount": "({{count}} total)",
+        "thisMeans": "This means:",
+        "selectFormat": "Select format...",
+        "formats": {
+          "skip": "Skip these dates",
+          "mdySlash": "Month/Day/Year (US)",
+          "dmySlash": "Day/Month/Year (International)",
+          "mdySlashShort": "Month/Day/Year (2-digit year, US)",
+          "dmySlashShort": "Day/Month/Year (2-digit year, International)",
+          "mdyDash": "Month-Day-Year (US)",
+          "dmyDash": "Day-Month-Year (International)",
+          "ymdDot": "Year.Month.Day",
+          "dmyDot": "Day.Month.Year"
+        }
+      }
+    },
+    "importing": {
+      "title": "Importing tickets...",
+      "help": "This may take a moment for large imports."
+    },
+    "complete": {
+      "heading": "Import Complete",
+      "ticketNumbers": "Ticket numbers:",
+      "andMore": "... and {{count}} more",
+      "failedHeading": "Import Failed",
+      "noneCreated": "No tickets were created.",
+      "allSkipped_one": "All {{count}} ticket was skipped due to errors.",
+      "allSkipped_other": "All {{count}} tickets were skipped due to errors."
+    }
   },
   "title": "Support Tickets",
   "subtitle": "View and manage your support tickets",
@@ -127,7 +256,8 @@
     "droppedFromLink": "Some filters in this link are not valid and were ignored.",
     "clearFilters": "Clear filters",
     "location": "Location",
-    "requesterLocation": "Requester location"
+    "requesterLocation": "Requester location",
+    "selectStatus": "Select Status"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -233,7 +363,13 @@
     "linkedAssets": "Linked assets",
     "assetName": "Name",
     "assetTag": "Asset tag",
-    "assetType": "Type"
+    "assetType": "Type",
+    "noStatus": "No Status",
+    "noPriority": "No Priority",
+    "noClient": "No Client",
+    "multipleClients": "Multiple clients",
+    "noDueDate": "No due date",
+    "dueInDays": "in {{count}} days"
   },
   "actions": {
     "view": "View",
@@ -2753,6 +2889,13 @@
       "hours": "{{hours}}h",
       "daysHours": "{{days}}d {{hours}}h",
       "days": "{{days}}d"
+    },
+    "cell": {
+      "breached": "SLA breached",
+      "paused": "SLA paused",
+      "atRisk": "At risk",
+      "onTrack": "On track",
+      "remaining": "{{magnitude}} left"
     }
   },
   "cannedResponses": {
@@ -2963,5 +3106,167 @@
     "notConfigured": "No service level applies.",
     "empty": "No service level is being tracked for this ticket yet.",
     "loadError": "The service level could not be loaded."
+  },
+  "activityTimeline": {
+    "actor": {
+      "user": "A user",
+      "contact": "A contact",
+      "apiClient": "API client",
+      "workflow": "Workflow",
+      "system": "System"
+    },
+    "fields": {
+      "status": "status",
+      "priority": "priority",
+      "assignee": "assignee",
+      "team": "team",
+      "board": "board",
+      "category": "category",
+      "subcategory": "subcategory",
+      "client": "client",
+      "contact": "contact",
+      "dueDate": "due date",
+      "responseState": "response state",
+      "closedAt": "closed-at",
+      "closedBy": "closed-by",
+      "title": "title",
+      "url": "URL"
+    },
+    "externalSystemFallback": "an external system",
+    "annotation": {
+      "silentAll": "silent — no notifications",
+      "silentContact": "silent — contact not notified"
+    },
+    "events": {
+      "created": "{{actor}} created the ticket",
+      "createdFromTemplateNamed": "{{actor}} created this ticket from template \"{{templateName}}\"",
+      "createdFromTemplate": "{{actor}} created this ticket from a template",
+      "duplicatedFromNumber": "{{actor}} created this ticket as a duplicate of #{{ticketNumber}}",
+      "duplicatedFrom": "{{actor}} created this ticket as a duplicate of another ticket",
+      "duplicatedToNumber": "{{actor}} duplicated this ticket as #{{ticketNumber}}",
+      "duplicatedTo": "{{actor}} duplicated this ticket",
+      "closed": "{{actor}} closed the ticket",
+      "reopened": "{{actor}} reopened the ticket",
+      "reopenedByEmail": "Triggered by inbound email reply",
+      "bundleReopened": "Bundle master reopened",
+      "bundleReopenedSubtitle": "Triggered by a child-ticket reply",
+      "bundleStatusNotPropagated": "{{actor}} changed the bundle master status (children not updated)",
+      "bundleStatusPropagated": "{{actor}} {{action}} the bundle master and {{count}} child ticket(s)",
+      "bundleAction": {
+        "reopened": "reopened",
+        "closed": "closed"
+      },
+      "statusChanged": "{{actor}} changed the status",
+      "statusChangedSubtitle": "Status changed",
+      "priorityChanged": "{{actor}} changed the priority",
+      "priorityChangedSubtitle": "Priority changed",
+      "assigned": "{{actor}} assigned the ticket",
+      "unassigned": "{{actor}} unassigned the ticket",
+      "boardMoved": "{{actor}} moved the ticket to another board",
+      "responseStateUpdated": "{{actor}} updated the response state",
+      "internalNoteAdded": "{{actor}} added an internal note",
+      "replied": "{{actor}} replied",
+      "repliedViaEmail": "Received via inbound email",
+      "repliedViaPortal": "Received via client portal",
+      "commentAdded": "{{actor}} added a comment",
+      "commentEdited": "{{actor}} edited a comment",
+      "documentAttached": "{{actor}} attached a document",
+      "documentRemoved": "{{actor}} removed a document",
+      "inboundEmailReceived": "Inbound email received",
+      "updated": "{{actor}} updated the ticket",
+      "externalLinkAdded": "{{actor}} linked {{reference}}",
+      "externalLinkUpdated": "{{actor}} updated the {{reference}} link",
+      "externalLinkRemoved": "{{actor}} unlinked {{reference}}",
+      "fallback": "{{actor}} • {{eventType}}"
+    },
+    "comment": {
+      "added": "Comment added",
+      "internalNoteAdded": "Internal note added",
+      "customerReply": "Customer reply",
+      "inboundEmailReply": "Inbound email reply",
+      "actor": "See conversation tab"
+    },
+    "filters": {
+      "events": {
+        "all": "All events",
+        "created": "Ticket created",
+        "updated": "Ticket updated",
+        "statusChanged": "Status changed",
+        "closed": "Closed",
+        "reopened": "Reopened",
+        "priorityChanged": "Priority changed",
+        "assigned": "Assigned",
+        "unassigned": "Unassigned",
+        "boardMoved": "Board moved",
+        "responseState": "Response state",
+        "messageAdded": "Comment added",
+        "commentAdded": "Comment added",
+        "commentEdited": "Comment edited",
+        "internalNote": "Internal note",
+        "customerReply": "Customer reply",
+        "documentAttached": "Document attached",
+        "documentRemoved": "Document removed",
+        "inboundEmail": "Inbound email",
+        "createdFromTemplate": "Created from template",
+        "duplicatedFrom": "Duplicated from",
+        "duplicatedTo": "Duplicated to",
+        "bundleReopened": "Bundle reopened",
+        "bundleStatusPropagated": "Bundle status propagated"
+      },
+      "sources": {
+        "all": "All sources",
+        "clientPortal": "Client Portal",
+        "inboundEmail": "Inbound Email",
+        "workflow": "Workflow",
+        "system": "System",
+        "internalNote": "Internal Note"
+      },
+      "actors": {
+        "all": "All actors",
+        "user": "User",
+        "contact": "Contact",
+        "emailSender": "Email sender",
+        "workflow": "Workflow",
+        "system": "System"
+      },
+      "entries": {
+        "all": "All entries",
+        "activity": "Activity only",
+        "comments": "Comments only"
+      },
+      "entryType": "Type",
+      "eventType": "Event",
+      "source": "Source",
+      "actorType": "Actor",
+      "reset": "Reset filters"
+    },
+    "columns": {
+      "when": "When",
+      "event": "Event",
+      "source": "Source",
+      "actor": "Actor"
+    },
+    "actions": {
+      "hide": "Hide",
+      "details": "Details"
+    },
+    "errors": {
+      "loadFailed": "Failed to load ticket activity timeline.",
+      "loadFailedPrefix": "Failed to load activity timeline:"
+    },
+    "empty": {
+      "noActivity": "No activity yet. New events will appear here as the ticket changes.",
+      "noMatches": "No entries match the current filters."
+    }
+  },
+  "bundle": {
+    "toggleChildren": "Toggle bundle children",
+    "bundledTo": "Bundled → {{ticketNumber}}",
+    "master": "Master",
+    "openChildrenShort": "open"
+  },
+  "statusChange": {
+    "title": "Update Ticket Status",
+    "message": "Are you sure you want to change the status from \"{{from}}\" to \"{{to}}\"?"
   }
 }
