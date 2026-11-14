@@ -315,7 +315,7 @@
   {
     "id": "T035",
     "description": "E2E: a seat technician opens the time-entry dialog and saves an entry; the network log shows no service catalog, tax or contract request, and the stored entry is operational with no service or contract line.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066",
       "F067"

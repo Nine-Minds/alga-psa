@@ -8,10 +8,19 @@ export const fetchTimeEntriesParamsSchema = z.object({
 
 export type FetchTimeEntriesParams = z.infer<typeof fetchTimeEntriesParamsSchema>;
 
-export const saveTimeEntryParamsSchema = timeEntrySchema.extend({
+const saveTimeEntryBaseSchema = timeEntrySchema.extend({
   // When present, the save also logs this stopwatch session in the same transaction (plan D4/D6).
   stopwatch_session_id: z.string().guid().nullable().optional(),
-}).superRefine((data, ctx) => {
+});
+
+/**
+ * Operational mode (seat technician): the same shape without the service rule. The rule lives in
+ * `serviceRequiredForTimeEntry`; an operational entry never carries a service, and the write core
+ * rejects one that arrives with commercial fields.
+ */
+export const saveOperationalTimeEntryParamsSchema = saveTimeEntryBaseSchema;
+
+export const saveTimeEntryParamsSchema = saveTimeEntryBaseSchema.superRefine((data, ctx) => {
   if (!data.service_id?.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

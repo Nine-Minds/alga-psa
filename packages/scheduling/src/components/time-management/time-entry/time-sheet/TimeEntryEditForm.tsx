@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTimeEntryMode } from '../../../../context/TimeEntryModeContext';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { BillingAttributionInspector } from '@alga-psa/ui/components/BillingAttributionInspector';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
@@ -109,6 +110,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   );
   // The time source said this work needs no service: with none chosen the entry is operational (never billed).
   const isOperational = serviceOptional && !entry?.service_id?.trim();
+  // Server-resolved mode (seat technician): the commercial fields are not rendered and their loaders never run.
+  const operationalMode = useTimeEntryMode() === 'operational';
   const latestEntry = useRef(entry);
   latestEntry.current = entry;
   // Use work item times for ad-hoc entries - only update if values actually changed
@@ -304,6 +307,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
   // Get client ID from entry or work item
   useEffect(() => {
+    if (operationalMode) return; // Only contract-line eligibility needs the client; operational reads none.
     const fetchClientId = async () => {
       let resolvedClientId: string | null = null;
       if (entry?.client_id) {
@@ -331,7 +335,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     };
 
     fetchClientId();
-  }, [entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
+  }, [operationalMode, entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
 
   // Subject-zone calendar day of the entry (YYYY-MM-DD), the unit eligibility is judged in.
   const workDate = useMemo(() => {
@@ -347,6 +351,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
   // Load eligible contract lines and set default tax region when service or client ID changes
   useEffect(() => {
+    if (operationalMode) return; // No client, contract or tax lookup on the operational surface.
     let cancelled = false;
     const loadDataAndSetDefaults = async () => {
       // --- Removed Tax Region / Default Rate Logic ---
@@ -454,7 +459,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       loadDataAndSetDefaults();
     }
     return () => { cancelled = true; };
-  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, workDate, index, onUpdateEntry]);
+  }, [operationalMode, entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, workDate, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);
@@ -651,6 +656,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         </div>
       )}
 
+      {/* Commercial fields: not rendered in operational mode (the server resolved the mode). */}
+      {!operationalMode && (<>
       <div className="space-y-1.5">
         <label htmlFor={`${id}-service-${index}`} className="flex items-center gap-2 text-sm font-medium text-gray-700">
           <span>
@@ -759,6 +766,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           }
         />
       )}
+
+      </>)}
 
       {/*
         Date field — shown for both new and existing entries so a saved entry can be moved to a
@@ -909,6 +918,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               {t('common.units.minutesShort', { defaultValue: 'm' })}
             </span>
           </div>
+          {!operationalMode && (
           <div className="inline-flex h-10 items-center gap-3 px-1">
             <Switch
               id={`${id}-billable-duration-${index}`}
@@ -939,6 +949,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               {t('timeEntryForm.labels.billable', { defaultValue: 'Billable' })}
             </span>
           </div>
+          )}
         </div>
         {(showErrors || Boolean(validationErrors.duration)) && validationErrors.duration && (
           <span className="text-sm text-red-500">

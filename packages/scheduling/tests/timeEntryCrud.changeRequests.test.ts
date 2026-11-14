@@ -49,6 +49,8 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 // The client read scope has its own DB test (T012); here the subject is not client-restricted.
+// The save resolves the principal's billing mode from the admin connection; this suite is an ordinary (non-seat) user.
+vi.mock('@shared/services/productPrincipal', () => ({ loadProductPrincipal: async () => ({ rawProductCode: 'psa', surfaceKind: null }) }));
 vi.mock('../src/lib/timeEntryAuthorizationSql', () => ({
   resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined }),
 }));

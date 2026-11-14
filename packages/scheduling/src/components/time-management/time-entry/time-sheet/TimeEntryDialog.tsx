@@ -28,6 +28,7 @@ import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
 import { contractLineFieldsForWrite, validateTimeEntry } from './utils';
+import { useTimeEntryMode } from '../../../../context/TimeEntryModeContext';
 import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
 import { TimeEntrySaveRejectedError } from '../../../../lib/timeEntrySaveAdapter';
 import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
@@ -99,6 +100,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   const { t } = useTranslation('msp/time-entry');
   // Injected from the composition layer (billing owns the warning action).
   const getProjectTaskPaymentWarning = useSchedulingCrossFeatureOptional()?.getProjectTaskPaymentWarning;
+  // Mode the server resolved for the viewer. Operational (seat technician): no commercial read is made.
+  const operationalMode = useTimeEntryMode() === 'operational';
   const {
     entries,
     services,
@@ -126,17 +129,17 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   useEffect(() => {
     let stale = false;
     setServiceOptional(false);
-    if (!isOpen || !workItem.work_item_id) return;
+    if (!isOpen || !workItem.work_item_id || operationalMode) return;
     isServiceOptionalForWorkItem(workItem.type, workItem.work_item_id)
       .then(answer => { if (!stale) setServiceOptional(answer === true); })
       .catch(() => { if (!stale) setServiceOptional(false); });
     return () => { stale = true; };
-  }, [isOpen, workItem.type, workItem.work_item_id]);
+  }, [isOpen, workItem.type, workItem.work_item_id, operationalMode]);
 
   useEffect(() => {
     let stale = false;
 
-    if (!isOpen || workItem.type !== 'project_task' || !getProjectTaskPaymentWarning) {
+    if (!isOpen || operationalMode || workItem.type !== 'project_task' || !getProjectTaskPaymentWarning) {
       setHasProjectPaymentWarning(false);
       return () => {
         stale = true;
@@ -155,7 +158,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     return () => {
       stale = true;
     };
-  }, [isOpen, workItem.type, workItem.work_item_id, getProjectTaskPaymentWarning]);
+  }, [isOpen, workItem.type, workItem.work_item_id, getProjectTaskPaymentWarning, operationalMode]);
 
   // Initialize a single-entry form whenever the dialog opens.
   useEffect(() => {
@@ -185,7 +188,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     const isAdHoc = workItem.type === 'ad_hoc';
 
     // No service is only allowed when the time source said so; the entry is then operational and carries no billable minutes.
-    const isOperational = serviceOptional && !entry.service_id?.trim();
+    const isOperational = operationalMode || (serviceOptional && !entry.service_id?.trim());
 
     if (!isOperational && !entry.service_id?.trim()) {
       toast.error(t('messages.serviceRequired'));
@@ -227,10 +230,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         updated_at: formatISO(new Date()),
         notes: entry.notes || '',
         approval_status: 'DRAFT' as TimeSheetStatus,
-        service_id: entry.service_id || undefined,
-        tax_region: entry.tax_region || undefined,
-        // Never echo a server-resolved (auto_*) line back: see contractLineFieldsForWrite.
-        ...contractLineFieldsForWrite(entry, 'resave'),
+        // Operational mode never sends a commercial field; the server would reject one.
+        ...(operationalMode
+          ? { service_id: undefined, tax_region: undefined, tax_rate_id: undefined, contract_line_id: undefined, contract_line_source: undefined }
+          : {
+            service_id: entry.service_id || undefined,
+            tax_region: entry.tax_region || undefined,
+            // Never echo a server-resolved (auto_*) line back: see contractLineFieldsForWrite.
+            ...contractLineFieldsForWrite(entry, 'resave'),
+          }),
       };
 
       await onSave(timeEntry);
@@ -262,7 +270,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     } finally {
       setIsSaving(false);
     }
-  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, serviceOptional, services, timeSheetId, workItem, workTimeZone]);
+  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, operationalMode, serviceOptional, services, timeSheetId, workItem, workTimeZone]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {

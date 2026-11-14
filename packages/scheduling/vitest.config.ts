@@ -34,6 +34,8 @@ export default defineConfig({
       'tests/newWorkItemTimeEntry.test.tsx',
       'tests/stopwatchProvider.test.tsx',
       'tests/timeEntryDialog.saveLifecycle.test.tsx',
+      'tests/timeEntryDialog.operationalMode.test.tsx',
+      'tests/timeEntryEditForm.operationalMode.test.tsx',
       'tests/workItemDrawer.adHocAssignees.test.tsx',
     ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,
@@ -79,6 +81,8 @@ export default defineConfig({
       // alias billing/tickets/integrations already use.
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      { find: /^@shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: path.resolve(__dirname, '../co-managed/src/$1') },
       { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts') },
       { find: /^@alga-psa\/workflow-streams\/(.*)$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/$1') },
       { find: /^@alga-psa\/workflows(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/workflows/src$1') },
