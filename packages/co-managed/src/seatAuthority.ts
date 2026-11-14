@@ -31,6 +31,11 @@ import type { AuthorizationSubject } from '@alga-psa/authorization/kernel/contra
 import { builtinResolverSubjectsQuery } from '@alga-psa/authorization/subject/resolverSubjects';
 
 export const CO_MANAGED_SEAT_RESOLVER_ID = 'co-managed-seat';
+/**
+ * Key of the seat technician's surface in the product surface registry (`SURFACE_KINDS`). A literal, so this
+ * module (which every process boots through) takes no dependency on the registry; a contract test pins the two.
+ */
+export const CO_MANAGED_SEAT_PRINCIPAL_KIND = 'co_managed_seat';
 
 /** One condition a record must meet. Every condition listed for an action must hold. */
 export type CoManagedSeatCondition =
@@ -235,6 +240,9 @@ function seatFactsQuery(knex: Knex | Knex.Transaction, subject: { tenant: string
 export const coManagedSeatResolver: BuiltinRuleResolver = {
   id: CO_MANAGED_SEAT_RESOLVER_ID,
   baseline: 'closed',
+  // A seat technician sees the operational surface only and holds no API credential. The surface is data in
+  // the product surface registry under this key.
+  principalKind: { kind: CO_MANAGED_SEAT_PRINCIPAL_KIND, apiCredentials: 'refused' },
   facts: {
     tenantHasSubjects: (knex, tenant) => builtinResolverSubjectsQuery(knex, tenant, CO_MANAGED_SEAT_RESOLVER_ID),
     subjectFacts: seatFactsQuery,

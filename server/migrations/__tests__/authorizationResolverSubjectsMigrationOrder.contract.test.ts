@@ -56,6 +56,7 @@ describe('authorization resolver subjects migration ordering', () => {
   // recorded file is missing, so a shipped migration is never renamed to resolve an ordering clash.
   it('keeps the filenames deployed databases have recorded', () => {
     expect(PAIR.map(fileFor)).toEqual(SHIPPED_PAIR);
+    expect(fileFor('grant_service_read_to_msp_roles')).toBe('20261113140000_grant_service_read_to_msp_roles.cjs');
   });
 
   // Knex breaks timestamp ties by full filename, so a neighbour sharing a timestamp only matters
@@ -72,13 +73,14 @@ describe('authorization resolver subjects migration ordering', () => {
     }
   });
 
-  it('cross-references only migrations in the pair', () => {
+  it('cross-references only migrations in the pair, by full name', () => {
     const set = PAIR.map(fileFor);
-    const timestamps = new Set(set.map(timestampOf));
+    const names = new Set(set.map((name) => name.replace(/\.cjs$/, '')));
     for (const name of set) {
       const source = readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8');
-      for (const [ref] of source.matchAll(/\b20\d{12}\b/g)) {
-        expect(timestamps.has(ref), `${name} references ${ref}`).toBe(true);
+      // A bare timestamp is ambiguous once another migration shares it.
+      for (const [ref] of source.matchAll(/\b20\d{12}(?:_[a-z0-9_]*[a-z0-9])?/g)) {
+        expect(names.has(ref), `${name} references ${ref}`).toBe(true);
       }
     }
   });
