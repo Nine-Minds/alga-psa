@@ -15,7 +15,7 @@ import { getTenantProjectStatuses } from '../../actions/projectTaskStatusActions
 import { getTaskTypes } from '../../actions/projectTaskActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers } from '@alga-psa/user-composition/actions';
-import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { loadServiceOptions } from '@alga-psa/projects/lib/serviceOptions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useUnsavedChangesGuard } from '../../lib/useUnsavedChangesGuard';
@@ -124,7 +124,7 @@ export function TemplateCreationWizard({
           getTaskTypes(),
           getAllPriorities('project_task'),
           getAllUsers(true, 'internal'), // Load internal users only
-          getServices(1, 999), // Load all services
+          loadServiceOptions(), // Service picker options (empty when the catalog is refused)
         ]);
         console.log('[TemplateCreationWizard] Loaded statuses:', statuses);
         if (isReturnedActionError(statuses)) {
@@ -164,7 +164,7 @@ export function TemplateCreationWizard({
         console.log('Loaded priorities for project_task:', mappedPriorities);
         setPriorities(mappedPriorities);
         setUsers(allUsers);
-        setServices(servicesResponse.services);
+        setServices(servicesResponse);
       } catch (error) {
         console.error('Failed to load wizard data', error);
         setErrors((prev) => ({
