@@ -93,7 +93,7 @@
   {
     "id": "T011",
     "description": "DB integration: accepting an invitation creates an internal user with only the seat role; the role and its permissions exist for that tenant and no other, and the role editor omits them for a tenant not served.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019"

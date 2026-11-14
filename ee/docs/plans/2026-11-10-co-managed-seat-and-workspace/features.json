@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "Accepting the invitation creates an internal user with the seat role and activates the assignment.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "A seat role with operational permissions and no sales, billing, accounting, settings or user-administration permission is seeded for a tenant when its first seat arrangement is admitted; its catalog entries carry the `co-managed-seat` capability and are hidden for tenants not served.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
