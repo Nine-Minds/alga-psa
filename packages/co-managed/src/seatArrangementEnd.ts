@@ -128,6 +128,20 @@ export async function endCoManagedSeatArrangement(
   });
 }
 
+/**
+ * The client an arrangement belongs to, or null when there is no such arrangement (a malformed id
+ * included). An entry point authorizes the caller against this client before previewing or ending.
+ */
+export async function readCoManagedSeatArrangementClientId(
+  db: Knex | Knex.Transaction,
+  input: { sponsorTenant: string; arrangementId: string },
+): Promise<string | null> {
+  if (![input.sponsorTenant, input.arrangementId].every((id) => typeof id === 'string' && uuid.test(id))) return null;
+  const arrangement = await tenantDb(db, input.sponsorTenant).table('co_managed_seat_arrangements')
+    .where('arrangement_id', input.arrangementId).first('client_id');
+  return arrangement?.client_id ?? null;
+}
+
 /** What ending an arrangement would do now: the effects the confirmation lists. Reads only. */
 export interface CoManagedSeatArrangementEndPreview {
   arrangementId: string;
