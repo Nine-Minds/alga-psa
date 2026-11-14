@@ -26,6 +26,21 @@ test('unknown evidence and non-graph inputs require full coverage', () => {
   ]) assert.equal(selectIntegration([file]).full, true, file);
 });
 
+test('harness changes are marked so no judgment can narrow them; schema and service changes are not', () => {
+  for (const file of ['package-lock.json', 'server/vitest.config.ts', 'server/src/test/setup.ts', 'server/test-utils/dbConfig.ts',
+    'scripts/run-tier1-integration.mjs', '.github/workflows/integration-tests.yml', '.env.localtest', 'tsconfig.base.json']) {
+    assert.equal(selectIntegration([file]).harness, true, file);
+  }
+  for (const file of ['server/migrations/next.cjs', 'server/seeds/dev/01.cjs', 'services/email-service/src/consumer.ts',
+    'ee/packages/workflows/src/actions/run.ts', 'new-runtime/handler.ts']) {
+    const decision = selectIntegration([file]);
+    assert.equal(decision.full, true, file);
+    assert.equal(decision.harness, false, file);
+  }
+  assert.equal(selectIntegration(null).harness, true);
+  assert.equal(selectIntegration(['packages/billing/src/actions/usageActions.ts']).harness, false);
+});
+
 test('actual git diffs preserve both sides of moves and recover conservatively from missing revisions', (t) => {
   const cwd = mkdtempSync(path.join(tmpdir(), 'integration-selection-'));
   t.after(() => rmSync(cwd, { recursive: true, force: true }));

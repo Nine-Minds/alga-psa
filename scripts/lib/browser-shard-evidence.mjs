@@ -46,7 +46,13 @@ export function mergeBrowserShardEvidence({ edition, shards, root, revision, run
   } else if (!described.length) failures.push('No browser shard published evidence');
 
   // Each shard's own evidence must describe exactly the shard it claims to be.
+  // A shard may run only the journeys a recorded Jev judgment selected, as
+  // location filters within its own files; the judgment was made over the
+  // whole collection, so every shard carries the same one, and the merge
+  // excuses its deferred journeys from the reconcile below. Filters without a
+  // judgment, or judgments that differ between shards, are not a partition.
   const statuses = [];
+  const judgments = [];
   for (const shard of described) {
     const evidence = shard.evidence;
     const prefix = `shard ${shard.lane}`;
@@ -56,9 +62,21 @@ export function mergeBrowserShardEvidence({ edition, shards, root, revision, run
     if (evidence.selection?.mode !== 'shard' || !equal(evidence.selection.shard, { index: shard.index, total: shard.total })) {
       failures.push(`${prefix}: evidence does not describe shard ${shard.index}/${shard.total}`);
     }
-    if (Array.isArray(evidence.selection?.filters) && evidence.selection.filters.length) failures.push(`${prefix}: filtered execution`);
+    const judged = object(evidence.selection?.jev) && evidence.selection.jev.status === 'applied' ? evidence.selection.jev : null;
+    judgments.push(judged);
+    const filters = Array.isArray(evidence.selection?.filters) ? evidence.selection.filters : [];
+    if (filters.length && !judged) failures.push(`${prefix}: filtered execution`);
+    if (judged) {
+      if (typeof judged.threshold !== 'number' || !Array.isArray(judged.deferred)) failures.push(`${prefix}: judged selection lacks threshold or deferred cases`);
+      const own = new Set(Array.isArray(evidence.selection.files) ? evidence.selection.files : []);
+      for (const filter of filters) {
+        if (typeof filter !== 'string' || !own.has(`e2e-tests/${filter.replace(/:\d+$/, '')}`)) failures.push(`${prefix}: filter outside its assigned journeys: ${filter}`);
+      }
+    }
     for (const failure of Array.isArray(evidence.failures) ? evidence.failures : []) failures.push(`${prefix}: ${failure}`);
   }
+  const jev = judgments.find(Boolean) ?? null;
+  if (jev && judgments.some(judged => !equal(judged, jev))) failures.push('Browser shards disagree on the judged selection');
 
   // The revision is either imposed by the caller (CI's GITHUB_SHA) or must be
   // the one every shard agrees on.
@@ -67,6 +85,7 @@ export function mergeBrowserShardEvidence({ edition, shards, root, revision, run
   for (const shard of described) {
     if (object(shard.evidence) && shard.evidence.revision !== revision) failures.push(`shard ${shard.lane}: tested a different revision`);
   }
+  if (jev && jev.revision !== revision) failures.push('Browser shards applied a judgment for a different revision');
 
   // Every shard lists the whole collection; it is the merged expectation.
   const collections = described.filter(shard => object(shard.collected) && Array.isArray(shard.collected.suites));
@@ -128,14 +147,19 @@ export function mergeBrowserShardEvidence({ edition, shards, root, revision, run
   const workingTreeDirty = !described.length || described.some(shard => shard.evidence?.workingTreeDirty !== false);
 
   const passed = complete && described.length > 0 && statuses.every(status => status === 'passed');
-  const evidence = reconcilePlaywrightExecution({ collected, report, root, revision, exitCode: passed ? 0 : 1 });
+  const evidence = reconcilePlaywrightExecution({ collected, report, root, revision, exitCode: passed ? 0 : 1,
+    deferred: Array.isArray(jev?.deferred) ? jev.deferred : [] });
   evidence.failures.push(...failures);
   if (evidence.failures.length) evidence.status = 'failed';
   evidence.edition = edition;
   evidence.configuration = collected?.config?.metadata ?? null;
-  evidence.selection = { mode: 'full', filters: [], shards: described.map((shard, position) => ({
+  const shardRecords = described.map((shard, position) => ({
     lane: shard.lane, index: Number.isFinite(shard.index) ? shard.index : null, total: shard.total, status: statuses[position],
-    files: Array.isArray(shard.evidence?.selection?.files) ? shard.evidence.selection.files : [] })) };
+    files: Array.isArray(shard.evidence?.selection?.files) ? shard.evidence.selection.files : [] }));
+  // The merged record is what one judged or full run would have published:
+  // the union of the shards' filters under the shared judgment, or no filter.
+  const filters = [...new Set(described.flatMap(shard => Array.isArray(shard.evidence?.selection?.filters) ? shard.evidence.selection.filters : []))].sort();
+  evidence.selection = jev ? { mode: 'jev', filters, jev, shards: shardRecords } : { mode: 'full', filters: [], shards: shardRecords };
   evidence.source = source ?? undefined;
   evidence.workingTreeDirty = workingTreeDirty;
 

@@ -6,7 +6,7 @@
 // Each report contributes its own edition (from config.metadata.edition). A
 // file's weight is the whole wall time Playwright spent in it, every attempt
 // included, in whole seconds. Files absent from a report keep their old weight.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { playwrightTests } from './lib/playwright-execution-evidence.mjs';
@@ -41,6 +41,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (!args.length) throw new Error('usage: update-browser-journey-weights.mjs <results.json> [...] [--source <text>]');
   let profile = JSON.parse(readFileSync(target, 'utf8'));
   for (const file of args) {
+    // A report from a run a Jev judgment narrowed measures only the journeys
+    // it selected; a file's weight from it would undercount the file and
+    // unbalance the shards. The run's evidence, beside its report, says so.
+    const evidence = path.join(path.dirname(file), 'evidence.json');
+    if (existsSync(evidence) && JSON.parse(readFileSync(evidence, 'utf8'))?.selection?.mode === 'jev') {
+      throw new Error(`${file} comes from a judged (narrowed) run; refresh the weights from a full run`);
+    }
     const update = journeyWeightsFromReport(JSON.parse(readFileSync(file, 'utf8')), root);
     profile = mergeJourneyWeights(profile, update, { source });
     console.log(`${update.edition}: ${Object.keys(update.weights).length} journey files from ${file}`);

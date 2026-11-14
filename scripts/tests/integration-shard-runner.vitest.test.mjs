@@ -19,7 +19,7 @@ test('actual integration runner partitions, executes and rejects missing or stal
     'scripts/lib/integration-selection.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs',
     'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
     'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/flaky-error.mjs',
-    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/server-unit-durations.mjs']) {
+    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/server-unit-durations.mjs', 'scripts/lib/jev-enforcement.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules\ntest-results/\nserver/test-results-integration.json\n');
