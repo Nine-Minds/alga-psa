@@ -51,7 +51,7 @@ vi.mock('../../lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => state.allow),
 }));
 vi.mock('../../lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => ({ allowed: state.kernelAllow, redactedFields: [] })),
+  projectApiResourceRead: vi.fn(async (input: { record: object }) => (state.kernelAllow ? input.record : null)),
 }));
 vi.mock('../../lib/api/controllers/ApiBaseController', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/api/controllers/ApiBaseController')>();
@@ -195,7 +195,7 @@ describe('POST /api/v1/documents', () => {
     state.product = 'psa';
   });
 
-  it('returns 403 (parity with GET /tickets/:id) when the read-authorization kernel denies the ticket', async () => {
+  it('returns 404 (parity with GET /tickets/:id) when the read-authorization kernel denies the ticket', async () => {
     state.kernelAllow = false;
     const { status, json } = await post({
       entity_type: 'ticket',
@@ -203,8 +203,8 @@ describe('POST /api/v1/documents', () => {
       source: { type: 'base64', content: Buffer.from('x').toString('base64') },
       file_name: 'x.txt',
     });
-    expect(status).toBe(403);
-    expect(json.error.message).toMatch(/Cannot read ticket/);
+    expect(status).toBe(404);
+    expect(json.error.code).toBe('NOT_FOUND');
   }, HOOK_TIMEOUT);
 
   it('returns 404 for a missing ticket', async () => {

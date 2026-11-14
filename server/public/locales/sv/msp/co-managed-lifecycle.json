@@ -60,5 +60,22 @@
     },
     "retentionFailuresHeading": "Bilagor som inte har sparats",
     "retentionFailed": "Bilagan har inte sparats: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "Avsluta platsavtalet för {{name}}?",
+    "intro": "Avslutet gäller från varje tekniskers nästa begäran och kan inte ångras här.",
+    "effectTechnicians": "Avaktiverade tekniker: {{count}}",
+    "effectInvitations": "Återkallade väntande inbjudningar: {{count}}",
+    "effectTickets": "Ärenden som lämnats tillbaka till ditt team: {{count}}",
+    "effectSeats": "Platser som frigjorts till poolen: {{count}}",
+    "effectNotes": "Delade anteckningar förblir läsbara för din personal.",
+    "confirm": "Avsluta avtal",
+    "cancel": "Avbryt",
+    "start": "Avsluta platsavtal",
+    "done": "Platsavtalet har avslutats.",
+    "errorDenied": "Du har inte behörighet att avsluta det här avtalet.",
+    "errorNotFound": "Det här avtalet hittades inte.",
+    "errorGeneric": "Begäran kunde inte behandlas.",
+    "loading": "Läser in…"
   }
 }

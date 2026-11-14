@@ -536,6 +536,7 @@
         "contractEnd": "data zakończenia umowy",
         "warrantyEnd": "data zakończenia gwarancji zasobu",
         "maintenanceDue": "data terminu przeglądu zasobu",
+        "ticketDueDate": "termin zgłoszenia",
         "ticketStatusAge": "dzień, w którym zgłoszenie osiąga liczbę dni w statusie"
       }
     }
@@ -820,6 +821,7 @@
       "tenantTimezoneOption": "Strefa czasowa organizacji (domyślna)",
       "searchTimezones": "Szukaj stref czasowych",
       "inputDataEventPending": "Wybierz powyższe zdarzenie; kroki będą odczytywać dane wysyłane przez to zdarzenie.",
+      "dateSourceTicketDueDate": "Termin zgłoszenia",
       "dateSourceTicketStatusAge": "Zgłoszenie w statusie przez N dni",
       "statusAgeStatus": "Status",
       "statusAgeStatusPlaceholder": "Wybierz status",

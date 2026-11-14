@@ -208,6 +208,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         external_parent_id: zOpenApi.string().nullable().optional(),
         realm: zOpenApi.string().nullable().optional().describe('Repo, server, or workspace the record lives in.'),
         url: zOpenApi.string().url().nullable().optional().describe('Explicit link-out; must be http(s).'),
+        title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown instead of the raw external id, e.g. a knowledge-base article name.'),
         relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
         actor: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
@@ -1090,6 +1091,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       external_parent_id: zOpenApi.string().nullable().optional(),
       realm: zOpenApi.string().nullable().optional(),
       url: zOpenApi.string().url().nullable().optional().describe('Optional explicit link-out; must be http(s).'),
+      title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown instead of the raw external id, e.g. a knowledge-base article name.'),
       relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
       actor: ExternalLinkActor.nullable().optional(),
       external_status: zOpenApi.string().nullable().optional(),
@@ -1102,6 +1104,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
       url: zOpenApi.string().url().nullable().optional(),
+      title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown instead of the raw external id, e.g. a knowledge-base article name.'),
       actor: ExternalLinkActor.nullable().optional(),
       external_status: zOpenApi.string().nullable().optional(),
       external_updated_at: zOpenApi.string().nullable().optional(),
@@ -1265,6 +1268,14 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     is_required: zOpenApi.boolean().describe('Whether the item gates ticket closure.'),
     checklist_template_id: zOpenApi.string().guid().nullable().optional().describe('Checklist template the item came from; leave null for a plain item.'),
   });
+  const TicketTemplateLink = zOpenApi.object({
+    system: zOpenApi.string().min(1).describe("Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."),
+    external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system, e.g. the Hudu article id.'),
+    realm: zOpenApi.string().nullable().optional().describe('Repository, server or workspace, for systems whose URL template needs one.'),
+    url: zOpenApi.string().url().nullable().optional().describe('Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created.'),
+    title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown on the ticket, e.g. the article name.'),
+    metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional().describe('Free-form details, e.g. { hudu: { article_id, company_id } }.'),
+  });
   const ticketTemplateBodyShape = {
     name: zOpenApi.string().min(1).max(200).describe('Template name, unique among active templates in the tenant.'),
     notes: zOpenApi.string().max(2000).nullable().optional().describe('Note for your team; never copied onto tickets.'),
@@ -1281,6 +1292,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     custom_fields: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Custom field values copied onto the ticket.'),
     offer_for_manual_use: zOpenApi.boolean().optional().describe('Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use.'),
     checklist: zOpenApi.array(TicketTemplateChecklistItem).max(200).optional().describe('The whole checklist, in order. On update this list replaces the stored items.'),
+    links: zOpenApi.array(TicketTemplateLink).max(50).optional().describe('Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links.'),
   };
   const TicketTemplateCreateBody = registry.registerSchema(
     'WorkV1TicketTemplateCreateBody',
@@ -1346,7 +1358,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/templates/{templateId}',
     summary: 'Get a ticket template',
-    description: 'Returns one ticket template with its checklist items in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).',
+    description: 'Returns one ticket template with its checklist items and documentation links in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: TicketTemplateParams },
     responses: {
@@ -1427,7 +1439,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/external-links',
     summary: 'Add a ticket external link',
-    description: 'Adds a ticket-level external-system reference. Only one origin link is allowed per ticket. URL must be http(s).',
+    description: 'Adds a ticket-level external-system reference. Only one origin link is allowed per ticket. A mirror or origin record can be linked to one ticket only, but a reference may cite the same external record on many tickets (once per ticket). Optional title is shown instead of the raw external id. URL must be http(s).',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: ExternalLinkCreateBody } },
     responses: ticketStdResponses({ code: 201, description: 'External link created.' }),

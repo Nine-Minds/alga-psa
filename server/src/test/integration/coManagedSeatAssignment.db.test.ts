@@ -200,8 +200,9 @@ describeDb('the human-work guard scopes seat technicians to their own client', {
       .resolves.toBeUndefined();
   });
 
-  // A move that strands a seat technician already on the ticket is not refused here: the move
-  // releases them (F094, coManagedSeatLifecycleGuards.db.test.ts).
+  // A move that takes the ticket away from a seat technician already on it is not refused: the
+  // writer releases the technician and returns the ticket to the MSP (F094, see
+  // coManagedSeatLifecycleGuards.db.test.ts and coManagedSeatTicketReadScope.db.test.ts).
 
   it('prefers the live seat assignment over a revoked one', async () => {
     const s = await arrangement();

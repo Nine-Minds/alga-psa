@@ -60,5 +60,22 @@
     },
     "retentionFailuresHeading": "Attachments not retained",
     "retentionFailed": "Attachment not retained: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "End the seat arrangement for {{name}}?",
+    "intro": "Ending takes effect on each technician's next request and cannot be undone from here.",
+    "effectTechnicians": "Technicians deactivated: {{count}}",
+    "effectInvitations": "Pending invitations withdrawn: {{count}}",
+    "effectTickets": "Tickets handed back to your team: {{count}}",
+    "effectSeats": "Seats released to the pool: {{count}}",
+    "effectNotes": "Shared notes stay readable to your staff.",
+    "confirm": "End arrangement",
+    "cancel": "Cancel",
+    "start": "End seat arrangement",
+    "done": "The seat arrangement has ended.",
+    "errorDenied": "You do not have permission to end this arrangement.",
+    "errorNotFound": "This arrangement could not be found.",
+    "errorGeneric": "The request could not be processed.",
+    "loading": "Loading…"
   }
 }

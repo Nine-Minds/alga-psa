@@ -682,6 +682,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'recurring_ticket_definition_clients', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'recurring_ticket_definitions', deletion: 'ordered' },
   { table: 'ticket_template_checklist_items', deletion: 'ordered' },
+  { table: 'ticket_template_links', deletion: 'ordered' },
   { table: 'ticket_templates', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'canned_response_favorites', deletion: 'ordered' },
   { table: 'canned_responses', deletion: 'ordered' },

@@ -5,7 +5,7 @@ import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { randomUUID } from 'node:crypto';
 import {
-  changeThreadAudience, commentAudienceSql, resolveCommentAudienceReader, type CommentAudienceReader,
+  changeThreadAudience, commentAudienceSql, resolveCommentAudienceReader, resolveCommentWriteAuthor, type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -228,6 +228,30 @@ describe('comment audiences on native writes (integration)', () => {
       const legacyNote = await write({ ticket: ticketA, is_internal: true });
       await expect(write({ ticket: ticketA, user: seatUser, author: seat, parent_comment_id: legacyNote })).rejects.toMatchObject(INVALID);
       expect((await threadOf(legacyNote)).reply_count).toBe(0);
+    });
+  });
+
+  describe('S25 F060: the ticket-screen entry points resolve the author from the loaded user row', () => {
+    it('a seat technician row resolves to a seat author and is refused Private and the legacy note', async () => {
+      const author = await resolveCommentWriteAuthor(knex, tenant, { user_id: seatUser, user_type: 'internal', seat_reader: true });
+      expect(author).toEqual(seat);
+      await expect(viaModel({ ticket: ticketA, user: seatUser, author, is_internal: true, collaboration_audience: 'organization_private' })).rejects.toMatchObject(INVALID);
+      await expect(viaModel({ ticket: ticketA, user: seatUser, author, is_internal: true })).rejects.toMatchObject(INVALID);
+      expect(await audienceOf(await viaModel({ ticket: ticketA, user: seatUser, author, is_internal: false }))).toBe('requester');
+    });
+
+    it('a staff row (seat_reader false) resolves to staff with no SQL; client and service principals keep the implied author', async () => {
+      const queries: string[] = [];
+      const onQuery = (q: { sql: string }) => queries.push(q.sql);
+      knex.on('query', onQuery);
+      try {
+        expect(await resolveCommentWriteAuthor(knex, tenant, { user_id: mspUser, user_type: 'internal', seat_reader: false })).toEqual(staff);
+      } finally {
+        knex.removeListener('query', onQuery);
+      }
+      expect(queries).toEqual([]);
+      expect(await resolveCommentWriteAuthor(knex, tenant, { user_id: mspUser, user_type: 'client' })).toBeUndefined();
+      expect(await resolveCommentWriteAuthor(knex, tenant, { user_id: mspUser, user_type: 'service' })).toBeUndefined();
     });
   });
 

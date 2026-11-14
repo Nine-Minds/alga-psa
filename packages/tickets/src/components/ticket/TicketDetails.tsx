@@ -182,6 +182,8 @@ interface TicketDetailsProps {
     liveContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
+    /** Seat technicians of this ticket's client (MSP viewer, live arrangement only): the picker's Client IT group. */
+    clientItUserIds?: readonly string[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string; color?: string | null; is_from_itil_standard?: boolean }[];
     initialCategories?: ITicketCategory[];
@@ -325,6 +327,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     liveContactMap,
     statusOptions = [],
     agentOptions = [],
+    clientItUserIds,
     boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
@@ -4613,6 +4616,7 @@ const handleClose = () => {
                     priorityOptions={priorityOptions}
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
+                    clientItUserIds={clientItUserIds}
                     onSelectChange={handleSelectChange}
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     onUpdateDescription={handleUpdateDescription}
@@ -4685,7 +4689,7 @@ const handleClose = () => {
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
                     onChangeLocation={handleLocationChange}
-                    onChangeBillingProfile={handleBillingProfileChange}
+                    onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}
@@ -4746,6 +4750,7 @@ const handleClose = () => {
                                     conversations={conversations}
                                     statusOptions={statusOptions}
                                     agentOptions={agentOptions}
+                                    clientItUserIds={clientItUserIds}
                                     boardOptions={boardOptions}
                                     priorityOptions={priorityOptions}
                                     onSelectChange={handleSelectChange}
@@ -4928,7 +4933,7 @@ const handleClose = () => {
                                 onChangeContact={handleContactChange}
                                 onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
-                                onChangeBillingProfile={handleBillingProfileChange}
+                                onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}
@@ -4986,6 +4991,7 @@ const handleClose = () => {
                             conversations={conversations}
                             statusOptions={statusOptions}
                             agentOptions={agentOptions}
+                            clientItUserIds={clientItUserIds}
                             boardOptions={boardOptions}
                             priorityOptions={priorityOptions}
                             onSelectChange={handleSelectChange}

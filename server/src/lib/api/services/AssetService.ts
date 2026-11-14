@@ -29,7 +29,7 @@ import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/wo
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
-import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { EXTENSION_TABLE_BY_ASSET_TYPE, isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import {
   compileTenantScopedResourceReadAuthorizationSql,
@@ -41,6 +41,7 @@ import { assetClosedFields, assetColumnsOpenTo, resolveAuthorizationSubjectForUs
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAuthorizedAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import type { AssetAuthUser } from '@alga-psa/assets/lib/assetReadAuthorization';
+import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import { claimAssetTag, prepareAssetIdentity, normalizeAssetTag, assetTagClaimsRequired } from '@alga-psa/shared/services/assetNumbering';
 
@@ -178,76 +179,82 @@ export class AssetService extends BaseService<any> {
     const query = scopedTable(knex, context.tenant, this.tableName);
     applyReadScope(query);
 
-    // Common and asset-specific range filters. Unsupported range keys fail loudly.
-    if (filters) {
-      this.applyRangeFilters(query, filters);
-    }
-
-    // Apply filters
+    // Apply filters through the policy guard: a filter over a column the caller's redactions hide matches nothing.
+    // LEVERAGE: pattern filter-key-to-response-field — see ProjectService.list / TicketService.TICKET_FILTER_RESPONSE_FIELD.
+    const guard = await createPredicateGuard(knex, context, 'asset');
+    const T = this.tableName;
     if (filters) {
       if (filters.search) {
-        this.applySearch(query, filters.search);
+        guard.search(query, this.searchableFields.map((field) => `${T}.${field}`), String(filters.search));
       }
+      // Common and asset-specific ranges use the same guard as scalar filters. The count query is cloned below
+      // after all predicates have been composed, so it observes the same fail-closed range decisions.
+      this.applyRangeFilters(query, filters, undefined, (q, column, operator, value) => {
+        guard.filter(q, column, (builder, readableColumn) => {
+          if (operator === '>=') builder.where(readableColumn, '>=', value as any);
+          else builder.where(readableColumn, '<=', value as any);
+        });
+      });
       if (filters.asset_tag) {
-        query.where(`${this.tableName}.asset_tag`, 'ilike', `%${filters.asset_tag}%`);
+        guard.filter(query, `${T}.asset_tag`, (q, c) => { q.where(c, 'ilike', `%${filters.asset_tag}%`); });
       }
       if (filters.name) {
-        query.where(`${this.tableName}.name`, 'ilike', `%${filters.name}%`);
+        guard.filter(query, `${T}.name`, (q, c) => { q.where(c, 'ilike', `%${filters.name}%`); });
       }
       if (filters.client_id) {
-        query.where(`${this.tableName}.client_id`, filters.client_id);
+        guard.filter(query, `${T}.client_id`, (q, c) => { q.where(c, filters.client_id); });
       }
       if (filters.location_id) {
-        query.where(`${this.tableName}.location_id`, filters.location_id);
+        guard.filter(query, `${T}.location_id`, (q, c) => { q.where(c, filters.location_id); });
       }
       if (filters.contact_name_id) {
-        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+        guard.filter(query, `${T}.contact_name_id`, (q, c) => { q.where(c, filters.contact_name_id); });
       }
       if (filters.manufacturer) {
-        query.where(`${this.tableName}.manufacturer`, 'ilike', `%${filters.manufacturer}%`);
+        guard.filter(query, `${T}.manufacturer`, (q, c) => { q.where(c, 'ilike', `%${filters.manufacturer}%`); });
       }
       if (filters.model) {
-        query.where(`${this.tableName}.model`, 'ilike', `%${filters.model}%`);
+        guard.filter(query, `${T}.model`, (q, c) => { q.where(c, 'ilike', `%${filters.model}%`); });
       }
       if (filters.vendor_id) {
-        query.where(`${this.tableName}.vendor_id`, filters.vendor_id);
+        guard.filter(query, `${T}.vendor_id`, (q, c) => { q.where(c, filters.vendor_id); });
       }
       // Filtering on a closed field would disclose it by inference, so the filter is not applied.
       if (filters.billing_profile_id && !closedFields.includes('billing_profile_id')) {
-        query.where(`${this.tableName}.billing_profile_id`, filters.billing_profile_id);
+        guard.filter(query, `${T}.billing_profile_id`, (q, c) => { q.where(c, filters.billing_profile_id); });
       }
       if (filters.asset_type) {
-        query.where(`${this.tableName}.asset_type`, filters.asset_type);
+        guard.filter(query, `${T}.asset_type`, (q, c) => { q.where(c, filters.asset_type); });
       }
       if (filters.status) {
-        query.where(`${this.tableName}.status`, filters.status);
+        guard.filter(query, `${T}.status`, (q, c) => { q.where(c, filters.status); });
       }
       if (filters.location) {
-        query.where(`${this.tableName}.location`, 'ilike', `%${filters.location}%`);
+        guard.filter(query, `${T}.location`, (q, c) => { q.where(c, 'ilike', `%${filters.location}%`); });
       }
       if (filters.client_name) {
         tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
-        query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
+        guard.filter(query, 'clients.client_name', (q, c) => { q.where(c, 'ilike', `%${filters.client_name}%`); });
       }
       if (filters.has_warranty !== undefined) {
-        if (filters.has_warranty) {
-          query.whereNotNull(`${this.tableName}.warranty_end_date`);
-        } else {
-          query.whereNull(`${this.tableName}.warranty_end_date`);
-        }
+        guard.filter(query, `${T}.warranty_end_date`, (q, c) => {
+          if (filters.has_warranty) q.whereNotNull(c); else q.whereNull(c);
+        });
       }
       if (filters.warranty_expired !== undefined) {
-        if (filters.warranty_expired) {
-          query.where(`${this.tableName}.warranty_end_date`, '<', new Date());
-        } else {
-          const tableName = this.tableName;
-          query.where(function() {
-            this.where(`${tableName}.warranty_end_date`, '>=', new Date())
-              .orWhereNull(`${tableName}.warranty_end_date`);
-          });
-        }
+        guard.filter(query, `${T}.warranty_end_date`, (q, c) => {
+          if (filters.warranty_expired) {
+            q.where(c, '<', new Date());
+          } else {
+            q.where(function() {
+              this.where(c, '>=', new Date()).orWhereNull(c);
+            });
+          }
+        });
       }
     }
+
+    const countQuery = query.clone().clearSelect().clearOrder();
 
     // Add joins for additional data
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
@@ -270,45 +277,6 @@ export class AssetService extends BaseService<any> {
           END as warranty_status
         `)
       );
-
-    // Execute queries with pagination
-    const countQuery = scopedTable(knex, context.tenant, this.tableName);
-    applyReadScope(countQuery);
-
-    if (filters) {
-      // Apply the same range filters to count query
-      this.applyRangeFilters(countQuery, filters);
-      // Apply the same filters to count query
-      if (filters.search) {
-        this.applySearch(countQuery, filters.search);
-      }
-      if (filters.client_id) {
-        countQuery.where(`${this.tableName}.client_id`, filters.client_id);
-      }
-      if (filters.location_id) {
-        countQuery.where(`${this.tableName}.location_id`, filters.location_id);
-      }
-      if (filters.contact_name_id) {
-        countQuery.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
-      }
-      if (filters.status) {
-        countQuery.where(`${this.tableName}.status`, filters.status);
-      }
-      if (filters.asset_type) {
-        countQuery.where(`${this.tableName}.asset_type`, filters.asset_type);
-      }
-      if (filters.warranty_expired !== undefined) {
-        if (filters.warranty_expired) {
-          countQuery.where(`${this.tableName}.warranty_end_date`, '<', new Date());
-        } else {
-          const tableName = this.tableName;
-          countQuery.where(function() {
-            this.where(`${tableName}.warranty_end_date`, '>=', new Date())
-              .orWhereNull(`${tableName}.warranty_end_date`);
-          });
-        }
-      }
-    }
 
     // Apply pagination
     const page = options.page || 1;
@@ -339,37 +307,26 @@ export class AssetService extends BaseService<any> {
     return withTransaction(knex, async (trx) => {
       const columns = await assetColumnsOpenTo(trx, await this.closedFieldsFor(trx, context), this.tableName) ?? [`${this.tableName}.*`];
       const query = scopedTable(trx, context.tenant, this.tableName)
-        .where({
-          [`${this.tableName}.${this.primaryKey}`]: id
-        });
-      tenantDb(trx, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
-        type: 'left',
-      });
-      tenantDb(trx, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
-        type: 'left',
-      });
-      // FR-C6/FR-E3: mobile and the REST clients read the assignee and the group
-      // off this payload, so they travel with the asset rather than needing a
-      // second round trip.
-      tenantDb(trx, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', {
-        type: 'left',
-      });
+        .where({ [`${this.tableName}.${this.primaryKey}`]: id });
+      tenantDb(trx, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', { type: 'left' });
+      tenantDb(trx, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', { type: 'left' });
+      tenantDb(trx, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
 
       const asset = await query.select(
-          ...columns,
-          'clients.client_name',
-          'vendors.vendor_name',
-          'contacts.full_name as contact_name',
-          trx.raw(`
+        ...columns,
+        'clients.client_name',
+        'vendors.vendor_name',
+        'contacts.full_name as contact_name',
+        trx.raw(`
           CASE
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
             WHEN ${this.tableName}.warranty_end_date < NOW() + INTERVAL '30 days' THEN 'expiring_soon'
             ELSE 'active'
           END as warranty_status
-          `)
-        )
-        .first();
+        `)
+      )
+      .first();
 
       if (!asset) return null;
 
@@ -377,11 +334,7 @@ export class AssetService extends BaseService<any> {
       const groupUser: AssetAuthUser | null = requestUser?.user_id
         ? {
             user_id: requestUser.user_id,
-            user_type: requestUser.user_type === 'client'
-              ? 'client'
-              : requestUser.user_type === 'service'
-                ? 'service'
-                : 'internal',
+            user_type: requestUser.user_type === 'client' ? 'client' : requestUser.user_type === 'service' ? 'service' : 'internal',
             clientId: requestUser.clientId,
             apiKeyId: context.apiKeyId ?? null,
             roles: requestUser.roles,
@@ -509,8 +462,10 @@ export class AssetService extends BaseService<any> {
     // must not leave a committed asset with no extension row.
     const asset = await knex.transaction(async (trx) => {
       const identity = await prepareAssetIdentity(trx, {
-        tenant: context.tenant, clientId: assetColumns.client_id,
-        assetTag: assetColumns.asset_tag, reservationId,
+        tenant: context.tenant,
+        clientId: assetColumns.client_id,
+        assetTag: assetColumns.asset_tag,
+        reservationId,
       });
       const [created] = await scopedTable(trx, context.tenant, this.tableName)
         .insert({ ...assetRecord, ...identity })
@@ -1387,11 +1342,17 @@ export class AssetService extends BaseService<any> {
     return query;
   }
 
-  async getMaintenanceScheduleAssetId(scheduleId: string, context: ServiceContext): Promise<string | null> {
+  /** Load a schedule before mutation so its owning asset can be authorized first. */
+  async getMaintenanceScheduleForUpdate(scheduleId: string, context: ServiceContext): Promise<any | null> {
     const knex = await this.getDbForContext(context);
-    const row = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId }).first('asset_id');
-    return row?.asset_id ?? null;
+    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
+      .first();
+  }
+
+  async getMaintenanceScheduleAssetId(scheduleId: string, context: ServiceContext): Promise<string | null> {
+    const schedule = await this.getMaintenanceScheduleForUpdate(scheduleId, context);
+    return schedule?.asset_id ?? null;
   }
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
@@ -1567,48 +1528,39 @@ export class AssetService extends BaseService<any> {
   async search(searchData: AssetSearchData, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
     const applyReadScope = await this.resolveAssetReadScope(knex, context);
-    const searchColumns = await assetColumnsOpenTo(knex, applyReadScope.closedFields, this.tableName) ?? [`${this.tableName}.*`];
+    const selectColumns = await assetColumnsOpenTo(knex, applyReadScope.closedFields, this.tableName) ?? [`${this.tableName}.*`];
     const db = tenantDb(knex, context.tenant);
     const query = db.table(this.tableName);
     applyReadScope(query);
 
-    // Build search query
+    // Search columns/filters come from the policy guard: columns the caller's redactions hide drop out of the match
+    // set, whether defaulted or named explicitly in `fields`.
     const tableName = this.tableName;
-    if (searchData.fields && searchData.fields.length > 0) {
-      query.where(function() {
-        searchData.fields!.forEach(field => {
-          if (field === 'client_name') {
-            this.orWhere('clients.client_name', 'ilike', `%${searchData.query}%`);
-          } else {
-            this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-          }
-        });
-      });
-    } else {
-      // Default search across all text fields
-      query.where(function() {
-        this.orWhere(`${tableName}.asset_tag`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.name`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.serial_number`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.location`, 'ilike', `%${searchData.query}%`);
-      });
-    }
+    const guard = await createPredicateGuard(knex, context, 'asset');
+    // A field closed to the caller's seat is not matched either: a hit would disclose it by inference.
+    const requestedFields = (searchData.fields ?? []).filter(field => !applyReadScope.closedFields.includes(field));
+    const searchColumns = searchData.fields && searchData.fields.length > 0
+      ? requestedFields.map(field => field === 'client_name'
+          ? { column: 'clients.client_name', field: 'client_name' }
+          : { column: `${tableName}.${field}`, field })
+      : ['asset_tag', 'name', 'serial_number', 'location'].map(field => `${tableName}.${field}`);
+    guard.search(query, searchColumns, searchData.query);
 
     // Apply filters
     if (searchData.asset_types && searchData.asset_types.length > 0) {
-      query.whereIn(`${this.tableName}.asset_type`, searchData.asset_types);
+      guard.filter(query, `${tableName}.asset_type`, (q, c) => { q.whereIn(c, searchData.asset_types!); });
     }
     if (searchData.statuses && searchData.statuses.length > 0) {
-      query.whereIn(`${this.tableName}.status`, searchData.statuses);
+      guard.filter(query, `${tableName}.status`, (q, c) => { q.whereIn(c, searchData.statuses!); });
     }
     if (searchData.client_ids && searchData.client_ids.length > 0) {
-      query.whereIn(`${this.tableName}.client_id`, searchData.client_ids);
+      guard.filter(query, `${tableName}.client_id`, (q, c) => { q.whereIn(c, searchData.client_ids!); });
     }
 
     // Add joins for searching
     db.tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', { type: 'left' });
     query
-      .select(...searchColumns, 'clients.client_name')
+      .select(...selectColumns, 'clients.client_name')
       .limit(searchData.limit || 25);
 
     const assets = await query;
@@ -1659,7 +1611,173 @@ export class AssetService extends BaseService<any> {
     return query.orderBy('display_order', 'asc').orderBy('label', 'asc');
   }
 
-  // Statistics
+  /** Aggregates only caller-authorized, already projected asset records. */
+  getStatisticsFromProjections(
+    assets: Array<Record<string, any>>,
+    deployableStatusSlugs: readonly string[],
+    now = new Date(),
+  ): Record<string, any> {
+    const deployableStatuses = new Set(deployableStatusSlugs);
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const warrantyHorizon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const overdueHorizon = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const dateValue = (value: unknown): Date | null => {
+      if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+      if (typeof value !== 'string' || !value) return null;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+    const countBy = (field: string, fallback?: string) => {
+      const result: Record<string, number> = {};
+      for (const asset of assets) {
+        if (!Object.hasOwn(asset, field)) continue;
+        const value = asset[field];
+        if ((value === null || value === undefined) && fallback === undefined) continue;
+        const key = String(value ?? fallback);
+        result[key] = (result[key] ?? 0) + 1;
+      }
+      return result;
+    };
+
+    const assetsAddedThisMonth = assets.reduce((count, asset) => {
+      if (!Object.hasOwn(asset, 'created_at')) return count;
+      const createdAt = dateValue(asset.created_at);
+      return count + (createdAt && createdAt >= monthStart ? 1 : 0);
+    }, 0);
+    const visibleAges = assets.flatMap((asset) => {
+      if (!Object.hasOwn(asset, 'purchase_date')) return [];
+      const purchasedAt = dateValue(asset.purchase_date);
+      return purchasedAt ? [Math.floor((now.getTime() - purchasedAt.getTime()) / 86_400_000)] : [];
+    });
+    // Purchase cost is summed only when every authorized asset exposes it: a cost hidden by redaction or closed
+    // to the caller's seat omits the aggregate rather than reporting a partial or zero total.
+    const assetValueReadable = assets.every((asset) => Object.hasOwn(asset, 'purchase_cost'));
+    const totalAssetValue = assets.reduce((sum, asset) => {
+      const value = Number(asset.purchase_cost ?? 0);
+      return sum + (Number.isFinite(value) ? value : 0);
+    }, 0);
+
+    let warrantyExpiringSoon = 0;
+    let warrantyExpired = 0;
+    let maintenanceDue = 0;
+    let maintenanceOverdue = 0;
+    for (const asset of assets) {
+      if (Object.hasOwn(asset, 'warranty_end_date')) {
+        const warrantyEnd = dateValue(asset.warranty_end_date);
+        if (warrantyEnd && warrantyEnd < now) warrantyExpired += 1;
+        else if (warrantyEnd && warrantyEnd >= now && warrantyEnd < warrantyHorizon) warrantyExpiringSoon += 1;
+      }
+
+      for (const schedule of asset.maintenance_schedules ?? []) {
+        if (!Object.hasOwn(schedule, 'is_active') || !Object.hasOwn(schedule, 'next_maintenance')) continue;
+        if (!schedule.is_active) continue;
+        const nextMaintenance = dateValue(schedule.next_maintenance);
+        if (!nextMaintenance) continue;
+        if (nextMaintenance <= now) maintenanceDue += 1;
+        if (nextMaintenance < overdueHorizon) maintenanceOverdue += 1;
+      }
+    }
+
+    return {
+      total_assets: assets.length,
+      deployed_assets: assets.filter((asset) =>
+        Object.hasOwn(asset, 'status') && deployableStatuses.has(String(asset.status)),
+      ).length,
+      assets_added_this_month: assetsAddedThisMonth,
+      average_asset_age_days: visibleAges.length
+        ? Math.round(visibleAges.reduce((sum, age) => sum + age, 0) / visibleAges.length)
+        : null,
+      ...(assetValueReadable ? { total_asset_value: totalAssetValue } : {}),
+      assets_by_type: countBy('asset_type'),
+      assets_by_status: countBy('status', 'Unknown'),
+      assets_by_client: countBy('client_name', 'Unknown'),
+      warranty_expiring_soon: warrantyExpiringSoon,
+      warranty_expired: warrantyExpired,
+      maintenance_due: maintenanceDue,
+      maintenance_overdue: maintenanceOverdue,
+    };
+  }
+
+  /** Status definitions used when statistics are aggregated from authorized asset projections. */
+  async getDeployableStatusSlugs(context: ServiceContext): Promise<string[]> {
+    const knex = await this.getDbForContext(context);
+    return scopedTable(knex, context.tenant, 'asset_statuses')
+      .where({ kind: 'deployable' })
+      .pluck('slug');
+  }
+
+  /** Related schedules are loaded only for asset ids the REST caller has already been authorized to read. */
+  async getMaintenanceSchedulesForAssets(
+    context: ServiceContext,
+    assetIds: string[],
+  ): Promise<Array<{ asset_id: string; schedule_id: string; next_maintenance: Date | string | null; is_active: boolean }>> {
+    if (assetIds.length === 0) return [];
+    const knex = await this.getDbForContext(context);
+    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .whereIn('asset_id', assetIds)
+      .select('asset_id', 'schedule_id', 'next_maintenance', 'is_active');
+  }
+
+  // Helper methods
+  private getExtensionTableName(assetType: string): string | null {
+    return Object.hasOwn(EXTENSION_TABLE_BY_ASSET_TYPE, assetType)
+      ? EXTENSION_TABLE_BY_ASSET_TYPE[assetType]
+      : null;
+  }
+
+  // Shared with the UI actions so both paths advance schedules identically.
+  private calculateNextMaintenanceDate(startDate: string, frequency: string, interval?: number, scheduleConfig?: unknown): Date {
+    try {
+      return advanceMaintenanceDate(startDate, frequency, interval || 1, scheduleConfig);
+    } catch (error) {
+      throw new ValidationError((error as Error).message);
+    }
+  }
+
+  private assertCustomRecurrence(frequency: string | undefined, scheduleConfig: unknown): void {
+    if (frequency !== 'custom') return;
+    try {
+      parseCustomRecurrence(scheduleConfig);
+    } catch (error) {
+      throw new ValidationError((error as Error).message);
+    }
+  }
+
+  private async updateScheduleAfterMaintenance(scheduleId: string, performedAt: string, context: ServiceContext): Promise<void> {
+    const knex = await this.getDbForContext(context);
+    const schedule = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
+      .first();
+
+    if (schedule) {
+      const nextMaintenance = this.calculateNextMaintenanceDate(
+        performedAt,
+        schedule.frequency,
+        schedule.frequency_interval,
+        schedule.schedule_config
+      );
+
+      await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
+        .update({
+          last_maintenance: performedAt,
+          next_maintenance: nextMaintenance,
+          updated_at: new Date()
+        });
+    }
+  }
+
+  private async getAssetClient(clientId: string, context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+    return scopedTable(knex, context.tenant, 'clients')
+      .where({ client_id: clientId })
+      // clients holds only client_name/url/billing_email; contact email/phone
+      // live on the client's locations/contacts, not here.
+      .select('client_id', 'client_name', 'billing_email')
+      .first();
+  }
+
+
   async getStatistics(context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
     const applyReadScope = await this.resolveAssetReadScope(knex, context);
@@ -1807,69 +1925,6 @@ export class AssetService extends BaseService<any> {
   }
 
   // Helper methods
-  private getExtensionTableName(assetType: string): string | null {
-    const tableMap: Record<string, string> = {
-      'workstation': 'workstation_assets',
-      'network_device': 'network_device_assets',
-      'server': 'server_assets',
-      'mobile_device': 'mobile_device_assets',
-      'printer': 'printer_assets'
-    };
-    return tableMap[assetType] || null;
-  }
-
-  // Shared with the UI actions so both paths advance schedules identically.
-  private calculateNextMaintenanceDate(startDate: string, frequency: string, interval?: number, scheduleConfig?: unknown): Date {
-    try {
-      return advanceMaintenanceDate(startDate, frequency, interval || 1, scheduleConfig);
-    } catch (error) {
-      throw new ValidationError((error as Error).message);
-    }
-  }
-
-  private assertCustomRecurrence(frequency: string | undefined, scheduleConfig: unknown): void {
-    if (frequency !== 'custom') return;
-    try {
-      parseCustomRecurrence(scheduleConfig);
-    } catch (error) {
-      throw new ValidationError((error as Error).message);
-    }
-  }
-
-  private async updateScheduleAfterMaintenance(scheduleId: string, performedAt: string, context: ServiceContext): Promise<void> {
-    const knex = await this.getDbForContext(context);
-    const schedule = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .first();
-
-    if (schedule) {
-      const nextMaintenance = this.calculateNextMaintenanceDate(
-        performedAt,
-        schedule.frequency,
-        schedule.frequency_interval,
-        schedule.schedule_config
-      );
-
-      await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-        .where({ schedule_id: scheduleId })
-        .update({
-          last_maintenance: performedAt,
-          next_maintenance: nextMaintenance,
-          updated_at: new Date()
-        });
-    }
-  }
-
-  private async getAssetClient(clientId: string, context: ServiceContext): Promise<any> {
-    const knex = await this.getDbForContext(context);
-    return scopedTable(knex, context.tenant, 'clients')
-      .where({ client_id: clientId })
-      // clients holds only client_name/url/billing_email; contact email/phone
-      // live on the client's locations/contacts, not here.
-      .select('client_id', 'client_name', 'billing_email')
-      .first();
-  }
-
   private async getBasicStatistics(context: ServiceContext, includeAssetValue = true): Promise<any> {
     const knex = await this.getDbForContext(context);
     const stats = await scopedTable(knex, context.tenant, this.tableName)
