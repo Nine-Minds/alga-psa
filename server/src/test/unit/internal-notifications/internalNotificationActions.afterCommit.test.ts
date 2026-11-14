@@ -43,6 +43,13 @@ vi.mock('@alga-psa/notifications/realtime/internalNotificationBroadcaster', () =
   broadcastUnreadCount: vi.fn(),
 }));
 
+// Who the recipient is on the ticket is a database read of its own (covered against the real
+// schema by seatNotificationAudience.integration.test.ts). Here nobody is a seat technician.
+vi.mock('@alga-psa/shared/lib/notificationAudience', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/shared/lib/notificationAudience')>()),
+  resolveTicketNotificationRecipient: vi.fn(async () => ({ seat: false })),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),

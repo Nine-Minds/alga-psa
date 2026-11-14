@@ -231,6 +231,24 @@ export interface AnalyzedEntry { entry: Entry; summary: Summary }
 /** Authentication and authorization infrastructure: its own session/role table reads are not what the caller does with tenant data. */
 export const OPAQUE_PATH = /(^|\/)(packages\/(auth|authorization|db)|shared\/(db|core)|server\/src\/lib\/(auth|db)|server\/src\/lib\/api\/middleware)\//;
 
+/**
+ * Recipient-authorization modules: they decide what a notification's RECIPIENT may be told and return
+ * only that decision (a recipient classification, an audience, an admission), never a covered row. Their
+ * own reads (the S33 boundary reads `tickets.client_id`/`board_id`, `comments`, `comment_threads` to
+ * place a seat technician) are therefore not what the caller does with tenant data, exactly as for
+ * `OPAQUE_PATH`. Opaque, NOT an authorization entry point: reaching one gates nothing for the caller,
+ * so an action's own covered reads stay visible and still need a real entry point.
+ * Each file listed here must export no function that returns a covered table's rows.
+ */
+export const OPAQUE_FILES: ReadonlySet<string> = new Set([
+  'shared/lib/notificationAudience.ts',
+]);
+
+export const isOpaqueFile = (file: string): boolean => {
+  const normalized = file.split(path.sep).join('/');
+  return OPAQUE_PATH.test(normalized) || [...OPAQUE_FILES].some((opaque) => normalized === opaque || normalized.endsWith(`/${opaque}`));
+};
+
 export interface Analysis { analyzed: AnalyzedEntry[]; analyzer: Analyzer }
 
 /** Entries sorted by file, then export, so every list and message is in one stable order. */
@@ -238,7 +256,7 @@ export function analyzeFiles(program: Program, files: string[]): Analysis {
   const analyzer = createAnalyzer({
     program,
     isTable: isTenantTable,
-    opaqueFile: (file) => OPAQUE_PATH.test(file.split(path.sep).join('/')),
+    opaqueFile: isOpaqueFile,
   });
   const entries: Entry[] = [];
   for (const file of files) entries.push(...findEntries(program.source(file), relativeToRepository(file)));

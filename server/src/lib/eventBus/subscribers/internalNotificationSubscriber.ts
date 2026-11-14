@@ -34,6 +34,7 @@ import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssign
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { deliverCoManagedSeatSharedNoteNotifications } from '../../notifications/coManagedSeatNotifications';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
+import { lazyAudience, readTicketCommentAudience } from '@alga-psa/shared/lib/notificationAudience';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
 const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
@@ -189,6 +190,8 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
         tenant: tenantId,
         user_id: userId,
         template_name: 'ticket-created',
+        // LEVERAGE: pattern ticket-notification-audience — every ticket notification in this file repeats tenant + ticketAudience + link; a per-handler ticket notifier would declare the audience once.
+        ticketAudience: { ticketId, audience: 'requester' },
         type: 'info',
         category: 'tickets',
         link: internalUrl,
@@ -262,6 +265,7 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
             tenant: tenantId,
             user_id: recipient.userId,
             template_name: 'ticket-board-created',
+            ticketAudience: { ticketId, audience: 'requester' },
             type: 'info',
             category: 'tickets',
             link: internalUrl,
@@ -293,6 +297,7 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-created-client',
+          ticketAudience: { ticketId, audience: 'requester' },
           type: 'info',
           category: 'tickets',
           link: portalUrl,
@@ -381,6 +386,7 @@ async function handleTicketStatusChanged(
         tenant: tenantId,
         user_id: recipient.userId,
         template_name: 'ticket-board-status-entered',
+        ticketAudience: { ticketId, audience: 'requester' },
         type: 'info',
         category: 'tickets',
         link: internalUrl,
@@ -508,6 +514,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
         tenant: tenantId,
         user_id: userId,
         template_name: 'ticket-assigned',
+        ticketAudience: { ticketId, audience: 'requester' },
         type: 'info',
         category: 'tickets',
         link: internalUrl,
@@ -558,6 +565,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-agent-assigned-client',
+          ticketAudience: { ticketId, audience: 'requester' },
           type: 'info',
           category: 'tickets',
           link: portalUrl,
@@ -608,6 +616,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
             tenant: tenantId,
             user_id: memberId,
             template_name: 'ticket-team-assigned',
+            ticketAudience: { ticketId, audience: 'requester' },
             type: 'info',
             category: 'tickets',
             link: internalUrl,
@@ -701,6 +710,7 @@ async function handleTicketAdditionalAgentAssigned(
       tenant: tenantId,
       user_id: additionalAgentId,
       template_name: 'ticket-additional-agent-assigned',
+      ticketAudience: { ticketId, audience: 'requester' },
       type: 'info',
       category: 'tickets',
       link: internalUrl,
@@ -734,6 +744,7 @@ async function handleTicketAdditionalAgentAssigned(
         tenant: tenantId,
         user_id: primaryAgentId,
         template_name: 'ticket-additional-agent-added',
+        ticketAudience: { ticketId, audience: 'requester' },
         type: 'info',
         category: 'tickets',
         link: internalUrl,
@@ -780,6 +791,7 @@ async function handleTicketAdditionalAgentAssigned(
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-additional-agent-added-client',
+          ticketAudience: { ticketId, audience: 'requester' },
           type: 'info',
           category: 'tickets',
           link: internalUrl,
@@ -1062,6 +1074,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
             tenant: tenantId,
             user_id: assigneeId,
             template_name: templateName,
+            ticketAudience: { ticketId, audience: 'requester' },
             type: 'info',
             category: 'tickets',
             link: internalUrl,
@@ -1099,6 +1112,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-updated-client',
+          ticketAudience: { ticketId, audience: 'requester' },
           type: 'info',
           category: 'tickets',
           link: portalUrl,
@@ -1176,6 +1190,7 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
             tenant: tenantId,
             user_id: assigneeId,
             template_name: 'ticket-closed',
+            ticketAudience: { ticketId, audience: 'requester' },
             type: 'success',
             category: 'tickets',
             link: internalUrl,
@@ -1217,6 +1232,7 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-closed-client',
+          ticketAudience: { ticketId, audience: 'requester' },
           type: 'success',
           category: 'tickets',
           link: portalUrl,
@@ -1781,6 +1797,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 
   try {
     const db = opts?.db ?? await getConnection(tenantId);
+    // The notification previews the comment, so the comment's stored audience is the notification's.
+    // Read from the rows, and only if a seat technician is among the recipients.
+    const commentAudience = lazyAudience(() => readTicketCommentAudience(db, tenantId, comment?.id));
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -1868,6 +1887,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
               tenant: tenantId,
               user_id: mentionedUser.user_id,
               template_name: 'user-mentioned-in-comment',
+              ticketAudience: { ticketId, audience: commentAudience },
               type: 'info',
               category: 'messages',
               link: internalUrl,
@@ -1940,6 +1960,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
           tenant: targetTenant,
           user_id: recipient.principalId,
           template_name: isRequester ? 'ticket-comment-added-client' : 'ticket-comment-added',
+          ticketAudience: { ticketId, audience: commentAudience },
           type: 'info',
           category: 'tickets',
           link,
@@ -1981,6 +2002,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
             tenant: tenantId,
             user_id: assigneeId,
             template_name: 'ticket-comment-added',
+            ticketAudience: { ticketId, audience: commentAudience },
             type: 'info',
             category: 'tickets',
             link: ticketUrl,
@@ -2034,6 +2056,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-comment-added-client',
+          ticketAudience: { ticketId, audience: commentAudience },
           type: 'info',
           category: 'tickets',
           link: ticketPortalUrl,
@@ -2088,6 +2111,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts
 
   try {
     const db = opts?.db ?? await getConnection(tenantId);
+    // The notification previews the comment, so the comment's stored audience is the notification's.
+    // Read from the rows, and only if a seat technician is among the recipients.
+    const commentAudience = lazyAudience(() => readTicketCommentAudience(db, tenantId, newComment?.id));
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -2165,6 +2191,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts
               tenant: tenantId,
               user_id: mentionedUser.user_id,
               template_name: 'user-mentioned-in-comment',
+              ticketAudience: { ticketId, audience: commentAudience },
               type: 'info',
               category: 'messages',
               link: internalUrl,
