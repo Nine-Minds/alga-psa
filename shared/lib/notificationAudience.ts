@@ -26,8 +26,9 @@ import {
  *     rendering and with the portal link (`recipientRendering`), and their replies are stored
  *     as `requester`.
  *
- * Scope is evaluated at delivery time, from rows. A subscription made while a ticket was in scope
- * therefore stops delivering the moment the ticket leaves it; nothing has to be cleaned up.
+ * Scope is evaluated at delivery time, from live rows. A subscription made while a ticket was in
+ * scope is therefore downgraded to the external requester rendering the moment the ticket leaves
+ * it, and upgraded again when it comes back; nothing has to be cleaned up or re-subscribed.
  *
  * Every other recipient resolves `{ seat: false }` and keeps exactly the behaviour they had.
  *

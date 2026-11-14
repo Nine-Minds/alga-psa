@@ -1380,15 +1380,11 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         { excludeUserIds: [ticket.assigned_to, creatorUserId] }
       );
       if (resolved.length > 0) {
-        // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
-        const internalWatchers = await resolveInternalWatcherEmails(
-          db,
-          tenantId,
-          extractActiveWatcherEmails(ticket.attributes),
-          { ticketId: payload.ticketId }
-        );
+        // Dedupe against EVERY active watcher, whatever their rendering: an out-of-scope seat
+        // technician who watches is mailed by the watcher block and must not get this one too.
+        const watchingEmails = new Set(extractActiveWatcherEmails(ticket.attributes).map(normalizeRecipientEmail));
         const notWatchers = resolved.filter(
-          (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+          (recipient) => !watchingEmails.has(normalizeRecipientEmail(recipient.email))
         );
         boardRuleRecipients = notWatchers.length > 0
           ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
@@ -1612,10 +1608,10 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
 
     // Active watchers already follow the ticket and get the standard update emails.
     const watcherEmails = extractActiveWatcherEmails(ticket.attributes);
-    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
-    const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails, { ticketId: payload.ticketId });
+    // Dedupe against every active watcher, whatever their rendering (see handleTicketCreated).
+    const watchingEmails = new Set(watcherEmails.map(normalizeRecipientEmail));
     const notWatchers = resolved.filter(
-      (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+      (recipient) => !watchingEmails.has(normalizeRecipientEmail(recipient.email))
     );
     // Only principals go through the visibility filter. Plain addresses have no principal to check.
     const recipients = notWatchers.length > 0

@@ -46,6 +46,27 @@ vi.mock('../../lib/notifications/sendEventEmail', async (importOriginal) => ({
   }),
 }));
 
+// Visibility filter dependencies (`filterRecipientsWhoCanReadTicket`): load the user from the test
+// DB and grant RBAC and record-level read, as on main, where the filter does not narrow seat technicians.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    getUserWithRoles: async (userId: string, tenant: string) => {
+      const user = await actual.tenantDb(testDb, tenant).table('users').where({ user_id: userId }).first();
+      return user ? { ...user, roles: [] } : null;
+    },
+  };
+});
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth/rbac')>()),
+  hasPermission: vi.fn(async () => true),
+}));
+vi.mock('@alga-psa/tickets/lib/ticketRecordAuthorization', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/tickets/lib/ticketRecordAuthorization')>()),
+  authorizeTicketRecordAccess: vi.fn(async () => ({})),
+}));
+
 const SEAT_EMAIL = 'seat.tech@client-a.example.com';
 const MSP_EMAIL = 'msp.agent@msp.example.com';
 const AUTHOR_EMAIL = 'msp.author@msp.example.com';
@@ -78,6 +99,7 @@ describe('audience-safe notifications for a seat technician (integration)', () =
   let emailCommentAdded: (event: any) => Promise<void>;
   let emailClosed: (event: any) => Promise<void>;
   let emailAssigned: (event: any) => Promise<void>;
+  let emailCreated: (event: any) => Promise<void>;
   let inAppCommentAdded: (event: any, opts?: any) => Promise<void>;
   let inAppAssigned: (event: any, opts?: any) => Promise<void>;
 
@@ -87,6 +109,7 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     (globalThis as any).__algaWriteAdmissionResolver = undefined;
     ({ ticketEmailSubscriberTestHarness: {
       handleTicketCommentAdded: emailCommentAdded, handleTicketClosed: emailClosed, handleTicketAssigned: emailAssigned,
+      handleTicketCreated: emailCreated,
     } } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber'));
     ({ internalNotificationSubscriberTestHarness: {
       handleTicketCommentAdded: inAppCommentAdded, handleTicketAssigned: inAppAssigned,
@@ -566,6 +589,28 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     await scoped.table('co_managed_seat_board_scopes').where({ arrangement_id: arrangementId }).delete();
     const reactivation = await testDb.transaction((trx) => setTicketWatcherActive(trx, tenant, inScope, SEAT_EMAIL, true, author));
     expect(reactivation.changed).toBe(true);
+  });
+
+  it('an out-of-scope technician who watches and is also a board-rule recipient is mailed once, in the client rendering (F083)', async () => {
+    const ruleId = uuidv4();
+    await scoped.table('board_notification_rules').insert({ tenant, rule_id: ruleId, board_id: boardIn, notify_on_create: true });
+    await scoped.table('board_notification_rule_recipients').insert({ tenant, rule_id: ruleId, recipient_type: 'user', user_id: seat });
+    try {
+      const ticketId = await createTicket({ client_id: clientB, assigned_to: msp });
+      await watch(ticketId, { user_id: seat });
+      await runWithTenant(tenant, () => emailCreated({
+        id: uuidv4(), eventType: 'TICKET_CREATED', timestamp: new Date().toISOString(),
+        payload: { tenantId: tenant, ticketId, userId: author, actorUserId: author, actorType: 'USER', occurredAt: new Date().toISOString() },
+      }));
+      const seatMail = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
+      expect(seatMail).toHaveLength(1);
+      expect(seatMail[0].template).not.toBe('ticket-board-created');
+      expect(JSON.stringify(seatMail[0].context)).not.toContain('/msp/');
+      expect(JSON.stringify(seatMail[0].context)).toContain('/client-portal/tickets/');
+    } finally {
+      await scoped.table('board_notification_rule_recipients').where({ rule_id: ruleId }).delete();
+      await scoped.table('board_notification_rules').where({ rule_id: ruleId }).delete();
+    }
   });
 
   it('an out-of-scope technician\'s email reply is admitted and stored as requester, never shared IT (F083)', async () => {
