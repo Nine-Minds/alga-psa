@@ -34,6 +34,16 @@ describe('authorization resolver subjects migration ordering', () => {
     expect([...order].sort()).toEqual(order);
   });
 
+  // main shipped the pair under these names and deployed databases record them in
+  // knex_migrations; renaming either one makes knex report the recorded file as missing
+  // on upgrade, so the names are fixed.
+  it('keeps the filenames deployed databases already recorded', () => {
+    expect(PAIR.map(fileFor)).toEqual([
+      '20261113140000_index_authorization_resolver_subjects.cjs',
+      '20261113140100_validate_authorization_resolver_subjects.cjs',
+    ]);
+  });
+
   it('runs after the seat-table migrations it follows on deployed databases', () => {
     const [first] = PAIR.map(fileFor);
     for (const suffix of PRIOR_SEAT_TABLE_MIGRATIONS) {
