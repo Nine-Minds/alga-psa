@@ -5,6 +5,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import type { ITicketResource } from '@alga-psa/types';
 import { assertHumanWorkAssignee } from '../../lib/humanWork/assertHumanWorkAssignee';
+import { assertActorMayAssign } from '../../lib/humanWork/seatAssigneeAudience';
 import { buildTicketAdditionalAgentAssignedPayload, buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 import { writeTicketActivity } from '../../lib/ticketActivity/writeTicketActivity';
 import {
@@ -174,8 +175,11 @@ export async function addTicketResourceCore(
     throw new TicketResourceError(`Ticket not found in tenant ${tenant}`, 'not_found');
   }
 
+  // A seat technician may only assign themselves or a technician of their own client.
+  await assertActorMayAssign(trx, tenant, actorUserId, [additionalUserId]);
+
   // Human-work guard: both the additional agent and the promoted-to-primary assignee are this id.
-  await assertHumanWorkAssignee(trx, tenant, [additionalUserId]);
+  await assertHumanWorkAssignee(trx, tenant, [additionalUserId], { kind: 'ticket', ticketId });
 
   // If the ticket has no primary assignment yet, promote this user to primary
   if (!ticket.assigned_to) {

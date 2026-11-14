@@ -1,7 +1,12 @@
 'use server';
 
 import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
-import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import {
+  assertActorMayAssign,
+  resolveSeatAssigneeAudience,
+  restrictToSeatAudience,
+} from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import {
   isClientUserType,
   isMspPrincipalUserType,
@@ -794,6 +799,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         assigned_team_id: createTicketInput.assigned_team_id,
         entered_by: user.user_id,
       });
+
+      await assertActorMayAssign(trx, tenant, user, [createTicketInput.assigned_to]);
 
       // Use shared TicketModel with retry logic
       // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
@@ -1701,9 +1708,16 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       }
 
       // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+      // The placement the write leaves behind is what scope is judged against, not the stored one.
+      const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
       if (isChangingAssignment && updateData.assigned_to) {
-        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+        await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
+        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
       }
+      await assertTicketMoveKeepsSeatsInScope(
+        trx, tenant, id, pendingPlacement,
+        isChangingAssignment ? updateData.assigned_to : undefined
+      );
 
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.
@@ -3119,14 +3133,19 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       const includeAgentDirectory = !isClientUserType(user.user_type);
 
       // Fetch additional resources and available agents in parallel
+      const seatAssigneeAudience = includeAgentDirectory
+        ? await resolveSeatAssigneeAudience(trx, tenant, user)
+        : null;
       const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
             ticket_id: id
           }),
         includeAgentDirectory
-          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
-              .where({ is_inactive: false })
+          ? restrictToSeatAudience(
+              projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).where({ is_inactive: false }),
+              seatAssigneeAudience
+            )
               .orderBy('first_name', 'asc')
               .then(sanitizeResponseUsers)
           : Promise.resolve(undefined)

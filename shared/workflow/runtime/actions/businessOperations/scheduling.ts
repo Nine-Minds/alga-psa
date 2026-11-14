@@ -406,7 +406,7 @@ export function registerSchedulingActions(): void {
       if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'User not found' });
 
       // Human-work guard (R5.3): schedule assignees must be active internal users.
-      await assertHumanWorkAssignee(tx.trx, tx.tenantId, [input.user_id]);
+      await assertHumanWorkAssignee(tx.trx, tx.tenantId, [input.user_id], { kind: 'unscoped', surface: 'schedule_entry' });
 
       const db = tenantDb(tx.trx, tx.tenantId);
       const technicianRoleQuery = db.table('user_roles as ur');
@@ -608,7 +608,7 @@ export function registerSchedulingActions(): void {
       }
 
       // Human-work guard (R5.3): schedule assignees must be active internal users.
-      await assertHumanWorkAssignee(tx.trx, tx.tenantId, assignedUserIds);
+      await assertHumanWorkAssignee(tx.trx, tx.tenantId, assignedUserIds, { kind: 'unscoped', surface: 'schedule_entry' });
 
       const nowIso = new Date().toISOString();
       await tenantScopedTable(tx, 'schedule_entries').insert({

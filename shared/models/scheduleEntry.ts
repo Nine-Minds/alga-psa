@@ -207,7 +207,8 @@ const ScheduleEntry = {
     await assertHumanWorkAssignee(
       knexOrTrx,
       tenant,
-      userIds.filter((id) => !existingAssigneeIds.has(id))
+      userIds.filter((id) => !existingAssigneeIds.has(id)),
+      { kind: 'unscoped', surface: 'schedule_entry' }
     );
 
     // Delete existing assignments

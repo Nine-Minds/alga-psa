@@ -484,7 +484,7 @@ export const createAppointmentRequest = withAuth(async (
       };
 
       // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
-      await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id]);
+      await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id], { kind: 'unscoped', surface: 'appointment_request' });
       await tenantDb(trx, tenant).table('appointment_requests').insert(newRequest);
 
       return await tenantDb(trx, tenant).table('appointment_requests')
@@ -890,7 +890,7 @@ export const updateAppointmentRequest = withAuth(async (
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
       if (validatedData.preferred_assigned_user_id !== existingRequest.preferred_assigned_user_id) {
-        await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id]);
+        await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id], { kind: 'unscoped', surface: 'appointment_request' });
       }
       await tenantDb(trx, tenant).table('appointment_requests')
         .where({

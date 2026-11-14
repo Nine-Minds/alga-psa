@@ -674,7 +674,7 @@ export const approveAppointmentRequest = withAuth(async (
           throw new Error('Assigned user not found');
         }
         // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
-        await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id]);
+        await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id], { kind: 'unscoped', surface: 'appointment_request' });
 
         const service = await trxTenantDb.table('service_catalog')
           .where({
@@ -831,7 +831,7 @@ export const approveAppointmentRequest = withAuth(async (
         throw new Error('Assigned user not found');
       }
       // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
-      await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id]);
+      await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id], { kind: 'unscoped', surface: 'appointment_request' });
 
       // Get service details
       const service = await trxTenantDb.table('service_catalog')

@@ -24,31 +24,34 @@ const hoisted = vi.hoisted(() => {
     return tableExpr.split(/\s+as\s+/i)[0].trim();
   }
 
+  // A qualified column (`users.user_id`) names the same field as the bare one.
+  const field = (column: string) => column.split('.').pop()!;
+
   function buildQuery(tableName: string) {
     const filters: Array<(row: Row) => boolean> = [];
     const matches = (row: Row) => filters.every((filter) => filter(row));
     const chain: any = {
       where(cond: Row) {
-        filters.push((row) => Object.entries(cond).every(([key, value]) => row[key] === value));
+        filters.push((row) => Object.entries(cond).every(([key, value]) => row[field(key)] === value));
         return chain;
       },
       andWhere(cond: any) {
         return chain.where(cond);
       },
       whereIn(col: string, vals: any[]) {
-        filters.push((row) => vals.includes(row[col]));
+        filters.push((row) => vals.includes(row[field(col)]));
         return chain;
       },
       whereNot(cond: Row) {
-        filters.push((row) => !Object.entries(cond).every(([key, value]) => row[key] === value));
+        filters.push((row) => !Object.entries(cond).every(([key, value]) => row[field(key)] === value));
         return chain;
       },
       whereNotIn(col: string, vals: any[]) {
-        filters.push((row) => !vals.includes(row[col]));
+        filters.push((row) => !vals.includes(row[field(col)]));
         return chain;
       },
       whereNotNull(col: string) {
-        filters.push((row) => row[col] !== null && row[col] !== undefined);
+        filters.push((row) => row[field(col)] !== null && row[field(col)] !== undefined);
         return chain;
       },
       orderBy() {

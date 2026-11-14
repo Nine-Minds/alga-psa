@@ -1,6 +1,11 @@
 'use server';
 
-import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import {
+  assertActorMayAssign,
+  resolveSeatAssigneeAudience,
+  restrictToSeatAudience,
+} from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import {
   isClientUserType,
   isMspPrincipalUserType,
@@ -544,6 +549,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     if (!ticketRead) {
       throw new Error('Permission denied: Cannot view ticket');
     }
+
+    // A seat technician is offered only the technicians of their own client as assignees.
+    const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
     const ticketRedactions = ticketRead.redactedFields;
     // A related record is derived from a ticket field: hiding the field hides the record.
     const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
@@ -589,11 +597,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
       // LEVERAGE: pattern users-star-projection — every ticket loader's users fetch should route through USER_RESPONSE_FIELD_NAMES (users.* carries hashed_password / two_factor_secret)
-      tenantScopedTable(trx, 'users', tenant)
-        .select(...USER_RESPONSE_FIELD_NAMES)
-        .where('user_type', 'internal')
-        .where('is_inactive', false)
-        .orderBy('first_name', 'asc'),
+      restrictToSeatAudience(
+        tenantScopedTable(trx, 'users', tenant)
+          .select(...USER_RESPONSE_FIELD_NAMES)
+          .where('user_type', 'internal')
+          .where('is_inactive', false),
+        seatAssigneeAudience
+      ).orderBy('first_name', 'asc'),
       
       // Statuses
       tenantScopedTable(trx, 'statuses', tenant)
@@ -2431,6 +2441,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         throw new Error('Permission denied: Cannot view ticket options');
       }
 
+      // A seat technician is offered only the technicians of their own client, never an MSP user.
+      const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
+
       // Fetch all options in parallel
       const scopedDb = tenantDb(trx, tenant);
       const ticketTagMappingsQuery = scopedDb.table('tag_mappings as tm')
@@ -2478,10 +2491,12 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       
       // Assignee and user options are internal staff only: a portal (client) user is never a valid assignee,
       // for any client, whoever is asking.
-      tenantScopedTable(trx, 'users', tenant)
-        .where('user_type', 'internal')
-        .select(...USER_RESPONSE_FIELD_NAMES)
-        .orderBy('first_name', 'asc'),
+      restrictToSeatAudience(
+        tenantScopedTable(trx, 'users', tenant)
+          .where('user_type', 'internal')
+          .select(...USER_RESPONSE_FIELD_NAMES),
+        seatAssigneeAudience
+      ).orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
@@ -2916,9 +2931,16 @@ export async function updateTicketInTransaction(
     }
 
     // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+    // The placement the write leaves behind is what scope is judged against, not the stored one.
+    const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
     if (isChangingAssignment && updateData.assigned_to) {
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+      await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
     }
+    await assertTicketMoveKeepsSeatsInScope(
+      trx, tenant, id, pendingPlacement,
+      isChangingAssignment ? updateData.assigned_to : undefined
+    );
 
     let updatedTicket;
     

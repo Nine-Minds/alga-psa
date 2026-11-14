@@ -1261,7 +1261,7 @@ export function registerProjectActions(): void {
         const user = await tenantScopedTable(tx, 'users').where('user_id', assignedTo).first();
         if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Assignee user not found' });
         // Human-work guard (R5.3): task assignees (incl. a team manager) must be active internal users.
-        await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo]);
+        await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo], { kind: 'project_phase', phaseId });
       }
 
       const taskColumns = await getTableColumns(tx, 'project_tasks');
@@ -2439,7 +2439,7 @@ export function registerProjectActions(): void {
           ? parseNullableUuid(sourceTaskRow.assigned_to)
           : null;
         // Human-work guard (R5.3): a copied primary assignee must still be an active internal user.
-        await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo]);
+        await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo], { kind: 'project_phase', phaseId: input.target_phase_id });
         const copiedTaskRow: Record<string, unknown> = {
           ...sourceTaskRow,
           task_id: copiedTaskId,
@@ -2496,7 +2496,8 @@ export function registerProjectActions(): void {
               await assertHumanWorkAssignee(
                 tx.trx,
                 tx.tenantId,
-                sourceResources.map((row: Record<string, unknown>) => String(row.additional_user_id))
+                sourceResources.map((row: Record<string, unknown>) => String(row.additional_user_id)),
+                { kind: 'project_task', taskId: copiedTaskId }
               );
               const resourceColumns = await getTableColumns(tx, 'task_resources');
               const inserts = sourceResources.map((row: Record<string, unknown>) => ({
