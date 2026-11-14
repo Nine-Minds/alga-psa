@@ -3,7 +3,7 @@
  * Keep conservative resolver membership in the authorization layer. A colocated
  * FK makes missing membership impossible, including for revoked seat assignments;
  * no trigger or rollout flag is involved. Feature facts remain authoritative.
- * Constraints enforce new writes immediately; 20261113100100 validates existing
+ * Constraints enforce new writes immediately; 20261113140100 validates existing
  * rows separately so the validation scan does not hold this migration's DDL locks.
  */
 const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
