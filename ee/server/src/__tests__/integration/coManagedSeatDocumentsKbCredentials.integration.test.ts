@@ -29,16 +29,16 @@ vi.mock('@alga-psa/core/logger', () => ({
   default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 vi.mock('@alga-psa/db', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  ...((await importOriginal()) as typeof import('@alga-psa/db')),
   createTenantKnex: vi.fn(async () => ({ knex: ref.knex, tenant: ref.tenant })),
   getConnection: vi.fn(async () => ref.knex),
 }));
 vi.mock('@alga-psa/db/tenant', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/db/tenant')>()),
+  ...((await importOriginal()) as typeof import('@alga-psa/db/tenant')),
   createTenantKnex: vi.fn(async () => ({ knex: ref.knex, tenant: ref.tenant })),
 }));
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   withAuth: (action: any) => (...args: any[]) => action(ref.user, { tenant: ref.tenant }, ...args),
   withOptionalAuth: (action: any) => (...args: any[]) => action(ref.user, { tenant: ref.tenant }, ...args),
   hasPermission: vi.fn(async () => true),
@@ -51,7 +51,7 @@ vi.mock('@alga-psa/auth/lib/knowledgeBasePermissions', () => ({
   canReadPublishedKnowledgeBase: vi.fn(async () => true),
 }));
 vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
   publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
