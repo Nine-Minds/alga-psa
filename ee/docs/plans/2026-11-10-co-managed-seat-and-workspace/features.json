@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Revoking a seat assignment deactivates the user, removes access on the next request and frees the committed seat; it never leaves an ordinary internal user behind.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "Converting a seat technician into an MSP user is an explicit action that passes MSP seat admission, ends the seat assignment and replaces the seat role.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "A user with a live seat assignment can hold only seat roles; assigning another role or adding them to an MSP team is refused.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
