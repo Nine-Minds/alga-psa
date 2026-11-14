@@ -1,3 +1,4 @@
+import { isSeatTechnicianGuardError } from '@alga-psa/db';
 import {
   actionError,
   isAuthorizationThrow,
@@ -26,6 +27,10 @@ export function teamActionErrorFrom(error: unknown): TeamActionError | null {
     if (typeof candidate.actionError === 'string') {
       return actionError(candidate.actionError);
     }
+  }
+
+  if (isSeatTechnicianGuardError(error)) {
+    return actionError(error.message);
   }
 
   if (error instanceof Error) {

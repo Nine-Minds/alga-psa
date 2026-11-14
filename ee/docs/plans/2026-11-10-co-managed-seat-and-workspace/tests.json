@@ -111,7 +111,7 @@
   {
     "id": "T013",
     "description": "DB integration: revoking a seat deactivates the user and frees the seat; converting a seat technician to an MSP user is refused at the MSP seat limit and succeeds with a free seat; assigning a non-seat role or a team to a seat technician is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023",

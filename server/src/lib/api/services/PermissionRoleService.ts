@@ -16,7 +16,7 @@
  */
 
 import { Knex } from 'knex';
-import { assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
 import type { UserRoleFloorChange } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
@@ -1098,6 +1098,9 @@ export class PermissionRoleService extends BaseService<IRole> {
         throw new ValidationError(`Roles not found: ${missingRoles.join(', ')}`);
       }
 
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
+
       // Get current roles to avoid duplicates
       const currentRoles = await tenantDb(trx, context.tenant).table('user_roles')
         .where('user_id', userId)
@@ -1226,6 +1229,8 @@ export class PermissionRoleService extends BaseService<IRole> {
 
       // The final set decides, which is also what rejects an empty roleIds.
       await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
 
       // Remove all current roles
       await tenantDb(trx, context.tenant).table('user_roles')
