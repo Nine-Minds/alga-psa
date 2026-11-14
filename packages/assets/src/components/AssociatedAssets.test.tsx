@@ -1,15 +1,15 @@
 /* @vitest-environment jsdom */
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SWRConfig, mutate, useSWRConfig } from 'swr';
 import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
 import AssociatedAssets from './AssociatedAssets';
-import { listEntityAssets } from '../actions/assetActions';
+import { createAssetAssociation, getAssetSurfaceAccess, linkAssetToTicket, listAssets, listEntityAssets } from '../actions/assetActions';
 import { entityAssetsCacheKey, matchEntityAssetsCacheKeys } from '../lib/assetCacheKeys';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
-vi.mock('../actions/assetActions', () => ({ listEntityAssets: vi.fn(async () => []), createAssetAssociation: vi.fn(), removeAssetAssociation: vi.fn(), listAssets: vi.fn(async () => ({ assets: [], total: 0 })) }));
+vi.mock('../actions/assetActions', () => ({ listEntityAssets: vi.fn(async () => []), createAssetAssociation: vi.fn(), removeAssetAssociation: vi.fn(), listAssets: vi.fn(async () => ({ assets: [], total: 0 })), getAssetSurfaceAccess: vi.fn(), linkAssetToTicket: vi.fn() }));
 const badges = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
 vi.mock('./custody/CustodyBadge', () => ({
   useCustodyBadges: () => badges.map,
@@ -26,10 +26,10 @@ vi.mock('../actions/assetActionErrors', () => ({ unwrapAssetActionResult: (value
 const stableT = (_key: string, options: any) => options?.defaultValue ?? _key;
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: stableT }) }));
 vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({ ReflectionContainer: ({ children }: any) => <div>{children}</div> }));
-vi.mock('@alga-psa/ui/components', () => ({ ContentCard: ({ children }: any) => <div>{children}</div> }));
+vi.mock('@alga-psa/ui/components', () => ({ ContentCard: ({ children, addButton }: any) => <div>{addButton ? <button id={addButton.id} onClick={addButton.onClick}>{addButton.label}</button> : null}{children}</div> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({ Checkbox: (props: any) => <input type="checkbox" {...props} /> }));
-vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ children }: any) => <div>{children}</div> }));
+vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ children, footer }: any) => <div>{children}{footer}</div> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ __esModule: true, default: () => <select /> }));
 vi.mock('@alga-psa/ui/components/SearchInput', () => ({ SearchInput: () => <input /> }));
 vi.mock('@alga-psa/ui/components/Pagination', () => ({ default: () => null }));
@@ -272,5 +272,33 @@ describe('AssociatedAssets custody and RMA chips', () => {
     renderIt();
     await screen.findByRole('button', { name: 'Dell dock' });
     expect(screen.queryByRole('link', { name: /^RMA / })).toBeNull();
+  });
+});
+
+describe('AssociatedAssets linking a device to a ticket (S30, F075)', () => {
+  const device = { asset_id: 'a-own', asset_type: 'workstation', name: 'Reception PC', status: 'active', asset_tag: 'WD-1', client_id: 'c1' } as any;
+  const linkFromDialog = async (closedActions: string[]) => {
+    vi.mocked(listEntityAssets).mockResolvedValue([] as any);
+    vi.mocked(listAssets).mockResolvedValue({ assets: [device], total: 1 } as any);
+    vi.mocked(getAssetSurfaceAccess).mockReset().mockResolvedValue({ closedActions, closedOperations: [], closedFields: [] });
+    vi.mocked(createAssetAssociation).mockReset().mockResolvedValue({} as any);
+    vi.mocked(linkAssetToTicket).mockReset().mockResolvedValue({} as any);
+    render(<SWRConfig value={{ provider: () => new Map() }}><AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" /></SWRConfig>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Asset' }));
+    fireEvent.click(await waitFor(() => { const box = document.getElementById('select-asset-a-own'); expect(box).toBeTruthy(); return box!; }));
+    fireEvent.click(document.getElementById('confirm-add-asset-button')!);
+    await waitFor(() => expect(vi.mocked(createAssetAssociation).mock.calls.length + vi.mocked(linkAssetToTicket).mock.calls.length).toBe(1));
+  };
+
+  it('links through the ticket when the asset surface is read-only (a seat technician)', async () => {
+    await linkFromDialog(['create', 'update', 'delete']);
+    expect(linkAssetToTicket).toHaveBeenCalledWith({ asset_id: 'a-own', ticket_id: 'ticket-1', relationship_type: 'affected' });
+    expect(createAssetAssociation).not.toHaveBeenCalled();
+  });
+
+  it('keeps the asset-update association for someone who may edit assets', async () => {
+    await linkFromDialog([]);
+    expect(createAssetAssociation).toHaveBeenCalledWith({ asset_id: 'a-own', entity_id: 'ticket-1', entity_type: 'ticket', relationship_type: 'affected' });
+    expect(linkAssetToTicket).not.toHaveBeenCalled();
   });
 });

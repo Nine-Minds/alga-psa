@@ -599,8 +599,8 @@ export function AssetBentoLayout({
                   {t('assetBento.noRelated', { defaultValue: 'Not linked to any other asset.' })}
                 </BentoTileEmpty>
               )}
-              {/* F071: an ungrouped asset gets the way into a group from here. */}
-              {!asset.group ? (
+              {/* F071: an ungrouped asset gets the way into a group from here; grouping is a write. */}
+              {!asset.group && canUpdate ? (
                 <Link
                   id="asset-bento-add-to-group"
                   href={`/msp/clients/${asset.client_id}?tab=assets&view=groups`}
