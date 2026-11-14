@@ -319,6 +319,23 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     expect(leaked((await service.getById(clientId, { tenant, userId: people.admin.user_id } as any)) as any)).toEqual([]);
   });
 
+  it('the REST billing decision reads roles in the API context tenant, with no ambient tenant scope and no tenant on the user', async () => {
+    const { ClientService } = await import('../../lib/api/services/ClientService');
+    const service = new ClientService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
+    // A context user shaped like a session user without its tenant: only the context names the tenant.
+    const contextFor = (user: any) => {
+      const { tenant: _omitted, ...userWithoutTenant } = user;
+      return { tenant, userId: user.user_id, user: userWithoutTenant, viaPrincipalUserId: null } as any;
+    };
+
+    expect(await service.getById(clientId, contextFor(people.admin))).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly' });
+    expect(leaked((await service.getById(clientId, contextFor(people.seat))) as any)).toEqual([]);
+    const listed = (await service.list({ page: 1, limit: 100 } as any, contextFor(people.seat))).data.find((c: any) => c.client_id === clientId);
+    expect(listed).toMatchObject({ client_name: 'S13 client' });
+    expect(leaked(listed as any)).toEqual([]);
+  });
+
   it('saving a client from a projected row (as ClientDetails does) leaves every billing column untouched', async () => {
     const { getClientById } = await import('../../../../packages/clients/src/actions/queryActions');
     const { updateClient } = await import('../../../../packages/clients/src/actions/clientActions');
