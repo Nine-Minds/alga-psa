@@ -105,5 +105,66 @@
     "^native_time_tracking_",
     "^tenant_license_state$"
   ],
+  "neutrality": {
+    "capability": "co-managed-seat",
+    "fencedSteps": [
+      "ticket.list",
+      "ticket.open",
+      "comment.add",
+      "timeEntry.create"
+    ],
+    "postures": {
+      "seat-flag-off": {
+        "description": "release flag off: the gate never reaches eligibility or participation",
+        "steps": [
+          {
+            "name": "ticket.list",
+            "statements": 14,
+            "locks": 0
+          },
+          {
+            "name": "ticket.open",
+            "statements": 29,
+            "locks": 0
+          },
+          {
+            "name": "comment.add",
+            "statements": 22,
+            "locks": 3
+          },
+          {
+            "name": "timeEntry.create",
+            "statements": 18,
+            "locks": 1
+          }
+        ]
+      },
+      "seat-flag-on-unentitled": {
+        "description": "release flag on, tenant has no co-managed-seat entitlement or arrangement",
+        "steps": [
+          {
+            "name": "ticket.list",
+            "statements": 14,
+            "locks": 0
+          },
+          {
+            "name": "ticket.open",
+            "statements": 29,
+            "locks": 0
+          },
+          {
+            "name": "comment.add",
+            "statements": 22,
+            "locks": 3
+          },
+          {
+            "name": "timeEntry.create",
+            "statements": 18,
+            "locks": 1
+          }
+        ]
+      }
+    }
+  },
   "notes": "raising a number requires this file in the PR diff"
 }

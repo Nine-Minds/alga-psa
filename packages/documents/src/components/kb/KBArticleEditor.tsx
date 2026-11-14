@@ -161,7 +161,7 @@ export default function KBArticleEditor({
     setIsLoading(true);
     try {
       const result = await getArticle(articleId);
-      if (result && typeof result === 'object' && 'code' in result) {
+      if (isDocumentActionError(result)) {
         toast.error(tRef.current('editor.feedback.permissionDenied', { defaultValue: 'Permission denied' }));
         return;
       }
@@ -233,7 +233,7 @@ export default function KBArticleEditor({
       }
 
       const result = await updateArticle(article.article_id, updates);
-      if (typeof result === 'object' && 'code' in result) {
+      if (isDocumentActionError(result)) {
         toast.error(t('editor.feedback.saveError', { defaultValue: 'Failed to save article' }));
         return;
       }
@@ -307,14 +307,14 @@ export default function KBArticleEditor({
     try {
       if (newStatus === 'published') {
         const result = await publishArticle(article.article_id);
-        if (typeof result === 'object' && 'code' in result) {
+        if (isDocumentActionError(result)) {
           toast.error(t('editor.feedback.publishError', { defaultValue: 'Failed to publish article' }));
           return;
         }
         toast.success(t('editor.feedback.publishSuccess', { defaultValue: 'Article published' }));
       } else {
         const result = await updateArticle(article.article_id, { status: newStatus });
-        if (typeof result === 'object' && 'code' in result) {
+        if (isDocumentActionError(result)) {
           toast.error(t('editor.feedback.statusChangeError', { defaultValue: 'Failed to change article status' }));
           return;
         }
@@ -342,7 +342,7 @@ export default function KBArticleEditor({
     setIsDeleting(true);
     try {
       const result = await deleteArticle(article.article_id);
-      if (typeof result === 'object' && 'code' in result) {
+      if (isDocumentActionError(result)) {
         toast.error(t('editor.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
         setIsDeleting(false);
         return;
