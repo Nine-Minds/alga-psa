@@ -14,6 +14,7 @@ import { tenantDb } from '@alga-psa/db';
 import { CoManagedAdmissionError } from './co-managed-admission';
 import { materializeState, type CoManagedEntitlementState } from './co-managed-entitlements';
 import type { CoManagedOperationalState } from './co-managed-lifecycle-error';
+import { coManagedStateForLapse, resolveCoManagedLapse } from './co-managed-lifecycle';
 import type { CoManagedSeatAllocationRecord } from './co-managed-reservation';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -137,4 +138,29 @@ export async function readCoManagedSeatAllocationState(
   const pool = await materializeState(trx, sponsorTenant, entitlement, new Date());
   if (pool.isReadOnly) return { state: 'read_only', canWrite: false, graceEndsAt: pool.graceEndsAt };
   return { state: pool.graceEndsAt ? 'grace' : 'active', canWrite: true, graceEndsAt: pool.graceEndsAt };
+}
+
+/**
+ * The same answer as `readCoManagedSeatAllocationState`, for a write gate that runs on every
+ * mutation of a seat technician: no row lock and no write. It reads the durable lapse columns the
+ * pool already stored, exactly as `readCoManagedLifecycleLockFree` does for a workspace, so it may
+ * be briefly staler than the locked reader (a lapse that has begun but not yet been recorded reads
+ * as healthy until the next capacity writer or reading records it) but never takes a lock a
+ * capacity writer holds.
+ */
+export async function readCoManagedSeatAllocationStateLockFree(
+  db: Knex | Knex.Transaction, sponsorTenant: string, allocationId: string, now: () => Date = () => new Date(),
+): Promise<CoManagedOperationalState> {
+  const sponsor = tenantDb(db, sponsorTenant);
+  const allocation = await sponsor.table('co_managed_allocations')
+    .where({ allocation_id: allocationId, allocation_kind: 'seat' }).first('state');
+  if (!allocation || allocation.state === 'released') return { state: 'terminated', canWrite: false, graceEndsAt: null };
+  if (allocation.state !== 'active') return { state: 'pending_acceptance', canWrite: false, graceEndsAt: null };
+  const entitlement = await sponsor.table('co_managed_entitlements').first('lapse_started_at', 'valid_until');
+  if (!entitlement) return { state: 'read_only', canWrite: false, graceEndsAt: null };
+  const at = now();
+  // An entitlement that expired but has not been re-materialized yet lapses at its expiry.
+  const expired = entitlement.valid_until && new Date(entitlement.valid_until).getTime() <= at.getTime();
+  const lapseStartedAt = entitlement.lapse_started_at ?? (expired ? entitlement.valid_until : null);
+  return coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt, now: at }));
 }

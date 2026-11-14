@@ -26,6 +26,10 @@
       "types": "./src/seatCapability.ts",
       "import": "./src/seatCapability.ts"
     },
+    "./seatWriteAdmission": {
+      "types": "./src/seatWriteAdmission.ts",
+      "import": "./src/seatWriteAdmission.ts"
+    },
     "./permissionsCapability": {
       "types": "./src/permissionsCapability.ts",
       "import": "./src/permissionsCapability.ts"

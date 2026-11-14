@@ -722,7 +722,7 @@
   {
     "id": "F091",
     "description": "Ending a seat arrangement, after a confirmation that lists the effects, deactivates its technicians, releases the allocation once, returns responsibility for its tickets to the MSP and keeps shared notes readable by MSP staff.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "F092",
     "description": "After lapse grace expires, a seat technician's writes are refused with the lifecycle error while sign-in and reads continue, and MSP users and requesters are unaffected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "F095",
     "description": "A deactivated seat technician can be reactivated only into a live assignment with a free seat.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]
