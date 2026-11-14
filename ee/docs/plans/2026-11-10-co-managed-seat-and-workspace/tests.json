@@ -129,7 +129,7 @@
   {
     "id": "T015",
     "description": "Unit, property: seat subject against every resource type and action in the kernel catalog, asserting own-client allow, other-client deny, out-of-scope board deny, unshared project deny and unnamed resource deny, each with its reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027"
@@ -138,7 +138,7 @@
   {
     "id": "T016",
     "description": "Contract: adding a resource type to the kernel catalog without classifying it for seat subjects fails; the policy service lists no seat rule as editable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F026"
@@ -156,7 +156,7 @@
   {
     "id": "T018",
     "description": "DB integration: a seat technician and a portal user calling the service catalog and contract-line lookups are refused; an internal user with permission succeeds; a client read by a seat technician contains no billing column.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F032"
@@ -173,7 +173,7 @@
   {
     "id": "T020",
     "description": "DB integration: after revoking an assignment or removing a board from scope, the technician's next request is denied without a new sign-in.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]

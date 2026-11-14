@@ -15,8 +15,8 @@
       "types": "./src/kernel/index.ts"
     },
     "./kernel/*": {
-      "import": "./dist/kernel/*.js",
-      "types": "./src/kernel/*"
+      "types": "./src/kernel/*.ts",
+      "import": "./dist/kernel/*.js"
     },
     "./quoteSelfApproval": {
       "import": "./dist/quoteSelfApproval.js",

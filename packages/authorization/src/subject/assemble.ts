@@ -28,6 +28,8 @@ export interface AuthorizationSubjectFacts {
   managedUserIds: readonly string[];
   /** Rows of `user_client_portfolios` for this user. */
   storedPortfolioClientIds: readonly string[];
+  /** Facts of registered built-in rule resolvers, keyed by resolver id; absent when none were loaded. */
+  resolverFacts?: Record<string, unknown>;
 }
 
 export function normalizeStringArray(values: unknown): string[] {
@@ -105,5 +107,6 @@ export function assembleAuthorizationSubject(input: {
     clientId,
     portfolioClientIds: portfolioForUser(facts.storedPortfolioClientIds, clientId),
     ...(apiKeyId ? { apiKeyId } : {}),
+    ...(facts.resolverFacts ? { resolverFacts: facts.resolverFacts } : {}),
   };
 }

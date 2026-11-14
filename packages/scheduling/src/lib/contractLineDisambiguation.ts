@@ -6,6 +6,7 @@ import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
 import { delegateToTimeSource } from './timeSource';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 import {
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionOptions,
@@ -253,6 +254,7 @@ export async function getEligibleContractLines(
   });
 }
 
+// LEVERAGE: pattern eligible-contract-lines-for-ui — three near-identical copies of this lookup (packages/billing/src/lib, packages/scheduling/src/lib, server/src/lib/utils); the guard is shared (@alga-psa/auth/lib/commercialAccess), the body is not. A package-direction-safe shared implementation would remove two.
 export async function getEligibleContractLinesForUI(
   clientId: string,
   serviceId: string,
@@ -273,6 +275,7 @@ export async function getEligibleContractLinesForUI(
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
+  await assertCommercialReadPermission(currentUser);
   const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {

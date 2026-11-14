@@ -6,6 +6,8 @@
  * shared IT note tells the other organization's participants on the ticket. Each case asserts the
  * exact set of users who received an in-app notification: the expected recipients and no one else.
  */
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
@@ -84,6 +86,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
   };
   const seat = async (tenant: string, arrangementId: string, state: 'invited' | 'active' | 'revoked' = 'active', inactive = false) => {
     const userId = await createUser(db, tenant, { is_inactive: inactive });
+    await db.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant: tenant, userId: userId }, CO_MANAGED_SEAT_RESOLVER_ID));
     await db('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId,
       user_id: userId, state, revoked_at: state === 'revoked' ? new Date() : null });
     return userId;

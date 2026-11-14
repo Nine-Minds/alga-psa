@@ -50,6 +50,8 @@ function uniqueNonEmpty(values: Array<string | null | undefined> | undefined): s
  * template semantics; the resource supplies the columns/relations they map to.
  */
 export interface RelationshipSqlAdapter {
+  /** Column holding the record's own id. When omitted, the `selected_records` template denies all rows. */
+  idColumn?: string;
   ownerColumn?: string;
   clientColumn?: string;
   boardColumn?: string;
@@ -98,6 +100,7 @@ export interface RelationshipSqlContext {
   subject: AuthorizationSubject;
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
+  selectedRecordIds?: string[];
   adapter: RelationshipSqlAdapter;
 }
 
@@ -288,6 +291,15 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
       whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
     },
   },
+  // The record itself is on an explicit list (a project shared with a seat arrangement, say). An empty list
+  // and a resource with no id column both deny.
+  selected_records: {
+    matches: (input) => Boolean(input.record?.id && input.selectedRecordIds?.includes(input.record.id)),
+    compileSql: (builder, ctx) => {
+      if (!ctx.adapter.idColumn) { deny(builder); return; }
+      whereInOrDeny(builder, ctx.adapter.idColumn, ctx.selectedRecordIds);
+    },
+  },
 };
 
 export function evaluateRelationshipTemplate(
@@ -370,6 +382,8 @@ function compileBundleRuleSql(
       rule.templateKey === 'selected_clients' ? (rule.selectedClientIds ?? []) : ctx.selectedClientIds,
     selectedBoardIds:
       rule.templateKey === 'selected_boards' ? (rule.selectedBoardIds ?? []) : ctx.selectedBoardIds,
+    selectedRecordIds:
+      rule.templateKey === 'selected_records' ? (rule.selectedRecordIds ?? []) : ctx.selectedRecordIds,
   };
 
   builder.andWhere(function bundleTemplate(this: Knex.QueryBuilder) {

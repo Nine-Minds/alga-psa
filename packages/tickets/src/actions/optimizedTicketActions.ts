@@ -58,7 +58,7 @@ import {
 import { Knex } from 'knex';
 import { findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { checkMultiplePermissions, hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
 import { publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -75,6 +75,7 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
 import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList';
@@ -648,7 +649,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Use the same document policy as subsequent fetches before returning rows
     // or deriving counts. This also annotates effective comment visibility.
-    const documents = await hasPermission(user, 'document', 'read', trx)
+    // One roles load answers both the document policy and the client billing projection below,
+    // so the billing projection costs this hot path no extra statement.
+    // LEVERAGE: pattern request-scoped-permissions — hand-batched permission checks to stay inside the hot-path budget (also the paginated client list in @alga-psa/clients clientActions).
+    const [documentRead, clientBillingRead] = await checkMultiplePermissions(
+      user,
+      [{ resource: 'document', action: 'read' }, CLIENT_BILLING_PERMISSION],
+      trx,
+    );
+    const documents = documentRead.granted
       ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
       : [];
 
@@ -716,6 +725,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         if ('file_id' in client) {
             delete client.file_id;
         }
+        // Billing columns leave with the client row only for a subject holding billing permission
+        // (clientBillingProjection; evaluated with the document permission above).
+        if (!clientBillingRead.granted) client = omitClientBillingColumns(client);
       }
     }
 

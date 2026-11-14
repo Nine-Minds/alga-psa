@@ -3,6 +3,7 @@
 import type { IService } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 import type { Knex } from 'knex';
 
 export interface PaginatedServicesResponse {
@@ -20,7 +21,8 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-export const getServices = withAuth(async (_user, { tenant }, page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> => {
+export const getServices = withAuth(async (user, { tenant }, page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> => {
+  await assertCommercialReadPermission(user);
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {

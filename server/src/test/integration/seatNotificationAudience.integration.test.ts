@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
@@ -140,6 +142,7 @@ describe('audience-safe notifications for a seat technician (integration)', () =
 
     arrangementId = uuidv4();
     await scoped.table('co_managed_seat_arrangements').insert({ tenant, arrangement_id: arrangementId, client_id: clientA, allocation_id: uuidv4(), state: 'active' });
+    await testDb.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant: tenant, userId: seat }, CO_MANAGED_SEAT_RESOLVER_ID));
     await scoped.table('co_managed_seat_assignments').insert({ tenant, assignment_id: uuidv4(), arrangement_id: arrangementId, user_id: seat, state: 'active' });
   }, 900_000);
 
@@ -232,6 +235,7 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     const arrangementB = uuidv4();
     await scoped.table('co_managed_seat_arrangements').insert({ tenant, arrangement_id: arrangementB, client_id: clientB, allocation_id: uuidv4(), state: 'active' });
     await scoped.table('co_managed_seat_board_scopes').insert({ tenant, arrangement_id: arrangementB, board_id: boardIn, can_create: false });
+    await testDb.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant: tenant, userId: userId }, CO_MANAGED_SEAT_RESOLVER_ID));
     await scoped.table('co_managed_seat_assignments').insert({ tenant, assignment_id: uuidv4(), arrangement_id: arrangementB, user_id: userId, state: 'active' });
     try {
       return await run({ userId, email });

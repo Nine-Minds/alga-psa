@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { AuthorizationRequestCache, AuthorizationSubject } from '../kernel/contracts';
 import { RequestLocalAuthorizationCache } from '../kernel/requestCache';
 import { readUserClientPortfolio } from '../portfolios/service';
+import { loadBuiltinResolverFacts } from '../kernel/builtinRuleResolvers';
 import {
   assembleAuthorizationSubject,
   roleIdsCarriedByUser,
@@ -60,11 +61,15 @@ export async function loadAuthorizationSubjectFacts(
     ? await readUserClientPortfolio(knex, { tenant, userId })
     : [];
 
+  // Fast path: no registered resolver's fact source has a subject in this tenant, so nothing is read.
+  const resolverFacts = scope.resolverSubjects !== false ? await loadBuiltinResolverFacts(knex, { tenant, userId }) : undefined;
+
   return {
     roleIds,
     teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),
     storedPortfolioClientIds,
+    ...(resolverFacts ? { resolverFacts } : {}),
   };
 }
 

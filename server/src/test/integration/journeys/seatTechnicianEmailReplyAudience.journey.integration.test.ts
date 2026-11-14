@@ -1,4 +1,6 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -210,6 +212,7 @@ describe('journey: a seat technician replies by email to a ticket notification',
     });
     arrangementId = uuidv4();
     await t('co_managed_seat_arrangements').insert({ tenant: tenantId, arrangement_id: arrangementId, client_id: clientId, allocation_id: uuidv4(), state: 'active' });
+    await db.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant: tenantId, userId: seatUserId }, CO_MANAGED_SEAT_RESOLVER_ID));
     await t('co_managed_seat_assignments').insert({ tenant: tenantId, assignment_id: uuidv4(), arrangement_id: arrangementId, user_id: seatUserId, state: 'active' });
 
     ({ processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp'));

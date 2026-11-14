@@ -107,7 +107,7 @@ vi.mock('./registerEnterpriseStorageProviders.js', () => ({
 
 const { healthState, registrationMode, callOrder } = vi.hoisted(() => ({
   healthState: { workers: {} as Record<string, boolean>, ready: false },
-  registrationMode: { fail: false },
+  registrationMode: { fail: false, pending: null as Promise<void> | null, entered: () => {} },
   callOrder: [] as string[]
 }));
 
@@ -192,11 +192,15 @@ describe('workflow worker startup', () => {
     healthState.workers = {};
     healthState.ready = false;
     registrationMode.fail = false;
+    registrationMode.pending = null;
+    registrationMode.entered = () => {};
     callOrder.length = 0;
     // Re-run per boot: a vi.mock factory is cached across resetModules.
     // Load the real registration, or simulate an image that cannot resolve it.
     vi.doMock('@alga-psa/co-managed/deliveryRegistration', async (importOriginal) => {
       callOrder.push('import');
+      registrationMode.entered();
+      await registrationMode.pending;
       if (registrationMode.fail) throw new Error('cannot resolve co-managed');
       return importOriginal();
     });
@@ -229,21 +233,19 @@ describe('workflow worker startup', () => {
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
 
     try {
-      await import('./index.ts');
-      await vi.waitFor(() => {
-        expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
-        expect(registerFeatureFlagCheckerMock).toHaveBeenCalledTimes(1);
-        expect(registerWorkflowEmailProviderMock).toHaveBeenCalledTimes(1);
-        expect(registerEnterpriseStorageProvidersMock).toHaveBeenCalledTimes(1);
-        expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(sweepWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-        expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-      });
+      await (await import('./index.ts')).startup;
+      expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
+      expect(registerFeatureFlagCheckerMock).toHaveBeenCalledTimes(1);
+      expect(registerWorkflowEmailProviderMock).toHaveBeenCalledTimes(1);
+      expect(registerEnterpriseStorageProvidersMock).toHaveBeenCalledTimes(1);
+      expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
+      expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
+      expect(sweepWorkerCtorMock).toHaveBeenCalledTimes(1);
+      expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+      expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
       const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
       expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(true);
       // Both capability shapes must be ready before the runtime can process work.
@@ -274,12 +276,10 @@ describe('workflow worker startup', () => {
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
 
     try {
-      await import('./index.ts');
-      await vi.waitFor(() => {
-        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
-      });
+      await (await import('./index.ts')).startup;
+      expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
 
       expect(loggerErrorMock).not.toHaveBeenCalled();
     } finally {
@@ -291,12 +291,10 @@ describe('workflow worker startup', () => {
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
 
     try {
-      await import('./index.ts');
-      await vi.waitFor(() => {
-        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
-      });
+      await (await import('./index.ts')).startup;
+      expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
       expect(loggerErrorMock).not.toHaveBeenCalled();
     } finally {
       processOnSpy.mockRestore();
@@ -308,11 +306,40 @@ describe('workflow worker startup', () => {
     coManagedWorkflowTicketSeam.reset();
   });
 
+  it('keeps startup pending and stays not-ready until authority registration completes', async () => {
+    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+    let release!: () => void;
+    registrationMode.pending = new Promise<void>((resolve) => { release = resolve; });
+    const entered = new Promise<void>((resolve) => { registrationMode.entered = resolve; });
+    const { startup } = await import('./index.ts');
+    let finished = false;
+    void startup.then(() => { finished = true; });
+    try {
+      await entered;
+      expect(finished).toBe(false);
+      expect(healthState.ready).toBe(false);
+      expect(initializeWorkflowRuntimeV2Mock).not.toHaveBeenCalled();
+      expect(temporalWorkerStartMock).not.toHaveBeenCalled();
+      release();
+      await startup;
+      expect(finished).toBe(true);
+      expect(healthState.ready).toBe(true);
+      expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
+      expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+      expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
+    } finally {
+      release();
+      await startup;
+      processOnSpy.mockRestore();
+    }
+  });
+
   it('registers the co-managed workflow ticket authority before initializeWorkflowRuntimeV2 and reports ready', async () => {
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
     try {
-      await import('./index.ts');
-      await vi.waitFor(() => expect(healthState.ready).toBe(true));
+      await (await import('./index.ts')).startup;
+      expect(healthState.ready).toBe(true);
       const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
       expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(true);
       expect(healthState.workers['co-managed-workflow-authority']).toBe(true);
@@ -326,8 +353,8 @@ describe('workflow worker startup', () => {
     registrationMode.fail = true;
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
     try {
-      await import('./index.ts');
-      await vi.waitFor(() => expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1));
+      await (await import('./index.ts')).startup;
+      expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
       const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
       expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(false);
       expect(registerCapabilityParticipationMock).not.toHaveBeenCalled();

@@ -109,6 +109,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   client_contacts: { scope: 'tenant' },
   attribute_definitions: { scope: 'tenant' },
   authorization_bundle_assignments: { scope: 'tenant' },
+  authorization_resolver_subjects: { scope: 'tenant' },
   authorization_bundle_revisions: { scope: 'tenant' },
   authorization_bundle_rules: { scope: 'tenant' },
   authorization_bundles: { scope: 'tenant' },

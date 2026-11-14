@@ -105,6 +105,19 @@ describe('client ownership declarations are structurally sound', () => {
 });
 
 describe('client ownership in the manifest', () => {
+  it('requires the ticket template client foreign key while preserving client merge discovery', () => {
+    expect(tenantClientColumns()).toContainEqual({ table: 'ticket_templates', column: 'client_id', owned: true });
+    expect(tenantClientKeyedTables()).toContain('ticket_templates');
+    expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, TENANT_TABLE_FOREIGN_KEYS)).toEqual([]);
+
+    const withoutTemplateClientKey = TENANT_TABLE_FOREIGN_KEYS.filter(
+      key => !(key.child === 'ticket_templates' && key.parent === 'clients'),
+    );
+    expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, withoutTemplateClientKey)).toEqual([
+      'ticket_templates.clientKeyed: no foreign key ticket_templates.client_id -> clients; fix the declaration or mark it enforced: false',
+    ]);
+  });
+
   it('discovers seat arrangements as client-owned without requiring a database foreign key', () => {
     expect(tenantClientOwnership('co_managed_seat_arrangements')).toEqual({
       by: 'column', column: 'client_id', enforced: false,

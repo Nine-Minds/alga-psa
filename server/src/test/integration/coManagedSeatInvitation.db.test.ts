@@ -8,6 +8,8 @@
  * admission orders its locks (seat lock, entitlement, allocation, arrangement) so that it cannot
  * deadlock against reservation, purchase or hosted reconcile.
  */
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -232,6 +234,7 @@ describeDb('inviting a seat technician against the allocation', { shuffle: false
     await invite(sponsor, arrangement.arrangement_id);
     const technician = await createUser(db, sponsor, { user_type: 'internal' });
     // An active technician and a pending invitation each hold a seat; a revoked one holds none.
+    await db.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant: sponsor, userId: technician }, CO_MANAGED_SEAT_RESOLVER_ID));
     await db('co_managed_seat_assignments').insert([
       { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, user_id: technician, state: 'active' },
       { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, state: 'revoked', revoked_at: new Date() },
