@@ -9,7 +9,7 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-ac
 import { MspLayoutClient } from "./MspLayoutClient";
 import { getCoManagedWorkspaceState } from "@/lib/actions/coManagedWorkspaceActions";
 import type { CoManagedWorkspaceNoticeState } from "@/components/co-managed/CoManagedWorkspaceNotice";
-import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { getCurrentProductPrincipal } from "@/lib/productAccess";
 import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
@@ -101,7 +101,10 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
-  const productCode = await getCurrentTenantProduct();
+  // One read answers the tenant's product and the user's principal kind: the route guard, the menu and the
+  // action guards all decide from this principal.
+  const principal = await getCurrentProductPrincipal();
+  const productCode = principal.productCode;
 
   // Only a customer workspace has a relationship notice; psa and algadesk read nothing.
   // A failed or gated read is no notice: the shell must never block on it.
@@ -161,6 +164,7 @@ export default async function MspLayout({
       dateFormat={dateFormat}
       dontNotifyCustomerDefault={dontNotifyCustomerDefault}
       productCode={productCode}
+      surfaceKind={principal.surfaceKind ?? null}
       workspaceNotice={workspaceNotice}
       needsOnboarding={needsOnboarding}
       canRunOnboarding={canRunOnboarding}

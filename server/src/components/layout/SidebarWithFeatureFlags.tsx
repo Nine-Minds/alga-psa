@@ -166,7 +166,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const { hasFeature } = useTier();
   // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
-  const { productCode, edition } = useProduct();
+  const { productCode, surfaceKind, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
 
   useEffect(() => {
@@ -250,23 +250,30 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const editionSections = filterNavigationSectionsByEdition(filteredSections, edition);
 
     return filterMenuSectionsByProduct(
-      productCode,
+      { productCode, surfaceKind },
       filterNavigationSectionsByPermission(
         filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed]);
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
-    const productSections = filterMenuSectionsByProduct(productCode, editionSections);
+    const productSections = filterMenuSectionsByProduct({ productCode, surfaceKind }, editionSections);
 
     return filterNavigationSectionsBySelfHost(
       productSections,
       selfHostMode,
     );
-  }, [edition, productCode, selfHostMode]);
+  }, [edition, productCode, surfaceKind, selfHostMode]);
+
+  // The footer links answer to the same principal as the sections above: a seat technician's surface
+  // reaches neither settings nor the external support link.
+  const footerItems = useMemo(
+    () => filterMenuSectionsByProduct({ productCode, surfaceKind }, [{ items: bottomMenuItems }]).flatMap((section) => section.items),
+    [productCode, surfaceKind],
+  );
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByPermission(
@@ -288,7 +295,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     <Sidebar
       {...props}
       menuSections={menuSections}
-      bottomMenuItems={bottomMenuItems}
+      bottomMenuItems={footerItems}
       appDisplayName={isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA'}
       appLogoAlt={t('sidebar.appLogoAlt', {
         appName: isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA',

@@ -1,6 +1,7 @@
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { mayHoldApiCredentials } from '@alga-psa/authorization/subject/principalKind';
 import { assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { servicePrincipalDb } from './tables';
 import { getForKey } from 'server/src/lib/api/rateLimit/apiRateLimitSettingsModel';
@@ -103,6 +104,11 @@ export async function resolveServicePrincipalApiContext<TUser = unknown>(
     // findUserByIdForApi only returns active users in this tenant.
     const target = await findUserByIdForApi(actAsHeader, keyRecord.tenant);
     if (!target || target.user_type !== 'internal') throw invalidTarget();
+    // Acting as a user is the user's REST access: a principal kind that holds no API credentials (a seat
+    // technician) cannot be acted as either.
+    if (!(await mayHoldApiCredentials(await getConnection(keyRecord.tenant), { tenant: keyRecord.tenant, userId: target.user_id }))) {
+      throw invalidTarget();
+    }
     effectiveUser = target as unknown as TUser;
     actAsUserId = target.user_id;
     viaPrincipalUserId = keyRecord.user_id;

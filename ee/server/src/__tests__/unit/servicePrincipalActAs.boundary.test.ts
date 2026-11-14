@@ -29,6 +29,12 @@ vi.mock('@alga-psa/licensing', () => ({ getLicenseStateRow: vi.fn(), verifyLicen
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTenantTierAccess: vi.fn(async () => undefined),
 }));
+// A principal kind that holds no API credentials (a seat technician) cannot be acted as. Which users are of
+// that kind is the resolver's business; here it is the listed user ids.
+const seatUsers = vi.hoisted(() => new Set<string>());
+vi.mock('@alga-psa/authorization/subject/principalKind', () => ({
+  mayHoldApiCredentials: async (_knex: unknown, input: { userId: string }) => !seatUsers.has(input.userId),
+}));
 import {
   mapServicePrincipalError,
   resolveServicePrincipalApiContext,
@@ -83,6 +89,20 @@ describe('act-as boundary (T015/T016)', () => {
       code: 'ACT_AS_INVALID_TARGET',
       statusCode: 422,
     });
+  });
+
+  it('a seat principal target -> 422 ACT_AS_INVALID_TARGET, so a service principal cannot reach REST as a seat technician', async () => {
+    const SEAT = '66666666-6666-6666-6666-666666666666';
+    mocks.users.set(SEAT, { user_id: SEAT, user_type: 'internal' });
+    seatUsers.add(SEAT);
+    try {
+      await expect(resolveServicePrincipalApiContext(key, owner, req(SEAT))).rejects.toMatchObject({
+        code: 'ACT_AS_INVALID_TARGET',
+        statusCode: 422,
+      });
+    } finally {
+      seatUsers.delete(SEAT);
+    }
   });
 
   it('valid act-as makes the human effective and the principal the via principal', async () => {

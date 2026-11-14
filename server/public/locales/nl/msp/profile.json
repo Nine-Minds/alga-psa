@@ -832,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Toestemming geweigerd: het beheer van API-sleutels is voorbehouden aan interne gebruikers",
+      "notAvailableForAccount": "API-sleutels zijn niet beschikbaar voor dit account.",
       "configInternalOnly": "Toestemming geweigerd: de configuratie van API-sleutels is voorbehouden aan interne gebruikers",
       "invalidExpiration": "Kies een geldige vervaldatum voor deze API-sleutel.",
       "notFound": "API-sleutel niet gevonden.",

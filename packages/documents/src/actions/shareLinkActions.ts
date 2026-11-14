@@ -139,7 +139,7 @@ export const createShareLink = withAuth(
     { tenant },
     input: ICreateShareLinkInput
   ): Promise<IDocumentShareLink | ActionPermissionError> => {
-    await assertPsaOnlyTenantAccess(tenant, 'document_management_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'document_management_actions');
     const { knex } = await createTenantKnex();
 
     // Check document:share permission (or document:update as fallback)
@@ -214,7 +214,7 @@ export const getShareLinksForDocument = withAuth(
     { tenant },
     documentId: string
   ): Promise<IDocumentShareLink[] | ActionPermissionError> => {
-    await assertPsaOnlyTenantAccess(tenant, 'document_management_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'document_management_actions');
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
@@ -247,7 +247,7 @@ export const revokeShareLink = withAuth(
     { tenant },
     shareId: string
   ): Promise<boolean | ActionPermissionError> => {
-    await assertPsaOnlyTenantAccess(tenant, 'document_management_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'document_management_actions');
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {

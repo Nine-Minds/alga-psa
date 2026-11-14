@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
+import { getSession } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '@ee/lib/extensions/runtime/provision';
@@ -22,7 +23,7 @@ export interface InstallInfo {
 export async function getInstallInfo(registryId: string): Promise<InstallInfo | null> {
   const { tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
-  await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: (await getSession())?.user?.id }, 'extension_actions');
   const adminDb: Knex = await getAdminConnection();
   const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
     .where({ id: registryId })
@@ -57,7 +58,7 @@ export async function getInstallInfo(registryId: string): Promise<InstallInfo | 
 export async function reprovisionExtension(registryId: string): Promise<{ domain: string }> {
   const { tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
-  await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: (await getSession())?.user?.id }, 'extension_actions');
   const adminDb: Knex = await getAdminConnection();
   const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
     .where({ id: registryId })

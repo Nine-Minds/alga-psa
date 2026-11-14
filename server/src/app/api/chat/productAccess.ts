@@ -14,6 +14,7 @@ export async function assertPsaChatProductAccess(): Promise<Response | null> {
   try {
     await assertTenantProductAccess({
       tenantId,
+      userId: session?.user?.id,
       capability: 'ai_chat',
       allowedProducts: ['psa'],
     });

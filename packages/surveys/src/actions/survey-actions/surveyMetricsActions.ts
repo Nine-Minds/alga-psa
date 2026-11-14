@@ -7,11 +7,11 @@ import SurveyAnalyticsService from '../../services/SurveyAnalyticsService';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 export const getSurveyMetrics = withAuth(async (
-  _user,
+  user,
   { tenant },
   filters?: SurveyDashboardFilters
 ): Promise<SurveyDashboardMetrics> => {
-  await assertPsaOnlyTenantAccess(tenant, 'survey_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'survey_actions');
   const { knex } = await createTenantKnex();
   return SurveyAnalyticsService.getDashboardMetrics(knex, tenant, filters);
 });

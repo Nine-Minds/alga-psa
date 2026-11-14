@@ -52,6 +52,8 @@ interface Props {
   /** notification_settings.default_dont_notify_customer, seeding ticket notification checkboxes. */
   dontNotifyCustomerDefault?: boolean;
   productCode: ProductCode;
+  /** The user's principal kind (a seat technician's surface); null for an ordinary MSP user. */
+  surfaceKind?: string | null;
   needsOnboarding: boolean;
   /** Whether this user may run workspace setup; only they are sent to it. */
   canRunOnboarding?: boolean;
@@ -103,6 +105,7 @@ export function MspLayoutClient({
   dateFormat,
   dontNotifyCustomerDefault = false,
   productCode,
+  surfaceKind = null,
   needsOnboarding,
   canRunOnboarding = false,
   initialSidebarCollapsed,
@@ -116,7 +119,7 @@ export function MspLayoutClient({
   const router = useRouter();
   const pathname = usePathname();
   const isOnboardingPage = pathname === "/msp/onboarding";
-  const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
+  const routeBehavior = resolveProductRouteBehavior({ productCode, surfaceKind }, pathname);
   const sessionTenant = session?.user?.tenant;
   const shortcutPreference = useKeyboardShortcutPreferenceStorage({ userId: session?.user?.id });
   const dataTablePreferences = useUserPreference<DataTablePageSizes>(DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY, {
@@ -217,7 +220,7 @@ export function MspLayoutClient({
     <AppSessionProvider session={session}>
       <CoManagedWorkspaceBoundary productCode={productCode} requireAcceptance>
       <MspBrandingProvider branding={mspBranding}>
-      <ProductProvider productCode={productCode}>
+      <ProductProvider productCode={productCode} surfaceKind={surfaceKind}>
         <TierProvider selfHostLicensing={selfHostLicensing}>
           <MspCallLinkProvider>
           <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>

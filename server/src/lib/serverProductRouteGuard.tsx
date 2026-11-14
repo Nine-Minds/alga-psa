@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ProductCode } from '@alga-psa/types';
 import { notFound } from 'next/navigation';
-import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { getCurrentProductPrincipal } from '@/lib/productAccess';
 import { type ProductRouteBehavior, resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 
@@ -12,15 +12,21 @@ interface ResolveServerProductRouteInput {
 interface ResolveServerProductRouteResult {
   productCode: ProductCode;
   behavior: ProductRouteBehavior;
+  /** Present only for a user of a principal kind (a seat technician); an ordinary principal has none. */
+  surfaceKind?: string;
 }
 
 export async function resolveServerProductRouteBehavior(
   input: ResolveServerProductRouteInput,
 ): Promise<ResolveServerProductRouteResult> {
-  const productCode = await getCurrentTenantProduct();
-  const behavior = resolveProductRouteBehavior(productCode, input.pathname);
+  const principal = await getCurrentProductPrincipal();
+  const behavior = resolveProductRouteBehavior(principal, input.pathname);
 
-  return { productCode, behavior };
+  return {
+    productCode: principal.productCode,
+    behavior,
+    ...(principal.surfaceKind ? { surfaceKind: principal.surfaceKind } : {}),
+  };
 }
 
 interface EnforceServerProductRouteInput {
