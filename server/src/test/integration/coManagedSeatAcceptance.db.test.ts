@@ -24,7 +24,7 @@ import { releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
 import { clearCapabilityCache } from '../../../../packages/core/src/capability/testing';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { createClient, createContact, createTenant, createUser, ensureContactWithEmail } from '../../../test-utils/testDataFactory';
 
 const require = createRequire(import.meta.url);
 const permissionsDir = path.resolve(__dirname, '../../../migrations/utils/permissions');
@@ -57,8 +57,12 @@ describeDb('accepting an invitation into the seat role', { shuffle: false }, () 
   const arrange = async (sponsorTenant: string, seats = 2) => createCoManagedSeatArrangement(db, { sponsorTenant,
     clientId: await createClient(db, sponsorTenant, `Seat client ${randomUUID().slice(0, 8)}`), operationId: randomUUID(), seats });
   const address = (label = 'tech') => `${label}.${randomUUID().slice(0, 12)}@client.example`;
-  const invite = (sponsorTenant: string, arrangementId: string, email: string = address()) =>
-    inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, email, firstName: 'Dana', lastName: 'Reyes' });
+  /** Invites the client's contact with this email (made when there is none): the technician is always a contact. */
+  const invite = async (sponsorTenant: string, arrangementId: string, email: string = address()) => {
+    const { client_id } = await db('co_managed_seat_arrangements').where({ tenant: sponsorTenant, arrangement_id: arrangementId }).first('client_id');
+    const contactId = await ensureContactWithEmail(db, sponsorTenant, client_id, email, 'Dana Reyes');
+    return inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, contactId });
+  };
   const accept = (token: string, password = PASSWORD) => acceptCoManagedSeatInvitation(db, { token, password });
 
   const seatRoles = (tenant: string) => db('roles').where({ tenant, ...CO_MANAGED_SEAT_ROLE });
@@ -168,8 +172,7 @@ describeDb('accepting an invitation into the seat role', { shuffle: false }, () 
     const sponsor = await sponsorWithPool();
     const arrangement = await arrange(sponsor);
     const [role] = await seatRoles(sponsor);
-    const invitation = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor,
-      arrangementId: arrangement.arrangement_id, email: ' Dana.Reyes.S8@Client.Example ', firstName: 'Dana', lastName: 'Reyes' });
+    const invitation = await invite(sponsor, arrangement.arrangement_id, ' Dana.Reyes.S8@Client.Example ');
     const before = (await internalUsers(sponsor)).length;
 
     const accepted = await accept(invitation.token);

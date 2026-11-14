@@ -11,7 +11,7 @@ import { CoManagedAdmissionError, resizeCoManagedSeatAllocation } from '@alga-ps
 import {
   CoManagedSeatArrangementError, CoManagedSeatInvitationError, coManagedSeatCommitmentCounter,
   createCoManagedSeatArrangement, getCoManagedClientOverview, inviteCoManagedSeatTechnician,
-  mergeCoManagedOverviewEntries, readCoManagedSeatAdminOptions, readCoManagedSeatArrangementPanel,
+  mergeCoManagedOverviewEntries, readCoManagedSeatAdminOptions, readCoManagedSeatContactChoices, readCoManagedSeatArrangementPanel,
   readCoManagedSeatEnableState, readCoManagedSeatOverviewRows, refreshCoManagedSeatInvitation,
   revokeCoManagedSeatInvitation, setCoManagedSeatBoardScope, setCoManagedSeatHandoffDefaults,
   setCoManagedSeatProjectGrants, type CoManagedOverviewEntry,
@@ -67,22 +67,28 @@ export const getCoManagedSeatAdminOptions = withAuth(async (user, { tenant }, cl
   return readCoManagedSeatAdminOptions(knex, { sponsorTenant: tenant, clientId });
 });
 
+/**
+ * The client's contacts for the technician picker, each with the reason it cannot be invited (inactive,
+ * no email, already holds a seat or pending invitation) or null. Computed here from the same facts the
+ * invite command checks; the screen only shows it. The command re-checks, so a stale answer is refused there.
+ */
+export const getCoManagedSeatContactChoicesAction = withAuth(async (user, { tenant }, clientId: string) => {
+  await requireCapabilityForAction(SEAT, tenant, 'admits');
+  const knex = await authorizeSeatAdministration(user, tenant, 'admits', 'manage', { clientId });
+  return readCoManagedSeatContactChoices(knex, { sponsorTenant: tenant, clientId });
+});
+
 export interface EnableCoManagedSeatInput {
   clientId: string;
   /** The idempotency key: a repeated submit returns the same arrangement. */
   operationId: string;
   seats: number;
   boards: Array<{ boardId: string; canCreate: boolean }>;
-  technician: { name: string; email: string };
+  /** The first technician: a contact of the client. Name and email come from the contact row. */
+  contactId: string;
 }
 
 type Delivery = { delivered: boolean };
-
-/** Splits "Dana Reyes" into the first and last name the invitation stores. */
-function splitName(name: string): { firstName: string; lastName: string } {
-  const [firstName = '', ...rest] = name.trim().split(/\s+/);
-  return { firstName, lastName: rest.join(' ') };
-}
 
 /**
  * Enables the seat shape for a client: the arrangement (which reserves and activates the allocation),
@@ -109,13 +115,11 @@ export const enableCoManagedSeatArrangementAction = withAuth(async (user, { tena
     result.scopeSet = true;
   } catch (error) { result.followUpError = refused(error).errorCode; return result; }
   try {
-    const name = splitName(input.technician?.name ?? '');
     const invitation = await inviteCoManagedSeatTechnician(knex, {
-      sponsorTenant: tenant, arrangementId, email: input.technician?.email, firstName: name.firstName,
-      lastName: name.lastName, invitedBy: user.user_id,
+      sponsorTenant: tenant, arrangementId, contactId: input.contactId, invitedBy: user.user_id,
     });
     result.invited = true;
-    if (invitation.created) result.delivered = (await deliverSeatInvitation(user, tenant, { ...invitation, ...name })).delivered;
+    if (invitation.created) result.delivered = (await deliverSeatInvitation(user, tenant, invitation)).delivered;
     else result.delivered = true;
   } catch (error) { result.followUpError = refused(error).errorCode; }
   return result;
@@ -170,18 +174,17 @@ export const setCoManagedSeatHandoffDefaultsAction = withAuth(async (user, { ten
   } catch (error) { return refused(error); }
 });
 
-/** Invites another technician into an existing arrangement. */
+/** Invites another technician, chosen from the arrangement's client's contacts, into an existing arrangement. */
 export const inviteCoManagedSeatTechnicianAction = withAuth(async (user, { tenant }, input: {
-  arrangementId: string; name: string; email: string;
+  arrangementId: string; contactId: string;
 }) => {
   await requireCapabilityForAction(SEAT, tenant, 'admits');
   const knex = await authorizeSeatAdministration(user, tenant, 'admits', 'manage', { arrangementId: input.arrangementId });
   try {
-    const name = splitName(input.name);
     const invitation = await inviteCoManagedSeatTechnician(knex, {
-      sponsorTenant: tenant, arrangementId: input.arrangementId, email: input.email, ...name, invitedBy: user.user_id,
+      sponsorTenant: tenant, arrangementId: input.arrangementId, contactId: input.contactId, invitedBy: user.user_id,
     });
-    const delivery = invitation.created ? await deliverSeatInvitation(user, tenant, { ...invitation, ...name }) : { delivered: true };
+    const delivery = invitation.created ? await deliverSeatInvitation(user, tenant, invitation) : { delivered: true };
     return { invited: true as const, delivered: delivery.delivered };
   } catch (error) { return refused(error); }
 });

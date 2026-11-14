@@ -395,7 +395,7 @@
   },
   {
     "id": "T044",
-    "description": "E2E: on a client with no arrangement an administrator chooses Seat, sets seats, scope and a first technician, and the overview shows the arrangement with pool totals reduced; choosing Workspace opens the existing provisioning flow.",
+    "description": "E2E: on a client with no arrangement an administrator chooses Seat, sets seats, scope and a first technician picked from the client's contacts (inactive, email-less and already-seated contacts are not offered), and the overview shows the arrangement with pool totals reduced; choosing Workspace opens the existing provisioning flow.",
     "implemented": true,
     "featureIds": [
       "F084",

@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "Dit verzoek is al met andere gegevens verzonden. Vernieuw de pagina en begin opnieuw.",
         "invalidSeats": "Voer een geheel aantal plekken in, minimaal 1.",
-        "invalidInvitation": "Voer een naam en een geldig e-mailadres in.",
+        "invalidInvitation": "Kies een contactpersoon om uit te nodigen.",
+        "contactNotFound": "Deze contactpersoon is niet meer beschikbaar. Kies een andere.",
+        "contactWrongClient": "Deze contactpersoon hoort bij een andere klant. Kies een contactpersoon van deze klant.",
+        "contactInactive": "Deze contactpersoon is inactief. Activeer de contactpersoon eerst opnieuw.",
+        "contactNoEmail": "Deze contactpersoon heeft geen e-mailadres. Voeg eerst een e-mailadres toe.",
+        "contactHasSeat": "Deze contactpersoon heeft al een plek of een openstaande uitnodiging.",
         "emailInUse": "Dit e-mailadres hoort al bij een gebruikersaccount. Gebruik een ander adres.",
         "emailInvited": "Voor dit e-mailadres staat al een uitnodiging open.",
         "seatLimit": "Alle plekken zijn in gebruik. Voeg eerst plekken toe of trek een uitnodiging in.",
@@ -480,10 +485,17 @@
         "seats": "Aantal plekken",
         "boards": "Borden in bereik",
         "boardsHint": "Technici zien de tickets van hun bedrijf alleen op deze borden.",
-        "technicianName": "Naam van eerste technicus",
-        "technicianEmail": "E-mailadres van eerste technicus",
+        "technician": "Eerste technicus",
+        "technicianHint": "Kies een contactpersoon van deze klant. Die wordt per e-mail uitgenodigd.",
         "submit": "Plekken inschakelen",
         "title": "Plekkenregeling"
+      },
+      "contact": {
+        "label": "Technicus",
+        "placeholder": "Kies een contactpersoon",
+        "addedNoEmail": "{{name}} is toegevoegd maar heeft geen e-mailadres en kan nog niet worden uitgenodigd.",
+        "addedUnavailable": "{{name}} is toegevoegd maar kan niet worden uitgenodigd.",
+        "unavailable": "Niet getoond omdat ze inactief zijn, geen e-mailadres hebben of al een plek of uitnodiging hebben: {{count}}."
       },
       "chooser": {
         "seat": "Plek",

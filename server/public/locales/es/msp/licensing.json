@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "Esta solicitud ya se envió con datos distintos. Actualice e inicie de nuevo.",
         "invalidSeats": "Introduzca un número entero de puestos, como mínimo 1.",
-        "invalidInvitation": "Introduzca un nombre y una dirección de correo válida.",
+        "invalidInvitation": "Elija un contacto al que invitar.",
+        "contactNotFound": "Este contacto ya no está disponible. Elija otro contacto.",
+        "contactWrongClient": "Este contacto pertenece a otro cliente. Elija un contacto de este cliente.",
+        "contactInactive": "Este contacto está inactivo. Reactívelo primero.",
+        "contactNoEmail": "Este contacto no tiene correo electrónico. Añada uno al contacto primero.",
+        "contactHasSeat": "Este contacto ya tiene un puesto o una invitación pendiente.",
         "emailInUse": "Este correo ya pertenece a una cuenta de usuario. Use otra dirección.",
         "emailInvited": "Este correo ya tiene una invitación pendiente.",
         "seatLimit": "Todos los puestos están en uso. Añada puestos o retire una invitación primero.",
@@ -480,10 +485,17 @@
         "seats": "Número de puestos",
         "boards": "Tableros en el ámbito",
         "boardsHint": "Los técnicos solo ven los tickets de su empresa en estos tableros.",
-        "technicianName": "Nombre del primer técnico",
-        "technicianEmail": "Correo electrónico del primer técnico",
+        "technician": "Primer técnico",
+        "technicianHint": "Elija un contacto de este cliente. Se le invita por correo electrónico.",
         "submit": "Activar puestos",
         "title": "Acuerdo de puestos"
+      },
+      "contact": {
+        "label": "Técnico",
+        "placeholder": "Elija un contacto",
+        "addedNoEmail": "{{name}} se añadió pero no tiene correo electrónico, así que aún no se le puede invitar.",
+        "addedUnavailable": "{{name}} se añadió pero no se le puede invitar.",
+        "unavailable": "No aparecen por estar inactivos, no tener correo o tener ya un puesto o una invitación: {{count}}."
       },
       "chooser": {
         "seat": "Puesto",

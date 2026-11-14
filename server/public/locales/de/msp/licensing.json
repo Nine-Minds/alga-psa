@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "Diese Anfrage wurde bereits mit anderen Angaben gesendet. Aktualisieren Sie die Ansicht und beginnen Sie neu.",
         "invalidSeats": "Geben Sie eine ganze Zahl von Plätzen ein, mindestens 1.",
-        "invalidInvitation": "Geben Sie einen Namen und eine gültige E-Mail-Adresse ein.",
+        "invalidInvitation": "Wählen Sie einen Kontakt zum Einladen aus.",
+        "contactNotFound": "Dieser Kontakt ist nicht mehr verfügbar. Wählen Sie einen anderen Kontakt.",
+        "contactWrongClient": "Dieser Kontakt gehört zu einem anderen Kunden. Wählen Sie einen Kontakt dieses Kunden.",
+        "contactInactive": "Dieser Kontakt ist inaktiv. Reaktivieren Sie den Kontakt zuerst.",
+        "contactNoEmail": "Dieser Kontakt hat keine E-Mail-Adresse. Ergänzen Sie zuerst eine beim Kontakt.",
+        "contactHasSeat": "Dieser Kontakt hat bereits einen Platz oder eine offene Einladung.",
         "emailInUse": "Diese E-Mail-Adresse gehört bereits zu einem Benutzerkonto. Verwenden Sie eine andere Adresse.",
         "emailInvited": "Für diese E-Mail-Adresse besteht bereits eine offene Einladung.",
         "seatLimit": "Alle Plätze sind belegt. Fügen Sie zuerst Plätze hinzu oder ziehen Sie eine Einladung zurück.",
@@ -480,10 +485,17 @@
         "seats": "Anzahl der Plätze",
         "boards": "Boards im Umfang",
         "boardsHint": "Techniker sehen Tickets ihres Unternehmens nur auf diesen Boards.",
-        "technicianName": "Name des ersten Technikers",
-        "technicianEmail": "E-Mail-Adresse des ersten Technikers",
+        "technician": "Erster Techniker",
+        "technicianHint": "Wählen Sie einen Kontakt dieses Kunden. Er wird per E-Mail eingeladen.",
         "submit": "Plätze aktivieren",
         "title": "Platzvereinbarung"
+      },
+      "contact": {
+        "label": "Techniker",
+        "placeholder": "Kontakt auswählen",
+        "addedNoEmail": "{{name}} wurde hinzugefügt, hat aber keine E-Mail-Adresse und kann noch nicht eingeladen werden.",
+        "addedUnavailable": "{{name}} wurde hinzugefügt, kann aber nicht eingeladen werden.",
+        "unavailable": "Nicht aufgeführt, weil inaktiv, ohne E-Mail-Adresse oder bereits mit Platz oder Einladung: {{count}}."
       },
       "chooser": {
         "seat": "Platz",

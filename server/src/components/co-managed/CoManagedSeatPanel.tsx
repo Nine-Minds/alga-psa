@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -16,9 +17,8 @@ import {
   revokeCoManagedSeatInvitationAction,
 } from '@/lib/actions/coManagedSeatActions';
 import CoManagedSeatAccess from './CoManagedSeatAccess';
+import CoManagedSeatContactField from './CoManagedSeatContactField';
 import { coManagedSeatMessage } from './coManagedSeatMessage';
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * A client's seat arrangement: seats used and allocated, the allocation, technicians and their
@@ -36,8 +36,7 @@ export default function CoManagedSeatPanel({ panel, canManage, idPrefix, onChang
 }) {
   const { t } = useTranslation('msp/licensing');
   const [seats, setSeats] = useState(panel.seats);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [contactId, setContactId] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [withdrawing, setWithdrawing] = useState<CoManagedSeatTechnicianRow | null>(null);
@@ -58,7 +57,10 @@ export default function CoManagedSeatPanel({ panel, canManage, idPrefix, onChang
     : t('coManaged.seat.technicians.notSent', { defaultValue: 'The seat is held, but the email did not send. Resend it.' });
 
   const columns: ColumnDefinition<CoManagedSeatTechnicianRow>[] = [
-    { title: t('coManaged.seat.technicians.name', { defaultValue: 'Name' }), dataIndex: 'name', sortable: false },
+    { title: t('coManaged.seat.technicians.name', { defaultValue: 'Name' }), dataIndex: 'name', sortable: false,
+      render: (_value, row) => row.contactId
+        ? <Link id={`${idPrefix}-contact-${row.assignmentId}`} href={`/msp/contacts/${row.contactId}`} className="text-primary hover:underline">{row.name}</Link>
+        : row.name },
     { title: t('coManaged.seat.technicians.email', { defaultValue: 'Email' }), dataIndex: 'email', sortable: false },
     { title: t('coManaged.seat.technicians.status', { defaultValue: 'Status' }), dataIndex: 'state', sortable: false,
       render: (_value, row) => row.state === 'active'
@@ -118,24 +120,18 @@ export default function CoManagedSeatPanel({ panel, canManage, idPrefix, onChang
             ? <p className="text-sm text-muted-foreground">{t('coManaged.seat.technicians.none', { defaultValue: 'No technicians yet.' })}</p>
             : <DataTable id={`${idPrefix}-technicians`} data={panel.technicians} columns={columns} pagination={false} />}
           {canManage && (
-            <form id={`${idPrefix}-invite`} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" onSubmit={(event) => {
+            <form id={`${idPrefix}-invite`} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end" onSubmit={(event) => {
               event.preventDefault();
               void run(async () => {
-                const result = await inviteCoManagedSeatTechnicianAction({ arrangementId: panel.arrangementId, name, email });
+                const result = await inviteCoManagedSeatTechnicianAction({ arrangementId: panel.arrangementId, contactId });
                 if ('rejected' in result) return result;
-                setName(''); setEmail('');
+                setContactId('');
                 return { ok: delivery(result.delivered) };
               });
             }}>
-              <div className="space-y-2">
-                <Label htmlFor={`${idPrefix}-invite-name`}>{t('coManaged.seat.technicians.name', { defaultValue: 'Name' })}</Label>
-                <Input id={`${idPrefix}-invite-name`} maxLength={200} value={name} disabled={busy} onChange={(event) => setName(event.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`${idPrefix}-invite-email`}>{t('coManaged.seat.technicians.email', { defaultValue: 'Email' })}</Label>
-                <Input id={`${idPrefix}-invite-email`} type="email" maxLength={254} value={email} disabled={busy} onChange={(event) => setEmail(event.target.value)} />
-              </div>
-              <Button id={`${idPrefix}-invite-submit`} type="submit" disabled={busy || !name.trim() || !EMAIL.test(email.trim()) || panel.usedSeats >= panel.seats}>
+              <CoManagedSeatContactField clientId={panel.clientId} idPrefix={idPrefix} value={contactId} onChange={setContactId}
+                disabled={busy} version={panel.technicians.length} />
+              <Button id={`${idPrefix}-invite-submit`} type="submit" disabled={busy || contactId === '' || panel.usedSeats >= panel.seats}>
                 {t('coManaged.seat.technicians.invite', { defaultValue: 'Invite technician' })}
               </Button>
             </form>

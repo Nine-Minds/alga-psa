@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const gate = vi.hoisted(() => ({ clientInScope: true, workspace: true, serves: true, admits: true, checked: [] as string[], permissions: new Set<string>(), userType: 'internal' }));
 const domain = vi.hoisted(() => ({
   create: vi.fn(), scope: vi.fn(), invite: vi.fn(), revoke: vi.fn(), refresh: vi.fn(), panel: vi.fn(), enable: vi.fn(),
-  grants: vi.fn(), handoff: vi.fn(), resize: vi.fn(), overview: vi.fn(), seatRows: vi.fn(),
+  grants: vi.fn(), handoff: vi.fn(), resize: vi.fn(), overview: vi.fn(), seatRows: vi.fn(), choices: vi.fn(),
 }));
 const createTenantKnex = vi.hoisted(() => vi.fn());
 const browserActor = vi.hoisted(() => vi.fn());
@@ -57,6 +57,7 @@ vi.mock('@alga-psa/co-managed', () => ({
   readCoManagedSeatArrangementPanel: (...a: any[]) => domain.panel(...a),
   readCoManagedSeatEnableState: (...a: any[]) => domain.enable(...a),
   readCoManagedSeatAdminOptions: vi.fn(async () => ({ boards: [], projects: [], staff: [] })),
+  readCoManagedSeatContactChoices: (...a: any[]) => domain.choices(...a),
   readCoManagedSeatOverviewRows: (...a: any[]) => domain.seatRows(...a),
   setCoManagedSeatProjectGrants: (...a: any[]) => domain.grants(...a),
   setCoManagedSeatHandoffDefaults: (...a: any[]) => domain.handoff(...a),
@@ -67,7 +68,7 @@ vi.mock('../../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: 
 vi.mock('../../../lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: vi.fn() }));
 
 const load = () => import('@/lib/actions/coManagedSeatActions');
-const enableInput = { clientId: 'c', operationId: 'op', seats: 2, boards: [{ boardId: 'b', canCreate: true }], technician: { name: 'Dana Reyes', email: 'dana@client.example' } };
+const enableInput = { clientId: 'c', operationId: 'op', seats: 2, boards: [{ boardId: 'b', canCreate: true }], contactId: 'contact-1' };
 
 beforeEach(() => {
   gate.clientInScope = true; gate.workspace = true; gate.serves = true; gate.admits = true; gate.checked = []; gate.userType = 'internal';
@@ -86,12 +87,13 @@ describe('seat administration gate', () => {
     for (const run of [
       () => actions.getCoManagedSeatClientState('c'),
       () => actions.getCoManagedSeatAdminOptions('c'),
+      () => actions.getCoManagedSeatContactChoicesAction('c'),
       () => actions.enableCoManagedSeatArrangementAction(enableInput),
       () => actions.changeCoManagedSeatAllocationAction({ arrangementId: 'a', seats: 2, expectedSeats: 1 }),
       () => actions.setCoManagedSeatBoardScopeAction({ arrangementId: 'a', boards: [] }),
       () => actions.setCoManagedSeatProjectGrantsAction({ arrangementId: 'a', projectIds: [] }),
       () => actions.setCoManagedSeatHandoffDefaultsAction({ arrangementId: 'a', assignedTo: null }),
-      () => actions.inviteCoManagedSeatTechnicianAction({ arrangementId: 'a', name: 'D', email: 'd@x.io' }),
+      () => actions.inviteCoManagedSeatTechnicianAction({ arrangementId: 'a', contactId: 'contact-1' }),
       () => actions.resendCoManagedSeatInvitationAction({ assignmentId: 'x' }),
       () => actions.revokeCoManagedSeatInvitationAction({ assignmentId: 'x' }),
       () => actions.getCoManagedCombinedOverviewAction({}),
@@ -143,6 +145,7 @@ describe('client scope', () => {
     for (const run of [
       () => actions.getCoManagedSeatClientState('c'),
       () => actions.getCoManagedSeatAdminOptions('c'),
+      () => actions.getCoManagedSeatContactChoicesAction('c'),
       () => actions.enableCoManagedSeatArrangementAction(enableInput),
       () => actions.setCoManagedSeatProjectGrantsAction({ arrangementId: 'a', projectIds: [] }),
       () => actions.revokeCoManagedSeatInvitationAction({ assignmentId: 'x' }),
@@ -155,12 +158,14 @@ describe('enabling a seat arrangement', () => {
   it('creates, scopes and invites in that order, reusing the one operation key, and delivers the link', async () => {
     domain.create.mockResolvedValue({ arrangement_id: 'arr' });
     domain.scope.mockResolvedValue([]);
-    domain.invite.mockResolvedValue({ created: true, token: 'tok', email: 'dana@client.example' });
+    domain.invite.mockResolvedValue({ created: true, token: 'tok', email: 'dana@client.example', firstName: 'Dana', lastName: 'Reyes' });
     const { enableCoManagedSeatArrangementAction } = await load();
     await expect(enableCoManagedSeatArrangementAction(enableInput)).resolves.toEqual({ created: true, scopeSet: true, invited: true, delivered: true, followUpError: null });
     expect(domain.create).toHaveBeenCalledWith('knex', { sponsorTenant: 't', clientId: 'c', operationId: 'op', seats: 2 });
     expect(domain.scope).toHaveBeenCalledWith('knex', { sponsorTenant: 't', arrangementId: 'arr', boards: [{ boardId: 'b', canCreate: true }] });
-    expect(domain.invite).toHaveBeenCalledWith('knex', expect.objectContaining({ arrangementId: 'arr', email: 'dana@client.example', firstName: 'Dana', lastName: 'Reyes', invitedBy: 'u' }));
+    expect(domain.invite).toHaveBeenCalledWith('knex', { sponsorTenant: 't', arrangementId: 'arr', contactId: 'contact-1', invitedBy: 'u' });
+    // The name and email come back from the contact row: the action sends none of its own.
+    expect(email.mock.calls[0][0]).toMatchObject({ email: 'dana@client.example', teamMemberName: 'Dana Reyes' });
     expect(email).toHaveBeenCalledOnce();
     expect(email.mock.calls[0][0].inviteLink).toBe('https://msp.example/auth/team/setup?token=tok');
   });
@@ -184,7 +189,7 @@ describe('enabling a seat arrangement', () => {
   it('a failed email still reports the invitation, so the administrator can resend', async () => {
     domain.create.mockResolvedValue({ arrangement_id: 'arr' });
     domain.scope.mockResolvedValue([]);
-    domain.invite.mockResolvedValue({ created: true, token: 'tok', email: 'dana@client.example' });
+    domain.invite.mockResolvedValue({ created: true, token: 'tok', email: 'dana@client.example', firstName: 'Dana', lastName: 'Reyes' });
     email.mockRejectedValue(new Error('smtp down'));
     const { enableCoManagedSeatArrangementAction } = await load();
     await expect(enableCoManagedSeatArrangementAction(enableInput)).resolves.toMatchObject({ invited: true, delivered: false });
@@ -194,6 +199,33 @@ describe('enabling a seat arrangement', () => {
     domain.create.mockRejectedValue(new Error('connection reset'));
     const { enableCoManagedSeatArrangementAction } = await load();
     await expect(enableCoManagedSeatArrangementAction(enableInput)).rejects.toThrow('connection reset');
+  });
+});
+
+describe('contact choices and invitation by contact', () => {
+  it('the choices come from the domain read for the client, after the gate, and are returned as read', async () => {
+    domain.choices.mockResolvedValue([{ contactId: 'c1', name: 'Dana Reyes', email: 'dana@s34-review.example', blocker: null }]);
+    const { getCoManagedSeatContactChoicesAction } = await load();
+    await expect(getCoManagedSeatContactChoicesAction('c')).resolves.toEqual([expect.objectContaining({ contactId: 'c1', blocker: null })]);
+    expect(domain.choices).toHaveBeenCalledWith('knex', { sponsorTenant: 't', clientId: 'c' });
+  });
+
+  it('a manager without admission or the manage permission reads no choices', async () => {
+    const actions = await load();
+    gate.permissions.delete('co_management:manage');
+    await expect(actions.getCoManagedSeatContactChoicesAction('c')).rejects.toThrow('Permission denied');
+    gate.permissions.add('co_management:manage');
+    gate.admits = false;
+    await expect(actions.getCoManagedSeatContactChoicesAction('c')).rejects.toThrow('CAPABILITY_UNAVAILABLE');
+    expect(domain.choices).not.toHaveBeenCalled();
+  });
+
+  it('inviting passes the contact id and nothing typed, and returns the domain\'s named refusal', async () => {
+    domain.invite.mockRejectedValue(new SeatError('CONTACT_WRONG_CLIENT'));
+    const { inviteCoManagedSeatTechnicianAction } = await load();
+    await expect(inviteCoManagedSeatTechnicianAction({ arrangementId: 'a', contactId: 'contact-1' }))
+      .resolves.toEqual({ rejected: true, errorCode: 'CONTACT_WRONG_CLIENT' });
+    expect(domain.invite).toHaveBeenCalledWith('knex', { sponsorTenant: 't', arrangementId: 'a', contactId: 'contact-1', invitedBy: 'u' });
   });
 });
 

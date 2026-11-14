@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "This request was already sent with different details. Refresh and start again.",
         "invalidSeats": "Enter a whole number of seats, at least 1.",
-        "invalidInvitation": "Enter a name and a valid email address.",
+        "invalidInvitation": "Choose a contact to invite.",
+        "contactNotFound": "This contact is no longer available. Choose another contact.",
+        "contactWrongClient": "This contact belongs to a different client. Choose one of this client's contacts.",
+        "contactInactive": "This contact is inactive. Reactivate the contact first.",
+        "contactNoEmail": "This contact has no email address. Add one to the contact first.",
+        "contactHasSeat": "This contact already holds a seat or a pending invitation.",
         "emailInUse": "This email already belongs to a user account. Use a different address.",
         "emailInvited": "This email already has a pending invitation.",
         "seatLimit": "Every seat is in use. Add seats, or withdraw an invitation, first.",
@@ -480,10 +485,17 @@
         "seats": "Number of seats",
         "boards": "Boards in scope",
         "boardsHint": "Technicians see tickets of their company on these boards only.",
-        "technicianName": "First technician name",
-        "technicianEmail": "First technician email",
+        "technician": "First technician",
+        "technicianHint": "Choose one of this client's contacts. They are invited by email.",
         "submit": "Enable seats",
         "title": "Seat arrangement"
+      },
+      "contact": {
+        "label": "Technician",
+        "placeholder": "Choose a contact",
+        "addedNoEmail": "{{name}} was added but has no email address, so they cannot be invited yet.",
+        "addedUnavailable": "{{name}} was added but cannot be invited.",
+        "unavailable": "Not listed because they are inactive, have no email address, or already hold a seat or invitation: {{count}}."
       },
       "chooser": {
         "seat": "Seat",

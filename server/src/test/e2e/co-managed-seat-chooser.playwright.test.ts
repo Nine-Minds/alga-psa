@@ -3,7 +3,9 @@
  * and the combined overview.
  *
  * On a client with no arrangement an administrator opens the Co-managed IT tab, chooses Seat, sets the
- * number of seats, the boards in scope and the first technician, and confirms. The tab then shows the seat
+ * number of seats, the boards in scope and the first technician, and confirms. The technician is picked from
+ * the client's contacts (inactive contacts, contacts without an email and contacts that already hold a seat are not
+ * offered), never typed. The tab then shows the seat
  * arrangement panel, and the Co-managed IT overview lists the client as shape Seat with seats used and
  * allocated while the pool's available total is reduced. Choosing Workspace opens the existing provisioning
  * flow, unchanged.
@@ -13,6 +15,10 @@
  * below, so eligibility is real; only the release flag is bypassed):
  *
  *   FORCE_CAPABILITIES=co-managed:on,co-managed-seat:on NEXT_PUBLIC_FORCE_CAPABILITIES=co-managed:on,co-managed-seat:on
+ *
+ * Not covered here: creating a contact from the picker's "Add new contact" and having it selected. That flow is
+ * covered with a stand-in for the quick-add dialog in CoManagedSeatPanel.test.tsx and CoManagedShapeChooser.test.tsx,
+ * and has not been driven through the real dialog.
  *
  * The server-side halves are covered by tests that did run:
  *   server/src/test/unit/co-managed/coManagedSeatActions.gate.test.ts   capability and permission gating, command order
@@ -59,6 +65,15 @@ test.describe('Co-managed seat: shape chooser, panel and overview (T044)', () =>
         await db('boards').insert({ tenant, board_id: uuidv4(), board_name: name, is_default: false });
       }
 
+      // The client's contacts: Dana can be invited; the other two cannot.
+      const danaEmail = `dana.${uuidv4().slice(0, 8)}@s34-review.example`;
+      const danaId = uuidv4();
+      await db('contacts').insert([
+        { tenant, contact_name_id: danaId, client_id: client.clientId, full_name: 'Dana Reyes', email: danaEmail, is_inactive: false },
+        { tenant, contact_name_id: uuidv4(), client_id: client.clientId, full_name: 'Ines Inactive', email: `ines.${uuidv4().slice(0, 8)}@s34-review.example`, is_inactive: true },
+        { tenant, contact_name_id: uuidv4(), client_id: client.clientId, full_name: 'Nora NoEmail', email: null, is_inactive: false },
+      ]);
+
       await page.goto(`${baseUrl}/msp/clients/${client.clientId}?tab=co-managed`, { waitUntil: 'domcontentloaded' });
 
       // The chooser: two shapes with one sentence each, and the pool.
@@ -79,13 +94,19 @@ test.describe('Co-managed seat: shape chooser, panel and overview (T044)', () =>
       await page.locator('[id$="-seat-count"]').fill(String(SEATS));
       await page.getByLabel(boardName).check();
       await page.locator('[id*="-board-create-"]').first().click();
-      await page.locator('[id$="-tech-name"]').fill('Dana Reyes');
-      await page.locator('[id$="-tech-email"]').fill(`dana.${uuidv4().slice(0, 8)}@client.example`);
+      // No free-text technician fields: the technician is chosen from the client's contacts.
+      await expect(page.locator('[id$="-tech-name"], [id$="-tech-email"]')).toHaveCount(0);
+      await expect(page.locator('[id$="-seat-submit"]')).toBeDisabled();
+      await page.locator('[id$="-technician-contact"]').first().click();
+      await expect(page.getByRole('option', { name: /Dana Reyes/ })).toBeVisible();
+      await expect(page.getByRole('option', { name: /Ines Inactive/ })).toHaveCount(0);
+      await expect(page.getByRole('option', { name: /Nora NoEmail/ })).toHaveCount(0);
+      await page.getByRole('option', { name: /Dana Reyes/ }).click();
       await page.locator('[id$="-seat-submit"]').click();
 
       // The panel replaces the chooser: seats used (the invited technician holds one) and allocated.
       await expect(page.locator('[id$="-seat-usage"]')).toHaveText(`1 of ${SEATS} seats used`, { timeout: 30_000 });
-      await expect(page.getByText('Dana Reyes')).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Dana Reyes' })).toHaveAttribute('href', `/msp/contacts/${danaId}`);
       await expect(seatOption).toHaveCount(0);
 
       // The overview: the client as shape Seat, seats used and allocated, and the pool reduced.
@@ -103,6 +124,16 @@ test.describe('Co-managed seat: shape chooser, panel and overview (T044)', () =>
       expect(arrangement?.state).toBe('active');
       const allocation = await db('co_managed_allocations').where({ tenant, allocation_id: arrangement.allocation_id }).first();
       expect(Number(allocation.seats)).toBe(SEATS);
+      // The seat records the contact, and the invitation's name and email are the contact's.
+      const assignment = await db('co_managed_seat_assignments').where({ tenant, arrangement_id: arrangement.arrangement_id }).first();
+      expect(assignment.contact_id).toBe(danaId);
+      const invitation = await db('user_invitations').where({ tenant, invitation_id: assignment.invitation_id }).first();
+      expect(invitation).toMatchObject({ email: danaEmail, first_name: 'Dana', last_name: 'Reyes' });
+
+      // Dana now holds a seat, so the panel's own picker no longer offers her.
+      await page.goto(`${baseUrl}/msp/clients/${client.clientId}?tab=co-managed`, { waitUntil: 'domcontentloaded' });
+      await page.locator('[id$="-technician-contact"]').first().click();
+      await expect(page.getByRole('option', { name: /Dana Reyes/ })).toHaveCount(0);
     } finally {
       await db.destroy();
     }

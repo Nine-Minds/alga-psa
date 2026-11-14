@@ -23,7 +23,17 @@ export function coManagedSeatMessage(code: string | null | undefined, t: Transla
     case 'INVALID_RESERVATION':
       return t('coManaged.seat.error.invalidSeats', { defaultValue: 'Enter a whole number of seats, at least 1.' });
     case 'INVALID_INVITATION':
-      return t('coManaged.seat.error.invalidInvitation', { defaultValue: 'Enter a name and a valid email address.' });
+      return t('coManaged.seat.error.invalidInvitation', { defaultValue: 'Choose a contact to invite.' });
+    case 'CONTACT_NOT_FOUND':
+      return t('coManaged.seat.error.contactNotFound', { defaultValue: 'This contact is no longer available. Choose another contact.' });
+    case 'CONTACT_WRONG_CLIENT':
+      return t('coManaged.seat.error.contactWrongClient', { defaultValue: 'This contact belongs to a different client. Choose one of this client\'s contacts.' });
+    case 'CONTACT_INACTIVE':
+      return t('coManaged.seat.error.contactInactive', { defaultValue: 'This contact is inactive. Reactivate the contact first.' });
+    case 'CONTACT_NO_EMAIL':
+      return t('coManaged.seat.error.contactNoEmail', { defaultValue: 'This contact has no email address. Add one to the contact first.' });
+    case 'CONTACT_HAS_SEAT':
+      return t('coManaged.seat.error.contactHasSeat', { defaultValue: 'This contact already holds a seat or a pending invitation.' });
     case 'EMAIL_IN_USE':
       return t('coManaged.seat.error.emailInUse', { defaultValue: 'This email already belongs to a user account. Use a different address.' });
     case 'EMAIL_INVITED':

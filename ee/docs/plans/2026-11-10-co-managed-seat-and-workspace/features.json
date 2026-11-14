@@ -673,7 +673,7 @@
   },
   {
     "id": "F085",
-    "description": "The seat arrangement panel shows seats used and allocated and lets an administrator change the allocation, invite, resend and revoke technicians, edit board scope, share projects and set handoff defaults.",
+    "description": "The seat arrangement panel shows seats used and allocated and lets an administrator change the allocation, invite technicians chosen from the client's contacts (a missing contact is added through the standard quick-add contact dialog; no free-text name or email), resend and revoke invitations, edit board scope, share projects and set handoff defaults.",
     "implemented": false,
     "prdRefs": [
       "Segment H — MSP administration surfaces"

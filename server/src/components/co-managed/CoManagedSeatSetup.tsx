@@ -7,11 +7,10 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { enableCoManagedSeatArrangementAction, getCoManagedSeatAdminOptions } from '@/lib/actions/coManagedSeatActions';
+import CoManagedSeatContactField from './CoManagedSeatContactField';
 import CoManagedSeatBoardPicker, { type SeatBoardChoice } from './CoManagedSeatBoardPicker';
 import { coManagedSeatMessage } from './coManagedSeatMessage';
 import { newCoManagedOperationId } from './coManagedOperationId';
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Seat shape setup: how many seats, which boards, and the first technician. Confirming calls one
@@ -29,8 +28,7 @@ export default function CoManagedSeatSetup({ clientId, idPrefix, available, onEn
   const [boards, setBoards] = useState<Array<{ boardId: string; name: string }>>([]);
   const [scope, setScope] = useState<SeatBoardChoice>({});
   const [seats, setSeats] = useState(1);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [contactId, setContactId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const operationId = useRef(newCoManagedOperationId());
@@ -46,16 +44,16 @@ export default function CoManagedSeatSetup({ clientId, idPrefix, available, onEn
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return; }
     onDirtyChange?.(true);
-  }, [seats, name, email, scope, onDirtyChange]);
+  }, [seats, contactId, scope, onDirtyChange]);
 
-  const valid = Number.isInteger(seats) && seats >= 1 && seats <= available && name.trim().length > 0 && EMAIL.test(email.trim());
+  const valid = Number.isInteger(seats) && seats >= 1 && seats <= available && contactId !== '';
 
   const submit = async () => {
     if (!valid || busy) return;
     setBusy(true); setError(null);
     try {
       const result = await enableCoManagedSeatArrangementAction({
-        clientId, operationId: operationId.current, seats, technician: { name, email },
+        clientId, operationId: operationId.current, seats, contactId,
         boards: Object.entries(scope).map(([boardId, entry]) => ({ boardId, canCreate: entry.canCreate })),
       });
       if ('rejected' in result) { setError(coManagedSeatMessage(result.errorCode, t)); return; }
@@ -82,15 +80,10 @@ export default function CoManagedSeatSetup({ clientId, idPrefix, available, onEn
           <p className="text-sm text-muted-foreground">{t('coManaged.seat.setup.boardsHint', { defaultValue: 'Technicians see tickets of their company on these boards only.' })}</p>
           <CoManagedSeatBoardPicker idPrefix={idPrefix} boards={boards} value={scope} onChange={setScope} />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-tech-name`}>{t('coManaged.seat.setup.technicianName', { defaultValue: 'First technician name' })}</Label>
-            <Input id={`${idPrefix}-tech-name`} required maxLength={200} value={name} onChange={(event) => setName(event.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-tech-email`}>{t('coManaged.seat.setup.technicianEmail', { defaultValue: 'First technician email' })}</Label>
-            <Input id={`${idPrefix}-tech-email`} required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} />
-          </div>
+        <div className="space-y-2">
+          <Label>{t('coManaged.seat.setup.technician', { defaultValue: 'First technician' })}</Label>
+          <p className="text-sm text-muted-foreground">{t('coManaged.seat.setup.technicianHint', { defaultValue: 'Choose one of this client\'s contacts. They are invited by email.' })}</p>
+          <CoManagedSeatContactField clientId={clientId} idPrefix={idPrefix} value={contactId} onChange={setContactId} disabled={busy} />
         </div>
       </fieldset>
       <Button id={`${idPrefix}-seat-submit`} type="submit" disabled={busy || !valid}>

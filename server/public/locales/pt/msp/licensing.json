@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "Esta solicitação já foi enviada com detalhes diferentes. Atualize e comece novamente.",
         "invalidSeats": "Informe um número inteiro de lugares, no mínimo 1.",
-        "invalidInvitation": "Informe um nome e um endereço de e-mail válido.",
+        "invalidInvitation": "Escolha um contato para convidar.",
+        "contactNotFound": "Este contato não está mais disponível. Escolha outro contato.",
+        "contactWrongClient": "Este contato pertence a outro cliente. Escolha um contato deste cliente.",
+        "contactInactive": "Este contato está inativo. Reative-o primeiro.",
+        "contactNoEmail": "Este contato não tem e-mail. Adicione um ao contato primeiro.",
+        "contactHasSeat": "Este contato já ocupa uma vaga ou tem um convite pendente.",
         "emailInUse": "Este e-mail já pertence a uma conta de usuário. Use outro endereço.",
         "emailInvited": "Este e-mail já tem um convite pendente.",
         "seatLimit": "Todos os lugares estão em uso. Adicione lugares ou retire um convite primeiro.",
@@ -480,10 +485,17 @@
         "seats": "Número de lugares",
         "boards": "Quadros no âmbito",
         "boardsHint": "Os técnicos veem os tickets da sua empresa apenas nestes quadros.",
-        "technicianName": "Nome do primeiro técnico",
-        "technicianEmail": "E-mail do primeiro técnico",
+        "technician": "Primeiro técnico",
+        "technicianHint": "Escolha um contato deste cliente. Ele é convidado por e-mail.",
         "submit": "Ativar lugares",
         "title": "Acordo de lugares"
+      },
+      "contact": {
+        "label": "Técnico",
+        "placeholder": "Escolha um contato",
+        "addedNoEmail": "{{name}} foi adicionado, mas não tem e-mail, então ainda não pode ser convidado.",
+        "addedUnavailable": "{{name}} foi adicionado, mas não pode ser convidado.",
+        "unavailable": "Não listados por estarem inativos, sem e-mail ou já com vaga ou convite: {{count}}."
       },
       "chooser": {
         "seat": "Lugar",

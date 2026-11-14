@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import {
+  readCoManagedSeatContactChoices,
   acceptCoManagedSeatInvitation, createCoManagedSeatArrangement, inviteCoManagedSeatTechnician,
   readCoManagedSeatAdminOptions, readCoManagedSeatArrangementPanel, readCoManagedSeatEnableState,
   readCoManagedSeatOverviewRows, refreshCoManagedSeatInvitation, revokeCoManagedSeatInvitation,
@@ -17,7 +18,7 @@ import {
 import { releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { createClient, createContact, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const DAY = 86_400_000;
 const describeDb = await describeWithDb();
@@ -54,6 +55,12 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
     return projectId;
   };
   const address = () => `tech.${randomUUID().slice(0, 12)}@client.example`;
+  /** Invites a new contact of the arrangement's client (name and email as given), the way the panel does. */
+  const invite = async (sponsorTenant: string, arrangementId: string, options: { email?: string | null; name?: string } = {}) => {
+    const { client_id } = await db('co_managed_seat_arrangements').where({ tenant: sponsorTenant, arrangement_id: arrangementId }).first('client_id');
+    const contactId = await createContact(db, sponsorTenant, client_id, { fullName: options.name ?? 'Dana Reyes', email: options.email === undefined ? address() : options.email });
+    return inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, contactId });
+  };
   const revision = async (sponsor: string, arrangementId: string) =>
     (await db('co_managed_seat_arrangements').where({ tenant: sponsor, arrangement_id: arrangementId }).first('revision')).revision as number;
 
@@ -101,18 +108,18 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
       .toMatchObject({ arrangementId: arrangement.arrangement_id, seats: 3, usedSeats: 0, technicians: [], boardScope: [], sharedProjectIds: [], handoffDefaults: {} });
 
     const email = address();
-    const invited = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email, firstName: 'Dana', lastName: 'Reyes' });
+    const invited = await invite(sponsor, arrangement.arrangement_id, { email, name: 'Dana Reyes' });
     const boardId = await board(sponsor);
     await setCoManagedSeatBoardScope(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, boards: [{ boardId, canCreate: true }] });
 
     const panel = await readCoManagedSeatArrangementPanel(db, { sponsorTenant: sponsor, clientId: arrangement.client_id });
     expect(panel).toMatchObject({ seats: 3, usedSeats: 1, boardScope: [{ boardId, canCreate: true }] });
-    expect(panel?.technicians).toEqual([{ assignmentId: invited.assignment_id, state: 'invited', name: 'Dana Reyes', email,
+    expect(panel?.technicians).toEqual([{ assignmentId: invited.assignment_id, contactId: invited.contact_id, state: 'invited', name: 'Dana Reyes', email,
       expiresAt: expect.any(String), expired: false }]);
 
     await acceptCoManagedSeatInvitation(db, { token: invited.token, password: 'Sup3r-secret-pass!' });
     const accepted = await readCoManagedSeatArrangementPanel(db, { sponsorTenant: sponsor, clientId: arrangement.client_id });
-    expect(accepted?.technicians).toEqual([expect.objectContaining({ state: 'active', name: 'Dana Reyes', email, expiresAt: null, expired: false })]);
+    expect(accepted?.technicians).toEqual([expect.objectContaining({ state: 'active', contactId: invited.contact_id, name: 'Dana Reyes', email, expiresAt: null, expired: false })]);
   });
 
   // F085
@@ -134,7 +141,7 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
     await project(sponsor, arrangement.client_id, 'Rollout');
     await project(sponsor, other, 'Somebody else');
     const staff = await createUser(db, sponsor, { user_type: 'internal', first_name: 'Sam', last_name: 'Staff' });
-    const invited = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email: address(), firstName: 'Tess', lastName: 'Tech' });
+    const invited = await invite(sponsor, arrangement.arrangement_id, { email: address(), name: 'Tess Tech' });
     const accepted = await acceptCoManagedSeatInvitation(db, { token: invited.token, password: 'Sup3r-secret-pass!' });
 
     const options = await readCoManagedSeatAdminOptions(db, { sponsorTenant: sponsor, clientId: arrangement.client_id });
@@ -149,8 +156,8 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
     const sponsor = await sponsorWithPool(10);
     const acme = await arrange(sponsor, 3, await client(sponsor, 'Acme'));
     const beta = await arrange(sponsor, 2, await client(sponsor, 'Beta'));
-    await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: acme.arrangement_id, email: address(), firstName: 'A' });
-    await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: acme.arrangement_id, email: address(), firstName: 'B' });
+    await invite(sponsor, acme.arrangement_id, { email: address(), name: 'A' });
+    await invite(sponsor, acme.arrangement_id, { email: address(), name: 'B' });
     await releaseCoManagedSeatAllocation(db, sponsor, { allocationId: beta.allocation_id });
     await db('co_managed_seat_arrangements').where({ tenant: sponsor, arrangement_id: beta.arrangement_id }).update({ state: 'ended', ended_at: new Date() });
 
@@ -214,7 +221,7 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
     await expect(set(portalUser)).rejects.toMatchObject({ code: 'USER_NOT_FOUND' });
     await expect(set(randomUUID())).rejects.toMatchObject({ code: 'USER_NOT_FOUND' });
     await expect(set('nope')).rejects.toMatchObject({ code: 'INVALID_HANDOFF_DEFAULTS' });
-    const invited = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email: address(), firstName: 'Tess' });
+    const invited = await invite(sponsor, arrangement.arrangement_id, { email: address(), name: 'Tess' });
     const technician = await acceptCoManagedSeatInvitation(db, { token: invited.token, password: 'Sup3r-secret-pass!' });
     await expect(set(technician.user_id)).rejects.toMatchObject({ code: 'USER_NOT_FOUND' });
   });
@@ -223,8 +230,8 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
   it('withdrawing a pending invitation gives its seat back and spends the link', async () => {
     const sponsor = await sponsorWithPool(3);
     const arrangement = await arrange(sponsor, 1);
-    const invited = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email: address(), firstName: 'Dana' });
-    await expect(inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email: address(), firstName: 'Full' }))
+    const invited = await invite(sponsor, arrangement.arrangement_id, { email: address(), name: 'Dana' });
+    await expect(invite(sponsor, arrangement.arrangement_id, { email: address(), name: 'Full' }))
       .rejects.toMatchObject({ code: 'SEAT_LIMIT' });
 
     expect(await revokeCoManagedSeatInvitation(db, { sponsorTenant: sponsor, assignmentId: invited.assignment_id })).toEqual({ revoked: true });
@@ -236,14 +243,14 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
     await expect(acceptCoManagedSeatInvitation(db, { token: invited.token, password: 'Sup3r-secret-pass!' })).rejects.toMatchObject({ code: 'INVITATION_REVOKED' });
 
     // The seat is free again.
-    await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email: address(), firstName: 'Next' });
+    await invite(sponsor, arrangement.arrangement_id, { email: address(), name: 'Next' });
   });
 
   // F085: accepted technicians are revoked by a command this slice does not have.
   it('does not revoke an accepted technician', async () => {
     const sponsor = await sponsorWithPool(3);
     const arrangement = await arrange(sponsor, 1);
-    const invited = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email: address(), firstName: 'Dana' });
+    const invited = await invite(sponsor, arrangement.arrangement_id, { email: address(), name: 'Dana' });
     await acceptCoManagedSeatInvitation(db, { token: invited.token, password: 'Sup3r-secret-pass!' });
     await expect(revokeCoManagedSeatInvitation(db, { sponsorTenant: sponsor, assignmentId: invited.assignment_id })).rejects.toMatchObject({ code: 'ASSIGNMENT_NOT_PENDING' });
     await expect(revokeCoManagedSeatInvitation(db, { sponsorTenant: sponsor, assignmentId: randomUUID() })).rejects.toMatchObject({ code: 'INVITATION_NOT_FOUND' });
@@ -254,7 +261,7 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
     const sponsor = await sponsorWithPool(3);
     const arrangement = await arrange(sponsor, 1);
     const email = address();
-    const invited = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email, firstName: 'Dana', lastName: 'Reyes' });
+    const invited = await invite(sponsor, arrangement.arrangement_id, { email, name: 'Dana Reyes' });
     await db('user_invitations').where({ tenant: sponsor, invitation_id: invited.invitation_id }).update({ expires_at: new Date(Date.now() - 1000) });
 
     const refreshed = await refreshCoManagedSeatInvitation(db, { sponsorTenant: sponsor, assignmentId: invited.assignment_id });
@@ -269,8 +276,132 @@ describeDb('seat arrangement administration', { shuffle: false }, () => {
   it('refuses to resend a withdrawn invitation', async () => {
     const sponsor = await sponsorWithPool(3);
     const arrangement = await arrange(sponsor, 1);
-    const invited = await inviteCoManagedSeatTechnician(db, { sponsorTenant: sponsor, arrangementId: arrangement.arrangement_id, email: address(), firstName: 'Dana' });
+    const invited = await invite(sponsor, arrangement.arrangement_id, { email: address(), name: 'Dana' });
     await revokeCoManagedSeatInvitation(db, { sponsorTenant: sponsor, assignmentId: invited.assignment_id });
     await expect(refreshCoManagedSeatInvitation(db, { sponsorTenant: sponsor, assignmentId: invited.assignment_id })).rejects.toMatchObject({ code: 'ASSIGNMENT_NOT_PENDING' });
+  });
+
+  // F085: a technician is a contact of the arrangement's client; the contact row is the only source of the name and email.
+  describe('seat technicians are picked from the client\'s contacts', () => {
+    const attempt = (sponsorTenant: string, arrangementId: string, contactId: string) =>
+      inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, contactId });
+    const stored = async (sponsor: string, assignmentId: string) => {
+      const assignment = await db('co_managed_seat_assignments').where({ tenant: sponsor, assignment_id: assignmentId }).first();
+      const invitation = await db('user_invitations').where({ tenant: sponsor, invitation_id: assignment.invitation_id }).first();
+      return { assignment, invitation };
+    };
+
+    it('stores the contact on the assignment and takes the name and email from the contact row', async () => {
+      const sponsor = await sponsorWithPool(5);
+      const arrangement = await arrange(sponsor, 2);
+      const contactId = await createContact(db, sponsor, arrangement.client_id, { fullName: 'Dana Mae Reyes', email: ' Dana@S34-Review.Example ' });
+      const invited = await attempt(sponsor, arrangement.arrangement_id, contactId);
+      const { assignment, invitation } = await stored(sponsor, invited.assignment_id);
+      expect(assignment).toMatchObject({ contact_id: contactId, state: 'invited' });
+      expect(invitation).toMatchObject({ email: 'dana@s34-review.example', first_name: 'Dana', last_name: 'Mae Reyes' });
+      expect(invited).toMatchObject({ contact_id: contactId, email: 'dana@s34-review.example', firstName: 'Dana', lastName: 'Mae Reyes' });
+      // The panel shows the contact's name and names the contact for its link.
+      const panel = await readCoManagedSeatArrangementPanel(db, { sponsorTenant: sponsor, clientId: arrangement.client_id });
+      expect(panel?.technicians).toEqual([expect.objectContaining({ contactId, name: 'Dana Mae Reyes' })]);
+      // Renaming the contact before acceptance does not change who the invitation was for; the contact's name is shown.
+      await db('contacts').where({ tenant: sponsor, contact_name_id: contactId }).update({ full_name: 'Dana Reyes-Moore' });
+      expect((await readCoManagedSeatArrangementPanel(db, { sponsorTenant: sponsor, clientId: arrangement.client_id }))?.technicians[0].name).toBe('Dana Reyes-Moore');
+    });
+
+    it('is declarative on the contact: a second invitation of the same contact returns the first and takes no seat', async () => {
+      const sponsor = await sponsorWithPool(5);
+      const arrangement = await arrange(sponsor, 2);
+      const contactId = await createContact(db, sponsor, arrangement.client_id, { fullName: 'Dana Reyes' });
+      const first = await attempt(sponsor, arrangement.arrangement_id, contactId);
+      expect(await attempt(sponsor, arrangement.arrangement_id, contactId)).toEqual({ ...first, created: false });
+      expect(await db('co_managed_seat_assignments').where({ tenant: sponsor }).whereNot('state', 'revoked')).toHaveLength(1);
+    });
+
+    it('refuses a contact of another client', async () => {
+      const sponsor = await sponsorWithPool(5);
+      const arrangement = await arrange(sponsor, 2);
+      const other = await client(sponsor);
+      const contactId = await createContact(db, sponsor, other, { fullName: 'Not Theirs' });
+      await expect(attempt(sponsor, arrangement.arrangement_id, contactId)).rejects.toMatchObject({ code: 'CONTACT_WRONG_CLIENT' });
+      expect(await db('co_managed_seat_assignments').where({ tenant: sponsor })).toHaveLength(0);
+      expect(await db('user_invitations').where({ tenant: sponsor })).toHaveLength(0);
+    });
+
+    it("refuses a contact that does not exist or belongs to another tenant", async () => {
+      const sponsor = await sponsorWithPool(5);
+      const arrangement = await arrange(sponsor, 2);
+      await expect(attempt(sponsor, arrangement.arrangement_id, randomUUID())).rejects.toMatchObject({ code: 'CONTACT_NOT_FOUND' });
+      const foreign = await sponsorWithPool(1);
+      const foreignContact = await createContact(db, foreign, await client(foreign), { fullName: 'Elsewhere' });
+      await expect(attempt(sponsor, arrangement.arrangement_id, foreignContact)).rejects.toMatchObject({ code: 'CONTACT_NOT_FOUND' });
+      expect(await db('co_managed_seat_assignments').where({ tenant: sponsor })).toHaveLength(0);
+    });
+
+    it('refuses an inactive contact and a contact with no email, each by name', async () => {
+      const sponsor = await sponsorWithPool(5);
+      const arrangement = await arrange(sponsor, 3);
+      const inactive = await createContact(db, sponsor, arrangement.client_id, { fullName: 'Gone', isInactive: true });
+      await expect(attempt(sponsor, arrangement.arrangement_id, inactive)).rejects.toMatchObject({ code: 'CONTACT_INACTIVE' });
+      for (const email of [null, '', '   ', 'not-an-email']) {
+        const contactId = await createContact(db, sponsor, arrangement.client_id, { fullName: 'No Mail', email });
+        await expect(attempt(sponsor, arrangement.arrangement_id, contactId)).rejects.toMatchObject({ code: 'CONTACT_NO_EMAIL' });
+      }
+      expect(await db('co_managed_seat_assignments').where({ tenant: sponsor })).toHaveLength(0);
+    });
+
+    it('refuses a contact who already holds a seat or pending invitation on any arrangement, and frees them on withdrawal', async () => {
+      const sponsor = await sponsorWithPool(6);
+      const arrangement = await arrange(sponsor, 3);
+      const contactId = await createContact(db, sponsor, arrangement.client_id, { fullName: 'Dana Reyes' });
+      const first = await attempt(sponsor, arrangement.arrangement_id, contactId);
+
+      // Pending on another arrangement of the same sponsor: refused, whichever client the contact belongs to.
+      const elsewhere = await arrange(sponsor, 1);
+      await expect(attempt(sponsor, elsewhere.arrangement_id, contactId)).rejects.toMatchObject({ code: 'CONTACT_HAS_SEAT' });
+
+      // Accepted: still holding.
+      await acceptCoManagedSeatInvitation(db, { token: first.token, password: 'Sup3r-secret-pass!' });
+      await expect(attempt(sponsor, arrangement.arrangement_id, contactId)).rejects.toMatchObject({ code: 'CONTACT_HAS_SEAT' });
+      expect(await db('co_managed_seat_assignments').where({ tenant: sponsor, contact_id: contactId }).whereNot('state', 'revoked')).toHaveLength(1);
+
+      // A withdrawn invitation frees the contact.
+      const other = await createContact(db, sponsor, arrangement.client_id, { fullName: 'Sam Pending' });
+      const pending = await attempt(sponsor, arrangement.arrangement_id, other);
+      await revokeCoManagedSeatInvitation(db, { sponsorTenant: sponsor, assignmentId: pending.assignment_id });
+      await expect(attempt(sponsor, arrangement.arrangement_id, other)).resolves.toMatchObject({ created: true });
+    });
+
+    it('the database allows one live seat per contact and refuses a contact of another tenant', async () => {
+      const sponsor = await sponsorWithPool(5);
+      const arrangement = await arrange(sponsor, 2);
+      const contactId = await createContact(db, sponsor, arrangement.client_id, { fullName: 'Dana Reyes' });
+      const row = (assignmentId: string) => ({ tenant: sponsor, assignment_id: assignmentId, arrangement_id: arrangement.arrangement_id, state: 'invited', contact_id: contactId });
+      await db('co_managed_seat_assignments').insert(row(randomUUID()));
+      await expect(db('co_managed_seat_assignments').insert(row(randomUUID()))).rejects.toMatchObject({ constraint: 'co_managed_one_live_seat_per_contact' });
+      await db('co_managed_seat_assignments').where({ tenant: sponsor, contact_id: contactId })
+        .update({ state: 'revoked', revoked_at: new Date() });
+      await expect(db('co_managed_seat_assignments').insert(row(randomUUID()))).resolves.toBeDefined();
+      const foreign = await sponsorWithPool(1);
+      const foreignContact = await createContact(db, foreign, await client(foreign), { fullName: 'Elsewhere' });
+      await expect(db('co_managed_seat_assignments').insert({ ...row(randomUUID()), contact_id: foreignContact })).rejects.toBeDefined();
+    });
+
+    it('offers the client\'s contacts with the first reason each cannot be invited, and no other client\'s', async () => {
+      const sponsor = await sponsorWithPool(5);
+      const arrangement = await arrange(sponsor, 3);
+      const clientId = arrangement.client_id;
+      const ready = await createContact(db, sponsor, clientId, { fullName: 'Dana Reyes', email: 'dana@s34-review.example' });
+      const inactive = await createContact(db, sponsor, clientId, { fullName: 'Ines Inactive', isInactive: true });
+      const noEmail = await createContact(db, sponsor, clientId, { fullName: 'Nora NoEmail', email: null });
+      const holder = await createContact(db, sponsor, clientId, { fullName: 'Hal Holder' });
+      await attempt(sponsor, arrangement.arrangement_id, holder);
+      await createContact(db, sponsor, await client(sponsor), { fullName: 'Somebody Else' });
+
+      const choices = await readCoManagedSeatContactChoices(db, { sponsorTenant: sponsor, clientId });
+      expect(choices.map((choice) => [choice.contactId, choice.name, choice.blocker])).toEqual([
+        [ready, 'Dana Reyes', null], [holder, 'Hal Holder', 'HAS_SEAT'], [inactive, 'Ines Inactive', 'INACTIVE'], [noEmail, 'Nora NoEmail', 'NO_EMAIL'],
+      ]);
+      expect(await readCoManagedSeatContactChoices(db, { sponsorTenant: sponsor, clientId: 'nope' })).toEqual([]);
+    });
   });
 });

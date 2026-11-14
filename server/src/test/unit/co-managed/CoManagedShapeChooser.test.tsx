@@ -3,22 +3,47 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const actions = vi.hoisted(() => ({ enable: vi.fn(), options: vi.fn() }));
+const actions = vi.hoisted(() => ({ enable: vi.fn(), options: vi.fn(), choices: vi.fn() }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_k: string, o?: any) => (o?.defaultValue ?? _k).replace(/\{\{(\w+)\}\}/g, (_m: string, k: string) => String(o?.[k])) }),
 }));
 vi.mock('@/lib/actions/coManagedSeatActions', () => ({
   enableCoManagedSeatArrangementAction: actions.enable, getCoManagedSeatAdminOptions: actions.options,
+  getCoManagedSeatContactChoicesAction: actions.choices,
 }));
 
+import { QuickAddClientProvider } from '@alga-psa/ui/context/QuickAddClientContext';
 import CoManagedShapeChooser from '@/components/co-managed/CoManagedShapeChooser';
 
 const enable = (overrides: any = {}) => ({ capacity: { purchased: 10, allocated: 4, available: 6 }, blocker: null, ...overrides });
+// The standard quick-add contact dialog stands in as a button that "creates" a contact for the preset client.
+const quickAdd = vi.hoisted(() => ({ props: null as any }));
+const callbacks = {
+  renderQuickAddClient: () => null,
+  renderQuickAddInteraction: () => null,
+  openInteractionDetails: async () => undefined,
+  renderQuickAddContact: (props: any) => {
+    quickAdd.props = props;
+    return props.isOpen ? <button onClick={() => props.onContactAdded({ contact_name_id: 'c-zoe', full_name: 'Zoe New' })}>Create Zoe</button> : null;
+  },
+};
 const mount = (props: any = {}) => render(
-  <CoManagedShapeChooser clientId="c1" idPrefix="t" enable={enable()} workspaceSetup={<div>workspace-setup-flow</div>} onEnabled={vi.fn()} {...props} />);
+  <QuickAddClientProvider value={callbacks}>
+    <CoManagedShapeChooser clientId="c1" idPrefix="t" enable={enable()} workspaceSetup={<div>workspace-setup-flow</div>} onEnabled={vi.fn()} {...props} />
+  </QuickAddClientProvider>);
+const pickContact = async (name: RegExp) => {
+  fireEvent.click(await screen.findByRole('button', { name: 'Choose a contact' }));
+  fireEvent.click(await screen.findByRole('option', { name }));
+};
 
 beforeEach(() => {
   actions.enable.mockReset();
+  actions.choices.mockReset().mockResolvedValue([
+    { contactId: 'c-dana', name: 'Dana Reyes', email: 'dana@s34-review.example', blocker: null },
+    { contactId: 'c-gone', name: 'Ines Inactive', email: 'ines@s34-review.example', blocker: 'INACTIVE' },
+    { contactId: 'c-nomail', name: 'Nora NoEmail', email: null, blocker: 'NO_EMAIL' },
+    { contactId: 'c-held', name: 'Hal Holder', email: 'hal@s34-review.example', blocker: 'HAS_SEAT' },
+  ]);
   actions.options.mockReset().mockResolvedValue({ boards: [{ boardId: 'b1', name: 'Service desk' }, { boardId: 'b2', name: 'Projects' }], projects: [], staff: [] });
 });
 afterEach(cleanup);
@@ -74,13 +99,55 @@ describe('shape chooser', () => {
     fireEvent.change(screen.getByLabelText('Number of seats'), { target: { value: '3' } });
     fireEvent.click(screen.getByLabelText('Service desk'));
     fireEvent.click(screen.getByLabelText('Can create tickets'));
-    fireEvent.change(screen.getByLabelText('First technician name'), { target: { value: 'Dana Reyes' } });
-    fireEvent.change(screen.getByLabelText('First technician email'), { target: { value: 'dana@client.example' } });
+    expect(screen.getByRole('button', { name: 'Enable seats' })).toBeDisabled();
+    await pickContact(/Dana Reyes/);
     fireEvent.click(screen.getByRole('button', { name: 'Enable seats' }));
     await waitFor(() => expect(onEnabled).toHaveBeenCalledOnce());
-    expect(actions.enable).toHaveBeenCalledWith(expect.objectContaining({
-      clientId: 'c1', seats: 3, boards: [{ boardId: 'b1', canCreate: true }],
-      technician: { name: 'Dana Reyes', email: 'dana@client.example' }, operationId: expect.any(String) }));
+    expect(actions.enable).toHaveBeenCalledWith({
+      clientId: 'c1', seats: 3, boards: [{ boardId: 'b1', canCreate: true }], contactId: 'c-dana', operationId: expect.any(String) });
+    // The request names the contact and nothing free-typed.
+    expect(actions.enable.mock.calls[0][0]).not.toHaveProperty('technician');
+    expect(actions.choices).toHaveBeenCalledWith('c1');
+  });
+
+  // F084 / F085: the picker offers this client's eligible contacts only; the server decided which.
+  it('lists only the contacts the server says can be invited, and counts the rest', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('radio', { name: /Seat/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose a contact' }));
+    expect(await screen.findByRole('option', { name: /Dana Reyes/ })).toBeInTheDocument();
+    for (const hidden of [/Ines Inactive/, /Nora NoEmail/, /Hal Holder/]) expect(screen.queryByRole('option', { name: hidden })).not.toBeInTheDocument();
+    expect(screen.getByText(/Not listed because they are inactive, have no email address, or already hold a seat or invitation: 3\./)).toBeInTheDocument();
+    expect(document.querySelector('input[type="email"]')).toBeNull();
+  });
+
+  // F084: quick-add with the client preset, then the new contact is selected without another click.
+  it('adds a new contact through the standard quick-add dialog and selects it', async () => {
+    actions.enable.mockResolvedValue({ created: true, scopeSet: true, invited: true, delivered: true, followUpError: null });
+    mount();
+    fireEvent.click(screen.getByRole('radio', { name: /Seat/ }));
+    actions.choices.mockResolvedValue([
+      { contactId: 'c-dana', name: 'Dana Reyes', email: 'dana@s34-review.example', blocker: null },
+      { contactId: 'c-zoe', name: 'Zoe New', email: 'zoe@s34-review.example', blocker: null },
+    ]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose a contact' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Add new contact/ }));
+    expect(quickAdd.props).toMatchObject({ isOpen: true, selectedClientId: 'c1' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Create Zoe' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /Zoe New/ })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Enable seats' }));
+    await waitFor(() => expect(actions.enable).toHaveBeenCalledWith(expect.objectContaining({ contactId: 'c-zoe' })));
+  });
+
+  it('a contact added without an email is not selected, and the screen says why', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('radio', { name: /Seat/ }));
+    actions.choices.mockResolvedValue([{ contactId: 'c-zoe', name: 'Zoe New', email: null, blocker: 'NO_EMAIL' }]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose a contact' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Add new contact/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Create Zoe' }));
+    expect(await screen.findByText('Zoe New was added but has no email address, so they cannot be invited yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enable seats' })).toBeDisabled();
   });
 
   it('cannot confirm more seats than the pool has, and a refusal keeps the same operation key for the retry', async () => {
@@ -88,8 +155,7 @@ describe('shape chooser', () => {
     const onEnabled = vi.fn();
     mount({ onEnabled });
     fireEvent.click(screen.getByRole('radio', { name: /Seat/ }));
-    fireEvent.change(screen.getByLabelText('First technician name'), { target: { value: 'Dana' } });
-    fireEvent.change(screen.getByLabelText('First technician email'), { target: { value: 'dana@client.example' } });
+    await pickContact(/Dana Reyes/);
     fireEvent.change(screen.getByLabelText('Number of seats'), { target: { value: '7' } });
     expect(screen.getByRole('button', { name: 'Enable seats' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Number of seats'), { target: { value: '2' } });

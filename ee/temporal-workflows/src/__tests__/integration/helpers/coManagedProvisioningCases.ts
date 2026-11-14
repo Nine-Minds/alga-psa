@@ -115,8 +115,11 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       await sponsor.table('clients').insert({ tenant: operation.tenant, client_id: clientId, client_name: 'Seat client' });
       const arrangement = await createCoManagedSeatArrangement(db, { sponsorTenant: operation.tenant, clientId,
         operationId: randomUUID(), seats: 1 });
+      const contactId = randomUUID();
+      await sponsor.table('contacts').insert({ tenant: operation.tenant, contact_name_id: contactId, client_id: clientId,
+        full_name: 'Dana Reyes', email: `tech-${randomUUID()}@client.example`, is_inactive: false });
       const seat = await inviteCoManagedSeatTechnician(db, { sponsorTenant: operation.tenant,
-        arrangementId: arrangement.arrangement_id, email: `tech-${randomUUID()}@client.example`, firstName: 'Dana', lastName: 'Reyes' });
+        arrangementId: arrangement.arrangement_id, contactId });
       const before = await sponsor.table('user_invitations').where('invitation_id', seat.invitation_id).first();
       actorState.user = { tenant: operation.tenant, user_id: operation.requested_by, user_type: 'internal', username: 'admin' };
       appliance.check.mockResolvedValue(null);

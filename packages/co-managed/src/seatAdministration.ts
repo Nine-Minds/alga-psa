@@ -69,7 +69,10 @@ export async function readCoManagedSeatEnableState(
 
 export interface CoManagedSeatTechnicianRow {
   assignmentId: string;
+  /** The contact this technician is, for a link to the contact; never shown. Null on seats from before contacts were recorded. */
+  contactId: string | null;
   state: 'invited' | 'active';
+  /** The contact's name when the seat records one, else the invitation's or user's. */
   name: string;
   email: string;
   /** Pending invitations only: when the link stops working. */
@@ -107,7 +110,7 @@ export async function readCoManagedSeatArrangementPanel(
     sponsor.table('co_managed_allocations').where('allocation_id', arrangement.allocation_id).first('seats'),
     sponsor.table('clients').where('client_id', input.clientId).first('client_name'),
     sponsor.table('co_managed_seat_assignments').where('arrangement_id', arrangement.arrangement_id)
-      .whereNot('state', 'revoked').orderBy('created_at').select('assignment_id', 'state', 'invitation_id', 'user_id'),
+      .whereNot('state', 'revoked').orderBy('created_at').select('assignment_id', 'state', 'invitation_id', 'user_id', 'contact_id'),
     sponsor.table('co_managed_seat_board_scopes').where('arrangement_id', arrangement.arrangement_id)
       .orderBy('board_id').select('board_id', 'can_create'),
     sponsor.table('co_managed_seat_project_grants').where('arrangement_id', arrangement.arrangement_id)
@@ -115,7 +118,9 @@ export async function readCoManagedSeatArrangementPanel(
   ]);
   const invitationIds = assignments.flatMap((row) => row.invitation_id ? [row.invitation_id] : []);
   const userIds = assignments.flatMap((row) => row.user_id ? [row.user_id] : []);
-  const [invitations, users] = await Promise.all([
+  const contactIds = assignments.flatMap((row) => row.contact_id ? [row.contact_id] : []);
+  const [contacts, invitations, users] = await Promise.all([
+    contactIds.length ? sponsor.table('contacts').whereIn('contact_name_id', contactIds).select('contact_name_id', 'full_name') : [],
     invitationIds.length ? sponsor.table('user_invitations').whereIn('invitation_id', invitationIds)
       .select('invitation_id', 'email', 'first_name', 'last_name', 'expires_at') : [],
     userIds.length ? sponsor.table('users').whereIn('user_id', userIds).select('user_id', 'email', 'first_name', 'last_name') : [],
@@ -125,10 +130,11 @@ export async function readCoManagedSeatArrangementPanel(
     const user = users.find((entry) => entry.user_id === row.user_id);
     const invitation = invitations.find((entry) => entry.invitation_id === row.invitation_id);
     const person = row.state === 'active' ? user : invitation;
+    const contact = contacts.find((entry) => entry.contact_name_id === row.contact_id);
     const expiresAt = row.state === 'invited' && invitation?.expires_at ? new Date(invitation.expires_at).toISOString() : null;
     return {
-      assignmentId: row.assignment_id, state: row.state,
-      name: [person?.first_name, person?.last_name].filter(Boolean).join(' '),
+      assignmentId: row.assignment_id, contactId: row.contact_id ?? null, state: row.state,
+      name: contact?.full_name || [person?.first_name, person?.last_name].filter(Boolean).join(' '),
       email: String(person?.email ?? ''),
       expiresAt, expired: expiresAt !== null && new Date(expiresAt).getTime() <= now,
     };
@@ -173,6 +179,43 @@ export async function readCoManagedSeatAdminOptions(
       userId: row.user_id, name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.email,
     })),
   };
+}
+
+/** Why a contact cannot be given a seat right now. */
+export type CoManagedSeatContactBlocker = 'INACTIVE' | 'NO_EMAIL' | 'HAS_SEAT';
+
+export interface CoManagedSeatContactChoice {
+  contactId: string;
+  name: string;
+  email: string | null;
+  /** Null when the contact can be invited. */
+  blocker: CoManagedSeatContactBlocker | null;
+}
+
+/**
+ * The contacts of a client, each with the first reason it could not be invited. The same facts
+ * `inviteCoManagedSeatTechnician` checks, read for the picker: the command still decides, so a
+ * stale answer is refused there. Contacts of other clients are never returned.
+ */
+export async function readCoManagedSeatContactChoices(
+  db: Knex,
+  input: { sponsorTenant: string; clientId: string },
+): Promise<CoManagedSeatContactChoice[]> {
+  if (![input.sponsorTenant, input.clientId].every((id) => uuid.test(id))) return [];
+  const sponsor = tenantDb(db, input.sponsorTenant);
+  const [contacts, holding] = await Promise.all([
+    sponsor.table('contacts').where('client_id', input.clientId).orderBy('full_name').select('contact_name_id', 'full_name', 'email', 'is_inactive'),
+    sponsor.table('co_managed_seat_assignments').whereNot('state', 'revoked').whereNotNull('contact_id').select('contact_id'),
+  ]);
+  const held = new Set(holding.map((row) => row.contact_id));
+  return contacts.map((row): CoManagedSeatContactChoice => {
+    const email = typeof row.email === 'string' && row.email.trim() ? row.email.trim() : null;
+    return {
+      contactId: row.contact_name_id, name: row.full_name, email,
+      blocker: row.is_inactive ? 'INACTIVE' : !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'NO_EMAIL'
+        : held.has(row.contact_name_id) ? 'HAS_SEAT' : null,
+    };
+  });
 }
 
 /** One seat arrangement as the overview lists it. */

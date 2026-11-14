@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "To żądanie zostało już wysłane z innymi danymi. Odśwież i zacznij od nowa.",
         "invalidSeats": "Wpisz liczbę całkowitą stanowisk, co najmniej 1.",
-        "invalidInvitation": "Wpisz imię i nazwisko oraz prawidłowy adres e-mail.",
+        "invalidInvitation": "Wybierz kontakt do zaproszenia.",
+        "contactNotFound": "Ten kontakt nie jest już dostępny. Wybierz inny kontakt.",
+        "contactWrongClient": "Ten kontakt należy do innego klienta. Wybierz kontakt tego klienta.",
+        "contactInactive": "Ten kontakt jest nieaktywny. Najpierw go aktywuj.",
+        "contactNoEmail": "Ten kontakt nie ma adresu e-mail. Najpierw dodaj go do kontaktu.",
+        "contactHasSeat": "Ten kontakt ma już miejsce lub oczekujące zaproszenie.",
         "emailInUse": "Ten adres e-mail należy już do konta użytkownika. Użyj innego adresu.",
         "emailInvited": "Dla tego adresu e-mail istnieje już oczekujące zaproszenie.",
         "seatLimit": "Wszystkie stanowiska są zajęte. Najpierw dodaj stanowiska lub wycofaj zaproszenie.",
@@ -480,10 +485,17 @@
         "seats": "Liczba stanowisk",
         "boards": "Tablice w zakresie",
         "boardsHint": "Technicy widzą zgłoszenia swojej firmy tylko na tych tablicach.",
-        "technicianName": "Imię i nazwisko pierwszego technika",
-        "technicianEmail": "E-mail pierwszego technika",
+        "technician": "Pierwszy technik",
+        "technicianHint": "Wybierz kontakt tego klienta. Zaproszenie zostanie wysłane e-mailem.",
         "submit": "Włącz stanowiska",
         "title": "Uzgodnienie stanowisk"
+      },
+      "contact": {
+        "label": "Technik",
+        "placeholder": "Wybierz kontakt",
+        "addedNoEmail": "Dodano {{name}}, ale kontakt nie ma adresu e-mail, więc nie można go jeszcze zaprosić.",
+        "addedUnavailable": "Dodano {{name}}, ale nie można go zaprosić.",
+        "unavailable": "Niewyświetlone, bo nieaktywne, bez adresu e-mail lub już z miejscem albo zaproszeniem: {{count}}."
       },
       "chooser": {
         "seat": "Stanowisko",

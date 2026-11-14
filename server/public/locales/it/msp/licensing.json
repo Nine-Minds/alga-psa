@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "Questa richiesta è già stata inviata con dettagli diversi. Aggiorna e ricomincia.",
         "invalidSeats": "Inserisci un numero intero di postazioni, almeno 1.",
-        "invalidInvitation": "Inserisci un nome e un indirizzo email valido.",
+        "invalidInvitation": "Scegli un contatto da invitare.",
+        "contactNotFound": "Questo contatto non è più disponibile. Scegli un altro contatto.",
+        "contactWrongClient": "Questo contatto appartiene a un altro cliente. Scegli un contatto di questo cliente.",
+        "contactInactive": "Questo contatto è inattivo. Riattivalo prima.",
+        "contactNoEmail": "Questo contatto non ha un indirizzo email. Aggiungine uno al contatto prima.",
+        "contactHasSeat": "Questo contatto ha già un posto o un invito in sospeso.",
         "emailInUse": "Questa email appartiene già a un account utente. Usa un altro indirizzo.",
         "emailInvited": "Questa email ha già un invito in sospeso.",
         "seatLimit": "Tutte le postazioni sono in uso. Aggiungi postazioni o ritira prima un invito.",
@@ -480,10 +485,17 @@
         "seats": "Numero di postazioni",
         "boards": "Bacheche nell’ambito",
         "boardsHint": "I tecnici vedono i ticket della loro azienda solo su queste bacheche.",
-        "technicianName": "Nome del primo tecnico",
-        "technicianEmail": "Email del primo tecnico",
+        "technician": "Primo tecnico",
+        "technicianHint": "Scegli un contatto di questo cliente. Viene invitato via email.",
         "submit": "Abilita postazioni",
         "title": "Accordo di postazioni"
+      },
+      "contact": {
+        "label": "Tecnico",
+        "placeholder": "Scegli un contatto",
+        "addedNoEmail": "{{name}} è stato aggiunto ma non ha un indirizzo email, quindi non può ancora essere invitato.",
+        "addedUnavailable": "{{name}} è stato aggiunto ma non può essere invitato.",
+        "unavailable": "Non elencati perché inattivi, senza email o con già un posto o un invito: {{count}}."
       },
       "chooser": {
         "seat": "Postazione",

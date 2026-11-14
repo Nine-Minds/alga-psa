@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "Begäran har redan skickats med andra uppgifter. Uppdatera och börja om.",
         "invalidSeats": "Ange ett heltal för antal platser, minst 1.",
-        "invalidInvitation": "Ange ett namn och en giltig e-postadress.",
+        "invalidInvitation": "Välj en kontakt att bjuda in.",
+        "contactNotFound": "Den här kontakten finns inte längre. Välj en annan kontakt.",
+        "contactWrongClient": "Den här kontakten tillhör en annan kund. Välj en kontakt hos den här kunden.",
+        "contactInactive": "Den här kontakten är inaktiv. Aktivera kontakten först.",
+        "contactNoEmail": "Den här kontakten saknar e-postadress. Lägg först till en på kontakten.",
+        "contactHasSeat": "Den här kontakten har redan en plats eller en väntande inbjudan.",
         "emailInUse": "Den här e-postadressen tillhör redan ett användarkonto. Använd en annan adress.",
         "emailInvited": "Den här e-postadressen har redan en väntande inbjudan.",
         "seatLimit": "Alla platser används. Lägg till platser eller dra tillbaka en inbjudan först.",
@@ -480,10 +485,17 @@
         "seats": "Antal platser",
         "boards": "Tavlor i omfattningen",
         "boardsHint": "Tekniker ser sitt företags ärenden endast på dessa tavlor.",
-        "technicianName": "Första teknikerns namn",
-        "technicianEmail": "Första teknikerns e-postadress",
+        "technician": "Första tekniker",
+        "technicianHint": "Välj en kontakt hos den här kunden. De bjuds in via e-post.",
         "submit": "Aktivera platser",
         "title": "Platsavtal"
+      },
+      "contact": {
+        "label": "Tekniker",
+        "placeholder": "Välj en kontakt",
+        "addedNoEmail": "{{name}} lades till men saknar e-postadress och kan inte bjudas in ännu.",
+        "addedUnavailable": "{{name}} lades till men kan inte bjudas in.",
+        "unavailable": "Visas inte eftersom de är inaktiva, saknar e-post eller redan har plats eller inbjudan: {{count}}."
       },
       "chooser": {
         "seat": "Plats",

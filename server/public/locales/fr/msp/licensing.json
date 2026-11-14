@@ -410,7 +410,12 @@
       "error": {
         "operationConflict": "Cette demande a déjà été envoyée avec des informations différentes. Actualisez et recommencez.",
         "invalidSeats": "Saisissez un nombre entier de postes, au moins 1.",
-        "invalidInvitation": "Saisissez un nom et une adresse e-mail valide.",
+        "invalidInvitation": "Choisissez un contact à inviter.",
+        "contactNotFound": "Ce contact n'est plus disponible. Choisissez un autre contact.",
+        "contactWrongClient": "Ce contact appartient à un autre client. Choisissez un contact de ce client.",
+        "contactInactive": "Ce contact est inactif. Réactivez-le d'abord.",
+        "contactNoEmail": "Ce contact n'a pas d'adresse e-mail. Ajoutez-en une au contact d'abord.",
+        "contactHasSeat": "Ce contact occupe déjà un poste ou a une invitation en attente.",
         "emailInUse": "Cette adresse e-mail appartient déjà à un compte utilisateur. Utilisez une autre adresse.",
         "emailInvited": "Cette adresse e-mail a déjà une invitation en attente.",
         "seatLimit": "Tous les postes sont utilisés. Ajoutez des postes ou retirez d’abord une invitation.",
@@ -480,10 +485,17 @@
         "seats": "Nombre de postes",
         "boards": "Tableaux dans le périmètre",
         "boardsHint": "Les techniciens ne voient les tickets de leur entreprise que sur ces tableaux.",
-        "technicianName": "Nom du premier technicien",
-        "technicianEmail": "E-mail du premier technicien",
+        "technician": "Premier technicien",
+        "technicianHint": "Choisissez un contact de ce client. Il est invité par e-mail.",
         "submit": "Activer les postes",
         "title": "Accord de postes"
+      },
+      "contact": {
+        "label": "Technicien",
+        "placeholder": "Choisir un contact",
+        "addedNoEmail": "{{name}} a été ajouté mais n'a pas d'adresse e-mail ; il ne peut pas encore être invité.",
+        "addedUnavailable": "{{name}} a été ajouté mais ne peut pas être invité.",
+        "unavailable": "Non listés car inactifs, sans adresse e-mail ou occupant déjà un poste ou une invitation : {{count}}."
       },
       "chooser": {
         "seat": "Poste",
