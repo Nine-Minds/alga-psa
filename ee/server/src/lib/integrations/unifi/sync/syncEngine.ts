@@ -15,6 +15,9 @@ import type { RmmSyncResult } from '../../../../interfaces/rmm.interfaces';
 import { UniFiApiError, type UniFiClientSurface, type UniFiDevice } from '../unifiApiClient';
 import { unreachableConsoleMessage } from '../credentials/types';
 import { mapUniFiDeviceToSnapshot, normalizeMac, resolveExternalDeviceId } from '../mappers/deviceMapper';
+import { parseUniFiScopeKey } from '../scopeKey';
+
+export { parseUniFiScopeKey } from '../scopeKey';
 
 export const UNIFI_PROVIDER = 'unifi' as const;
 
@@ -36,12 +39,6 @@ export interface UniFiSyncArgs {
 /** Scope key stored in rmm_organization_mappings.external_organization_id. */
 export function buildUniFiScopeKey(hostId: string, siteId: string): string {
   return `${hostId}:${siteId}`;
-}
-
-export function parseUniFiScopeKey(scopeKey: string): { hostId: string; siteId: string } | null {
-  const index = scopeKey.indexOf(':');
-  if (index <= 0 || index === scopeKey.length - 1) return null;
-  return { hostId: scopeKey.slice(0, index), siteId: scopeKey.slice(index + 1) };
 }
 
 function sanitizeError(error: unknown): string {

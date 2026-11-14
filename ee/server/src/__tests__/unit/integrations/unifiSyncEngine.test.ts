@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { UniFiApiError } from '../../../lib/integrations/unifi/unifiApiClient';
-import { runUniFiDeviceSync, runUniFiFullSync } from '../../../lib/integrations/unifi/sync/syncEngine';
+import { buildUniFiScopeKey, parseUniFiScopeKey, runUniFiDeviceSync, runUniFiFullSync } from '../../../lib/integrations/unifi/sync/syncEngine';
 
 type Rows = Record<string, any[]>;
 
@@ -25,6 +25,8 @@ function createKnexStub(rowsByTable: Rows) {
 
 const SITE = { external_organization_id: 'host-1:site-1', external_organization_name: 'HQ', client_id: 'client-1' };
 const SITE2 = { external_organization_id: 'host-1:site-2', external_organization_name: 'Branch', client_id: 'client-2' };
+const COMPOSITE_HOST = 'console-1:123456';
+const COMPOSITE_SITE = { ...SITE, external_organization_id: `${COMPOSITE_HOST}:site-1` };
 
 const sw = (over: Record<string, unknown> = {}) => ({
   id: 'sw-1', macAddress: 'aa:bb:cc:dd:ee:01', ipAddress: '10.0.0.2', name: 'Switch', model: 'USW-24',
@@ -46,7 +48,36 @@ function baseDeps(client: any, rows: Rows) {
   };
 }
 
+describe('UniFi scope keys', () => {
+  it.each(['host-1', 'local', 'local-2', COMPOSITE_HOST])('round trips host %s without changing stored scope keys', (hostId) => {
+    const key = buildUniFiScopeKey(hostId, 'site-1');
+    expect(key).toBe(`${hostId}:site-1`);
+    expect(parseUniFiScopeKey(key)).toEqual({ hostId, siteId: 'site-1' });
+  });
+
+  it.each(['', 'host-only', ':site-1', 'host-1:'])('rejects invalid scope %s', (key) => {
+    expect(parseUniFiScopeKey(key)).toBeNull();
+  });
+});
+
 describe('runUniFiFullSync', () => {
+  it('uses the entire composite host ID for listing and detail requests', async () => {
+    const client = {
+      listDevices: vi.fn(async () => [sw()]),
+      getDevice: vi.fn(async () => sw()),
+    };
+    const deps = baseDeps(client, { rmm_organization_mappings: [COMPOSITE_SITE], tenant_external_entity_mappings: [] });
+    const result = await runUniFiFullSync({ tenant: 't', integrationId: 'int-1' }, deps);
+
+    expect(result.success).toBe(true);
+    expect(client.listDevices).toHaveBeenCalledWith(expect.objectContaining({ hostId: COMPOSITE_HOST, siteId: 'site-1' }));
+    expect(client.getDevice).toHaveBeenCalledWith(expect.objectContaining({ hostId: COMPOSITE_HOST, siteId: 'site-1' }), 'sw-1');
+    expect(deps.ingest).toHaveBeenCalledWith(expect.objectContaining({
+      resolvedClientId: 'client-1',
+      snapshot: expect.objectContaining({ externalScopeId: COMPOSITE_SITE.external_organization_id }),
+    }));
+  });
+
   it('ingests devices for mapped sites with the mapped client and writes facts', async () => {
     const client = {
       listDevices: vi.fn(async () => [sw(), sw({ id: 'sw-2', state: 'PENDING_ADOPTION' })]),
@@ -182,6 +213,16 @@ describe('runUniFiFullSync', () => {
 });
 
 describe('runUniFiDeviceSync', () => {
+  it('preserves composite host IDs when refreshing one mapped device', async () => {
+    const client = { getDevice: vi.fn(async () => sw()) };
+    const deps = baseDeps(client, { rmm_organization_mappings: [COMPOSITE_SITE] });
+    const out = await runUniFiDeviceSync({
+      tenant: 't', integrationId: 'i', scopeKey: COMPOSITE_SITE.external_organization_id, deviceId: 'sw-1',
+    }, deps);
+    expect(out.action).toBe('created');
+    expect(client.getDevice).toHaveBeenCalledWith(expect.objectContaining({ hostId: COMPOSITE_HOST, siteId: 'site-1' }), 'sw-1');
+  });
+
   it('skips an unmapped site without calling the API', async () => {
     const client = { getDevice: vi.fn() };
     const deps = baseDeps(client, { rmm_organization_mappings: [] });

@@ -1,11 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
+const { deleteTenantSecret } = vi.hoisted(() => ({ deleteTenantSecret: vi.fn() }));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn(async () => ({ deleteTenantSecret })),
+}));
 
 import knexFactory, { type Knex } from 'knex';
+import logger from '@alga-psa/core/logger';
 import { createPersistentFleetStore } from '../../../lib/integrations/unifi/credentials/credentialStore';
+import { removeCredential } from '../../../lib/integrations/unifi/credentials/credentialService';
 
 const TENANT = '00000000-0000-0000-0000-0000000000aa';
 const INTEGRATION_ID = '00000000-0000-0000-0000-0000000000bb';
@@ -15,7 +22,7 @@ const CREDENTIAL_ID = '00000000-0000-0000-0000-0000000000cc';
  * A real pg-dialect knex whose driver is replaced by a recorder, so the test
  * sees the exact SQL and bindings the store sends to Postgres/Citus.
  */
-function recordingKnex(): { knex: Knex; queries: Array<{ sql: string; bindings: unknown[] }> } {
+function recordingKnex(responseRows: Record<string, unknown[]> = {}): { knex: Knex; queries: Array<{ sql: string; bindings: unknown[] }> } {
   const knex = knexFactory({ client: 'pg' });
   const queries: Array<{ sql: string; bindings: unknown[] }> = [];
   const client = knex.client as any;
@@ -23,7 +30,10 @@ function recordingKnex(): { knex: Knex; queries: Array<{ sql: string; bindings: 
   client.releaseConnection = async () => undefined;
   client._query = async (_connection: unknown, obj: any) => {
     queries.push({ sql: obj.sql, bindings: obj.bindings ?? [] });
-    const rows = /from "rmm_integrations"/.test(obj.sql) ? [{ integration_id: INTEGRATION_ID }] : [];
+    const table = /^select\b.*?\bfrom "([^"]+)"/i.exec(obj.sql)?.[1];
+    const rows = table && table in responseRows
+      ? responseRows[table]
+      : table === 'rmm_integrations' ? [{ integration_id: INTEGRATION_ID }] : [];
     obj.response = { rows, rowCount: rows.length, command: obj.method === 'insert' ? 'INSERT' : 'SELECT' };
     return obj;
   };
@@ -56,5 +66,108 @@ describe('UniFi persistent fleet store: console route upsert', () => {
     for (const stamp of stamps) expect(Date.parse(stamp)).toBeGreaterThanOrEqual(before - 1);
 
     await knex.destroy();
+  });
+});
+
+function credentialRemovalKnex(hostId: string, scope: string) {
+  return recordingKnex({
+    unifi_credentials: [{
+      credential_id: CREDENTIAL_ID, integration_id: INTEGRATION_ID, label: 'Fabric',
+      mode: 'site_manager', status: 'active', created_at: new Date(),
+    }],
+    unifi_console_routes: [{
+      host_id: hostId, credential_id: CREDENTIAL_ID, console_name: 'Branch', state: 'routed',
+      first_seen_at: new Date(), last_verified_at: new Date(),
+    }],
+    rmm_organization_mappings: [{
+      external_organization_id: scope, external_organization_name: 'Branch / Default',
+    }],
+  });
+}
+
+describe('UniFi credential removal confirmation', () => {
+  it.each([
+    { description: 'a composite host', hostId: 'console-1:123456', scope: 'console-1:123456:site-1' },
+    { description: 'a legacy host', hostId: 'console-1', scope: 'console-1:site-1' },
+    { description: 'a migrated local host', hostId: 'local', scope: 'local:site-1' },
+  ])('requires confirmation for mapped sites on $description before deleting anything', async ({ hostId, scope }) => {
+    vi.mocked(logger.warn).mockClear();
+    deleteTenantSecret.mockClear();
+    const { knex, queries } = credentialRemovalKnex(hostId, scope);
+    try {
+      await expect(removeCredential(knex, TENANT, {
+        integrationId: INTEGRATION_ID, credentialId: CREDENTIAL_ID,
+      })).resolves.toEqual({
+        removed: false, requiresConfirmation: true, affectedSites: ['Branch / Default'],
+      });
+      expect(queries.every((query) => query.sql.startsWith('select'))).toBe(true);
+      expect(deleteTenantSecret).not.toHaveBeenCalled();
+      expect(logger.warn).not.toHaveBeenCalled();
+    } finally {
+      await knex.destroy();
+    }
+  });
+
+  it('does not confuse a composite host with its shorter prefix', async () => {
+    deleteTenantSecret.mockClear();
+    const { knex } = credentialRemovalKnex('console-1', 'console-1:123456:site-1');
+    try {
+      await expect(removeCredential(knex, TENANT, {
+        integrationId: INTEGRATION_ID, credentialId: CREDENTIAL_ID,
+      })).resolves.toEqual({ removed: true, affectedSites: [] });
+      expect(deleteTenantSecret).toHaveBeenCalledTimes(2);
+    } finally {
+      await knex.destroy();
+    }
+  });
+
+  it.each([
+    { hostId: 'console-1:123456', scope: 'console-1:123456:site-1' },
+    { hostId: 'console-1', scope: 'console-1:site-1' },
+    { hostId: 'local', scope: 'local:site-1' },
+  ])('removes a credential after confirmation for $scope without deleting mappings', async ({ hostId, scope }) => {
+    deleteTenantSecret.mockClear();
+    const { knex, queries } = credentialRemovalKnex(hostId, scope);
+    try {
+      await expect(removeCredential(knex, TENANT, {
+        integrationId: INTEGRATION_ID, credentialId: CREDENTIAL_ID, confirm: true,
+      })).resolves.toEqual({ removed: true, affectedSites: ['Branch / Default'] });
+      expect(queries.filter((query) => query.sql.startsWith('delete'))).toHaveLength(2);
+      expect(queries.filter((query) => query.sql.startsWith('delete')).every(
+        (query) => !query.sql.includes('rmm_organization_mappings')
+      )).toBe(true);
+      expect(deleteTenantSecret).toHaveBeenCalledTimes(2);
+    } finally {
+      await knex.destroy();
+    }
+  });
+
+  describe.each([false, true])('with confirm=%s', (confirm) => {
+    it.each([
+      { hostId: 'console-1', scope: 'console-1:' },
+      { hostId: 'console-1', scope: 'console-1:legacy:' },
+      { hostId: 'console-1:123456', scope: 'console-1:123456:' },
+      { hostId: 'console-1', scope: 'unrelated-console:' },
+      { hostId: 'console-1', scope: 'console-1' },
+      { hostId: 'console-1', scope: ':site-1' },
+      { hostId: 'console-1', scope: '' },
+    ])('rejects malformed scope "$scope" without guessing its host or deleting anything', async ({ hostId, scope }) => {
+      vi.mocked(logger.warn).mockClear();
+      deleteTenantSecret.mockClear();
+      const { knex, queries } = credentialRemovalKnex(hostId, scope);
+      try {
+        await expect(removeCredential(knex, TENANT, {
+          integrationId: INTEGRATION_ID, credentialId: CREDENTIAL_ID, confirm,
+        })).rejects.toThrow('Repair or unmap invalid site mappings');
+        expect(queries.every((query) => query.sql.startsWith('select'))).toBe(true);
+        expect(deleteTenantSecret).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+          '[UniFi] Malformed mapped-site scope during credential removal',
+          { credentialId: CREDENTIAL_ID, integrationId: INTEGRATION_ID }
+        );
+      } finally {
+        await knex.destroy();
+      }
+    });
   });
 });

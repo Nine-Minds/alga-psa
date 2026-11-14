@@ -14,6 +14,7 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import { UniFiApiClient, UniFiApiError, type UniFiConnectionMode } from '../unifiApiClient';
+import { parseUniFiScopeKey } from '../scopeKey';
 import { decideDestination, type BoundDestination } from './destinationBinding';
 import {
   deleteCredentialRow,
@@ -289,8 +290,17 @@ export async function removeCredential(
       .select(['external_organization_id', 'external_organization_name']);
     for (const row of rows as any[]) {
       const scope = String(row.external_organization_id);
-      const hostId = scope.slice(0, Math.max(scope.indexOf(':'), 0));
-      if (ownedHostIds.has(hostId)) affectedSites.push(String(row.external_organization_name ?? scope));
+      const parsed = parseUniFiScopeKey(scope);
+      if (!parsed) {
+        logger.warn('[UniFi] Malformed mapped-site scope during credential removal', {
+          credentialId: credential.credentialId,
+          integrationId: input.integrationId,
+        });
+        throw new UniFiCredentialError(
+          'A mapped UniFi site has an invalid stored scope. Repair or unmap invalid site mappings in this integration before removing this key.'
+        );
+      }
+      if (ownedHostIds.has(parsed.hostId)) affectedSites.push(String(row.external_organization_name ?? scope));
     }
   }
 
