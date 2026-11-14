@@ -593,6 +593,7 @@
       "requester": "Solicitante",
       "sharedIt": "TI compartilhada",
       "organizationPrivate": "Privado da organização",
+      "private": "Privado",
       "placeholder": "Quem pode ver isto?",
       "required": "Escolha quem pode ver este comentário antes de publicá-lo."
     },
@@ -1270,6 +1271,7 @@
     "keepEditing": "Continue editando",
     "statusRequiresSelection": "Selecione um status para o novo quadro antes de salvar.",
     "notAssigned": "Não atribuído",
+    "clientItGroup": "TI do cliente",
     "additionalAgentsTooltip": "Agentes Adicionais:",
     "loading": "Carregando...",
     "tagsCannotBeManaged": "As tags não podem ser gerenciadas",

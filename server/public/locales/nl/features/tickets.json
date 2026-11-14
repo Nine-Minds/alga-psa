@@ -593,6 +593,7 @@
       "requester": "Aanvrager",
       "sharedIt": "Gedeelde IT",
       "organizationPrivate": "Privé voor organisatie",
+      "private": "Privé",
       "placeholder": "Wie kan dit zien?",
       "required": "Kies wie deze opmerking kan zien voordat u deze plaatst."
     },
@@ -1270,6 +1271,7 @@
     "keepEditing": "Doorgaan met bewerken",
     "statusRequiresSelection": "Selecteer een status voor het nieuwe bord voordat u opslaat.",
     "notAssigned": "Niet toegewezen",
+    "clientItGroup": "IT van de klant",
     "additionalAgentsTooltip": "Extra medewerkers:",
     "loading": "Laden...",
     "tagsCannotBeManaged": "Tags kunnen niet worden beheerd",

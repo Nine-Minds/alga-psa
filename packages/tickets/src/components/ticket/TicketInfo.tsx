@@ -73,6 +73,8 @@ interface TicketInfoProps {
   conversations: IComment[];
   statusOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
+  /** Seat technicians of the ticket's own client, listed apart in the assignee picker. Absent: no group. */
+  clientItUserIds?: readonly string[];
   boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string; is_from_itil_standard?: boolean }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
@@ -137,6 +139,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   conversations,
   statusOptions,
   agentOptions,
+  clientItUserIds,
   boardOptions,
   priorityOptions,
   onSelectChange,
@@ -1459,6 +1462,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     }
                   }}
                   users={usersList}
+                  userGroups={clientItUserIds?.length
+                    ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
+                    : undefined}
                   teams={teams}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}

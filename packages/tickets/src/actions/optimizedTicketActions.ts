@@ -6,6 +6,8 @@ import {
   resolveSeatAssigneeAudience,
   restrictToSeatAudience,
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
+import { resolveTicketSeatContext, restrictToThisClientsSeatTechnicians } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
+import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
   isMspPrincipalUserType,
@@ -554,6 +556,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // A seat technician is offered only the technicians of their own client as assignees.
     const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
+    // Seat surfaces of this ticket (composer audiences, Client IT picker group, audience badges).
+    // Null, at no statement, while the co-managed-seat capability does not serve the tenant.
+    const seatTicket = await resolveTicketSeatContext(trx, tenant, user, ticket.client_id, seatAssigneeAudience);
     const ticketRedactions = ticketRead.redactedFields;
     // A related record is derived from a ticket field: hiding the field hides the record.
     const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
@@ -612,10 +617,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       seatAssignees
         ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
         : restrictToSeatAudience(
-          tenantScopedTable(trx, 'users', tenant)
-            .select(...USER_RESPONSE_FIELD_NAMES)
-            .where('user_type', 'internal')
-            .where('is_inactive', false),
+          restrictToThisClientsSeatTechnicians(
+            tenantScopedTable(trx, 'users', tenant)
+              .select(...USER_RESPONSE_FIELD_NAMES)
+              .where('user_type', 'internal')
+              .where('is_inactive', false),
+            seatTicket
+          ),
           seatAssigneeAudience
         ).orderBy('first_name', 'asc'),
       
@@ -825,7 +833,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // bound by that: client-portal repliers and deactivated agents also write
     // comments, so fetch the missing authors separately for display purposes only.
     // "<human> via <principal>" needs the principal's display name (EE only; a no-op elsewhere).
-    const comments = await attachViaPrincipalNames(trx, tenant, rawComments as any[], 'created_via_principal_id');
+    const comments = await attachViaPrincipalNames(
+      trx,
+      tenant,
+      seatTicket?.arrangement ? await attachThreadAudiences(trx, tenant, rawComments as any[]) : (rawComments as any[]),
+      'created_via_principal_id',
+    );
 
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
@@ -1209,6 +1222,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       board: whenTicketFieldVisible('board_name', board),
       additionalAgents: resources,
       availableAgents: users,
+      // Only a ticket of an arrangement client carries it; every other ticket's payload is unchanged.
+      ...(seatTicket?.arrangement ? { seatTicket } : {}),
       userMap,
       contactMap,
       options: {

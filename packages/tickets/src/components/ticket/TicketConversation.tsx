@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
-import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from './CommentAudienceControl';
+import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, useDefaultComposerAudience, type ComposerAudience } from './CommentAudienceControl';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -213,10 +213,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   // Shared tickets and co_managed workspaces replace the Internal toggle with a required audience
   // choice, driven by the data source's conversation config (never by a tenant-wide capability).
-  // There is deliberately no default: submit stays blocked until the author picks one.
+  // Unless the data source names a default, there is none: submit stays blocked until the author picks one.
   const configuredAudiences = useComposerAudiences();
   const useAudienceComposer = configuredAudiences != null && !hideInternalTab;
-  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
+  // A data source may name the audience a fresh composer starts on (the seat shape does); otherwise none.
+  const defaultAudience = useDefaultComposerAudience();
+  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(defaultAudience);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   // A resolution closes the ticket through the native path, so it never offers `shared_it`.
   const offeredAudiences = configuredAudiences == null ? [] : isResolutionToggle ? nativeComposerAudiences(configuredAudiences) : configuredAudiences;
@@ -352,7 +354,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     // Auto-check toggles based on which tab is active
     if (useAudienceComposer) {
       // Opening a fresh composer never carries a previous audience; an open draft keeps its choice.
-      if (!showEditor) { setComposerAudience(null); setIsInternalToggle(false); }
+      if (!showEditor) { setComposerAudience(defaultAudience); setIsInternalToggle(audienceIsInternal(defaultAudience)); }
     } else if (!hideInternalTab) {
       setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
     }
@@ -398,8 +400,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         );
         if (success) {
           emailRecipients.reset();
-          setIsInternalToggle(false);
-          setComposerAudience(null);
+          setIsInternalToggle(audienceIsInternal(defaultAudience));
+          setComposerAudience(defaultAudience);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
           setNotificationSuppression(defaultNotificationSuppression());

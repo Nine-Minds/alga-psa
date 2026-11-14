@@ -2,6 +2,7 @@
 // TODO: Comment model method signature changes
 'use server'
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { attachThreadAudiencesOnSeatTicket } from './commentAudienceRead';
 import { assertNativeEditKeepsAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
@@ -210,7 +211,10 @@ export const findCommentsByTicketId = withAuth(async (user, { tenant }, ticketId
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await authorizeCommentRead(user, trx, tenant!, ticketId);
-      const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId, internalReader(user));
+      const readComments = await Comment.getAllbyTicketId(trx, tenant!, ticketId, internalReader(user));
+      const comments = user.user_type === 'internal'
+        ? await attachThreadAudiencesOnSeatTicket(trx, tenant!, ticketId, readComments)
+        : readComments;
       const threads = isMspPrincipalUserType(user.user_type)
         ? undefined
         : await loadThreadVisibility(trx, tenant!, comments);

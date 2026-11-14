@@ -193,7 +193,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
-  const { enabled: coManagedEnabled } = useCapability('co-managed');
+  const { enabled: coManagedWorkspaceEnabled } = useCapability('co-managed');
+  // The seat shape labels comments too, but only a ticket of a live arrangement ever carries a read-time audience.
+  const { enabled: coManagedSeatEnabled } = useCapability('co-managed-seat');
+  const coManagedEnabled = coManagedWorkspaceEnabled || coManagedSeatEnabled;
   const dataSource = useTicketDataSource();
   const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
   const { searchUsersForMentions } = dataSource.viewer;

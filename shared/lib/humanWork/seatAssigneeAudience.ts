@@ -43,10 +43,16 @@ export async function resolveSeatAssigneeAudience(
   const mine = await liveClientId(db, tenant, own.state === 'active' ? own.arrangement_id : null);
   if (!mine) return [];
 
+  return seatTechniciansOfClient(db, tenant, mine);
+}
+
+/** The live seat technicians of one client: active assignments under that client's active arrangement. */
+export async function seatTechniciansOfClient(db: Db, tenant: string, clientId: string): Promise<string[]> {
+  const scoped = tenantDb(db, tenant);
   const peers = scoped.table('co_managed_seat_assignments as a');
   scoped.tenantJoin(peers, 'co_managed_seat_arrangements as r', 'r.arrangement_id', 'a.arrangement_id', { rootTenantColumn: 'a.tenant' });
   const rows = await peers
-    .where({ 'a.state': 'active', 'r.state': 'active', 'r.client_id': mine })
+    .where({ 'a.state': 'active', 'r.state': 'active', 'r.client_id': clientId })
     .whereNotNull('a.user_id')
     .select('a.user_id');
   return rows.map((row: { user_id: string }) => row.user_id);

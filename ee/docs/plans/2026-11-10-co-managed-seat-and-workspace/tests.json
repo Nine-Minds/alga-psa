@@ -287,7 +287,7 @@
   {
     "id": "T032",
     "description": "E2E: on an arrangement client's ticket the MSP composer shows three audiences defaulting to Private and the picker shows a Client IT group; on another client's ticket both are unchanged; the technician's composer shows two audiences.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060",
       "F059",

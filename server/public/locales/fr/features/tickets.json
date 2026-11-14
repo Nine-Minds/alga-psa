@@ -593,6 +593,7 @@
       "requester": "Demandeur",
       "sharedIt": "Informatique partagée",
       "organizationPrivate": "Privé à l'organisation",
+      "private": "Privé",
       "placeholder": "Qui peut voir ceci ?",
       "required": "Choisissez qui peut voir ce commentaire avant de le publier."
     },
@@ -1270,6 +1271,7 @@
     "keepEditing": "Continuer la modification",
     "statusRequiresSelection": "Sélectionnez un statut pour la nouvelle carte avant de sauvegarder.",
     "notAssigned": "Non attribué",
+    "clientItGroup": "Informatique du client",
     "additionalAgentsTooltip": "Agents supplémentaires :",
     "loading": "Chargement...",
     "tagsCannotBeManaged": "Les balises ne peuvent pas être gérées",
