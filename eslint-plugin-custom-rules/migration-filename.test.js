@@ -5,6 +5,20 @@ import migrationFilename from './migration-filename.js';
 RuleTester.describe = describe;
 RuleTester.it = it;
 
+// Migration names use the author's wall clock (the rule parses them as local time).
+// A name stamped a few hours ahead of the commit passes the author's lint run later
+// that day but fails CI run sooner — so pin the boundary at hours, not years.
+function localMigrationTimestamp(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+    `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+  );
+}
+const HOUR_MS = 60 * 60 * 1000;
+const anHourAgo = localMigrationTimestamp(new Date(Date.now() - HOUR_MS));
+const inFourHours = localMigrationTimestamp(new Date(Date.now() + 4 * HOUR_MS));
+
 const ruleTester = new RuleTester({
   languageOptions: {
     ecmaVersion: 2020,
@@ -14,6 +28,11 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('migration-filename', migrationFilename, {
   valid: [
+    {
+      // Timestamp earlier than now (hours, not days) is accepted
+      code: 'exports.up = function(knex) {};',
+      filename: `/app/server/migrations/${anHourAgo}_recent_migration.cjs`,
+    },
     {
       // Old migration before cutoff date (20251118) - grandfathered in even with wrong format
       code: 'exports.up = function(knex) {};',
@@ -52,6 +71,16 @@ ruleTester.run('migration-filename', migrationFilename, {
   ],
 
   invalid: [
+    {
+      // Timestamp only hours ahead of now is still in the future and is rejected
+      code: 'exports.up = function(knex) {};',
+      filename: `/app/server/migrations/${inFourHours}_stamped_ahead_of_commit.cjs`,
+      errors: [
+        {
+          messageId: 'futureTimestamp',
+        },
+      ],
+    },
     {
       // Future timestamp - December 31, 2099 (after cutoff date)
       code: 'exports.up = function(knex) {};',

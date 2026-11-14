@@ -7,6 +7,7 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { isAssetOperationClosedForUser } from '@alga-psa/authorization/assetReadAuthorization';
 import {
   resolveRmmAssetDeviceActions,
   type RmmAssetDeviceActions,
@@ -76,6 +77,19 @@ export async function requireAssetPermission(user: unknown, action: 'read' | 'up
 }
 
 /**
+ * Whether the signed-in user's seat authority closes this named asset operation (`SEAT_AUTHORITY_PROJECTION`).
+ * Asked right after the coarse permission and before any device work. It does not depend on the permission, so
+ * the closure holds for a user whose role was widened as well. Shared by the asset-page actions and the REST
+ * adapters so both entry points close the same operations.
+ */
+export async function isOperationClosed(user: unknown, tenant: string, operation: 'remote_access' | 'rmm_command' | 'rmm_refresh'): Promise<boolean> {
+  const { knex } = await createTenantKnex();
+  return isAssetOperationClosedForUser(knex, tenant, user as any, operation);
+}
+
+export const OPERATION_CLOSED_MESSAGE = 'Permission denied: Cannot run remote or RMM actions on assets';
+
+/**
  * Cached RMM vitals for the asset page, read from the extension tables the
  * provider syncs populate. Never throws for a missing row: the page renders
  * its "not managed" state from null.
@@ -143,6 +157,7 @@ export const getAssetRmmDataForApi = withAuth(async (user, { tenant }, assetId: 
 export const refreshAssetRmmDataForApi = withAuth(async (user, { tenant }, assetId: string): Promise<RmmApiReadResult | null> => {
   await requireAssetPermission(user, 'update');
   await requireAssetPermission(user, 'read');
+  if (await isOperationClosed(user, tenant, 'rmm_refresh')) throw new Error(OPERATION_CLOSED_MESSAGE);
   const { ref, actions } = await resolveDevice(tenant, assetId);
   await actions.refresh(ref);
   return loadAssetRmmData(tenant, assetId);

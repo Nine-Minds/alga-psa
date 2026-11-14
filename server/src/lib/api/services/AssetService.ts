@@ -37,7 +37,7 @@ import {
   type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
+import { assetClosedFields, assetColumnsOpenTo, resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAuthorizedAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import type { AssetAuthUser } from '@alga-psa/assets/lib/assetReadAuthorization';
@@ -174,6 +174,8 @@ export class AssetService extends BaseService<any> {
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
     const knex = await this.getDbForContext(context);
     const applyReadScope = await this.resolveAssetReadScope(knex, context);
+    const closedFields = applyReadScope.closedFields;
+    const columns = await assetColumnsOpenTo(knex, closedFields, this.tableName) ?? [`${this.tableName}.*`];
     const query = scopedTable(knex, context.tenant, this.tableName);
     applyReadScope(query);
 
@@ -217,7 +219,8 @@ export class AssetService extends BaseService<any> {
       if (filters.vendor_id) {
         guard.filter(query, `${T}.vendor_id`, (q, c) => { q.where(c, filters.vendor_id); });
       }
-      if (filters.billing_profile_id) {
+      // Filtering on a closed field would disclose it by inference, so the filter is not applied.
+      if (filters.billing_profile_id && !closedFields.includes('billing_profile_id')) {
         guard.filter(query, `${T}.billing_profile_id`, (q, c) => { q.where(c, filters.billing_profile_id); });
       }
       if (filters.asset_type) {
@@ -262,7 +265,7 @@ export class AssetService extends BaseService<any> {
     });
     query
       .select(
-        `${this.tableName}.*`,
+        ...columns,
         'clients.client_name',
         'vendors.vendor_name',
         knex.raw(`
@@ -283,7 +286,8 @@ export class AssetService extends BaseService<any> {
     query.limit(limit).offset(offset);
 
     // Apply sorting
-    const sortField = options.sort || 'created_at';
+    // Ordering by a closed field would disclose its ranking, so it falls back to the default order.
+    const sortField = options.sort && !closedFields.includes(options.sort) ? options.sort : 'created_at';
     const sortOrder = options.order || 'desc';
     query.orderBy(sortField, sortOrder);
 
@@ -301,6 +305,7 @@ export class AssetService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const knex = await this.getDbForContext(context);
     return withTransaction(knex, async (trx) => {
+      const columns = await assetColumnsOpenTo(trx, await this.closedFieldsFor(trx, context), this.tableName) ?? [`${this.tableName}.*`];
       const query = scopedTable(trx, context.tenant, this.tableName)
         .where({ [`${this.tableName}.${this.primaryKey}`]: id });
       tenantDb(trx, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', { type: 'left' });
@@ -308,7 +313,7 @@ export class AssetService extends BaseService<any> {
       tenantDb(trx, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
 
       const asset = await query.select(
-        `${this.tableName}.*`,
+        ...columns,
         'clients.client_name',
         'vendors.vendor_name',
         'contacts.full_name as contact_name',
@@ -1523,6 +1528,7 @@ export class AssetService extends BaseService<any> {
   async search(searchData: AssetSearchData, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
     const applyReadScope = await this.resolveAssetReadScope(knex, context);
+    const selectColumns = await assetColumnsOpenTo(knex, applyReadScope.closedFields, this.tableName) ?? [`${this.tableName}.*`];
     const db = tenantDb(knex, context.tenant);
     const query = db.table(this.tableName);
     applyReadScope(query);
@@ -1531,8 +1537,10 @@ export class AssetService extends BaseService<any> {
     // set, whether defaulted or named explicitly in `fields`.
     const tableName = this.tableName;
     const guard = await createPredicateGuard(knex, context, 'asset');
+    // A field closed to the caller's seat is not matched either: a hit would disclose it by inference.
+    const requestedFields = (searchData.fields ?? []).filter(field => !applyReadScope.closedFields.includes(field));
     const searchColumns = searchData.fields && searchData.fields.length > 0
-      ? searchData.fields.map(field => field === 'client_name'
+      ? requestedFields.map(field => field === 'client_name'
           ? { column: 'clients.client_name', field: 'client_name' }
           : { column: `${tableName}.${field}`, field })
       : ['asset_tag', 'name', 'serial_number', 'location'].map(field => `${tableName}.${field}`);
@@ -1552,7 +1560,7 @@ export class AssetService extends BaseService<any> {
     // Add joins for searching
     db.tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', { type: 'left' });
     query
-      .select(`${this.tableName}.*`, 'clients.client_name')
+      .select(...selectColumns, 'clients.client_name')
       .limit(searchData.limit || 25);
 
     const assets = await query;
@@ -1641,9 +1649,11 @@ export class AssetService extends BaseService<any> {
       const purchasedAt = dateValue(asset.purchase_date);
       return purchasedAt ? [Math.floor((now.getTime() - purchasedAt.getTime()) / 86_400_000)] : [];
     });
+    // Purchase cost is summed only when every authorized asset exposes it: a cost hidden by redaction or closed
+    // to the caller's seat omits the aggregate rather than reporting a partial or zero total.
+    const assetValueReadable = assets.every((asset) => Object.hasOwn(asset, 'purchase_cost'));
     const totalAssetValue = assets.reduce((sum, asset) => {
-      if (!Object.hasOwn(asset, 'purchase_price')) return sum;
-      const value = Number(asset.purchase_price ?? 0);
+      const value = Number(asset.purchase_cost ?? 0);
       return sum + (Number.isFinite(value) ? value : 0);
     }, 0);
 
@@ -1677,7 +1687,7 @@ export class AssetService extends BaseService<any> {
       average_asset_age_days: visibleAges.length
         ? Math.round(visibleAges.reduce((sum, age) => sum + age, 0) / visibleAges.length)
         : null,
-      total_asset_value: totalAssetValue,
+      ...(assetValueReadable ? { total_asset_value: totalAssetValue } : {}),
       assets_by_type: countBy('asset_type'),
       assets_by_status: countBy('status', 'Unknown'),
       assets_by_client: countBy('client_name', 'Unknown'),
@@ -1772,8 +1782,10 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     const applyReadScope = await this.resolveAssetReadScope(knex, context);
     const scopedContext = { ...context, assetReadScope: applyReadScope } as ServiceContext & { assetReadScope: (query: Knex.QueryBuilder) => void };
+    // Aggregate purchase cost is purchase cost: with it closed the field is omitted, not reported as 0.
+    const includeAssetValue = !applyReadScope.closedFields.includes('purchase_cost');
     const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
-      this.getBasicStatistics(scopedContext),
+      this.getBasicStatistics(scopedContext, includeAssetValue),
       this.getAssetsByType(scopedContext),
       this.getAssetsByStatus(scopedContext),
       this.getAssetsByClient(scopedContext),
@@ -1791,17 +1803,10 @@ export class AssetService extends BaseService<any> {
     };
   }
 
-  private async resolveAssetReadScope(
-    knex: Knex,
-    context: ServiceContext
-  ): Promise<(query: Knex.QueryBuilder) => void> {
-    if (!context.user) {
-      // A service call without an authenticated principal must never turn into
-      // an unscoped collection query.
-      return (query) => { query.whereRaw('1 = 0'); };
-    }
+  private async resolveReadSubject(knex: Knex, context: ServiceContext) {
+    if (!context.user) return null;
     const apiKeyId = (context as ServiceContext & { apiKeyId?: string }).apiKeyId;
-    const subject = await resolveAuthorizationSubjectForUser(
+    return resolveAuthorizationSubjectForUser(
       knex,
       context.tenant,
       {
@@ -1816,6 +1821,28 @@ export class AssetService extends BaseService<any> {
       },
       apiKeyId,
     );
+  }
+
+  /**
+   * The asset columns this caller's reads must not select (`SEAT_AUTHORITY_PROJECTION`), empty for everyone a
+   * resolver does not close anything for. Reads leave them out of their SQL; `projectApiRecord` stays as the net.
+   */
+  private async closedFieldsFor(knex: Knex, context: ServiceContext): Promise<string[]> {
+    const subject = await this.resolveReadSubject(knex, context);
+    return subject ? assetClosedFields(subject) : [];
+  }
+
+  /** The read-scope predicate for the caller, carrying the fields closed to them so a read resolves the subject once. */
+  private async resolveAssetReadScope(
+    knex: Knex,
+    context: ServiceContext
+  ): Promise<((query: Knex.QueryBuilder) => void) & { closedFields: string[] }> {
+    const subject = await this.resolveReadSubject(knex, context);
+    if (!subject) {
+      // A service call without an authenticated principal must never turn into
+      // an unscoped collection query.
+      return Object.assign((query: Knex.QueryBuilder) => { query.whereRaw('1 = 0'); }, { closedFields: [] as string[] });
+    }
     const bundleRules = await resolveBundleNarrowingRulesForEvaluation(knex, {
       subject,
       resource: { type: 'asset', action: 'read' },
@@ -1854,7 +1881,7 @@ export class AssetService extends BaseService<any> {
       ctx: { subject, adapter },
     });
     if (compiled.supported === false) throw new Error(`Unsupported asset read authorization predicate: ${compiled.reason}`);
-    return apply;
+    return Object.assign(apply, { closedFields: assetClosedFields(subject) });
   }
 
   private applyAssetAssociationScope(query: Knex.QueryBuilder, ids: string[], entityType: 'user' | 'team'): void {
@@ -1898,7 +1925,7 @@ export class AssetService extends BaseService<any> {
   }
 
   // Helper methods
-  private async getBasicStatistics(context: ServiceContext): Promise<any> {
+  private async getBasicStatistics(context: ServiceContext, includeAssetValue = true): Promise<any> {
     const knex = await this.getDbForContext(context);
     const stats = await scopedTable(knex, context.tenant, this.tableName)
       .modify((query) => this.applyAssetScopeFromContext(query, context))
@@ -1906,7 +1933,7 @@ export class AssetService extends BaseService<any> {
         knex.raw('COUNT(*) as total_assets'),
         knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as assets_added_this_month`),
         knex.raw('AVG(EXTRACT(DAYS FROM NOW() - purchase_date)) as average_asset_age_days'),
-        knex.raw('SUM(COALESCE(purchase_cost, 0)) as total_asset_value')
+        ...(includeAssetValue ? [knex.raw('SUM(COALESCE(purchase_cost, 0)) as total_asset_value')] : [])
       ])
       .first();
 
@@ -1927,7 +1954,7 @@ export class AssetService extends BaseService<any> {
       deployed_assets: parseInt(String(deployed?.count ?? '0')),
       assets_added_this_month: parseInt(stats?.assets_added_this_month || '0'),
       average_asset_age_days: stats?.average_asset_age_days ? Math.round(parseFloat(stats.average_asset_age_days)) : null,
-      total_asset_value: parseFloat(stats?.total_asset_value || '0')
+      ...(includeAssetValue ? { total_asset_value: parseFloat(stats?.total_asset_value || '0') } : {}),
     };
   }
 

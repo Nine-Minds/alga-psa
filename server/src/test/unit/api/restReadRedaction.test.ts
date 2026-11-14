@@ -1502,12 +1502,12 @@ describe('asset routes serialize the projection', () => {
     state.assets = [
       {
         asset_id: 'a-visible', asset_type: 'workstation', status: 'active', client_id: 'c-1', client_name: 'Acme',
-        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_price: 4938,
+        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_cost: 4938,
         warranty_end_date: oldWarrantyDate,
       },
       {
         asset_id: 'a-suppressed', asset_type: 'server', status: 'active', client_id: 'c-2', client_name: 'Hidden client',
-        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_price: 90000,
+        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_cost: 90000,
         warranty_end_date: oldWarrantyDate,
       },
     ];
@@ -1529,17 +1529,19 @@ describe('asset routes serialize the projection', () => {
     state.decisions.set('a-visible', {
       allowed: true,
       redactedFields: [
-        'purchase_price', 'purchase_date', 'created_at', 'warranty_end_date', 'client_id',
+        'purchase_cost', 'purchase_date', 'created_at', 'warranty_end_date', 'client_id',
         'asset_maintenance_schedules.next_maintenance',
       ],
     });
     const hidden = await controller.getStatistics(request('/api/v2/assets/stats'));
     const hiddenStats = (await hidden.json()).data;
     expect(hiddenStats).toMatchObject({
-      total_assets: 1, assets_added_this_month: 0, average_asset_age_days: null, total_asset_value: 0,
+      total_assets: 1, assets_added_this_month: 0, average_asset_age_days: null,
       assets_by_client: { Unknown: 1 }, warranty_expiring_soon: 0, warranty_expired: 0,
       maintenance_due: 0, maintenance_overdue: 0,
     });
+    // A hidden purchase cost omits the aggregate instead of reporting a fabricated 0.
+    expect(hiddenStats).not.toHaveProperty('total_asset_value');
     expect(JSON.stringify(hiddenStats)).not.toContain('4938');
   });
 

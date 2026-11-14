@@ -12,7 +12,9 @@
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { RmmRemoteConnectionType } from '../../lib/rmm/assetDeviceActions';
 import {
+  isOperationClosed,
   loadAssetRmmData,
+  OPERATION_CLOSED_MESSAGE,
   providerLabel,
   requireAssetPermission,
   resolveDevice,
@@ -56,6 +58,7 @@ export const getAssetRmmData = withAuth(async (user, { tenant }, assetId: string
 /** Pulls the device from its provider, then returns the refreshed cached data. */
 export const refreshAssetRmmData = withAuth(async (user, { tenant }, assetId: string): Promise<RmmCachedData | null> => {
   await requireAssetPermission(user, 'update');
+  if (await isOperationClosed(user, tenant, 'rmm_refresh')) throw new Error(OPERATION_CLOSED_MESSAGE);
   const { ref, actions } = await resolveDevice(tenant, assetId);
   await actions.refresh(ref);
   return getAssetRmmData(assetId);
@@ -63,6 +66,7 @@ export const refreshAssetRmmData = withAuth(async (user, { tenant }, assetId: st
 
 export const triggerRmmReboot = withAuth(async (user, { tenant }, assetId: string): Promise<RmmCommandResult> => {
   await requireAssetPermission(user, 'update');
+  if (await isOperationClosed(user, tenant, 'rmm_command')) return { success: false, message: OPERATION_CLOSED_MESSAGE };
   const { asset, ref, actions } = await resolveDevice(tenant, assetId);
   if (!(await canExecuteCommands(user, asset.rmm_provider))) {
     return { success: false, message: EXECUTE_COMMAND_DENIED_MESSAGE };
@@ -84,6 +88,7 @@ export const triggerRmmReboot = withAuth(async (user, { tenant }, assetId: strin
 
 export const triggerRmmScript = withAuth(async (user, { tenant }, assetId: string, scriptId: string): Promise<RmmCommandResult> => {
   await requireAssetPermission(user, 'update');
+  if (await isOperationClosed(user, tenant, 'rmm_command')) return { success: false, message: OPERATION_CLOSED_MESSAGE };
   const { asset, ref, actions } = await resolveDevice(tenant, assetId);
   if (!(await canExecuteCommands(user, asset.rmm_provider))) {
     return { success: false, message: EXECUTE_COMMAND_DENIED_MESSAGE };
@@ -110,6 +115,7 @@ export const getAssetRemoteControlTypes = withAuth(async (
   assetId: string
 ): Promise<RmmRemoteConnectionType[]> => {
   await requireAssetPermission(user, 'read');
+  if (await isOperationClosed(user, tenant, 'remote_access')) return [];
   if (!await hasPermission(user as any, 'asset', 'update')) return [];
   try {
     const { asset, ref, actions } = await resolveDevice(tenant, assetId);
@@ -130,6 +136,7 @@ export const getAssetRemoteControlUrl = withAuth(async (
   connectionType: RmmRemoteConnectionType = 'splashtop'
 ): Promise<string | null> => {
   await requireAssetPermission(user, 'update');
+  if (await isOperationClosed(user, tenant, 'remote_access')) throw new Error(OPERATION_CLOSED_MESSAGE);
   const { asset, ref, actions } = await resolveDevice(tenant, assetId);
   // A Web Remote session is at least as powerful as a reboot.
   if (!(await canExecuteCommands(user, asset.rmm_provider))) throw new Error(EXECUTE_COMMAND_DENIED_MESSAGE);
