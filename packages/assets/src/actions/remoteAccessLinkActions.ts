@@ -6,7 +6,7 @@ import type { AssetRemoteAccessLink } from '@alga-psa/types';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { AssetActionError } from './assetActionErrors';
 import { hasLiteralHttpAuthority, renderRemoteAccessTemplate, SUPPORTED_ASSET_PLACEHOLDER_KEYS } from '../lib/remoteAccessTemplate';
-import { createAssetReadContext, isAssetReadAllowed } from '../lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetOperationClosed, isAssetOperationClosedForUser, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 
 type RemoteAccessLinkInput = Partial<AssetRemoteAccessLink> & {
   label: string;
@@ -131,6 +131,8 @@ export const hasRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<b
     return permissionError('Permission denied: Cannot read assets.', 'msp/assets:remoteAccess.errors.readPermission');
   }
   const { knex } = await createTenantKnex();
+  // Closed to a seat subject: no remote access is offered, so there is no link to look for.
+  if (await isAssetOperationClosedForUser(knex, tenant, user as any, 'remote_access')) return false;
   const link = await tenantDb(knex, tenant)
     .table('asset_remote_access_links')
     .select('link_id')
@@ -157,6 +159,8 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
 
     const readContext = await createAssetReadContext(trx, tenant, user as any);
     if (!await isAssetReadAllowed(trx, tenant, readContext, assetIdentity)) return [];
+    // Remote access is closed to a seat subject even on an asset they may read.
+    if (isAssetOperationClosed(readContext.subject, 'remote_access')) return [];
 
     const assetQuery = db.table('assets')
       .select(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.rmm_device_id', 'assets.rmm_provider', 'assets.rmm_organization_id', 'assets.attributes', 'clients.client_name']);

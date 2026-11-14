@@ -1,5 +1,6 @@
 'use client';
 
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
@@ -170,6 +171,8 @@ const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobi
 const ASSETS_PRINT_PAGE_SIZE = 5000;
 
 export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
+  // What the server's seat authority closes for this user: those controls are left out, not disabled.
+  const { canCreate, canUpdate, canDelete } = useAssetSurfaceControls();
   const { t } = useTranslation('msp/assets');
   const clientDrawer = useClientDrawer();
   const assetTypeEntries = useAssetTypeRegistry();
@@ -1279,16 +1282,18 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             >
               {t('assetDashboardClient.actions.viewDetails', { defaultValue: 'View details' })}
             </DropdownMenuItem>
-            <DropdownMenuItem
-              id={`edit-asset-${record.asset_id}`}
-              onSelect={() => {
-                if (typeof window !== 'undefined') {
-                  window.location.assign(`/msp/assets/${record.asset_id}/edit`);
-                }
-              }}
-            >
-              {t('assetDashboardClient.actions.editAsset', { defaultValue: 'Edit asset' })}
-            </DropdownMenuItem>
+            {canUpdate && (
+              <DropdownMenuItem
+                id={`edit-asset-${record.asset_id}`}
+                onSelect={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.assign(`/msp/assets/${record.asset_id}/edit`);
+                  }
+                }}
+              >
+                {t('assetDashboardClient.actions.editAsset', { defaultValue: 'Edit asset' })}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               id={`create-ticket-${record.asset_id}`}
@@ -1543,9 +1548,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 <RefreshCw className="h-4 w-4" />
                 {t('assetDashboardClient.actions.refreshData', { defaultValue: 'Refresh data' })}
               </Button>
-              <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />
-              <Link href="/msp/assets/new" className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium">Full add</Link>
-              <LabelFirstAssetIntake />
+              {canCreate && <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />}
+              {canCreate && <Link href="/msp/assets/new" className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium">Full add</Link>}
+              {canCreate && <LabelFirstAssetIntake />}
             </div>
           </div>
 
@@ -2267,13 +2272,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           count: selectedAssetIds.length,
         })}
         actions={[
-          {
+          ...(canUpdate ? [{
             id: 'status',
             label: t('assetDashboardClient.bulk.actionBar.setStatus', { defaultValue: 'Set status' }),
             icon: <CircleDot className="h-4 w-4" />,
             onClick: () => setIsBulkStatusOpen(true),
-          },
-          {
+          }] : []),
+          ...(canUpdate ? [{
             id: 'location',
             label: t('assetDashboardClient.bulk.actionBar.setLocation', { defaultValue: 'Set location' }),
             icon: <MapPin className="h-4 w-4" />,
@@ -2281,21 +2286,21 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               setBulkLocationMode(canBulkAssignSavedLocation ? 'saved' : 'custom');
               setIsBulkLocationOpen(true);
             },
-          },
-          {
+          }] : []),
+          ...(canUpdate ? [{
             id: 'assign',
             label: t('assetDashboardClient.bulk.actionBar.assignContact', { defaultValue: 'Assign to contact' }),
             icon: <UserPlus className="h-4 w-4" />,
             disabled: !singleClientSelectionId,
             onClick: () => setIsBulkAssignOpen(true),
-          },
-          {
+          }] : []),
+          ...(canUpdate ? [{
             id: 'group',
             label: t('assetDashboardClient.bulk.actionBar.addToGroup', { defaultValue: 'Add to group' }),
             icon: <Boxes className="h-4 w-4" />,
             disabled: !singleClientSelectionId,
             onClick: () => setIsBulkGroupOpen(true),
-          },
+          }] : []),
           {
             id: 'print-labels',
             label: t('assetDashboardClient.bulk.actionBar.printLabels', { defaultValue: 'Print labels' }),
@@ -2309,13 +2314,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               : undefined,
             onClick: () => setIsPrintLabelsOpen(true),
           },
-          {
+          ...(canDelete ? [{
             id: 'delete',
             label: t('assetDashboardClient.bulk.actionBar.delete', { defaultValue: 'Delete' }),
             icon: <Trash2 className="h-4 w-4" />,
             onClick: () => setIsBulkDeleteOpen(true),
             destructive: true,
-          },
+          }] : []),
         ]}
         onClear={() => setSelectedAssetIds([])}
         clearLabel={t('assetDashboardClient.bulk.actionBar.clear', { defaultValue: 'Clear' })}

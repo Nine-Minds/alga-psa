@@ -100,6 +100,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
+import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from '@alga-psa/authorization/assetReadAuthorization';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -503,6 +504,17 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
               board_id: data.board_id,
               entered_by: user.user_id,
             });
+
+            // The asset the ticket is created from must be one the creator may read: for a seat technician that is
+            // their own client's, and anything else answers as missing. Without a restricting rule this allows.
+            const sourceAsset = await tenantScopedTable(trx, 'assets', tenant)
+              .where({ asset_id: data.asset_id })
+              .first('asset_id', 'client_id');
+            if (!sourceAsset || !await isAssetReadAllowed(
+              trx, tenant, await createAssetReadContext(trx, tenant, user as AssetAuthUser), sourceAsset,
+            )) {
+              throw new Error(`Invalid asset: ${data.asset_id} was not found`);
+            }
 
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(

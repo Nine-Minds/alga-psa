@@ -18,6 +18,7 @@ import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { createBundleNarrowingProvider } from './bundles/narrowingProvider';
 import { projectReadableRecord } from './recordProjection';
+import { builtinClosedFields, builtinClosedOperations, builtinResolversCloseAction, builtinResolversConcealDenials, isBuiltinOperationClosed } from './kernel/builtinRuleResolvers';
 
 /**
  * Asset read authorization, shared by the asset server actions and the label code paths.
@@ -384,4 +385,55 @@ export async function projectReadableAssets<T extends AssetAuthorizationInput>(
     return decision.allowed ? projectReadableRecord('asset', asset, decision.redactedFields) : null;
   });
   return projected.filter((asset): asset is NonNullable<typeof asset> => asset !== null) as T[];
+}
+
+/**
+ * Asset columns (and joined display columns) a registered built-in resolver closes to this subject. A read path
+ * leaves them out of its query; the decision's `redactedFields` carry the same list as a safety net.
+ */
+export function assetClosedFields(subject: AuthorizationSubject): string[] {
+  return builtinClosedFields({ subject, resource: { type: 'asset', action: 'read' } });
+}
+
+/** Whether a built-in resolver closes the named asset operation (`remote_access`, `rmm_command`, ...) to this subject. */
+export function isAssetOperationClosed(subject: AuthorizationSubject, operation: string): boolean {
+  return isBuiltinOperationClosed({ subject, resource: { type: 'asset', action: operation } });
+}
+
+/** Every asset operation closed to this subject; what a screen consults to decide which controls to render. */
+export function assetClosedOperations(subject: AuthorizationSubject): string[] {
+  return builtinClosedOperations({ subject, resource: { type: 'asset', action: 'read' } });
+}
+
+/** {@link isAssetOperationClosed} for a user the caller has not resolved a subject for yet. */
+export async function isAssetOperationClosedForUser(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  operation: string
+): Promise<boolean> {
+  return isAssetOperationClosed(await resolveAuthorizationSubjectForUser(trx, tenant, user), operation);
+}
+
+/** Throws the kernel's standard denial when the named asset operation is closed to the user. */
+export async function assertAssetOperationOpen(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  operation: string
+): Promise<void> {
+  if (await isAssetOperationClosedForUser(trx, tenant, user, operation)) {
+    throw new Error(`Permission denied: Cannot ${operation.replace(/_/g, ' ')} on assets`);
+  }
+}
+
+/** The asset actions (`create`, `update`, `delete`) a closed baseline denies this subject outright, whatever the record. */
+export function assetClosedActions(subject: AuthorizationSubject): string[] {
+  return ['create', 'update', 'delete'].filter((action) =>
+    builtinResolversCloseAction({ subject, resource: { type: 'asset', action } }));
+}
+
+/** Whether a record this subject may not read must answer as missing (a closed-baseline subject) rather than forbidden. */
+export function assetDenialsConcealed(subject: AuthorizationSubject): boolean {
+  return builtinResolversConcealDenials({ subject, resource: { type: 'asset', action: 'read' } });
 }

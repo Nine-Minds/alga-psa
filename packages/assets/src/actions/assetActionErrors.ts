@@ -103,6 +103,12 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
     if (message === 'Asset not found') {
       return actionError('Asset not found. It may have been deleted. Please refresh and try again.', 'msp/assets:errors.asset.notFoundRefresh');
     }
+    if (message === 'Ticket not found') {
+      return actionError('Ticket not found. It may have been deleted. Please refresh and try again.', 'msp/assets:errors.asset.ticketNotFound');
+    }
+    if (message === 'Asset is already linked to this ticket') {
+      return actionError('This asset is already linked to the ticket.', 'msp/assets:errors.asset.alreadyLinkedToTicket');
+    }
     if (message === 'Client not found') {
       return actionError('Client not found. It may have been deleted. Please refresh and try again.', 'msp/assets:errors.asset.clientNotFound');
     }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -159,6 +160,8 @@ export function AssetBentoLayout({
   const groupPeople = asset.group?.kind === 'bundle'
     ? (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'owner')
     : (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'user');
+  // What the server's seat authority closes for this user: closed views and their entry points are left out.
+  const { canUpdate, readOnly } = useAssetSurfaceControls();
   // Owned here because the drawer footer holds the edit form's Save button.
   const [editSaving, setEditSaving] = useState(false);
   const purchaseCostLabel = formatMinorUnits(asset.purchase_cost, asset.purchase_cost_currency);
@@ -172,7 +175,7 @@ export function AssetBentoLayout({
     </Button>
   );
 
-  const views: FocusView[] = useMemo(() => [
+  const allViews: FocusView[] = useMemo(() => [
     // Edit leads: it is the action people reach for most, and hosting it here
     // means one drawer with one rail instead of two competing overlays.
     {
@@ -225,6 +228,12 @@ export function AssetBentoLayout({
       : []),
     { id: 'documents-passwords', label: t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' }), icon: Lock, content: <DocumentsPasswordsTab asset={asset} /> },
   ], [asset, t, onFocusChange, editSaving]);
+
+  // Editing, maintenance schedules and related-asset links are writes; the documents and credentials view is the
+  // documents slice's (S31) and stays closed to a read-only surface until it lands.
+  const views = useMemo(() => allViews.filter((view) =>
+    !((!canUpdate && ['edit', 'maintenance', 'related-assets'].includes(view.id)) || (readOnly && view.id === 'documents-passwords'))
+  ), [allViews, canUpdate, readOnly]);
 
   const activeView = focusView ? views.find((view) => view.id === focusView) ?? null : null;
 
@@ -565,11 +574,11 @@ export function AssetBentoLayout({
               id="asset-bento-related"
               title={t('assetDetailTabs.tabs.relatedAssets', { defaultValue: 'Related assets' })}
               icon={<Network className="h-4 w-4" />}
-              action={
+              action={canUpdate ? (
                 <button id="asset-bento-related-manage" type="button" onClick={() => onFocusChange('related-assets')} className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline">
                   {t('assetBento.manage', { defaultValue: 'Manage' })}
                 </button>
-              }
+              ) : undefined}
             >
               {asset.relationships?.length ? (
                 <BentoRowList>
@@ -657,11 +666,11 @@ export function AssetBentoLayout({
               id="asset-bento-maintenance"
               title={t('assetDetailTabs.tabs.maintenance', { defaultValue: 'Maintenance' })}
               icon={<CalendarDays className="h-4 w-4" />}
-              action={
+              action={canUpdate ? (
                 <button id="asset-bento-maintenance-open" type="button" onClick={() => onFocusChange('maintenance')} className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline">
                   {t('assetBento.manage', { defaultValue: 'Manage' })}
                 </button>
-              }
+              ) : undefined}
             >
               {maintenanceReport && maintenanceReport.total_schedules > 0 ? (
                 <div className="space-y-1.5 text-sm">
@@ -683,6 +692,7 @@ export function AssetBentoLayout({
               )}
             </BentoTile>
 
+            {!readOnly && (
             <BentoTile
               id="asset-bento-docs"
               title={t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' })}
@@ -697,6 +707,7 @@ export function AssetBentoLayout({
                 {t('assetBento.docsHint', { defaultValue: 'Attachments and credentials for this asset.' })}
               </BentoTileEmpty>
             </BentoTile>
+            )}
           </div>
         </div>
 
