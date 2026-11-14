@@ -61,7 +61,8 @@ describeDb('seat technician ticket list views (F046 / T026)', { shuffle: false }
     const result: any = await optimized.getTicketsForList({ ...base, ...filters } as ITicketListFilters, 1, 100);
     if (!result.tickets) throw new Error(JSON.stringify(result));
     return { names: result.tickets.map((t: any) => name.get(t.ticket_id) ?? `UNKNOWN`).sort() as string[],
-      total: result.totalCount as number, views: result.views as Array<{ key: string; count: number }> | undefined };
+      total: result.totalCount as number, views: result.views as Array<{ key: string; count: number }> | undefined,
+      seatResponsibilityOffered: result.seatResponsibilityOffered as boolean | undefined, rawTickets: result.tickets as Array<{ seat_responsibility?: unknown }> };
   };
 
   beforeAll(async () => {
@@ -203,6 +204,19 @@ describeDb('seat technician ticket list views (F046 / T026)', { shuffle: false }
     expect(rows.views).toBeUndefined();
     expect(rows.names).toEqual(['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'C1', 'C2']);
     // The subject's own facts read (the authorization kernel's, shared with every surface) is not the list's.
+    // With the seat shape released, MSP staff are offered the responsibility column (S24): one page-scoped read.
+    const seatReads = seen.filter((sql) => /co_managed_seat_/.test(sql) && !sql.includes('jsonb_build_object'));
+    expect(seatReads).toHaveLength(1);
+    expect(rows.seatResponsibilityOffered).toBe(true);
+  });
+
+  it('with the seat shape off an MSP user\'s list runs no seat query and offers no responsibility column', async () => {
+    as(f.mspAgent);
+    process.env.FORCE_CAPABILITIES = 'co-managed-seat:off';
+    seen.length = 0;
+    const rows = await list({});
+    expect(rows.seatResponsibilityOffered).toBeUndefined();
+    expect(rows.rawTickets.every((ticket: { seat_responsibility?: unknown }) => ticket.seat_responsibility === undefined)).toBe(true);
     const seatReads = seen.filter((sql) => /co_managed_seat_/.test(sql) && !sql.includes('jsonb_build_object'));
     expect(seatReads).toEqual([]);
   });

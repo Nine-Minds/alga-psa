@@ -820,7 +820,12 @@
     "exportSelectedTooltip_few": "Exportar {{count}} tickets seleccionados a CSV",
     "exportSelectedTooltip_many": "Exportar {{count}} tickets seleccionados a CSV",
     "selectAllMatching_few": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros",
-    "selectAllMatching_many": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros"
+    "selectAllMatching_many": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros",
+    "responsibility": {
+      "column": "Responsable",
+      "all": "Todas las responsabilidades",
+      "filter": "Responsabilidad"
+    }
   },
   "bulk": {
     "bundleTickets": "Agrupar tickets",
@@ -1919,6 +1924,18 @@
     },
     "comment": {
       "audienceRequired": "Elige quién puede ver este comentario antes de publicarlo."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Escriba una nota compartida para TI del cliente antes de pasar este ticket.",
+      "ticketNotFound": "Este ticket ya no está disponible.",
+      "noArrangement": "El cliente de este ticket ya no tiene un acuerdo de puestos de cogestión.",
+      "operationConflict": "Este traspaso se inició con otros datos. Inténtelo de nuevo.",
+      "changed": "Este ticket se pasó o se reasignó. Actualice el ticket antes de volver a intentarlo.",
+      "alreadyResponsible": "TI del cliente ya es responsable de este ticket. Actualice el ticket para ver su estado actual.",
+      "actorNotAllowed": "No puede pasar este ticket a TI del cliente.",
+      "boardOutOfScope": "El tablero de este ticket no está compartido con TI del cliente, por lo que no se puede pasar.",
+      "technicianNotAvailable": "El técnico seleccionado ya no está disponible para este cliente. Elija otro o déjelo sin asignar.",
+      "unavailable": "Pasar tickets a TI del cliente no está disponible."
     }
   },
   "ticketSection": {
@@ -3275,5 +3292,19 @@
   "statusChange": {
     "title": "Actualizar estado del ticket",
     "message": "¿Seguro que quiere cambiar el estado de \"{{from}}\" a \"{{to}}\"?"
+  },
+  "seatResponsibility": {
+    "clientIt": "TI del cliente",
+    "msp": "MSP",
+    "label": "Responsable",
+    "chipTitle": "Quién es responsable de este ticket",
+    "handToClientIt": "Pasar a TI del cliente",
+    "handedToClientIt": "Pasado a TI del cliente",
+    "handing": "Pasando…",
+    "handPrompt": "TI del cliente pasa a ser responsable de este ticket y sus temporizadores de SLA se pausan hasta que vuelva. La nota se comparte con los técnicos del cliente.",
+    "noteLabel": "Nota compartida para TI del cliente",
+    "technicianLabel": "Técnico (opcional)",
+    "technicianPlaceholder": "Cualquier técnico de este cliente",
+    "technicianNone": "Dejar el asignado como está"
   }
 }

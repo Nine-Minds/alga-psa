@@ -820,7 +820,12 @@
     "exportSelectedTooltip_few": "Export {{count}} selected tickets to CSV",
     "exportSelectedTooltip_many": "Export {{count}} selected tickets to CSV",
     "selectAllMatching_few": "Select all {{count}} tickets matching your filters",
-    "selectAllMatching_many": "Select all {{count}} tickets matching your filters"
+    "selectAllMatching_many": "Select all {{count}} tickets matching your filters",
+    "responsibility": {
+      "column": "Responsible",
+      "all": "All responsibility",
+      "filter": "Responsibility"
+    }
   },
   "bulk": {
     "bundleTickets": "Bundle Tickets",
@@ -1919,6 +1924,18 @@
     },
     "comment": {
       "audienceRequired": "Choose who can see this comment before posting it."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Write a shared note for client IT before handing this ticket over.",
+      "ticketNotFound": "This ticket is no longer available.",
+      "noArrangement": "This ticket's client no longer has a co-managed seat arrangement.",
+      "operationConflict": "This handoff was started with different details. Try again.",
+      "changed": "This ticket was handed off or reassigned. Refresh the ticket before trying again.",
+      "alreadyResponsible": "Client IT is already responsible for this ticket. Refresh the ticket to see its current state.",
+      "actorNotAllowed": "You cannot hand this ticket to client IT.",
+      "boardOutOfScope": "This ticket's board is not shared with client IT, so it cannot be handed over.",
+      "technicianNotAvailable": "The selected technician is no longer available for this client. Choose another or leave it unassigned.",
+      "unavailable": "Handing tickets to client IT is not available."
     }
   },
   "ticketSection": {
@@ -3275,5 +3292,19 @@
   "statusChange": {
     "title": "Update Ticket Status",
     "message": "Are you sure you want to change the status from \"{{from}}\" to \"{{to}}\"?"
+  },
+  "seatResponsibility": {
+    "clientIt": "Client IT",
+    "msp": "MSP",
+    "label": "Responsible",
+    "chipTitle": "Who is responsible for this ticket",
+    "handToClientIt": "Hand to client IT",
+    "handedToClientIt": "Handed to client IT",
+    "handing": "Handing over…",
+    "handPrompt": "Client IT becomes responsible for this ticket and your SLA timers pause until it comes back. The note is shared with the client's technicians.",
+    "noteLabel": "Shared note for client IT",
+    "technicianLabel": "Technician (optional)",
+    "technicianPlaceholder": "Any technician of this client",
+    "technicianNone": "Leave the assignee as it is"
   }
 }

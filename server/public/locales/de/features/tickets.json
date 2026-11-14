@@ -758,6 +758,11 @@
       "saveFailed": "Standardansicht konnte nicht gespeichert werden",
       "reset": "Auf Mandantenstandard zurücksetzen",
       "resetFailed": "Ansicht konnte nicht zurückgesetzt werden"
+    },
+    "responsibility": {
+      "column": "Verantwortlich",
+      "all": "Alle Verantwortlichen",
+      "filter": "Verantwortung"
     }
   },
   "bulk": {
@@ -1781,6 +1786,18 @@
     },
     "comment": {
       "audienceRequired": "Wählen Sie vor dem Senden aus, wer diesen Kommentar sehen kann."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Schreiben Sie eine gemeinsame Notiz für die Kunden-IT, bevor Sie das Ticket übergeben.",
+      "ticketNotFound": "Dieses Ticket ist nicht mehr verfügbar.",
+      "noArrangement": "Der Kunde dieses Tickets hat keine Co-Managed-Seat-Vereinbarung mehr.",
+      "operationConflict": "Diese Übergabe wurde mit anderen Angaben gestartet. Versuchen Sie es erneut.",
+      "changed": "Dieses Ticket wurde übergeben oder neu zugewiesen. Aktualisieren Sie das Ticket, bevor Sie es erneut versuchen.",
+      "alreadyResponsible": "Die Kunden-IT ist bereits für dieses Ticket verantwortlich. Aktualisieren Sie das Ticket, um den aktuellen Stand zu sehen.",
+      "actorNotAllowed": "Sie können dieses Ticket nicht an die Kunden-IT übergeben.",
+      "boardOutOfScope": "Das Board dieses Tickets ist nicht für die Kunden-IT freigegeben und kann daher nicht übergeben werden.",
+      "technicianNotAvailable": "Der gewählte Techniker ist für diesen Kunden nicht mehr verfügbar. Wählen Sie einen anderen oder lassen Sie das Ticket unzugewiesen.",
+      "unavailable": "Das Übergeben von Tickets an die Kunden-IT ist nicht verfügbar."
     }
   },
   "ticketSection": {
@@ -3129,5 +3146,19 @@
   "statusChange": {
     "title": "Ticketstatus aktualisieren",
     "message": "Möchten Sie den Status wirklich von „{{from}}“ auf „{{to}}“ ändern?"
+  },
+  "seatResponsibility": {
+    "clientIt": "Kunden-IT",
+    "msp": "MSP",
+    "label": "Verantwortlich",
+    "chipTitle": "Wer für dieses Ticket verantwortlich ist",
+    "handToClientIt": "An Kunden-IT übergeben",
+    "handedToClientIt": "An Kunden-IT übergeben",
+    "handing": "Wird übergeben …",
+    "handPrompt": "Die Kunden-IT wird für dieses Ticket verantwortlich und Ihre SLA-Timer pausieren, bis es zurückkommt. Die Notiz ist für die Techniker des Kunden sichtbar.",
+    "noteLabel": "Gemeinsame Notiz für die Kunden-IT",
+    "technicianLabel": "Techniker (optional)",
+    "technicianPlaceholder": "Beliebiger Techniker dieses Kunden",
+    "technicianNone": "Zuständigen unverändert lassen"
   }
 }

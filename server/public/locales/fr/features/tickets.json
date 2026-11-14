@@ -820,7 +820,12 @@
     "exportSelectedTooltip_few": "Exportation de {{count}} tickets sélectionnés vers CSV",
     "exportSelectedTooltip_many": "Exportation de {{count}} tickets sélectionnés vers CSV",
     "selectAllMatching_few": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
-    "selectAllMatching_many": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres"
+    "selectAllMatching_many": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
+    "responsibility": {
+      "column": "Responsable",
+      "all": "Toutes les responsabilités",
+      "filter": "Responsabilité"
+    }
   },
   "bulk": {
     "bundleTickets": "Regrouper les tickets",
@@ -1919,6 +1924,18 @@
     },
     "comment": {
       "audienceRequired": "Choisissez qui peut voir ce commentaire avant de le publier."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Rédigez une note partagée pour l'IT du client avant de lui confier ce ticket.",
+      "ticketNotFound": "Ce ticket n'est plus disponible.",
+      "noArrangement": "Le client de ce ticket n'a plus d'accord de postes en cogestion.",
+      "operationConflict": "Ce transfert a été lancé avec des informations différentes. Réessayez.",
+      "changed": "Ce ticket a été transféré ou réassigné. Actualisez le ticket avant de réessayer.",
+      "alreadyResponsible": "L'IT du client est déjà responsable de ce ticket. Actualisez le ticket pour voir son état actuel.",
+      "actorNotAllowed": "Vous ne pouvez pas confier ce ticket à l'IT du client.",
+      "boardOutOfScope": "Le tableau de ce ticket n'est pas partagé avec l'IT du client ; il ne peut donc pas lui être confié.",
+      "technicianNotAvailable": "Le technicien sélectionné n'est plus disponible pour ce client. Choisissez-en un autre ou laissez le ticket non assigné.",
+      "unavailable": "La remise de tickets à l'IT du client n'est pas disponible."
     }
   },
   "ticketSection": {
@@ -3275,5 +3292,19 @@
   "statusChange": {
     "title": "Mettre à jour le statut du ticket",
     "message": "Voulez-vous vraiment passer du statut « {{from}} » au statut « {{to}} » ?"
+  },
+  "seatResponsibility": {
+    "clientIt": "IT du client",
+    "msp": "MSP",
+    "label": "Responsable",
+    "chipTitle": "Qui est responsable de ce ticket",
+    "handToClientIt": "Confier à l'IT du client",
+    "handedToClientIt": "Confié à l'IT du client",
+    "handing": "Transfert en cours…",
+    "handPrompt": "L'IT du client devient responsable de ce ticket et vos minuteurs SLA sont suspendus jusqu'à son retour. La note est partagée avec les techniciens du client.",
+    "noteLabel": "Note partagée pour l'IT du client",
+    "technicianLabel": "Technicien (facultatif)",
+    "technicianPlaceholder": "N'importe quel technicien de ce client",
+    "technicianNone": "Laisser l'assigné inchangé"
   }
 }

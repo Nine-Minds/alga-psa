@@ -12,6 +12,7 @@ import { serves } from '@alga-psa/core/capability';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
+import { registerCoManagedSeatSla } from './seatTicketSla';
 import { CO_MANAGED_CAPABILITY } from './permissionsCapability';
 import { applyCoManagedTicketSlaTransition, recordCoManagedTicketFirstResponse, recordCoManagedTicketReopened,
   recordCoManagedTicketResolution, syncCoManagedTicketAwaitingClientSla } from './ticketSla';
@@ -58,6 +59,8 @@ export function registerCoManagedTicketSlaHandlers(): void {
   registerTicketLifecycleHandler('resolved', onResolved);
   registerTicketLifecycleHandler('reopened', onReopened);
   registerTicketLifecycleHandler('awaitingClient', onAwaitingClient);
+  // The seat shape's SLA pause: its own release gate (flag AND `co-managed-seat`), independent of participation above.
+  registerCoManagedSeatSla();
 }
 
 /** Test-only. */

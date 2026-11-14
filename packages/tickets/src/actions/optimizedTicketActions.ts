@@ -155,6 +155,7 @@ import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErr
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveTicketResponsibility } from '../lib/ticketResponsibility';
 import { resolveTicketListViews, ticketListViewPredicates, type TicketListViewDefinition } from '../lib/ticketListViews';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
@@ -1180,8 +1181,14 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       view_source: 'ticket_details'
     }, user.user_id);
 
+    // Who is responsible, for a reader the seat shape is offered to and a ticket of a client in a live arrangement.
+    // Every other ticket and tenant resolves to none here without a statement.
+    const responsibilityProvider = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
+    const seatResponsibility = responsibilityProvider ? await responsibilityProvider.load(trx, tenant, ticketId) : null;
+
     // Return all data in a single consolidated object
     return {
+      ...(seatResponsibility ? { seatResponsibility } : {}),
       ticket: projectReadableRecord('ticket', {
         ...normalizedTicketData,
         tenant,
@@ -2225,7 +2232,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[] } | TicketActionError> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[], seatResponsibilityOffered?: boolean } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2283,11 +2290,18 @@ export const getTicketsForList = withAuth(async (
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
     const views = await summarizeTicketListViews(trx, tenant, user, validatedFilters, listViews, authorizationContext);
+    // Responsibility column: asked only of a reader a provider offers it to (a tenant the seat shape is not released for resolves to none, with no query).
+    const responsibility = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
+    if (responsibility) {
+      const byTicket = await responsibility.read(trx, tenant, enriched.tickets.flatMap((ticket) => ticket.ticket_id ? [ticket.ticket_id] : []));
+      for (const ticket of enriched.tickets) ticket.seat_responsibility = (ticket.ticket_id && byTicket.get(ticket.ticket_id)) || null;
+    }
     return {
       tickets: enriched.tickets,
       totalCount,
       metadata: enriched.metadata,
       ...(views ? { views } : {}),
+      ...(responsibility ? { seatResponsibilityOffered: true } : {}),
     };
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
@@ -4042,7 +4056,8 @@ export const getConsolidatedTicketListData = withAuth(async (
           tickets: ticketsData.tickets,
           totalCount: ticketsData.totalCount,
           metadata: ticketsData.metadata,
-          ...(ticketsData.views ? { views: ticketsData.views } : {})
+          ...(ticketsData.views ? { views: ticketsData.views } : {}),
+          ...(ticketsData.seatResponsibilityOffered ? { seatResponsibilityOffered: true } : {})
         };
       } catch (error) {
         const expected = ticketListActionErrorFrom(error);

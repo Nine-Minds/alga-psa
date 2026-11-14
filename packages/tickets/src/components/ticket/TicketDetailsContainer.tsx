@@ -23,6 +23,7 @@ import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 import { TicketLiveProvider } from './TicketLiveProvider';
 import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
+import type { TicketResponsibilityState } from '../../lib/ticketResponsibility';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -80,6 +81,8 @@ interface TicketDetailsContainerProps {
     categories: any[];
     locations: any[];
     agentSchedules: any[];
+    /** Present only for a ticket of a client in a live seat arrangement, when the seat shape is released. */
+    seatResponsibility?: TicketResponsibilityState;
   };
   surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
@@ -363,6 +366,7 @@ export default function TicketDetailsContainer({
       initialCategories={ticketData.categories}
       initialLocations={ticketData.locations}
       initialAgentSchedules={ticketData.agentSchedules}
+      initialSeatResponsibility={ticketData.seatResponsibility ?? null}
       onTicketUpdate={handleTicketUpdate}
       onBatchTicketUpdate={handleBatchTicketUpdate}
       onAddComment={handleAddComment}

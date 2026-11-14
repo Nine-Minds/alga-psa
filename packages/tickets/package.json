@@ -36,6 +36,11 @@
       "import": "./dist/lib/ticketLifecycleHooks.mjs",
       "require": "./dist/lib/ticketLifecycleHooks.js"
     },
+    "./lib/ticketResponsibility": {
+      "types": "./dist/lib/ticketResponsibility.d.ts",
+      "import": "./dist/lib/ticketResponsibility.mjs",
+      "require": "./dist/lib/ticketResponsibility.js"
+    },
     "./lib/ticketListViews": {
       "types": "./dist/lib/ticketListViews.d.ts",
       "import": "./dist/lib/ticketListViews.mjs",

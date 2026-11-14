@@ -758,6 +758,11 @@
       "saveFailed": "Det gick inte att spara standardvyn",
       "reset": "Återställ till organisationens standardinställning",
       "resetFailed": "Det gick inte att återställa vyn"
+    },
+    "responsibility": {
+      "column": "Ansvarig",
+      "all": "Alla ansvar",
+      "filter": "Ansvar"
     }
   },
   "bulk": {
@@ -1781,6 +1786,18 @@
     },
     "comment": {
       "audienceRequired": "Välj vem som kan se kommentaren innan du publicerar den."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Skriv en delad anteckning till kundens IT innan du lämnar över ärendet.",
+      "ticketNotFound": "Det här ärendet är inte längre tillgängligt.",
+      "noArrangement": "Ärendets kund har inte längre ett avtal om samförvaltade platser.",
+      "operationConflict": "Den här överlämningen startades med andra uppgifter. Försök igen.",
+      "changed": "Ärendet har lämnats över eller tilldelats om. Uppdatera ärendet innan du försöker igen.",
+      "alreadyResponsible": "Kundens IT är redan ansvarig för det här ärendet. Uppdatera ärendet för att se aktuellt läge.",
+      "actorNotAllowed": "Du kan inte lämna över det här ärendet till kundens IT.",
+      "boardOutOfScope": "Ärendets tavla delas inte med kundens IT, så det kan inte lämnas över.",
+      "technicianNotAvailable": "Den valda teknikern är inte längre tillgänglig för den här kunden. Välj en annan eller lämna ärendet utan tilldelning.",
+      "unavailable": "Att lämna över ärenden till kundens IT är inte tillgängligt."
     }
   },
   "ticketSection": {
@@ -3129,5 +3146,19 @@
   "statusChange": {
     "title": "Uppdatera ärendestatus",
     "message": "Vill du ändra status från ”{{from}}” till ”{{to}}”?"
+  },
+  "seatResponsibility": {
+    "clientIt": "Kundens IT",
+    "msp": "MSP",
+    "label": "Ansvarig",
+    "chipTitle": "Vem som ansvarar för det här ärendet",
+    "handToClientIt": "Lämna över till kundens IT",
+    "handedToClientIt": "Överlämnat till kundens IT",
+    "handing": "Lämnar över…",
+    "handPrompt": "Kundens IT blir ansvarig för det här ärendet och dina SLA-timers pausas tills det kommer tillbaka. Anteckningen delas med kundens tekniker.",
+    "noteLabel": "Delad anteckning till kundens IT",
+    "technicianLabel": "Tekniker (valfritt)",
+    "technicianPlaceholder": "Valfri tekniker hos den här kunden",
+    "technicianNone": "Lämna tilldelad person oförändrad"
   }
 }

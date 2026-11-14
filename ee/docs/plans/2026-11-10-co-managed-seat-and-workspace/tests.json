@@ -276,7 +276,7 @@
   {
     "id": "T031",
     "description": "E2E: an MSP technician hands a ticket to client IT from the native screen, the seat technician sees it under Client IT, hands it back, and the MSP sees the chip change.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058",
       "F056",
@@ -297,7 +297,7 @@
   {
     "id": "T033",
     "description": "DB integration: MSP SLA elapsed time does not advance while responsibility is with client IT and resumes after handback; a ticket of a client with no arrangement is unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]

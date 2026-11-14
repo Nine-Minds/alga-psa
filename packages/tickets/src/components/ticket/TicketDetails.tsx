@@ -92,6 +92,8 @@ import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
 import type { TicketDetailLayout } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
+import TicketResponsibilityControl from './TicketResponsibilityControl';
+import type { TicketResponsibilityState } from '../../lib/ticketResponsibility';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
 import type { TicketLiveRemoteUpdate } from '../../hooks/useTicketLive';
@@ -185,6 +187,8 @@ interface TicketDetailsProps {
     initialCategories?: ITicketCategory[];
     initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
+    /** Who is responsible for the ticket under a co-managed seat arrangement. Absent: no chip, no handoff action. */
+    initialSeatResponsibility?: TicketResponsibilityState | null;
 
     // Current user (for drawer usage)
     currentUser?: IUser | null;
@@ -326,6 +330,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialCategories = [],
     initialLocations = [],
     initialAgentSchedules = [],
+    initialSeatResponsibility = null,
     // Current user (for drawer usage)
     currentUser,
     // Optimized handlers
@@ -3963,6 +3968,15 @@ const handleClose = () => {
         />
     );
 
+    // Responsibility chip and Hand to client IT: rendered only when the server sent a state.
+    const seatResponsibilityControl = initialSeatResponsibility && ticket.ticket_id ? (
+        <TicketResponsibilityControl
+            ticketId={ticket.ticket_id}
+            state={initialSeatResponsibility}
+            onChange={() => onSaved?.()}
+        />
+    ) : null;
+
     // Created / Updated stamps. Entry shows them under the header; Grid folds
     // them into the hero's single metadata line.
     const ticketTimestamps = (
@@ -4038,6 +4052,7 @@ const handleClose = () => {
                                     />
                                 ) : null}
                                 {!useGridLayout ? ticketOriginBadge : null}
+                                {!useGridLayout ? seatResponsibilityControl : null}
                                 {recurringSource ? (
                                     <Link
                                         id="ticket-recurring-source-link"
@@ -4564,6 +4579,7 @@ const handleClose = () => {
                     heroMeta={
                         <>
                             {ticketOriginBadge}
+                            {seatResponsibilityControl}
                             {/* Relative stamps; the absolute time is the tooltip. */}
                             {ticket.entered_at && hasHydrated ? (
                                 <p title={formatTicketDateTime(ticket.entered_at, locale, getUserTimeZone(), dateFormat, showWeekday)}>

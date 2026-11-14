@@ -822,7 +822,12 @@
     "exportSelectedTooltip_few": "Eksportuj {{count}} wybrane zgłoszenia do CSV",
     "exportSelectedTooltip_many": "Eksportuj {{count}} wybranych zgłoszeń do CSV",
     "selectAllMatching_few": "Zaznacz wszystkie {{count}} zgłoszenia spełniające filtry",
-    "selectAllMatching_many": "Zaznacz wszystkie {{count}} zgłoszeń spełniających filtry"
+    "selectAllMatching_many": "Zaznacz wszystkie {{count}} zgłoszeń spełniających filtry",
+    "responsibility": {
+      "column": "Odpowiedzialny",
+      "all": "Wszystkie odpowiedzialności",
+      "filter": "Odpowiedzialność"
+    }
   },
   "bulk": {
     "bundleTickets": "Połącz zgłoszenia",
@@ -1921,6 +1926,18 @@
     },
     "comment": {
       "audienceRequired": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Napisz wspólną notatkę dla IT klienta przed przekazaniem zgłoszenia.",
+      "ticketNotFound": "To zgłoszenie nie jest już dostępne.",
+      "noArrangement": "Klient tego zgłoszenia nie ma już umowy o współzarządzanych stanowiskach.",
+      "operationConflict": "To przekazanie rozpoczęto z innymi danymi. Spróbuj ponownie.",
+      "changed": "To zgłoszenie zostało przekazane lub przypisane ponownie. Odśwież zgłoszenie przed ponowną próbą.",
+      "alreadyResponsible": "IT klienta już odpowiada za to zgłoszenie. Odśwież zgłoszenie, aby zobaczyć jego aktualny stan.",
+      "actorNotAllowed": "Nie możesz przekazać tego zgłoszenia do IT klienta.",
+      "boardOutOfScope": "Tablica tego zgłoszenia nie jest udostępniona IT klienta, więc nie można go przekazać.",
+      "technicianNotAvailable": "Wybrany technik nie jest już dostępny dla tego klienta. Wybierz innego lub pozostaw zgłoszenie nieprzypisane.",
+      "unavailable": "Przekazywanie zgłoszeń do IT klienta jest niedostępne."
     }
   },
   "ticketSection": {
@@ -3289,5 +3306,19 @@
   "statusChange": {
     "title": "Zaktualizuj status zgłoszenia",
     "message": "Czy na pewno chcesz zmienić status z „{{from}}” na „{{to}}”?"
+  },
+  "seatResponsibility": {
+    "clientIt": "IT klienta",
+    "msp": "MSP",
+    "label": "Odpowiedzialny",
+    "chipTitle": "Kto odpowiada za to zgłoszenie",
+    "handToClientIt": "Przekaż do IT klienta",
+    "handedToClientIt": "Przekazano do IT klienta",
+    "handing": "Przekazywanie…",
+    "handPrompt": "IT klienta przejmuje odpowiedzialność za to zgłoszenie, a Twoje liczniki SLA są wstrzymane do jego powrotu. Notatka jest udostępniona technikom klienta.",
+    "noteLabel": "Wspólna notatka dla IT klienta",
+    "technicianLabel": "Technik (opcjonalnie)",
+    "technicianPlaceholder": "Dowolny technik tego klienta",
+    "technicianNone": "Pozostaw przypisaną osobę bez zmian"
   }
 }

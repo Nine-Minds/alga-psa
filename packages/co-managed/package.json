@@ -182,6 +182,10 @@
       "types": "./src/refusalAck.ts",
       "import": "./src/refusalAck.ts"
     },
+    "./seatTicketSla": {
+      "types": "./src/seatTicketSla.ts",
+      "import": "./src/seatTicketSla.ts"
+    },
     "./ticketSlaRegistration": {
       "types": "./src/ticketSlaRegistration.ts",
       "import": "./src/ticketSlaRegistration.ts"
@@ -288,6 +292,8 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/types": "*",
     "@alga-psa/tickets": "*",
+    "@alga-psa/sla": "*",
+    "@alga-psa/predicates": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/event-schemas": "*",
     "@alga-psa/shared": "*",

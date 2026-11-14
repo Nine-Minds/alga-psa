@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "On the native ticket screen for a client with a live seat arrangement, MSP staff see who is responsible and a Hand to client IT action; both are absent for every other client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "The MSP ticket list offers a responsibility filter and column for tenants served by the capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "MSP SLA timers pause while a ticket's responsibility is with client IT and resume when it returns, through the ticket lifecycle hooks; tickets of other clients are unaffected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]

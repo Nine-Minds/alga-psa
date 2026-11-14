@@ -15,14 +15,13 @@
  *
  * Registration is a side effect of importing this module; `./capability` imports it.
  */
-import { isCapabilityServed } from '@alga-psa/core/capability';
 import {
   registerTicketListViewProvider,
   type TicketListViewDefinition,
   type TicketListViewProvider,
 } from '@alga-psa/tickets/lib/ticketListViews';
 import { coManagedSeatAuthority } from './seatAuthority';
-import { coManagedSeatNotificationsServed } from './seatNotifications';
+import { coManagedSeatReleased } from './seatRelease';
 
 export const CO_MANAGED_SEAT_LIST_VIEWS_PROVIDER_ID = 'co-managed-seat';
 
@@ -41,17 +40,12 @@ export function coManagedSeatTicketListViews(): readonly (TicketListViewDefiniti
   ];
 }
 
-/** Whether the seat shape is released for the tenant: the rollout flag is on and the capability is served. */
-async function seatViewsReleased(tenant: string): Promise<boolean> {
-  return coManagedSeatNotificationsServed(tenant) && await isCapabilityServed('co-managed-seat', tenant);
-}
-
 export const coManagedSeatListViewProvider: TicketListViewProvider = async ({ tenant, subject }) => {
   const authority = coManagedSeatAuthority(subject);
   // Not a seat technician: nothing was read and nothing is asked. A seat technician with no live
   // scope is offered no view; the kernel's closed baseline already returns them no tickets.
   if (!authority?.scope) return null;
-  return await seatViewsReleased(tenant) ? coManagedSeatTicketListViews() : null;
+  return await coManagedSeatReleased(tenant) ? coManagedSeatTicketListViews() : null;
 };
 
 /** Idempotent: registering again replaces the earlier registration. */
