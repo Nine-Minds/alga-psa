@@ -129,6 +129,28 @@ describe('client ownership in the manifest', () => {
     expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, TENANT_TABLE_FOREIGN_KEYS)).toEqual([]);
   });
 
+  // Co-managed seat and workspace shapes, slice S39 (F093 / T050). The list comes from the
+  // manifest, so a seat table added later fails here until it says how its rows reach a client.
+  it('classifies every seat arrangement table as client-owned', () => {
+    const seatTables = TENANT_TABLE_MANIFEST.map(entry => entry.table).filter(name => name.startsWith('co_managed_seat_'));
+    expect(seatTables).toEqual(expect.arrayContaining([
+      'co_managed_seat_arrangements', 'co_managed_seat_board_scopes', 'co_managed_seat_assignments',
+      'co_managed_seat_project_grants', 'co_managed_seat_ticket_work', 'co_managed_seat_ticket_handoffs',
+    ]));
+    for (const name of seatTables) {
+      const ownership = tenantClientOwnership(name);
+      expect(ownership, `${name} has no client ownership declaration`).toBeTruthy();
+      expect(ownership?.by, `${name} is exempted from client ownership`).not.toBe('exempt');
+    }
+    const throughArrangement = { column: 'arrangement_id', table: 'co_managed_seat_arrangements', enforced: false };
+    expect(tenantClientOwnership('co_managed_seat_assignments')).toEqual({ by: 'parent', chain: [throughArrangement] });
+    // A ticket's seat work reaches a client through its ticket and through the arrangement it ran under.
+    expect(tenantClientOwnership('co_managed_seat_ticket_work')).toEqual({ by: 'alternatives', parents: [
+      [{ column: 'ticket_id', table: 'tickets', enforced: false }], [throughArrangement],
+    ] });
+    expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, TENANT_TABLE_FOREIGN_KEYS)).toEqual([]);
+  });
+
   it('includes user portfolios in client ownership and client merge discovery', () => {
     expect(tenantClientOwnership('user_client_portfolios')).toEqual({ by: 'column', column: 'client_id' });
     expect(tenantClientColumns()).toContainEqual({ table: 'user_client_portfolios', column: 'client_id', owned: true });

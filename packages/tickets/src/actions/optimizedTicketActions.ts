@@ -50,6 +50,7 @@ import {
   createTenantKnex,
   getConnection,
   recordTicketAssigneeChange,
+  releaseSeatTicketOnMove,
   tenantDb,
   resolveUserTimeZone,
   normalizeIanaTimeZone,
@@ -2993,6 +2994,11 @@ export async function updateTicketInTransaction(
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
+    }
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, id, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
     }
 
     // Emit expanded domain transition events for workflow v2 triggers.

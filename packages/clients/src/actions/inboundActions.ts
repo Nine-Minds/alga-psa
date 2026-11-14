@@ -1,3 +1,4 @@
+import { assertClientPatchKeepsSeatArrangement } from '@alga-psa/core/config/deletion';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { queueContactCreated, queueContactUpdated } from '../lib/contactEvents';
@@ -160,6 +161,8 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
             );
           }
 
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await assertClientPatchKeepsSeatArrangement(trx, ctx.tenant, existingMapping.algaEntityId, payload);
           const [updated] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
             .where({ client_id: existingMapping.algaEntityId })
             .update({
@@ -271,6 +274,8 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
         .where({ client_id: lookup.algaEntityId })
         .first('is_inactive');
 
+      // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+      await assertClientPatchKeepsSeatArrangement(trx, ctx.tenant, lookup.algaEntityId, { is_inactive: !mappedValues.active });
       const [client] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
         .where({ client_id: lookup.algaEntityId })
         .update({

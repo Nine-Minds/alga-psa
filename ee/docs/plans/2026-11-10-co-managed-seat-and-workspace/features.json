@@ -738,7 +738,7 @@
   {
     "id": "F093",
     "description": "Deleting, merging or inactivating a client with a live seat arrangement is refused with a reason, and the arrangement tables are classified in the client-owned table roster.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "F094",
     "description": "Changing a ticket's client, or moving it to an out-of-scope board, clears a seat technician assignee, returns responsibility to the MSP and removes the technician's access, keeping the shared notes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]

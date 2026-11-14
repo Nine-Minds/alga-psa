@@ -450,7 +450,7 @@
   {
     "id": "T050",
     "description": "DB integration: client delete, merge and inactivate are refused while an arrangement is live; a contract test finds every arrangement table in the client-owned roster; changing a ticket's client or board clears the technician assignee and returns responsibility to the MSP.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093",
       "F094"

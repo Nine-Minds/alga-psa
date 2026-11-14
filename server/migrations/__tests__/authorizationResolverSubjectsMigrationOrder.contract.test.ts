@@ -1,13 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 // Knex runs migrations in filename order. The resolver-membership pair adds a NOT VALID
 // foreign key and CHECK on co_managed_seat_assignments, then validates them in a separate
 // file. Both must sort after every earlier migration that alters co_managed_seat_assignments,
 // including main's seat-reader marker; otherwise fresh databases run them in a different order
 // than deployed ones (migration-lint R6).
+//
+// Released migration names are immutable: deployed databases record them in knex_migrations,
+// and knex refuses to migrate when a recorded file is missing (the upgrade-order gate). So a
+// migration that shares the pair's timestamp cannot be restamped away once it is on main.
+// Knex then breaks the tie by full filename. That order is safe because the sibling touches
+// none of the pair's tables, so neither order changes what the pair does.
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
+const LINT_ENGINE = path.resolve(__dirname, '../../../scripts/lib/migration-lint.mjs');
 
 const PAIR = ['index_authorization_resolver_subjects', 'validate_authorization_resolver_subjects'];
 const PRIOR_SEAT_TABLE_MIGRATIONS = [
@@ -40,10 +48,21 @@ describe('authorization resolver subjects migration ordering', () => {
     }
   });
 
-  it('gives each migration in the pair a timestamp no other migration file uses', () => {
-    for (const name of PAIR.map(fileFor)) {
-      const ts = timestampOf(name);
-      expect(allMigrations.filter((other) => timestampOf(other) === ts), name).toEqual([name]);
+  it('shares its timestamps only with migrations that touch none of its tables', async () => {
+    const { deriveSchemaFacts } = await import(pathToFileURL(LINT_ENGINE).href);
+    const pair = PAIR.map(fileFor);
+    const timestamps = new Set(pair.map(timestampOf));
+    const siblings = allMigrations.filter((name) => timestamps.has(timestampOf(name)) && !pair.includes(name));
+    const touches = (names: string[]): Array<{ name: string; tables: string[] }> =>
+      deriveSchemaFacts(
+        names.map((name) => ({ name, source: readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8') })),
+      ).touches;
+
+    const pairTables = new Set(touches(pair).flatMap((t) => t.tables));
+    expect(pairTables).toContain('co_managed_seat_assignments');
+    for (const sibling of touches(siblings)) {
+      const shared = sibling.tables.filter((table) => pairTables.has(table));
+      expect(shared, `${sibling.name} shares a timestamp with the resolver pair and touches its tables`).toEqual([]);
     }
   });
 

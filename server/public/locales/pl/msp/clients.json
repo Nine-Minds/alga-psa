@@ -2041,7 +2041,8 @@
       "invalidValue": "Jedna z wybranych wartości klienta jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
       "invalidData": "Podano nieprawidłowe dane klienta. Sprawdź wszystkie pola i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola klienta.",
-      "missingFieldNamed": "Brakuje wymaganego pola klienta: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola klienta: {{field}}.",
+      "hasSeatArrangement": "Ten klient ma umowę na stanowiska współzarządzanego IT. Zakończ umowę przed dezaktywacją klienta."
     },
     "permissions": {
       "readClients": "Odmowa uprawnień: nie można odczytywać klientów",
