@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
+
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('next/server', async () => ({
   ...await import('next/dist/server/web/spec-extension/request'),
   ...await import('next/dist/server/web/spec-extension/response'),

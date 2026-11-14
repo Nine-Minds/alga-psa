@@ -292,6 +292,27 @@ describe('projects: REST reads serialize the projection', () => {
     expect((await controller().getById()(request(`/api/v1/projects/${P1}`, { id: P1 }))).status).toBe(404);
   });
 
+  it.each(['project', 'fields.project', 'values.project'])(
+    'suppresses GET, list rows and totals under the whole-resource alias %s', async (alias) => {
+      hideProjectFields(alias);
+      expect((await controller().getById()(request(`/api/v1/projects/${P1}`, { id: P1 }))).status).toBe(404);
+      const page = await (await controller().list()(request('/api/v1/projects?page=1&limit=25'))).json();
+      expect(page.data).toEqual([]);
+      expect(page.pagination.total).toBe(0);
+    },
+  );
+
+  it.each(['project.description', 'fields.project.description'])(
+    'retains the project while omitting the field hidden by %s', async (alias) => {
+      hideProjectFields(alias);
+      const response = await controller().getById()(request(`/api/v1/projects/${P1}`, { id: P1 }));
+      expect(response.status).toBe(200);
+      const { data } = await response.json();
+      expect(data).not.toHaveProperty('description');
+      expect(data).toMatchObject({ project_id: P1, project_name: 'Project 1' });
+    },
+  );
+
   it('list omits hidden fields, drops suppressed rows and does not count them', async () => {
     hideProjectFields('description');
     state.decisions.set(P2, { allowed: true, redactedFields: ['values.project_id'] });

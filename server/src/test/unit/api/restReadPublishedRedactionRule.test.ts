@@ -19,6 +19,12 @@ const state = vi.hoisted(() => ({
   tickets: [] as Record<string, any>[],
 }));
 
+// Route fixtures supply loaded subject facts while retaining authorization and response projection checks.
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('server/src/lib/authorization/kernel', async () => {
   const {
     createAuthorizationKernel,

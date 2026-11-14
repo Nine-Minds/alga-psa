@@ -7,6 +7,12 @@ const state = vi.hoisted(() => ({
   subjects: [] as any[],
 }));
 
+// Route fixtures supply loaded subject facts while retaining authorization and response projection checks.
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('@/lib/productAccess', () => ({
   getTenantProduct: vi.fn(async () => 'psa'),
   ProductAccessError: class extends Error {},

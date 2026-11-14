@@ -29,6 +29,12 @@ const softwareRows = vi.hoisted(() => ([
   },
 ]));
 
+// Route fixtures supply loaded subject facts while retaining authorization and response projection checks.
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(async () => principal),
   runWithApiKeyUser: vi.fn(async (_user: unknown, fn: () => Promise<unknown>) => fn()),

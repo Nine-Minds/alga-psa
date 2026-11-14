@@ -236,8 +236,16 @@ export class ApiTicketController extends ApiBaseController {
       throw new NotFoundError('ticket not found');
     }
 
+    return this.assertTicketMutationRecordAllowed(apiRequest, ticket as Record<string, any>, action, resolvedKnex);
+  }
+
+  private async assertTicketMutationRecordAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    ticketRow: Record<string, any>,
+    action: 'update' | 'delete',
+    resolvedKnex: Knex | Knex.Transaction,
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     // Must still be readable, then authorized against the mutation action's scope.
-    const ticketRow = ticket as Record<string, any>;
     const recordContext = buildTicketRecordContext(ticketRow);
     const projection = await projectApiResourceRead({
       knex: resolvedKnex,
@@ -266,6 +274,17 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     return projection;
+  }
+
+  /** Reauthorize the locked row and retain that exact policy for the mutation response. */
+  private buildTicketAuthorizeHook(
+    apiRequest: AuthenticatedApiRequest,
+    action: 'update' | 'delete',
+    retain: (projection: AuthorizedProjection<Record<string, any>>) => void,
+  ) {
+    return async (ticket: Record<string, any>, trx: Knex.Transaction): Promise<void> => {
+      retain(await this.assertTicketMutationRecordAllowed(apiRequest, ticket, action, trx));
+    };
   }
 
   private async filterAuthorizedTickets(
@@ -2043,12 +2062,15 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          let gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
             apiRequest.context!,
-            { honorSuppliedClosure: true }
+            {
+              honorSuppliedClosure: true,
+              authorize: this.buildTicketAuthorizeHook(apiRequest, 'update', (lockedGate) => { gate = lockedGate; }),
+            }
           );
 
           if (!updated) {
@@ -2136,11 +2158,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          let gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
-            apiRequest.context!
+            apiRequest.context!,
+            { authorize: this.buildTicketAuthorizeHook(apiRequest, 'update', (lockedGate) => { gate = lockedGate; }) },
           );
 
           if (!updated) {
@@ -2169,13 +2192,15 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const gate = await this.assertTicketMutationAllowed(apiRequest, id, 'update', knex);
+          let gate = await this.assertTicketMutationAllowed(apiRequest, id, 'update', knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
             : await apiRequest.json();
 
-          const updated = await this.service.update(id, data, apiRequest.context);
+          const updated = await this.ticketService.update(id, data, apiRequest.context, {
+            authorize: this.buildTicketAuthorizeHook(apiRequest, 'update', (lockedGate) => { gate = lockedGate; }),
+          });
           if (!updated) {
             throw new NotFoundError(`${this.options.resource} not found`);
           }

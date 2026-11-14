@@ -3,6 +3,12 @@ import { NextRequest } from 'next/server';
 
 const authorizeResource = vi.hoisted(() => vi.fn(async () => ({ allowed: true, redactedFields: [] })));
 
+
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('@alga-psa/db', async (orig) => ({ ...(await orig<any>()), runWithTenant: async (_t: string, cb: any) => cb() }));
 vi.mock('server/src/lib/db', async (orig) => ({ ...(await orig<any>()), runWithTenant: async (_t: string, cb: any) => cb() }));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => ({}) }));

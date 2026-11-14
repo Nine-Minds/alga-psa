@@ -34,8 +34,8 @@ import {
   isSelfApprovalBlocked,
 } from '@alga-psa/authorization/kernel';
 import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import {
-  buildAuthorizationPrincipalSubject,
   projectApiResourceRead,
   projectApiResourceReads,
   reprojectUnderDecision,
@@ -171,8 +171,13 @@ export class ApiQuoteController extends ApiBaseController {
     quote: Record<string, any>
   ): Promise<{ selfApproved: boolean }> {
     const knex = await getConnection(apiRequest.context.tenant);
-    const subject = buildAuthorizationPrincipalSubject(apiRequest.context.user, apiRequest.context.apiKeyId);
-    subject.tenant = apiRequest.context.tenant;
+    const requestCache = new RequestLocalAuthorizationCache();
+    const subject = await resolveAuthorizationSubject(knex, {
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      requestCache,
+    });
 
     const kernel = createAuthorizationKernel({
       builtinProvider: new BuiltinAuthorizationKernelProvider({
@@ -229,7 +234,7 @@ export class ApiQuoteController extends ApiBaseController {
         record,
         allowSelfApproval,
       },
-      requestCache: new RequestLocalAuthorizationCache(),
+      requestCache,
     };
     const decision = await kernel.authorizeMutation(mutationInput);
 

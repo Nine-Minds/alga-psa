@@ -7,6 +7,7 @@ vi.mock('../../../lib/db/db', async (original) => ({ ...(await original<object>(
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: async () => ({
     authorizeResource: async () => ({ allowed: true, redactedFields: [] }),
+    authorizeMutation: async () => ({ allowed: true, redactedFields: [] }),
   }),
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({

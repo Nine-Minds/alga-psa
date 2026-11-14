@@ -1,5 +1,6 @@
 import {
   ASSET_RECORD_SOURCE,
+  PROJECT_RESOURCE_ALIASES,
   PROJECT_IDENTITY_ALIASES,
   TICKET_IDENTITY_ALIASES,
   QUOTE_IDENTITY_ALIASES,
@@ -22,7 +23,7 @@ interface CoManagedFieldSource {
   readonly identifier: readonly string[];
 }
 const CO_MANAGED_PROJECT_FIELD_SOURCE: CoManagedFieldSource = {
-  resource: ['projects'],
+  resource: PROJECT_RESOURCE_ALIASES,
   title: PROJECT_NAME_ALIASES,
   description: ['description', 'values.description', 'projects.description'],
   identifier: PROJECT_IDENTITY_ALIASES,
@@ -75,7 +76,9 @@ export const PROJECT_TASK_CHECKLIST_ITEM_SOURCE: RedactableRecordSource = {
 
 /** Project phases use the shared canonical source aliases for description and parent/project identifiers. */
 export const PROJECT_PHASE_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
-  CO_MANAGED_PHASE_FIELD_SOURCE, { title: 'phase_name', description: 'description' }, { derived: {} },
+  CO_MANAGED_PHASE_FIELD_SOURCE, { title: 'phase_name', description: 'description' }, {
+    derived: { project_name: ['project_id', 'projects', 'projects.project_name'] },
+  },
 );
 
 export const PROJECT_STATUS_MAPPING_SOURCE: RedactableRecordSource = {

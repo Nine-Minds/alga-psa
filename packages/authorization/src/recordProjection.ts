@@ -12,7 +12,8 @@ export function isResourceHidden(redactions: readonly string[], resources: reado
   return redactions.some(redaction => {
     if (typeof redaction !== 'string') throw new InvalidRedactionError();
     if (redaction === '*' || redaction === 'fields') return true;
-    return resources.includes(redaction.startsWith('fields.') ? redaction.slice(7) : redaction);
+    const path = redaction.startsWith('fields.') ? redaction.slice('fields.'.length) : redaction;
+    return resources.includes(path.startsWith('values.') ? path.slice('values.'.length) : path);
   });
 }
 
@@ -429,6 +430,8 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
 
 const ids = (...names: string[]) => names;
 
+/** Canonical project resource names shared by action projections and REST source descriptors. */
+export const PROJECT_RESOURCE_ALIASES = ['project', 'projects'] as const;
 /** Canonical identities shared by action projections and REST source descriptors. */
 export const PROJECT_IDENTITY_ALIASES = ids(
   'project_id', 'projectId', 'projects.project_id', 'values.project_id', 'id',
@@ -861,7 +864,7 @@ export type ProjectableResource = 'project' | 'ticket' | 'quote' | 'asset' | 'ph
 
 const DEFINITIONS: Record<ProjectableResource, ResourceDefinition> = {
   project: {
-    aliases: ['project', 'projects'],
+    aliases: PROJECT_RESOURCE_ALIASES,
     identifiers: PROJECT_IDENTITY_ALIASES,
     fields: {
       project_name: [...PROJECT_NAME_ALIASES.filter((alias) => !['project', 'project_id', 'projects'].includes(alias)), 'values.project_name', 'projects.project_name', 'project_tasks.project_name'],

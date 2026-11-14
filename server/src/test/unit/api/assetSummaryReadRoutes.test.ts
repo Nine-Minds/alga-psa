@@ -51,6 +51,12 @@ const h = vi.hoisted(() => {
   return { state, decide, table, knex };
 });
 
+// Route fixtures supply loaded subject facts while retaining authorization and response projection checks.
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn(h.state.user, { tenant: h.state.tenant }, ...args),
@@ -68,6 +74,7 @@ vi.mock('@/lib/api/middleware/apiAuthMiddleware', () => ({
 }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => h.knex) }));
 vi.mock('@alga-psa/db', () => ({
+  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: h.state.tenant })),
   withTransaction: vi.fn(async (_knex: any, fn: any) => fn(h.knex)),
   tenantDb: (_knex: any, tenant: string) => ({

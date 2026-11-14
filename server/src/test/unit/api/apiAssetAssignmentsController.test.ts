@@ -15,6 +15,12 @@ const serviceState = vi.hoisted(() => ({
   decision: { allowed: true, redactedFields: [] as string[] },
 }));
 
+
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('@/lib/api/services/AssetService', () => ({
   AssetService: class {
     async getAuthorizationRecord(id: string, context: { tenant: string }) {

@@ -21,4 +21,25 @@ describe('canonical identity suppression across projection APIs', () => {
     expect(projectRecord(resource, row, [identity])).toBeNull();
     expect(projectRecordByRedactions([identity], row, source)).toBeNull();
   });
+
+  it.each(['project', 'fields.project', 'values.project', 'projects', 'fields.projects', 'values.projects'])(
+    'suppresses both project representations under the resource alias %s', (alias) => {
+      const row = { project_id: 'p-1', project_name: 'Visible', description: 'Private' };
+      expect(projectRecord('project', row, [alias])).toBeNull();
+      expect(projectRecordByRedactions([alias], row, PROJECT_RECORD_SOURCE)).toBeNull();
+    },
+  );
+
+  it.each(['project.description', 'fields.project.description', 'projects.description', 'values.description'])(
+    'redacts %s without suppressing the project or hiding unrelated fields', (alias) => {
+      const row = { project_id: 'p-1', project_name: 'Visible', description: 'Private' };
+      for (const projected of [
+        projectRecord('project', row, [alias]),
+        projectRecordByRedactions([alias], row, PROJECT_RECORD_SOURCE),
+      ]) {
+        expect(projected).toEqual({ project_id: 'p-1', project_name: 'Visible' });
+      }
+      expect(row.description).toBe('Private');
+    },
+  );
 });
