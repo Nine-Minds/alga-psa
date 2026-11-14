@@ -10,7 +10,7 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { loadServiceOptions } from '@alga-psa/projects/lib/serviceOptions';
 import { timeEntryServiceChoices } from '@alga-psa/core';
 import { IService } from '@alga-psa/types';
 import {
@@ -457,8 +457,7 @@ export default function TaskForm({
         }
 
         // Fetch services for time entry prefill
-        const servicesResponse = await getServices(1, 999);
-        setAvailableServices(servicesResponse.services);
+        setAvailableServices(await loadServiceOptions());
 
         // Fetch all tasks in the project
         if (phase.project_id) {

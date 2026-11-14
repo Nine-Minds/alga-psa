@@ -156,7 +156,7 @@
   {
     "id": "T018",
     "description": "DB integration: a seat technician and a portal user calling the service catalog and contract-line lookups are refused; an internal user with permission succeeds; a client read by a seat technician contains no billing column.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F032"
