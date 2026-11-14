@@ -8,7 +8,7 @@ const {
   PRODUCTS,
   permissionIdentity,
 } = require('./catalog.cjs');
-const { entryScopeAllows, getDefaultRoles, knownRoleKeys } = require('./roleGrants.cjs');
+const { entryScopeAllows, getCapabilityRoles, getDefaultRoles, knownRoleKeys } = require('./roleGrants.cjs');
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -69,6 +69,25 @@ function collectCatalogErrors(entries = ACTIVE_PERMISSIONS) {
         const role = roles.find((candidate) => candidate.key === roleKey);
         if (!entryScopeAllows(entry, role)) {
           errors.push(`${identity}: default grant "${roleKey}" is outside the permission's scope`);
+        }
+      }
+    }
+  }
+
+  // A capability role's closed grant list must name real permissions of its own scope.
+  for (const product of PRODUCTS) {
+    for (const role of getCapabilityRoles(product)) {
+      if (!Array.isArray(role.capabilities) || role.capabilities.length === 0) {
+        errors.push(`${role.key}: a capability role names at least one capability`);
+      }
+      if (knownRoleKeys(product).includes(role.key)) {
+        errors.push(`${role.key}: capability role collides with a ${product} default role`);
+      }
+      for (const grant of role.grants) {
+        const matches = entries.filter((entry) => `${entry.resource}:${entry.action}` === grant
+          && entry.products.includes(product) && entry.msp === role.msp && entry.client === role.client);
+        if (matches.length !== 1) {
+          errors.push(`${role.key}: grant "${grant}" does not resolve to one ${product} permission in the role's scope`);
         }
       }
     }

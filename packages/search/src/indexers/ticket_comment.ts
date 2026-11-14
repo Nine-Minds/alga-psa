@@ -78,7 +78,10 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
     body: resolveCommentBody(row),
     // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
     url: `${recordPath('ticket', row.ticket_id)}#comment-${row.comment_id}`,
-    metadata: { author_kind: toCommentAuthorKind(row.author_type) },
+    // `audience` is carried on the row so a reader whose organization is not the owning tenant's
+    // staff (a seat technician) is filtered by it in the index; a row indexed before it existed
+    // has none and is hidden from such a reader until it is re-indexed.
+    metadata: { author_kind: toCommentAuthorKind(row.author_type), ...(row.audience ? { audience: row.audience } : {}) },
     acl: {
       requiredPermission: 'ticket:read',
       clientScopeId: row.ticket_client_id ?? undefined,

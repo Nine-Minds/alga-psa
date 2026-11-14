@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { countLiveCoManagedWorkspacesForClient } from '@alga-psa/core/config/deletion';
 import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import { lockTenantBilling } from '@alga-psa/shared/billingClients/billingMutationLock';
 import {
   CLIENT_OWNED_MOVE_TABLES,
   PROFILE_HISTORY_TABLES,
@@ -217,24 +218,6 @@ export interface ClientMergeResult {
 
 const scoped = (trx: Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
   tenantDb(trx, tenant).table(table);
-
-/**
- * The same lock every billing mutation takes
- * (`packages/billing/src/lib/billing/billingMutationLock.ts`). Re-expressed
- * here rather than imported because `packages/clients` is a vertical feature
- * package and may not depend on `packages/billing`; the two statements must
- * stay identical, so change them together.
- *
- * Without it a billing cycle could change owner halfway through an invoice
- * generation run that had already read it.
- */
-async function lockTenantBilling(trx: Knex.Transaction, tenant: string): Promise<void> {
-  await trx.raw("select pg_advisory_xact_lock(hashtextextended(? || ':billing-semantics', 0))", [tenant]);
-  await trx.raw(
-    'insert into billing_semantics_locks (tenant) values (?) on conflict (tenant) do update set tenant = excluded.tenant',
-    [tenant],
-  );
-}
 
 async function readClientFacts(
   trx: Knex.Transaction,
@@ -893,6 +876,8 @@ export async function executeClientMerge(
   actorUserId: string | null,
   input: ClientMergeInput,
 ): Promise<ClientMergeResult> {
+  // Without it a billing cycle could change owner halfway through an invoice
+  // generation run that had already read it.
   await lockTenantBilling(trx, tenant);
 
   // Seat creation holds a share lock on its client through commit. Lock both

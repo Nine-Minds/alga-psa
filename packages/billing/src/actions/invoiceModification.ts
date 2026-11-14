@@ -18,6 +18,7 @@ import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenish
 import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '../lib/invoiceDeletionErrors';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType, type ManualPartialPeriodMetadata } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import { capAppliesToInvoiceCurrency } from '../lib/billing/compute/projectCapMath';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -665,11 +666,12 @@ async function hasLinkedRecurringServicePeriodsForInvoice(
 }
 
 async function releaseRecurringServicePeriodInvoiceLinkageForInvoice(
-  trx: Knex | Knex.Transaction,
+  trx: Knex.Transaction,
   tenant: string,
   invoiceId: string,
   releasedAt: string,
 ) {
+  await lockTenantBilling(trx, tenant);
   return tenantScopedTable(trx, tenant, 'recurring_service_periods')
     .where({
       tenant,

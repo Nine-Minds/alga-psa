@@ -376,7 +376,8 @@
     "extensionRemoved": "Extensión eliminada",
     "reprovisionFailed": "Error al reaprovisionar",
     "manifestReadFailed": "Error al leer el archivo de manifiesto",
-    "invalidBundleExtension": "El archivo debe terminar con \".tar.zst\": {{filename}}"
+    "invalidBundleExtension": "El archivo debe terminar con \".tar.zst\": {{filename}}",
+    "bundleTooLarge": "Este paquete pesa {{size}}. El límite actual es de {{limit}} por paquete."
   },
   "debug": {
     "scopeToOneInstall": "Limitar a una instalación",

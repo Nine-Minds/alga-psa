@@ -413,7 +413,7 @@ export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
       const deniedByClientVisibility =
         user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
       const allowed = decision.allowed && mutationAllowed && !deniedDocuments.has(document.document_id) && !deniedByClientVisibility &&
-        await (verifiedRecipientLifecycleAccess ? verifiedRecipientLifecycleAccess(document.document_id) : canReadCommentAttachment(trx, tenant, user.user_id, document.document_id));
+        await (verifiedRecipientLifecycleAccess ? verifiedRecipientLifecycleAccess(document.document_id) : canReadCommentAttachment(trx, tenant, user, document.document_id));
 
       return {
         allowed,

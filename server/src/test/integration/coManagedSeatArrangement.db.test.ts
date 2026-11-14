@@ -56,7 +56,7 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
   afterAll(async () => { await db?.destroy(); });
 
   // F012
-  it('the seat tables have tenant-first keys, only the resolver membership foreign key, and no application triggers', async () => {
+  it('the seat tables have tenant-first keys, only the resolver-membership and seat-reader foreign keys, no triggers but the seat-reader marker pair, and tenant deletion knows them', async () => {
     for (const table of SEAT_TABLES) {
       const { rows: keys } = await db.raw(`
         SELECT i.indexrelid::regclass::text AS name, (SELECT attname FROM pg_attribute
@@ -64,18 +64,19 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
         FROM pg_index i WHERE i.indrelid = ?::regclass AND (i.indisprimary OR i.indisunique)`, [table]);
       expect(keys.length, table).toBeGreaterThan(0);
       for (const key of keys) expect(key.leading, `${table}.${key.name}`).toBe('tenant');
-      // PostgreSQL implements the resolver-membership FK with internal RI triggers.
-      // Application triggers remain forbidden; the allowed FK is checked explicitly below.
-      const { rows: triggers } = await db.raw(`SELECT tgname FROM pg_trigger WHERE tgrelid = ?::regclass AND NOT tgisinternal`, [table]);
-      expect(triggers, table).toEqual([]);
+      // The foreign keys' own constraint triggers are internal. The one pair of row triggers keeps
+      // `users.seat_reader` in step on plain Postgres (S18, migration 20261113130000); no command
+      // may rely on it, because Citus has no triggers on a distributed table.
+      const { rows: triggers } = await db.raw(`SELECT tgname FROM pg_trigger WHERE tgrelid = ?::regclass AND NOT tgisinternal ORDER BY tgname`, [table]);
+      expect(triggers.map((row: { tgname: string }) => row.tgname), table).toEqual(table === 'co_managed_seat_assignments'
+        ? ['co_managed_seat_assignment_marks_reader', 'co_managed_seat_assignment_unmarks_reader'] : []);
       const { rows: foreignKeys } = await db.raw(`
         SELECT conname, confrelid::regclass::text AS parent, convalidated
-        FROM pg_constraint WHERE conrelid = ?::regclass AND contype = 'f'`, [table]);
-      expect(foreignKeys, table).toEqual(table === 'co_managed_seat_assignments' ? [{
-        conname: 'co_managed_seat_assignment_resolver_subject_fk',
-        parent: 'authorization_resolver_subjects',
-        convalidated: true,
-      }] : []);
+        FROM pg_constraint WHERE conrelid = ?::regclass AND contype = 'f' ORDER BY conname`, [table]);
+      expect(foreignKeys, table).toEqual(table === 'co_managed_seat_assignments' ? [
+        { conname: 'co_managed_seat_assignment_resolver_subject_fk', parent: 'authorization_resolver_subjects', convalidated: true },
+        { conname: 'co_managed_seat_assignments_seat_reader_foreign', parent: 'users', convalidated: true },
+      ] : []);
     }
     const order = tenantDeletionOrder();
     for (const table of SEAT_TABLES) {

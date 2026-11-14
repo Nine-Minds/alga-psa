@@ -404,11 +404,21 @@ describe.sequential('(d) the psa budget', () => {
       order_number: 1, is_closed: false, created_by: userId });
     await home.table('tickets').insert({ tenant, ticket_id: ticketId, title: 'Plain psa ticket', ticket_number: 'PSA-1', client_id: clientId, board_id: boardId,
       status_id: statusId, entered_by: userId, entered_at: new Date() });
-    const commentId = randomUUID(), threadId = randomUUID();
-    await home.table('comment_threads').insert({ tenant, thread_id: threadId, ticket_id: ticketId, root_comment_id: commentId, created_by: userId });
-    await home.table('comments').insert({ tenant, comment_id: commentId, thread_id: threadId, ticket_id: ticketId, user_id: userId, author_type: 'internal',
-      note: 'hello', is_internal: false, is_resolution: false });
-    actorState.user = { tenant, user_id: userId, user_type: 'internal', username: `psa-${userId}`, email: `psa-${userId}@example.test` };
+    const expectedComments = [
+      { comment_id: randomUUID(), note: 'hello', is_internal: false },
+      { comment_id: randomUUID(), note: 'private PSA note', is_internal: true },
+    ];
+    for (const comment of expectedComments) {
+      const threadId = randomUUID();
+      await home.table('comment_threads').insert({ tenant, thread_id: threadId, ticket_id: ticketId,
+        root_comment_id: comment.comment_id, created_by: userId, is_internal: comment.is_internal });
+      await home.table('comments').insert({ tenant, thread_id: threadId, ticket_id: ticketId, user_id: userId,
+        author_type: 'internal', is_resolution: false, ...comment });
+    }
+    // Authentication loads the user row, including the database-enforced seat marker. A
+    // hand-built row without it deliberately takes the conservative seat-table read path.
+    actorState.user = await home.table('users').where({ user_id: userId }).first();
+    expect(actorState.user.seat_reader).toBe(false);
 
     process.env.FORCE_CAPABILITIES = 'co-managed:off';
     const { getConsolidatedTicketData } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
@@ -419,7 +429,8 @@ describe.sequential('(d) the psa budget', () => {
     try { data = await runWithTenant(tenant, () => getConsolidatedTicketData(ticketId)); } finally { db.removeListener('query', record); }
     expect(data?.ticket?.ticket_id ?? data?.ticket_id, JSON.stringify(data)?.slice(0, 300)).toBe(ticketId);
     expect(captured.length).toBeGreaterThan(0);
-    expect(JSON.stringify(data)).toContain('hello'); // the comment read really happened on this path
+    expect(data.comments).toHaveLength(expectedComments.length);
+    expect(data.comments).toEqual(expect.arrayContaining(expectedComments.map(comment => expect.objectContaining(comment))));
     expect(captured.filter(sql => COMANAGED_TABLE.test(sql))).toEqual([]);
   });
 });

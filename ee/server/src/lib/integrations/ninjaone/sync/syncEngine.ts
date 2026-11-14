@@ -1159,7 +1159,7 @@ export class NinjaOneSyncEngine {
   private async updateOrganizationMappingLastSynced(mappingId: string): Promise<void> {
     await tenantDb(this.knex!, this.tenantId).table('rmm_organization_mappings')
       .where({ mapping_id: mappingId })
-      .update({ last_synced_at: new Date().toISOString() });
+      .update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   }
 
   /**

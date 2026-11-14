@@ -75,7 +75,7 @@
   {
     "id": "T009",
     "description": "DB integration, concurrent: eight invitations against one remaining seat produce one success; an invitation for an email claimed by another tenant's internal user is refused with that reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -85,7 +85,7 @@
   {
     "id": "T010",
     "description": "DB integration, concurrent: seat admission running against reservation, purchase intent and hosted reconcile completes without deadlock.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -93,7 +93,7 @@
   {
     "id": "T011",
     "description": "DB integration: accepting an invitation creates an internal user with only the seat role; the role and its permissions exist for that tenant and no other, and the role editor omits them for a tenant not served.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019"
@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "description": "DB integration: a ticket with ten legacy internal notes shows a seat technician none of them, in the conversation, the activity list, attachments and search.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F044",
@@ -370,7 +370,7 @@
   {
     "id": "T041",
     "description": "DB integration: handoff with and without a named technician, handoff to the MSP and a shared IT note each notify the expected recipients and no one else.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079",
       "F081"
@@ -378,8 +378,8 @@
   },
   {
     "id": "T042",
-    "description": "DB integration: the rendered email to a seat technician for a ticket with private notes contains no private text, a private note produces no technician notification, and a technician cannot watch an out-of-scope ticket.",
-    "implemented": false,
+    "description": "DB integration: the rendered email to a seat technician for a ticket with private notes contains no private text, a private note produces no technician notification, and a seat technician added as a watcher on an out-of-scope ticket is admitted and receives only the requester-audience client rendering (no MSP link, no shared IT or private content), while on an in-scope ticket they receive their audience's rendering.",
+    "implemented": true,
     "featureIds": [
       "F080",
       "F083"
@@ -388,7 +388,7 @@
   {
     "id": "T043",
     "description": "Integration with the email emulator: a seat technician's reply to a shared IT notification is stored as shared IT and a reply to a requester notification as requester.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]

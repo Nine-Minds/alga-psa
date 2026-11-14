@@ -1011,6 +1011,11 @@ beforeAll(async () => {
   ({ registerTicketEmailSubscriber } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber'));
   ({ registerProjectEmailSubscriber } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber'));
   ({ ServerEventPublisher } = await import('@alga-psa/event-bus'));
+  // These tenants hold no co-managed seat arrangement, so the seat gate decides the recipient
+  // boundary is closed and no seat row is read (the mocked database has no seat tables). The
+  // boundary itself is covered against the real schema by seatNotificationAudience.integration.test.ts.
+  const { registerCapabilityParticipation } = await import('@alga-psa/core/capability');
+  registerCapabilityParticipation('co-managed-seat', async () => []);
 });
 
 beforeEach(() => {

@@ -1859,6 +1859,10 @@ export async function deleteAssetRecord(
             await tenantScopedTable(trx as Knex.Transaction, 'asset_ticket_associations', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_service_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_document_associations', tenantId).where({ asset_id }).delete();
+            // RMM alerts outlive the device they fired on; its maintenance windows do not.
+            await tenantScopedTable(trx as Knex.Transaction, 'rmm_alerts', tenantId).where({ asset_id })
+                .update({ asset_id: null, updated_at: new Date().toISOString() });
+            await tenantScopedTable(trx as Knex.Transaction, 'rmm_maintenance_windows', tenantId).where({ asset_id }).delete();
             if (await trx.schema.hasTable('asset_facts')) {
                 await tenantScopedTable(trx as Knex.Transaction, 'asset_facts', tenantId).where({ asset_id }).delete();
             }

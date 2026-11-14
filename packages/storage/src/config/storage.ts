@@ -2,7 +2,24 @@ import path from 'node:path';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 import { isMimeAllowed } from './storage-mime';
+import { UploadContentTypeError, UploadSizeLimitError } from '../ingest/errors';
 import type { StorageConfig, StorageProviderConfig } from '../types/storage';
+
+/**
+ * THE source of truth for the per-file upload size limit.
+ *
+ * The limit is the default provider's `maxFileSize`, set by STORAGE_LOCAL_MAX_FILE_SIZE (local) or
+ * STORAGE_S3_MAX_FILE_SIZE (s3), in bytes. Upload validation (`validateFileUpload`,
+ * `validateSystemArtifact`) and the ingest pipeline enforce it on the server, and the upload-session
+ * API (`getUploadPolicy`) is the only way it reaches the browser, as `maxFileSize`. No client
+ * constant, Next body cap or helm `locations` block carries a second copy. Failures are an
+ * `UploadSizeLimitError` (413). The helm chart defaults and `envConfig.ts` must equal this default;
+ * server/src/test/unit/storageLimitDefaults.test.ts pins them together.
+ *
+ * A provider's own `getCapabilities().maxFileSize` is a ceiling of the backing store (S3's 5 GiB
+ * single-object limit), never a second limit: it is clamped to this configured value.
+ */
+export const DEFAULT_MAX_FILE_SIZE_BYTES = 524288000; // 500 MiB
 
 // Cached configuration to avoid multiple async calls
 let cachedConfig: StorageConfig | null = null;
@@ -33,7 +50,7 @@ async function buildStorageConfig(): Promise<StorageConfig> {
       local: {
         type: 'local',
         basePath: defaultLocalBasePath,
-        maxFileSize: Number(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || '524288000'), // 500MB
+        maxFileSize: Number(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || DEFAULT_MAX_FILE_SIZE_BYTES),
         allowedMimeTypes: defaultLocalMimeTypes.split(','),
         retentionDays: parseInt(process.env.STORAGE_LOCAL_RETENTION_DAYS || '30'),
       },
@@ -44,7 +61,7 @@ async function buildStorageConfig(): Promise<StorageConfig> {
         accessKey: s3AccessKey,
         secretKey: s3SecretKey,
         endpoint: process.env.STORAGE_S3_ENDPOINT,
-        maxFileSize: Number(process.env.STORAGE_S3_MAX_FILE_SIZE || '524288000'), // 500MB
+        maxFileSize: Number(process.env.STORAGE_S3_MAX_FILE_SIZE || DEFAULT_MAX_FILE_SIZE_BYTES),
         allowedMimeTypes: (process.env.STORAGE_S3_ALLOWED_MIME_TYPES || '*/*').split(','),
         retentionDays: parseInt(process.env.STORAGE_S3_RETENTION_DAYS || '30'),
       },
@@ -80,8 +97,10 @@ async function validateFileSize(fileSize: number): Promise<StorageProviderConfig
   const config = await buildStorageConfig();
   const provider = config.providers[config.defaultProvider];
 
+  // The ingest pipeline's typed errors (same messages as before), so every entry point maps a
+  // refusal by its type (413 / 400-415) whether it came from this pre-check or from the stream.
   if (fileSize > provider.maxFileSize) {
-    throw new Error(`File size exceeds limit of ${provider.maxFileSize} bytes`);
+    throw new UploadSizeLimitError(provider.maxFileSize);
   }
 
   return provider;
@@ -92,7 +111,7 @@ export async function validateFileUpload(mimeType: string, fileSize: number): Pr
   const provider = await validateFileSize(fileSize);
 
   if (!isMimeAllowed(provider.allowedMimeTypes, mimeType)) {
-    throw new Error('File type not allowed');
+    throw new UploadContentTypeError('File type not allowed', mimeType, undefined);
   }
 }
 

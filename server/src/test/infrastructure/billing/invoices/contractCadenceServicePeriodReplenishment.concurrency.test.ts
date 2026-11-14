@@ -210,14 +210,14 @@ describe('Contract-cadence replenishment under concurrent execution', () => {
     const billedRow = await billingTrx('recurring_service_periods')
       .where({ tenant: tenantId, record_id: recordId }).first();
 
-    // The uncommitted invoice holds a row lock. The sweep sees the previous
-    // generated state, then waits on that lock when trying to supersede it.
+    // The uncommitted invoice holds the tenant billing lock. The sweep sees the
+    // previous generated state, then waits on that lock before superseding it.
     let onQuery: (query: { sql: string; bindings?: unknown[] }) => void;
     let timer: ReturnType<typeof setTimeout>;
     const attemptedWrite = new Promise<void>((resolve, reject) => {
-      timer = setTimeout(() => reject(new Error('Sweep did not attempt its stale ledger update')), 10000);
+      timer = setTimeout(() => reject(new Error('Sweep did not reach its stale ledger write')), 10000);
       onQuery = (query) => {
-        if (query.sql.startsWith('update "recurring_service_periods"') && query.bindings?.includes(recordId)) {
+        if (query.sql.includes(':billing-semantics') && query.bindings?.includes(tenantId)) {
           resolve();
         }
       };

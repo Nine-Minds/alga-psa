@@ -25,6 +25,7 @@ How the decision moved, so nobody re-walks it:
 - Audience by organization. `organization_private` is MSP-only.
 - Responsibility is explicit state with receipts.
 - No capability admission until the authorization plan's acceptance passes and segment C has had an independent security review.
+- **Watchers (2026-11-13, captain, S33 review):** the watcher list is the MSP's case-by-case choice of who follows a ticket. A seat technician is never refused as a watcher, on any ticket. Outside their scope they are read as an external party (requester audience, client rendering, replies stored as requester); inside it, as their audience. The boundary guards automatic over-delivery (MSP rendering, internal and private notes), not the MSP's explicit choice of address. Supersedes the earlier "cannot watch an out-of-scope ticket" rule.
 
 ## Discoveries about existing code
 

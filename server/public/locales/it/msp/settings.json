@@ -3033,7 +3033,8 @@
         "preparingPreview": "Preparazione anteprima…",
         "linking": "Collegamento account…",
         "unlinking": "Scollegamento account…",
-        "bulkLabel": "Azioni SSO in blocco {{location}}"
+        "bulkLabel": "Azioni SSO in blocco {{location}}",
+        "disabledSelectUsers": "Selezioni prima almeno un utente."
       },
       "table": {
         "email": "Email",

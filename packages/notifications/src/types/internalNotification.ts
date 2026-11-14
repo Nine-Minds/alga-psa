@@ -1,3 +1,4 @@
+import type { AudienceSource } from '@alga-psa/shared/lib/notificationAudience';
 /**
  * Internal Notification Types
  *
@@ -90,6 +91,15 @@ export interface CreateInternalNotificationRequest {
   category?: string;
   link?: string;
   metadata?: Record<string, any>;
+  /**
+   * The ticket this notification is about and the audience of anything it quotes: `requester`
+   * for ticket-level facts, the comment's stored audience when it previews a comment.
+   *
+   * It decides what a seat technician may be told (`@alga-psa/shared/lib/notificationAudience`):
+   * only an in-scope ticket, only content their audience admits. A notification that does not
+   * declare it is never created for a seat technician. No other recipient is affected.
+   */
+  ticketAudience?: { ticketId: string; audience: AudienceSource };
 }
 
 export interface GetInternalNotificationsRequest {

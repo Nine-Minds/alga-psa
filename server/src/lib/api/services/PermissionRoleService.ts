@@ -20,7 +20,7 @@ import { assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRol
 import type { UserRoleFloorChange } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
-import { unservedPermissionResources } from '@alga-psa/auth/lib/permissionCapabilities';
+import { unservedPermissionResources, unservedRoles } from '@alga-psa/auth/lib/permissionCapabilities';
 import { 
   IRole, 
   IPermission, 
@@ -412,6 +412,15 @@ export class PermissionRoleService extends BaseService<IRole> {
     dataQuery = scopedDb.tenantJoin(dataQuery, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' });
 
     let countQuery = scopedDb.table('roles as r');
+
+    // A role that exists only for a capability is listed only for tenants served for it
+    // (an ended arrangement or a kill switch leaves the row in place).
+    for (const hidden of await unservedRoles(context.tenant)) {
+      const visible = (query: Knex.QueryBuilder) => query.whereNot((role) =>
+        role.where({ 'r.role_name': hidden.role_name, 'r.msp': hidden.msp, 'r.client': hidden.client }));
+      dataQuery = visible(dataQuery);
+      countQuery = visible(countQuery);
+    }
 
     // Common created_*/updated_* range filters (qualified to the roles alias).
     this.applyRangeFilters(dataQuery, filters);

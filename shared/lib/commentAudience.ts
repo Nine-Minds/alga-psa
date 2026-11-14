@@ -184,6 +184,41 @@ export async function resolveCommentAudienceReader(
   return { kind: 'seat', tenant, clientId: seat.client_id };
 }
 
+/**
+ * The internal user a read is for, as the caller holds them: the user id alone, or the user row
+ * the request already loaded (`getCurrentUser` reads it from the database on every request).
+ *
+ * The row carries `seat_reader`, which a foreign key keeps `true` for every user bound by a seat
+ * assignment that is not revoked (migration 20261113130000). So `seat_reader === false` on a
+ * loaded row is the one thing that says "MSP staff" with no statement. A bare id, a row without
+ * the column, or `true` says nothing either way, and the read then asks the seat tables in the
+ * statement it already runs. Nothing else decides who is staff: not the capability gate, not a
+ * cache, so a process that never registered the co-managed capability and a tenant whose first
+ * seat was bound a moment ago are read the same as any other.
+ */
+export type InternalReaderIdentity = string | { user_id: string; seat_reader?: boolean | null };
+
+const internalReaderUserId = (reader: InternalReaderIdentity): string => typeof reader === 'string' ? reader : reader.user_id;
+/** True only for a loaded user row whose marker says no seat assignment binds the user. */
+export const isKnownStaffReader = (reader: InternalReaderIdentity): boolean =>
+  typeof reader !== 'string' && reader.seat_reader === false;
+
+/**
+ * `resolveCommentAudienceReader` for a request boundary that holds the user row (search): an
+ * internal user whose row says no seat assignment binds them is staff, with no SQL. Any other
+ * internal user is resolved from the seat tables.
+ */
+export async function admitCommentAudienceReader(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: { userId: string; userType: string; seatReader?: boolean | null },
+): Promise<CommentAudienceReader | null> {
+  if (tenant && user?.userId && user.userType === 'internal' && user.seatReader === false) {
+    return { kind: 'staff', tenant };
+  }
+  return resolveCommentAudienceReader(trx, tenant, user);
+}
+
 /** The owning organization as a WRITE sees it: the read owner plus whether its client has a live seat arrangement. */
 export interface CommentWriteOwner extends CommentAudienceOwner {
   /** The ticket's client has an active seat arrangement. Only then does `shared_it` exist. */
@@ -471,4 +506,95 @@ export function commentAudienceVisibleSql(
     default:
       return db.raw('FALSE');
   }
+}
+
+/** The audiences a reader of this kind reads on a ticket of their own organization, by the one predicate. */
+export function audiencesVisibleTo(kind: CommentAudienceReader['kind']): CommentAudience[] {
+  const tenant = 'owner', clientId = 'client';
+  const reader: CommentAudienceReader = kind === 'seat' ? { kind, tenant, clientId } : { kind, tenant };
+  return COMMENT_AUDIENCES.filter(audience => isCommentAudienceVisible(audience, { tenant, clientId }, reader));
+}
+
+/**
+ * How a comment note names an uploaded file: `<prefix><file id><suffix>` as a regular expression.
+ * One shape for the note parser (`commentAttachmentFileIds`) and for `documentVisible`'s SQL.
+ */
+export const COMMENT_UPLOAD_URL_PATTERN = {
+  prefix: '/api/documents/(?:view|download)/',
+  suffix: '(?=[^0-9a-f-]|$)',
+} as const;
+
+/**
+ * Audience visibility for one INTERNAL user of the owning tenant, decided inside the statement
+ * that reads the rows: the SQL composition of `resolveCommentAudienceReader` and
+ * `commentAudienceVisibleSql`. Read paths that cannot name the reader's organization before they
+ * query (the ticket screen, the activity list, the attachment gate) add these expressions to the
+ * statement they already run. They reach it only through `admitInternalReaderAudienceSql`, so a
+ * reader known to be staff runs none of it.
+ *
+ *   staff           no seat assignment binds the user: every audience stored in their tenant
+ *   commentVisible  staff, or a live seat technician of the comment's ticket's client reading an
+ *                   audience `audiencesVisibleTo('seat')` admits
+ *
+ *   documentVisible staff, or every comment that owns the document is `commentVisible`. A comment
+ *                   owns a document through an attachment row, or, for comments saved before
+ *                   attachment rows existed, by naming the document's file in an upload URL in its
+ *                   note on a ticket the document is associated with. A document no comment owns
+ *                   is not this predicate's to decide: it is visible here and keeps its own policy.
+ *
+ * A bound user whose assignment is not live sees nothing, as in `resolveCommentAudienceReader`.
+ * A missing comment, thread, root or ticket fails closed for everyone but staff.
+ */
+function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: string, userId: string) {
+  const staff = db.raw(
+    `NOT EXISTS (SELECT 1 FROM co_managed_seat_assignments aud_bound
+      WHERE aud_bound.tenant = ? AND aud_bound.user_id = ? AND aud_bound.state <> 'revoked')`, [tenant, userId]);
+  /** `commentId` is a uuid column (bound as an identifier) or a uuid-typed expression. */
+  const commentVisible = (commentId: string | Knex.Raw): Knex.Raw => {
+    const id = typeof commentId === 'string' ? db.raw('??', [commentId]) : commentId;
+    return db.raw(`((?) OR EXISTS (SELECT 1 FROM comments aud_c
+      JOIN comment_threads aud_ct ON aud_ct.tenant = aud_c.tenant AND aud_ct.thread_id = aud_c.thread_id
+      JOIN comments aud_rc ON aud_rc.tenant = aud_ct.tenant AND aud_rc.comment_id = aud_ct.root_comment_id
+      JOIN tickets aud_t ON aud_t.tenant = aud_c.tenant AND aud_t.ticket_id = aud_c.ticket_id
+      JOIN co_managed_seat_arrangements aud_ar ON aud_ar.tenant = aud_c.tenant AND aud_ar.client_id = aud_t.client_id
+        AND aud_ar.state = 'active'
+      JOIN co_managed_seat_assignments aud_sa ON aud_sa.tenant = aud_c.tenant AND aud_sa.arrangement_id = aud_ar.arrangement_id
+        AND aud_sa.user_id = ? AND aud_sa.state = 'active'
+      WHERE aud_c.tenant = ? AND aud_c.comment_id = (?) AND (?) = ANY(?::text[])))`,
+    [staff, userId, tenant, id, commentAudienceSql(db, 'aud_ct', 'aud_rc', 'aud_c'), audiencesVisibleTo('seat')]);
+  };
+  /** `documentId` is a uuid column (bound as an identifier) or a uuid-typed expression. */
+  const documentVisible = (documentId: string | Knex.Raw): Knex.Raw => {
+    const id = typeof documentId === 'string' ? db.raw('??', [documentId]) : documentId;
+    // The note scan runs only for a seat reader, and only over the comments of the tickets the
+    // document is associated with.
+    return db.raw(`((?) OR (
+      NOT EXISTS (SELECT 1 FROM ticket_comment_attachments aud_ca
+        WHERE aud_ca.tenant = ? AND aud_ca.document_id = (?) AND NOT (?))
+      AND NOT EXISTS (SELECT 1 FROM documents aud_d
+        JOIN document_associations aud_da ON aud_da.tenant = aud_d.tenant AND aud_da.document_id = aud_d.document_id
+          AND aud_da.entity_type = 'ticket'
+        JOIN comments aud_oc ON aud_oc.tenant = aud_d.tenant AND aud_oc.ticket_id = aud_da.entity_id
+          AND aud_oc.note ~* (? || aud_d.file_id::text || ?)
+        WHERE aud_d.tenant = ? AND aud_d.document_id = (?) AND aud_d.file_id IS NOT NULL AND NOT (?))))`,
+    [staff, tenant, id, commentVisible('aud_ca.comment_id'),
+      COMMENT_UPLOAD_URL_PATTERN.prefix, COMMENT_UPLOAD_URL_PATTERN.suffix, tenant, id, commentVisible('aud_oc.comment_id')]);
+  };
+  return { staff, commentVisible, documentVisible };
+}
+
+export type InternalReaderAudienceSql = ReturnType<typeof internalReaderAudienceSql>;
+
+/**
+ * The audience expressions for one internal reader, or `null` when the reader is known to be MSP
+ * staff (`isKnownStaffReader`): staff read every audience stored in their tenant, and the caller
+ * adds no predicate and no seat table to its statement. For every other reader the expressions
+ * decide staff or seat technician inside the caller's statement.
+ */
+export function admitInternalReaderAudienceSql(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  reader: InternalReaderIdentity,
+): InternalReaderAudienceSql | null {
+  return isKnownStaffReader(reader) ? null : internalReaderAudienceSql(db, tenant, internalReaderUserId(reader));
 }

@@ -1262,6 +1262,15 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       // settings, cycles, contracts, locations — and before the client itself.
       // A restrict-mode FK means a missed reference surfaces here rather than
       // leaving an orphan.
+      // RMM organisations stay mapped to nothing; the client's maintenance
+      // windows go with it. Neither foreign key acts on its own on Citus.
+      await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
+        .where({ client_id: clientId })
+        .update({ client_id: null, billing_profile_id: null, updated_at: new Date().toISOString() });
+      await tenantScopedTable(trx, 'rmm_maintenance_windows', tenantId)
+        .where({ client_id: clientId })
+        .delete();
+
       const deletedBillingProfiles = await tenantScopedTable(trx, 'client_billing_profiles', tenantId)
         .where({ client_id: clientId })
         .delete();

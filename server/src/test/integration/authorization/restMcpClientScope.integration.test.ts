@@ -105,7 +105,7 @@ const insert = (table: string, row: Record<string, unknown>) => connection.db!(t
 function request(caller: Caller, path: string, method = 'GET', body?: Record<string, unknown>) {
   return new NextRequest(`http://localhost${path}`, {
     method,
-    headers: { 'x-api-key': caller.apiKey, 'x-tenant-id': tenant, ...(body ? { 'content-type': 'application/json' } : {}) },
+    headers: { 'x-api-key': caller.apiKey, 'x-tenant-id': tenant, ...(body ? { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(JSON.stringify(body))) } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
 }

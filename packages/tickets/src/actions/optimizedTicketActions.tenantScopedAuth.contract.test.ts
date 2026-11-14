@@ -49,7 +49,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     const section = source.slice(start, end);
 
     expect(section).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
-    expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId)');
+    expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId, ');
     expect(section).toContain("tenantScopedTable(trx, 'documents as d', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'users', tenant)");
@@ -124,7 +124,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     // The join/mapping lives once in the model so refresh paths that call
     // Comment.getAllbyTicketId return the same shape; the action must not
     // rebuild it inline.
-    expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId)');
+    expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId, ');
     expect(section).not.toContain('ticket_bundle_mirrors as bm');
     expect(section).not.toContain('.leftJoin(');
   });

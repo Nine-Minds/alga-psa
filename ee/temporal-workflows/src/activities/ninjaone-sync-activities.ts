@@ -943,7 +943,7 @@ class NinjaOneSyncWorker {
     await this.runWriteWithRetry('updateOrganizationMappingLastSynced', (knex) =>
       tenantDb(knex, this.tenantId).table('rmm_organization_mappings')
         .where({ mapping_id: mappingId })
-        .update({ last_synced_at: new Date().toISOString() })
+        .update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     );
   }
 

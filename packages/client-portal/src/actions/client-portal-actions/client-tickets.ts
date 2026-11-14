@@ -541,7 +541,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
             visibility
           )
         : false;
-      return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, user, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -1364,7 +1364,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           'da.entity_type': 'ticket',
           'd.is_client_visible': true,
         });
-      return filterReadableCommentAttachments(trx, tenant, userId, rows) as Promise<IDocument[]>;
+      return filterReadableCommentAttachments(trx, tenant, user, rows) as Promise<IDocument[]>;
     });
 
     return documents;
