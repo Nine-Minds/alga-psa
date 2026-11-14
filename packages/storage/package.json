@@ -50,6 +50,10 @@
       "import": "./dist/ingest/mime.mjs",
       "types": "./src/ingest/mime.ts"
     },
+    "./ingest/bufferedCap": {
+      "import": "./dist/ingest/bufferedCap.mjs",
+      "types": "./src/ingest/bufferedCap.ts"
+    },
     "./ingest/errors": {
       "import": "./dist/ingest/errors.mjs",
       "types": "./src/ingest/errors.ts"

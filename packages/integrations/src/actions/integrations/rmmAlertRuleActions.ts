@@ -174,7 +174,7 @@ export const updateRmmAlertRule = withAuth(
     const { knex } = await createTenantKnex();
     const [rule] = await tenantDb(knex, tenant).table('rmm_alert_rules')
       .where({ rule_id: input.ruleId })
-      .update(update)
+      .update({ ...update, updated_at: new Date().toISOString() })
       .returning('*');
     if (!rule) {
       return actionFailure('Rule not found', 'msp/integrations:errors.rmm.ruleNotFound');
@@ -305,6 +305,7 @@ export const updateRmmMaintenanceWindow = withAuth(
         starts_at: parsed.data.startsAt ?? null,
         ends_at: parsed.data.endsAt ?? null,
         recurrence: parsed.data.recurrence ? JSON.stringify(parsed.data.recurrence) : null,
+        updated_at: new Date().toISOString(),
       })
       .returning('*');
     if (!window) {
@@ -418,6 +419,7 @@ export const updateRmmAlertPollingSettings = withAuth(
            )`,
           [input.enabled, intervalMinutes]
         ),
+        updated_at: new Date().toISOString(),
       });
     if (!updated) {
       return actionFailure('Integration not found', 'msp/integrations:errors.rmm.integrationNotFound');

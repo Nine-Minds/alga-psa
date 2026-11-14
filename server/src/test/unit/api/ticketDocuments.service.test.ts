@@ -45,6 +45,12 @@ describe('TicketService.getTicketDocuments', () => {
         return builder;
       }
 
+      if (table === 'users') {
+        // An MSP staff reader: no comment that owns the document is hidden from them.
+        const builder: any = { where: vi.fn(() => builder), first: vi.fn(async () => ({ document_visible: true })) };
+        return builder;
+      }
+
       throw new Error(`Unexpected table ${table}`);
     }), {
       raw: vi.fn((value: string) => value),

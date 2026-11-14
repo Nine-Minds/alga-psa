@@ -2280,7 +2280,41 @@
         "refreshTokenValidUntilProvider": "Auktorisering för {{provider}} är giltig till {{date}}. Token förnyas automatiskt.",
         "autoProvisionCustomersLabelProvider": "Skapa {{provider}}-kunder automatiskt",
         "syncSucceeded": "Synkroniseringen har slutförts",
-        "syncStopped": "Synkroniseringen har stoppats"
+        "syncStopped": "Synkroniseringen har stoppats",
+        "erroredOpsDialogTitle": "{{provider}}-synkroniseringsåtgärder med fel",
+        "erroredOpsDialogDescription": "Åtgärder som misslyckades eller hoppades över efter upprepade försök.",
+        "erroredOpsOpen": "Visa åtgärder med fel",
+        "erroredOpsColItem": "Post",
+        "erroredOpsColOperation": "Åtgärd",
+        "erroredOpsColError": "Fel",
+        "erroredOpsColWhen": "Tidpunkt",
+        "erroredOpsColBatch": "Exportbatch",
+        "erroredOpsLoading": "Läser in åtgärder med fel…",
+        "erroredOpsEmpty": "Inga åtgärder med fel.",
+        "erroredOpsLoadError": "Det gick inte att läsa in åtgärder med fel.",
+        "erroredOpsNoError": "Ingen felinformation registrerades.",
+        "erroredOpsBatchLink": "Visa batch {{batch}}",
+        "erroredOpsClose": "Stäng",
+        "erroredOpsDeleted": {
+          "invoice": "Borttagen faktura",
+          "credit_memo": "Borttagen kreditfaktura",
+          "vendor_bill": "Borttagen leverantörsfaktura",
+          "payment": "Borttagen betalning",
+          "credit_application": "Borttagen avräkning av tillgodohavande",
+          "other": "Post som inte är tillgänglig"
+        },
+        "erroredOpsItem": {
+          "payment": "Betalning för {{invoice}}",
+          "creditApplication": "Tillgodohavande avräknat mot {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Exportera faktura",
+          "export_credit_memo": "Exportera kreditfaktura",
+          "export_vendor_bill": "Exportera leverantörsfaktura",
+          "apply_credit": "Avräkna tillgodohavande",
+          "record_payment": "Registrera betalning",
+          "void_invoice": "Makulera faktura"
+        }
       },
       "itemImport": {
         "description": "Importera QuickBooks-produkter och tjänster till Algas tjänstekatalog för det anslutna QuickBooks-företaget. QuickBooks förblir huvudkälla för namn, taxor, SKU:er, beskrivningar och kostnader. Debiteringsmetod, måttenhet och tjänstetyp anges här och hanteras därefter av Alga. Steget är valfritt – hoppa över det med Nästa.",

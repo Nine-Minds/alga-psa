@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "An MSP administrator invites a seat technician by name and email for an arrangement; the assignment is recorded as invited and counts as a committed seat; an email already claimed by an internal user elsewhere is refused with that reason.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "An invitation is refused when committed seats would exceed the allocation, and concurrent invitations for the last seat produce exactly one success.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Seat admission takes locks in the established order (entitlement, then arrangement) and cannot deadlock against reservation, purchase or hosted reconcile running concurrently.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "F043",
     "description": "Attachments and inline images are readable by a seat technician only when their parent comment's audience is visible to them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "Ticket activity and audit entries shown to a seat technician omit events about private notes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "F045",
     "description": "Search indexing and its access check carry the audience, so a seat technician's search never returns private note text.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment D — Conversation audiences by organization"
     ]
@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "A handoff to client IT notifies the named technician, or every active technician of that client when none is named; a handoff to the MSP notifies MSP staff by the existing assignment and board rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]
@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "A shared IT note notifies the other organization's participants on the ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment G — Notifications and email"
     ]

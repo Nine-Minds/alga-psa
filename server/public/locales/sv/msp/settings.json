@@ -3033,7 +3033,8 @@
         "preparingPreview": "Förbereder förhandsgranskning…",
         "linking": "Kopplar konton…",
         "unlinking": "Tar bort kontokopplingar…",
-        "bulkLabel": "Massåtgärder för SSO {{location}}"
+        "bulkLabel": "Massåtgärder för SSO {{location}}",
+        "disabledSelectUsers": "Välj minst en användare först."
       },
       "table": {
         "email": "E-post",

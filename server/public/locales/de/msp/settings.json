@@ -3033,7 +3033,8 @@
         "preparingPreview": "Vorschau wird vorbereitet…",
         "linking": "Konten werden verknüpft…",
         "unlinking": "Verknüpfung der Konten wird aufgehoben…",
-        "bulkLabel": "SSO-Massenaktionen {{location}}"
+        "bulkLabel": "SSO-Massenaktionen {{location}}",
+        "disabledSelectUsers": "Wählen Sie zuerst mindestens einen Benutzer aus."
       },
       "table": {
         "email": "E-Mail",

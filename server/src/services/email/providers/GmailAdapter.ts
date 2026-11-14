@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from '@alga-psa/shared/services/email/providers/base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { resolveGoogleMailboxOAuthClient, toActionableGoogleRefreshError } from '@alga-psa/shared/services/email/providers/googleMailboxOAuthClient';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { getAdminConnection } from '@alga-psa/db/admin';
@@ -85,20 +85,12 @@ export class GmailAdapter extends BaseEmailAdapter {
 
       const vendorConfig = this.config.provider_config || {};
       
-      // Get client credentials from provider config, environment, or tenant secrets
-      let clientId = vendorConfig.client_id || process.env.GOOGLE_CLIENT_ID;
-      let clientSecret = vendorConfig.client_secret || process.env.GOOGLE_CLIENT_SECRET;
-      
-      // Fall back to tenant secrets if not found in config or environment
-      if (!clientId || !clientSecret) {
-        const secretProvider = await getSecretProviderInstance();
-        clientId = clientId || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
-        clientSecret = clientSecret || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
-      }
-
-      if (!clientId || !clientSecret) {
-        throw new Error('Google OAuth credentials not configured');
-      }
+      // One resolver for every Google mailbox OAuth path: the refresh must use the
+      // client that issued the token (tenant-owned), never Alga's env client.
+      const { clientId, clientSecret } = await resolveGoogleMailboxOAuthClient({
+        tenant: this.config.tenant,
+        vendorConfig,
+      });
 
       // Configure OAuth2 client with app credentials
       this.oauth2Client = new OAuth2Client(clientId, clientSecret);
@@ -107,7 +99,12 @@ export class GmailAdapter extends BaseEmailAdapter {
       });
 
       // Get new access token
-      const { credentials } = await this.oauth2Client.refreshAccessToken();
+      let credentials;
+      try {
+        ({ credentials } = await this.oauth2Client.refreshAccessToken());
+      } catch (refreshError) {
+        throw toActionableGoogleRefreshError(refreshError) ?? refreshError;
+      }
       
       if (!credentials.access_token) {
         throw new Error('Failed to obtain new access token');

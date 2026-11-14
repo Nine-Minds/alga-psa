@@ -226,7 +226,7 @@ export async function processEscalation(
 
           await txDb.table('rmm_alerts')
             .where({ alert_id: alertId })
-            .update({ ticket_id: ticket.ticket_id, asset_id: matchedAssetId });
+            .update({ ticket_id: ticket.ticket_id, asset_id: matchedAssetId, updated_at: new Date().toISOString() });
 
           await publishRmmTicketCreated({
             trx,

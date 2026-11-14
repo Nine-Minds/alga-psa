@@ -450,7 +450,7 @@ export async function runDattoRmmDeviceSync(
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where({ provider: PROVIDER })
-      .update({ sync_status: 'syncing', sync_error: null });
+      .update({ sync_status: 'syncing', sync_error: null, updated_at: new Date().toISOString() });
 
     const mappingRows: any[] = await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
       .where({ integration_id: integration.integration_id })
@@ -682,6 +682,7 @@ export async function runDattoRmmDeviceSync(
         last_sync_at: knex.fn.now(),
         ...(fullSweep ? { last_full_sync_at: knex.fn.now() } : {}),
         sync_error: errors.length ? errors.slice(0, 5).join('; ') : null,
+        updated_at: new Date().toISOString(),
       });
 
     await publishRmmSyncEvent({
@@ -733,7 +734,7 @@ export async function runDattoRmmDeviceSync(
     if (knex && integrationId) {
       await tenantScopedTable(knex, 'rmm_integrations', tenant)
         .where({ provider: PROVIDER })
-        .update({ sync_status: 'error', sync_error: message })
+        .update({ sync_status: 'error', sync_error: message, updated_at: new Date().toISOString() })
         .catch(() => undefined);
     }
     if (integrationId) {

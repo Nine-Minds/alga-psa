@@ -142,6 +142,17 @@ describe('resolveUploadMime', () => {
     ).toBe('declared');
     expect(() => resolveUploadMime('image/png', 'application/zip', allow)).toThrow();
   });
+  it('a declared docx/xlsx/msg/doc wins over the sniffed container family, in the one mime rule every path shares', () => {
+    const everything = ['*/*'];
+    const docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    expect(resolveUploadMime(docx, 'application/zip', everything)).toEqual({ mime: docx, source: 'declared' });
+    expect(resolveUploadMime(xlsx, 'application/zip', everything)).toEqual({ mime: xlsx, source: 'declared' });
+    expect(resolveUploadMime('application/vnd.ms-outlook', 'application/x-cfb', everything).mime).toBe('application/vnd.ms-outlook');
+    expect(resolveUploadMime('application/msword', 'application/x-cfb', everything).mime).toBe('application/msword');
+    // ...but only if the declared type itself is allowed.
+    expect(() => resolveUploadMime(docx, 'application/zip', ['application/zip'])).toThrow(/not allowed/);
+  });
 });
 
 describe('uploadFile streaming ingest (local provider)', () => {
@@ -252,6 +263,21 @@ describe('uploadFile streaming ingest (local provider)', () => {
     expect(mimes).toEqual(['message/rfc822', 'application/pkcs7-signature', 'application/vnd.example']);
     await expect(upload(randomBytes(2048), 'g.pdf', 'application/pdf')).rejects.toSatisfy(isUploadContentTypeError);
     await expect(upload(randomBytes(2048), 'g.mp4', 'video/mp4')).rejects.toSatisfy(isUploadContentTypeError);
+  });
+
+  it('enforces the provider size cap and MIME allowlist on both Buffer and Readable bodies with the default origin', async () => {
+    process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '100';
+    clearCachedStorageConfig();
+    await expect(upload(Buffer.alloc(101), 'big.txt', 'text/plain')).rejects.toSatisfy(isUploadSizeLimitError);
+    await expect(upload(Readable.from([Buffer.alloc(60), Buffer.alloc(60)]), 'big.txt', 'text/plain')).rejects.toSatisfy(isUploadSizeLimitError);
+    // A declared type outside the allowlist is refused before a byte is read; real bytes of one are refused after the sniff.
+    await expect(upload(Readable.from([Buffer.from('<html>')]), 'a.html', 'text/html')).rejects.toSatisfy(isUploadContentTypeError);
+    await expect(upload(Readable.from([EXE_HEAD.subarray(0, 90)]), 'a.txt', 'text/plain')).rejects.toSatisfy(isUploadContentTypeError);
+    await expect(upload(Buffer.from('<html>'), 'a.html', 'text/html')).rejects.toSatisfy(isUploadContentTypeError);
+    await expectNothingStored();
+    // At the limit exactly, it goes through.
+    await upload(Readable.from([Buffer.alloc(100, 97)]), 'ok.txt', 'text/plain');
+    expect(FileStoreModel.create).toHaveBeenCalledWith({}, expect.objectContaining({ file_size: 100 }));
   });
 
   it('rejects an undetectable declared type that is not allowlisted', async () => {

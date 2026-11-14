@@ -3033,7 +3033,8 @@
         "preparingPreview": "Voorbeeld voorbereiden…",
         "linking": "Accounts koppelen…",
         "unlinking": "Accounts ontkoppelen…",
-        "bulkLabel": "SSO-bulkacties {{location}}"
+        "bulkLabel": "SSO-bulkacties {{location}}",
+        "disabledSelectUsers": "Selecteer eerst minimaal één gebruiker."
       },
       "table": {
         "email": "E-mail",

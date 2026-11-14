@@ -56,9 +56,13 @@ const createMockKnex = () => {
     orderBy: mockOrderBy,
   }));
 
+  const mockRaw = vi.fn().mockResolvedValue({ rows: [] });
+  (mockKnex as any).raw = mockRaw;
+
   return {
     knex: mockKnex as any,
     mocks: {
+      raw: mockRaw,
       insert: mockInsert,
       where: mockWhere,
       first: mockFirst,
@@ -125,6 +129,8 @@ describe('Contract Model', () => {
       await Contract.delete(knex, 'tenant-1', 'contract-123');
 
       expect(knex).toHaveBeenCalledWith('recurring_service_periods');
+      // The period delete runs under the tenant billing lock.
+      expect(mocks.raw).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), ['tenant-1']);
       expect(mocks.where).toHaveBeenCalledWith('recurring_service_periods.tenant', 'tenant-1');
       expect(mocks.whereIn).toHaveBeenCalledWith('obligation_id', ['line-1', 'line-2']);
     });

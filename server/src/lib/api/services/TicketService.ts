@@ -16,7 +16,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { admitInternalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -155,7 +155,9 @@ import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-p
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { generatePreviewsForDocument } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { attachDocumentFromBytes } from './documents/attachDocument';
+import { attachDocument } from './documents/attachDocument';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -455,6 +457,15 @@ async function assertClosedByIsTenantUser(trx: Knex.Transaction, tenant: string,
 /** The request is made as a service principal itself (not acting as a human). */
 function isBareServicePrincipal(context: ServiceContext): boolean {
   return (context.user as { user_type?: string } | undefined)?.user_type === 'service' && !context.viaPrincipalUserId;
+}
+
+/**
+ * The reader a comment-audience check is made for: the verified user row when the transport
+ * loaded it for this user, otherwise the bare id (which is always checked against the seat tables).
+ */
+function audienceReader(context: ServiceContext): string | TicketServiceUser {
+  const user = context.user as TicketServiceUser | undefined;
+  return user && user.user_id === context.userId ? user : context.userId;
 }
 
 export class TicketService extends BaseService<ITicket> {
@@ -1059,7 +1070,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
+    return filterReadableCommentAttachments(knex, context.tenant, audienceReader(context), documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1547,7 +1558,7 @@ export class TicketService extends BaseService<ITicket> {
 
     // Validation, storage, the transaction, rollback cleanup, previews and events all
     // live in the shared upload core; the draft branch is a ticket-adapter option.
-    return attachDocumentFromBytes({
+    return attachDocument({
       knex,
       tenant: context.tenant,
       actorUserId: context.userId,
@@ -1556,7 +1567,8 @@ export class TicketService extends BaseService<ITicket> {
       file: {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
-        bytes: Buffer.from(await file.arrayBuffer()),
+        // The part is streamed into the ingest; no whole-file copy of it.
+        body: Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
       },
       source: 'multipart',
       options: { commentAttachmentDraft },
@@ -1592,7 +1604,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1636,7 +1648,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.*')
       .first() as IDocument | undefined;
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -2789,6 +2801,10 @@ export class TicketService extends BaseService<ITicket> {
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);
         });
+    } else if (context.userId) {
+      // An internal reader sees only the audiences their organization may: MSP staff all of them, a seat technician never a private note.
+      const audience = admitInternalReaderAudienceSql(knex, context.tenant, audienceReader(context));
+      if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('tc.comment_id')]);
     }
 
     const comments = await commentsQuery

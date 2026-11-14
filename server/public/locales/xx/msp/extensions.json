@@ -376,7 +376,8 @@
     "extensionRemoved": "⟦Ḗẋŧḗƞşīȯƞ řḗḿȯṽḗḓ⟧",
     "reprovisionFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗƥřȯṽīşīȯƞ⟧",
     "manifestReadFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗȧḓ ḿȧƞīƒḗşŧ ƒīŀḗ⟧",
-    "invalidBundleExtension": "⟦Ƒīŀḗ ḿŭşŧ ḗƞḓ ẇīŧħ \".ŧȧř.ẑşŧ\": {{filename}}⟧"
+    "invalidBundleExtension": "⟦Ƒīŀḗ ḿŭşŧ ḗƞḓ ẇīŧħ \".ŧȧř.ẑşŧ\": {{filename}}⟧",
+    "bundleTooLarge": "⟦Ŧħīş ƀŭƞḓŀḗ īş {{size}}. Ŧħḗ ƈŭřřḗƞŧ ŀīḿīŧ īş {{limit}} ƥḗř ƀŭƞḓŀḗ.⟧"
   },
   "debug": {
     "scopeToOneInstall": "⟦Şƈȯƥḗ ŧȯ ȯƞḗ īƞşŧȧŀŀ⟧",

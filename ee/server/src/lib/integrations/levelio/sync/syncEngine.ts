@@ -435,8 +435,8 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
     const errors: string[] = [];
 
     for (const alert of alerts) {
+      // No tenant here: Citus rejects an UPDATE that sets the distribution column.
       const row = {
-        tenant: args.tenant,
         integration_id: args.integrationId,
         external_alert_id: alert.id,
         external_device_id: alert.device_id,
@@ -463,7 +463,7 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
           await db.table('rmm_alerts').where({ alert_id: existing.alert_id }).update(row);
           updated += 1;
         } else {
-          await db.table('rmm_alerts').insert({ ...row, created_at: deps.knex.fn.now() });
+          await db.table('rmm_alerts').insert({ tenant: args.tenant, ...row, created_at: deps.knex.fn.now() });
           created += 1;
         }
       } catch (error) {

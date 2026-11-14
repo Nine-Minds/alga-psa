@@ -13,6 +13,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Badge } from "@alga-psa/ui/components/Badge";
+import { Tooltip } from "@alga-psa/ui/components/Tooltip";
 import { SSO_PROFILE_TAB_URL } from "@alga-psa/auth/lib/sso/linkStateCookie";
 import { PROVIDER_SETUP_ENTRY_PATH } from "@alga-psa/types";
 import clsx from "clsx";
@@ -412,8 +413,10 @@ export default function ConnectSsoClient({
             {providerOptions.map((provider) => {
               const disabled = !provider.configured || !reauthComplete || !reauthNonce;
               const branding = providerBranding[provider.id] ?? providerBranding.default;
+              // A configured provider is only blocked by the verification step above.
+              const needsVerification = disabled && provider.configured;
 
-              return (
+              const card = (
                 <div
                   key={provider.id}
                   role="button"
@@ -484,6 +487,12 @@ export default function ConnectSsoClient({
                   </div>
                 </div>
               );
+
+              return needsVerification ? (
+                <Tooltip key={provider.id} content={t("connectSso.verify.verifyBeforeProvider")}>
+                  {card}
+                </Tooltip>
+              ) : card;
             })}
           </div>
         </CardContent>

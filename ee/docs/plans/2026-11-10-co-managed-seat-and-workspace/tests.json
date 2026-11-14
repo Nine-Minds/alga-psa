@@ -75,7 +75,7 @@
   {
     "id": "T009",
     "description": "DB integration, concurrent: eight invitations against one remaining seat produce one success; an invitation for an email claimed by another tenant's internal user is refused with that reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -85,7 +85,7 @@
   {
     "id": "T010",
     "description": "DB integration, concurrent: seat admission running against reservation, purchase intent and hosted reconcile completes without deadlock.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "description": "DB integration: a ticket with ten legacy internal notes shows a seat technician none of them, in the conversation, the activity list, attachments and search.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F044",
@@ -370,7 +370,7 @@
   {
     "id": "T041",
     "description": "DB integration: handoff with and without a named technician, handoff to the MSP and a shared IT note each notify the expected recipients and no one else.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079",
       "F081"

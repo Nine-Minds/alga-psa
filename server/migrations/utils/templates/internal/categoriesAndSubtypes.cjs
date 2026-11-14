@@ -31,6 +31,8 @@ const SUBTYPES = [
   { category: 'tickets', name: 'ticket-team-assigned', description: 'Team assigned to ticket' },
   { category: 'tickets', name: 'ticket-board-created', description: 'Ticket created on a board with a notification rule for you' },
   { category: 'tickets', name: 'ticket-board-status-entered', description: 'Ticket entered a status with a board notification rule for you' },
+  { category: 'tickets', name: 'ticket-handed-to-client-it', description: 'Ticket handed to client IT (co-managed seat)' },
+  { category: 'tickets', name: 'ticket-handed-to-msp', description: 'Ticket handed to the MSP by client IT (co-managed seat)' },
   { category: 'tickets', name: 'ticket-agent-assigned-client', description: 'Agent assigned to existing ticket (client-facing)' },
   // Projects
   { category: 'projects', name: 'project-assigned', description: 'Project assigned to user' },
