@@ -8,6 +8,7 @@ import TagDefinition from '@alga-psa/tags/models/tagDefinition';
 import type {
   ITicketTemplate,
   ITicketTemplateChecklistItem,
+  ITicketTemplateLink,
   TicketTemplateForCreate,
   TicketTemplateListItem,
   TicketTemplateOption,
@@ -20,6 +21,12 @@ import {
   type ParsedTicketTemplateInput,
   type TicketTemplateInput,
 } from '../lib/ticketTemplates';
+import {
+  ExternalLinkValidationError,
+  loadTenantExternalSystems,
+  validateLinkTarget,
+} from '@alga-psa/shared/services/tickets/externalLinkPersistence';
+import { renderExternalLinkUrl, resolveExternalSystem } from '../lib/externalSystems';
 import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import {
   isDuplicateTemplateNameViolation,
@@ -30,6 +37,7 @@ import {
 
 const TEMPLATES = 'ticket_templates';
 const ITEMS = 'ticket_template_checklist_items';
+const LINKS = 'ticket_template_links';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Action = 'read' | 'create' | 'update' | 'delete';
@@ -75,7 +83,20 @@ async function loadItemRows(trx: Knex.Transaction, tenant: string, templateId: s
     .select('template_item_id', 'item_name', 'description', 'is_required', 'order_number', 'checklist_template_id');
 }
 
-function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITicketTemplate {
+async function loadLinkRows(trx: Knex.Transaction, tenant: string, templateId: string) {
+  return tenantDb(trx, tenant)
+    .table(LINKS)
+    .where({ template_id: templateId })
+    .orderBy('order_number', 'asc')
+    .orderBy('created_at', 'asc')
+    .select('template_link_id', 'system', 'external_id', 'realm', 'url', 'title', 'order_number', 'metadata');
+}
+
+function toTemplate(
+  row: Record<string, any>,
+  items: Record<string, any>[],
+  links: Record<string, any>[] = []
+): ITicketTemplate {
   return {
     tenant: row.tenant,
     template_id: row.template_id,
@@ -109,12 +130,75 @@ function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITi
         checklist_template_id: item.checklist_template_id ?? null,
       })
     ),
+    links: links.map(
+      (link): ITicketTemplateLink => ({
+        template_link_id: link.template_link_id,
+        system: link.system,
+        external_id: link.external_id,
+        realm: link.realm ?? null,
+        url: link.url ?? null,
+        title: link.title ?? null,
+        metadata: link.metadata ? asJsonColumn<Record<string, unknown>>(link.metadata) : null,
+        order_number: link.order_number,
+      })
+    ),
   };
 }
 
 /** Custom fields go through the same allowlist as Duplicate (D7). */
 function allowlistedCustomFields(fields: Record<string, unknown>): Record<string, unknown> {
   return (pickDuplicableAttributes({ custom_fields: fields }).custom_fields as Record<string, unknown> | undefined) ?? {};
+}
+
+/**
+ * A broken template link is a save error, never a later occurrence failure: each link must pass the
+ * same pure rules as a ticket link (system resolves, safe http(s) URL, a clickable destination).
+ */
+async function assertValidLinks(trx: Knex.Transaction, tenant: string, links: ParsedTicketTemplateInput['links']) {
+  if (links.length === 0) return;
+  const systems = await loadTenantExternalSystems(trx, tenant);
+  const problems: string[] = [];
+  links.forEach((link, index) => {
+    try {
+      validateLinkTarget(systems, link);
+    } catch (error) {
+      if (!(error instanceof ExternalLinkValidationError)) throw error;
+      problems.push(`Link ${index + 1} (${link.title ?? link.external_id}): ${error.message}`);
+    }
+  });
+  if (problems.length > 0) {
+    const joined = problems.join('. ');
+    throw new TicketTemplateError(joined, 'INVALID_REFERENCES', { problems: joined });
+  }
+}
+
+async function insertLinks(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  links: ParsedTicketTemplateInput['links']
+) {
+  if (links.length === 0) return;
+  const systems = await loadTenantExternalSystems(trx, tenant);
+  await tenantDb(trx, tenant)
+    .table(LINKS)
+    .insert(
+      links.map((link, index) => {
+        const target = validateLinkTarget(systems, link);
+        return {
+          tenant,
+          template_id: templateId,
+          // Stored canonical: the registry key and the validated, trimmed fields.
+          system: target.system,
+          external_id: target.external_id,
+          realm: target.realm,
+          url: target.url,
+          title: link.title ?? null,
+          order_number: index,
+          metadata: link.metadata ? JSON.stringify(link.metadata) : null,
+        };
+      })
+    );
 }
 
 async function assertValidReferences(trx: Knex.Transaction, tenant: string, input: ParsedTicketTemplateInput) {
@@ -289,7 +373,8 @@ export const getTicketTemplate = withAuth(async (
       await requirePermission(user, 'ticket_template', 'read', trx);
       const row = await loadTemplateRow(trx, tenant, templateId);
       const items = await loadItemRows(trx, tenant, row.template_id);
-      const template = toTemplate(row, items);
+      const links = await loadLinkRows(trx, tenant, row.template_id);
+      const template = toTemplate(row, items, links);
       const referenceProblems = await findTicketFieldReferenceProblems(trx, tenant, { fields: template });
       const usage = (await loadTemplateUsage(trx, tenant, [template.template_id])).get(template.template_id)!;
       return { ...template, referenceProblems, ...usage };
@@ -312,6 +397,7 @@ export const createTicketTemplate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket_template', 'create', trx);
       await assertValidReferences(trx, tenant, parsed);
+      await assertValidLinks(trx, tenant, parsed.links);
       try {
         const [row] = await tenantDb(trx, tenant)
           .table(TEMPLATES)
@@ -325,6 +411,7 @@ export const createTicketTemplate = withAuth(async (
           })
           .returning('template_id');
         await insertItems(trx, tenant, row.template_id, parsed.checklist);
+        await insertLinks(trx, tenant, row.template_id, parsed.links);
         return { template_id: row.template_id as string };
       } catch (error) {
         if (isDuplicateTemplateNameViolation(error)) throw duplicateNameError(parsed.name);
@@ -350,6 +437,7 @@ export const updateTicketTemplate = withAuth(async (
       await requirePermission(user, 'ticket_template', 'update', trx);
       const existing = await loadTemplateRow(trx, tenant, templateId);
       await assertValidReferences(trx, tenant, parsed);
+      await assertValidLinks(trx, tenant, parsed.links);
       try {
         await tenantDb(trx, tenant)
           .table(TEMPLATES)
@@ -358,6 +446,9 @@ export const updateTicketTemplate = withAuth(async (
         // Item ids are never referenced elsewhere, so the checklist is replaced wholesale.
         await tenantDb(trx, tenant).table(ITEMS).where({ template_id: existing.template_id }).delete();
         await insertItems(trx, tenant, existing.template_id, parsed.checklist);
+        // Links are replaced wholesale too (PUT semantics): the stored list becomes exactly the payload.
+        await tenantDb(trx, tenant).table(LINKS).where({ template_id: existing.template_id }).delete();
+        await insertLinks(trx, tenant, existing.template_id, parsed.links);
         return { template_id: existing.template_id as string };
       } catch (error) {
         if (isDuplicateTemplateNameViolation(error)) throw duplicateNameError(parsed.name);
@@ -420,6 +511,7 @@ export const deleteTicketTemplate = withAuth(async (
       }
       // Hard delete. Tickets keep created_from_template_id (no FK) and the activity-row name snapshot.
       await tenantDb(trx, tenant).table(ITEMS).where({ template_id: existing.template_id }).delete();
+      await tenantDb(trx, tenant).table(LINKS).where({ template_id: existing.template_id }).delete();
       await tenantDb(trx, tenant).table(TEMPLATES).where({ template_id: existing.template_id }).delete();
       return { template_id: existing.template_id as string };
     });
@@ -485,7 +577,9 @@ export const getTicketTemplateForCreate = withAuth(async (
         throw new TicketTemplateError('This template belongs to a different client', 'NOT_AVAILABLE');
       }
       const items = await loadItemRows(trx, tenant, row.template_id);
-      const template = toTemplate(row, items);
+      const links = await loadLinkRows(trx, tenant, row.template_id);
+      const template = toTemplate(row, items, links);
+      const systems = template.links.length > 0 ? await loadTenantExternalSystems(trx, tenant) : [];
 
       const problems = await findTicketFieldReferenceProblems(trx, tenant, { fields: template });
       const bad = new Set(problems.map((problem) => problem.field));
@@ -519,6 +613,14 @@ export const getTicketTemplateForCreate = withAuth(async (
           };
         }),
         checklist: template.checklist.map((item) => ({ item_name: item.item_name, is_required: item.is_required })),
+        links: template.links.map((link) => {
+          const definition = resolveExternalSystem(systems, link.system);
+          return {
+            title: link.title,
+            href: renderExternalLinkUrl(definition, link),
+            systemLabel: definition?.label ?? link.system,
+          };
+        }),
         custom_field_count: countDuplicableCustomFields({ custom_fields: template.custom_fields }),
         warnings: problems.map((problem) => problem.message),
       } satisfies TicketTemplateForCreate;

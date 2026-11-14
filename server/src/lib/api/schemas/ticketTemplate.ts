@@ -18,6 +18,19 @@ const checklistItemSchema = z.object({
   checklist_template_id: uuidSchema.nullable().optional(),
 }).strict();
 
+/**
+ * Documentation link carried by a template; always copied onto tickets as a `reference`, so there is
+ * no `relationship` field. Mirrors `ticketTemplateLinkSchema` in packages/tickets.
+ */
+const templateLinkSchema = z.object({
+  system: z.string().trim().min(1, 'System is required').max(100),
+  external_id: z.string().trim().min(1, 'External ID is required').max(2000),
+  realm: z.string().max(500).nullable().optional(),
+  url: z.string().trim().url().refine((value) => /^https?:\/\//i.test(value), 'URL must use http or https').nullable().optional(),
+  title: z.string().max(500).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+}).strict();
+
 export const createTicketTemplateSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   /** Admin note about the template; never copied to tickets. */
@@ -39,6 +52,17 @@ export const createTicketTemplateSchema = z.object({
   offer_for_manual_use: z.boolean().optional(),
   /** The whole checklist: an update replaces the stored items with this list. */
   checklist: z.array(checklistItemSchema).max(200).optional(),
+  /** Documentation links, copied onto each created ticket as references. An update replaces the stored list. */
+  links: z.array(templateLinkSchema).max(50).optional().superRefine((links, ctx) => {
+    const seen = new Set<string>();
+    (links ?? []).forEach((link, index) => {
+      const key = `${link.system.trim()}\u0000${link.external_id.trim()}`;
+      if (seen.has(key)) {
+        ctx.addIssue({ code: 'custom', path: [index], message: 'Duplicate documentation link' });
+      }
+      seen.add(key);
+    });
+  }),
 }).strict();
 
 /** PUT replaces the template wholesale, plus the optional activate/deactivate flag. */
