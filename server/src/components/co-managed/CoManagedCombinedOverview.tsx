@@ -57,7 +57,7 @@ export default function CoManagedCombinedOverview({ search, admitted }: { search
       render: (_value, row) => row.usedSeats ?? '—' },
     { title: t('coManaged.overview.seatsAllocated', { defaultValue: 'Seats allocated' }), dataIndex: 'seats', sortable: false,
       render: (_value, row) => row.seats },
-    { title: t('coManaged.overview.actions', { defaultValue: 'Actions' }), dataIndex: 'key', id: 'actions', sortable: false,
+    { title: t('coManaged.overview.actions', { defaultValue: 'Actions' }), dataIndex: 'key', id: 'actions', sortable: false, minWidth: '140px',
       render: (_value, row) => admitted ? <Button id={`co-managed-overview-manage-${row.key}`} variant="outline" size="sm" asChild>
         <Link href={hrefFor(row)}>{t('coManaged.client.viewDetails', { defaultValue: 'View details' })}</Link></Button> : null },
   ];

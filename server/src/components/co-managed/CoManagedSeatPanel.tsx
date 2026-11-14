@@ -66,8 +66,10 @@ export default function CoManagedSeatPanel({ panel, canManage, idPrefix, onChang
         : row.expired ? t('coManaged.seat.technicians.expired', { defaultValue: 'Invitation expired' })
           : t('coManaged.seat.technicians.invited', { defaultValue: 'Invited' }) },
     ...(canManage ? [{ title: t('coManaged.overview.actions', { defaultValue: 'Actions' }), dataIndex: 'assignmentId', id: 'actions', sortable: false,
+      // Two buttons side by side: without a floor the table squeezed them to "esen" and "ithdra".
+      minWidth: '200px',
       render: (_value: unknown, row: CoManagedSeatTechnicianRow) => row.state === 'invited' ? (
-        <div className="flex gap-2">
+        <div className="flex gap-2 whitespace-nowrap">
           <Button id={`${idPrefix}-resend-${row.assignmentId}`} size="sm" variant="outline" disabled={busy}
             onClick={() => void run(async () => {
               const result = await resendCoManagedSeatInvitationAction({ assignmentId: row.assignmentId });
