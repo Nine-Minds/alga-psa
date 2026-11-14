@@ -190,6 +190,8 @@ const config: Config = {
         slow: 'var(--duration-slow)',
       },
       borderColor: {
+        // A border with no colour class follows the palette instead of Tailwind's fixed gray-200.
+        DEFAULT: 'rgb(var(--color-border-200))',
         main: {
           base: 'rgb(var(--color-border-base))',
           50: 'rgb(var(--color-border-50))',
