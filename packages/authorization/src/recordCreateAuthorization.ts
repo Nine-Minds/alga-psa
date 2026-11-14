@@ -14,6 +14,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { resolveAuthorizationSubject } from './subject/resolver';
 import type { SubjectUserInput } from './subject/assemble';
 import { probeTenantAuthorizationScope } from './subject/tenantScope';
+import { resolveAppliedBuiltinResolvers } from './kernel/builtinRuleResolvers';
 import { tenantDb } from '@alga-psa/db';
 
 /**
@@ -38,6 +39,16 @@ export interface AuthorizeRecordCreateInput {
    */
   record: AuthorizationRecord | (() => Promise<AuthorizationRecord | null>);
   requestCache?: AuthorizationRequestCache;
+  /** Rows the record points at that must belong to its own client; see `assertRecordCreateAllowed`. */
+  references?: readonly ClientOwnedReference[];
+}
+
+/** A reference a written record makes to a row that must belong to the record's own client (a ticket's contact). */
+export interface ClientOwnedReference {
+  table: string;
+  idColumn: string;
+  clientColumn: string;
+  id: string | null | undefined;
 }
 
 const ALLOWED: AuthorizationMutationDecision = Object.freeze({ allowed: true, reasons: [] });
@@ -90,14 +101,35 @@ export function isRecordCreateDeniedError(error: unknown): error is RecordCreate
   return error instanceof Error && error.name === 'RecordCreateDeniedError';
 }
 
-/** Throws `RecordCreateDeniedError` (`Permission denied: Cannot create <label>`) when the subject may not create the candidate record. */
+/**
+ * Throws `RecordCreateDeniedError` (`Permission denied: Cannot create <label>`) when the subject may not create the
+ * candidate record, or, for a subject a built-in rule resolver governs (a co-managed seat technician), when a row the
+ * candidate points at (`references`: a ticket's contact) does not belong to the candidate's own client. The reference
+ * is read from the database, never taken from the request, and nothing is read for a subject no resolver governs.
+ */
 export async function assertRecordCreateAllowed(
   conn: Knex | Knex.Transaction,
   input: AuthorizeRecordCreateInput,
   label: string = input.resourceType
 ): Promise<void> {
-  const decision = await authorizeRecordCreate(conn, input);
+  const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
+  const decision = await authorizeRecordCreate(conn, { ...input, requestCache });
   if (!decision.allowed) throw new RecordCreateDeniedError(input.resourceType, label);
+
+  const references = (input.references ?? []).filter((reference) => reference.id);
+  if (references.length === 0 || typeof input.record === 'function' || isClientUserType(input.user.user_type)) return;
+  const tenantScope = await probeTenantAuthorizationScope(conn, input.tenant, requestCache);
+  if (tenantScope.resolverSubjects === false) return;
+  const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
+  const evaluation = { subject, resource: { type: input.resourceType, action: 'create' }, record: input.record, requestCache, knex: conn };
+  if (resolveAppliedBuiltinResolvers(evaluation).length === 0) return;
+  for (const reference of references) {
+    const row = await tenantDb(conn, input.tenant).table(reference.table)
+      .where(reference.idColumn, reference.id as string).first(reference.clientColumn);
+    if (!row || !input.record.clientId || row[reference.clientColumn] !== input.record.clientId) {
+      throw new RecordCreateDeniedError(input.resourceType, label);
+    }
+  }
 }
 
 export interface DocumentAssociationTarget {

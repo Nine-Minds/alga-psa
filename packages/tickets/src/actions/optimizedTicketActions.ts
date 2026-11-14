@@ -2755,6 +2755,9 @@ export async function updateTicketInTransaction(
         user,
         ticketId: id,
         action: 'update',
+        // A subject scoped to a client and boards (a co-managed seat technician) is also judged by where this
+        // write would leave the ticket, so an edit cannot move it, or give it a contact, outside that scope.
+        proposed: validatedData,
       });
     }
 

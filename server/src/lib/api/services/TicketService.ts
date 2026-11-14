@@ -1,4 +1,4 @@
-import { assertTicketCreateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
+import { assertTicketCreateAllowed, assertTicketUpdateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
 import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
@@ -2188,6 +2188,9 @@ export class TicketService extends BaseService<ITicket> {
       if (options.authorize) {
         await options.authorize(currentTicket as Record<string, any>, trx);
       }
+      // A subject scoped to a client and boards (a co-managed seat technician) must also be allowed where this
+      // write would leave the ticket; the hook above judges the stored row only.
+      await assertTicketUpdateAllowed(trx, context.tenant, subjectFromServiceContext(context), currentTicket as any, data as any);
 
       if (enteredAt !== undefined) {
         // Preserve the chronology enforced when historical comments and closes are created.

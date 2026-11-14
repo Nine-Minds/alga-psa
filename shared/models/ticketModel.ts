@@ -9,7 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
-import { recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
+import { recordSeatTicketCreated, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
@@ -1186,6 +1186,9 @@ export class TicketModel {
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
+
+    // A ticket a seat technician raises for their own client starts with client IT. Nothing is written for any other creator.
+    await recordSeatTicketCreated(trx, tenant, { ticket_id: ticketId, client_id: dbData.client_id, board_id: dbData.board_id }, userId);
 
     // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
     // board defaults); the mirror is then rewritten from the table.

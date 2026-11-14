@@ -178,3 +178,34 @@ export async function releaseSeatTicketOnMove(
   }
   return settled;
 }
+
+/**
+ * Called by the ticket creator in the transaction that inserts the ticket. A ticket a seat technician creates for
+ * their own client, on a board their arrangement shares, starts with client IT: they raised it, so the turn is
+ * theirs. Any other creator (MSP staff, a portal user, an inbound channel) writes nothing here, and the ticket
+ * starts with the MSP as it always has.
+ *
+ * Goes through `advanceSeatTicketWork`, the one writer of the work row. A tenant the `co-managed-seat` capability
+ * does not serve pays no statement (the verdict is cached per tenant); a client with no live arrangement pays one.
+ */
+export async function recordSeatTicketCreated(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticket: { ticket_id: string; client_id?: string | null; board_id?: string | null },
+  creatorUserId: string | null | undefined,
+): Promise<boolean> {
+  if (!creatorUserId || !ticket.client_id || !ticket.board_id) return false;
+  if (![tenant, ticket.ticket_id, creatorUserId].every((id) => uuid.test(id))) return false;
+  if (!await isCapabilityServed('co-managed-seat', tenant)) return false;
+  const sponsor = tenantDb(trx, tenant);
+  const arrangement = await liveSeatArrangement(sponsor, ticket.client_id, true);
+  if (!arrangement) return false;
+  const creator = await sponsor.table('co_managed_seat_assignments')
+    .where({ user_id: creatorUserId, arrangement_id: arrangement.arrangement_id, state: 'active' }).first('assignment_id');
+  if (!creator) return false;
+  const shared = await sponsor.table('co_managed_seat_board_scopes')
+    .where({ arrangement_id: arrangement.arrangement_id, board_id: ticket.board_id }).first('board_id');
+  if (!shared) return false;
+  await advanceSeatTicketWork(sponsor, { tenant, ticket_id: ticket.ticket_id }, arrangement.arrangement_id, 'client_it', undefined, true);
+  return true;
+}

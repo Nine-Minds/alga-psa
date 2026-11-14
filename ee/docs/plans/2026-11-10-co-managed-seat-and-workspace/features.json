@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "A seat technician creates a ticket only for their own client, on a board that allows creation, with a contact of their own client; responsibility starts with client IT.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "A seat technician edits a ticket's native fields but cannot change its client or move it to an out-of-scope board.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]

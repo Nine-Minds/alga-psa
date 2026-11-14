@@ -18,7 +18,7 @@ import {
   authorizationEvaluationSnapshotQuery, bundleNarrowingRuleFromRow, loadAuthorizationEvaluationSnapshot,
   type AuthorizationEvaluationSnapshot,
 } from './bundles/service';
-import { builtinResolverSubjectsExistExpression, loadBuiltinResolverFacts } from './kernel/builtinRuleResolvers';
+import { builtinResolverSubjectsExistExpression, loadBuiltinResolverFacts, resolveAppliedBuiltinResolvers } from './kernel/builtinRuleResolvers';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
@@ -205,6 +205,36 @@ async function resolveTicketRecord(
  * when the principal is not allowed to access this specific ticket (mapped to
  * 403). Returns the resolved row so callers can reuse it.
  */
+/** The columns of a ticket that decide where it sits: its client, its board and the contact it is for. */
+export type TicketProposedPlacement = Pick<Partial<ITicket>, 'client_id' | 'board_id' | 'contact_name_id'>;
+
+async function assertProposedPlacementAllowed(
+  trx: Conn,
+  tenant: string,
+  context: TicketAuthorizationContext,
+  evaluation: Parameters<AuthorizationKernel['authorizeMutation']>[0],
+  current: TicketRecordRow,
+  proposed: TicketProposedPlacement,
+): Promise<void> {
+  const next: TicketRecordRow = { ...current };
+  for (const key of ['client_id', 'board_id', 'contact_name_id'] as const) {
+    if (proposed[key] !== undefined) next[key] = proposed[key] as never;
+  }
+  const record = toTicketAuthorizationRecord(next as Partial<ITicket>);
+  const postImage = { ...evaluation, record };
+  if (resolveAppliedBuiltinResolvers(postImage).length === 0) return;
+  const decision = await context.authorizationKernel.authorizeMutation(postImage);
+  let allowed = decision.allowed;
+  const contactSet = proposed.contact_name_id !== undefined && proposed.contact_name_id !== null
+    && proposed.contact_name_id !== current.contact_name_id;
+  if (allowed && contactSet) {
+    const contact = await tenantScopedTable(trx, tenant, 'contacts')
+      .where({ contact_name_id: proposed.contact_name_id }).first('client_id');
+    allowed = Boolean(contact && record.clientId && contact.client_id === record.clientId);
+  }
+  if (!allowed) throw new Error('Permission denied: Cannot access ticket');
+}
+
 export async function authorizeTicketRecordAccess(input: {
   trx: Conn;
   tenant: string;
@@ -213,6 +243,14 @@ export async function authorizeTicketRecordAccess(input: {
   action: 'read' | 'update' | 'delete';
   /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
   ticketRow?: TicketRecordRow;
+  /**
+   * The placement an `update` would leave the ticket in. For a subject a built-in rule resolver governs (a
+   * co-managed seat technician) the ticket as the write leaves it must also be allowed, and a contact the write
+   * sets must belong to the ticket's client (read from the database). The decision above reads the stored row,
+   * so without this a subject could move a ticket they may work to a board or client they may not. Nothing
+   * else is evaluated, and no statement is issued, for any subject no resolver governs.
+   */
+  proposed?: TicketProposedPlacement;
 }): Promise<TicketRecordRow> {
   const ticket =
     input.ticketRow ?? (await resolveTicketRecord(input.trx, input.tenant, input.ticketId));
@@ -242,6 +280,10 @@ export async function authorizeTicketRecordAccess(input: {
 
   if (!decision.allowed) {
     throw new Error('Permission denied: Cannot access ticket');
+  }
+
+  if (input.action === 'update' && input.proposed) {
+    await assertProposedPlacementAllowed(input.trx, input.tenant, context, evaluation, ticket, input.proposed);
   }
 
   if (input.action === 'delete' && !(await hasPermission(
