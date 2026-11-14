@@ -1213,6 +1213,7 @@
     "banner_one": "Se puso en cuarentena {{count}} correo entrante de este ticket",
     "banner_many": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
     "banner_other": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
-    "bannerLink": "Revisar correo en cuarentena"
+    "bannerLink": "Revisar correo en cuarentena",
+    "bannerAskAdmin": "Pida a un administrador de correo que los revise."
   }
 }

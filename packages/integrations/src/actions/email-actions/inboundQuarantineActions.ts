@@ -6,8 +6,8 @@
  *
  * Authorization follows the inbound-email settings actions: client-portal users
  * are rejected, and the caller must hold `ticket_settings:update`
- * (requireOutboundEmailAdmin). The same guard covers the ticket banner count so
- * the banner never advertises a queue the viewer cannot open. Every query is
+ * (requireOutboundEmailAdmin) to list or dismiss. The ticket banner count is
+ * wider (internal user + `ticket:read`) and reports whether the queue is openable. Every query is
  * tenant-scoped through tenantDb. Rows never contain message bodies or headers.
  */
 
@@ -20,7 +20,8 @@ import {
   type QuarantineStatus,
 } from '@alga-psa/shared/services/email/inboundQuarantineConstants';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
-import { requireOutboundEmailAdmin } from './mspOutboundEmailAccess';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { isClientUser, requireOutboundEmailAdmin } from './mspOutboundEmailAccess';
 
 export interface InboundQuarantineRow {
   id: string;
@@ -138,20 +139,31 @@ export const dismissInboundQuarantine = withAuth(async (
   return { success: true };
 });
 
-/** Count of OPEN quarantined emails matched to a ticket (staff-only ticket banner). */
+/**
+ * Count of OPEN quarantined emails matched to a ticket (staff-only ticket banner).
+ *
+ * Gated on MSP-internal user + `ticket:read` so the technicians working the
+ * ticket see it; client-portal users are refused. `canOpenQueue` tells the
+ * banner whether this viewer may open the (admin-only) queue page.
+ */
 export const getOpenQuarantineCountForTicket = withAuth(async (
   user,
   { tenant },
   ticketId: string
-): Promise<{ count: number } | ReturnType<typeof permissionError> | ReturnType<typeof actionError>> => {
+): Promise<{ count: number; canOpenQueue: boolean } | ReturnType<typeof permissionError> | ReturnType<typeof actionError>> => {
   const { knex } = await createTenantKnex();
-  const access = await requireOutboundEmailAdmin(user, knex);
-  if (!access.allowed) return permissionError(access.message, DENIED_KEY);
+  if (isClientUser(user) || (user as any)?.user_type !== 'internal') {
+    return permissionError('Permission denied', DENIED_KEY);
+  }
+  if (!await hasPermission(user, 'ticket', 'read', knex)) {
+    return permissionError('Permission denied: Cannot view tickets', DENIED_KEY);
+  }
   if (!UUID_PATTERN.test(ticketId ?? '')) return actionError('Invalid ticket');
 
   const row = await tenantDb(knex, tenant).table('inbound_email_quarantine')
     .where({ ticket_id: ticketId, status: 'open' })
     .count<{ count: string }[]>('id as count')
     .first();
-  return { count: Number(row?.count ?? 0) };
+  const admin = await requireOutboundEmailAdmin(user, knex);
+  return { count: Number(row?.count ?? 0), canOpenQueue: admin.allowed };
 });

@@ -113,7 +113,7 @@ describe('subject truncation and Message-ID hashing', () => {
 
 describe('surfaceInboundQuarantine', () => {
   it.each(QUARANTINE_REASONS)('reason %s persists one row and produces exactly one dispatch', async (reason) => {
-    const notifier = vi.fn(async () => undefined);
+    const notifier = vi.fn(async (_p: any) => undefined);
     registerInboundQuarantineNotifier(notifier);
 
     await surfaceInboundQuarantine(input({ reason, messageId: `<${reason}@mail>` }));
@@ -122,6 +122,15 @@ describe('surfaceInboundQuarantine', () => {
     expect(state.rows[0]).toMatchObject({ reason, status: 'open', mailbox: 'support@msp.example', ticket_number: 'TIC-1042' });
     expect(notifier).toHaveBeenCalledTimes(1);
     expect(notifier.mock.calls[0][0]).toMatchObject({ tenant: TENANT, reason, mailbox: 'support@msp.example', ticketNumber: 'TIC-1042' });
+  });
+
+  it('persists a reason outside the original closed set (a future reason is never dropped)', async () => {
+    const notifier = vi.fn(async (_p: any) => undefined);
+    registerInboundQuarantineNotifier(notifier);
+    await surfaceInboundQuarantine(input({ reason: 'some_future_reason' as any, messageId: '<future@mail>' }));
+    expect(state.rows).toHaveLength(1);
+    expect(state.rows[0].reason).toBe('some_future_reason');
+    expect(notifier).toHaveBeenCalledTimes(1);
   });
 
   it('stores the row even when no notifier is registered (persistence does not depend on the hook)', async () => {
@@ -139,7 +148,7 @@ describe('surfaceInboundQuarantine', () => {
   });
 
   it('redelivery of the same Message-ID dedupes: one row, one notification', async () => {
-    const notifier = vi.fn(async () => undefined);
+    const notifier = vi.fn(async (_p: any) => undefined);
     registerInboundQuarantineNotifier(notifier);
     await surfaceInboundQuarantine(input());
     await surfaceInboundQuarantine(input({ messageId: 'abc@mail.example' }));
@@ -156,7 +165,7 @@ describe('surfaceInboundQuarantine', () => {
 
   it('a failing database is logged and swallowed, never thrown into the caller', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const notifier = vi.fn(async () => undefined);
+    const notifier = vi.fn(async (_p: any) => undefined);
     registerInboundQuarantineNotifier(notifier);
     state.failDb = true;
     await expect(surfaceInboundQuarantine(input())).resolves.toBeUndefined();

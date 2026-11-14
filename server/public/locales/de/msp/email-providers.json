@@ -1212,6 +1212,7 @@
     },
     "banner_one": "{{count}} eingehende E-Mail zu diesem Ticket wurde unter Quarantäne gestellt",
     "banner_other": "{{count}} eingehende E-Mails zu diesem Ticket wurden unter Quarantäne gestellt",
-    "bannerLink": "E-Mails in Quarantäne prüfen"
+    "bannerLink": "E-Mails in Quarantäne prüfen",
+    "bannerAskAdmin": "Bitten Sie eine E-Mail-Administratorin oder einen E-Mail-Administrator, sie zu prüfen."
   }
 }

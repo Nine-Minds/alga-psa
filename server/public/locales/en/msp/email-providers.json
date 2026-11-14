@@ -1212,6 +1212,7 @@
     },
     "banner_one": "{{count}} inbound email to this ticket was quarantined",
     "banner_other": "{{count}} inbound emails to this ticket were quarantined",
-    "bannerLink": "Review quarantined email"
+    "bannerLink": "Review quarantined email",
+    "bannerAskAdmin": "Ask an email administrator to review them."
   }
 }

@@ -3348,6 +3348,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(Object.keys(rows[0])).not.toContain('body');
     expect(JSON.stringify(rows[0])).not.toContain('Must never be stored');
 
+    // The reason column is unconstrained: a reason added to QUARANTINE_REASONS later persists with no migration.
+    await expect(tenantTable('inbound_email_quarantine').insert({
+      tenant: tenantId, id: uuidv4(), provider_id: providerId, mailbox, sender: internalEmail, subject: 's',
+      received_at: db.fn.now(), reason: 'some_future_reason', matched_by: null, ticket_id: ticketId,
+      message_id_hash: 'f'.repeat(64), status: 'open',
+    })).resolves.toBeDefined();
+    await tenantTable('inbound_email_quarantine').where({ message_id_hash: 'f'.repeat(64) }).delete();
+
     // Redelivery of the same Message-ID must not create a second row.
     const second = await deliver();
     expect(second.outcome).toBe('quarantined');

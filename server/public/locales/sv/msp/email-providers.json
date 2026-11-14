@@ -1212,6 +1212,7 @@
     },
     "banner_one": "{{count}} inkommande e-post till detta ärende har satts i karantän",
     "banner_other": "{{count}} inkommande e-postmeddelanden till detta ärende har satts i karantän",
-    "bannerLink": "Granska e-post i karantän"
+    "bannerLink": "Granska e-post i karantän",
+    "bannerAskAdmin": "Be en e-postadministratör granska dem."
   }
 }

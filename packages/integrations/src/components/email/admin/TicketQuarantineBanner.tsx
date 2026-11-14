@@ -6,7 +6,7 @@
  *
  * MSP-only by construction: it is rendered solely from the MSP ticket page
  * (server/src/app/msp/tickets/[id]/page.tsx), and the backing action rejects
- * client-portal users and users without ticket_settings:update. It is not
+ * client-portal users and non-internal users (internal + ticket:read required). It is not
  * imported by anything under the client portal.
  */
 
@@ -20,13 +20,16 @@ import { getOpenQuarantineCountForTicket } from '../../../actions/email-actions/
 export function TicketQuarantineBanner({ ticketId }: { ticketId: string }) {
   const { t } = useTranslation('msp/email-providers');
   const [count, setCount] = useState(0);
+  const [canOpenQueue, setCanOpenQueue] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     getOpenQuarantineCountForTicket(ticketId)
       .then((result) => {
         if (cancelled || isActionPermissionError(result) || isActionMessageError(result)) return;
-        setCount((result as { count: number }).count);
+        const ok = result as { count: number; canOpenQueue: boolean };
+        setCount(ok.count);
+        setCanOpenQueue(ok.canOpenQueue);
       })
       .catch(() => undefined); // advisory banner: never break the ticket view
     return () => { cancelled = true; };
@@ -43,12 +46,16 @@ export function TicketQuarantineBanner({ ticketId }: { ticketId: string }) {
             defaultValue: '{{count}} inbound emails to this ticket were quarantined',
           })}
         </span>
-        <Link
-          href={`/msp/settings/email/quarantine?ticketId=${encodeURIComponent(ticketId)}`}
-          className="font-medium underline"
-        >
-          {t('quarantine.bannerLink', { defaultValue: 'Review quarantined email' })}
-        </Link>
+        {canOpenQueue ? (
+          <Link
+            href={`/msp/settings/email/quarantine?ticketId=${encodeURIComponent(ticketId)}`}
+            className="font-medium underline"
+          >
+            {t('quarantine.bannerLink', { defaultValue: 'Review quarantined email' })}
+          </Link>
+        ) : (
+          <span>{t('quarantine.bannerAskAdmin', { defaultValue: 'Ask an email administrator to review them.' })}</span>
+        )}
       </AlertDescription>
     </Alert>
   );

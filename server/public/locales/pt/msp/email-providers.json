@@ -1213,6 +1213,7 @@
     "banner_one": "{{count}} e-mail recebido para este ticket foi colocado em quarentena",
     "banner_many": "{{count}} e-mails recebidos para este ticket foram colocados em quarentena",
     "banner_other": "{{count}} e-mails recebidos para este ticket foram colocados em quarentena",
-    "bannerLink": "Revisar e-mails em quarentena"
+    "bannerLink": "Revisar e-mails em quarentena",
+    "bannerAskAdmin": "Peça a um administrador de e-mail que os revise."
   }
 }

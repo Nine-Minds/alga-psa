@@ -9,9 +9,11 @@
  * subject, the mailbox, the reason, the matched ticket, and a sha256 of the
  * Message-ID used to dedupe redelivery (unique per tenant + provider + hash).
  *
- * `reason` is a closed set; it mirrors QUARANTINE_REASONS in
- * shared/services/email/inboundQuarantine.ts. Adding a reason needs a new
- * migration that replaces the check constraint.
+ * `reason` is deliberately NOT constrained in the database. The closed set is
+ * QUARANTINE_REASONS in shared/services/email/inboundQuarantineConstants.ts
+ * (enforced by the TypeScript type); a CHECK here would make an INSERT for a
+ * newly added reason fail, and the best-effort surfacing would swallow that and
+ * lose the quarantine. Adding a reason therefore needs no migration.
  *
  * Citus: new table, no pre-existing rows. Primary key and every index lead with
  * the distribution column (`tenant`). No foreign keys on purpose: a quarantine
@@ -56,17 +58,6 @@ exports.up = async function up(knex) {
         indexName: 'inbound_email_quarantine_dedupe_unique',
       });
     });
-    await knex.raw(`
-      ALTER TABLE ${TABLE}
-      ADD CONSTRAINT inbound_email_quarantine_reason_check
-      CHECK (reason IN (
-        'unauthorized_thread_header_sender',
-        'reply_outside_sender_audience',
-        'co_managed_token_refused',
-        'co_managed_token_unserved',
-        'co_managed_sender_unauthenticated'
-      ))
-    `);
     await knex.raw(`
       ALTER TABLE ${TABLE}
       ADD CONSTRAINT inbound_email_quarantine_status_check

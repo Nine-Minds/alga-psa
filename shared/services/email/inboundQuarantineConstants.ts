@@ -4,10 +4,11 @@
  */
 
 /**
- * The closed set of quarantine reasons. Adding a reason is one entry here: the
- * result type, the DB check constraint (see the migration, which must be
- * extended with a new migration) and the human labels (locale `quarantine.reasons.*`)
- * are all keyed off this list.
+ * The closed set of quarantine reasons (enforced by the TypeScript type only).
+ * Adding a reason is one entry here: the result type follows, and no migration
+ * is needed because the reason column has no CHECK constraint. Optionally add a
+ * locale label `quarantine.reasons.<reason>` and a plain-language description in
+ * the notification service; both fall back to generic text when missing.
  */
 export const QUARANTINE_REASONS = [
   'unauthorized_thread_header_sender',

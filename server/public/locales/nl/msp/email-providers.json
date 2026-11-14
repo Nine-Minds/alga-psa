@@ -1212,6 +1212,7 @@
     },
     "banner_one": "{{count}} inkomende e-mail voor dit ticket is in quarantaine geplaatst",
     "banner_other": "{{count}} inkomende e-mails voor dit ticket zijn in quarantaine geplaatst",
-    "bannerLink": "E-mail in quarantaine bekijken"
+    "bannerLink": "E-mail in quarantaine bekijken",
+    "bannerAskAdmin": "Vraag een e-mailbeheerder om ze te bekijken."
   }
 }
