@@ -60,10 +60,17 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 
 vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
-vi.mock('@/lib/api/controllers/authorizationKernel', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/lib/api/controllers/authorizationKernel')>()),
-  authorizeApiResourceRead: vi.fn(async () => ({ allowed: true, redactedFields: [] })),
-}));
+vi.mock('@/lib/api/controllers/authorizationKernel', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/controllers/authorizationKernel')>();
+  // Read is allowed with no redactions: run the real projector without a principal so it returns a genuine
+  // branded projection of the unredacted row (the kernel is skipped) instead of touching the stubbed database.
+  const withoutPrincipal = <T extends object>(input: T) => ({ ...input, user: undefined, userId: undefined, apiKeyId: undefined });
+  return {
+    ...actual,
+    projectApiResourceRead: vi.fn(async (input: any) => actual.projectApiResourceRead(withoutPrincipal(input))),
+    projectApiResourceReads: vi.fn(async (input: any) => actual.projectApiResourceReads(withoutPrincipal(input))),
+  };
+});
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/db', () => ({
   runWithTenant: async (_tenant: string, fn: () => Promise<unknown>) => fn(),

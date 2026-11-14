@@ -27,6 +27,7 @@ import {
 } from '../../auth/rbac';
 import {
   authorizeApiResource,
+  isAuthorizedProjectionFieldReadable,
   projectApiResourceRead,
   projectApiResourceReads,
   reprojectUnderDecision,
@@ -359,7 +360,14 @@ export class ApiTicketController extends ApiBaseController {
     return linkId;
   }
 
+  /**
+   * Aggregates over authorized ticket projections. An aggregate is emitted only when every source field it is computed
+   * from is readable on every row under that row's retained policy; otherwise it is omitted, never counted from the
+   * redacted (absent) values, which would report fabricated numbers (e.g. hidden assignees counted as unassigned).
+   */
   private buildTicketStatsFromAuthorizedRows(tickets: AuthorizedProjection<Record<string, any>>[]) {
+    const visible = (fields: string[]) => tickets.every((ticket) =>
+      fields.every((field) => isAuthorizedProjectionFieldReadable(ticket, field, TICKET_RECORD_SOURCE)));
     const now = new Date();
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
@@ -370,48 +378,31 @@ export class ApiTicketController extends ApiBaseController {
     const startOfMonth = new Date(startOfToday);
     startOfMonth.setDate(startOfMonth.getDate() - 30);
 
-    const ticketsByStatus = tickets.reduce((acc: Record<string, number>, ticket) => {
-      const key = String(ticket.status_id ?? ticket.status_name ?? 'unknown');
-      acc[key] = (acc[key] ?? 0) + 1;
+    const countBy = (key: (ticket: Record<string, any>) => string | null) => tickets.reduce((acc: Record<string, number>, ticket) => {
+      const value = key(ticket);
+      if (value === null) return acc;
+      acc[value] = (acc[value] ?? 0) + 1;
       return acc;
     }, {});
 
-    const ticketsByPriority = tickets.reduce((acc: Record<string, number>, ticket) => {
-      const key = String(ticket.priority_name ?? 'unknown');
-      acc[key] = (acc[key] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    const ticketsByCategory = tickets.reduce((acc: Record<string, number>, ticket) => {
-      if (!ticket.category_name) {
-        return acc;
-      }
-      const key = String(ticket.category_name);
-      acc[key] = (acc[key] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    const ticketsByBoard = tickets.reduce((acc: Record<string, number>, ticket) => {
-      const key = String(ticket.board_name ?? 'unknown');
-      acc[key] = (acc[key] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    return {
-      total_tickets: tickets.length,
-      open_tickets: tickets.filter((ticket) => ticket.status_is_closed === false).length,
-      closed_tickets: tickets.filter((ticket) => ticket.status_is_closed === true).length,
-      unassigned_tickets: tickets.filter((ticket) => !ticket.assigned_to).length,
-      overdue_tickets: 0,
-      tickets_by_status: ticketsByStatus,
-      tickets_by_priority: ticketsByPriority,
-      tickets_by_category: ticketsByCategory,
-      tickets_by_board: ticketsByBoard,
-      average_resolution_time: null,
-      tickets_created_today: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfToday).length,
-      tickets_created_this_week: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfWeek).length,
-      tickets_created_this_month: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfMonth).length,
-    };
+    const stats: Record<string, unknown> = { total_tickets: tickets.length };
+    if (visible(['status_is_closed'])) {
+      stats.open_tickets = tickets.filter((ticket) => ticket.status_is_closed === false).length;
+      stats.closed_tickets = tickets.filter((ticket) => ticket.status_is_closed === true).length;
+    }
+    if (visible(['status_is_closed', 'due_date'])) stats.overdue_tickets = 0;
+    if (visible(['assigned_to', 'assigned_to_name'])) stats.unassigned_tickets = tickets.filter((ticket) => !ticket.assigned_to).length;
+    if (visible(['status_id', 'status_name'])) stats.tickets_by_status = countBy((ticket) => String(ticket.status_id ?? ticket.status_name ?? 'unknown'));
+    if (visible(['priority_name'])) stats.tickets_by_priority = countBy((ticket) => String(ticket.priority_name ?? 'unknown'));
+    if (visible(['category_name'])) stats.tickets_by_category = countBy((ticket) => (ticket.category_name ? String(ticket.category_name) : null));
+    if (visible(['board_name'])) stats.tickets_by_board = countBy((ticket) => String(ticket.board_name ?? 'unknown'));
+    if (visible(['status_is_closed', 'entered_at'])) stats.average_resolution_time = null;
+    if (visible(['entered_at'])) {
+      stats.tickets_created_today = tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfToday).length;
+      stats.tickets_created_this_week = tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfWeek).length;
+      stats.tickets_created_this_month = tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfMonth).length;
+    }
+    return stats;
   }
 
   list() {
