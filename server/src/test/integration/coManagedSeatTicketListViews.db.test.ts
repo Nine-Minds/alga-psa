@@ -11,7 +11,8 @@ import type { Knex } from 'knex';
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { createCoManagedSeatArrangement, setCoManagedSeatBoardScope } from '@alga-psa/co-managed';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
-import '@alga-psa/co-managed/seatTicketListViews';
+// Registers the seat list views the way the server does (instrumentation imports ./capability).
+import '@alga-psa/co-managed/capability';
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { TICKET_STATUS_FILTER_ALL } from '@alga-psa/tickets/lib';
 import type { ITicketListFilters } from '@alga-psa/types';
