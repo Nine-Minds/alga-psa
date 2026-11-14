@@ -3,14 +3,15 @@ import { probeTenantAuthorizationScope } from '@alga-psa/authorization/subject/t
 import type { AuthorizationRequestCache } from '@alga-psa/authorization/kernel';
 import { loadProductPrincipal } from '@shared/services/productPrincipal';
 import { CO_MANAGED_SEAT_SURFACE } from '@shared/services/productSurfaceKinds';
-import type { CoManagedTimeEntryMode } from '@alga-psa/co-managed/timeEntryBillingMode';
+import type { CoManagedTimeEntryMode } from '@alga-psa/types';
 
-// A1 bridge. The time-entry call sites may not import @alga-psa/co-managed (src/test/timeSourceCoverage.static.test.ts);
-// this module is the explicit, allowlisted exception, because seat (operational) mode is decided from the principal and
-// written natively, not through a time source. See the allowlist in that test for the rule and why.
+// The single place time-entry call sites get `operationalTimeEntryFields` from. It bridges to @alga-psa/types, where
+// the seat (operational) mode primitives live; nothing under this package imports @alga-psa/co-managed
+// (src/test/timeSourceCoverage.static.test.ts enforces it, type-only imports included). Seat mode is decided from
+// the principal and written natively, not through a time source.
 // LEVERAGE: friction time-source-seam-vs-principal-mode — operational mode is a per-principal axis on native time,
 // which the time-source seam (per work item / tenant) does not model; if a third principal-driven mode appears, give it its own seam.
-export { operationalTimeEntryFields, serviceRequiredForTimeEntry } from '@alga-psa/co-managed/timeEntryBillingMode';
+export { operationalTimeEntryFields, serviceRequiredForTimeEntry } from '@alga-psa/types';
 export type { CoManagedTimeEntryMode };
 
 /**

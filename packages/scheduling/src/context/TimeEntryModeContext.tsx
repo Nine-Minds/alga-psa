@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
-import type { CoManagedTimeEntryMode } from '@alga-psa/co-managed/timeEntryBillingMode';
+import type { CoManagedTimeEntryMode } from '@alga-psa/types';
 
 /**
  * The billing mode the SERVER resolved for the signed-in viewer (see `resolveTimeEntryMode`), handed down by a
