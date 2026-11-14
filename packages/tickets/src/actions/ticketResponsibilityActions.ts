@@ -6,7 +6,7 @@ import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
-import { resolveTicketResponsibility, TicketResponsibilityError, type TicketResponsibilityState } from '../lib/ticketResponsibility';
+import { resolveTicketResponsibility, ticketResponsibilityRefusalCode, type TicketResponsibilityState } from '../lib/ticketResponsibility';
 import { assertTicketReadable } from './optimizedTicketActions';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
@@ -73,10 +73,9 @@ export const handTicketToClientIt = withAuth(async (
       ? { state }
       : actionError(HANDOFF_REFUSALS.NO_SEAT_ARRANGEMENT.message, HANDOFF_REFUSALS.NO_SEAT_ARRANGEMENT.key);
   } catch (error) {
-    if (error instanceof TicketResponsibilityError) {
-      const refusal = HANDOFF_REFUSALS[error.code];
-      if (refusal) return actionError(refusal.message, refusal.key);
-    }
+    const code = ticketResponsibilityRefusalCode(error);
+    const refusal = code ? HANDOFF_REFUSALS[code] : undefined;
+    if (refusal) return actionError(refusal.message, refusal.key);
     const expected = ticketActionErrorFrom(error);
     if (expected) return expected;
     throw error;

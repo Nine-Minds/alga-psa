@@ -47,6 +47,20 @@ export class TicketResponsibilityError extends Error {
   }
 }
 
+/**
+ * The refusal code of a `TicketResponsibilityError`, or null. Matched by name and code, not `instanceof`:
+ * the provider and the action calling it can hold different copies of this module (split Next bundles),
+ * and an instance of one copy is not an instance of the other's class.
+ */
+export function ticketResponsibilityRefusalCode(error: unknown): string | null {
+  if (error instanceof TicketResponsibilityError) return error.code;
+  if (error instanceof Error && error.name === 'TicketResponsibilityError') {
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : null;
+  }
+  return null;
+}
+
 export interface TicketResponsibilityProvider {
   /** Whether the reader is offered the responsibility column and filter. */
   offered(input: TicketResponsibilityInput): Promise<boolean> | boolean;

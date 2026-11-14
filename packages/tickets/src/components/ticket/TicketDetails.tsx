@@ -3973,7 +3973,11 @@ const handleClose = () => {
         <TicketResponsibilityControl
             ticketId={ticket.ticket_id}
             state={initialSeatResponsibility}
-            onChange={() => onSaved?.()}
+            onChange={() => {
+                // The handoff also moved the assignee and paused the SLA clocks: show the ticket as it now stands.
+                void refreshTicketSnapshot(['assigned_to']);
+                onSaved?.();
+            }}
         />
     ) : null;
 
