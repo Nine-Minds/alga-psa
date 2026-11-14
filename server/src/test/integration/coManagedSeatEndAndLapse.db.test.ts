@@ -127,6 +127,9 @@ describeDb('ending a seat arrangement and lapse', { shuffle: false }, () => {
     const before = await rows();
     expect(await end(w)).toEqual({ arrangementId: w.arrangementId, ended: false, releasedSeats: 0, deactivatedTechnicians: 0, ticketsReturned: 0 });
     expect(await rows()).toEqual(before);
+    // The confirmation for an ended arrangement lists nothing left to do.
+    expect(await previewCoManagedSeatArrangementEnd(db, { sponsorTenant: w.sponsor, arrangementId: w.arrangementId }))
+      .toMatchObject({ state: 'ended', technicians: 0, pendingInvitations: 0, ticketsWithClientIt: 0, seatsToRelease: 0 });
 
     // A technician of the ended arrangement is refused on every reactivation path's one admission.
     expect(await admit(w.sponsor, first)).toMatchObject({ ok: false, code: 'SEAT_ARRANGEMENT_REFUSED', error: 'This seat arrangement has ended.' });
@@ -154,7 +157,10 @@ describeDb('ending a seat arrangement and lapse', { shuffle: false }, () => {
     const w = await world();
     const invitation = await inviteCoManagedSeatTechnician(db, { sponsorTenant: w.sponsor, arrangementId: w.arrangementId,
       email: `invitee.${randomUUID().slice(0, 8)}@client.example`, firstName: 'Ira' });
+    const preview = () => previewCoManagedSeatArrangementEnd(db, { sponsorTenant: w.sponsor, arrangementId: w.arrangementId });
+    expect(await preview()).toMatchObject({ technicians: 2, pendingInvitations: 1 });
     await end(w);
+    expect(await preview()).toMatchObject({ technicians: 0, pendingInvitations: 0 });
     expect((await db('user_invitations').where({ tenant: w.sponsor, invitation_id: invitation.invitation_id }).first(db.raw('expires_at <= now() as expired'))).expired).toBe(true);
     await expect(endCoManagedSeatArrangement(db, { sponsorTenant: w.sponsor, arrangementId: randomUUID(), actorUserId: w.staff }))
       .rejects.toMatchObject({ code: 'ARRANGEMENT_NOT_FOUND' });

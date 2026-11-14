@@ -163,8 +163,13 @@ export async function previewCoManagedSeatArrangementEnd(
     arrangementId: input.arrangementId,
     clientName: client?.client_name ?? null,
     state: arrangement.state,
-    technicians: await count(live().where('state', 'active')),
-    pendingInvitations: await count(live().where('state', 'invited')),
+    // The same rows the end command changes, so a replay of an ended arrangement previews nothing:
+    // its assignments stay active by design, but their users are already inactive and their
+    // invitations already withdrawn.
+    technicians: await count(live().where('state', 'active').whereIn('user_id',
+      sponsor.table('users').where('is_inactive', false).select('user_id'))),
+    pendingInvitations: await count(live().where('state', 'invited').whereIn('invitation_id',
+      sponsor.table('user_invitations').whereNull('used_at').where('expires_at', '>', db.fn.now()).select('invitation_id'))),
     ticketsWithClientIt: await count(sponsor.table('co_managed_seat_ticket_work')
       .where({ arrangement_id: input.arrangementId, responsibility: 'client_it' })),
     seatsToRelease: Number(allocation?.seats ?? 0),
