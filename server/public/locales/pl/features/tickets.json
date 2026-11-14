@@ -787,6 +787,13 @@
     "boardTabs": {
       "all": "Wszystkie zgłoszenia"
     },
+    "seatViews": {
+      "clientIt": "IT klienta",
+      "msp": "U MSP",
+      "unassigned": "Nieprzypisane",
+      "all": "Wszystkie",
+      "empty": "Brak zgłoszeń w widoku „{{view}}”."
+    },
     "boardHeader": {
       "open": "Otwarte",
       "overdue": "Po terminie",

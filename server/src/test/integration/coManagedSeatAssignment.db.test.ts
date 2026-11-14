@@ -13,7 +13,7 @@ import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority'
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { tenantDb } from '@alga-psa/db';
 import {
-  assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope, type HumanWorkItem,
+  assertHumanWorkAssignee, type HumanWorkItem,
 } from '../../../../shared/lib/humanWork/assertHumanWorkAssignee';
 import { HumanWorkAssigneeInvalidError } from '../../../../shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import {
@@ -200,27 +200,8 @@ describeDb('the human-work guard scopes seat technicians to their own client', {
       .resolves.toBeUndefined();
   });
 
-  it('judges only the assignee a move names; technicians already on the ticket are settled by the release', async () => {
-    const s = await arrangement();
-    const ticketId = await ticket(s.tenant, s.clientId, s.scopedBoard);
-    await db('tickets').where({ tenant: s.tenant, ticket_id: ticketId }).update({ assigned_to: s.technician });
-    // The stored technician is not stranded: the move leaves them covered or released (releaseSeatTicketOnMove).
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, undefined)).resolves.toBeUndefined();
-    // Same for a client change: the writer's release clears the technician and returns the ticket to the MSP.
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { clientId: s.otherClientId }, undefined)).resolves.toBeUndefined();
-    // Reassigning to an MSP user in the same write lets the move through.
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, s.msp)).resolves.toBeUndefined();
-    // Naming a seat technician in the same write is still judged against the placement after the move.
-    await refusal(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, s.peer));
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.scopedBoard }, s.peer)).resolves.toBeUndefined();
-    await db('tickets').where({ tenant: s.tenant, ticket_id: ticketId }).update({ assigned_to: s.msp });
-    await db('ticket_resources').insert({ tenant: s.tenant, assignment_id: randomUUID(), ticket_id: ticketId,
-      assigned_to: s.msp, additional_user_id: s.peer, role: 'support', assigned_at: db.fn.now() });
-    // An additional agent is dropped by the release, not refused here.
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.unscopedBoard }, undefined)).resolves.toBeUndefined();
-    // No placement change, no check.
-    await expect(assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, {}, undefined)).resolves.toBeUndefined();
-  });
+  // A move that strands a seat technician already on the ticket is not refused here: the move
+  // releases them (F094, coManagedSeatLifecycleGuards.db.test.ts).
 
   it('prefers the live seat assignment over a revoked one', async () => {
     const s = await arrangement();
@@ -271,7 +252,6 @@ describeDb('the human-work guard scopes seat technicians to their own client', {
     expect(technicianRow.seat_reader).toBe(true);
 
     expect(await seatReads(() => assign(s.tenant, [s.msp], { kind: 'ticket', ticketId }))).toEqual([]);
-    expect(await seatReads(() => assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.scopedBoard }, s.msp))).toEqual([]);
     expect(await seatReads(async () => expect(await resolveSeatAssigneeAudience(db, s.tenant, mspRow)).toBeNull())).toEqual([]);
     expect(await seatReads(() => assertActorMayAssign(db, s.tenant, mspRow, [s.technician]))).toEqual([]);
 

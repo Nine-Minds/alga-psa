@@ -259,39 +259,6 @@ async function refuseSeatsOutsideScope(
 }
 
 /**
- * A write that moves a ticket (new client and/or board) and, in the same write, chooses its primary
- * assignee (`primaryAssignee`) may not hand a seat technician a placement they cannot work: the
- * chosen assignee is judged against the post-write placement. Only seat scope is judged, never
- * validity, so a legacy reference never blocks a move.
- *
- * Seat technicians already on the ticket (the stored assignee, every additional agent) are not
- * judged here and never block a move: after it they are either still covered (the arrangement
- * still shares the ticket) or released by the writer's `releaseSeatTicketOnMove`, which clears them
- * and returns the ticket to the MSP. A tenant the `co-managed-seat` capability does not serve is
- * left exactly as it was. `primaryAssignee` `undefined` (assignee not changed) or `null`
- * (unassigned) therefore checks nothing.
- *
- * Cost: none unless the write both moves the ticket and names an assignee; then one statement on
- * the seat-subject index, and the seat tables are read only when that assignee is a seat subject.
- */
-export async function assertTicketMoveKeepsSeatsInScope(
-  trx: Db,
-  tenant: string,
-  ticketId: string,
-  pending: PendingTicketPlacement,
-  primaryAssignee: MaybeId
-): Promise<void> {
-  if (pending.clientId === undefined && pending.boardId === undefined) return;
-  if (!primaryAssignee) return;
-  const subject = await tenantDb(trx, tenant).table('authorization_resolver_subjects')
-    .where({ resolver_id: SEAT_RESOLVER_ID, user_id: primaryAssignee })
-    .first('user_id');
-  if (!subject) return;
-  const seats = await loadSeats(trx, tenant, [primaryAssignee]);
-  await refuseSeatsOutsideScope(trx, tenant, seats, { kind: 'ticket', ticketId, pending });
-}
-
-/**
  * Guard for writes that DEFAULT ownership to the caller: the effective user must be an
  * active internal user, else HumanWorkOwnerRequiredError(field).
  */

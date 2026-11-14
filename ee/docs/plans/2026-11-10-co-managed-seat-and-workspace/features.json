@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "The native ticket list offers a seat technician Client IT, With MSP, Unassigned and All views, and each view's count equals the rows its filter returns.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
