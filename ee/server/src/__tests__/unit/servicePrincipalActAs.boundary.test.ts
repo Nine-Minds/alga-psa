@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(async () => ({})),
   registerTenantTables: vi.fn(),
+  // hasApiContextPermission reads roles inside the context's tenant scope.
+  runWithTenant: async (_tenant: string, fn: () => Promise<unknown>) => fn(),
   tenantDb: () => ({ table: () => ({ where: () => ({ first: async () => mocks.principal.value }) }) }),
 }));
 vi.mock('@alga-psa/users/actions', () => ({

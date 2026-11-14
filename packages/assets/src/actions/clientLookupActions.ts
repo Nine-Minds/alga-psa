@@ -1,5 +1,6 @@
 'use server';
 
+import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { AuthorizationDecision } from '@alga-psa/authorization/kernel';
@@ -127,7 +128,7 @@ export const getAllClientsForAssets = withAuth(async (
 
   // Batch-resolve logo URLs once (no N+1) so the assets table can show real logos.
   const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c) => c.client_id), tenant);
-  return clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null }));
+  return projectClientsForSubject(user, clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null })));
 });
 
 export const getClientByIdForAssets = withAuth(async (
@@ -158,7 +159,7 @@ export const getClientByIdForAssets = withAuth(async (
   // Resolve the uploaded logo so the client drawer/detail view shows the real
   // logo (matching the assets table), not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return withClientSinceDateString({ ...client, logoUrl });
+  return projectClientForSubject(user, withClientSinceDateString({ ...client, logoUrl }));
 });
 
 export const getClientLocationsForAssets = withAuth(async (
