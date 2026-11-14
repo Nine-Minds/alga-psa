@@ -9,7 +9,7 @@ import {
   resolveProductRouteBehavior,
   type ProductPrincipal,
 } from '../../lib/productSurfaceRegistry';
-import { CO_MANAGED_SEAT_SURFACE } from '@shared/services/productSurfaceKinds';
+import { CO_MANAGED_SEAT_SURFACE, SURFACE_KINDS, surfaceAllowsRoute, surfaceHomeRedirect } from '@shared/services/productSurfaceKinds';
 import { bottomMenuItems, navigationSections, settingsNavigationSections } from '../../config/menuConfig';
 
 const seat = (productCode: ProductPrincipal['productCode'] = 'psa'): ProductPrincipal => ({
@@ -148,6 +148,24 @@ describe('product surface registry resolves per principal (S12 F029)', () => {
     it('drops an external link and an entry with no destination', () => {
       expect(filterMenuSectionsByProduct(seat(), [{ items: [{ href: 'https://example.com/help' }, {}, { href: '/msp/tickets' }] }]))
         .toEqual([{ items: [{ href: '/msp/tickets' }] }]);
+    });
+  });
+
+  describe('a principal kind\'s home', () => {
+    it('is a route the kind opens, for every registered kind that declares one', () => {
+      for (const [kind, surface] of Object.entries(SURFACE_KINDS)) {
+        if (surface.home) expect(surfaceAllowsRoute(kind, surface.home), kind).toBe(true);
+      }
+    });
+
+    it('replaces the MSP home only: other closed routes still have no redirect', () => {
+      expect(surfaceHomeRedirect(CO_MANAGED_SEAT_SURFACE, '/msp/dashboard')).toBe('/msp/tickets');
+      expect(surfaceHomeRedirect(CO_MANAGED_SEAT_SURFACE, '/msp')).toBe('/msp/tickets');
+      expect(surfaceHomeRedirect(CO_MANAGED_SEAT_SURFACE, '/msp/settings')).toBeNull();
+      expect(surfaceHomeRedirect(CO_MANAGED_SEAT_SURFACE, '/msp/dashboard/anything')).toBeNull();
+      expect(surfaceHomeRedirect('unregistered_kind', '/msp/dashboard')).toBeNull();
+      // The registry still answers not found for the dashboard itself: the redirect is the guard's, not a route rule.
+      expect(resolveProductRouteBehavior(seat(), '/msp/dashboard')).toBe('not_found');
     });
   });
 });

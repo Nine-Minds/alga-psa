@@ -40,7 +40,18 @@ export interface SurfaceKind {
   routes: readonly SurfacePathRule[];
   /** Server-action product capabilities (the `capability` argument of the product guards) the kind reaches. */
   capabilities: readonly string[];
+  /**
+   * Where the kind's user lands when the application sends it "home" (sign-in, `/`, `/msp`, the logo). Must be a
+   * route the kind opens. Absent: the kind has no home, and the MSP home answers not found like any closed route.
+   */
+  home?: string;
 }
+
+/**
+ * The paths the application means as "home": sign-in's default callback, the root redirect, `/msp` and the
+ * logo all send a user to the MSP dashboard. For a principal kind these resolve to the kind's own home.
+ */
+export const MSP_HOME_PATHS: readonly string[] = ['/msp', '/msp/dashboard'];
 
 export const CO_MANAGED_SEAT_SURFACE = 'co_managed_seat';
 
@@ -81,6 +92,7 @@ export const SURFACE_KINDS: Readonly<Record<string, SurfaceKind>> = Object.freez
       { group: 'seat_time', access: 'open', staticPrefixes: ['/msp/time-entry'] },
     ],
     capabilities: ['scheduling_time_actions'],
+    home: '/msp/tickets',
   },
 });
 
@@ -107,6 +119,16 @@ function allowedByRules(rules: readonly SurfacePathRule[], path: string): boolea
 
 export function surfaceAllowsRoute(kind: string, pathname: string): boolean {
   return allowedByRules(surfaceKindRules(kind).routes, pathname);
+}
+
+/**
+ * The kind's home when `pathname` is the application's home, else null: a principal kind asking for the MSP home
+ * is sent to its own instead of a not-found page. Null for a kind without a home, or whose home it does not open.
+ */
+export function surfaceHomeRedirect(kind: string, pathname: string): string | null {
+  const home = surfaceKindRules(kind).home;
+  if (!home || !MSP_HOME_PATHS.includes(surfacePath(pathname))) return null;
+  return surfaceAllowsRoute(kind, home) ? home : null;
 }
 
 export function surfaceAllowsCapability(kind: string, capability: string): boolean {

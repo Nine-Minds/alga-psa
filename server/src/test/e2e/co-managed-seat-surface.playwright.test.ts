@@ -49,7 +49,6 @@ const CLOSED_ROUTES = [
   '/msp/reports',
   '/msp/co-managed',
   '/msp/clients',
-  '/msp/dashboard',
   '/msp/tickets/customer',
 ];
 
@@ -136,6 +135,13 @@ test.describe('Co-managed seat: the operational surface resolves per principal (
       for (const route of CLOSED_ROUTES) {
         const response = await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' });
         expect(response?.status(), `${route} is not found for a seat technician`).toBe(404);
+      }
+
+      // The MSP home (where sign-in, `/` and the logo send everyone) lands a seat technician in its own home.
+      for (const home of ['/msp', '/msp/dashboard']) {
+        const response = await page.goto(`${baseUrl}${home}`, { waitUntil: 'domcontentloaded' });
+        expect(response?.status(), `${home} lands a seat technician in its surface`).toBe(200);
+        expect(new URL(page.url()).pathname).toBe('/msp/tickets');
       }
 
       // The operational routes still open.

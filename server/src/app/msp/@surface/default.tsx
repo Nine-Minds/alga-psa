@@ -1,4 +1,4 @@
-// Default render for the msp @surface parallel slot: nothing. See [[...path]]/page.tsx.
+// Default render for the msp @surface parallel slot: nothing. See [...catchAll]/page.tsx.
 export default function MspSurfaceDefault() {
   return null;
 }
