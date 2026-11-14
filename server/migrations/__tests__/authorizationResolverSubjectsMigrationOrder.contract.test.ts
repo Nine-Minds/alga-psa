@@ -66,17 +66,23 @@ describe('authorization resolver subjects migration ordering', () => {
     }
   });
 
+  // Knex records applied migrations by filename, so a file that has shipped can never be
+  // renamed: deployed databases would report it missing and refuse to migrate. The pair shares
+  // its 20261113140000 timestamp with main's grant_service_read_to_msp_roles, which shipped
+  // alongside it; both keep their names, and knex orders them by the full filename.
   it('keeps the filenames deployed ledgers recorded when the pair was released', () => {
     expect(PAIR.map(fileFor)).toEqual(RELEASED_NAMES);
+    expect(fileFor('grant_service_read_to_msp_roles')).toBe('20261113140000_grant_service_read_to_msp_roles.cjs');
   });
 
-  it('cross-references only migrations in the pair', () => {
+  it('cross-references only migrations in the pair, by full name', () => {
     const set = PAIR.map(fileFor);
-    const timestamps = new Set(set.map(timestampOf));
+    const names = new Set(set.map((name) => name.replace(/\.cjs$/, '')));
     for (const name of set) {
       const source = readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8');
-      for (const [ref] of source.matchAll(/\b20\d{12}\b/g)) {
-        expect(timestamps.has(ref), `${name} references ${ref}`).toBe(true);
+      // A bare timestamp is ambiguous once another migration shares it.
+      for (const [ref] of source.matchAll(/\b20\d{12}(?:_[a-z0-9_]*[a-z0-9])?/g)) {
+        expect(names.has(ref), `${name} references ${ref}`).toBe(true);
       }
     }
   });

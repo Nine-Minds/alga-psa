@@ -58,6 +58,7 @@ export async function validate(params: { tenant: string; extension: string; hash
   const extension = (params?.extension || '').trim();
   const hash = normalizeHash(params?.hash);
   if (!tenant || !extension || !hash) return { valid: false };
+  // LEVERAGE: friction tenant-only-product-guard — runner-internal call keyed by a tenant argument; no user is in play, so the guard answers for the tenant alone.
   await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
 
   const db: Knex = await getAdminConnection();

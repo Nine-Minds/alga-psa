@@ -242,7 +242,7 @@ export const fetchTimeEntriesForTicket = withAuth(async (
     // extra, and when the source does not serve it the ORIGINAL error is rethrown untouched (same class, message, capability).
     // LEVERAGE: friction product-guard-not-time-source-aware — assertPsaOnlyTenantAccess knows nothing about time sources; the guard should consult the registry itself.
     try {
-      await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
+      await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'scheduling_time_actions');
     } catch (denied) {
       if (!(denied instanceof ProductAccessError)) throw denied;
       const served = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: 'ticket', workItemId: ticketId },
