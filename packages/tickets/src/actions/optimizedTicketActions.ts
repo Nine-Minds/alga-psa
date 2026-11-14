@@ -6,7 +6,7 @@ import {
   resolveSeatAssigneeAudience,
   restrictToSeatAudience,
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
-import { resolveTicketSeatContext, restrictToThisClientsSeatTechnicians } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
+import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
 import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
@@ -558,9 +558,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // A seat technician is offered only the technicians of their own client as assignees.
     const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
-    // Seat surfaces of this ticket (composer audiences, Client IT picker group, audience badges).
-    // Null, at no statement, while the co-managed-seat capability does not serve the tenant.
-    const seatTicket = await resolveTicketSeatContext(trx, tenant, user, ticket.client_id, seatAssigneeAudience);
     const ticketRedactions = ticketRead.redactedFields;
     // A related record is derived from a ticket field: hiding the field hides the record.
     const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
@@ -619,13 +616,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       seatAssignees
         ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
         : restrictToSeatAudience(
-          restrictToThisClientsSeatTechnicians(
-            tenantScopedTable(trx, 'users', tenant)
-              .select(...USER_RESPONSE_FIELD_NAMES)
-              .where('user_type', 'internal')
-              .where('is_inactive', false),
-            seatTicket
-          ),
+          // seat_reader is read for the seat context below and never leaves the server (sanitized out).
+          tenantScopedTable(trx, 'users', tenant)
+            .select(...USER_RESPONSE_FIELD_NAMES, 'seat_reader')
+            .where('user_type', 'internal')
+            .where('is_inactive', false),
           seatAssigneeAudience
         ).orderBy('first_name', 'asc'),
       
@@ -675,9 +670,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
     ]);
 
+    // Seat surfaces of this ticket (composer audiences, Client IT picker group, audience badges).
+    // Null, at no statement, in a tenant without seat technicians: the users just loaded carry the
+    // seat marker, so a psa tenant never reaches the capability probe or a co-managed table.
+    const loadedUsers = rawUsers as Array<Record<string, unknown> & { user_id: string; seat_reader?: boolean | null }>;
+    const seatTicket = await resolveTicketSeatContext(trx, tenant, user, ticket.client_id, seatAssigneeAudience, loadedUsers);
+
     // Projection is the fix; this is the guarantee that a future edit to the query
     // above cannot silently re-widen what leaves this action.
-    const users: SafeConsolidatedUser[] = (rawUsers as Array<Record<string, unknown>>).map(
+    const users: SafeConsolidatedUser[] = keepThisClientsSeatTechnicians(loadedUsers, seatTicket).map(
       (row) => sanitizeUserForResponse(row)
     );
 
