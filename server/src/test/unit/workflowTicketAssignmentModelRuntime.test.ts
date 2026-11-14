@@ -95,6 +95,12 @@ import { registerTicketActions } from '@shared/workflow/runtime/actions/business
 
 class FakeJoinClause {
   pairs: Array<{ left: string; right: string }> = [];
+  values: Array<{ column: string; value: any }> = [];
+
+  andOnVal(column: string, _operator: string, value: any): this {
+    this.values.push({ column, value });
+    return this;
+  }
 
   on(left: string, operatorOrRight: string, maybeRight?: string): this {
     this.pairs.push({ left, right: maybeRight ?? operatorOrRight });
@@ -113,7 +119,10 @@ class FakeQueryBuilder {
   private orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
   private selectedColumns: string[] | null = null;
   private joinTableName: string | null = null;
+  private joinAlias: string | null = null;
+  private joinType: 'inner' | 'left' = 'inner';
   private joinPairs: Array<{ left: string; right: string }> = [];
+  private joinValues: Array<{ column: string; value: any }> = [];
 
   constructor(
     private readonly tableName: string,
@@ -147,10 +156,26 @@ class FakeQueryBuilder {
   }
 
   join(tableName: string, callback: (this: FakeJoinClause, clause?: FakeJoinClause) => void): this {
+    return this.addJoin('inner', tableName, callback);
+  }
+
+  leftJoin(tableName: string, callback: (this: FakeJoinClause, clause?: FakeJoinClause) => void): this {
+    return this.addJoin('left', tableName, callback);
+  }
+
+  private addJoin(
+    type: 'inner' | 'left',
+    tableExpression: string,
+    callback: (this: FakeJoinClause, clause?: FakeJoinClause) => void,
+  ): this {
     const clause = new FakeJoinClause();
     callback.call(clause, clause);
-    this.joinTableName = tableName;
+    const [name, alias] = tableExpression.split(/\s+as\s+/i).map((part) => part.trim());
+    this.joinTableName = name;
+    this.joinAlias = alias ?? null;
+    this.joinType = type;
     this.joinPairs = clause.pairs;
+    this.joinValues = clause.values;
     return this;
   }
 
@@ -239,21 +264,28 @@ class FakeQueryBuilder {
     const joined: TableRow[] = [];
 
     for (const leftRow of leftRows) {
+      let matched = false;
       for (const rightRow of rightRows) {
         const joinMatches = this.joinPairs.every(({ left, right }) => {
           const leftValue = this.getColumnValueFromTables(leftRow, rightRow, left);
           const rightValue = this.getColumnValueFromTables(leftRow, rightRow, right);
           return leftValue === rightValue;
-        });
+        }) && this.joinValues.every(({ column, value }) => this.getColumnValueFromTables(leftRow, rightRow, column) === value);
 
         if (!joinMatches) continue;
+        matched = true;
 
         joined.push({
           ...leftRow,
           ...rightRow,
           ...this.prefixRow(this.tableName, leftRow),
           ...this.prefixRow(this.joinTableName!, rightRow),
+          ...(this.joinAlias ? this.prefixRow(this.joinAlias, rightRow) : {}),
         });
+      }
+      // A left join keeps an unmatched row, with every joined column null.
+      if (!matched && this.joinType === 'left') {
+        joined.push({ ...leftRow, ...this.prefixRow(this.tableName, leftRow) });
       }
     }
 
@@ -277,6 +309,8 @@ class FakeQueryBuilder {
     }
 
     const segments = sourceColumn.split('.');
+    // A joined table's column absent from the row is the null side of a left join.
+    if (segments.length > 1 && (segments[0] === this.joinTableName || segments[0] === this.joinAlias)) return null;
     return segments.length > 1 ? row[segments[segments.length - 1]] : row[sourceColumn];
   }
 
@@ -286,7 +320,7 @@ class FakeQueryBuilder {
     if (prefix === this.tableName) {
       return leftRow[key];
     }
-    if (prefix === this.joinTableName) {
+    if (prefix === this.joinTableName || prefix === this.joinAlias) {
       return rightRow[key];
     }
     return undefined;

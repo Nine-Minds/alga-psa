@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { HumanWorkAssigneeInvalidError } from './HumanWorkOwnerRequiredError';
+import type { InternalReaderIdentity } from '../commentAudience';
 
 type Db = Knex | Knex.Transaction;
 
@@ -14,14 +15,22 @@ type Db = Knex | Knex.Transaction;
  * thing standing between a seat technician and an MSP user).
  *
  * Native code never imports `@alga-psa/co-managed`, so this reads the seat tables directly, as
- * `assertHumanWorkAssignee` does. For a non-seat actor it costs one indexed lookup of
- * `co_managed_seat_assignments` by user id (no row), and nothing else.
+ * `assertHumanWorkAssignee` does. Pass the actor's loaded user row when the caller holds it: a row
+ * whose `seat_reader` marker is `false` is MSP staff with no statement, so a plain PSA request never
+ * touches a co-managed table. (A user whose only seat was revoked has the marker cleared and reads as
+ * staff here; that is safe because the closed seat baseline already denies such a user every ticket
+ * read and write before an assignee is offered or checked.) A bare id (or a row without the marker) costs one indexed lookup of
+ * `co_managed_seat_assignments` by user id, and nothing else for a non-seat actor.
  */
 export async function resolveSeatAssigneeAudience(
   db: Db,
   tenant: string,
-  actorUserId: string | null | undefined
+  actor: InternalReaderIdentity | null | undefined
 ): Promise<string[] | null> {
+  if (!actor) return null;
+  // Same rule as commentAudience's isKnownStaffReader (not imported: that module pulls in write admission).
+  if (typeof actor !== 'string' && actor.seat_reader === false) return null;
+  const actorUserId = typeof actor === 'string' ? actor : actor.user_id;
   if (!actorUserId) return null;
   const scoped = tenantDb(db, tenant);
   // A user may hold a revoked history row beside a live one: the live row decides, and any other
@@ -65,18 +74,19 @@ export function restrictToSeatAudience<Q extends Knex.QueryBuilder>(
 
 /**
  * Server-side counterpart of the picker: a seat technician may only assign themselves or a seat
- * technician of their own client. Refuses with `HumanWorkAssigneeInvalidError('seat_out_of_scope')`.
+ * technician of their own client. `actor` is the acting user's id or loaded row (see
+ * `resolveSeatAssigneeAudience`). Refuses with `HumanWorkAssigneeInvalidError('seat_out_of_scope')`.
  * Does nothing for any other actor.
  */
 export async function assertActorMayAssign(
   db: Db,
   tenant: string,
-  actorUserId: string | null | undefined,
+  actor: InternalReaderIdentity | null | undefined,
   userIds: ReadonlyArray<string | null | undefined>
 ): Promise<void> {
   const ids = Array.from(new Set(userIds.filter((id): id is string => typeof id === 'string' && id.length > 0)));
   if (ids.length === 0) return;
-  const audience = await resolveSeatAssigneeAudience(db, tenant, actorUserId);
+  const audience = await resolveSeatAssigneeAudience(db, tenant, actor);
   if (!audience) return;
   const allowed = new Set(audience);
   const refused = ids.filter((id) => !allowed.has(id));

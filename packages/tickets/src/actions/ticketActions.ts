@@ -800,7 +800,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         entered_by: user.user_id,
       });
 
-      await assertActorMayAssign(trx, tenant, user.user_id, [createTicketInput.assigned_to]);
+      await assertActorMayAssign(trx, tenant, user, [createTicketInput.assigned_to]);
 
       // Use shared TicketModel with retry logic
       // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
@@ -1711,7 +1711,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // The placement the write leaves behind is what scope is judged against, not the stored one.
       const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
       if (isChangingAssignment && updateData.assigned_to) {
-        await assertActorMayAssign(trx, tenant, user.user_id, [updateData.assigned_to]);
+        await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
         await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
       }
       await assertTicketMoveKeepsSeatsInScope(
@@ -3134,7 +3134,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
 
       // Fetch additional resources and available agents in parallel
       const seatAssigneeAudience = includeAgentDirectory
-        ? await resolveSeatAssigneeAudience(trx, tenant, user.user_id)
+        ? await resolveSeatAssigneeAudience(trx, tenant, user)
         : null;
       const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)

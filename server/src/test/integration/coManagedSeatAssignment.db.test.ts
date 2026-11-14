@@ -246,4 +246,36 @@ describeDb('the human-work guard scopes seat technicians to their own client', {
     const inactive = await createUser(db, s.tenant, { user_type: 'internal', is_inactive: true });
     await refusal(assign(s.tenant, [inactive], { kind: 'ticket', ticketId }));
   });
+
+  // The PSA hot path never reads a co-managed table: users.seat_reader = false clears MSP staff.
+  it('never touches a seat table for MSP staff, and still scopes a seat-bound user', async () => {
+    const s = await arrangement();
+    const ticketId = await ticket(s.tenant, s.otherClientId, s.unscopedBoard);
+    const seatTables = /co_managed_seat_/;
+    const captured: string[] = [];
+    const record = (query: { sql: string }) => captured.push(query.sql);
+    const seatReads = async (run: () => Promise<unknown>) => {
+      captured.length = 0;
+      db.on('query', record);
+      try { await run(); } finally { db.removeListener('query', record); }
+      return captured.filter((sql) => seatTables.test(sql));
+    };
+    const mspRow = await db('users').where({ tenant: s.tenant, user_id: s.msp }).first();
+    expect(mspRow.seat_reader).toBe(false);
+    const technicianRow = await db('users').where({ tenant: s.tenant, user_id: s.technician }).first();
+    expect(technicianRow.seat_reader).toBe(true);
+
+    expect(await seatReads(() => assign(s.tenant, [s.msp], { kind: 'ticket', ticketId }))).toEqual([]);
+    expect(await seatReads(() => assertTicketMoveKeepsSeatsInScope(db, s.tenant, ticketId, { boardId: s.scopedBoard }, s.msp))).toEqual([]);
+    expect(await seatReads(async () => expect(await resolveSeatAssigneeAudience(db, s.tenant, mspRow)).toBeNull())).toEqual([]);
+    expect(await seatReads(() => assertActorMayAssign(db, s.tenant, mspRow, [s.technician]))).toEqual([]);
+
+    // The loaded row of a seat technician (marker true) still resolves their audience and scope.
+    expect((await resolveSeatAssigneeAudience(db, s.tenant, technicianRow))?.sort()).toEqual([s.technician, s.peer].sort());
+    expect((await refusal(assertActorMayAssign(db, s.tenant, technicianRow, [s.msp]))).userIds).toEqual([s.msp]);
+    let refused: HumanWorkAssigneeInvalidError | undefined;
+    const reads = await seatReads(async () => { refused = await refusal(assign(s.tenant, [s.msp, s.technician], { kind: 'ticket', ticketId })); });
+    expect(reads.length).toBeGreaterThan(0);
+    expect(refused?.userIds).toEqual([s.technician]);
+  });
 });

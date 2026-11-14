@@ -550,7 +550,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }
 
     // A seat technician is offered only the technicians of their own client as assignees.
-    const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user.user_id);
+    const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
     const ticketRedactions = ticketRead.redactedFields;
     // A related record is derived from a ticket field: hiding the field hides the record.
     const whenTicketFieldVisible = <V,>(field: string, value: V): V | null =>
@@ -2430,7 +2430,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       }
 
       // A seat technician is offered only the technicians of their own client, never an MSP user.
-      const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user.user_id);
+      const seatAssigneeAudience = await resolveSeatAssigneeAudience(trx, tenant, user);
 
       // Fetch all options in parallel
       const scopedDb = tenantDb(trx, tenant);
@@ -2922,7 +2922,7 @@ export async function updateTicketInTransaction(
     // The placement the write leaves behind is what scope is judged against, not the stored one.
     const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
     if (isChangingAssignment && updateData.assigned_to) {
-      await assertActorMayAssign(trx, tenant, user.user_id, [updateData.assigned_to]);
+      await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
       await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
     }
     await assertTicketMoveKeepsSeatsInScope(
