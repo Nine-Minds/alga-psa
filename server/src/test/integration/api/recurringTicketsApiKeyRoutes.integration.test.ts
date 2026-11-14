@@ -40,6 +40,12 @@ vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
     grantsFor(user.user_id).has(`${resource}:${action}`)),
 }));
+// The authorization kernel's RBAC step (ticket:create for the tickets a schedule produces) reads the same table.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/rbac')>()),
+  hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
+    grantsFor(user.user_id).has(`${resource}:${action}`)),
+}));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
@@ -89,7 +95,8 @@ import * as clientPauseRoute from '@/app/api/v1/tickets/recurring/[definitionId]
 import * as clientResumeRoute from '@/app/api/v1/tickets/recurring/[definitionId]/clients/[clientId]/resume/route';
 
 const ALL_RECURRING = ['read', 'create', 'update', 'delete'].map((action) => `recurring_ticket:${action}`);
-const FULL = new Set([...ALL_RECURRING, 'ticket_template:read']);
+// A schedule creates tickets, so writing one is authorized as ticket:create for each client it covers.
+const FULL = new Set([...ALL_RECURRING, 'ticket_template:read', 'ticket:create']);
 const READ_ONLY = new Set(['recurring_ticket:read', 'ticket_template:read']);
 
 interface TenantFixture {
@@ -375,11 +382,28 @@ describe('/api/v1/tickets/recurring route handlers (API key, real database)', ()
   it('create without ticket_template:read is refused by the action, not just the controller', async () => {
     const noTemplateRead = `no-template-${uuidv4()}`;
     const userId = await createUser(testDb, a.tenant);
-    keys.set(noTemplateRead, { tenant: a.tenant, userId, grants: new Set(ALL_RECURRING) });
+    // ticket:create is granted so the controller's kernel gate passes and the action's own check is what refuses.
+    keys.set(noTemplateRead, { tenant: a.tenant, userId, grants: new Set([...ALL_RECURRING, 'ticket:create']) });
     const refused = await call(collectionRoute.POST, 'POST', '', noTemplateRead, apnsDefinition(a));
     expect(refused.status).toBe(403);
     const count = await tenantDb(testDb, a.tenant).table('recurring_ticket_definitions').count('* as n').first();
     expect(Number(count?.n)).toBe(0);
+  });
+
+  it('a key that may manage schedules but not create tickets cannot schedule tickets, and nothing is written', async () => {
+    const definitionId = await createApns(a);
+    const noTicketCreate = `no-ticket-create-${uuidv4()}`;
+    const userId = await createUser(testDb, a.tenant);
+    keys.set(noTicketCreate, { tenant: a.tenant, userId, grants: new Set([...ALL_RECURRING, 'ticket_template:read']) });
+
+    expect((await call(collectionRoute.POST, 'POST', '', noTicketCreate, apnsDefinition(a))).status).toBe(403);
+    expect((await call(clientsRoute.POST, 'POST', `/${definitionId}/clients`, noTicketCreate, { client_ids: [a.clientId] })).status).toBe(403);
+    expect((await call(definitionRoute.PUT, 'PUT', `/${definitionId}`, noTicketCreate, apnsDefinition(a, { name: 'renamed' }))).status).toBe(403);
+
+    const definitions = await tenantDb(testDb, a.tenant).table('recurring_ticket_definitions').select('name');
+    expect(definitions.map((d: any) => d.name)).toEqual(['Apple APNs certificate renewal']);
+    const clients = await tenantDb(testDb, a.tenant).table('recurring_ticket_definition_clients').where({ definition_id: definitionId });
+    expect(clients).toHaveLength(0);
   });
 
   it('tenant isolation: tenant B cannot list, read, write or manage clients on tenant A records', async () => {

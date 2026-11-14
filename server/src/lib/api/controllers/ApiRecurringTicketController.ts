@@ -13,6 +13,10 @@
  * Permissions: `recurring_ticket` read / create / update / delete is checked up front so a caller
  * without the grant fails fast with 403; the action checks again and is the authoritative check
  * (including `ticket_template:read` on create and on a template change).
+ *
+ * Record authorization: a definition is a standing order to create tickets, so every write that decides
+ * what the schedule creates, or for which clients, is asked of the authorization kernel as `ticket:create`
+ * for each ticket it will produce (see `assertScheduledTicketsAllowed`).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -44,12 +48,25 @@ import {
   updateRecurringTicketClient,
   updateRecurringTicketDefinition,
 } from '@alga-psa/tickets/actions/recurringTicketActions';
+import { getTicketTemplate } from '@alga-psa/tickets/actions/ticketTemplateActions';
+import { resolveTemplateTicketFields } from '@alga-psa/tickets/lib/instantiateTicketTemplate';
+import {
+  applyOverrides,
+  type RecurringTemplateFields,
+  type RecurringTicketOverrides,
+} from '@alga-psa/tickets/lib/recurring/effectiveFields';
+import type { ParsedRecurringTicketDefinitionInput } from '@alga-psa/tickets/lib/recurring/definitionInput';
 import type {
   RecurringDefinitionClientRecord,
   RecurringDefinitionDetail,
   RecurringDefinitionStatus,
+  RecurringTemplateSummary,
 } from '@alga-psa/tickets/lib/recurring/types';
+import { getConnection } from '@/lib/db/db';
+import { authorizeApiResourceAction } from './authorizationKernel';
+import { buildTicketRecordContext } from './recordContexts';
 import {
+  ForbiddenError,
   NotFoundError,
   ValidationError,
   createPaginatedResponse,
@@ -81,6 +98,16 @@ const NO_SERVICE: BaseService = {
 };
 
 type PermissionAction = 'read' | 'create' | 'update' | 'delete';
+
+/** A client the schedule creates tickets for, with the client's own override layer. */
+interface ScheduledClient {
+  client_id: string;
+  overrides?: RecurringTicketOverrides | null;
+}
+
+type TemplateFieldSource = Pick<RecurringTemplateSummary, 'board_id' | 'priority_id' | 'category_id' | 'subcategory_id'>;
+
+const NO_TEMPLATE_FIELDS: TemplateFieldSource = { board_id: null, priority_id: null, category_id: null, subcategory_id: null };
 
 function statusOf(definition: RecurringDefinitionDetail['definition']): RecurringDefinitionStatus {
   if (definition.archived_at) return 'archived';
@@ -182,12 +209,68 @@ export class ApiRecurringTicketController extends ApiBaseController {
   private async resolveDefinitionClient(
     definitionId: string,
     clientId: string,
-  ): Promise<NextResponse | RecurringDefinitionClientRecord> {
+  ): Promise<NextResponse | { detail: RecurringDefinitionDetail; row: RecurringDefinitionClientRecord }> {
     const detail = await this.readDefinition(definitionId);
     if (detail instanceof NextResponse) return detail;
     const row = detail.clients.find((candidate) => candidate.client_id === clientId);
     if (!row) throw new NotFoundError('Client is not on this recurring ticket');
-    return row;
+    return { detail, row };
+  }
+
+  /**
+   * The definition-level ticket fields `input` would produce: template -> dispatch -> definition overrides.
+   * `knownTemplate` is the stored template summary when the template is unchanged; otherwise the template
+   * is read (a template the caller cannot read, or that does not exist, contributes nothing here and the
+   * action then refuses the write itself).
+   */
+  private async definitionFieldsFor(
+    input: ParsedRecurringTicketDefinitionInput,
+    knownTemplate?: RecurringDefinitionDetail['definition']['template'],
+  ): Promise<RecurringTemplateFields> {
+    let template: TemplateFieldSource | null | undefined = knownTemplate;
+    if (template === undefined) {
+      const loaded = await getTicketTemplate(input.ticket_template_id);
+      template = isServerActionErrorResult(loaded) ? null : (loaded as TemplateFieldSource);
+    }
+    return resolveTemplateTicketFields(template ?? NO_TEMPLATE_FIELDS, input, [input.overrides]);
+  }
+
+  /**
+   * A recurring definition creates a ticket per client on every due date, carrying the effective board,
+   * status and assignment. A write that decides those fields or those clients is therefore authorized as
+   * `ticket:create` through the authorization kernel, once per client with that client's override layer,
+   * BEFORE the write. With no client yet the definition-level fields are still asked without a client, so
+   * board and assignment narrowing apply to an empty schedule too. Any refusal is a 403 and nothing is written.
+   */
+  private async assertScheduledTicketsAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    definitionFields: RecurringTemplateFields,
+    clients: readonly ScheduledClient[],
+  ): Promise<void> {
+    const { tenant, user, apiKeyId } = apiRequest.context;
+    const knex = await getConnection(tenant);
+    const targets: Array<{ clientId: string | null; fields: RecurringTemplateFields }> = clients.length
+      ? clients.map((client) => ({ clientId: client.client_id, fields: applyOverrides(definitionFields, client.overrides ?? {}) }))
+      : [{ clientId: null, fields: definitionFields }];
+
+    for (const { clientId, fields } of targets) {
+      const allowed = await authorizeApiResourceAction({
+        knex,
+        tenant,
+        user,
+        apiKeyId,
+        resource: 'ticket',
+        action: 'create',
+        recordContext: buildTicketRecordContext({ ...fields, client_id: clientId }),
+      });
+      if (!allowed) {
+        throw new ForbiddenError(
+          clientId
+            ? `Permission denied: Cannot create tickets for client ${clientId} on this recurring ticket`
+            : 'Permission denied: Cannot create tickets with this recurring ticket\'s board or assignment',
+        );
+      }
+    }
   }
 
   private async detailResponse(
@@ -233,6 +316,7 @@ export class ApiRecurringTicketController extends ApiBaseController {
   create() {
     return this.handler('create', async (apiRequest) => {
       const data = await this.validateData(apiRequest, recurringTicketDefinitionInputSchema);
+      await this.assertScheduledTicketsAllowed(apiRequest, await this.definitionFieldsFor(data), []);
       const created = await createRecurringTicketDefinition(data);
       if (isServerActionErrorResult(created)) return this.actionErrorResponse(created as ActionErrorLike);
       return this.detailResponse(apiRequest, (created as { definition_id: string }).definition_id, 201);
@@ -259,6 +343,14 @@ export class ApiRecurringTicketController extends ApiBaseController {
     return this.handler('update', async (apiRequest) => {
       const definitionId = this.extractDefinitionId(apiRequest);
       const data = await this.validateData(apiRequest, recurringTicketDefinitionInputSchema);
+      const current = await this.readDefinition(definitionId);
+      if (current instanceof NextResponse) return current;
+      const templateUnchanged = current.definition.ticket_template_id === data.ticket_template_id;
+      await this.assertScheduledTicketsAllowed(
+        apiRequest,
+        await this.definitionFieldsFor(data, templateUnchanged ? current.definition.template : undefined),
+        current.clients,
+      );
       const updated = await updateRecurringTicketDefinition(definitionId, data);
       if (isServerActionErrorResult(updated)) return this.actionErrorResponse(updated as ActionErrorLike);
       return this.detailResponse(apiRequest, definitionId);
@@ -361,6 +453,13 @@ export class ApiRecurringTicketController extends ApiBaseController {
     return this.handler('update', async (apiRequest) => {
       const definitionId = this.extractDefinitionId(apiRequest);
       const { client_ids: clientIds } = await this.validateData(apiRequest, recurringTicketAddClientsSchema);
+      const current = await this.readDefinition(definitionId);
+      if (current instanceof NextResponse) return current;
+      await this.assertScheduledTicketsAllowed(
+        apiRequest,
+        current.effective_fields,
+        (clientIds as string[]).map((client_id) => ({ client_id })),
+      );
       const result = await addClientsToRecurringTicketDefinition(definitionId, clientIds);
       // A client that no longer exists is the request's fault (400), not a missing path resource.
       if (isServerActionErrorResult(result)) return this.actionErrorResponse(result as ActionErrorLike, 'body');
@@ -372,8 +471,12 @@ export class ApiRecurringTicketController extends ApiBaseController {
     return this.handler('update', async (apiRequest) => {
       const { definitionId, clientId } = this.extractDefinitionAndClientId(apiRequest);
       const data = await this.validateData(apiRequest, recurringTicketClientUpdateSchema);
-      const row = await this.resolveDefinitionClient(definitionId, clientId);
-      if (row instanceof NextResponse) return row;
+      const resolved = await this.resolveDefinitionClient(definitionId, clientId);
+      if (resolved instanceof NextResponse) return resolved;
+      const { detail, row } = resolved;
+      await this.assertScheduledTicketsAllowed(apiRequest, detail.effective_fields, [
+        { client_id: row.client_id, overrides: data.overrides },
+      ]);
 
       const result = await updateRecurringTicketClient(row.definition_client_id, data);
       if (isServerActionErrorResult(result)) return this.actionErrorResponse(result as ActionErrorLike);
@@ -392,8 +495,9 @@ export class ApiRecurringTicketController extends ApiBaseController {
   private setClientActive(active: boolean) {
     return this.handler('update', async (apiRequest) => {
       const { definitionId, clientId } = this.extractDefinitionAndClientId(apiRequest);
-      const row = await this.resolveDefinitionClient(definitionId, clientId);
-      if (row instanceof NextResponse) return row;
+      const resolved = await this.resolveDefinitionClient(definitionId, clientId);
+      if (resolved instanceof NextResponse) return resolved;
+      const { row } = resolved;
 
       const result = await setRecurringTicketClientActive(row.definition_client_id, active);
       if (isServerActionErrorResult(result)) return this.actionErrorResponse(result as ActionErrorLike);
@@ -405,8 +509,9 @@ export class ApiRecurringTicketController extends ApiBaseController {
   removeClient() {
     return this.handler('update', async (apiRequest) => {
       const { definitionId, clientId } = this.extractDefinitionAndClientId(apiRequest);
-      const row = await this.resolveDefinitionClient(definitionId, clientId);
-      if (row instanceof NextResponse) return row;
+      const resolved = await this.resolveDefinitionClient(definitionId, clientId);
+      if (resolved instanceof NextResponse) return resolved;
+      const { row } = resolved;
 
       const result = await removeClientFromRecurringTicketDefinition(row.definition_client_id);
       if (isServerActionErrorResult(result)) return this.actionErrorResponse(result as ActionErrorLike);

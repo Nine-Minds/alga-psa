@@ -23,6 +23,22 @@ const actions = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/tickets/actions/recurringTicketActions', () => actions);
+
+/** The authorization kernel's `ticket:create` decision; denies clients listed in `deniedClients`. */
+const kernel = vi.hoisted(() => {
+  const deniedClients = new Set<string>();
+  return {
+    deniedClients,
+    authorize: vi.fn(async (input: { recordContext: { clientId?: string } }) =>
+      !(input.recordContext.clientId && deniedClients.has(input.recordContext.clientId))),
+  };
+});
+vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
+  authorizeApiResourceAction: kernel.authorize,
+  authorizeApiResource: kernel.authorize,
+}));
+const templates = vi.hoisted(() => ({ getTicketTemplate: vi.fn() }));
+vi.mock('@alga-psa/tickets/actions/ticketTemplateActions', () => templates);
 vi.mock('@/lib/productAccess', () => ({
   getTenantProduct: vi.fn(async () => 'psa'),
   ProductAccessError: class extends Error {},
@@ -88,6 +104,10 @@ function makeController(opts: { allowed?: boolean } = {}) {
 beforeEach(() => {
   Object.values(actions).forEach((fn) => fn.mockReset());
   actions.getRecurringTicketDefinition.mockResolvedValue(detail());
+  kernel.deniedClients.clear();
+  kernel.authorize.mockClear();
+  templates.getTicketTemplate.mockReset();
+  templates.getTicketTemplate.mockResolvedValue({ template_id: TEMPLATE, board_id: 'template-board', priority_id: 'p', category_id: null, subcategory_id: null });
 });
 
 describe('permission gate', () => {
@@ -325,5 +345,62 @@ describe('reads', () => {
     actions.previewRecurringTicketOccurrences.mockResolvedValue({ occurrences: [] });
     const json = await (await makeController().upcoming()(req(`${BASE}/${DEF}/upcoming`))).json();
     expect(json.data.definition_status).toBe('archived');
+  });
+});
+
+describe('record authorization: a schedule is authorized as the tickets it creates', () => {
+  const body = {
+    name: 'APNs', ticket_template_id: TEMPLATE, start_date: '2027-03-01', lead_days: 30,
+    recurrence: { frequency: 'yearly', month: 3, day: 1, end: { type: 'never' } },
+  };
+  const OVERRIDE_BOARD = '77777777-7777-4777-8777-777777777777';
+  const OVERRIDE_STATUS = '88888888-8888-4888-8888-888888888888';
+  const ASSIGNEE = '99999999-9999-4999-8999-999999999999';
+  const clientUpdate = { overrides: {}, contact_id: null, location_id: null, asset_ids: [] };
+  const decisions = () => kernel.authorize.mock.calls.map(([input]) => input as any);
+
+  it('add-clients asks ticket:create for each added client and writes nothing when one is refused', async () => {
+    kernel.deniedClients.add(OTHER_CLIENT);
+    const res = await makeController().addClients()(req(`${BASE}/${DEF}/clients`, 'POST', { client_ids: [CLIENT, OTHER_CLIENT] }));
+    expect(res.status).toBe(403);
+    expect(actions.addClientsToRecurringTicketDefinition).not.toHaveBeenCalled();
+    expect(decisions().map((d) => [d.resource, d.action, d.recordContext.clientId])).toEqual([
+      ['ticket', 'create', CLIENT],
+      ['ticket', 'create', OTHER_CLIENT],
+    ]);
+  });
+
+  it('client update is refused for a client the caller may not create tickets for, with its override layer applied', async () => {
+    kernel.deniedClients.add(CLIENT);
+    const overrides = { board: { board_id: OVERRIDE_BOARD, status_id: OVERRIDE_STATUS } };
+    const res = await makeController().updateClient()(req(`${BASE}/${DEF}/clients/${CLIENT}`, 'PUT', { ...clientUpdate, overrides }));
+    expect(res.status).toBe(403);
+    expect(actions.updateRecurringTicketClient).not.toHaveBeenCalled();
+    expect(decisions()[0].recordContext).toMatchObject({ clientId: CLIENT, boardId: OVERRIDE_BOARD, statusId: OVERRIDE_STATUS });
+  });
+
+  it('PUT authorizes the new fields for every client already on the schedule before writing', async () => {
+    kernel.deniedClients.add(CLIENT);
+    const res = await makeController().update()(req(`${BASE}/${DEF}`, 'PUT', { ...body, assigned_to: ASSIGNEE }));
+    expect(res.status).toBe(403);
+    expect(actions.updateRecurringTicketDefinition).not.toHaveBeenCalled();
+    expect(decisions()[0].recordContext).toMatchObject({ clientId: CLIENT, assignedUserIds: [ASSIGNEE] });
+  });
+
+  it('create with no clients yet still asks for the definition-level board and assignment', async () => {
+    actions.createRecurringTicketDefinition.mockResolvedValue({ definition_id: DEF });
+    const res = await makeController().create()(req(BASE, 'POST', { ...body, assigned_to: ASSIGNEE }));
+    expect(res.status).toBe(201);
+    expect(templates.getTicketTemplate).toHaveBeenCalledWith(TEMPLATE);
+    expect(decisions()).toHaveLength(1);
+    expect(decisions()[0]).toMatchObject({ resource: 'ticket', action: 'create' });
+    expect(decisions()[0].recordContext).toMatchObject({ clientId: undefined, boardId: 'template-board', assignedUserIds: [ASSIGNEE] });
+  });
+
+  it('create is refused before the write when the kernel denies the definition-level fields', async () => {
+    kernel.authorize.mockResolvedValueOnce(false);
+    const res = await makeController().create()(req(BASE, 'POST', body));
+    expect(res.status).toBe(403);
+    expect(actions.createRecurringTicketDefinition).not.toHaveBeenCalled();
   });
 });
