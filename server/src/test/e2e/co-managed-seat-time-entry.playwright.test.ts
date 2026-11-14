@@ -14,8 +14,8 @@
  *
  * The mode follows the seat principal alone (it fails closed), so no release flag is needed; seeding the seat rows
  * is enough, as in T027. Run against a running app with PLAYWRIGHT_SKIP_WEB_SERVER=true and BASE_URL/NEXTAUTH_URL/PORT
- * set to that app. NOT RUN in the step that wrote it (no app server was available). The server-side halves are
- * covered by tests that did run:
+ * set to that app, and NEXTAUTH_SECRET to the app's secret so the injected session is accepted. The server-side halves
+ * are also covered by unit tests:
  *   packages/scheduling/src/actions/timeEntryCrudActions.operationalMode.test.ts   mode decided from the principal
  *   packages/scheduling/src/lib/__tests__/timeEntryWriteCore.operationalMode.test.ts   operational row, no allocation
  *   packages/scheduling/tests/timeEntryDialog.operationalMode.test.tsx             dialog invokes no commercial reader
@@ -56,6 +56,16 @@ async function seedSeatTechnicianWithTicketAndPeriod(db: Db, tenantData: TenantT
   });
   // A hosted entitlement sponsors seats only on a Pro PSA workspace (readEligibleSponsor).
   await db('tenants').where({ tenant }).update({ product_code: 'psa', plan: 'pro' });
+
+  // The fresh e2e tenant has permission rows only for ticket, client and user. Add the time_entry rows before the seat
+  // role is admitted (it links the existing rows it is entitled to, here time_entry:read/create/update) and grant them
+  // to the staff role too, so the control can make the very reads the seat is meant to skip.
+  const adminRole = await scoped.table('user_roles').where({ user_id: tenantData.adminUser.userId }).first('role_id');
+  for (const action of ['read', 'create', 'update']) {
+    const permissionId = uuidv4();
+    await scoped.table('permissions').insert({ permission_id: permissionId, tenant, resource: 'time_entry', action, msp: true, client: false });
+    await scoped.table('role_permissions').insert({ tenant, role_id: adminRole.role_id, permission_id: permissionId });
+  }
 
   const arrangement = await createCoManagedSeatArrangement(db, { sponsorTenant: tenant, clientId, operationId: uuidv4(), seats: 1 });
 
@@ -99,7 +109,8 @@ async function seedSeatTechnicianWithTicketAndPeriod(db: Db, tenantData: TenantT
   return { seat: { userId, email }, ticketId };
 }
 
-const ADD_TIME = '[id$="-add-time-entry-btn"]';
+// The ticket screen's default (Grid) layout puts the launcher in the time tile; the Entry layout keeps it in the properties panel.
+const ADD_TIME = '#ticket-details-bento-add-time-entry, [id$="-add-time-entry-btn"]';
 const SAVE = '[id$="-save-dialog-btn"]';
 // Controls the operational dialog does not render.
 const COMMERCIAL_CONTROLS = '[id*="-service-"], [id*="-billable-duration-"], [id^="contract-line-"]';
@@ -159,11 +170,24 @@ test.describe('Co-managed seat: operational time entry (T035)', () => {
 
       // Save. Only the note is filled in; there is no service to choose.
       await page.locator('[id$="-notes-0"]').first().fill('Reset the printer queue');
-      const saveRequests: string[] = [];
-      page.on('request', (request) => saveRequests.push(`${request.method()} ${request.url()} ${request.postData() ?? ''}`));
+      const saveRequests: Array<{ line: string; body: string }> = [];
+      page.on('request', (request) => {
+        const body = request.postData() ?? '';
+        saveRequests.push({ line: `${request.method()} ${request.url()} ${body}`, body });
+      });
       await page.locator(SAVE).first().click();
       await expect(page.locator(SAVE)).toHaveCount(0, { timeout: 30_000 });
-      expect(saveRequests.filter((entry) => COMMERCIAL_READERS.test(entry)), 'saving makes no commercial request').toEqual([]);
+      // The save payload itself names the commercial fields: React Flight serialises the dialog's explicit `undefined`
+      // as "$undefined". So the payload is checked for values and every other request for commercial readers.
+      const isSavePayload = (body: string) => body.includes('"work_item_id"') && body.includes('"start_time"');
+      const savePayloads = saveRequests.filter((request) => isSavePayload(request.body));
+      expect(savePayloads, 'exactly one save request').toHaveLength(1);
+      const [sent] = JSON.parse(savePayloads[0].body) as Array<Record<string, unknown>>;
+      for (const field of ['service_id', 'contract_line_id', 'contract_line_source', 'tax_rate_id', 'tax_region']) {
+        expect([undefined, null, '', '$undefined'], `the seat save sends no ${field} value`).toContain(sent[field]);
+      }
+      expect(saveRequests.filter((request) => !isSavePayload(request.body) && COMMERCIAL_READERS.test(request.line)),
+        'saving makes no commercial request').toEqual([]);
 
       // The stored row.
       const rows = await tenantDb(db, tenant).table('time_entries').where({ user_id: seat.userId, work_item_id: ticketId });
