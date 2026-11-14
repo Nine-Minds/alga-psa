@@ -102,10 +102,6 @@
       "types": "./src/sharedWork.ts",
       "import": "./src/sharedWork.ts"
     },
-    "./sharedWorkProjection": {
-      "types": "./src/sharedWorkProjection.ts",
-      "import": "./src/sharedWorkProjection.ts"
-    },
     "./sharedWorkRead": {
       "types": "./src/sharedWorkRead.ts",
       "import": "./src/sharedWorkRead.ts"
@@ -145,6 +141,10 @@
     "./projectTaskQueue": {
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
+    },
+    "./recordProjection": {
+      "types": "./src/recordProjection.ts",
+      "import": "./src/recordProjection.ts"
     },
     "./projectFieldMask": {
       "types": "./src/projectFieldMask.ts",

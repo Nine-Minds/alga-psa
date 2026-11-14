@@ -369,6 +369,25 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   return filterAssetsAllowedForAction(trx, tenant, context, assets, 'read', options);
 }
 
+export interface AuthorizedAssetRead<T extends AssetAuthorizationInput> {
+  asset: T;
+  index: number;
+  redactedFields: readonly string[];
+}
+
+/** Batch read decisions retain each row's field policy for the shared response projector. */
+export async function authorizeReadableAssets<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+): Promise<AuthorizedAssetRead<T>[]> {
+  const decisions = await authorizeAssetsForAction(trx, tenant, context, assets, 'read');
+  return decisions.flatMap((decision, index) => decision.allowed
+    ? [{ asset: assets[index], index, redactedFields: decision.redactedFields ?? [] }]
+    : []);
+}
+
 /**
  * The assets the caller may read, each as the caller may see it: fields the read decision redacts are omitted
  * the way the REST asset endpoints omit them, and an asset whose identity is redacted (or that is not readable)

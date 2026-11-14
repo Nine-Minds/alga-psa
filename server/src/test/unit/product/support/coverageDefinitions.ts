@@ -112,7 +112,7 @@ export const CLIENT_PORTAL_OWN_CLIENT_SCOPE: ReadonlySet<string> = new Set([
 
 /**
  * Every name below was checked against the tree: each is defined only in the authorization package, the
- * slice's own read-authorization module, or the S18 REST kernel adapter, so a bare-name match cannot hit an
+ * slice's own read-authorization module, the S18 REST kernel adapter, or the REST asset read guard, so a bare-name match cannot hit an
  * unrelated function. The method names `authorizeResource` and `authorizeMutation` are defined only on the
  * kernel (`packages/authorization/src/kernel/{contracts,engine,providers/builtinProvider}.ts`).
  */
@@ -146,7 +146,8 @@ export const AUTHORIZATION_ENTRY_POINTS: ReadonlySet<string> = new Set([
   // client portal: the caller's own client, derived from the session (see CLIENT_PORTAL_OWN_CLIENT_SCOPE)
   ...CLIENT_PORTAL_OWN_CLIENT_SCOPE,
   // REST and MCP (S18)
-  'authorizeApiResourceAction', 'authorizeApiResource', 'authorizeApiResourceRead',
+  'authorizeApiResourceAction', 'authorizeApiResource', 'projectApiResourceRead', 'projectApiResourceReads',
+  'readAssetGateForRequest', 'guardAssetReadForRequest',
 ]);
 
 // ---------------------------------------------------------------------------------------------

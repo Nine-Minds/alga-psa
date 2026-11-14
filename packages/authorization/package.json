@@ -122,6 +122,10 @@
       "import": "./dist/recordProjection.js",
       "types": "./src/recordProjection.ts"
     },
+    "./recordProjectionDescriptors": {
+      "import": "./dist/recordProjectionDescriptors.js",
+      "types": "./src/recordProjectionDescriptors.ts"
+    },
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"

@@ -78,3 +78,39 @@ export async function buildAuthorizationAwarePage<T>(input: AuthorizedPageInput<
     total: authorizedTotal,
   };
 }
+
+/**
+ * Scan source pages until the requested output page is full, counting only rows that survive authorization and
+ * projection. This is the projection boundary used by REST controllers; the lower-level action API above remains
+ * available for call sites that already receive decision records.
+ */
+export async function buildProjectedPage<T, P>(input: {
+  page: number;
+  limit: number;
+  fetchPage: (page: number, limit: number) => Promise<PageResult<T>>;
+  projectRecord: (record: T) => Promise<P | null>;
+  scanLimit?: number;
+}): Promise<PageResult<P>> {
+  const requestedPage = Number.isFinite(input.page) && input.page > 0 ? Math.floor(input.page) : 1;
+  const requestedLimit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 25;
+  const scanLimit = Math.max(requestedLimit, input.scanLimit ?? 100);
+  const pageOffset = (requestedPage - 1) * requestedLimit;
+  const pageEnd = pageOffset + requestedLimit;
+  const data: P[] = [];
+  let total = 0;
+  let sourcePage = 1;
+
+  for (;;) {
+    const result = await input.fetchPage(sourcePage, scanLimit);
+    if (!Array.isArray(result.data) || result.data.length === 0) break;
+    for (const record of result.data) {
+      const projected = await input.projectRecord(record);
+      if (projected === null) continue;
+      if (total >= pageOffset && total < pageEnd) data.push(projected);
+      total += 1;
+    }
+    if (sourcePage * scanLimit >= result.total || result.data.length < scanLimit) break;
+    sourcePage += 1;
+  }
+  return { data, total };
+}

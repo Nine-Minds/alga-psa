@@ -178,10 +178,11 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
     expect(state.writes).toEqual([IN_SCOPE]);
   });
 
-  it('403s when update is allowed but read is denied (no record disclosure)', async () => {
+  it('404s when update is allowed but read is denied (existence is not confirmed)', async () => {
     state.readDenied = new Set([IN_SCOPE]);
     const res = await put(IN_SCOPE);
-    expect(res.status).toBe(403);
+    // A row-dependent read denial is indistinguishable from a missing ticket (404), unlike plain RBAC (403).
+    expect(res.status).toBe(404);
     expect(state.writes).toEqual([]);
     // The kernel refuses at the read prerequisite and never reaches the update rules.
     expect(actionsRequested()).toEqual(['ticket:read']);
@@ -207,22 +208,22 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
       addWatcherMock.mockClear();
     });
 
-    it('(a) an update-allowed / read-denied caller gets 403 on an acknowledgement-only mutation (DELETE agents/{userId}) and nothing is removed', async () => {
+    it('(a) an update-allowed / read-denied caller gets 404 on an acknowledgement-only mutation (DELETE agents/{userId}) and nothing is removed', async () => {
       const res = await deleteAgent(IN_SCOPE);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
       expect(removeTicketAgentMock).not.toHaveBeenCalled();
       expect(actionsRequested()).toEqual(['ticket:read']);
     });
 
-    it('(b) the same caller gets 403 on PUT assignment (response discloses the ticket) and nothing is written', async () => {
+    it('(b) the same caller gets 404 on PUT assignment (response discloses the ticket) and nothing is written', async () => {
       const res = await put(IN_SCOPE);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
       expect(serviceUpdateMock).not.toHaveBeenCalled();
       expect(state.writes).toEqual([]);
       expect(actionsRequested()).toContain('ticket:read');
     });
 
-    it('(c) the same caller gets 403 on POST watchers (response returns the watcher list) and addWatcher is not called', async () => {
+    it('(c) the same caller gets 404 on POST watchers (response returns the watcher list) and addWatcher is not called', async () => {
       const res = await POST_WATCHER(
         new NextRequest(`http://localhost/api/v1/tickets/${IN_SCOPE}/watchers`, {
           method: 'POST',
@@ -231,7 +232,7 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
         }),
         { params: Promise.resolve({ id: IN_SCOPE }) } as any
       );
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
       expect(addWatcherMock).not.toHaveBeenCalled();
       expect(actionsRequested()).toContain('ticket:read');
     });
