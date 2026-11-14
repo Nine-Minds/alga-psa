@@ -32,6 +32,8 @@ import { CO_MANAGED_CAPABILITY } from './permissionsCapability';
 // Side effect: registers the seat authority resolver with the authorization kernel in every process that boots here.
 import './seatAuthority';
 import './seatPeopleProjection';
+// The seat technician's ticket list views register into the ticket list's view-provider seam.
+import './seatTicketListViews';
 // The seat shape's capability registers with the same import, so every host that registers
 // `co-managed` (server entry, Temporal worker) registers `co-managed-seat` too.
 import './seatCapability';
