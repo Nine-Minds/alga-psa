@@ -463,6 +463,12 @@ jobs:
           path: test-results/infrastructure/
           if-no-files-found: error
           retention-days: 30
+          # Re-running only the failed shard leaves the earlier attempt's
+          # same-named artifact in place; the aggregator's pattern download
+          # then has two "infrastructure-shard-N" artifacts to choose from and
+          # can pick the stale, failing one even though the rerun went green.
+          # Overwrite so a rerun always replaces this shard's own evidence.
+          overwrite: true
 
       # Published only when this shard retried something. The shard bundle above
       # expires in a week; the weekly flaky report reads this one.

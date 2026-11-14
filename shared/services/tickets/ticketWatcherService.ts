@@ -24,6 +24,10 @@ import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
  *
  * Callers pass an open transaction and own events/notifications: this layer
  * reports `changed` so they can publish only when something actually changed.
+ *
+ * A seat technician may be named as a watcher on any ticket, like any other address. What a
+ * subscription delivers is decided at delivery time from live rows (`notificationAudience`): in
+ * scope their audience's content, out of scope the requester-only client rendering.
  */
 
 export interface TicketWatcher {
@@ -303,8 +307,8 @@ export async function addTicketWatcher(
 ): Promise<TicketWatcherWriteResult> {
   await lockTicket(trx, tenant, ticketId);
   const target = await resolveTicketWatcherTarget(trx, tenant, input);
-  const before = (await readRows(trx, tenant, ticketId)).map(toWatcher);
   const active = input.active ?? true;
+  const before = (await readRows(trx, tenant, ticketId)).map(toWatcher);
 
   const existing = await watchersTable(trx, tenant)
     .where({ ticket_id: ticketId })

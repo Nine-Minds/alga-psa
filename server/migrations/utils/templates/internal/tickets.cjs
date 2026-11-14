@@ -340,6 +340,42 @@ const TEMPLATES = [
       sv: { title: 'Ärende har fått status {{statusName}} på {{boardName}}', message: 'Ärende #{{ticketId}} ”{{ticketTitle}}” för {{clientName}} har fått status {{statusName}} på tavlan {{boardName}}' },
     },
   },
+
+  // ── ticket-handed-to-client-it ───────────────────────────────────────
+  // Co-managed seat: MSP staff handed a ticket to the client's technicians.
+  {
+    templateName: 'ticket-handed-to-client-it',
+    subtypeName: 'ticket-handed-to-client-it',
+    translations: {
+      en: { title: 'Ticket handed to client IT', message: '{{performedByName}} handed ticket #{{ticketId}} "{{ticketTitle}}" to client IT' },
+      fr: { title: 'Ticket transmis à l\'équipe IT du client', message: '{{performedByName}} a transmis le ticket #{{ticketId}} "{{ticketTitle}}" à l\'équipe IT du client' },
+      es: { title: 'Ticket transferido al equipo de TI del cliente', message: '{{performedByName}} transfirió el ticket #{{ticketId}} "{{ticketTitle}}" al equipo de TI del cliente' },
+      de: { title: 'Ticket an die Kunden-IT übergeben', message: '{{performedByName}} hat Ticket #{{ticketId}} "{{ticketTitle}}" an die Kunden-IT übergeben' },
+      nl: { title: 'Ticket overgedragen aan IT van de klant', message: '{{performedByName}} heeft ticket #{{ticketId}} "{{ticketTitle}}" overgedragen aan IT van de klant' },
+      it: { title: 'Ticket passato all\'IT del cliente', message: '{{performedByName}} ha passato il ticket #{{ticketId}} "{{ticketTitle}}" all\'IT del cliente' },
+      pl: { title: 'Zgłoszenie przekazane do IT klienta', message: '{{performedByName}} przekazał(a) zgłoszenie #{{ticketId}} "{{ticketTitle}}" do IT klienta' },
+      pt: { title: 'Ticket transferido para a TI do cliente', message: '{{performedByName}} transferiu o ticket #{{ticketId}} "{{ticketTitle}}" para a TI do cliente' },
+      sv: { title: 'Ärende överlämnat till kundens IT', message: '{{performedByName}} överlämnade ärende #{{ticketId}} ”{{ticketTitle}}” till kundens IT' },
+    },
+  },
+
+  // ── ticket-handed-to-msp ─────────────────────────────────────────────
+  // Co-managed seat: a client technician handed a ticket to the MSP.
+  {
+    templateName: 'ticket-handed-to-msp',
+    subtypeName: 'ticket-handed-to-msp',
+    translations: {
+      en: { title: 'Ticket handed over by client IT', message: '{{performedByName}} handed ticket #{{ticketId}} "{{ticketTitle}}" to your team' },
+      fr: { title: 'Ticket transmis par l\'équipe IT du client', message: '{{performedByName}} a transmis le ticket #{{ticketId}} "{{ticketTitle}}" à votre équipe' },
+      es: { title: 'Ticket transferido por el equipo de TI del cliente', message: '{{performedByName}} transfirió el ticket #{{ticketId}} "{{ticketTitle}}" a su equipo' },
+      de: { title: 'Ticket von der Kunden-IT übergeben', message: '{{performedByName}} hat Ticket #{{ticketId}} "{{ticketTitle}}" an Ihr Team übergeben' },
+      nl: { title: 'Ticket overgedragen door IT van de klant', message: '{{performedByName}} heeft ticket #{{ticketId}} "{{ticketTitle}}" overgedragen aan uw team' },
+      it: { title: 'Ticket passato dall\'IT del cliente', message: '{{performedByName}} ha passato il ticket #{{ticketId}} "{{ticketTitle}}" al tuo team' },
+      pl: { title: 'Zgłoszenie przekazane przez IT klienta', message: '{{performedByName}} przekazał(a) zgłoszenie #{{ticketId}} "{{ticketTitle}}" Twojemu zespołowi' },
+      pt: { title: 'Ticket transferido pela TI do cliente', message: '{{performedByName}} transferiu o ticket #{{ticketId}} "{{ticketTitle}}" para a sua equipe' },
+      sv: { title: 'Ärende överlämnat av kundens IT', message: '{{performedByName}} överlämnade ärende #{{ticketId}} ”{{ticketTitle}}” till ditt team' },
+    },
+  },
 ];
 
 module.exports = { TEMPLATES };

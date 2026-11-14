@@ -95,6 +95,9 @@ export default defineConfig({
       // link reads — listed for the same reason as the suites above.
       'src/actions/accountingSyncActions.org.test.ts',
       'src/actions/accountingSyncActions.disconnectScope.test.ts',
+      'src/actions/accountingSyncActions.erroredOps.test.ts',
+      'src/services/accountingSync/syncOperationsRepository.listErrored.test.ts',
+      'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.syncButton.test.tsx',
       'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.

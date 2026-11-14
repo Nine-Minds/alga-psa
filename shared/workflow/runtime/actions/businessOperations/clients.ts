@@ -747,6 +747,12 @@ async function cleanupClientDeleteArtifacts(
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+  // RMM organisations stay mapped to nothing; the client's maintenance windows
+  // go with it. Neither foreign key acts on its own on Citus.
+  await tenantScopedTableForTenant(trx, tenant, 'rmm_organization_mappings')
+    .where('client_id', clientId)
+    .update({ client_id: null, billing_profile_id: null, updated_at: new Date().toISOString() });
+  await deleteFromTenantTableIfExists(trx, tenant, 'rmm_maintenance_windows', { client_id: clientId });
   // After every table that references a profile, before the client itself.
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_profiles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });

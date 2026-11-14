@@ -5,7 +5,16 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { getUploadPolicy } from '@alga-psa/storage/config/storage';
+import {
+  assertWithinBufferedCap,
+  effectiveBufferedCap,
+  serverActionFileLimitBytes,
+} from '@alga-psa/storage/ingest/bufferedCap';
+import { isUploadContentTypeError } from '@alga-psa/storage/ingest/errors';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
@@ -25,8 +34,20 @@ type ClientTaskDocument = {
   uploaded_by_name: string;
 };
 
+/**
+ * A server action receives the file inside its FormData, which Next holds in memory and rejects
+ * past SERVER_ACTIONS_BODY_LIMIT before this handler runs. So this path buffers by transport, and
+ * the largest file it can accept (the limit less the multipart envelope) is the cap, clamped to
+ * the provider max. The file is still streamed from the received File into the ingest.
+ */
+// Computed per call, not at import: an unparseable SERVER_ACTIONS_BODY_LIMIT must fail the upload
+// with a clear error, not every action in this module.
+const clientTaskUploadMaxBytes = (): number => serverActionFileLimitBytes();
+
 function clientProjectUploadErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  // A refusal by the ingest (the bytes are not the declared type) is the user's to act on.
+  if (isUploadContentTypeError(error)) return message;
 
   if (
     message === 'File type not allowed' ||
@@ -553,15 +574,21 @@ export const uploadClientTaskDocument = withAuth(async (
   try {
     const mimeType = file.type || 'application/octet-stream';
 
-    // 1. Validate file before upload (follows fileActions.ts pattern)
-    await StorageService.validateFileUpload(tenant, mimeType, file.size);
+    // 1. Never advertise or enforce more than the action transport accepts (or the provider allows).
+    const { maxFileSize } = await getUploadPolicy();
+    assertWithinBufferedCap(file.size, effectiveBufferedCap(clientTaskUploadMaxBytes(), maxFileSize, 'client task upload cap'));
 
-    // 2. Upload file to storage (StorageService.uploadFile is static, doesn't support transactions)
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const fileRecord = await StorageService.uploadFile(tenant, buffer, file.name, {
-      mime_type: mimeType,
-      uploaded_by_id: user.user_id
-    });
+    // 2. Stream the file into storage: the ingest owns the size, type and hash checks
+    // (StorageService.uploadFile is static, doesn't support transactions).
+    const fileRecord = await StorageService.uploadFile(
+      tenant,
+      Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
+      file.name,
+      {
+        mime_type: mimeType,
+        uploaded_by_id: user.user_id
+      }
+    );
     // fileRecord is a FileStore with: file_id, storage_path, original_name, mime_type, file_size, etc.
 
     // 3. Create document + association in transaction (matches documentActions.ts pattern)

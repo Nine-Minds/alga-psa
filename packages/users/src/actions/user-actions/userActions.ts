@@ -27,7 +27,7 @@ import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryAction
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import { CoManagedAdmissionError } from '@alga-psa/licensing';
-import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, type InternalUserLicenseLimitResult, type InternalUserLicenseLimitCode } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -70,8 +70,7 @@ export type AddUserErrorCode =
   | 'ROLE_MSP_NOT_ALLOWED_FOR_CLIENT'
   | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
   | 'EMAIL_ALREADY_EXISTS'
-  | 'LICENSE_LIMIT_REACHED'
-  | 'SOLO_PLAN_LIMIT'
+  | InternalUserLicenseLimitCode
   | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_CREATE_FAILED';
@@ -88,8 +87,7 @@ export type UpdateUserErrorCode =
   | 'SCIM_MANAGED_INACTIVE'
   | 'INVALID_TIMEZONE'
   | 'INVALID_ACTIVE_STATE'
-  | 'LICENSE_LIMIT_REACHED'
-  | 'SOLO_PLAN_LIMIT'
+  | InternalUserLicenseLimitCode
   | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
@@ -606,8 +604,9 @@ export const addUser = withAuth(async (
 
       // Admit the seat for MSP (internal) users: co-managed allocation gate or
       // the ordinary/solo/appliance limit, in the same transaction as the insert.
+      let admission: InternalUserLicenseLimitResult | null = null;
       if (isLicensedUserType(newUserType)) {
-        const admission = await admitInternalUserSeat(trx, tenant, { email: userData.email, kind: 'user' });
+        admission = await admitInternalUserSeat(trx, tenant, { email: userData.email, kind: 'user' });
         if (isInternalUserLicenseLimitRejected(admission)) {
           return { success: false, code: admission.code, error: admission.error };
         }
@@ -628,7 +627,7 @@ export const addUser = withAuth(async (
         }).returning(USER_RESPONSE_FIELD_NAMES);
 
       if (isLicensedUserType(newUserType)) {
-        await assertInternalUserSeatsWithinLimit(trx, tenant);
+        await assertInternalUserSeatsWithinLimit(trx, tenant, admission);
       }
 
       await tenantDb(trx, tenant).table('user_roles').insert({
@@ -1194,6 +1193,7 @@ export const updateUser = withAuth(async (
         };
       }
 
+      let licenseCheck: InternalUserLicenseLimitResult | null = null;
       // Moving an internal user from inactive to active occupies a seat, so it
       // is admitted like a new user. Only that transition is checked: an
       // unrelated edit by an already-active user must not be refused at the limit.
@@ -1202,7 +1202,7 @@ export const updateUser = withAuth(async (
         && existing.is_inactive === true
         && userData.is_inactive === false
       ) {
-        const licenseCheck = await admitInternalUserSeat(trx, tenant, {
+        licenseCheck = await admitInternalUserSeat(trx, tenant, {
           email: existing.email,
           kind: 'user',
           existingUserId: userId,
@@ -1218,7 +1218,7 @@ export const updateUser = withAuth(async (
         && existing.is_inactive === true
         && userData.is_inactive === false
       ) {
-        await assertInternalUserSeatsWithinLimit(trx, tenant);
+        await assertInternalUserSeatsWithinLimit(trx, tenant, licenseCheck);
       }
       const updatedUser = await getSafeUserWithRoles(trx, userId, tenant);
       return { success: true, user: updatedUser };

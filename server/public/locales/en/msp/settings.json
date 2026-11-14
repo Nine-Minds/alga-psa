@@ -3033,7 +3033,8 @@
         "preparingPreview": "Preparing preview…",
         "linking": "Linking accounts…",
         "unlinking": "Unlinking accounts…",
-        "bulkLabel": "Bulk SSO actions {{location}}"
+        "bulkLabel": "Bulk SSO actions {{location}}",
+        "disabledSelectUsers": "Select at least one user first."
       },
       "table": {
         "email": "Email",

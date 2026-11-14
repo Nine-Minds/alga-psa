@@ -23,6 +23,8 @@ export interface IUser {
   two_factor_required_new_device?: boolean;
   is_google_user?: boolean;
   is_inactive: boolean;
+  /** A seat assignment that is not revoked binds this user (database-enforced; see migration 20261113130000). `false` on a loaded row means MSP staff. */
+  seat_reader?: boolean;
   tenant: string;
   user_type: 'internal' | 'client' | 'service';
   reports_to?: string | null;

@@ -66,7 +66,11 @@
     "fallbackTitle": "Rapport",
     "dateRange": {
       "lastDays": "Senaste {{count}} dagarna",
-      "allActiveProjects": "Alla aktiva projekt, från start till idag"
+      "allActiveProjects": "Alla aktiva projekt, från start till idag",
+      "customRange": "{{start}} till {{end}}",
+      "customFrom": "Från datum",
+      "customTo": "Till datum",
+      "agingSnapshotNote": "Antal och åldersgrupper visar ärenden som är öppna just nu. Datumintervallet filtrerar bara listan över de äldsta öppna ärendena."
     },
     "units": {
       "daysWithCount": "{{count}} d"
@@ -564,7 +568,13 @@
         "not_client_attributable": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den läser {{table}}, som inte kan hänföras till en kund.",
         "unnarrowable_report": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den summerar alla kunders konton."
       },
-      "clientOutOfScope": "Du har inte åtkomst till den här kunden."
+      "clientOutOfScope": "Du har inte åtkomst till den här kunden.",
+      "range": {
+        "malformed": "Det anpassade datumintervallet kunde inte läsas. Välj båda datumen igen.",
+        "backwards": "Slutdatumet ligger före startdatumet.",
+        "tooLong": "Ett anpassat datumintervall kan omfatta högst {{maxDays}} dagar.",
+        "startsInFuture": "Det anpassade datumintervallet börjar efter i dag, så det finns inget att rapportera än."
+      }
     }
   }
 }

@@ -907,6 +907,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "nenhum"
+    },
+    "syncFeedback": {
+      "synced": "Fatura sincronizada com {{provider}}.",
+      "failed": "Falha na sincronização com {{provider}}: {{reason}}",
+      "failedNoReason": "Falha na sincronização com {{provider}}. Verifique a lista de operações com erro na página da integração contábil.",
+      "skipped": "A fatura foi ignorada e não foi enviada para {{provider}}: {{reason}}",
+      "skippedNoReason": "A fatura foi ignorada e não foi enviada para {{provider}}.",
+      "pending": "A fatura está na fila para sincronização com {{provider}}; ainda não foi processada.",
+      "unknown": "Não foi possível determinar se a fatura foi sincronizada com {{provider}}.",
+      "notRun": "A sincronização com {{provider}} não foi executada: {{reason}}",
+      "notRunNoReason": "A sincronização com {{provider}} não foi executada.",
+      "error": "Falha na sincronização: {{error}}",
+      "refusedNotFound": "Fatura não encontrada.",
+      "refusedPaid": "Faturas pagas não são sincronizadas com {{provider}}.",
+      "refusedCancelled": "Faturas anuladas ou canceladas não são sincronizadas com {{provider}}.",
+      "cycleFailed": "Falha na sincronização com {{provider}}: {{reason}} A fatura não foi enviada; ela permanece na fila e será reenviada na próxima sincronização.",
+      "cycleFailedNoReason": "Falha na sincronização com {{provider}}. A fatura não foi enviada; ela permanece na fila e será reenviada na próxima sincronização."
     }
   },
   "templateEditor": {

@@ -8,7 +8,7 @@ import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures
  * Real route/controller, adapter, AssetService, API-key auth and RBAC run on a
  * migrated DB. The authorization kernel decision is stubbed (deny a chosen asset
  * id) because a record-level denial needs bundle/rule fixtures; resolveSource and
- * attachDocumentFromBytes are spies so we can prove they are never reached.
+ * attachDocument are spies so we can prove they are never reached.
  *
  * Run (see integration-testing skill for the cloned-DB recipe):
  *   cd server && REQUIRE_DB=1 TEST_DB_NAME=<clone> DB_HOST=127.0.0.1 DB_PORT=5474 \
@@ -58,9 +58,13 @@ vi.mock('../../../lib/api/controllers/authorizationKernel', async (original) => 
 }));
 vi.mock('../../../lib/api/services/documents/resolveSource', () => ({
   resolveSource: (...args: unknown[]) => spies.resolveSource(...args),
+  getMaxUploadBytes: async () => 500 * 1024 * 1024,
+  base64SourceCap: (providerMax: number) => Math.min(25 * 1024 * 1024, providerMax),
+  assertJsonBodyWithinCap: () => undefined,
+  mapFetchError: (error: unknown) => error,
 }));
 vi.mock('../../../lib/api/services/documents/attachDocument', () => ({
-  attachDocumentFromBytes: (...args: unknown[]) => spies.attach(...args),
+  attachDocument: (...args: unknown[]) => spies.attach(...args),
 }));
 
 const route = await import('../../../app/api/v1/documents/route');
@@ -102,7 +106,7 @@ beforeEach(async () => {
   noUpdateKey = (await createTestApiKey(trx, noUpdateId, tenant)).api_key;
 
   spies.kernel.mockClear();
-  spies.resolveSource.mockReset().mockResolvedValue({ buffer: Buffer.from('x'), fileName: 'a.txt', mimeType: 'text/plain' });
+  spies.resolveSource.mockReset().mockResolvedValue({ body: Buffer.from('x'), fileName: 'a.txt', mimeType: 'text/plain' });
   spies.attach.mockReset().mockResolvedValue({ document_id: randomUUID(), document_name: 'a.txt' });
 });
 afterEach(async () => { await (connection.db as Knex.Transaction)?.rollback(); });

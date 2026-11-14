@@ -66,7 +66,11 @@
     "fallbackTitle": "Rapport",
     "dateRange": {
       "lastDays": "Laatste {{count}} dagen",
-      "allActiveProjects": "Alle actieve projecten, sinds de start"
+      "allActiveProjects": "Alle actieve projecten, sinds de start",
+      "customRange": "{{start}} tot {{end}}",
+      "customFrom": "Van",
+      "customTo": "Tot",
+      "agingSnapshotNote": "Aantallen en leeftijdsgroepen tonen de tickets die nu open staan. Het datumbereik filtert alleen de lijst met oudste open tickets."
     },
     "units": {
       "daysWithCount": "{{count}} dagen"
@@ -564,7 +568,13 @@
         "not_client_attributable": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het leest {{table}}, dat niet aan een klant kan worden toegewezen.",
         "unnarrowable_report": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het telt de rekeningen van alle klanten bij elkaar op."
       },
-      "clientOutOfScope": "U hebt geen toegang tot deze klant."
+      "clientOutOfScope": "U hebt geen toegang tot deze klant.",
+      "range": {
+        "malformed": "Het aangepaste datumbereik kon niet worden gelezen. Kies beide datums opnieuw.",
+        "backwards": "De einddatum ligt vóór de begindatum.",
+        "tooLong": "Een aangepast datumbereik kan maximaal {{maxDays}} dagen beslaan.",
+        "startsInFuture": "Het aangepaste datumbereik begint na vandaag, dus er is nog niets te rapporteren."
+      }
     }
   }
 }

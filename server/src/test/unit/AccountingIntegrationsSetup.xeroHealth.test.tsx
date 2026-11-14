@@ -12,17 +12,22 @@ const healthMock = vi.hoisted(() => vi.fn());
 const syncMock = vi.hoisted(() => vi.fn());
 const defaultMock = vi.hoisted(() => vi.fn());
 const catalogsMock = vi.hoisted(() => vi.fn(async () => []));
+const erroredOpsMock = vi.hoisted(() => vi.fn(async () => []));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+// Only translation is swapped for real English resources; every other export
+// (useFormatters, providers) stays the real module the components import.
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/ui/lib/i18n/client')>();
   const { createInstance } = await import('i18next');
   const { default: en } = await import('../../../public/locales/en/msp/integrations.json');
   const i18n = createInstance();
   await i18n.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
   const t = i18n.t.bind(i18n);
-  return { useTranslation: () => ({ t }) };
+  return { ...actual, useTranslation: () => ({ t }) };
 });
 vi.mock('@alga-psa/billing/actions/accountingSyncActions', () => ({
   getAccountingSyncHealth: healthMock,
+  getErroredSyncOperations: erroredOpsMock,
   runAccountingSyncNow: syncMock,
   setDefaultAccountingRealm: defaultMock,
   updateAccountingSyncSettingsAction: vi.fn()
@@ -135,5 +140,32 @@ describe('AccountingIntegrationsSetup mounts provider-aware health in the Xero f
     expect(await screen.findByText(`${provider} sync activity`)).toBeInTheDocument();
     expect(screen.getByText(`Review recent ${provider} activity, outstanding items, and automatic sync settings.`)).toBeInTheDocument();
     expect(healthMock).toHaveBeenCalledWith({ preferredAdapterType: adapterType });
+  });
+
+  it('opens the errored ops list for the selected Xero organisation from the Errored ops count', async () => {
+    const { default: Panel } = await import('@alga-psa/billing/components/accounting/QboSyncHealthPanel');
+    healthMock.mockResolvedValue({
+      connected: true, adapterType: 'xero',
+      settings: { autoSyncEnabled: true },
+      realms: [{ realmId: 'conn-1', isDefault: true }],
+      lastCycle: null, pendingOps: 0, erroredOps: 1, driftCount: 0, openExceptions: 0,
+      refreshTokenExpiresAt: null
+    });
+    erroredOpsMock.mockResolvedValue([{
+      opId: 'op-1', entityType: 'invoice', entityKind: 'invoice', displayName: 'INV-1001',
+      operation: 'export_invoice', status: 'failed', attempts: 3,
+      lastError: 'Xero rejected the invoice: contact is archived',
+      timestamp: '2026-11-01T10:00:00Z', batchId: null, batchLabel: null, batchQueuedAt: null
+    }]);
+
+    render(<Panel adapterType="xero" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'View errored operations' }));
+
+    expect(await screen.findByText('Errored Xero sync operations')).toBeInTheDocument();
+    expect(await screen.findByText('Xero rejected the invoice: contact is archived')).toBeInTheDocument();
+    expect(screen.getByText('INV-1001')).toBeInTheDocument();
+    expect(screen.getByText('Export invoice')).toBeInTheDocument();
+    expect(erroredOpsMock).toHaveBeenCalledWith({ preferredAdapterType: 'xero', preferredTargetRealm: 'conn-1' });
   });
 });

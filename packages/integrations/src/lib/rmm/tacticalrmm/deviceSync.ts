@@ -883,7 +883,7 @@ export async function runTacticalRmmDeviceSync(
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where({ provider: PROVIDER })
-      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null, updated_at: new Date().toISOString() });
 
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_COMPLETED',

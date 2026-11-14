@@ -66,7 +66,11 @@
     "fallbackTitle": "Report",
     "dateRange": {
       "lastDays": "Ultimi {{count}} giorni",
-      "allActiveProjects": "Tutti i progetti attivi, dall’inizio"
+      "allActiveProjects": "Tutti i progetti attivi, dall’inizio",
+      "customRange": "Dal {{start}} al {{end}}",
+      "customFrom": "Dal",
+      "customTo": "Al",
+      "agingSnapshotNote": "I conteggi e le fasce di anzianità mostrano i ticket aperti in questo momento. L'intervallo di date filtra solo l'elenco dei ticket aperti più vecchi."
     },
     "units": {
       "daysWithCount": "{{count}} giorni"
@@ -564,7 +568,13 @@
         "not_client_attributable": "Questo report non è disponibile per te perché non può essere limitato ai tuoi clienti: legge {{table}}, che non è attribuibile a un cliente.",
         "unnarrowable_report": "Questo report non è disponibile per te perché non può essere limitato ai tuoi clienti: somma i conti di tutti i clienti."
       },
-      "clientOutOfScope": "Non hai accesso a questo cliente."
+      "clientOutOfScope": "Non hai accesso a questo cliente.",
+      "range": {
+        "malformed": "Impossibile leggere l'intervallo di date personalizzato. Scegli di nuovo entrambe le date.",
+        "backwards": "La data di fine è precedente alla data di inizio.",
+        "tooLong": "Un intervallo di date personalizzato può coprire al massimo {{maxDays}} giorni.",
+        "startsInFuture": "L'intervallo di date personalizzato inizia dopo oggi, quindi non c'è ancora nulla da riportare."
+      }
     }
   }
 }

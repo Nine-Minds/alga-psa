@@ -31,7 +31,12 @@ const associationBuilder = {
   then: (resolve: (value: IDocumentAssociation[]) => unknown, reject?: (reason: unknown) => unknown) =>
     Promise.resolve(mockAssociationRows).then(resolve, reject),
 };
-const mockKnexInstance: any = vi.fn((table: string) => table === 'ticket_comment_attachments' ? { where: () => ({ where: () => ({ first: async () => undefined }) }) } : associationBuilder);
+// A document with no attachment row asks one more thing of an internal reader: that no comment
+// owning it is hidden from them. These readers are MSP staff, so the answer is always yes.
+const staffReaderBuilder: any = { where: () => staffReaderBuilder, first: async () => ({ document_visible: true }) };
+const mockKnexInstance: any = Object.assign(vi.fn((table: string) => table === 'ticket_comment_attachments'
+  ? { where: () => ({ where: () => ({ first: async () => undefined }) }) }
+  : table === 'users' ? staffReaderBuilder : associationBuilder), { raw: vi.fn((sql: string) => sql) });
 
 describe('documentPermissionUtils', () => {
   const mockUser: IUser = {

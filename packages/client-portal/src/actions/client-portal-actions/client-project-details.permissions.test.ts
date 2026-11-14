@@ -34,8 +34,17 @@ vi.mock('../../lib/clientAuth', () => ({
   getPortalVisibilityForUser: (...args: any[]) => getPortalVisibilityForUserMock(...args),
 }));
 
+const uploadFileMock = vi.fn();
+const validateFileUploadMock = vi.fn();
 vi.mock('@alga-psa/storage/StorageService', () => ({
-  StorageService: { validateFileUpload: vi.fn(), uploadFile: vi.fn() },
+  StorageService: {
+    validateFileUpload: (...args: any[]) => validateFileUploadMock(...args),
+    uploadFile: (...args: any[]) => uploadFileMock(...args),
+  },
+}));
+
+vi.mock('@alga-psa/storage/config/storage', () => ({
+  getUploadPolicy: async () => ({ maxFileSize: 500 * 1024 * 1024, allowedMimeTypes: ['*/*'] }),
 }));
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
@@ -140,5 +149,81 @@ describe('client portal project detail actions enforce project:read', () => {
     const { getClientProjectPhases } = await import('./client-project-details');
 
     expect(await getClientProjectPhases('project-1')).toEqual({ phases });
+  });
+
+  describe('uploadClientTaskDocument transport cap and streaming', () => {
+    const inserted: Record<string, any[]> = { documents: [], document_associations: [] };
+
+    beforeEach(() => {
+      projectReadGranted = true;
+      inserted.documents.length = 0;
+      inserted.document_associations.length = 0;
+      tableMock.mockImplementation((table: string) => {
+        if (table === 'project_tasks as pt') {
+          return buildQuery([{
+            project_id: 'project-1',
+            client_portal_config: { show_tasks: true, visible_task_fields: ['document_uploads'] },
+          }]);
+        }
+        if (table === 'documents' || table === 'document_associations') {
+          return { insert: vi.fn(async (row: any) => { inserted[table]!.push(row); }) };
+        }
+        throw new Error(`Unexpected table: ${table}`);
+      });
+    });
+
+    it('streams the file into the ingest (no arrayBuffer, no second validator)', async () => {
+      const { Readable } = await import('node:stream');
+      uploadFileMock.mockResolvedValue({ file_id: 'f1', storage_path: 'p', mime_type: 'video/mp4', file_size: 5 });
+      const file = new File([Buffer.from('hello')], 'clip.mp4', { type: 'video/mp4' });
+      const arrayBufferSpy = vi.spyOn(file, 'arrayBuffer');
+      const form = new FormData();
+      form.set('file', file);
+
+      const { uploadClientTaskDocument } = await import('./client-project-details');
+      const result = await uploadClientTaskDocument('task-1', form);
+
+      expect(result).toMatchObject({ success: true });
+      expect(arrayBufferSpy).not.toHaveBeenCalled();
+      expect(validateFileUploadMock).not.toHaveBeenCalled();
+      expect(uploadFileMock.mock.calls[0]![1]).toBeInstanceOf(Readable);
+      expect(inserted.documents[0]).toMatchObject({ file_id: 'f1', mime_type: 'video/mp4', file_size: 5 });
+    });
+
+    it('refuses a file larger than the server-action transport accepts, with the standard size message', async () => {
+      const { serverActionFileLimitBytes } = await import('@alga-psa/storage/ingest/bufferedCap');
+      const cap = serverActionFileLimitBytes();
+      // A File reporting a size over the cap without allocating it.
+      const file = new File(['x'], 'huge.mp4', { type: 'video/mp4' });
+      Object.defineProperty(file, 'size', { value: cap + 1 });
+      const form = new FormData();
+      form.set('file', file);
+
+      const { uploadClientTaskDocument } = await import('./client-project-details');
+      const result = await uploadClientTaskDocument('task-1', form);
+
+      // The cap in the message is the transport's, never the 500 MB provider max.
+      expect(result).toEqual({ success: false, error: `File size exceeds limit of ${cap} bytes` });
+      expect(uploadFileMock).not.toHaveBeenCalled();
+    });
+
+    it('the cap follows SERVER_ACTIONS_BODY_LIMIT up to the 100 MB proxy limit (200mb gives 100 MiB less 64 KiB), with no 25 MiB clamp', async () => {
+      vi.stubEnv('SERVER_ACTIONS_BODY_LIMIT', '200mb');
+      try {
+        // Next's proxy truncates every request body past proxyClientMaxBodySize (100mb), so a
+        // 200mb action limit cannot carry more than that.
+        const cap = 100 * 1024 * 1024 - 64 * 1024;
+        const file = new File(['x'], 'huge.mp4', { type: 'video/mp4' });
+        Object.defineProperty(file, 'size', { value: cap + 1 });
+        const form = new FormData();
+        form.set('file', file);
+        const { uploadClientTaskDocument } = await import('./client-project-details');
+        const result = await uploadClientTaskDocument('task-1', form);
+        // Refused at exactly the transport cap (the provider max in this suite is 500 MB), not at 25 MiB.
+        expect(result).toEqual({ success: false, error: `File size exceeds limit of ${cap} bytes` });
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
   });
 });

@@ -18,7 +18,7 @@ import {
   authorizationEvaluationSnapshotQuery, bundleNarrowingRuleFromRow, loadAuthorizationEvaluationSnapshot,
   type AuthorizationEvaluationSnapshot,
 } from './bundles/service';
-import { builtinResolverFactsExpression } from './kernel/builtinRuleResolvers';
+import { builtinResolverSubjectsExistExpression, loadBuiltinResolverFacts } from './kernel/builtinRuleResolvers';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
@@ -90,21 +90,26 @@ interface TicketAuthorizationContext {
 }
 
 /**
- * The evaluation snapshot and, when a built-in rule resolver declares a fact source, its facts for the subject:
- * one statement either way. With no fact source registered this is exactly the snapshot load.
+ * The evaluation snapshot and, when a built-in rule resolver may have a subject in the tenant, its facts for the
+ * subject. The snapshot statement carries the resolvers' tenant gate (the same one the subject resolver's tenant
+ * probe asks), so a tenant with no resolver subject issues that one statement and never reads a resolver's
+ * feature tables. Only a tenant the gate does not rule out pays a second statement for the facts. With no fact
+ * source registered this is exactly the snapshot load.
  */
 async function loadSnapshotWithResolverFacts(
   trx: Conn,
   subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
 ): Promise<{ snapshot: AuthorizationEvaluationSnapshot; resolverFacts?: Record<string, unknown> }> {
-  const facts = builtinResolverFactsExpression(trx, subject);
-  if (!facts) return { snapshot: await loadAuthorizationEvaluationSnapshot(trx, subject) };
+  const subjectsExist = builtinResolverSubjectsExistExpression(trx, subject.tenant);
+  if (!subjectsExist) return { snapshot: await loadAuthorizationEvaluationSnapshot(trx, subject) };
   const row = await trx.queryBuilder()
-    .select(authorizationEvaluationSnapshotQuery(trx, subject).as('snapshot'), trx.raw('? as "resolverFacts"', [facts]))
+    .select(authorizationEvaluationSnapshotQuery(trx, subject).as('snapshot'), trx.raw('? as "resolverSubjects"', [subjectsExist]))
     .first();
   // A missing part is a failed load, never "no facts": the subject gets no decision.
-  if (!row?.snapshot || !row.resolverFacts) throw new Error('Authorization context unavailable');
-  return { snapshot: row.snapshot as AuthorizationEvaluationSnapshot, resolverFacts: row.resolverFacts as Record<string, unknown> };
+  if (!row?.snapshot || typeof row.resolverSubjects !== 'boolean') throw new Error('Authorization context unavailable');
+  const snapshot = row.snapshot as AuthorizationEvaluationSnapshot;
+  if (!row.resolverSubjects) return { snapshot };
+  return { snapshot, resolverFacts: await loadBuiltinResolverFacts(trx, subject) };
 }
 
 // LEVERAGE: pattern ticket-authorization-context — near-duplicate of createTicketAuthorizationContext in actions/optimizedTicketActions.ts (and ticketActions.ts); a shared builder would remove the drift that dropped contact visibility here.

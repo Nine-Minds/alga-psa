@@ -8,6 +8,7 @@ import {
   type ClientScopeRefusal,
 } from '../../lib/reports/clientScope/refusal';
 import { ReportClientScopeRefusedError } from '../../lib/reports/core/types';
+import { REPORT_RANGE_PROBLEMS, ReportRangeError } from '../reportRange';
 import {
   actionError,
   isAuthorizationThrow,
@@ -27,6 +28,11 @@ export function clientScopeRefusalActionError(refusal: ClientScopeRefusal): Acti
 export function reportingActionErrorFrom(error: unknown): ReportingActionError | null {
   if (error instanceof ClientScopeRefusedError || error instanceof ReportClientScopeRefusedError) {
     return clientScopeRefusalActionError(error.refusal);
+  }
+
+  if (error instanceof ReportRangeError) {
+    const { message, key, params } = REPORT_RANGE_PROBLEMS[error.problem];
+    return actionError(message, `msp/reports:${key}`, params);
   }
 
   if (error && typeof error === 'object') {

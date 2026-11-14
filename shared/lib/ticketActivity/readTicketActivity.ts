@@ -15,6 +15,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { attachViaPrincipalNames } from '../viaPrincipal/viaPrincipalNames';
+import { admitInternalReaderAudienceSql, type InternalReaderAudienceSql, type InternalReaderIdentity } from '../commentAudience';
 
 import type {
   TicketActivityChanges,
@@ -72,6 +73,30 @@ export interface ReadTicketActivityOptions {
   limit?: number;
   /** Filter by event type. */
   eventTypes?: string[];
+  /**
+   * The internal user the activity is read for: their id, or the user row the request loaded.
+   * Named, events about a comment that user's organization may not read (and about a file
+   * attached to one) are omitted in the same statement: MSP staff still see every event, a seat
+   * technician none about a private note. A loaded row that says no seat assignment binds the
+   * user adds nothing to the statement.
+   */
+  internalReaderId?: InternalReaderIdentity;
+}
+
+const UUID_PATTERN = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+
+/**
+ * Activity rows an internal reader may see, by the audience of the comment each row is about.
+ * `entity_id` is free text, so it is read as a uuid only when it is one; a comment event whose
+ * comment cannot be resolved (deleted, malformed) fails closed for everyone but staff.
+ */
+function activityVisibleToInternalReaderSql(knex: Knex | Knex.Transaction, audience: InternalReaderAudienceSql): Knex.Raw {
+  const entityUuid = () => knex.raw('CASE WHEN ticket_audit_logs.entity_id ~ ? THEN ticket_audit_logs.entity_id::uuid END', [UUID_PATTERN]);
+  return knex.raw(`((?) OR CASE ticket_audit_logs.entity_type
+      WHEN 'comment' THEN (?)
+      WHEN 'document' THEN (?)
+      ELSE TRUE END)`,
+  [audience.staff, audience.commentVisible(entityUuid()), audience.documentVisible(entityUuid())]);
 }
 
 function tenantScopedTable(
@@ -98,6 +123,8 @@ export async function readTicketActivity(
       { column: 'audit_id', order: 'desc' },
     ]);
 
+  const audience = opts.internalReaderId ? admitInternalReaderAudienceSql(knex, tenant, opts.internalReaderId) : null;
+  if (audience) q = q.whereRaw('?', [activityVisibleToInternalReaderSql(knex, audience)]);
   if (opts.eventTypes && opts.eventTypes.length > 0) {
     q = q.whereIn('event_type', opts.eventTypes);
   }
@@ -154,6 +181,8 @@ export interface BuildUnifiedTimelineOptions {
   includeAlerts?: boolean;
   /** Sort order. Default 'desc' (newest first). */
   order?: 'asc' | 'desc';
+  /** The internal user the timeline is read for; see `ReadTicketActivityOptions.internalReaderId`. */
+  internalReaderId?: InternalReaderIdentity;
 }
 
 function normalizeRequiredIso(value: unknown, fieldName: string): string {
@@ -254,7 +283,7 @@ export async function buildUnifiedTicketTimeline(
   const includeTimeEntries = opts.includeTimeEntries ?? false;
   const includeAlerts = opts.includeAlerts ?? false;
 
-  const activityRows = await readTicketActivity(knex, tenant, ticketId);
+  const activityRows = await readTicketActivity(knex, tenant, ticketId, { internalReaderId: opts.internalReaderId });
 
   let commentQuery = tenantScopedTable(knex, 'comments', tenant)
     .where({ ticket_id: ticketId });
@@ -263,6 +292,8 @@ export async function buildUnifiedTicketTimeline(
       qb.where('is_internal', false).orWhereNull('is_internal'),
     );
   }
+  const audience = opts.internalReaderId ? admitInternalReaderAudienceSql(knex, tenant, opts.internalReaderId) : null;
+  if (audience) commentQuery = commentQuery.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
   const commentRows = (await commentQuery) as Array<Record<string, unknown>>;
 
   const activityEntries: TicketTimelineEntry[] = activityRows.map((row) => ({

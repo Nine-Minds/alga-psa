@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { AuthorizationRequestCache } from '../kernel/contracts';
 import { publishedAssignmentsQuery } from '../bundles/publishedAssignments';
-import { builtinResolverFactSources, hasBuiltinRuleResolversWithoutFactSource } from '../kernel/builtinRuleResolvers';
+import { builtinResolverSubjectsExistExpression, hasBuiltinRuleResolversWithoutFactSource } from '../kernel/builtinRuleResolvers';
 
 /**
  * What a tenant has configured that can change an authorization decision beyond
@@ -57,21 +57,20 @@ export async function probeTenantAuthorizationScope(
 
   let scope: TenantAuthorizationScope;
   try {
-    const sources = builtinResolverFactSources();
+    const subjectsExist = builtinResolverSubjectsExistExpression(knex, tenant);
     const row = await knex.queryBuilder()
       .select(
         knex.raw('exists(?) as "publishedAssignments"', [publishedAssignmentsQuery(knex, tenant).select(knex.raw('1'))]),
         knex.raw('exists(?) as "portfolios"', [tenantDb(knex, tenant).table('user_client_portfolios').select(knex.raw('1'))]),
-        ...sources.map(({ facts }, index) =>
-          knex.raw(`exists(?) as "resolverSubjects${index}"`, [facts.tenantHasSubjects(knex, tenant).select(knex.raw('1'))]))
+        ...(subjectsExist ? [knex.raw('? as "resolverSubjects"', [subjectsExist])] : [])
       )
-      .first<{ publishedAssignments: boolean; portfolios: boolean } & Record<string, unknown>>();
+      .first<{ publishedAssignments: boolean; portfolios: boolean; resolverSubjects?: unknown }>();
     if (!row || typeof row.publishedAssignments !== 'boolean' || typeof row.portfolios !== 'boolean') {
       return SLOW_PATH_TENANT_SCOPE;
     }
     // Anything but an explicit false counts as "may have subjects".
     const resolverSubjects = hasBuiltinRuleResolversWithoutFactSource() ||
-      sources.some((_, index) => row[`resolverSubjects${index}`] !== false);
+      (subjectsExist !== null && row.resolverSubjects !== false);
     scope = { publishedAssignments: row.publishedAssignments, portfolios: row.portfolios, resolverSubjects };
   } catch {
     return SLOW_PATH_TENANT_SCOPE;

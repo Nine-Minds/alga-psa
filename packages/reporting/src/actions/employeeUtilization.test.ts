@@ -120,6 +120,40 @@ describe('buildEmployeeUtilizationReport', () => {
     expect(report.byUser.map((u) => u.userId)).toEqual(['capped', 'uncapped']);
   });
 
+  it('handles a custom day count and echoes the window back', () => {
+    // Wed..Mon: 2026-07-22 to 2026-07-27, four weekdays of a Mon-Fri schedule.
+    const weekdays = [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+      dayOfWeek: dayOfWeek as 1 | 2 | 3 | 4 | 5,
+      isWorking: true,
+      startTime: '09:00',
+      endTime: '17:00',
+    }));
+    const report = buildEmployeeUtilizationReport(
+      [row({ workedMinutes: 960, maxWeeklyCapacity: 40, workSchedule: weekdays })], // 16h
+      6,
+      RANGE_END,
+      { from: '2026-07-22', to: RANGE_END },
+    );
+
+    expect(report.rangeDays).toBe(6);
+    expect(report.range).toEqual({ from: '2026-07-22', to: '2026-07-27' });
+    expect(report.byUser[0].capacityHours).toBe(32);
+    expect(report.byUser[0].capacitySource).toBe('schedule');
+    expect(report.byUser[0].utilizationPercent).toBe(50);
+  });
+
+  it('prorates the weekly override over a non-preset day count', () => {
+    const report = buildEmployeeUtilizationReport(
+      [row({ maxWeeklyCapacity: 40, workSchedule: [] })],
+      45,
+      RANGE_END,
+    );
+
+    // 40 * 45 / 7 = 257.14...
+    expect(report.byUser[0].capacityHours).toBe(257);
+    expect(report.range).toBeNull();
+  });
+
   it('rounds worked hours to one decimal place', () => {
     const report = buildEmployeeUtilizationReport(
       [row({ workedMinutes: 100 })], // 1.666.. h

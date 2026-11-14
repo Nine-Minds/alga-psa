@@ -1,4 +1,4 @@
-import { supportedMimeTypes } from 'file-type';
+import { fileTypeFromBuffer, supportedMimeTypes } from 'file-type';
 import { isMimeAllowed } from '../config/storage-mime';
 import { UploadContentTypeError } from './errors';
 
@@ -27,6 +27,8 @@ const CONTAINER_FAMILIES: Record<string, RegExp> = {
   'application/x-cfb': /^application\/(msword|vnd\.ms-[a-z0-9.-]+|x-msi)$/,
   'application/zip': /^application\/(vnd\.openxmlformats-officedocument\.[a-z0-9.+-]+|vnd\.oasis\.opendocument\.[a-z0-9.+-]+|epub\+zip|x-zip-compressed)$/,
 };
+
+const GENERIC_MIME = 'application/octet-stream';
 
 export interface ResolvedUploadMime {
   /** MIME to store on the object and the file_stores row. */
@@ -81,4 +83,18 @@ export function resolveUploadMime(
   }
   if (!allowed(declared)) throw reject('File type not allowed');
   return { mime: declaredMime, source: 'declared' };
+}
+
+/**
+ * Resolves the type of an already-stored object whose declared type is unknown (null in the row),
+ * by sniffing its bytes, through the same rule as an upload. Types that file-type cannot recognise
+ * fall back to application/octet-stream, which the allowlist then judges.
+ */
+export async function resolveMimeForBuffer(
+  declaredMime: string | null,
+  content: Buffer,
+  allowedMimeTypes: string[] | null,
+): Promise<ResolvedUploadMime> {
+  const detected = (await fileTypeFromBuffer(new Uint8Array(content)))?.mime;
+  return resolveUploadMime(declaredMime || GENERIC_MIME, detected, allowedMimeTypes, { empty: content.length === 0 });
 }

@@ -18,6 +18,7 @@ import { isRecurringLineExpectedInClientCadenceWindow } from './recurringTiming'
 import { whereLiveClientCadenceRecurringLine } from './liveClientCadenceRecurringLine';
 import { getClientBillingCycleAnchor } from './billingSchedule';
 import { loadBilledClientCadenceRecurringPeriods } from './billedClientCadenceRecurringPeriods';
+import { lockTenantBilling } from './billingMutationLock';
 import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
@@ -428,6 +429,8 @@ async function persistRecurringServicePeriodRegeneration(
     recordsToInsert: IRecurringServicePeriodRecord[];
   },
 ) {
+  if (params.recordsToSupersede.length === 0 && params.recordsToInsert.length === 0) return;
+  await lockTenantBilling(trx, params.tenant);
   const db = tenantDb(trx, params.tenant);
   for (const record of params.recordsToSupersede) {
     await db.table('recurring_service_periods')
@@ -695,12 +698,16 @@ export async function retireFutureClientCadenceRowsForLine(
     retiredAt: string;
   },
 ): Promise<void> {
-  await tenantDb(trx, params.tenant).table('recurring_service_periods')
+  const query = tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       obligation_id: params.contractLineId,
       cadence_owner: 'client',
     })
-    .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])
+    .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed']);
+  // Only a real retirement is a billing mutation.
+  if (!(await query.clone().first('record_id'))) return;
+  await lockTenantBilling(trx, params.tenant);
+  await query
     .update({
       lifecycle_state: 'superseded',
       updated_at: params.retiredAt,

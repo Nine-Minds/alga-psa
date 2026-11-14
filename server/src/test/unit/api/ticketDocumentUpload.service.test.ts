@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Readable } from 'node:stream';
 
 const { validateFileUploadMock, uploadFileMock, withTransactionMock, scheduleDocumentPreviewsMock, externalFiles } = vi.hoisted(() => ({
   validateFileUploadMock: vi.fn(),
@@ -85,6 +86,8 @@ describe('TicketService.uploadTicketDocument', () => {
     uploadFileMock.mockResolvedValue({
       file_id: 'file-1',
       storage_path: '/docs/file-1',
+      mime_type: 'application/pdf',
+      file_size: 11,
     });
     scheduleDocumentPreviewsMock.mockResolvedValue(true);
   });
@@ -174,12 +177,16 @@ describe('TicketService.uploadTicketDocument', () => {
     });
 
     const file = new File([Buffer.from('hello world')], 'report.pdf', { type: 'application/pdf' });
+    // The multipart part goes to the ingest as a stream; it is never read whole.
+    const arrayBufferSpy = vi.spyOn(file, 'arrayBuffer');
     const result = await service.uploadTicketDocument(ticketId, file, { ...context, viaPrincipalUserId });
 
-    expect(validateFileUploadMock).toHaveBeenCalledWith('tenant-1', 'application/pdf', file.size);
+    expect(arrayBufferSpy).not.toHaveBeenCalled();
+    // Validation lives in the ingest (StorageService.uploadFile), not in this path.
+    expect(validateFileUploadMock).not.toHaveBeenCalled();
     expect(uploadFileMock).toHaveBeenCalledWith(
       'tenant-1',
-      expect.any(Buffer),
+      expect.any(Readable),
       'report.pdf',
       expect.objectContaining({
         mime_type: 'application/pdf',

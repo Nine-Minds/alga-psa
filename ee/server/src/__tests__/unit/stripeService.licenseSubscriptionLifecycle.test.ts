@@ -32,7 +32,7 @@ function applyFilters(rows: Record<string, any>[], calls: Call[]) {
   for (const call of calls) {
     const [first, second] = call.args;
     if (call.method === 'where' && typeof first === 'object') {
-      out = out.filter((row) => Object.entries(first).every(([key, value]) => row[key] === value));
+      out = out.filter((row) => Object.entries(first).every(([key, value]) => row[key.replace(/^\w+\./, '')] === value));
     } else if (call.method === 'where' && typeof first === 'string' && call.args.length === 2) {
       out = out.filter((row) => row[first] === second);
     } else if (call.method === 'whereNot' && typeof first === 'string' && call.args.length === 2) {
@@ -57,7 +57,7 @@ function createFakeKnex(state: FakeDbState) {
     const calls: Call[] = [];
     const builder: any = {};
     let counting = false;
-    for (const method of ['where', 'whereNot', 'whereIn', 'whereRaw', 'orderByRaw', 'orderBy', 'select']) {
+    for (const method of ['where', 'whereNot', 'whereIn', 'whereRaw', 'whereNotExists', 'orderByRaw', 'orderBy', 'select']) {
       builder[method] = (...args: any[]) => {
         calls.push({ method, args });
         return builder;
@@ -79,6 +79,8 @@ function createFakeKnex(state: FakeDbState) {
     return builder;
   };
 
+  // The licensed count leaves out seat technicians with a subquery on seat assignments; none exist here.
+  knex.raw = (sql: string) => sql;
   knex.fn = {
     now: () => new Date('2026-07-10T00:00:00.000Z'),
   };

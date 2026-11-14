@@ -17,9 +17,11 @@ import {
   readCoManagedPoolCapacity, reserveAndActivateCoManagedSeatAllocation, reserveCoManagedWorkspace,
 } from '@alga-psa/licensing';
 import { tenantDeletionOrder } from '@alga-psa/db';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createTenant } from '../../../test-utils/testDataFactory';
+import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const SEAT_TABLES = ['co_managed_seat_arrangements', 'co_managed_seat_board_scopes',
   'co_managed_seat_assignments', 'co_managed_seat_project_grants'];
@@ -54,7 +56,7 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
   afterAll(async () => { await db?.destroy(); });
 
   // F012
-  it('the seat tables exist with tenant-first keys and no triggers or foreign keys, and tenant deletion knows them', async () => {
+  it('the seat tables have tenant-first keys, only the resolver-membership and seat-reader foreign keys, no triggers but the seat-reader marker pair, and tenant deletion knows them', async () => {
     for (const table of SEAT_TABLES) {
       const { rows: keys } = await db.raw(`
         SELECT i.indexrelid::regclass::text AS name, (SELECT attname FROM pg_attribute
@@ -62,14 +64,55 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
         FROM pg_index i WHERE i.indrelid = ?::regclass AND (i.indisprimary OR i.indisunique)`, [table]);
       expect(keys.length, table).toBeGreaterThan(0);
       for (const key of keys) expect(key.leading, `${table}.${key.name}`).toBe('tenant');
-      const { rows: triggers } = await db.raw(`SELECT tgname FROM pg_trigger WHERE tgrelid = ?::regclass`, [table]);
-      expect(triggers, table).toEqual([]);
+      // The foreign keys' own constraint triggers are internal. The one pair of row triggers keeps
+      // `users.seat_reader` in step on plain Postgres (S18, migration 20261113130000); no command
+      // may rely on it, because Citus has no triggers on a distributed table.
+      const { rows: triggers } = await db.raw(`SELECT tgname FROM pg_trigger WHERE tgrelid = ?::regclass AND NOT tgisinternal ORDER BY tgname`, [table]);
+      expect(triggers.map((row: { tgname: string }) => row.tgname), table).toEqual(table === 'co_managed_seat_assignments'
+        ? ['co_managed_seat_assignment_marks_reader', 'co_managed_seat_assignment_unmarks_reader'] : []);
+      const { rows: foreignKeys } = await db.raw(`
+        SELECT conname, confrelid::regclass::text AS parent, convalidated
+        FROM pg_constraint WHERE conrelid = ?::regclass AND contype = 'f' ORDER BY conname`, [table]);
+      expect(foreignKeys, table).toEqual(table === 'co_managed_seat_assignments' ? [
+        { conname: 'co_managed_seat_assignment_resolver_subject_fk', parent: 'authorization_resolver_subjects', convalidated: true },
+        { conname: 'co_managed_seat_assignments_seat_reader_foreign', parent: 'users', convalidated: true },
+      ] : []);
     }
     const order = tenantDeletionOrder();
     for (const table of SEAT_TABLES) {
       expect(order, table).toContain(table);
       // A seat row is deleted before the allocation it hangs off.
       expect(order.indexOf(table), table).toBeLessThan(order.indexOf('co_managed_allocations'));
+    }
+  });
+
+  it('deletes seat data in manifest order without violating resolver membership or affecting another tenant', async () => {
+    const seed = async () => {
+      const tenant = await sponsorWithPool(2);
+      const arrangement = await arrange(tenant, await client(tenant), 1);
+      const userId = await createUser(db, tenant, { user_type: 'internal' });
+      await setCoManagedSeatBoardScope(db, { sponsorTenant: tenant, arrangementId: arrangement.arrangement_id,
+        boards: [{ boardId: await board(tenant), canCreate: true }] });
+      await db('co_managed_seat_project_grants').insert({ tenant, arrangement_id: arrangement.arrangement_id, project_id: randomUUID() });
+      await db.transaction(async (trx) => {
+        await retainBuiltinResolverSubject(trx, { tenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
+        await trx('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(),
+          arrangement_id: arrangement.arrangement_id, user_id: userId, state: 'active' });
+      });
+      return tenant;
+    };
+    const tenant = await seed();
+    const survivor = await seed();
+    const tables = [...SEAT_TABLES, 'co_managed_allocations', 'authorization_resolver_subjects'];
+    const order = tenantDeletionOrder().filter((table) => tables.includes(table));
+
+    await db.transaction(async (trx) => {
+      for (const table of order) await trx(table).where({ tenant }).delete();
+    });
+
+    for (const table of tables) {
+      expect(await db(table).where({ tenant }), table).toEqual([]);
+      expect(await db(table).where({ tenant: survivor }), table).toHaveLength(1);
     }
   });
 

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: with process.env.GOOGLE_CLIENT_ID/SECRET set to an Alga app and the row's client_id null, GmailAdapter.refreshAccessToken constructs the OAuth client with the tenant's google_client_id/google_client_secret (the env values are never used). This is the regression for the Pereceptive bug.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: the resolver never mixes sources. Row client_id+client_secret both present uses that pair; row client_id present but secret absent uses the tenant pair only when the IDs match; tenant secrets missing fails with 'Google OAuth credentials not configured'.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: the Google OAuth callback (token exchange mocked) stores client_id on google_email_provider_config. A later refresh with a different tenant google_client_id makes no Google call and writes the reconnect-required error.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: a Google refresh failure with unauthorized_client maps to the client-mismatch message and does not increment inbound_auth_failure_count. invalid_grant maps to the expired/revoked message with the External/Testing hint and keeps existing auto-pause counting.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: a google provider in status='error' with an expired watch and a saved history_id is renewed by renew-google-gmail-watch (Gmail API mocked). It ends status='connected' and the messages in the missed interval are enqueued once. A rejected history_id falls back to the last_sync_at-bounded time query.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: running the error-recovery reconciliation twice, or over messages already ingested before the outage, creates no duplicate tickets or comments.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  }
+]

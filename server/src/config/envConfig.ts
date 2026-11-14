@@ -80,7 +80,10 @@ const dbSchema = z.object({
 // Storage Schema
 const storageSchema = z.object({
   STORAGE_LOCAL_BASE_PATH: z.string().default('/tmp/storage'),
-  STORAGE_LOCAL_MAX_FILE_SIZE: z.preprocess(coerceNumber, z.number().int().positive()).default(104857600),
+  // Startup validation only. The limit itself is read, and documented, in packages/storage/src/config/storage.ts
+  // (DEFAULT_MAX_FILE_SIZE_BYTES); the defaults below must equal it (pinned by storageLimitDefaults.test.ts).
+  STORAGE_LOCAL_MAX_FILE_SIZE: z.preprocess(coerceNumber, z.number().int().positive()).default(524288000),
+  STORAGE_S3_MAX_FILE_SIZE: z.preprocess(coerceNumber, z.number().int().positive()).default(524288000),
   STORAGE_LOCAL_ALLOWED_MIME_TYPES: z.string().default('*/*'),
   STORAGE_LOCAL_RETENTION_DAYS: z.preprocess(coerceNumber, z.number().int().positive()).default(30),
 });

@@ -7,6 +7,9 @@
  * user id. The resolver's class is every user who has such a row in ANY state: a technician whose
  * seat was revoked, or whose arrangement ended, stays in the class and is granted nothing, rather
  * than falling out of it and becoming an ordinary internal user.
+ * Before writing an assignment's user id, retainBuiltinResolverSubject must run in the same
+ * transaction. The assignment's foreign key enforces this membership index, so native tenant
+ * probes can skip the feature tables without ever overlooking a technician.
  *
  * The baseline is closed. `SEAT_AUTHORITY_POLICY` is the whole of a seat subject's authority: a
  * resource type or action it does not grant is denied, including one added to the kernel later.
@@ -22,10 +25,10 @@
  */
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import {
-  matchRulesForAction, registerBuiltinRuleResolver,
-  type AuthorizationSubject, type BuiltinResolverRule, type BuiltinRuleResolver,
-} from '@alga-psa/authorization/kernel';
+import { matchRulesForAction } from '@alga-psa/authorization/kernel/actionAliases';
+import { registerBuiltinRuleResolver, type BuiltinResolverRule, type BuiltinRuleResolver } from '@alga-psa/authorization/kernel/builtinRuleResolvers';
+import type { AuthorizationSubject } from '@alga-psa/authorization/kernel/contracts';
+import { builtinResolverSubjectsQuery } from '@alga-psa/authorization/subject/resolverSubjects';
 
 export const CO_MANAGED_SEAT_RESOLVER_ID = 'co-managed-seat';
 
@@ -233,7 +236,7 @@ export const coManagedSeatResolver: BuiltinRuleResolver = {
   id: CO_MANAGED_SEAT_RESOLVER_ID,
   baseline: 'closed',
   facts: {
-    tenantHasSubjects: (knex, tenant) => tenantDb(knex, tenant).table('co_managed_seat_assignments').whereNotNull('user_id'),
+    tenantHasSubjects: (knex, tenant) => builtinResolverSubjectsQuery(knex, tenant, CO_MANAGED_SEAT_RESOLVER_ID),
     subjectFacts: seatFactsQuery,
   },
   appliesTo: (input) => isCoManagedSeatSubject(input.subject),

@@ -140,5 +140,11 @@ export { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, CO_
 export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManagedUpgradePurchaseState } from './upgradePurchase';
 // Seat shape (S5): seat arrangements and their board scope.
 export * from './seatArrangement';
+// Seat shape (S8): the role a seat technician holds, seeded by the sponsor's first arrangement.
+export * from './seatRole';
+// Seat shape (S7): inviting a technician against the arrangement's allocation.
+export * from './seatInvitation';
 // Seat shape (S23): ticket responsibility and the handoff in each direction.
 export * from './seatTicketHandoff';
+// Seat shape (S32): who a handoff and a shared IT note notify.
+export * from './seatNotifications';

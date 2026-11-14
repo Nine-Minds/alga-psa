@@ -3033,7 +3033,8 @@
         "preparingPreview": "Préparation de l'aperçu…",
         "linking": "Liaison des comptes…",
         "unlinking": "Déliaison des comptes…",
-        "bulkLabel": "Actions SSO en masse {{location}}"
+        "bulkLabel": "Actions SSO en masse {{location}}",
+        "disabledSelectUsers": "Sélectionnez d'abord au moins un utilisateur."
       },
       "table": {
         "email": "E-mail",

@@ -11,6 +11,7 @@ import {
   RESOLVER_TEMPLATE_DENIED_CODE,
   builtinResolverFactSources,
   builtinResolverFactsExpression,
+  builtinResolverSubjectsExistExpression,
   builtinResolversRestrict,
   hasBuiltinRuleResolversWithoutFactSource,
   loadBuiltinResolverFacts,
@@ -358,6 +359,22 @@ describe('resolver fact sources', () => {
     );
     unregisterBuiltinRuleResolver('plain');
     expect(hasBuiltinRuleResolversWithoutFactSource()).toBe(false);
+  });
+
+  it('gates on the tenant probe of every fact source, never on the tables the facts are read from', () => {
+    const knex = knexFactory({ client: 'pg' });
+    expect(builtinResolverSubjectsExistExpression(knex, 't1')).toBeNull();
+    register('plain', []);
+    expect(builtinResolverSubjectsExistExpression(knex, 't1')).toBeNull();
+
+    const gated = (table: string) => ({ ...source, tenantHasSubjects: (k: any, tenant: string) => k(table).where({ tenant }) });
+    registerBuiltinRuleResolver({ id: 'zeta', facts: gated('zeta_members'), appliesTo: () => false, resolveRules: () => [] });
+    registerBuiltinRuleResolver({ id: 'alpha', facts: gated('alpha_members'), appliesTo: () => false, resolveRules: () => [] });
+    const sql = builtinResolverSubjectsExistExpression(knex, 't1')!.toQuery();
+    expect(sql).toBe(
+      `(exists((select 1 from "alpha_members" where "tenant" = 't1')) or exists((select 1 from "zeta_members" where "tenant" = 't1')))`
+    );
+    expect(sql).not.toContain('seat_rows');
   });
 
   it('loads nothing when no resolver has a fact source, and a load that returns no facts is a failure', async () => {

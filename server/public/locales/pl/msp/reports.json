@@ -66,7 +66,11 @@
     "fallbackTitle": "Raport",
     "dateRange": {
       "lastDays": "Ostatnie {{count}} dni",
-      "allActiveProjects": "Wszystkie aktywne projekty, od początku"
+      "allActiveProjects": "Wszystkie aktywne projekty, od początku",
+      "customRange": "{{start}} do {{end}}",
+      "customFrom": "Od",
+      "customTo": "Do",
+      "agingSnapshotNote": "Liczby i grupy wiekowe pokazują zgłoszenia otwarte w tej chwili. Zakres dat filtruje tylko listę najstarszych otwartych zgłoszeń."
     },
     "units": {
       "daysWithCount": "{{count}} dni"
@@ -564,7 +568,13 @@
         "not_client_attributable": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: odczytuje {{table}}, którego nie można przypisać do klienta.",
         "unnarrowable_report": "Ten raport jest dla Ciebie niedostępny, ponieważ nie można go ograniczyć do Twoich klientów: sumuje rozliczenia wszystkich klientów."
       },
-      "clientOutOfScope": "Nie masz dostępu do tego klienta."
+      "clientOutOfScope": "Nie masz dostępu do tego klienta.",
+      "range": {
+        "malformed": "Nie udało się odczytać niestandardowego zakresu dat. Wybierz ponownie obie daty.",
+        "backwards": "Data końcowa jest wcześniejsza niż data początkowa.",
+        "tooLong": "Niestandardowy zakres dat może obejmować maksymalnie {{maxDays}} dni.",
+        "startsInFuture": "Niestandardowy zakres dat zaczyna się po dzisiejszym dniu, więc nie ma jeszcze danych do raportu."
+      }
     }
   }
 }

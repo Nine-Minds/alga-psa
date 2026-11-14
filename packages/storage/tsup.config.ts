@@ -11,6 +11,7 @@ export default defineConfig({
     'providers/StorageProvider': 'src/providers/StorageProvider.ts',
     'providers/S3StorageProvider': 'src/providers/S3StorageProvider.ts',
     'config/storage': 'src/config/storage.ts',
+    'ingest/bufferedCap': 'src/ingest/bufferedCap.ts',
     'ingest/errors': 'src/ingest/errors.ts',
     'ingest/pipeline': 'src/ingest/pipeline.ts',
     'ingest/mime': 'src/ingest/mime.ts',

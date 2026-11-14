@@ -3033,7 +3033,8 @@
         "preparingPreview": "Preparando vista previa…",
         "linking": "Vinculando cuentas…",
         "unlinking": "Desvinculando cuentas…",
-        "bulkLabel": "Acciones masivas SSO {{location}}"
+        "bulkLabel": "Acciones masivas SSO {{location}}",
+        "disabledSelectUsers": "Seleccione primero al menos un usuario."
       },
       "table": {
         "email": "Correo electrónico",

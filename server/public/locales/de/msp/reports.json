@@ -66,7 +66,11 @@
     "fallbackTitle": "Bericht",
     "dateRange": {
       "lastDays": "Letzte {{count}} Tage",
-      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn"
+      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn",
+      "customRange": "{{start}} bis {{end}}",
+      "customFrom": "Von",
+      "customTo": "Bis",
+      "agingSnapshotNote": "Anzahlen und Altersgruppen zeigen die aktuell offenen Tickets. Der Zeitraum filtert nur die Liste der ältesten offenen Tickets."
     },
     "units": {
       "daysWithCount": "{{count}} Tage"
@@ -564,7 +568,13 @@
         "not_client_attributable": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Er liest {{table}}, das keinem Kunden zuordenbar ist.",
         "unnarrowable_report": "Dieser Bericht ist für Sie nicht verfügbar, weil er sich nicht auf Ihre Kunden beschränken lässt: Er summiert die Konten aller Kunden."
       },
-      "clientOutOfScope": "Sie haben keinen Zugriff auf diesen Kunden."
+      "clientOutOfScope": "Sie haben keinen Zugriff auf diesen Kunden.",
+      "range": {
+        "malformed": "Der benutzerdefinierte Zeitraum konnte nicht gelesen werden. Wählen Sie beide Daten erneut aus.",
+        "backwards": "Das Enddatum liegt vor dem Startdatum.",
+        "tooLong": "Ein benutzerdefinierter Zeitraum darf höchstens {{maxDays}} Tage umfassen.",
+        "startsInFuture": "Der benutzerdefinierte Zeitraum beginnt nach heute, daher gibt es noch nichts auszuwerten."
+      }
     }
   }
 }

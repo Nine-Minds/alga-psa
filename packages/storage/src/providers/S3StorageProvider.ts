@@ -22,6 +22,9 @@ import {
   type WriteSessionOptions,
 } from './StorageProvider';
 
+/** S3's single-object ceiling (a provider capability, not an upload limit). */
+const S3_MAX_OBJECT_BYTES = 5 * 1024 * 1024 * 1024;
+
 export class S3StorageProvider extends BaseStorageProvider {
   private readonly client: S3Client;
   private readonly bucket: string;
@@ -49,14 +52,21 @@ export class S3StorageProvider extends BaseStorageProvider {
     });
   }
 
+  /**
+   * `maxFileSize` is the smaller of S3's own single-object ceiling and the configured upload limit
+   * (STORAGE_S3_MAX_FILE_SIZE, see config/storage.ts), so a caller reading capabilities never sees
+   * more than validation allows. The configured limit wins; 5 GiB is only a backstop.
+   */
   getCapabilities(): StorageCapabilities {
+    const configured = (this.config as { maxFileSize?: number }).maxFileSize;
     return {
       supportsBuckets: true,
       supportsStreaming: true,
       supportsMetadata: true,
       supportsTags: true,
       supportsVersioning: true,
-      maxFileSize: 5 * 1024 * 1024 * 1024,
+      maxFileSize:
+        typeof configured === 'number' && configured > 0 ? Math.min(configured, S3_MAX_OBJECT_BYTES) : S3_MAX_OBJECT_BYTES,
     };
   }
 

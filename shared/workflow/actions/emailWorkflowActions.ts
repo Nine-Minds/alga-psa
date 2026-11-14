@@ -13,6 +13,7 @@ import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-sch
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { audienceIsInternal, type CommentAudience, type CommentAudienceReader } from '../../lib/commentAudience';
 import { contactEmailMatch } from '../../lib/email/contactEmailMatch';
 import { ContactModel } from '../../models/contactModel';
 import { createClientWithDefaults } from '../../models/clientCreation';
@@ -1592,6 +1593,12 @@ export async function createCommentFromEmail(
     author_id?: string;
     contact_id?: string;
     metadata?: any;
+    /**
+     * A seat technician's reply: who is writing and the audience the reply is stored with
+     * (`resolveInboundReplyAudience`). The comment writer still decides whether they may write it.
+     * Absent for every other sender, whose reply follows the native rules.
+     */
+    audience?: { author: CommentAudienceReader; audience: CommentAudience };
     // Keep this comment in-app only (no tech email). Set for the first comment on a new
     // inbound-email ticket, which the TICKET_CREATED email already covers.
     suppressTechEmailNotification?: boolean;
@@ -1658,7 +1665,10 @@ export async function createCommentFromEmail(
         ticket_id: commentData.ticket_id,
         content,
         parent_comment_id: commentData.parent_comment_id,
-        is_internal: false,
+        is_internal: commentData.audience ? audienceIsInternal(commentData.audience.audience) : false,
+        ...(commentData.audience
+          ? { collaboration_audience: commentData.audience.audience, audience_author: commentData.audience.author }
+          : {}),
         is_resolution: false,
         author_type: ticketModelAuthorType,
         author_id: commentData.author_id,

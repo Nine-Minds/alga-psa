@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import {
   CoManagedReservationError, reserveAndActivateCoManagedSeatAllocation, type CoManagedAllocationKind,
 } from '@alga-psa/licensing';
+import { admitCoManagedSeatRole } from './seatRole';
 
 /**
  * Seat arrangements: one of the sponsor's own clients, bound to the seat allocation that pays for
@@ -75,6 +76,9 @@ export interface CreateCoManagedSeatArrangementInput {
  * relationship or `seat` arrangement the client already has, and with every reason the seat
  * reservation refuses for (sponsor eligibility, lapse, capacity, unknown client).
  *
+ * The sponsor's first arrangement also seeds the seat role (`admitCoManagedSeatRole`); a sponsor
+ * with no seat arrangement never has it.
+ *
  * Locks: the sponsor's entitlement row first, as every allocation writer does, then the client row.
  */
 export async function createCoManagedSeatArrangement(
@@ -119,6 +123,9 @@ export async function createCoManagedSeatArrangement(
       allocation_id: allocation.allocation_id,
       state: 'active',
     }).returning('*');
+    // The role this arrangement's technicians will hold. Written by the sponsor's first
+    // arrangement and found by every later one; the pool lock above makes that exactly one.
+    await admitCoManagedSeatRole(trx, input.sponsorTenant);
     return arrangementResult(arrangement, allocation.seats);
   });
 }

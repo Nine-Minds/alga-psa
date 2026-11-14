@@ -22,6 +22,10 @@
       "types": "./src/seatAuthority.ts",
       "import": "./src/seatAuthority.ts"
     },
+    "./seatCapability": {
+      "types": "./src/seatCapability.ts",
+      "import": "./src/seatCapability.ts"
+    },
     "./permissionsCapability": {
       "types": "./src/permissionsCapability.ts",
       "import": "./src/permissionsCapability.ts"
