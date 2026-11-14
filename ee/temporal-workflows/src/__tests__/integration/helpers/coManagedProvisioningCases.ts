@@ -16,6 +16,8 @@ import { DISPOSABLE_CLIENTS, OZ_ESCALATION_BOARD } from '../../../../../../scrip
 import { runOnboardingSeeds } from '../../../db/onboarding-seeds-operations';
 import { getCoManagedManagementOptions } from '../../../../../../packages/co-managed/src/managementPolicy';
 import { registerFeatureFlagChecker } from '@alga-psa/core/features';
+import { createCoManagedSeatArrangement } from '../../../../../../packages/co-managed/src/seatArrangement';
+import { inviteCoManagedSeatTechnician } from '../../../../../../packages/co-managed/src/seatInvitation';
 
 interface Harness {
   getDb: () => Knex;
@@ -23,6 +25,24 @@ interface Harness {
   delivery: { send: ReturnType<typeof vi.fn> };
   actorState: { user: any };
   appliance: { check: ReturnType<typeof vi.fn> };
+}
+
+/** Queries one ordinary PSA team invitation issues, excluding BEGIN/COMMIT (see the switch-off case). */
+const PSA_INVITATION_QUERY_BUDGET = 11;
+
+/**
+ * A PSA team invitation never reads the co-managed switch's state: no relationship, entitlement,
+ * allocation or provisioning row. The one co-managed table it may name is the seat assignment, and
+ * only as a correlated predicate inside a licensed-seat read (a seat technician holds a seat of its
+ * arrangement, not one of the MSP's), never read on its own.
+ */
+function expectNoCoManagedSwitchReads(statements: string[]) {
+  const named = new Set(statements.flatMap(sql => sql.match(/co_manag\w*/gi) ?? []));
+  expect([...named].filter(name => name !== 'co_managed_seat_assignments')).toEqual([]);
+  for (const sql of statements) {
+    expect(sql).not.toMatch(/^\s*(select|update|delete|insert)\b[^(]*\bfrom\s+"co_managed/i);
+    if (/co_managed_seat_assignments/.test(sql)) expect(sql).toMatch(/exists \(+select 1 from "co_managed_seat_assignments"/);
+  }
 }
 
 const messages: string[] = [];
@@ -76,7 +96,44 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
         process.env.FORCE_CAPABILITIES = 'co-managed:off';
         expect((await invite()).success).toBe(true);
         expect(captured.length).toBe(ordinary.length);
-        expect([...ordinary, ...captured].some(sql => /co_manag/i.test(sql))).toBe(false);
+        // The PSA budget: role, existing user; seat lock, the email's pending invitation, pending
+        // seats, seat lock, tenant row, licensed users, the refreshed invitation, its insert; the
+        // MSP's name. BEGIN/COMMIT are not queries.
+        expect(ordinary.filter(sql => !/^(BEGIN|COMMIT);?$/.test(sql))).toHaveLength(PSA_INVITATION_QUERY_BUDGET);
+        expectNoCoManagedSwitchReads([...ordinary, ...captured]);
+      } finally {
+        db.removeListener('query', record);
+        appliance.check.mockReset();
+        appliance.check.mockResolvedValue({ seats: 0 });
+      }
+    });
+
+    it('leaves a seat technician\'s invitation to the seat flow, at the PSA invitation query budget', async () => {
+      const db = getDb(), operation = await prepare(), roleId = randomUUID(), clientId = randomUUID();
+      const sponsor = tenantDb(db, operation.tenant);
+      await sponsor.table('roles').insert({ tenant: operation.tenant, role_id: roleId, role_name: `PSA ${roleId}`, msp: true, client: false });
+      await sponsor.table('clients').insert({ tenant: operation.tenant, client_id: clientId, client_name: 'Seat client' });
+      const arrangement = await createCoManagedSeatArrangement(db, { sponsorTenant: operation.tenant, clientId,
+        operationId: randomUUID(), seats: 1 });
+      const seat = await inviteCoManagedSeatTechnician(db, { sponsorTenant: operation.tenant,
+        arrangementId: arrangement.arrangement_id, email: `tech-${randomUUID()}@client.example`, firstName: 'Dana', lastName: 'Reyes' });
+      const before = await sponsor.table('user_invitations').where('invitation_id', seat.invitation_id).first();
+      actorState.user = { tenant: operation.tenant, user_id: operation.requested_by, user_type: 'internal', username: 'admin' };
+      appliance.check.mockResolvedValue(null);
+      const { sendUserInvitation } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+      const captured: string[] = [];
+      const record = (query: { sql: string }) => captured.push(query.sql);
+      db.on('query', record);
+      try {
+        const refused = await runWithTenant(operation.tenant, () => sendUserInvitation({ email: ` ${seat.email.toUpperCase()} `,
+          firstName: 'PSA', lastName: 'User', roleId }));
+        expect(refused).toMatchObject({ success: false, errorCode: 'CO_MANAGED_INVITATION_INVALID' });
+        // Refused at the first read after the seat lock: no seat count, no refresh, no role, no email.
+        expect(captured.filter(sql => !/^(BEGIN|COMMIT|ROLLBACK);?$/.test(sql)).length).toBeLessThan(PSA_INVITATION_QUERY_BUDGET);
+        expectNoCoManagedSwitchReads(captured);
+        expect(delivery.send).not.toHaveBeenCalled();
+        expect(await sponsor.table('user_invitations').where('invitation_id', seat.invitation_id).first()).toEqual(before);
+        expect(await sponsor.table('user_invitations').where('email', seat.email)).toHaveLength(1);
       } finally {
         db.removeListener('query', record);
         appliance.check.mockReset();

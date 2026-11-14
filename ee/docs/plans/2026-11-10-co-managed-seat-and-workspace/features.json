@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "One function counts the MSP's licensed internal users and excludes users with a live seat assignment; the seat guard, the licence usage figures, the seat-reduction check, onboarding and the appliance seat check all use it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Creating, inviting, reactivating or directory-provisioning a seat technician is admitted against the arrangement's allocation and never against the MSP's licensed seat limit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment B — Arrangement, seat assignment and licensing"
     ]

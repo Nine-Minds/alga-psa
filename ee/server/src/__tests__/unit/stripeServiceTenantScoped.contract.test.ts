@@ -80,7 +80,8 @@ describe('StripeService top billing paths tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tier upgrade and downgrade database roots', () => {
     const section = sectionBetween('private async getActiveInternalUserCount', 'async getUpgradePreview');
 
-    expect(section).toContain("tenantScopedTable(knex, 'users', tenantId)");
+    // The internal user count is the licensed count, tenant-scoped inside @alga-psa/licensing.
+    expect(section).toContain('countLicensedInternalUsers(await getConnection(tenantId), tenantId)');
     expect(section).toContain("tenantScopedTable(knex, 'stripe_subscriptions', tenantId)");
     expect(section).toContain("tenantScopedTable(knex, 'stripe_prices', tenantId)");
     expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId)");

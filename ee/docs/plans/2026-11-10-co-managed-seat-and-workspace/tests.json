@@ -102,7 +102,7 @@
   {
     "id": "T012",
     "description": "DB integration: with a tenant at its licensed seat limit, seat technicians can still be added up to the allocation, and every licence count site returns the same number as before they existed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
