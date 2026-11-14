@@ -38,6 +38,10 @@
       "import": "./src/lib/uploadSessionClient.ts",
       "types": "./src/lib/uploadSessionClient.ts"
     },
+    "./lib/kbImportLimits": {
+      "import": "./src/lib/kbImportLimits.ts",
+      "types": "./src/lib/kbImportLimits.ts"
+    },
     "./handlers": {
       "import": "./src/handlers/index.ts",
       "types": "./src/handlers/index.ts"
