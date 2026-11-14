@@ -13,7 +13,7 @@
  * is added NOT VALID so the ALTER takes no scan under its lock (a NOT VALID check still holds for
  * every new or updated row), and leads with nothing distributed-table specific: it is a row-level
  * constraint, valid on Citus. Every row that exists today satisfies it — a live assignment has
- * `ended_reason` NULL — so 20261114100100 validates it in its own non-transactional file.
+ * `ended_reason` NULL — so 20261114060100 validates it in its own non-transactional file.
  */
 const TABLE = 'co_managed_seat_assignments';
 const CHECK = 'co_managed_seat_assignments_ended_reason_check';

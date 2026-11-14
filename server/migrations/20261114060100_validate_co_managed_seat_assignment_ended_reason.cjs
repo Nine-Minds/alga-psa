@@ -2,7 +2,7 @@
 
 /**
  * Co-managed seat and workspace shapes, slice S10: validates the `ended_reason` CHECK that
- * 20261114100000 added NOT VALID.
+ * 20261114060000 added NOT VALID.
  *
  * Runs outside a transaction: VALIDATE scans under SHARE UPDATE EXCLUSIVE while reads and writes
  * continue. Idempotent: a validated constraint is left alone.
@@ -26,5 +26,5 @@ exports.up = async function up(knex) {
 
 /** @param { import("knex").Knex } knex */
 exports.down = async function down() {
-  // A validated constraint is not un-validated; 20261114100000's down removes the constraint.
+  // A validated constraint is not un-validated; 20261114060000's down removes the constraint.
 };
