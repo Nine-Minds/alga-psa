@@ -50,7 +50,7 @@ import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import * as userActions from '../../../../packages/user-composition/src/actions/userQueryActions';
 import { searchUsersForMentions as searchMentions } from '../../../../packages/user-composition/src/actions/searchUsersForMentions';
 import { listUsersForInboundWebhook as listWebhookUsers } from '../../lib/actions/inboundWebhookLookups';
-import { getTicketFormOptions as ticketFormOptions } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
+import { getConsolidatedTicketData as consolidatedTicketData, getTicketFormOptions as ticketFormOptions } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -68,6 +68,7 @@ const { getAllUsers, getAllUsersBasic, getClientUsersForClient, getMultipleUsers
 const searchUsersForMentions = inTenant(searchMentions);
 const listUsersForInboundWebhook = inTenant(listWebhookUsers);
 const getTicketFormOptions = inTenant(ticketFormOptions);
+const getConsolidatedTicketData = inTenant(consolidatedTicketData);
 const describeDb = await describeWithDb();
 
 describeDb('a seat technician sees only the projected people', { shuffle: false }, () => {
@@ -94,13 +95,14 @@ describeDb('a seat technician sees only the projected people', { shuffle: false 
     await db('boards').insert({ tenant: s.tenant, board_id: boardId, board_name: `${name} ${tag}`, is_default: false });
     return boardId;
   };
-  const ticket = async (clientId: string, boardId: string, assignedTo: string | null, additional: string[] = []) => {
+  const ticket = async (clientId: string, boardId: string, assignedTo: string | null, additional: string[] = [], enteredBy: string | null = null) => {
     const ticketId = randomUUID();
     await db('tickets').insert({ tenant: s.tenant, ticket_id: ticketId, ticket_number: `T-${randomUUID().slice(0, 8)}`, title: 'Seat people', status_id: s.statusId,
-      priority_id: s.priorityId, board_id: boardId, client_id: clientId, assigned_to: assignedTo, entered_at: new Date(), updated_at: new Date() });
+      priority_id: s.priorityId, board_id: boardId, client_id: clientId, assigned_to: assignedTo, entered_by: enteredBy, entered_at: new Date(), updated_at: new Date() });
     for (const userId of additional) {
       await db('ticket_resources').insert({ tenant: s.tenant, ticket_id: ticketId, assigned_to: assignedTo, additional_user_id: userId });
     }
+    return ticketId;
   };
   const contact = async (clientId: string, name: string, options: { inactive?: boolean; portal?: boolean } = {}) => {
     const contactId = randomUUID();
@@ -144,7 +146,8 @@ describeDb('a seat technician sees only the projected people', { shuffle: false 
     s.ordinary = await staff('Ordinary');
     await db('users').where({ tenant: s.tenant, user_id: s.S6 }).update({ is_inactive: true });
 
-    await ticket(s.clientX, boardIn1, s.S1);                         // S1 assigned, in scope
+    // S1 assigned, in scope; opened by S5, who participates nowhere (a referenced person, released by name only).
+    s.ticketIn = await ticket(s.clientX, boardIn1, s.S1, [], s.S5);
     await ticket(s.clientX, boardIn2, s.B, [s.S2]);                  // S2 additional agent, in scope
     await ticket(s.clientX, boardOut, s.S3);                         // S3 only out of scope board
     await ticket(s.clientY, boardY, s.S4);                           // S4 only on a client Y ticket
@@ -183,6 +186,26 @@ describeDb('a seat technician sees only the projected people', { shuffle: false 
     expect(ids(options.users)).toEqual(expectedInternal());
     expect(options.agentOptions.map((o: any) => o.value).sort()).toEqual(expectedInternal());
     expect(ids(await listUsersForInboundWebhook())).toEqual(expectedInternal());
+  });
+
+  it('the ticket screen (consolidated ticket data) offers the projection and names referenced staff only', async () => {
+    as(s.A);
+    const data = await getConsolidatedTicketData(s.ticketIn) as any;
+    expect(data?.ticket?.ticket_id).toBe(s.ticketIn);
+    expect(ids(data.availableAgents)).toEqual(expectedInternal());
+    expect(data.options.agent.map((o: any) => o.value).sort()).toEqual(expectedInternal());
+    expect(Object.keys(data.userMap).filter((userId) => [s.S3, s.S4, s.S5, s.C, s.E, s.ordinary].includes(userId))).toEqual([]);
+    expect(data.createdByUser.user_id).toBe(s.S5);
+    expect(data.createdByUser.first_name).toBe('Smoke');
+    const serialized = JSON.stringify({ agents: data.availableAgents, userMap: data.userMap, createdBy: data.createdByUser, updatedBy: data.updatedByUser });
+    expect(serialized).not.toContain('msp-secret.test');
+    expect(serialized).not.toContain('-login-');
+    expect(serialized).not.toContain('+1-555-');
+
+    as(s.ordinary);
+    const full = await getConsolidatedTicketData(s.ticketIn) as any;
+    expect(ids(full.availableAgents)).toContain(s.S3);
+    expect(full.createdByUser.email).toContain('msp-secret.test');
   });
 
   it('mention suggestions are the projection and carry no MSP contact detail', async () => {

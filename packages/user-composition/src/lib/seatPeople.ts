@@ -53,6 +53,19 @@ export function projectedPersonToUser(
   return row as unknown as IUserWithRoles;
 }
 
+/** The columns of a user row that identify a person to a restricted caller: who they are, never how to reach them. */
+const PERSON_REFERENCE_FIELDS = ['user_id', 'tenant', 'first_name', 'last_name', 'user_type', 'contact_id', 'is_inactive', 'avatarUrl', 'roles'] as const;
+
+/**
+ * A user row a restricted caller sees because a record references the person (a ticket's creator, a comment's
+ * author) rather than through the projection: name and reference only, the same release as `msp_staff`.
+ */
+export function withholdPersonContactFields<Row extends Record<string, unknown>>(row: Row): Row {
+  const kept: Record<string, unknown> = {};
+  for (const field of PERSON_REFERENCE_FIELDS) if (field in row) kept[field] = row[field];
+  return kept as Row;
+}
+
 /** User rows for a seat caller's list, avatars attached from the person's reference. */
 export async function projectedPeopleAsUsers(
   people: readonly ProjectedPerson[],
