@@ -18,6 +18,7 @@ import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { createBundleNarrowingProvider } from './bundles/narrowingProvider';
 import { projectReadableRecord } from './recordProjection';
+import { hasBuiltinRuleResolversWithoutFactSource, hasRegisteredBuiltinRuleResolvers } from './kernel/builtinRuleResolvers';
 import { builtinClosedFields, builtinClosedOperations, builtinResolversCloseAction, builtinResolversConcealDenials, isBuiltinOperationClosed } from './kernel/builtinRuleResolvers';
 
 /**
@@ -405,13 +406,25 @@ export function assetClosedOperations(subject: AuthorizationSubject): string[] {
   return builtinClosedOperations({ subject, resource: { type: 'asset', action: 'read' } });
 }
 
-/** {@link isAssetOperationClosed} for a user the caller has not resolved a subject for yet. */
+/**
+ * {@link isAssetOperationClosed} for a user the caller has no subject for. Callers that hold a read context use
+ * `isAssetOperationClosed(context.subject, ...)` instead and pay nothing. Here the full subject (roles, teams,
+ * reports, resolver facts) is only resolved for a user a resolver may govern: with no resolver registered nothing
+ * is read, and otherwise one indexed lookup in the resolver membership index (retained for every row-backed
+ * subject, live or revoked) settles an ordinary MSP user.
+ */
 export async function isAssetOperationClosedForUser(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
   operation: string
 ): Promise<boolean> {
+  if (!hasRegisteredBuiltinRuleResolvers()) return false;
+  if (!hasBuiltinRuleResolversWithoutFactSource()) {
+    const member = await tenantDb(trx, tenant).table('authorization_resolver_subjects')
+      .where({ user_id: user.user_id }).first('user_id');
+    if (!member) return false;
+  }
   return isAssetOperationClosed(await resolveAuthorizationSubjectForUser(trx, tenant, user), operation);
 }
 
@@ -436,4 +449,26 @@ export function assetClosedActions(subject: AuthorizationSubject): string[] {
 /** Whether a record this subject may not read must answer as missing (a closed-baseline subject) rather than forbidden. */
 export function assetDenialsConcealed(subject: AuthorizationSubject): boolean {
   return builtinResolversConcealDenials({ subject, resource: { type: 'asset', action: 'read' } });
+}
+
+let assetColumnNames: string[] | undefined;
+
+/**
+ * The `assets` columns a read may select once `closed` (columns a built-in resolver closes to the subject, see
+ * `assetClosedFields`) are left out, so a closed column never leaves the database. Null when nothing is closed:
+ * the read keeps `assets.*` and its statement is the one it always was. Fields in `closed` that are not `assets`
+ * columns (a joined display name) match nothing here and are handled by the read that joins them.
+ * Shared by the asset server actions and the REST asset service.
+ */
+export async function assetColumnsOpenTo(
+  trx: Knex | Knex.Transaction,
+  closed: readonly string[],
+  table = 'assets'
+): Promise<string[] | null> {
+  if (closed.length === 0) return null;
+  assetColumnNames ??= (await trx.raw(
+    'select column_name from information_schema.columns where table_schema = current_schema() and table_name = ?',
+    ['assets']
+  )).rows.map((row: { column_name: string }) => row.column_name);
+  return assetColumnNames!.filter((column) => !closed.includes(column)).map((column) => `${table}.${column}`);
 }

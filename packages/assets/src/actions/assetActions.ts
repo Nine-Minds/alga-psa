@@ -122,6 +122,7 @@ import {
     authorizeAssetsForAction,
     assetClosedActions,
     assetClosedFields,
+    assetColumnsOpenTo,
     assetDenialsConcealed,
     assetClosedOperations,
     projectReadableAssets,
@@ -208,23 +209,6 @@ function tenantScopedTable(
     tenant: string,
 ): Knex.QueryBuilder {
     return tenantDb(conn, tenant).table(table);
-}
-
-let assetColumnNames: string[] | undefined;
-
-/**
- * The `assets` columns a read may select once `closed` (columns a built-in resolver closes to the subject) are
- * left out, so a closed column never leaves the database. Null when nothing is closed: the read keeps `assets.*`
- * and its statement is the one it always was. Fields in `closed` that are not `assets` columns (a joined display
- * name) match nothing here and are handled by the read that joins them.
- */
-async function assetColumnsOpenTo(trx: Knex | Knex.Transaction, closed: readonly string[]): Promise<string[] | null> {
-    if (closed.length === 0) return null;
-    assetColumnNames ??= (await trx.raw(
-        'select column_name from information_schema.columns where table_schema = current_schema() and table_name = ?',
-        ['assets']
-    )).rows.map((row: { column_name: string }) => row.column_name);
-    return assetColumnNames!.filter((column) => !closed.includes(column)).map((column) => `assets.${column}`);
 }
 
 function normalizeBulkAssetIds(assetIds: string[]): string[] {

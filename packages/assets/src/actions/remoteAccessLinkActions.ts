@@ -131,12 +131,13 @@ export const hasRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<b
     return permissionError('Permission denied: Cannot read assets.', 'msp/assets:remoteAccess.errors.readPermission');
   }
   const { knex } = await createTenantKnex();
-  // Closed to a seat subject: no remote access is offered, so there is no link to look for.
-  if (await isAssetOperationClosedForUser(knex, tenant, user as any, 'remote_access')) return false;
   const link = await tenantDb(knex, tenant)
     .table('asset_remote_access_links')
     .select('link_id')
     .first();
+  // Closed to a seat subject: no remote access is offered. Asked only once there is a link to hide, so a tenant
+  // without templates pays nothing for it.
+  if (link && await isAssetOperationClosedForUser(knex, tenant, user as any, 'remote_access')) return false;
   return Boolean(link);
 });
 

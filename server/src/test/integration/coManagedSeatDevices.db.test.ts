@@ -50,6 +50,8 @@ import {
   triggerRmmScript,
 } from '@alga-psa/integrations/actions/integrations/assetRmmActions';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
+import { AssetService } from '../../lib/api/services/AssetService';
+import { authorizeApiResource } from '../../lib/api/controllers/authorizationKernel';
 import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -388,6 +390,71 @@ describeDb('co-managed seat devices: read-only own-client assets on real Postgre
     const onUnscopedBoard = await attempt(() => createTicketFromAsset({ ...base, board_id: boardOther, asset_id: ownAsset, client_id: ownClient }));
     expect(onUnscopedBoard).not.toBeNull();
     expect(await db('asset_associations').where({ tenant, asset_id: otherAsset }).count('* as n').first().then((r) => Number(r!.n))).toBe(0);
+  });
+
+  // The REST asset API and the mobile app read through AssetService: the same closed fields apply.
+  describe('REST service layer', () => {
+    const service = new AssetService();
+    const ctx = (user: any) => ({ tenant, userId: user.user_id, user, db } as any);
+    const NO_COMMERCIAL = (row: Record<string, unknown>, label: string) => {
+      for (const key of COMMERCIAL_KEYS) expect(row, `${label}: ${key}`).not.toHaveProperty(key);
+    };
+
+    it('lists, searches and reads an asset without a closed field, leaving it out of the SQL', async () => {
+      queries.length = 0;
+      const list = await service.list({ page: 1, limit: 25, sort: 'purchase_cost' as any }, ctx(tech));
+      expect(list.data.map((a: any) => a.asset_id)).toEqual([ownAsset]);
+      NO_COMMERCIAL(list.data[0], 'list');
+      const found = await service.search({ query: 'Front', limit: 10 } as any, ctx(tech));
+      expect(found.map((a: any) => a.asset_id)).toEqual([ownAsset]);
+      NO_COMMERCIAL(found[0], 'search');
+      const byId = await service.getById(ownAsset, ctx(tech));
+      NO_COMMERCIAL(byId, 'getById');
+      const details = await service.getWithDetails(ownAsset, ctx(tech));
+      expect(details).toMatchObject({ asset_id: ownAsset, name: 'Front desk PC', rmm_provider: 'tacticalrmm' });
+      NO_COMMERCIAL(details, 'getWithDetails');
+      expect(JSON.stringify([list, found, byId, details])).not.toContain(String(COST));
+      const statements = queries.join('\n');
+      expect(statements).not.toMatch(/purchase_cost/);
+      expect(statements).not.toMatch(/billing_profile_id/);
+      expect(statements).not.toMatch(/client_billing_profiles/);
+    });
+
+    it('omits the aggregate asset value rather than reporting 0', async () => {
+      queries.length = 0;
+      const stats = await service.getStatistics(ctx(tech));
+      expect(stats).toMatchObject({ total_assets: 1 });
+      expect(stats).not.toHaveProperty('total_asset_value');
+      expect(queries.join('\n')).not.toMatch(/purchase_cost/);
+    });
+
+    it('gives MSP staff the commercial fields as before', async () => {
+      const list = await service.list({ page: 1, limit: 25 }, ctx(msp));
+      const row = list.data.find((a: any) => a.asset_id === ownAsset);
+      expect(row).toMatchObject({ purchase_cost: expect.anything(), purchase_cost_currency: 'EUR' });
+      expect(row.billing_profile_id).toBeTruthy();
+      const details = await service.getWithDetails(ownAsset, ctx(msp));
+      expect(details).toMatchObject({ purchase_cost: expect.anything() });
+      expect(details.billing_profile_id).toBeTruthy();
+      const stats = await service.getStatistics(ctx(msp));
+      expect(stats.total_asset_value).toBeGreaterThan(0);
+    });
+
+    it('denies REST asset writes to a seat subject whatever the role holds', async () => {
+      for (const user of [tech, widened]) {
+        for (const action of ['update', 'delete', 'create']) {
+          const allowed = await authorizeApiResource({
+            knex: db, tenant, user, resource: 'asset', action,
+            recordContext: { id: ownAsset, clientId: ownClient },
+          });
+          expect(allowed, `${action} (${user === tech ? 'seat role' : 'widened'})`).toBe(false);
+        }
+        // Another client's asset is not even readable: the REST routes answer it as not found.
+        expect(await authorizeApiResource({ knex: db, tenant, user, resource: 'asset', action: 'read', recordContext: { id: otherAsset, clientId: otherClient } })).toBe(false);
+        expect(await authorizeApiResource({ knex: db, tenant, user, resource: 'asset', action: 'read', recordContext: { id: ownAsset, clientId: ownClient } })).toBe(true);
+      }
+      expect(await authorizeApiResource({ knex: db, tenant, user: msp, resource: 'asset', action: 'update', recordContext: { id: ownAsset, clientId: ownClient } })).toBe(true);
+    });
   });
 
   // The flagged slice must leave the MSP asset experience as it was.
