@@ -15,6 +15,8 @@ const PRIOR_SEAT_TABLE_MIGRATIONS = [
   'add_users_seat_reader_marker',
 ];
 
+const PAIR_TABLES = ['authorization_resolver_subjects', 'co_managed_seat_assignments'];
+
 const allMigrations = readdirSync(MIGRATIONS_DIR)
   .filter((name) => /^\d{14}_.*\.cjs$/.test(name))
   .sort();
@@ -40,10 +42,22 @@ describe('authorization resolver subjects migration ordering', () => {
     }
   });
 
-  it('gives each migration in the pair a timestamp no other migration file uses', () => {
-    for (const name of PAIR.map(fileFor)) {
+  // main ships 20261113140000_grant_service_read_to_msp_roles beside the index migration; both
+  // are in deployed ledgers, so neither can be renamed. A shared timestamp is harmless only when
+  // the other migration leaves the pair's tables alone: then their relative order cannot matter.
+  it('shares its timestamps only with migrations that leave the pair\'s tables alone', () => {
+    const pair = PAIR.map(fileFor);
+    const pairSource = pair.map((name) => readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8')).join('\n');
+    for (const table of PAIR_TABLES) expect(pairSource, `pair touches ${table}`).toContain(table);
+    for (const name of pair) {
       const ts = timestampOf(name);
-      expect(allMigrations.filter((other) => timestampOf(other) === ts), name).toEqual([name]);
+      const neighbours = allMigrations.filter((other) => timestampOf(other) === ts && !pair.includes(other));
+      for (const other of neighbours) {
+        const source = readFileSync(path.join(MIGRATIONS_DIR, other), 'utf8');
+        for (const table of PAIR_TABLES) {
+          expect(new RegExp(`\\b${table}\\b`).test(source), `${other} shares ${ts} with ${name} and touches ${table}`).toBe(false);
+        }
+      }
     }
   });
 
