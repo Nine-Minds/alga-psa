@@ -14,10 +14,20 @@ import { pathToFileURL } from 'node:url';
 // migration that shares the pair's timestamp cannot be restamped away once it is on main.
 // Knex then breaks the tie by full filename. That order is safe because the sibling touches
 // none of the pair's tables, so neither order changes what the pair does.
+// The pair is released: deployed knex_migrations ledgers record these exact filenames, and
+// knex refuses to migrate ("migration directory is corrupt") when a recorded name is missing.
+// Their names are therefore fixed. Main later released 20261113140000_grant_service_read_to_msp_roles
+// with the same timestamp; knex orders by full filename, so the shared timestamp is harmless and,
+// being inherited from main, is not something this pair can fix by renaming (migration-lint R6
+// exempts a duplicate when both files are already on base).
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
 const LINT_ENGINE = path.resolve(__dirname, '../../../scripts/lib/migration-lint.mjs');
 
 const PAIR = ['index_authorization_resolver_subjects', 'validate_authorization_resolver_subjects'];
+const RELEASED_NAMES = [
+  '20261113140000_index_authorization_resolver_subjects.cjs',
+  '20261113140100_validate_authorization_resolver_subjects.cjs',
+];
 const PRIOR_SEAT_TABLE_MIGRATIONS = [
   'create_co_managed_seat_ticket_work',
   'add_users_seat_reader_marker',
@@ -64,6 +74,10 @@ describe('authorization resolver subjects migration ordering', () => {
       const shared = sibling.tables.filter((table) => pairTables.has(table));
       expect(shared, `${sibling.name} shares a timestamp with the resolver pair and touches its tables`).toEqual([]);
     }
+  });
+
+  it('keeps the filenames deployed ledgers recorded when the pair was released', () => {
+    expect(PAIR.map(fileFor)).toEqual(RELEASED_NAMES);
   });
 
   it('cross-references only migrations in the pair', () => {
