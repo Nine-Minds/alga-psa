@@ -1,0 +1,44 @@
+[
+  [
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "id": "31000000-0000-4000-8000-000000000001",
+      "provider_type": "google",
+      "mailbox": "refresh-watch-3100@example.test",
+      "is_active": true,
+      "status": "error"
+    },
+    {
+      "tenant": "7562294a-3c20-46a9-950b-143130ecc2ae",
+      "id": "31000000-0000-4000-8000-000000000002",
+      "provider_type": "google",
+      "mailbox": "foreign-refresh-watch-3100@example.test",
+      "is_active": true,
+      "status": "configuring"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "id": "31000000-0000-4000-8000-000000000003",
+      "provider_type": "google",
+      "mailbox": "refresh-throttle-3100@example.test",
+      "is_active": true,
+      "status": "error"
+    }
+  ],
+  [
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "email_provider_id": "31000000-0000-4000-8000-000000000001",
+      "pubsub_initialised_at": null,
+      "history_id": null,
+      "watch_expiration": null
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "email_provider_id": "31000000-0000-4000-8000-000000000003",
+      "pubsub_initialised_at": null,
+      "history_id": null,
+      "watch_expiration": null
+    }
+  ]
+]

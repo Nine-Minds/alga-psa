@@ -1,0 +1,835 @@
+
+> build
+> npm run build:assemblyscript && npx nx build-deps server && cd server && USE_PREBUILT=true EDITION=community NEXT_PUBLIC_EDITION=community npm run build:turbo
+
+
+> build:assemblyscript
+> node scripts/build-assemblyscript-if-needed.mjs
+
+[build:assemblyscript] outputs up to date — skipping
+
+ NX   Running target build-deps for project server and 63 tasks it depends on:
+
+
+
+> nx run @alga-psa/ui:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/validation:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/workflow-streams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-stubs:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/event-schemas:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/workflows:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/storage:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/scheduling:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/documents:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/predicates:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-host:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/billing:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/block-content:build  [existing outputs match the cache, left as is]
+
+
+> nx run sebastian-ee:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/agent-tooling:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/types:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/event-bus:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-smtp-sink:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-stripe:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-webhook-sink:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/core:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/db:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/formatting:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/licensing:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/authorization:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/shared:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/auth:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/user-composition:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/reference-data:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tags:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/list-views:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/teams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-calendar:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tenancy:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/assets:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/surveys:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/email:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/analytics:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/inventory:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/reporting:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tickets:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-microsoft-teams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/users:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/co-managed:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/portal-shared:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/search:build  [existing outputs match the cache, left as is]
+
+
+> nx run email-service:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/clients:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/telephony:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/onboarding:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/notifications:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-threecx:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/projects:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/integrations:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/sla:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/opportunities:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/client-portal-composition:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-msgraph:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/jobs:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/user-activities:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/marketing:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/msp-composition:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/client-portal:build  [existing outputs match the cache, left as is]
+
+
+
+
+ NX   Successfully ran target build-deps for project server and 63 tasks it depends on
+
+Nx read the output from the cache instead of running the command for 63 out of 64 tasks.
+
+
+> server@1.6.17 build:turbo
+> NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=8192}" NODE_ENV=production next build --turbo
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.mjs took 70ms
+- Experiments (use with caution):
+  · cpus: 1
+  ✓ externalDir
+  · proxyClientMaxBodySize: "100mb"
+  · serverActions
+  ⨯ serverSourceMaps
+  ✓ webpackBuildWorker
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Turbopack build encountered 14 warnings:
+./packages/documents/src/lib/documentPreviewGenerator.ts:532:21
+Warning: The file pattern (<dynamic> '/' <dynamic> '.' <dynamic> | <dynamic> '.' <dynamic> | <dynamic> '/' <dynamic> '.mp4' | <dynamic> '.mp4') matches 23567 files in [project]/server
+  [90m530 |[0m     [36mconst[0m tempDir = os.tmpdir();
+  [90m531 |[0m     [36mconst[0m videoExtension = document.mime_type?.split([32m'/'[0m)[[35m1[0m] || [32m'mp4'[0m;
+[33m[1m>[0m [90m532 |[0m     tempVideoPath = path.join(tempDir, [32m`[0m${uuidv4()[32m}.[0m${videoExtension[32m}`[0m);
+  [90m    |[0m                     [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m533 |[0m     tempFramePath = path.join(tempDir, [32m`[0m${uuidv4()[32m}.png`[0m);
+  [90m534 |[0m
+  [90m535 |[0m     [90m// Write video buffer to temporary file[0m
+
+Overly broad patterns can lead to build performance issues and over bundling.
+
+Import traces:
+  #1 [App Route]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/view/[fileId]/route.ts
+
+  #2 [Server Component]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/msp/clients/[id]/page.tsx
+
+  #3 [Server Component]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/lib/withPrivateDocumentUploads.ts
+    ./packages/msp-composition/src/assets/withCustodyPhotos.ts
+    ./packages/msp-composition/src/tickets/receiveEquipmentActions.ts
+
+  #4 [Instrumentation]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/lib/notifications/ticketCommentAttachmentEmail.ts
+    ./server/src/lib/notifications/sendEventEmail.ts
+    ./server/src/lib/notifications/EventEmailRetryQueue.ts
+    ./server/src/lib/initializeApp.ts
+    ./server/src/instrumentation.ts
+
+
+./server/src/lib/extensions/assets/serve.ts:24:16
+Warning: The file pattern (<dynamic> '/index.html' | <dynamic> 'index.html' | <dynamic> '/' <dynamic> | <dynamic>) matches 13309 files in [project]/server
+  [90m22 |[0m
+  [90m23 |[0m   [36mconst[0m safe = sanitizePath(reqPath);
+[33m[1m>[0m [90m24 |[0m   [36mconst[0m full = join(dir, safe);
+  [90m   |[0m                [33m[1m^^^^^^^^^^^^^^^[0m
+  [90m25 |[0m   [36mlet[0m path = full;
+  [90m26 |[0m   [36mif[0m (!existsSync(path)) {
+  [90m27 |[0m     path = join(dir, [32m'index.html'[0m);
+
+Overly broad patterns can lead to build performance issues and over bundling.
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+
+./packages/documents/src/handlers/VideoDocumentHandler.ts:46:11
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m44 |[0m
+  [90m45 |[0m     [36mfor[0m ([36mconst[0m candidate [36mof[0m candidates) {
+[33m[1m>[0m [90m46 |[0m       [36mif[0m (existsSync(candidate)) {
+  [90m   |[0m           [33m[1m^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m47 |[0m         [36mreturn[0m candidate;
+  [90m48 |[0m       }
+  [90m49 |[0m     }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  App Route:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/thumbnail/route.ts
+
+  Server Component:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/msp/clients/[id]/page.tsx
+
+  Instrumentation:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/lib/notifications/ticketCommentAttachmentEmail.ts
+    ./server/src/lib/notifications/sendEventEmail.ts
+    ./server/src/lib/notifications/EventEmailRetryQueue.ts
+    ./server/src/lib/initializeApp.ts
+    ./server/src/instrumentation.ts
+
+
+./packages/documents/src/handlers/VideoDocumentHandler.ts:61:9
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m59 |[0m   [36mconst[0m fallbacks = [[32m'/usr/bin/ffmpeg'[0m, [32m'/usr/local/bin/ffmpeg'[0m];
+  [90m60 |[0m   [36mfor[0m ([36mconst[0m fallback [36mof[0m fallbacks) {
+[33m[1m>[0m [90m61 |[0m     [36mif[0m (existsSync(fallback)) {
+  [90m   |[0m         [33m[1m^^^^^^^^^^^^^^^^^^^^[0m
+  [90m62 |[0m       [36mreturn[0m fallback;
+  [90m63 |[0m     }
+  [90m64 |[0m   }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  App Route:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/thumbnail/route.ts
+
+  Server Component:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/msp/clients/[id]/page.tsx
+
+  Instrumentation:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/lib/notifications/ticketCommentAttachmentEmail.ts
+    ./server/src/lib/notifications/sendEventEmail.ts
+    ./server/src/lib/notifications/EventEmailRetryQueue.ts
+    ./server/src/lib/initializeApp.ts
+    ./server/src/instrumentation.ts
+
+
+./packages/documents/src/handlers/VideoDocumentHandler.ts:116:11
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m114 |[0m
+  [90m115 |[0m     [36mfor[0m ([36mconst[0m candidate [36mof[0m candidates) {
+[33m[1m>[0m [90m116 |[0m       [36mif[0m (existsSync(candidate)) {
+  [90m    |[0m           [33m[1m^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m117 |[0m         [36mreturn[0m candidate;
+  [90m118 |[0m       }
+  [90m119 |[0m       console.warn([32m`[VideoDocumentHandler] ffprobe candidate missing: [0m${candidate[32m}`[0m);
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  App Route:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/thumbnail/route.ts
+
+  Server Component:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/msp/clients/[id]/page.tsx
+
+  Instrumentation:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/lib/notifications/ticketCommentAttachmentEmail.ts
+    ./server/src/lib/notifications/sendEventEmail.ts
+    ./server/src/lib/notifications/EventEmailRetryQueue.ts
+    ./server/src/lib/initializeApp.ts
+    ./server/src/instrumentation.ts
+
+
+./packages/documents/src/handlers/VideoDocumentHandler.ts:141:9
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m139 |[0m   [36mconst[0m fallbacks = [[32m'/usr/bin/ffprobe'[0m, [32m'/usr/local/bin/ffprobe'[0m];
+  [90m140 |[0m   [36mfor[0m ([36mconst[0m fallback [36mof[0m fallbacks) {
+[33m[1m>[0m [90m141 |[0m     [36mif[0m (existsSync(fallback)) {
+  [90m    |[0m         [33m[1m^^^^^^^^^^^^^^^^^^^^[0m
+  [90m142 |[0m       [36mreturn[0m fallback;
+  [90m143 |[0m     }
+  [90m144 |[0m     console.warn([32m`[VideoDocumentHandler] ffprobe candidate missing: [0m${fallback[32m}`[0m);
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  App Route:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/thumbnail/route.ts
+
+  Server Component:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/msp/clients/[id]/page.tsx
+
+  Instrumentation:
+    ./packages/documents/src/handlers/VideoDocumentHandler.ts
+    ./packages/documents/src/handlers/DocumentHandlerRegistry.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/lib/notifications/ticketCommentAttachmentEmail.ts
+    ./server/src/lib/notifications/sendEventEmail.ts
+    ./server/src/lib/notifications/EventEmailRetryQueue.ts
+    ./server/src/lib/initializeApp.ts
+    ./server/src/instrumentation.ts
+
+
+./packages/documents/src/lib/documentPreviewGenerator.ts:532:21
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m530 |[0m     [36mconst[0m tempDir = os.tmpdir();
+  [90m531 |[0m     [36mconst[0m videoExtension = document.mime_type?.split([32m'/'[0m)[[35m1[0m] || [32m'mp4'[0m;
+[33m[1m>[0m [90m532 |[0m     tempVideoPath = path.join(tempDir, [32m`[0m${uuidv4()[32m}.[0m${videoExtension[32m}`[0m);
+  [90m    |[0m                     [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m533 |[0m     tempFramePath = path.join(tempDir, [32m`[0m${uuidv4()[32m}.png`[0m);
+  [90m534 |[0m
+  [90m535 |[0m     [90m// Write video buffer to temporary file[0m
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/view/[fileId]/route.ts
+
+  #2 [Server Component]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/msp/clients/[id]/page.tsx
+
+  #3 [Server Component]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/lib/withPrivateDocumentUploads.ts
+    ./packages/msp-composition/src/assets/withCustodyPhotos.ts
+    ./packages/msp-composition/src/tickets/receiveEquipmentActions.ts
+
+  #4 [Instrumentation]:
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/lib/notifications/ticketCommentAttachmentEmail.ts
+    ./server/src/lib/notifications/sendEventEmail.ts
+    ./server/src/lib/notifications/EventEmailRetryQueue.ts
+    ./server/src/lib/initializeApp.ts
+    ./server/src/instrumentation.ts
+
+
+./packages/product-ext-proxy/ee/handler.ts:23:22
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m21 |[0m [36mconst[0m [33mMETHOD_OVERRIDE_FIELD[0m = [32m'__method'[0m;
+  [90m22 |[0m
+[33m[1m>[0m [90m23 |[0m [36mconst[0m debugLogPath = path.resolve(process.env.[33mEXT_PROXY_DEBUG_LOG[0m || [32m'/tmp/ext-proxy.log'[0m);
+  [90m   |[0m                      [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m24 |[0m
+  [90m25 |[0m [36mfunction[0m logDebug(event: string, payload: [33mRecord[0m<string, unknown>) {
+  [90m26 |[0m   [36mtry[0m {
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.resolve(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./packages/product-ext-proxy/ee/handler.ts
+    ./server/src/app/api/ext-proxy/[extensionId]/[[...path]]/route.ts
+
+
+./packages/ui/src/lib/i18n/serverOnly.ts:49:11
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m47 |[0m   [36mfor[0m ([36mconst[0m dir [36mof[0m candidates) {
+  [90m48 |[0m     [36mtry[0m {
+[33m[1m>[0m [90m49 |[0m       [36mif[0m (existsSync(dir)) [36mreturn[0m dir;
+  [90m   |[0m           [33m[1m^^^^^^^^^^^^^^^[0m
+  [90m50 |[0m     } [36mcatch[0m {
+  [90m51 |[0m       [90m// ignore and try next candidate[0m
+  [90m52 |[0m     }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  App Route:
+    ./packages/ui/src/lib/i18n/serverOnly.ts
+    ./server/src/app/api/auth/microsoft/email-setup/callback/route.ts
+
+  Instrumentation:
+    ./packages/ui/src/lib/i18n/serverOnly.ts
+    ./server/src/instrumentation.ts
+
+  Server Component:
+    ./packages/ui/src/lib/i18n/serverOnly.ts
+    ./server/src/app/layout.tsx
+
+
+./server/src/lib/extensions/assets/cache.ts:17:8
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m15 |[0m [36mfunction[0m root(): string {
+  [90m16 |[0m   [36mconst[0m base = process.env.[33mEXT_CACHE_ROOT[0m || [32m'.alga-ext-cache'[0m;
+[33m[1m>[0m [90m17 |[0m   [36mif[0m (!existsSync(base)) mkdirSync(base, { recursive: [36mtrue[0m });
+  [90m   |[0m        [33m[1m^^^^^^^^^^^^^^^^[0m
+  [90m18 |[0m   [36mreturn[0m base;
+  [90m19 |[0m }
+  [90m20 |[0m
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/extensions/assets/cache.ts
+    ./server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/extensions/assets/cache.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+
+./server/src/lib/extensions/assets/serve.ts:26:8
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m24 |[0m   [36mconst[0m full = join(dir, safe);
+  [90m25 |[0m   [36mlet[0m path = full;
+[33m[1m>[0m [90m26 |[0m   [36mif[0m (!existsSync(path)) {
+  [90m   |[0m        [33m[1m^^^^^^^^^^^^^^^^[0m
+  [90m27 |[0m     path = join(dir, [32m'index.html'[0m);
+  [90m28 |[0m     [36mif[0m (!existsSync(path)) [36mreturn[0m [33mNextResponse[0m.json({ error: [32m'not_found'[0m }, { status: [35m404[0m });
+  [90m29 |[0m   }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+
+./server/src/lib/extensions/assets/serve.ts:28:10
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m26 |[0m   [36mif[0m (!existsSync(path)) {
+  [90m27 |[0m     path = join(dir, [32m'index.html'[0m);
+[33m[1m>[0m [90m28 |[0m     [36mif[0m (!existsSync(path)) [36mreturn[0m [33mNextResponse[0m.json({ error: [32m'not_found'[0m }, { status: [35m404[0m });
+  [90m   |[0m          [33m[1m^^^^^^^^^^^^^^^^[0m
+  [90m29 |[0m   }
+  [90m30 |[0m   [36mconst[0m buf = readFileSync(path);
+  [90m31 |[0m   [36mconst[0m etag = [32m'W/"'[0m + createHash([32m'sha1'[0m).update(buf).digest([32m'hex'[0m) + [32m'"'[0m;
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+
+./server/src/lib/extensions/assets/serve.ts:30:15
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m28 |[0m     [36mif[0m (!existsSync(path)) [36mreturn[0m [33mNextResponse[0m.json({ error: [32m'not_found'[0m }, { status: [35m404[0m });
+  [90m29 |[0m   }
+[33m[1m>[0m [90m30 |[0m   [36mconst[0m buf = readFileSync(path);
+  [90m   |[0m               [33m[1m^^^^^^^^^^^^^^^^^^[0m
+  [90m31 |[0m   [36mconst[0m etag = [32m'W/"'[0m + createHash([32m'sha1'[0m).update(buf).digest([32m'hex'[0m) + [32m'"'[0m;
+  [90m32 |[0m   [36mconst[0m ifNone = req.headers.get([32m'if-none-match'[0m);
+  [90m33 |[0m   [36mif[0m (ifNone && ifNone === etag) [36mreturn[0m [36mnew[0m [33mNextResponse[0m([36mnull[0m, { status: [35m304[0m });
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFileSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+
+./server/src/lib/extensions/assets/serve.ts:24:16
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m22 |[0m
+  [90m23 |[0m   [36mconst[0m safe = sanitizePath(reqPath);
+[33m[1m>[0m [90m24 |[0m   [36mconst[0m full = join(dir, safe);
+  [90m   |[0m                [33m[1m^^^^^^^^^^^^^^^[0m
+  [90m25 |[0m   [36mlet[0m path = full;
+  [90m26 |[0m   [36mif[0m (!existsSync(path)) {
+  [90m27 |[0m     path = join(dir, [32m'index.html'[0m);
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/extensions/assets/serve.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+
+✓ Finished writing to filesystem cache in 22.1s
+
+> Build error occurred
+Error: Turbopack build failed with 3 errors:
+./packages/auth/src/services/apiKeyService.ts:6:1
+Error: Module not found: Can't resolve '@product/service-principals/entry'
+  [90m4 |[0m [36mimport[0m crypto [36mfrom[0m [32m'crypto'[0m;
+  [90m5 |[0m [36mimport[0m { isLicensedUserType } [36mfrom[0m [32m'@alga-psa/types'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { servicePrincipalKeyGate } [36mfrom[0m [32m'@product/service-principals/entry'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m
+  [90m8 |[0m [36minterface[0m [33mApiKey[0m {
+  [90m9 |[0m   api_key_id: string;
+
+Import map: aliased to module '@product/service-principals' with subpath '/oss/entry' inside of [project]/server
+
+
+Import traces:
+  #1 [App Route]:
+    ./packages/auth/src/services/apiKeyService.ts
+    ./server/src/app/api/auth/validate-api-key/route.ts
+
+  #2 [Server Component]:
+    ./packages/auth/src/services/apiKeyService.ts
+    ./server/src/lib/actions/apiKeyActions.ts
+
+  #3 [Server Component]:
+    ./packages/auth/src/services/apiKeyService.ts
+    ./packages/auth/src/index.ts
+    ./server/src/app/msp/layout.tsx
+
+  #4 [Instrumentation]:
+    ./packages/auth/src/services/apiKeyService.ts
+    ./packages/auth/src/index.ts
+    ./server/src/lib/initializeApp.ts
+    ./server/src/instrumentation.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./server/src/lib/api/middleware/apiMiddleware.ts:19:1
+Error: Module not found: Can't resolve '@product/service-principals/entry'
+  [90m17 |[0m [36mimport[0m { redactSensitiveFields } [36mfrom[0m [32m'../utils/redactSensitiveFields'[0m;
+  [90m18 |[0m [36mimport[0m [36mtype[0m { [33mBucketConfig[0m } [36mfrom[0m [32m'@alga-psa/core/rateLimit'[0m;
+[31m[1m>[0m [90m19 |[0m [36mimport[0m { resolveServicePrincipalApiContext } [36mfrom[0m [32m'@product/service-principals/entry'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m20 |[0m [36mimport[0m { isInteractiveUserType } [36mfrom[0m [32m'@alga-psa/types'[0m;
+  [90m21 |[0m
+  [90m22 |[0m [90m/** Who the request is made as. Defaults to the key owner (`kind: 'user'`). */[0m
+
+Import map: aliased to module '@product/service-principals' with subpath '/oss/entry' inside of [project]/server
+
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/api/middleware/apiMiddleware.ts
+    ./server/src/app/api/v1/time-periods/[id]/close/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/api/middleware/apiMiddleware.ts
+    ./server/src/lib/api/controllers/ApiStatusController.ts
+    ./server/src/app/api/v1/statuses/[id]/route.ts
+
+  #3 [App Route]:
+    ./server/src/lib/api/middleware/apiMiddleware.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./server/src/lib/services/apiKeyServiceForApi.ts:6:1
+Error: Module not found: Can't resolve '@product/service-principals/entry'
+  [90m4 |[0m [36mimport[0m { shouldTouchApiKeyLastUsed } [36mfrom[0m [32m'@alga-psa/auth'[0m;
+  [90m5 |[0m [36mimport[0m { getConnection } [36mfrom[0m [32m'../db/db'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { servicePrincipalKeyGate } [36mfrom[0m [32m'@product/service-principals/entry'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m [36mimport[0m { coManagedAcceptancePendingError, isCoManagedAwaitingAcceptanceLazily, isCoManagedL...
+  [90m8 |[0m
+  [90m9 |[0m [36minterface[0m [33mApiKey[0m {
+
+Import map: aliased to module '@product/service-principals' with subpath '/oss/entry' inside of [project]/server
+
+
+Import traces:
+  #1 [App Route]:
+    ./server/src/lib/services/apiKeyServiceForApi.ts
+    ./server/src/app/api/documents/view/[fileId]/route.ts
+
+  #2 [App Route]:
+    ./server/src/lib/services/apiKeyServiceForApi.ts
+    ./packages/documents/src/lib/documentPreviewGenerator.ts
+    ./packages/documents/src/actions/documentActions.ts
+    ./server/src/app/api/documents/[documentId]/content/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+npm error Lifecycle script `build:turbo` failed with error:
+npm error code 1
+npm error path /home/robert/alga-copies/feature-security-authz-in-post-3/server
+npm error workspace server@1.6.17
+npm error location /home/robert/alga-copies/feature-security-authz-in-post-3/server
+npm error command failed
+npm error command sh -c NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=8192}" NODE_ENV=production next build --turbo

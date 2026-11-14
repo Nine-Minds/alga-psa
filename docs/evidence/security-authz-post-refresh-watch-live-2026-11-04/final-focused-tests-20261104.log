@@ -1,0 +1,14 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1793823923277"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+·········································
+
+ Test Files  3 passed (3)
+      Tests  41 passed (41)
+   Start at  20:25:28
+   Duration  12.00s (transform 812ms, setup 335ms, import 795ms, tests 10.60s, environment 0ms)
+
+exit_status=0

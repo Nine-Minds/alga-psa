@@ -1,0 +1,26 @@
+{
+  "runtime": {
+    "service": "dev-server:6",
+    "checkout": "/home/robert/alga-copies/feature-security-authz-in-post-3",
+    "port": 3594,
+    "schedulerHealth": "running",
+    "healthHttpStatus": 200,
+    "revisionAttestation": "inferred from scheduler restart after current HEAD, exact checkout cwd, and unchanged route source hash; scheduler does not expose a git SHA"
+  },
+  "administratorSettingsUi": {
+    "action": "Refresh Pub/Sub & Watch",
+    "initialResponse": 409,
+    "immediateRepeat": 429,
+    "immediateRepeatVisibleText": "Gmail provider refresh rate limit exceeded",
+    "afterWindowResponse": 409,
+    "limitation": "The HTTP development origin is rejected by Google Pub/Sub validation; successful Google registration is not established"
+  },
+  "authenticatedApiMatrix": {
+    "internalReadOnly": {"valid": 403, "malformed": 403, "empty": 403},
+    "clientWithUpdatePermission": {"valid": 403, "malformed": 403, "empty": 403},
+    "anonymous": {"valid": 401, "malformed": 401, "empty": 401},
+    "foreignTenantProvider": 404,
+    "deniedRequestsPreservedThrottleCapacity": "The authorized first request after the real-session denied requests reached HTTP-origin validation with 409 (not throttled); immediate authorized repeat returned 429"
+  },
+  "fixtureCleanup": {"users": 0, "roles": 0, "providers": 0, "googleConfig": 0, "sessions": 0, "preferences": 0}
+}

@@ -1,0 +1,7 @@
+Checkout HEAD during run: e26f228aa80c62ec64dc08810bce9726fc029c7f
+Command: NEXT_BUILD_CPUS=1 NEXT_DIST_DIR=.next-build-refresh-watch NODE_OPTIONS=--max-old-space-size=6144 npm run build
+Exit: 1 (completed; not operator-interrupted)
+AssemblyScript: up to date, skipped
+Nx build-deps: passed, 63 cached targets
+Next.js 16.4.2 Turbopack: failed production compilation with three unresolved @product/service-principals/entry imports in packages/auth/src/services/apiKeyService.ts, server/src/lib/api/middleware/apiMiddleware.ts, server/src/lib/services/apiKeyServiceForApi.ts. Resolver mapped the specifier to @product/service-principals/oss/entry. Full compiler output is in build-constrained.log.
+Resource outcome: observed peak RSS about 17.4 GiB despite one Next build CPU and a 6 GiB NODE_OPTIONS heap limit; managed dev-server:6 exited during this run (scheduler last health: Process is no longer running). No unrelated workload was stopped. Subsequent recovery was requested through workflow-ensure-service, but scheduler admission queued it as #21 while host heavy-work admission was closed. Runtime health must be rechecked after recovery.

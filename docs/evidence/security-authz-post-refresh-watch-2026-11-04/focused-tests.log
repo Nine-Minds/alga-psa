@@ -1,0 +1,14 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1793799509116"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts (26 tests) 10ms 25 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts (13 tests) 19ms 18 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  39 passed (39)
+   Start at  13:38:34
+   Duration  899ms (transform 380ms, setup 185ms, import 484ms, tests 30ms, environment 0ms)
+

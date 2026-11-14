@@ -1,0 +1,51 @@
+{
+  "paneId": "2a3fd270-a3d2-40cc-bf3a-63d1fb844e0b",
+  "success": true,
+  "result": {
+    "events": [
+      {
+        "timestamp": 1793808672675,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 528,
+        "status": 409,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 59
+      },
+      {
+        "timestamp": 1793808693596,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 536,
+        "status": 429,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 4
+      },
+      {
+        "timestamp": 1793808900682,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 569,
+        "status": 409,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 4
+      },
+      {
+        "timestamp": 1793808923387,
+        "url": "http://feature-security-authz-in-post-3.localhost:3594/api/email/refresh-watch",
+        "method": "POST",
+        "id": 570,
+        "status": 429,
+        "ok": false,
+        "resourceType": "Fetch",
+        "durationMs": 3
+      }
+    ],
+    "total": 22,
+    "returned": 22,
+    "nextSince": 570
+  }
+}

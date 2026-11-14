@@ -1,0 +1,71 @@
+{
+  "capturedAt": "2026-11-04T19:03Z",
+  "checkout": "/home/robert/alga-copies/feature-security-authz-in-post-3",
+  "branch": "feature/security-authz-in-post-3",
+  "headDuringVerification": "e26f228aa80c62ec64dc08810bce9726fc029c7f",
+  "runtime": {
+    "service": "dev-server:6",
+    "cwd": "/home/robert/alga-copies/feature-security-authz-in-post-3/server",
+    "command": "PORT=3594 npm run dev",
+    "health": "HTTP 200 during live replay at 18:49Z; current post-build recovery check at 19:04Z failed because dev-server:6 is scheduler-queued and port 3594 refuses connections.",
+    "revisionAttestation": "Scheduler exposes no git SHA; registered cwd is this checkout. Direct served revision attestation is unavailable."
+  },
+  "freshLive": {
+    "internalReadOnlySession": {
+      "sessionVerified": true,
+      "valid": 403,
+      "malformed": 403,
+      "empty": 403
+    },
+    "anonymous": {
+      "valid": 401,
+      "malformed": 401,
+      "empty": 401
+    },
+    "administrator": {
+      "foreignTenantProvider": 404,
+      "afterInternalDenialsSameTenantProvider": [
+        409,
+        429
+      ],
+      "googleConfigurationBoundary": "409 due to HTTP origin requiring public HTTPS; this is not successful Google registration."
+    },
+    "settingsUI": {
+      "path": "/msp/settings/email, Inbound Email tab",
+      "action": "Refresh Pub/Sub & Watch",
+      "statuses": [
+        409,
+        429,
+        409
+      ],
+      "meaning": "First and post-window calls reached configuration; immediate repeat was throttled."
+    }
+  },
+  "clientSession": {
+    "freshReplay": "completed through the credential-based Client Portal form",
+    "loginPath": "/auth/client-portal/signin?tenant=6d178745f8f9",
+    "sessionIdentity": {
+      "id": "31000000-0000-4000-8000-000000000012",
+      "email": "refresh-client-3100@example.test",
+      "userType": "client",
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9"
+    },
+    "responses": {
+      "valid": 403,
+      "malformed": 403,
+      "empty": 403
+    },
+    "throttlePreservation": "After all three denials against provider 31000000-0000-4000-8000-000000000001, admin got 409 on first authorized request and 429 on immediate repeat.",
+    "evidence": "fresh-client-session-matrix.json and fresh-client-network.json"
+  },
+  "cleanup": "After client replay, cleanup-check-client-replay.json reports zero fixture users, roles, providers, Google config, sessions, and preferences.",
+  "repositoryChecks": {
+    "focusedRouteAndMiddlewareSuites": "39/39 passed",
+    "serverTypecheck": "passed with NODE_OPTIONS=--max-old-space-size=8192",
+    "rootBuild": "Completed controlled root production build, exit 1 (not interrupted): Nx dependencies succeeded, Next/Turbopack failed on three unresolved @product/service-principals/entry imports; details in build-constrained.log and build-constrained-run.txt. Peak RSS about 17.4 GiB; scheduler-managed dev-server:6 exited during the run and recovery is subject to scheduler heavy-work admission.",
+    "securityFindingAcceptance": "Pending external Security Review owner: canonical security-finding-resolved runner/check unavailable. No disposition or acceptance pass is claimed.",
+    "schedulerRecovery": "At 19:12Z after alias repair commit 5adf05f8996213aaa96c6ffea011b81130dee8cf, workflow-ensure-service still has existing dev-server:6 queued #16 for 6 GiB under admission accounting (18 GiB free, 3.8 GiB reserved, 8 GiB floor); port 3594 unavailable. Final healthy /api/health remains outstanding.",
+    "productionBuild": "The previously completed controlled build failed with three @product/service-principals/entry resolution errors. Cause was traced to duplicate turbopack.resolveAlias keys introduced in commit 299f5236bb59d2699256343c187a32efab60ffde; later package-specifier mapping overrode earlier absolute source mapping. Removed duplicate; community/enterprise config contract cases pass. Full build not rerun due prior ~17.4 GiB peak and managed-service exit; post-repair full build remains unverified. See build-alias-repair.txt.",
+    "focusedValidation": "41/41 passed: refresh-watch route, middleware API-key, and service-principals config alias contract suites; service-principal edition boundary guard passed."
+  }
+}

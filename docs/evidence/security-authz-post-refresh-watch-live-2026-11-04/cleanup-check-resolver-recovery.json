@@ -1,0 +1,26 @@
+[
+  {
+    "fixture": "users",
+    "count": "0"
+  },
+  {
+    "fixture": "roles",
+    "count": "0"
+  },
+  {
+    "fixture": "providers",
+    "count": "0"
+  },
+  {
+    "fixture": "google_config",
+    "count": "0"
+  },
+  {
+    "fixture": "sessions",
+    "count": "0"
+  },
+  {
+    "fixture": "user_preferences",
+    "count": "0"
+  }
+]
