@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useIsolatedEventBusModules } from './testing/isolatedEventBusModules';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 
 describe('durable comment publication across channels', () => {
-  afterEach(() => { vi.resetModules(); vi.restoreAllMocks(); });
+  useIsolatedEventBusModules();
+
+  afterEach(() => { vi.restoreAllMocks(); });
   it('delivers the same event ID once per channel, including after the global channel completes', async () => {
     const sets = new Map<string,Set<string>>();
     const redis = Object.assign(new EventEmitter(), {
