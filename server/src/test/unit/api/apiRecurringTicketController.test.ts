@@ -34,7 +34,6 @@ const kernel = vi.hoisted(() => {
   };
 });
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceAction: kernel.authorize,
   authorizeApiResource: kernel.authorize,
 }));
 const templates = vi.hoisted(() => ({ getTicketTemplate: vi.fn() }));

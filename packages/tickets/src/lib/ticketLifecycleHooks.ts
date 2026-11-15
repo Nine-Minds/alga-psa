@@ -18,7 +18,7 @@ export type TicketLifecycleEvent =
   // Additive (L6b): responsibility changes on shared work, and the first reply from the other organization.
   | { kind: 'handoff'; tenant: string; ticketId: string; relationshipId: string; workId: string; operationId: string;
       transition: 'escalated' | 'handed_back' | 'access_revoked' | 'reopened'; firstEscalatedAt: string | null; occurredAt: string }
-  // Seat responsibility (co-managed seat arrangement): who is responsible for the ticket changed. Distinct
+  // Seat responsibility (seat arrangement): who is responsible for the ticket changed. Distinct
   // from `handoff`, which belongs to the L6b relationship workflow. `operationId` is the handoff
   // operation, or null when responsibility returned to the MSP because the ticket left the arrangement's scope.
   | { kind: 'seatResponsibility'; tenant: string; ticketId: string; arrangementId: string;
