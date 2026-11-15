@@ -62,3 +62,14 @@ export function commercialTimeEntriesOnly<Q extends { whereRaw(sql: string): Q }
 
 /** The same rule for a row already in memory (a rollup over rows read without the SQL predicate). */
 export const isCommercialTimeEntry = (row: { billing_mode?: string | null }): boolean => row.billing_mode !== 'operational';
+
+/**
+ * The operational counterpart of `commercialTimeEntrySql`: only customer-side (seat technician) effort.
+ * Used where a reader may see operational time and nothing commercial (S28 / F069: a seat technician's time tile and timeline).
+ */
+export const operationalTimeEntrySql = (alias = 'time_entries'): string => `${alias}.billing_mode = 'operational'`;
+
+/** Knex-shaped: `query.whereRaw(operationalTimeEntrySql(alias))`. */
+export function operationalTimeEntriesOnly<Q extends { whereRaw(sql: string): Q }>(query: Q, alias = 'time_entries'): Q {
+  return query.whereRaw(operationalTimeEntrySql(alias));
+}

@@ -5,6 +5,8 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { formatISO } from 'date-fns';
 import { workedMinutes } from '@alga-psa/core';
+import { operationalTimeEntriesOnly } from '@alga-psa/types';
+import { resolveSeatViewerOperationalOnly } from '@alga-psa/shared/lib/humanWork/seatTimeScope';
 import type {
   IUser,
   TimeSheetStatus,
@@ -86,6 +88,8 @@ export async function fetchTimeEntriesForTicketCore(
   const readScope = await resolveTimeEntryReadScope(db, tenant, user);
   const query = scopedDb.table('time_entries');
   readScope.apply(query);
+  // A seat technician sees operational time only: the MSP's commercial entries are not read, so no entry, total or count can carry them.
+  if (await resolveSeatViewerOperationalOnly(db, tenant, user, ticketId)) operationalTimeEntriesOnly(query);
   scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
   scopedDb.tenantJoin(query, 'service_catalog', 'time_entries.service_id', 'service_catalog.service_id', { type: 'left' });
 

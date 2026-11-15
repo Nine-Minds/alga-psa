@@ -14,6 +14,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { operationalTimeEntriesOnly } from '@alga-psa/types';
 import { attachViaPrincipalNames } from '../viaPrincipal/viaPrincipalNames';
 import { admitInternalReaderAudienceSql, type InternalReaderAudienceSql, type InternalReaderIdentity } from '../commentAudience';
 
@@ -177,6 +178,8 @@ export interface BuildUnifiedTimelineOptions {
   includeInternalNotes?: boolean;
   /** Include ticket-linked time entries in the merged timeline. Default false. */
   includeTimeEntries?: boolean;
+  /** Time events are operational entries only (a seat technician's view, S28 / F069): commercial entries are not read. */
+  operationalTimeOnly?: boolean;
   /** Include ticket-linked RMM alerts in the merged timeline. Default false. */
   includeAlerts?: boolean;
   /** Sort order. Default 'desc' (newest first). */
@@ -335,6 +338,7 @@ export async function buildUnifiedTicketTimeline(
           "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.first_name, ''), NULLIF(u.last_name, ''))), '') AS user_display_name",
         ),
       );
+    if (opts.operationalTimeOnly) operationalTimeEntriesOnly(timeEntryQuery, 'te');
     tenantDb(knex, tenant).tenantJoin(timeEntryQuery, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
 
     const timeEntryRows = (await timeEntryQuery) as Array<Record<string, unknown>>;
