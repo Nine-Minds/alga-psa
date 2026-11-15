@@ -576,7 +576,10 @@
       "saveFailed": "Formuläret kunde inte sparas.",
       "notFound": "Den här serviceförfrågan finns inte längre.",
       "loadFailedTitle": "Formulärbyggaren kunde inte öppnas",
-      "loading": "Öppnar formulärbyggaren…"
+      "loading": "Öppnar formulärbyggaren…",
+      "published": "Publicerad. Kunderna ser den nya versionen.",
+      "publishBlocked": "Åtgärda det som definitionssidan rapporterar och publicera sedan.",
+      "publishFailed": "Den här serviceförfrågan kunde inte publiceras."
     },
     "types": {
       "short-text": {
@@ -683,6 +686,7 @@
       "customMessagePlaceholder": "Lämna tomt för standardtexten",
       "onlyShowWhen": "Visa detta bara när…",
       "onlyShowWhenHelp": "Utan regel visas det alltid.",
+      "onlyShowWhenSectionHelp": "Döljer du ett avsnitt döljs även frågorna i det.",
       "visibilityNeedsEarlierField": "Lägg till en fråga ovanför som regeln kan utgå från.",
       "visibilityAlways": "Visas alltid.",
       "visibilityWhen": "När",

@@ -2,8 +2,11 @@
 
 /**
  * The route shell for Form Studio: loads the definition's draft schema, then hands the whole
- * screen to the builder. Basics, linkage, execution, answer mapping and publish stay on the
- * definition page, which the back link returns to.
+ * screen to the builder. Basics, linkage, execution and answer mapping stay on the definition
+ * page, which the back link returns to.
+ *
+ * The builder covers the viewport rather than sitting inside the MSP sidebar and header: three
+ * panes plus a canvas need the width, and at 1280 px the app chrome left the canvas unusable.
  */
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -75,7 +78,10 @@ export default function ServiceRequestFormBuilderPage(): React.ReactElement {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)]">
+    <div
+      id="service-request-form-builder-surface"
+      className="fixed inset-0 z-50 bg-[rgb(var(--color-background))]"
+    >
       <ServiceRequestFormBuilder
         definitionId={data.definitionId}
         definitionName={data.definitionName}

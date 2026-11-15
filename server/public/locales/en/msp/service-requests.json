@@ -576,7 +576,10 @@
       "saveFailed": "Failed to save the form.",
       "notFound": "This service request no longer exists.",
       "loadFailedTitle": "The form builder could not open",
-      "loading": "Opening the form builder…"
+      "loading": "Opening the form builder…",
+      "published": "Published. Clients see the new version.",
+      "publishBlocked": "Fix what the definition page reports, then publish.",
+      "publishFailed": "Failed to publish this service request."
     },
     "types": {
       "short-text": {
@@ -683,6 +686,7 @@
       "customMessagePlaceholder": "Leave empty for the standard wording",
       "onlyShowWhen": "Only show this when…",
       "onlyShowWhenHelp": "Without a rule it is always shown.",
+      "onlyShowWhenSectionHelp": "Hiding a section hides the questions in it too.",
       "visibilityNeedsEarlierField": "Add a question above this one to base a rule on.",
       "visibilityAlways": "Always shown.",
       "visibilityWhen": "When",

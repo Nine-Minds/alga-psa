@@ -576,7 +576,10 @@
       "saveFailed": "Não foi possível salvar o formulário.",
       "notFound": "Esta solicitação de serviço já não existe.",
       "loadFailedTitle": "Não foi possível abrir o editor de formulário",
-      "loading": "Abrindo o editor de formulário…"
+      "loading": "Abrindo o editor de formulário…",
+      "published": "Publicado. Os clientes veem a nova versão.",
+      "publishBlocked": "Corrija o que a página da definição indica e publique novamente.",
+      "publishFailed": "Não foi possível publicar esta solicitação de serviço."
     },
     "types": {
       "short-text": {
@@ -683,6 +686,7 @@
       "customMessagePlaceholder": "Deixe vazio para o texto padrão",
       "onlyShowWhen": "Mostrar isto apenas quando…",
       "onlyShowWhenHelp": "Sem nenhuma regra, é sempre mostrado.",
+      "onlyShowWhenSectionHelp": "Ocultar uma seção também oculta as perguntas dela.",
       "visibilityNeedsEarlierField": "Adicione uma pergunta acima para basear uma regra.",
       "visibilityAlways": "Sempre mostrado.",
       "visibilityWhen": "Quando",

@@ -41,6 +41,7 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { FieldTypeKey, FieldValidationIssue } from '@alga-psa/ui/form-fields';
 import {
+  collectElementVisibilityRules,
   computeVisibleFieldKeys,
   parseVisibilityRules,
 } from '../../../../lib/service-requests/formVisibility';
@@ -48,8 +49,9 @@ import { collectFormFieldIssues } from '../../../../lib/service-requests/formVal
 import { normalizeBasicFormSchema } from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestFormRenderer } from '../../../../components/service-requests/ServiceRequestFormRenderer';
 import {
+  publishServiceRequestDefinitionAction,
   replaceServiceRequestFormSchemaAction,
-  updateServiceRequestFormBehaviorConfigAction,
+  validateServiceRequestDefinitionForPublishAction,
 } from '../actions';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormBuilderInspector } from './FormBuilderInspector';
@@ -92,7 +94,11 @@ export interface ServiceRequestFormBuilderProps {
   definitionId: string;
   definitionName: string;
   initialSchema: Record<string, unknown>;
-  /** Present only when the advanced form-behavior provider is on; gates the visibility editor. */
+  /**
+   * The EE advanced form-behavior provider's own rule list, when that provider is on. The
+   * builder never writes it — conditions it authors live on the elements — but Try it reads it
+   * so a definition carrying legacy rules behaves here exactly as it does in the portal.
+   */
   initialFormBehaviorConfig?: Record<string, unknown>;
   /** Where the back link goes; the definition page owns basics, execution, mapping and publish. */
   backHref: string;
@@ -128,9 +134,9 @@ export function ServiceRequestFormBuilder({
   const [inspectorWidth, setInspectorWidth] = useState(420);
   const [isLeftPaneCollapsed, setIsLeftPaneCollapsed] = useState(false);
   const [draggingPaletteType, setDraggingPaletteType] = useState<FieldTypeKey | null>(null);
-  const [formBehaviorConfig, setFormBehaviorConfig] = useState(initialFormBehaviorConfig);
   const [tryValues, setTryValues] = useState<Record<string, unknown>>({});
   const [tryErrors, setTryErrors] = useState<Record<string, string>>({});
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const document = getDocument(state);
   const selected = findElement(document, state.selectedKey);
@@ -283,20 +289,44 @@ export function ServiceRequestFormBuilder({
     }
   };
 
-  const saveVisibilityConfig = async (nextConfig: Record<string, unknown>) => {
-    setFormBehaviorConfig(nextConfig);
+  // Publishing snapshots what is stored, so a pending edit is written first.
+  const publish = async () => {
+    setIsPublishing(true);
     try {
-      await updateServiceRequestFormBehaviorConfigAction(definitionId, nextConfig);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      if (isDirty) {
+        await save(document);
+      }
+      const validation = await validateServiceRequestDefinitionForPublishAction(definitionId);
+      const errors = validation.errors ?? [];
+      if (errors.length > 0) {
+        toast.error(errors[0] ?? t('formBuilder.messages.publishBlocked'));
+        return;
+      }
+      await publishServiceRequestDefinitionAction(definitionId);
+      toast.success(t('formBuilder.messages.published'));
     } catch (error) {
-      console.error('Failed to save field visibility rules', error);
-      toast.error(t('editor.form.visibility.saveFailed'));
+      console.error('Failed to publish service request definition', error);
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : t('formBuilder.messages.publishFailed')
+      );
+    } finally {
+      setIsPublishing(false);
     }
   };
 
   // Try it: the same evaluator and validator the portal runs, on the draft as it stands.
   const visibilityRules = useMemo(
-    () => (formBehaviorConfig ? (parseVisibilityRules(formBehaviorConfig) ?? []) : []),
-    [formBehaviorConfig]
+    () => [
+      ...collectElementVisibilityRules(document.elements),
+      ...(initialFormBehaviorConfig ? (parseVisibilityRules(initialFormBehaviorConfig) ?? []) : []),
+    ],
+    [document.elements, initialFormBehaviorConfig]
   );
   const tryVisibleKeys = useMemo(() => {
     if (mode !== 'try' || visibilityRules.length === 0) return null;
@@ -419,6 +449,7 @@ export function ServiceRequestFormBuilder({
         idPrefix="service-request-form-builder"
         visible
         className="h-full"
+        maxHeightClassName="max-h-full"
         isCollapsed={isLeftPaneCollapsed}
         onToggleCollapse={() => setIsLeftPaneCollapsed((previous) => !previous)}
         search={paletteSearch}
@@ -446,7 +477,6 @@ export function ServiceRequestFormBuilder({
             elements={document.elements}
             selectedKey={state.selectedKey}
             onSelect={selectKey}
-            formBehaviorConfig={formBehaviorConfig}
           />
         ) : undefined}
       </DesignerPalette>
@@ -546,6 +576,15 @@ export function ServiceRequestFormBuilder({
       >
         <Settings className="h-4 w-4" />
       </Button>
+      <Button
+        id="service-request-form-builder-publish"
+        size="sm"
+        className="shrink-0 whitespace-nowrap"
+        disabled={isPublishing}
+        onClick={() => void publish()}
+      >
+        {isPublishing ? t('editor.publishing') : t('editor.publish')}
+      </Button>
     </>
   );
 
@@ -618,7 +657,6 @@ export function ServiceRequestFormBuilder({
           if (index !== null) switchTab('add');
         }}
         previewWidth={previewWidth}
-        formBehaviorConfig={formBehaviorConfig}
         renamingKey={renamingKey}
         onRenamingKeyChange={setRenamingKey}
         labels={rendererLabels}
@@ -631,7 +669,6 @@ export function ServiceRequestFormBuilder({
         element={selected}
         precedingElements={precedingElements}
         settings={document.settings}
-        formBehaviorConfig={formBehaviorConfig}
         showFormSettings={showFormSettings}
         onChange={(patch, options) =>
           selected && setState((previous) => updateElement(previous, selected.key, patch, options))
@@ -639,7 +676,6 @@ export function ServiceRequestFormBuilder({
         onRenameKey={(nextKey) =>
           selected && setState((previous) => renameElementKey(previous, selected.key, nextKey))
         }
-        onVisibilityConfigChange={(nextConfig) => void saveVisibilityConfig(nextConfig)}
         onDuplicate={() =>
           selected && setState((previous) => duplicateElement(previous, selected.key))
         }

@@ -27,11 +27,8 @@ export interface FormBuilderInspectorProps {
   /** Elements before the selected one; only these can be read by a visibility rule. */
   precedingElements: BasicFormField[];
   settings: BasicFormSettings;
-  /** Present only when the advanced form-behavior provider is on. */
-  formBehaviorConfig?: Record<string, unknown>;
   onChange: (patch: Partial<BasicFormField>, options?: { coalesceKey?: string | null }) => void;
   onRenameKey: (nextKey: string) => void;
-  onVisibilityConfigChange: (nextConfig: Record<string, unknown>) => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onSettingsChange: (patch: Partial<BasicFormSettings>, options?: { coalesceKey?: string | null }) => void;
@@ -76,10 +73,8 @@ export function FormBuilderInspector({
   element,
   precedingElements,
   settings,
-  formBehaviorConfig,
   onChange,
   onRenameKey,
-  onVisibilityConfigChange,
   onDuplicate,
   onDelete,
   onSettingsChange,
@@ -430,19 +425,20 @@ export function FormBuilderInspector({
         </InspectorGroup>
       ) : null}
 
-      {formBehaviorConfig ? (
-        <InspectorGroup
-          title={t('formBuilder.inspector.onlyShowWhen')}
-          description={t('formBuilder.inspector.onlyShowWhenHelp')}
-        >
-          <FormBuilderVisibilityRules
-            elementKey={element.key}
-            precedingElements={precedingElements}
-            config={formBehaviorConfig}
-            onChange={onVisibilityConfigChange}
-          />
-        </InspectorGroup>
-      ) : null}
+      <InspectorGroup
+        title={t('formBuilder.inspector.onlyShowWhen')}
+        description={t(
+          element.type === 'section'
+            ? 'formBuilder.inspector.onlyShowWhenSectionHelp'
+            : 'formBuilder.inspector.onlyShowWhenHelp'
+        )}
+      >
+        <FormBuilderVisibilityRules
+          precedingElements={precedingElements}
+          rules={element.visibleWhen ?? []}
+          onChange={(rules) => onChange({ visibleWhen: rules.length > 0 ? rules : undefined })}
+        />
+      </InspectorGroup>
     </div>
   );
 }

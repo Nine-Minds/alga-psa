@@ -87,6 +87,8 @@ export function buildFormBuilderTemplates(t: TFunction): FormBuilderTemplate[] {
       key: 'hardware',
       type: 'section',
       label: tt('newEmployee.section.hardware', 'Hardware'),
+      // The section and everything it owns appear only once the laptop box is ticked.
+      visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }],
     },
     {
       key: 'laptop_model',

@@ -578,7 +578,10 @@
       "saveFailed": "Nie udało się zapisać formularza.",
       "notFound": "To zgłoszenie serwisowe już nie istnieje.",
       "loadFailedTitle": "Nie można otworzyć kreatora formularza",
-      "loading": "Otwieranie kreatora formularza…"
+      "loading": "Otwieranie kreatora formularza…",
+      "published": "Opublikowano. Klienci widzą nową wersję.",
+      "publishBlocked": "Popraw to, co zgłasza strona definicji, a potem opublikuj.",
+      "publishFailed": "Nie udało się opublikować tego zgłoszenia serwisowego."
     },
     "types": {
       "short-text": {
@@ -685,6 +688,7 @@
       "customMessagePlaceholder": "Pozostaw puste, aby użyć standardowego tekstu",
       "onlyShowWhen": "Pokaż to tylko, gdy…",
       "onlyShowWhenHelp": "Bez reguły jest zawsze pokazywane.",
+      "onlyShowWhenSectionHelp": "Ukrycie sekcji ukrywa także pytania, które zawiera.",
       "visibilityNeedsEarlierField": "Dodaj wyżej pytanie, na którym oprzesz regułę.",
       "visibilityAlways": "Zawsze pokazywane.",
       "visibilityWhen": "Gdy",

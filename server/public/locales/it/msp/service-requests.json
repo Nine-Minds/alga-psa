@@ -576,7 +576,10 @@
       "saveFailed": "Impossibile salvare il modulo.",
       "notFound": "Questa richiesta di servizio non esiste più.",
       "loadFailedTitle": "Impossibile aprire l'editor del modulo",
-      "loading": "Apertura dell'editor del modulo…"
+      "loading": "Apertura dell'editor del modulo…",
+      "published": "Pubblicato. I clienti vedono la nuova versione.",
+      "publishBlocked": "Correggi quanto segnalato nella pagina della definizione, poi pubblica.",
+      "publishFailed": "Impossibile pubblicare questa richiesta di servizio."
     },
     "types": {
       "short-text": {
@@ -683,6 +686,7 @@
       "customMessagePlaceholder": "Lascia vuoto per il testo standard",
       "onlyShowWhen": "Mostra questo solo quando…",
       "onlyShowWhenHelp": "Senza regole viene sempre mostrato.",
+      "onlyShowWhenSectionHelp": "Nascondere una sezione nasconde anche le domande che contiene.",
       "visibilityNeedsEarlierField": "Aggiungi una domanda sopra su cui basare una regola.",
       "visibilityAlways": "Mostrato sempre.",
       "visibilityWhen": "Quando",

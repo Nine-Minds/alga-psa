@@ -6,9 +6,14 @@
  * The model is the one `WorkflowConditionBuilder` uses — pick a field, offer the operators its
  * type allows, choose the value editor by that type — so phase 3's required-when and option
  * filters extend this instead of starting again. The operators come from the shared field type
- * registry (a subset of `PredicateOperator`) and are written back through the adapter in
- * `fieldVisibilityModel.ts`: stored rules keep today's six-operator dialect, so published
- * definitions evaluate exactly as before.
+ * registry (a subset of `PredicateOperator`) through the adapter in `fieldVisibilityModel.ts`:
+ * rules keep today's six-operator dialect, so the evaluator and every published definition read
+ * them unchanged.
+ *
+ * The rules live on the element in the form schema, so they are part of the builder's undo
+ * history and ride along on the one debounced whole-schema save. The EE advanced form-behavior
+ * provider's own `visibilityRules` config is a separate, still-supported list edited on the
+ * definition page.
  */
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
@@ -18,25 +23,22 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getFieldType } from '@alga-psa/ui/form-fields';
 import type {
-  VisibilityRule,
+  ElementVisibilityRule,
   VisibilityRuleOperator,
 } from '../../../../lib/service-requests/formVisibility';
 import type { BasicFormField } from '../../../../lib/service-requests/formSchema';
 import {
   VISIBILITY_CONTEXT_SOURCES,
-  getFieldVisibilityRules,
   getVisibilityOperatorsForType,
   getVisibilitySourceFields,
   operatorNeedsValue,
-  replaceFieldVisibilityRules,
 } from '../fieldVisibilityModel';
 
 export interface FormBuilderVisibilityRulesProps {
-  elementKey: string;
   /** Only elements before this one, and only answer-carrying ones, can be read. */
   precedingElements: BasicFormField[];
-  config: Record<string, unknown>;
-  onChange: (nextConfig: Record<string, unknown>) => void;
+  rules: ElementVisibilityRule[];
+  onChange: (rules: ElementVisibilityRule[]) => void;
 }
 
 function defaultValueFor(source: BasicFormField | undefined): unknown {
@@ -46,18 +48,12 @@ function defaultValueFor(source: BasicFormField | undefined): unknown {
 }
 
 export function FormBuilderVisibilityRules({
-  elementKey,
   precedingElements,
-  config,
+  rules,
   onChange,
 }: FormBuilderVisibilityRulesProps): React.ReactElement {
   const { t } = useTranslation('msp/service-requests');
   const sourceFields = getVisibilitySourceFields(precedingElements);
-  const rules = getFieldVisibilityRules(config, elementKey);
-
-  const persist = (nextRules: VisibilityRule[]) => {
-    onChange(replaceFieldVisibilityRules(config, elementKey, nextRules));
-  };
 
   const findSource = (source: string) => sourceFields.find((field) => field.key === source);
 
@@ -72,15 +68,15 @@ export function FormBuilderVisibilityRules({
         label: t(`editor.form.visibility.contextSources.${source.slice('context.'.length)}`),
       })),
     ];
-    // Legacy hand-written sources (payload.x, forward references) must round-trip untouched.
+    // A source that moved below this element must still round-trip rather than vanish.
     if (current && !options.some((option) => option.value === current)) {
       options.push({ value: current, label: current });
     }
     return options;
   };
 
-  const updateRule = (index: number, patch: Partial<VisibilityRule>) => {
-    persist(rules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)));
+  const updateRule = (index: number, patch: Partial<ElementVisibilityRule>) => {
+    onChange(rules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)));
   };
 
   if (sourceFields.length === 0 && rules.length === 0) {
@@ -194,7 +190,7 @@ export function FormBuilderVisibilityRules({
                 variant="ghost"
                 size="icon"
                 tooltipText={t('editor.form.visibility.removeRule')}
-                onClick={() => persist(rules.filter((_rule, ruleIndex) => ruleIndex !== index))}
+                onClick={() => onChange(rules.filter((_rule, ruleIndex) => ruleIndex !== index))}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -209,13 +205,13 @@ export function FormBuilderVisibilityRules({
         disabled={sourceFields.length === 0}
         onClick={() => {
           const first = sourceFields[0];
-          persist([
+          if (!first) return;
+          onChange([
             ...rules,
             {
-              fieldKey: elementKey,
-              source: first ? first.key : VISIBILITY_CONTEXT_SOURCES[0],
-              operator: first?.type === 'checkbox' ? 'is-true' : 'equals',
-              value: first?.type === 'checkbox' ? undefined : defaultValueFor(first),
+              source: first.key,
+              operator: first.type === 'checkbox' ? 'is-true' : 'equals',
+              ...(first.type === 'checkbox' ? {} : { value: defaultValueFor(first) }),
             },
           ]);
         }}

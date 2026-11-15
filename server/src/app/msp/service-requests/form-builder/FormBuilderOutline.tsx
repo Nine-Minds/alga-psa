@@ -14,13 +14,11 @@ import {
   groupFormElementsBySection,
   type BasicFormField,
 } from '../../../../lib/service-requests/formSchema';
-import { getFieldVisibilityRules } from '../fieldVisibilityModel';
 
 export interface FormBuilderOutlineProps {
   elements: BasicFormField[];
   selectedKey: string | null;
   onSelect: (key: string) => void;
-  formBehaviorConfig?: Record<string, unknown>;
 }
 
 function OutlineRow({
@@ -103,14 +101,12 @@ export function FormBuilderOutline({
   elements,
   selectedKey,
   onSelect,
-  formBehaviorConfig,
 }: FormBuilderOutlineProps): React.ReactElement {
   const { t } = useTranslation('msp/service-requests');
   const indexByKey = new Map(elements.map((element, index) => [element.key, index] as const));
   const groups = groupFormElementsBySection(elements);
 
-  const hasRuleFor = (key: string): boolean =>
-    formBehaviorConfig ? getFieldVisibilityRules(formBehaviorConfig, key).length > 0 : false;
+  const hasRule = (element: BasicFormField): boolean => (element.visibleWhen?.length ?? 0) > 0;
 
   // A half-width element pairs with the next one, so both rows carry the bracket.
   const pairedKeys = new Set<string>();
@@ -151,7 +147,7 @@ export function FormBuilderOutline({
                 isSelected={selectedKey === group.section.key}
                 isPaired={false}
                 onSelect={onSelect}
-                hasRule={hasRuleFor(group.section.key)}
+                hasRule={hasRule(group.section)}
               />
             </ul>
           ) : null}
@@ -164,7 +160,7 @@ export function FormBuilderOutline({
                 isSelected={selectedKey === element.key}
                 isPaired={pairedKeys.has(element.key)}
                 onSelect={onSelect}
-                hasRule={hasRuleFor(element.key)}
+                hasRule={hasRule(element)}
               />
             ))}
           </ul>

@@ -576,7 +576,10 @@
       "saveFailed": "Das Formular konnte nicht gespeichert werden.",
       "notFound": "Diese Serviceanfrage gibt es nicht mehr.",
       "loadFailedTitle": "Der Formular-Editor konnte nicht geöffnet werden",
-      "loading": "Formular-Editor wird geöffnet…"
+      "loading": "Formular-Editor wird geöffnet…",
+      "published": "Veröffentlicht. Kunden sehen die neue Version.",
+      "publishBlocked": "Beheben Sie die Hinweise auf der Definitionsseite und veröffentlichen Sie dann.",
+      "publishFailed": "Diese Serviceanfrage konnte nicht veröffentlicht werden."
     },
     "types": {
       "short-text": {
@@ -683,6 +686,7 @@
       "customMessagePlaceholder": "Leer lassen für den Standardtext",
       "onlyShowWhen": "Nur anzeigen, wenn…",
       "onlyShowWhenHelp": "Ohne Regel wird es immer angezeigt.",
+      "onlyShowWhenSectionHelp": "Wird ein Abschnitt ausgeblendet, verschwinden auch seine Fragen.",
       "visibilityNeedsEarlierField": "Fügen Sie darüber eine Frage hinzu, auf die sich eine Regel stützen kann.",
       "visibilityAlways": "Wird immer angezeigt.",
       "visibilityWhen": "Wenn",

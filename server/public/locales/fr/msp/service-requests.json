@@ -576,7 +576,10 @@
       "saveFailed": "Échec de l'enregistrement du formulaire.",
       "notFound": "Cette demande de service n'existe plus.",
       "loadFailedTitle": "Impossible d'ouvrir l'éditeur de formulaire",
-      "loading": "Ouverture de l'éditeur de formulaire…"
+      "loading": "Ouverture de l'éditeur de formulaire…",
+      "published": "Publié. Les clients voient la nouvelle version.",
+      "publishBlocked": "Corrigez ce que signale la page de définition, puis publiez.",
+      "publishFailed": "Impossible de publier cette demande de service."
     },
     "types": {
       "short-text": {
@@ -683,6 +686,7 @@
       "customMessagePlaceholder": "Laisser vide pour le texte standard",
       "onlyShowWhen": "N'afficher que si…",
       "onlyShowWhenHelp": "Sans règle, il est toujours affiché.",
+      "onlyShowWhenSectionHelp": "Masquer une section masque aussi les questions qu'elle contient.",
       "visibilityNeedsEarlierField": "Ajoutez une question au-dessus sur laquelle fonder une règle.",
       "visibilityAlways": "Toujours affiché.",
       "visibilityWhen": "Quand",

@@ -576,7 +576,10 @@
       "saveFailed": "Het formulier kon niet worden opgeslagen.",
       "notFound": "Deze serviceaanvraag bestaat niet meer.",
       "loadFailedTitle": "De formulierbouwer kon niet worden geopend",
-      "loading": "Formulierbouwer wordt geopend…"
+      "loading": "Formulierbouwer wordt geopend…",
+      "published": "Gepubliceerd. Klanten zien de nieuwe versie.",
+      "publishBlocked": "Los op wat de definitiepagina meldt en publiceer daarna.",
+      "publishFailed": "Deze serviceaanvraag kon niet worden gepubliceerd."
     },
     "types": {
       "short-text": {
@@ -683,6 +686,7 @@
       "customMessagePlaceholder": "Laat leeg voor de standaardtekst",
       "onlyShowWhen": "Alleen tonen wanneer…",
       "onlyShowWhenHelp": "Zonder regel wordt het altijd getoond.",
+      "onlyShowWhenSectionHelp": "Een sectie verbergen verbergt ook de vragen erin.",
       "visibilityNeedsEarlierField": "Voeg hierboven een vraag toe om een regel op te baseren.",
       "visibilityAlways": "Wordt altijd getoond.",
       "visibilityWhen": "Wanneer",

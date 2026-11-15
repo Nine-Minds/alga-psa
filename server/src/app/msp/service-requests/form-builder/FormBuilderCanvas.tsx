@@ -14,7 +14,6 @@ import type {
   BasicFormSettings,
 } from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestFormRenderer } from '../../../../components/service-requests/ServiceRequestFormRenderer';
-import { getFieldVisibilityRules } from '../fieldVisibilityModel';
 import { InlineRenameLabel } from './InlineRenameLabel';
 
 export interface FormBuilderCanvasProps {
@@ -27,7 +26,6 @@ export interface FormBuilderCanvasProps {
   insertIndex: number | null;
   onInsertIndexChange: (index: number | null) => void;
   previewWidth: 'desktop' | 'mobile';
-  formBehaviorConfig?: Record<string, unknown>;
   /** The element the author asked to rename from the keyboard. */
   renamingKey: string | null;
   onRenamingKeyChange: (key: string | null) => void;
@@ -87,7 +85,6 @@ export function FormBuilderCanvas({
   insertIndex,
   onInsertIndexChange,
   previewWidth,
-  formBehaviorConfig,
   renamingKey,
   onRenamingKeyChange,
   labels,
@@ -113,9 +110,7 @@ export function FormBuilderCanvas({
   const renderElement = (element: BasicFormField, index: number, content: React.ReactNode) => {
     const isSelected = selectedKey === element.key;
     const isSection = element.type === 'section';
-    const ruleCount = formBehaviorConfig
-      ? getFieldVisibilityRules(formBehaviorConfig, element.key).length
-      : 0;
+    const ruleCount = element.visibleWhen?.length ?? 0;
     const hasValidation = Boolean(element.validation && Object.keys(element.validation).length > 0);
 
     return (
