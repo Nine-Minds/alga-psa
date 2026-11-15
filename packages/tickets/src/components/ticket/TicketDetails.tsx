@@ -215,6 +215,7 @@ interface TicketDetailsProps {
      * This keeps @alga-psa/tickets from importing other vertical slices directly.
      */
     surveySummaryCard?: React.ReactNode;
+    seatEffortCard?: React.ReactNode;
     /**
      * Server-gathered startup payload (see ticketScreenBootstrap.ts). When
      * present, the matching mount fetches are skipped — the screen renders
@@ -339,6 +340,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onSaved,
     isSubmitting = false,
     surveySummaryCard,
+    seatEffortCard,
     bootstrap,
     associatedAssets = null,
     renderContactDetails,
@@ -4709,6 +4711,7 @@ const handleClose = () => {
                     onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                     hideMaterials={effectiveHideMaterials}
                     surveySummaryCard={effectiveSurveySummaryCard}
+                    seatEffortCard={seatEffortCard}
                     associatedAssets={effectiveAssociatedAssets}
                     documents={documents}
                     onDocumentCreated={async () => {
@@ -4928,6 +4931,7 @@ const handleClose = () => {
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummaryCard={effectiveSurveySummaryCard}
+                    seatEffortCard={seatEffortCard}
                                     hideTimeEntry={effectiveHideTimeEntry}
                                     timeSummarySlot={timeSummarySlot}
                                     hideMaterials={effectiveHideMaterials}

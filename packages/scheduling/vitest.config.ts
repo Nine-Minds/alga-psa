@@ -36,6 +36,7 @@ export default defineConfig({
       'tests/timeEntryDialog.saveLifecycle.test.tsx',
       'tests/timeEntryDialog.operationalMode.test.tsx',
       'tests/timeEntryEditForm.operationalMode.test.tsx',
+      'tests/timeSheetHeader.operationalMode.test.tsx',
       'tests/workItemDrawer.adHocAssignees.test.tsx',
     ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,

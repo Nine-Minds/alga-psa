@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "Seat technician time entries never appear in billing runs, invoice previews, unbilled-time lists or timesheet approval queues.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "A seat technician sees client IT's total effort and their own entries on a ticket; the MSP's total is shown only when the arrangement setting allows it, and MSP staff see both totals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "A seat technician lists, edits and deletes their own operational entries; timesheet submission surfaces are absent for them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]

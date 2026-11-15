@@ -1965,6 +1965,18 @@
     "loadTicketFailed": "Ticket konnte nicht geladen werden",
     "noUserSession": "Keine Benutzersitzung gefunden"
   },
+  "seatEffort": {
+    "title": "Aufwand",
+    "clientIt": "Kunden-IT",
+    "msp": "MSP",
+    "combined": "Gesamt",
+    "yours": "Ihre Zeit",
+    "columns": {
+      "date": "Datum",
+      "duration": "Dauer",
+      "notes": "Notizen"
+    }
+  },
   "bento": {
     "hero": {
       "status": "Status",

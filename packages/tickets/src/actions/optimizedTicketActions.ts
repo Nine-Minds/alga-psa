@@ -7,6 +7,7 @@ import {
   restrictToSeatAudience,
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
+import { resolveSeatEffortSummary } from '@alga-psa/shared/lib/humanWork/seatEffortSummary';
 import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
@@ -700,6 +701,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // seat marker, so a psa tenant never reaches the capability probe or a co-managed table.
     const loadedUsers = rawUsers as Array<Record<string, unknown> & { user_id: string; seat_reader?: boolean | null }>;
     const seatTicket = await resolveTicketSeatContext(trx, tenant, user, ticket.client_id, seatAssigneeAudience, loadedUsers);
+    // Effort by organization, projected on the server to this viewer (a technician gets no MSP total unless the arrangement allows it).
+    const seatEffort = await resolveSeatEffortSummary(trx, tenant, { seatTicket, userId: user.user_id, ticketId, clientId: ticket.client_id });
 
     // Projection is the fix; this is the guarantee that a future edit to the query
     // above cannot silently re-widen what leaves this action.
@@ -1263,6 +1266,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       availableAgents: users,
       // Only a ticket of an arrangement client carries it; every other ticket's payload is unchanged.
       ...(seatTicket?.arrangement ? { seatTicket } : {}),
+      ...(seatEffort ? { seatEffort } : {}),
       userMap,
       contactMap,
       options: {

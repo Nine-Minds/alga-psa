@@ -33,6 +33,8 @@ import {
 import { deleteTimeEntryCore, persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
 import { logSession } from '../lib/stopwatch/stopwatchCore';
 import { resolveTimeEntryMode, serviceRequiredForTimeEntry } from '../lib/timeEntryMode';
+import { commercialEntriesOnly } from '../lib/timeApprovalScope';
+import { assertSeatOwnOperationalEntry, isSeatTimePrincipal } from '../lib/seatTimeAccess';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -156,6 +158,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 
   const timeEntriesQuery = tenantScopedDb.table('time_entries');
   readScope.apply(timeEntriesQuery);
+  // Someone else reading a sheet (an approver or manager) sees its commercial entries only; the owner sees their own.
+  if (timeSheet.user_id !== user.user_id) commercialEntriesOnly(timeEntriesQuery);
   tenantScopedDb.tenantJoin(
     timeEntriesQuery,
     'service_catalog',
@@ -388,6 +392,12 @@ export const saveTimeEntry = withAuth(async (
     if (stopwatchSessionId && mode === 'operational') {
       throw new Error('Validation failed: a stopwatch session cannot be logged on the operational surface');
     }
+    // A seat technician edits only their own operational entries; the write core refuses a commercial row, and this
+    // refuses someone else's, by principal, before anything is written.
+    if (mode === 'operational' && validatedTimeEntry.entry_id) {
+      const target = await tenantScopedDb.table('time_entries').where({ entry_id: validatedTimeEntry.entry_id }).first('user_id', 'billing_mode');
+      if (target) assertSeatOwnOperationalEntry(target, user.user_id);
+    }
     const persisted = await db.transaction(async (trx) => {
       if (!stopwatchSessionId) {
         return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry, requestCache, ...(mode === 'operational' ? { mode } : {}) });
@@ -582,11 +592,16 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
       .where({
         entry_id: validatedParams.entryId,
       })
-      .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id', 'work_item_id', 'work_item_type')
+      .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id', 'work_item_id', 'work_item_type', 'billing_mode')
       .first();
 
     if (!existingEntry) {
       throw new Error('Time entry not found');
+    }
+
+    // Operational (seat technician) time is never reviewed or approved.
+    if (existingEntry.billing_mode === 'operational') {
+      throw new Error('Permission denied: Operational time entries are not part of timesheet approval.');
     }
 
     if (validatedParams.approvalStatus === 'APPROVED') {
@@ -687,10 +702,13 @@ export const deleteTimeEntry = withAuth(async (
   if (!await hasPermission(user, 'time_entry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete time entries');
   }
+  const seatPrincipal = await isSeatTimePrincipal(db, tenant, user.user_id);
 
     const deletedTimeEntry = await db.transaction(async (trx) => {
       const { timeEntry, deleteCount } = await deleteTimeEntryCore(trx, tenant, entryId, {
         guard: async (entry) => {
+          // A seat technician deletes only their own operational entries (checked first: no delegation can widen it).
+          if (seatPrincipal) assertSeatOwnOperationalEntry(entry, user.user_id);
           await assertCanActOnBehalf(user, tenant, entry.user_id, trx);
 
           if (entry.invoiced) {
@@ -771,6 +789,8 @@ export const getTimeEntryById = withAuth(async (
         return null;
       }
 
+      // A seat technician reads only their own operational entries.
+      if (await isSeatTimePrincipal(db, tenant, user.user_id)) assertSeatOwnOperationalEntry(entry, user.user_id);
       await assertCanActOnBehalf(user, tenant, entry.user_id, db);
 
       // Fetch work item details based on the saved entry

@@ -2109,6 +2109,18 @@
     "loadTicketFailed": "Impossibile caricare il ticket",
     "noUserSession": "Nessuna sessione utente trovata"
   },
+  "seatEffort": {
+    "title": "Impegno",
+    "clientIt": "IT del cliente",
+    "msp": "MSP",
+    "combined": "Combinato",
+    "yours": "Il tuo tempo",
+    "columns": {
+      "date": "Data",
+      "duration": "Durata",
+      "notes": "Note"
+    }
+  },
   "bento": {
     "hero": {
       "status": "Stato",

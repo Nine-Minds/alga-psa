@@ -2109,6 +2109,18 @@
     "loadTicketFailed": "Falha ao carregar o ticket",
     "noUserSession": "Nenhuma sessão de usuário encontrada"
   },
+  "seatEffort": {
+    "title": "Esforço",
+    "clientIt": "TI do cliente",
+    "msp": "MSP",
+    "combined": "Combinado",
+    "yours": "Seu tempo",
+    "columns": {
+      "date": "Data",
+      "duration": "Duração",
+      "notes": "Notas"
+    }
+  },
   "bento": {
     "hero": {
       "status": "Status",
