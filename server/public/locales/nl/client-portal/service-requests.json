@@ -22,7 +22,19 @@
     "submit": "Aanvraag indienen",
     "requiredField": "Dit veld is verplicht.",
     "initialValuesTitle": "Beginwaarden",
-    "noInitialValues": "Geen statische standaardwaarden geconfigureerd."
+    "noInitialValues": "Geen statische standaardwaarden geconfigureerd.",
+    "validation": {
+      "type": "Dit antwoord heeft niet de verwachte vorm.",
+      "pattern": "Dit antwoord heeft niet de verwachte vorm.",
+      "minLength": "Gebruik ten minste {{minLength}} tekens.",
+      "maxLength": "Gebruik {{maxLength}} tekens of minder.",
+      "min": "Voer {{min}} of meer in.",
+      "max": "Voer {{max}} of minder in.",
+      "minDate": "Kies {{minDate}} of later.",
+      "maxDate": "Kies {{maxDate}} of eerder.",
+      "minSelected": "Kies er ten minste {{minSelected}}.",
+      "maxSelected": "Kies er hoogstens {{maxSelected}}."
+    }
   },
   "myRequests": {
     "title": "Mijn aanvragen",

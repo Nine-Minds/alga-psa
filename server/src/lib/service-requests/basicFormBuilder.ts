@@ -1,18 +1,58 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import {
+  FIELD_TYPE_REGISTRY,
+  getFieldElementKind,
+  getFieldType,
+  normalizeFieldValidationRules,
+  type FieldElementKind,
+  type FieldTypeKey,
+  type FieldValidationRules,
+} from '@alga-psa/ui/form-fields';
 import { saveServiceRequestDefinitionDraft, type ServiceRequestDefinitionManagementRow } from './definitionManagement';
 
-export type BasicFormFieldType =
-  | 'short-text'
-  | 'long-text'
-  | 'select'
-  | 'checkbox'
-  | 'date'
-  | 'file-upload';
+/**
+ * Schema v2, backward compatible.
+ *
+ * The array is still `fields`, and a v1 element (`{ key, type, label, helpText, required,
+ * defaultValue, options }`) still normalizes to exactly itself, so published snapshots keep
+ * rendering unchanged. What is new:
+ *
+ * - Display blocks (`section`, `text`, `callout`, `divider`) sit in the same array and carry no
+ *   answer. `@alga-psa/ui/form-fields` is the one table that says which kind a type is.
+ * - A field's *definition* (type, options, validation) stays at the top level; its *placement*
+ *   (width now, container later) lives under `layout`, and its position is the array order.
+ *   A section block opens a section and everything after it belongs to that section until the
+ *   next one — see `groupFormElementsBySection`.
+ * - `optionSource` and `binding` are carried through untouched. Nothing in phase 1 writes them;
+ *   phase 2 (options from the client's own data) and the later "answer lands in a custom field"
+ *   work fill them in without a schema rewrite.
+ */
+
+/** Legacy alias: the v1 name for an element's type. */
+export type BasicFormFieldType = FieldTypeKey;
+export type BasicFormElementType = FieldTypeKey;
 
 export interface BasicFormFieldOption {
   label: string;
   value: string;
+}
+
+export type BasicFormFieldWidth = 'full' | 'half';
+
+export interface BasicFormElementLayout {
+  /** `half` pairs with the next half-width field in a two-column row. */
+  width?: BasicFormFieldWidth;
+}
+
+export type BasicFormFieldValidation = FieldValidationRules;
+
+export interface BasicFormCalloutDisplay {
+  tone?: 'info' | 'warning' | 'success';
+}
+
+export interface BasicFormSectionDisplay {
+  collapsible?: boolean;
 }
 
 export interface BasicFormField {
@@ -23,10 +63,34 @@ export interface BasicFormField {
   required?: boolean;
   defaultValue?: string | boolean | null;
   options?: BasicFormFieldOption[];
+  placeholder?: string | null;
+  validation?: BasicFormFieldValidation;
+  layout?: BasicFormElementLayout;
+  /** Display-block settings; absent on inputs. */
+  display?: BasicFormCalloutDisplay & BasicFormSectionDisplay;
+  /** Phase 2: where a choice field's options come from. Carried through, never written here. */
+  optionSource?: Record<string, unknown>;
+  /** Later phase: the record field an answer lands in. Carried through, never written here. */
+  binding?: Record<string, unknown>;
+}
+
+/** v2 name. A "field" and an "element" are the same row; display blocks are elements too. */
+export type BasicFormElement = BasicFormField;
+
+export interface BasicFormLayoutSettings {
+  /** `boxed` (default) keeps a readable measure; `full` lets the form use the page width. */
+  width?: 'boxed' | 'full';
+}
+
+export interface BasicFormSettings {
+  layout?: BasicFormLayoutSettings;
+  submitLabel?: string | null;
+  successMessage?: string | null;
 }
 
 export interface BasicFormSchema {
   fields: BasicFormField[];
+  settings?: BasicFormSettings;
 }
 
 interface DraftFormSchemaRow {
@@ -34,14 +98,58 @@ interface DraftFormSchemaRow {
 }
 
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
-const SUPPORTED_FIELD_TYPES = new Set<BasicFormFieldType>([
-  'short-text',
-  'long-text',
-  'select',
-  'checkbox',
-  'date',
-  'file-upload',
-]);
+const SUPPORTED_FIELD_TYPES = new Set<BasicFormFieldType>(
+  Object.keys(FIELD_TYPE_REGISTRY) as FieldTypeKey[]
+);
+
+/** Element kinds, re-exported so service-request consumers read one table. */
+export { getFieldElementKind, type FieldElementKind };
+
+export function isDisplayElement(element: Pick<BasicFormField, 'type'>): boolean {
+  return getFieldElementKind(element.type) === 'display';
+}
+
+export function isInputElement(element: Pick<BasicFormField, 'type'>): boolean {
+  return getFieldElementKind(element.type) === 'input';
+}
+
+/** The answer-carrying elements of a schema, in form order. */
+export function getFormInputFields<T extends { type?: unknown }>(fields: readonly T[]): T[] {
+  return fields.filter((field) => getFieldElementKind(field?.type) === 'input');
+}
+
+export interface FormElementSectionGroup<T> {
+  /** The section block that opens the group, or null for elements before the first section. */
+  section: T | null;
+  elements: T[];
+}
+
+/**
+ * Elements grouped by the section block that precedes them. Used by the renderer, the ticket
+ * description and the request detail page so one rule decides what belongs where.
+ */
+export function groupFormElementsBySection<T extends { type?: unknown }>(
+  fields: readonly T[]
+): Array<FormElementSectionGroup<T>> {
+  const groups: Array<FormElementSectionGroup<T>> = [];
+  let current: FormElementSectionGroup<T> = { section: null, elements: [] };
+
+  for (const field of fields) {
+    if (field?.type === 'section') {
+      if (current.section !== null || current.elements.length > 0) {
+        groups.push(current);
+      }
+      current = { section: field, elements: [] };
+      continue;
+    }
+    current.elements.push(field);
+  }
+
+  if (current.section !== null || current.elements.length > 0) {
+    groups.push(current);
+  }
+  return groups;
+}
 
 function slugifyFieldKey(source: string): string {
   const normalized = source
@@ -61,6 +169,30 @@ function withUniqueFieldKey(base: string, existingKeys: Set<string>): string {
     suffix += 1;
   }
   return `${base}_${suffix}`;
+}
+
+function normalizeFormSettings(raw: unknown): BasicFormSettings | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return undefined;
+  }
+  const source = raw as Record<string, unknown>;
+  const settings: BasicFormSettings = {};
+
+  const layout = source.layout;
+  if (layout && typeof layout === 'object' && !Array.isArray(layout)) {
+    const width = (layout as Record<string, unknown>).width;
+    if (width === 'full' || width === 'boxed') {
+      settings.layout = { width };
+    }
+  }
+  if (typeof source.submitLabel === 'string' && source.submitLabel.trim().length > 0) {
+    settings.submitLabel = source.submitLabel.trim();
+  }
+  if (typeof source.successMessage === 'string' && source.successMessage.trim().length > 0) {
+    settings.successMessage = source.successMessage.trim();
+  }
+
+  return Object.keys(settings).length > 0 ? settings : undefined;
 }
 
 export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
@@ -88,6 +220,8 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
     const type: BasicFormFieldType = SUPPORTED_FIELD_TYPES.has(rawType)
       ? (rawType as BasicFormFieldType)
       : 'short-text';
+    const definition = getFieldType(type);
+    const isDisplay = definition?.kind === 'display';
 
     const label = typeof (raw as any).label === 'string' && (raw as any).label.trim()
       ? (raw as any).label.trim()
@@ -98,10 +232,11 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
       type,
       label,
       helpText: typeof (raw as any).helpText === 'string' ? (raw as any).helpText : null,
-      required: Boolean((raw as any).required),
+      // A display block carries no answer, so it is never required.
+      required: isDisplay ? false : Boolean((raw as any).required),
     };
 
-    if ((raw as any).defaultValue !== undefined) {
+    if (!isDisplay && (raw as any).defaultValue !== undefined) {
       field.defaultValue = (raw as any).defaultValue as string | boolean | null;
     }
     if (Array.isArray((raw as any).options)) {
@@ -113,10 +248,59 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
         .filter((option: BasicFormFieldOption) => option.label && option.value);
     }
 
+    if (definition?.supportsPlaceholder) {
+      const placeholder = (raw as any).placeholder;
+      if (typeof placeholder === 'string' && placeholder.trim().length > 0) {
+        field.placeholder = placeholder.trim();
+      }
+    }
+
+    const validation = normalizeFieldValidationRules(type, (raw as any).validation);
+    if (validation) {
+      field.validation = validation;
+    }
+
+    const rawLayout = (raw as any).layout;
+    if (rawLayout && typeof rawLayout === 'object' && !Array.isArray(rawLayout)) {
+      const width = (rawLayout as Record<string, unknown>).width;
+      // Only a sized input can share a row; display blocks always span the form.
+      if (!isDisplay && width === 'half') {
+        field.layout = { width: 'half' };
+      }
+    }
+
+    if (type === 'callout' || type === 'section') {
+      const rawDisplay = (raw as any).display;
+      const display: BasicFormField['display'] = {};
+      if (rawDisplay && typeof rawDisplay === 'object' && !Array.isArray(rawDisplay)) {
+        const tone = (rawDisplay as Record<string, unknown>).tone;
+        if (type === 'callout' && (tone === 'info' || tone === 'warning' || tone === 'success')) {
+          display.tone = tone;
+        }
+        if (type === 'section' && (rawDisplay as Record<string, unknown>).collapsible === true) {
+          display.collapsible = true;
+        }
+      }
+      if (Object.keys(display).length > 0) {
+        field.display = display;
+      }
+    }
+
+    // Phase 2 / later extension points: preserved verbatim, never interpreted here.
+    const optionSource = (raw as any).optionSource;
+    if (optionSource && typeof optionSource === 'object' && !Array.isArray(optionSource)) {
+      field.optionSource = optionSource as Record<string, unknown>;
+    }
+    const binding = (raw as any).binding;
+    if (binding && typeof binding === 'object' && !Array.isArray(binding)) {
+      field.binding = binding as Record<string, unknown>;
+    }
+
     normalizedFields.push(field);
   }
 
-  return { fields: normalizedFields };
+  const settings = normalizeFormSettings((schema as any).settings);
+  return settings ? { fields: normalizedFields, settings } : { fields: normalizedFields };
 }
 
 export interface BasicFormSchemaValidationResult {
@@ -135,7 +319,8 @@ export function resolveStaticDefaultValues(
       continue;
     }
 
-    if (field.type === 'file-upload') {
+    // Display blocks and uploads never seed a value.
+    if (field.type === 'file-upload' || isDisplayElement(field)) {
       continue;
     }
 
@@ -177,7 +362,8 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
     if (!SUPPORTED_FIELD_TYPES.has(field.type)) {
       errors.push(`${fieldRef} has unsupported type "${String(field.type)}"`);
     }
-    if (!field.label?.trim()) {
+    // A divider has nothing to say, so it needs no label.
+    if (!field.label?.trim() && field.type !== 'divider') {
       errors.push(`${fieldRef} is missing a label`);
     }
 
@@ -194,7 +380,15 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
       }
     }
 
-    if (field.type === 'select') {
+    if (field.validation?.pattern) {
+      try {
+        new RegExp(field.validation.pattern);
+      } catch {
+        errors.push(`Field "${field.key}" has an invalid pattern`);
+      }
+    }
+
+    if (getFieldType(field.type)?.supportsOptions) {
       if (!field.options || field.options.length === 0) {
         errors.push(`Field "${field.key}" must include at least one option`);
       }
@@ -246,9 +440,11 @@ export async function replaceBasicFormSchemaForDefinitionDraft(input: {
   tenant: string;
   definitionId: string;
   fields: BasicFormField[];
+  /** Form-level settings (width, submit label, success message). Omitted leaves none stored. */
+  settings?: BasicFormSettings;
   updatedBy?: string | null;
 }): Promise<ServiceRequestDefinitionManagementRow> {
-  const normalized = normalizeBasicFormSchema({ fields: input.fields });
+  const normalized = normalizeBasicFormSchema({ fields: input.fields, settings: input.settings });
   return saveServiceRequestDefinitionDraft({
     knex: input.knex,
     tenant: input.tenant,
@@ -273,6 +469,7 @@ export async function addBasicFormFieldToDefinitionDraft(input: {
   const baseKey = slugifyFieldKey(input.field.key?.trim() || input.field.label || input.field.type);
   const key = withUniqueFieldKey(baseKey, existingKeys);
   const nextField: BasicFormField = {
+    ...input.field,
     key,
     type: input.field.type,
     label: input.field.label,
@@ -292,6 +489,7 @@ export async function addBasicFormFieldToDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: nextFields,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }
@@ -320,6 +518,7 @@ export async function updateBasicFormFieldInDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: nextFields,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }
@@ -339,6 +538,7 @@ export async function removeBasicFormFieldFromDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: nextFields,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }
@@ -371,6 +571,7 @@ export async function reorderBasicFormFieldsInDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: reordered,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }

@@ -22,7 +22,19 @@
     "submit": "Submit Request",
     "requiredField": "This field is required.",
     "initialValuesTitle": "Initial Values",
-    "noInitialValues": "No static defaults configured."
+    "noInitialValues": "No static defaults configured.",
+    "validation": {
+      "type": "This answer is not in the expected form.",
+      "pattern": "This answer is not in the expected form.",
+      "minLength": "Use at least {{minLength}} characters.",
+      "maxLength": "Use {{maxLength}} characters or fewer.",
+      "min": "Enter {{min}} or more.",
+      "max": "Enter {{max}} or less.",
+      "minDate": "Pick {{minDate}} or later.",
+      "maxDate": "Pick {{maxDate}} or earlier.",
+      "minSelected": "Pick at least {{minSelected}}.",
+      "maxSelected": "Pick {{maxSelected}} at most."
+    }
   },
   "myRequests": {
     "title": "My Requests",

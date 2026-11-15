@@ -22,7 +22,19 @@
     "submit": "Anfrage einreichen",
     "requiredField": "Dieses Feld ist erforderlich.",
     "initialValuesTitle": "Anfangswerte",
-    "noInitialValues": "Keine statischen Standardwerte konfiguriert."
+    "noInitialValues": "Keine statischen Standardwerte konfiguriert.",
+    "validation": {
+      "type": "Diese Antwort hat nicht die erwartete Form.",
+      "pattern": "Diese Antwort hat nicht die erwartete Form.",
+      "minLength": "Mindestens {{minLength}} Zeichen verwenden.",
+      "maxLength": "Höchstens {{maxLength}} Zeichen verwenden.",
+      "min": "Mindestens {{min}} eingeben.",
+      "max": "Höchstens {{max}} eingeben.",
+      "minDate": "{{minDate}} oder später wählen.",
+      "maxDate": "{{maxDate}} oder früher wählen.",
+      "minSelected": "Mindestens {{minSelected}} auswählen.",
+      "maxSelected": "Höchstens {{maxSelected}} auswählen."
+    }
   },
   "myRequests": {
     "title": "Meine Anfragen",

@@ -9,8 +9,9 @@ import {
   computeVisibleFieldKeys,
   parseVisibilityRules,
   type VisibilityContext,
-  isMissingRequiredValue,
 } from './formVisibility';
+import { collectFormFieldIssues } from './formValidation';
+import { describeFieldValidationIssue } from '@alga-psa/ui/form-fields';
 import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
@@ -222,33 +223,30 @@ export function validateSubmissionAgainstPublishedSchema(input: {
   const visibleFieldKeySet = input.visibleFieldKeys
     ? new Set(input.visibleFieldKeys)
     : null;
-  const errors: string[] = [];
 
-  for (const field of fields) {
-    if (!field?.required || typeof field?.key !== 'string') {
-      continue;
-    }
-    if (visibleFieldKeySet && !visibleFieldKeySet.has(field.key)) {
-      continue;
-    }
+  // The same rules the browser enforced, run again here: required-ness, per-field validation
+  // rules, display blocks skipped (no answer), hidden fields skipped (never rendered).
+  const issues = collectFormFieldIssues({
+    fields,
+    values: input.payload,
+    visibleFieldKeys: visibleFieldKeySet,
+    fieldKeysWithFiles: new Set(
+      attachmentList
+        .map((attachment) => attachment.fieldKey)
+        .filter((fieldKey): fieldKey is string => typeof fieldKey === 'string')
+    ),
+  });
+
+  return issues.map((entry) => {
     // Messages reach the requester, so name the field by its label, not its internal key.
-    const fieldLabel =
-      typeof field.label === 'string' && field.label.trim().length > 0 ? field.label.trim() : field.key;
-
-    if (field.type === 'file-upload') {
-      const hasFile = attachmentList.some((attachment) => attachment.fieldKey === field.key);
-      if (!hasFile) {
-        errors.push(`Required file upload missing for "${fieldLabel}"`);
+    if (entry.issue.rule === 'required') {
+      const field = fields.find((candidate) => candidate?.key === entry.fieldKey);
+      if (field?.type === 'file-upload') {
+        return `Required file upload missing for "${entry.label}"`;
       }
-      continue;
     }
-
-    if (isMissingRequiredValue(input.payload[field.key])) {
-      errors.push(`Required field missing: "${fieldLabel}"`);
-    }
-  }
-
-  return errors;
+    return describeFieldValidationIssue(entry.issue, entry.label);
+  });
 }
 
 export async function submitPortalServiceRequest(
@@ -471,6 +469,7 @@ export async function submitPortalServiceRequest(
       contactId,
       payload: visiblePayload,
       config: definitionDetail.executionConfig,
+      formSchema: definitionDetail.formSchema,
     });
   } catch (error) {
     executionResult = {

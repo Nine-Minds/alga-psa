@@ -6,6 +6,7 @@ import { TicketModel } from '@shared/models/ticketModel';
 import { ticketCreatedPublishedByCaller } from '@shared/lib/tickets/ticketLifecycleEvents';
 import type { Knex } from 'knex';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { groupFormElementsBySection } from '../../basicFormBuilder';
 
 function getStringConfig(config: Record<string, unknown>, key: string): string | undefined {
   const value = config[key];
@@ -69,13 +70,66 @@ function buildTicketTitle(
   return `Service Request ${definitionId.slice(0, 8)}`;
 }
 
+/**
+ * The answers, in the order the form asked them, grouped under the section that holds them.
+ * Without a form schema (an older submission, a provider that never had one) it falls back to
+ * the flat `key: value` list the technician has always seen.
+ */
+function buildPayloadSummaryLines(
+  payload: Record<string, unknown>,
+  formSchema?: Record<string, unknown>
+): string[] {
+  const fields = Array.isArray((formSchema as any)?.fields)
+    ? ((formSchema as any).fields as Array<Record<string, unknown>>)
+    : [];
+  if (fields.length === 0) {
+    return Object.entries(payload).map(([key, value]) => `${key}: ${String(value)}`);
+  }
+
+  const lines: string[] = [];
+  for (const group of groupFormElementsBySection(fields)) {
+    const groupLines = group.elements
+      .filter((element) => typeof element?.key === 'string' && element.key in payload)
+      .map((element) => `${String(element.key)}: ${String(payload[String(element.key)])}`);
+    if (groupLines.length === 0) {
+      continue;
+    }
+    if (group.section) {
+      const sectionLabel =
+        typeof group.section.label === 'string' && group.section.label.trim().length > 0
+          ? group.section.label.trim()
+          : String(group.section.key ?? '');
+      if (lines.length > 0) {
+        lines.push('');
+      }
+      lines.push(`${sectionLabel}:`);
+    }
+    lines.push(...groupLines);
+  }
+
+  // Answers the schema does not describe (a key removed from a later draft) still show up.
+  const described = new Set(
+    fields
+      .map((element) => element?.key)
+      .filter((key): key is string => typeof key === 'string')
+  );
+  for (const [key, value] of Object.entries(payload)) {
+    if (!described.has(key)) {
+      lines.push(`${key}: ${String(value)}`);
+    }
+  }
+
+  return lines;
+}
+
 function buildTicketDescription(
   payload: Record<string, unknown>,
-  config: Record<string, unknown>
+  config: Record<string, unknown>,
+  formSchema?: Record<string, unknown>
 ): string {
   const descriptionPrefix = getStringConfig(config, 'descriptionPrefix');
   const includeFormResponses = config.includeFormResponsesInDescription !== false;
-  const payloadLines = Object.entries(payload).map(([key, value]) => `${key}: ${String(value)}`);
+  const payloadLines = buildPayloadSummaryLines(payload, formSchema);
   const payloadSummary = payloadLines.length > 0 ? payloadLines.join('\n') : 'No structured payload captured.';
 
   if (!includeFormResponses) {
@@ -205,7 +259,7 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
         }
 
         const title = buildTicketTitle(context.payload, context.definitionId, context.config);
-        const description = buildTicketDescription(context.payload, context.config);
+        const description = buildTicketDescription(context.payload, context.config, context.formSchema);
 
         const ticket = await TicketModel.createTicketWithRetry(
           {

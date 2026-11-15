@@ -18,6 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 import { parseVisibilityRules } from '../../../../lib/service-requests/formVisibility';
+import { normalizeBasicFormSchema } from '../../../../lib/service-requests/basicFormBuilder';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
 
@@ -55,9 +56,9 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   // resubmit the same key, letting the server deduplicate them into a single
   // submission. Reloading the page starts a fresh attempt with a fresh key.
   const clientSubmissionKey = crypto.randomUUID();
-  const fields = Array.isArray((detail.formSchema as any)?.fields)
-    ? ((detail.formSchema as any).fields as any[])
-    : [];
+  // One normalizer decides what an element is, so the portal and the builder agree.
+  const formSchema = normalizeBasicFormSchema(detail.formSchema);
+  const fields = formSchema.fields;
   // Rules only reach the browser for the advanced provider; in CE the detail is null
   // for such definitions, so this stays disabled and no rules are sent.
   const visibilityRules =
@@ -86,6 +87,9 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         <Alert variant="success">
           <AlertTitle>{t('detail.submitted')}</AlertTitle>
           <AlertDescription>
+            {formSchema.settings?.successMessage ? (
+              <p className="mb-1">{formSchema.settings.successMessage}</p>
+            ) : null}
             <p>
               {t('detail.requestIdLabel')}
               <span className="font-mono">{submittedRequestId}</span>
@@ -112,30 +116,15 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         </Alert>
       )}
 
-      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
+      <section className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
         <h2 className="text-base font-semibold mb-2">{t('detail.formTitle')}</h2>
         {fields.length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">{t('detail.noFields')}</p>
         ) : (
           <RequestServiceForm
             action={submitAction}
-            fields={fields.map((field: any, index: number) => ({
-              key: typeof field?.key === 'string' ? field.key : `field_${index}`,
-              label: typeof field?.label === 'string' ? field.label : (typeof field?.key === 'string' ? field.key : `field_${index}`),
-              type: typeof field?.type === 'string' ? field.type : undefined,
-              required: !!field?.required,
-              helpText: typeof field?.helpText === 'string' ? field.helpText : null,
-              options: Array.isArray(field?.options)
-                ? field.options.map((option: any, optionIndex: number) => {
-                    const value = typeof option?.value === 'string' ? option.value : '';
-                    const label =
-                      typeof option?.label === 'string'
-                        ? option.label
-                        : value || t('detail.optionLabel', { index: optionIndex + 1 });
-                    return { value, label };
-                  })
-                : undefined,
-            }))}
+            fields={fields}
+            settings={formSchema.settings}
             initialValues={detail.initialValues}
             visibility={{
               enabled: visibilityEnabled && visibilityContext !== null,
@@ -148,19 +137,31 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               datePlaceholder: t('detail.datePlaceholder'),
               submit: t('detail.submit'),
               requiredField: t('detail.requiredField'),
+              validation: {
+                type: t('detail.validation.type'),
+                minLength: t('detail.validation.minLength'),
+                maxLength: t('detail.validation.maxLength'),
+                pattern: t('detail.validation.pattern'),
+                min: t('detail.validation.min'),
+                max: t('detail.validation.max'),
+                minDate: t('detail.validation.minDate'),
+                maxDate: t('detail.validation.maxDate'),
+                minSelected: t('detail.validation.minSelected'),
+                maxSelected: t('detail.validation.maxSelected'),
+              },
             }}
           />
         )}
       </section>
 
-      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
+      <section className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
         <h2 className="text-base font-semibold mb-2">{t('detail.initialValuesTitle')}</h2>
         {Object.keys(detail.initialValues).length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">
             {t('detail.noInitialValues')}
           </p>
         ) : (
-          <pre className="text-xs bg-white p-2 rounded overflow-auto">
+          <pre className="text-xs bg-[rgb(var(--color-background))] border border-[rgb(var(--color-border-200))] p-2 rounded overflow-auto">
             {JSON.stringify(detail.initialValues, null, 2)}
           </pre>
         )}

@@ -1,3 +1,5 @@
+import { formatFieldValue, getFieldElementKind } from '@alga-psa/ui/form-fields';
+
 interface SubmissionFieldOption {
   label?: string;
   value?: string;
@@ -22,6 +24,7 @@ export interface SubmissionFieldDisplay {
 }
 
 function isMissingValue(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length === 0;
   return value === null || value === undefined || value === '';
 }
 
@@ -43,6 +46,11 @@ export function getSubmissionFieldDisplay(
 ): SubmissionFieldDisplay {
   const key = typeof field?.key === 'string' ? field.key : null;
   if (!key) {
+    return { kind: 'missing' };
+  }
+
+  // A display block carries no answer; it has nothing to read back.
+  if (getFieldElementKind(field.type) === 'display') {
     return { kind: 'missing' };
   }
 
@@ -76,20 +84,26 @@ export function getSubmissionFieldDisplay(
     return { kind: 'missing' };
   }
 
-  if (field.type === 'select' && Array.isArray(field.options)) {
-    const selectedValue = String(value);
-    const selectedOption = field.options.find((option) => option?.value === selectedValue);
-    return {
-      kind: 'text',
-      text: selectedOption?.label ?? selectedValue,
-    };
-  }
-
   if (field.type === 'checkbox') {
     return {
       kind: 'text',
       text: isCheckedValue(value) ? 'Yes' : 'No',
     };
+  }
+
+  // Every other type reads back through the shared registry, so a new field type needs no
+  // change here: choices resolve to their option label, lists join, the rest stringify.
+  const options = Array.isArray(field.options)
+    ? field.options
+        .map((option) => ({
+          label: typeof option?.label === 'string' ? option.label : String(option?.value ?? ''),
+          value: typeof option?.value === 'string' ? option.value : '',
+        }))
+        .filter((option) => option.value.length > 0)
+    : undefined;
+  const formatted = formatFieldValue(field.type, value, options);
+  if (formatted) {
+    return { kind: 'text', text: formatted };
   }
 
   if (typeof value === 'object') {

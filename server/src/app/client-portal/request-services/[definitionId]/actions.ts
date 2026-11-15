@@ -14,6 +14,7 @@ import {
   validateSubmissionAgainstPublishedSchema,
   type ServiceRequestPortalDefinitionDetail,
 } from '../../../../lib/service-requests';
+import { getFieldElementKind } from '@alga-psa/ui/form-fields';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
 function buildRequestServiceDefinitionRedirectUrl(
@@ -171,6 +172,19 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
 
     for (const field of fields) {
       if (!field || typeof field.key !== 'string') {
+        continue;
+      }
+
+      // A display block carries no answer and never appears in a payload.
+      if (getFieldElementKind(field.type) === 'display') {
+        continue;
+      }
+
+      if (field.type === 'multi-select') {
+        const selected = formData
+          .getAll(field.key)
+          .filter((entry): entry is string => typeof entry === 'string');
+        payload[field.key] = selected;
         continue;
       }
 

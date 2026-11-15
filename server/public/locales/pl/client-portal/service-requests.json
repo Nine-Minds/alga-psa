@@ -22,7 +22,19 @@
     "submit": "Prześlij zgłoszenie",
     "requiredField": "To pole jest wymagane.",
     "initialValuesTitle": "Wartości początkowe",
-    "noInitialValues": "Nie skonfigurowano statycznych wartości domyślnych."
+    "noInitialValues": "Nie skonfigurowano statycznych wartości domyślnych.",
+    "validation": {
+      "type": "Ta odpowiedź nie ma oczekiwanej postaci.",
+      "pattern": "Ta odpowiedź nie ma oczekiwanej postaci.",
+      "minLength": "Użyj co najmniej {{minLength}} znaków.",
+      "maxLength": "Użyj najwyżej {{maxLength}} znaków.",
+      "min": "Wpisz {{min}} lub więcej.",
+      "max": "Wpisz {{max}} lub mniej.",
+      "minDate": "Wybierz {{minDate}} lub później.",
+      "maxDate": "Wybierz {{maxDate}} lub wcześniej.",
+      "minSelected": "Wybierz co najmniej {{minSelected}}.",
+      "maxSelected": "Wybierz najwyżej {{maxSelected}}."
+    }
   },
   "myRequests": {
     "title": "Moje zgłoszenia",

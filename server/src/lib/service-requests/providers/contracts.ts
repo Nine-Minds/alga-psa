@@ -22,6 +22,8 @@ export interface ServiceRequestExecutionContext {
   contactId?: string | null;
   payload: Record<string, unknown>;
   config: Record<string, unknown>;
+  /** The published form schema the answers came from; lets a provider present them in order. */
+  formSchema?: Record<string, unknown>;
 }
 
 export interface ServiceRequestExecutionResult {
