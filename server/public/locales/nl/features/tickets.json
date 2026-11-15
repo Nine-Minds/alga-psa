@@ -1951,9 +1951,9 @@
       "boardOutOfScope": "Het bord van dit ticket wordt niet gedeeld met de IT van de klant, dus het kan niet worden overgedragen.",
       "technicianNotAvailable": "De geselecteerde technicus is niet meer beschikbaar voor deze klant. Kies een andere of laat het ticket niet toegewezen.",
       "unavailable": "Tickets overdragen aan de IT van de klant is niet beschikbaar.",
-      "invalidHandoffToMsp": "Schrijf een gedeelde notitie voor de MSP voordat je dit ticket overdraagt.",
+      "invalidHandoffToMsp": "Schrijf een gedeelde notitie voor de MSP voordat u dit ticket overdraagt.",
       "alreadyResponsibleMsp": "De MSP is al verantwoordelijk voor dit ticket. Vernieuw het ticket om de huidige status te zien.",
-      "actorNotAllowedMsp": "Je kunt dit ticket niet aan de MSP overdragen.",
+      "actorNotAllowedMsp": "U kunt dit ticket niet aan de MSP overdragen.",
       "unavailableMsp": "Tickets overdragen aan de MSP is niet beschikbaar.",
       "unexpected": "Dit ticket kon niet worden overgedragen. Vernieuw de lijst om te zien hoe het ervoor staat en probeer het opnieuw."
     }

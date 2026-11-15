@@ -238,7 +238,7 @@
       "textInvalidCharacters": "De labeltekst bevat ongeldige tekens",
       "backgroundColorInvalid": "Ongeldige indeling voor achtergrondkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FF0000)",
       "textColorInvalid": "Ongeldige indeling voor tekstkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FFFFFF)",
-      "creationRestricted": "Je kunt alleen bestaande tags toepassen."
+      "creationRestricted": "U kunt alleen bestaande tags toepassen."
     }
   },
   "time": {
