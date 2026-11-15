@@ -3,6 +3,20 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { builtRevision, verifyBuildRecord } from '../../scripts/verify-docker-archive-build.mjs';
+
+// The build records the browser job verified when it loaded the images. A
+// reused image carries the original build's revision label, and only its
+// record says so; without records every image must carry the candidate's.
+function defaultBuildRecords() {
+  const directory = process.env.BUILD_RECORD_DIRECTORY
+    ?? (process.env.RUNNER_TEMP ? path.join(process.env.RUNNER_TEMP, 'fresh-install-build-records') : null);
+  if (!directory) return () => null;
+  return recordService => {
+    try { return JSON.parse(readFileSync(path.join(directory, `${recordService}-build.json`), 'utf8')); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  };
+}
 
 function command(program, args, input) {
   const result = spawnSync(program, args, { input, encoding: 'utf8', timeout: 120_000, maxBuffer: 4 * 1024 * 1024 });
@@ -16,6 +30,7 @@ class ProviderTopologyError extends Error {}
 export function verifyProviderTopology({ edition = process.env.E2E_EDITION, revision = process.env.GITHUB_SHA,
   run = command, outputDirectory = 'logs/provider-readiness',
   probeSource = readFileSync(new URL('./check-provider-routing.mjs', import.meta.url), 'utf8'),
+  buildRecords = defaultBuildRecords(), runId = process.env.GITHUB_RUN_ID, runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT),
 } = {}) {
   let phase = 'configuration', activeService = '';
   try {
@@ -49,7 +64,10 @@ export function verifyProviderTopology({ edition = process.env.E2E_EDITION, revi
       assert.ok(Array.isArray(images) && images.length === 1, 'Expected one candidate image');
       const imageId = images[0].Id;
       assert.match(imageId ?? '', /^sha256:[a-f0-9]{64}$/, 'Invalid candidate image identity');
-      assert.equal(images[0].Config?.Labels?.['org.opencontainers.image.revision'], revision, 'Candidate image revision mismatch');
+      const recordService = service === 'server' && edition === 'enterprise' ? 'server-ee' : service;
+      const record = buildRecords(recordService);
+      if (record) verifyBuildRecord(record, { revision, runId, attempt: runAttempt, service: recordService });
+      assert.equal(images[0].Config?.Labels?.['org.opencontainers.image.revision'], record ? builtRevision(record, { revision }) : revision, 'Candidate image revision mismatch');
       phase = 'replicas';
       const replicas = config.services[service].deploy?.replicas ?? 1;
       assert.ok(Number.isSafeInteger(replicas) && replicas > 0, `Invalid replica count: ${service}`);

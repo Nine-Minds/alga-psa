@@ -34,6 +34,20 @@ export function candidateBuildIdentity(input) {
 // identity, recorded under `registry`, and is never a release identity.
 export const candidateRecordHeader = kind => ({ schemaVersion: 1, kind, registryPublication: false });
 
+// A reused build names the original build and the input hash that proves the
+// candidate would have built the same context (scripts/lib/image-inputs.mjs).
+// Returns the normalized block, or undefined when the build is the candidate's own.
+export function candidateReuseProvenance(reuse, identity) {
+  if (reuse === undefined) return undefined;
+  const r = reuse;
+  if (!/^[a-f0-9]{40}$/.test(r?.sourceRevision ?? '') || r.sourceRevision === identity.revision
+    || !/^\d+$/.test(String(r.sourceRunId ?? '')) || !Number.isSafeInteger(r.sourceAttempt) || r.sourceAttempt <= 0
+    || !/^\d+$/.test(String(r.artifactRunId ?? '')) || !plain(r.inputs?.policy) || !digestPattern.test(r.inputs?.sha256 ?? '')
+    || !Number.isSafeInteger(r.inputs?.files) || r.inputs.files < 1) throw new Error('Invalid reuse provenance');
+  return { sourceRevision: r.sourceRevision, sourceRunId: String(r.sourceRunId), sourceAttempt: r.sourceAttempt, artifactRunId: String(r.artifactRunId),
+    inputs: { policy: r.inputs.policy, sha256: r.inputs.sha256, files: r.inputs.files } };
+}
+
 export function candidateIdentityFromEnvironment(env = process.env) {
   return { revision: env.GITHUB_SHA, runId: env.GITHUB_RUN_ID, attempt: Number(env.GITHUB_RUN_ATTEMPT),
     service: env.BUILD_SERVICE, image: env.BUILD_IMAGE, dockerfile: env.BUILD_DOCKERFILE, platform: env.BUILD_PLATFORM,

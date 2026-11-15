@@ -24,7 +24,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs scripts/tests/unit-lane-pdf-tools.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs scripts/tests/unit-lane-pdf-tools.test.mjs scripts/tests/test-digest.test.mjs scripts/tests/change-digest.test.mjs scripts/tests/typesafe-client.test.mjs scripts/tests/jev-test-selection.test.mjs scripts/tests/jev-selection-evaluation.test.mjs scripts/tests/jev-enforcement.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 

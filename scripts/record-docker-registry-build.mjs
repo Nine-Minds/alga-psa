@@ -1,7 +1,7 @@
 import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { candidateBuildIdentity, candidateRecordHeader, candidateIdentityFromEnvironment, plain } from './lib/docker-build-identity.mjs';
+import { candidateBuildIdentity, candidateRecordHeader, candidateIdentityFromEnvironment, candidateReuseProvenance, plain } from './lib/docker-build-identity.mjs';
 import { verifyRegistryManifest, registryReferencePattern, registryTagPattern } from './verify-docker-archive-build.mjs';
 
 // Registry transport: the build job pushes the image to the CI candidate
@@ -16,6 +16,7 @@ export async function recordDockerRegistryBuild(input, manifestPath, outputPath)
   await mkdir(path.dirname(outputPath), { recursive: true });
   await rm(outputPath, { force: true });
   const identity = candidateBuildIdentity(input);
+  const reuse = candidateReuseProvenance(input.reuse, identity);
   const { reference, tag } = input.registry ?? {};
   if (!plain(reference) || !registryReferencePattern.test(reference) || !plain(tag) || !registryTagPattern.test(tag)) {
     throw new Error('Invalid candidate registry reference');
@@ -24,7 +25,8 @@ export async function recordDockerRegistryBuild(input, manifestPath, outputPath)
   const manifest = verifyRegistryManifest(await readFile(manifestPath),
     { manifestDigest: identity.buildReportedDigest, configImageId: identity.configImageId });
   const record = { ...candidateRecordHeader('docker-registry-build'), ...identity,
-    registry: { reference, tag, manifestDigest: identity.buildReportedDigest, mediaType: manifest.mediaType, bytes: manifest.bytes } };
+    registry: { reference, tag, manifestDigest: identity.buildReportedDigest, mediaType: manifest.mediaType, bytes: manifest.bytes },
+    ...(reuse ? { reuse } : {}) };
   await writeFile(outputPath, JSON.stringify(record, null, 2) + '\n', { flag: 'wx' });
   return record;
 }
