@@ -126,6 +126,7 @@ export function ServiceRequestFormBuilder({
   const [renamingKey, setRenamingKey] = useState<string | null>(null);
   const [showFormSettings, setShowFormSettings] = useState(false);
   const [inspectorWidth, setInspectorWidth] = useState(420);
+  const [isLeftPaneCollapsed, setIsLeftPaneCollapsed] = useState(false);
   const [draggingPaletteType, setDraggingPaletteType] = useState<FieldTypeKey | null>(null);
   const [formBehaviorConfig, setFormBehaviorConfig] = useState(initialFormBehaviorConfig);
   const [tryValues, setTryValues] = useState<Record<string, unknown>>({});
@@ -417,14 +418,15 @@ export function ServiceRequestFormBuilder({
         i18nNamespace="msp/service-requests"
         idPrefix="service-request-form-builder"
         visible
-        layout="stacked"
         className="h-full"
+        isCollapsed={isLeftPaneCollapsed}
+        onToggleCollapse={() => setIsLeftPaneCollapsed((previous) => !previous)}
         search={paletteSearch}
         onSearchChange={setPaletteSearch}
         registryError={false}
         draggingFromPalette={draggingPaletteType !== null}
         groupedPaletteItems={leftTab === 'add' ? groupedPaletteItems : {}}
-        header={leftPaneHeader}
+        header={isLeftPaneCollapsed ? null : leftPaneHeader}
         insertionHint={
           insertIndex !== null ? t('formBuilder.leftPane.insertionHint') : undefined
         }
