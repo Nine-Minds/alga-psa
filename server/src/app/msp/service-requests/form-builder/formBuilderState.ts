@@ -27,14 +27,14 @@ export interface FormBuilderState {
   history: DesignerHistory<FormBuilderDocument>;
   selectedKey: string | null;
   /** The last edit's coalesce key, so typing a label is one undo step, not one per keystroke. */
-  lastCoalesceKey: string | null;
+  lastCoalesceId: string | null;
 }
 
 export function createFormBuilderState(document: FormBuilderDocument): FormBuilderState {
   return {
     history: createDesignerHistory(document),
     selectedKey: null,
-    lastCoalesceKey: null,
+    lastCoalesceId: null,
   };
 }
 
@@ -46,16 +46,16 @@ export const canRedo = (state: FormBuilderState): boolean => canRedoDesignerHist
 function commit(
   state: FormBuilderState,
   next: FormBuilderDocument,
-  options?: { selectedKey?: string | null; coalesceKey?: string | null }
+  options?: { selectedKey?: string | null; coalesceId?: string | null }
 ): FormBuilderState {
   const history = pushDesignerHistory(state.history, next, {
-    coalesceKey: options?.coalesceKey ?? null,
-    lastCoalesceKey: state.lastCoalesceKey,
+    coalesceId: options?.coalesceId ?? null,
+    lastCoalesceId: state.lastCoalesceId,
   });
   return {
     history,
     selectedKey: options?.selectedKey !== undefined ? options.selectedKey : state.selectedKey,
-    lastCoalesceKey: options?.coalesceKey ?? null,
+    lastCoalesceId: options?.coalesceId ?? null,
   };
 }
 
@@ -112,13 +112,13 @@ export function updateElement(
   state: FormBuilderState,
   key: string,
   patch: Partial<BasicFormField>,
-  options?: { coalesceKey?: string | null }
+  options?: { coalesceId?: string | null }
 ): FormBuilderState {
   const document = getDocument(state);
   const elements = document.elements.map((element) =>
     element.key === key ? { ...element, ...patch, key: element.key } : element
   );
-  return commit(state, { ...document, elements }, { coalesceKey: options?.coalesceKey ?? null });
+  return commit(state, { ...document, elements }, { coalesceId: options?.coalesceId ?? null });
 }
 
 /**
@@ -193,13 +193,13 @@ export function deleteElement(state: FormBuilderState, key: string): FormBuilder
 export function updateSettings(
   state: FormBuilderState,
   patch: Partial<BasicFormSettings>,
-  options?: { coalesceKey?: string | null }
+  options?: { coalesceId?: string | null }
 ): FormBuilderState {
   const document = getDocument(state);
   return commit(
     state,
     { ...document, settings: { ...document.settings, ...patch } },
-    { coalesceKey: options?.coalesceKey ?? null }
+    { coalesceId: options?.coalesceId ?? null }
   );
 }
 
@@ -213,19 +213,19 @@ export function replaceDocument(
 
 export function selectElement(state: FormBuilderState, key: string | null): FormBuilderState {
   if (state.selectedKey === key) return state;
-  return { ...state, selectedKey: key, lastCoalesceKey: null };
+  return { ...state, selectedKey: key, lastCoalesceId: null };
 }
 
 export function undo(state: FormBuilderState): FormBuilderState {
   if (!canUndo(state)) return state;
   const history = undoDesignerHistory(state.history);
-  return { history, selectedKey: keepSelection(state.selectedKey, history.present), lastCoalesceKey: null };
+  return { history, selectedKey: keepSelection(state.selectedKey, history.present), lastCoalesceId: null };
 }
 
 export function redo(state: FormBuilderState): FormBuilderState {
   if (!canRedo(state)) return state;
   const history = redoDesignerHistory(state.history);
-  return { history, selectedKey: keepSelection(state.selectedKey, history.present), lastCoalesceKey: null };
+  return { history, selectedKey: keepSelection(state.selectedKey, history.present), lastCoalesceId: null };
 }
 
 function keepSelection(selectedKey: string | null, document: FormBuilderDocument): string | null {

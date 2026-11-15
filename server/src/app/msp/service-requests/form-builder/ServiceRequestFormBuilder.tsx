@@ -106,6 +106,13 @@ export interface ServiceRequestFormBuilderProps {
 
 type LeftTab = 'add' | 'outline';
 
+// Each state is its own class string so a foreground token never sits beside the background
+// of the other state — that pairing is what the theme contrast contract measures.
+const MODE_BUTTON_BASE = 'whitespace-nowrap px-2.5 py-1 text-xs';
+const MODE_BUTTON_ON = `${MODE_BUTTON_BASE} bg-[rgb(var(--color-primary-500))] text-white`;
+const MODE_BUTTON_OFF = `${MODE_BUTTON_BASE} text-[rgb(var(--color-text-700))]`;
+const modeButtonClass = (active: boolean) => (active ? MODE_BUTTON_ON : MODE_BUTTON_OFF);
+
 export function ServiceRequestFormBuilder({
   definitionId,
   definitionName,
@@ -535,7 +542,7 @@ export function ServiceRequestFormBuilder({
           type="button"
           aria-pressed={mode === 'edit'}
           onClick={() => setMode('edit')}
-          className={`whitespace-nowrap px-2.5 py-1 text-xs ${mode === 'edit' ? 'bg-[rgb(var(--color-primary-500))] text-white' : 'text-[rgb(var(--color-text-700))]'}`}
+          className={modeButtonClass(mode === 'edit')}
         >
           {t('formBuilder.toolbar.edit')}
         </button>
@@ -544,7 +551,7 @@ export function ServiceRequestFormBuilder({
           type="button"
           aria-pressed={mode === 'try'}
           onClick={enterTryIt}
-          className={`whitespace-nowrap px-2.5 py-1 text-xs ${mode === 'try' ? 'bg-[rgb(var(--color-primary-500))] text-white' : 'text-[rgb(var(--color-text-700))]'}`}
+          className={modeButtonClass(mode === 'try')}
         >
           {t('formBuilder.toolbar.tryIt')}
         </button>

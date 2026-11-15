@@ -125,9 +125,9 @@ describe('undo and redo', () => {
   it('merges consecutive edits of the same thing into one undo step', () => {
     let state = createFormBuilderState(baseDocument());
     state = selectElement(state, 'full_name');
-    state = updateElement(state, 'full_name', { label: 'F' }, { coalesceKey: 'label.full_name' });
-    state = updateElement(state, 'full_name', { label: 'Fu' }, { coalesceKey: 'label.full_name' });
-    state = updateElement(state, 'full_name', { label: 'Full' }, { coalesceKey: 'label.full_name' });
+    state = updateElement(state, 'full_name', { label: 'F' }, { coalesceId: 'label.full_name' });
+    state = updateElement(state, 'full_name', { label: 'Fu' }, { coalesceId: 'label.full_name' });
+    state = updateElement(state, 'full_name', { label: 'Full' }, { coalesceId: 'label.full_name' });
 
     state = undo(state);
     expect(getDocument(state).elements[1].label).toBe('Full name');

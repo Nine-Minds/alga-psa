@@ -68,7 +68,7 @@ const asText = (value: unknown): string => (typeof value === 'string' ? value : 
 const asList = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
 
-const errorRing = 'border-[rgb(var(--color-border-error,239_68_68))]';
+const errorRing = 'border-[rgb(var(--color-status-error))]';
 
 export function FieldInputControl(props: FieldInputControlProps): React.ReactElement | null {
   const {

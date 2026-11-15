@@ -19,20 +19,20 @@ export function createDesignerHistory<TDocument>(present: TDocument): DesignerHi
 }
 
 /**
- * Records a new present. `coalesceKey` merges consecutive edits of the same thing into one
+ * Records a new present. `coalesceId` merges consecutive edits of the same thing into one
  * undo step — typing a label is one step, not one per keystroke.
  */
 export function pushDesignerHistory<TDocument>(
   history: DesignerHistory<TDocument>,
   next: TDocument,
-  options?: { coalesceKey?: string | null; lastCoalesceKey?: string | null }
+  options?: { coalesceId?: string | null; lastCoalesceId?: string | null }
 ): DesignerHistory<TDocument> {
   if (Object.is(history.present, next)) {
     return history;
   }
   const coalesce =
-    !!options?.coalesceKey &&
-    options.coalesceKey === options.lastCoalesceKey &&
+    !!options?.coalesceId &&
+    options.coalesceId === options.lastCoalesceId &&
     history.past.length > 0;
 
   if (coalesce) {

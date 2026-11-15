@@ -27,11 +27,11 @@ export interface FormBuilderInspectorProps {
   /** Elements before the selected one; only these can be read by a visibility rule. */
   precedingElements: BasicFormField[];
   settings: BasicFormSettings;
-  onChange: (patch: Partial<BasicFormField>, options?: { coalesceKey?: string | null }) => void;
+  onChange: (patch: Partial<BasicFormField>, options?: { coalesceId?: string | null }) => void;
   onRenameKey: (nextKey: string) => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  onSettingsChange: (patch: Partial<BasicFormSettings>, options?: { coalesceKey?: string | null }) => void;
+  onSettingsChange: (patch: Partial<BasicFormSettings>, options?: { coalesceId?: string | null }) => void;
   /** Shows form-level settings instead of the element, from the toolbar's gear. */
   showFormSettings: boolean;
 }
@@ -113,7 +113,7 @@ export function FormBuilderInspector({
             value={settings.submitLabel ?? ''}
             placeholder={t('formBuilder.inspector.formSettings.submitLabelPlaceholder')}
             onChange={(event) =>
-              onSettingsChange({ submitLabel: event.target.value }, { coalesceKey: 'settings.submitLabel' })
+              onSettingsChange({ submitLabel: event.target.value }, { coalesceId: 'settings.submitLabel' })
             }
           />
           <TextArea
@@ -125,7 +125,7 @@ export function FormBuilderInspector({
             onChange={(event) =>
               onSettingsChange(
                 { successMessage: event.target.value },
-                { coalesceKey: 'settings.successMessage' }
+                { coalesceId: 'settings.successMessage' }
               )
             }
           />
@@ -145,21 +145,21 @@ export function FormBuilderInspector({
   const validation = element.validation ?? {};
   const validationRules = definition?.validationRules ?? [];
 
-  const setValidation = (patch: Record<string, unknown>, coalesceKey?: string) => {
+  const setValidation = (patch: Record<string, unknown>, coalesceId?: string) => {
     const next = { ...validation, ...patch };
     for (const [ruleKey, ruleValue] of Object.entries(next)) {
       if (ruleValue === '' || ruleValue === null || ruleValue === undefined) {
         delete (next as Record<string, unknown>)[ruleKey];
       }
     }
-    onChange({ validation: Object.keys(next).length > 0 ? next : undefined }, { coalesceKey });
+    onChange({ validation: Object.keys(next).length > 0 ? next : undefined }, { coalesceId });
   };
 
   const updateOption = (index: number, patch: Partial<BasicFormFieldOption>) => {
     const options = (element.options ?? []).map((option, optionIndex) =>
       optionIndex === index ? { ...option, ...patch } : option
     );
-    onChange({ options }, { coalesceKey: `options.${element.key}.${index}` });
+    onChange({ options }, { coalesceId: `options.${element.key}.${index}` });
   };
 
   const toneOptions: SelectOption[] = ['info', 'warning', 'success'].map((tone) => ({
@@ -208,7 +208,7 @@ export function FormBuilderInspector({
           containerClassName="mb-0"
           value={element.label}
           onChange={(event) =>
-            onChange({ label: event.target.value }, { coalesceKey: `label.${element.key}` })
+            onChange({ label: event.target.value }, { coalesceId: `label.${element.key}` })
           }
         />
         {definition?.supportsHelpText !== false || element.type === 'text' || element.type === 'callout' ? (
@@ -222,7 +222,7 @@ export function FormBuilderInspector({
             wrapperClassName="mb-0"
             value={element.helpText ?? ''}
             onChange={(event) =>
-              onChange({ helpText: event.target.value || null }, { coalesceKey: `help.${element.key}` })
+              onChange({ helpText: event.target.value || null }, { coalesceId: `help.${element.key}` })
             }
           />
         ) : null}
@@ -286,7 +286,7 @@ export function FormBuilderInspector({
               onChange={(event) =>
                 onChange(
                   { placeholder: event.target.value || null },
-                  { coalesceKey: `placeholder.${element.key}` }
+                  { coalesceId: `placeholder.${element.key}` }
                 )
               }
             />
