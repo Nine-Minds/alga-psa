@@ -45,6 +45,11 @@ export type DesignerPaletteProps<TItem extends DesignerPaletteItem> = {
   collapsedWidth?: number;
   /** Rendered above the search box, e.g. the Add / Outline tab strip. */
   header?: React.ReactNode;
+  /**
+   * How tall the palette may grow. The default leaves room for the page chrome a floating
+   * palette sits under; a designer that owns the whole viewport passes its own.
+   */
+  maxHeightClassName?: string;
   /** Replaces the search box and the item groups, e.g. a second tab's own content. */
   children?: React.ReactNode;
 };
@@ -71,6 +76,7 @@ export function DesignerPalette<TItem extends DesignerPaletteItem>({
   expandedWidth = 280,
   collapsedWidth = 32,
   header,
+  maxHeightClassName = 'max-h-[calc(100vh-220px)]',
   children,
 }: DesignerPaletteProps<TItem>): React.ReactElement {
   const { t } = useTranslation(i18nNamespace);
@@ -107,7 +113,7 @@ export function DesignerPalette<TItem extends DesignerPaletteItem>({
 
   return (
     <aside
-      className={`pointer-events-auto flex flex-col max-h-[calc(100vh-220px)] min-h-0 z-40 ${styles.container} ${isStacked ? styles.stackedContainer : ''} ${className ?? ''} ${visible ? '' : 'hidden'}`}
+      className={`pointer-events-auto flex flex-col ${maxHeightClassName} min-h-0 z-40 ${styles.container} ${isStacked ? styles.stackedContainer : ''} ${className ?? ''} ${visible ? '' : 'hidden'}`}
       style={containerStyle}
     >
       {onToggleCollapse ? (
