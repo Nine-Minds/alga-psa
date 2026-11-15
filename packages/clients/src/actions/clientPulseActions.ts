@@ -7,6 +7,7 @@ import { toCalendarDateString } from '@alga-psa/core';
 import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import { createTicketReadScope, type TicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 import { resolveDocumentReadScope, type DocumentReadScope } from '@alga-psa/shared/lib/documentAuthorization';
 import { toClientSinceDate } from '../lib/clientSince';
@@ -747,6 +748,8 @@ async function fetchMoney(
       })
       .where({ 'te.tenant': tenant, 'te.invoiced': false })
       .where('te.billable_duration', '>', 0)
+      // Operational (seat technician) time is never unbilled work (S28 / F068).
+      .whereRaw(commercialTimeEntrySql('te'))
       .andWhere(function matchWipClient() {
         this.where(function matchTicketTime() {
           this.where('te.work_item_type', 'ticket').where('wt.client_id', clientId);

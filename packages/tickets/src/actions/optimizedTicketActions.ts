@@ -7,6 +7,7 @@ import {
   restrictToSeatAudience,
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
+import { resolveSeatEffortSummary } from '@alga-psa/shared/lib/humanWork/seatEffortSummary';
 import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
@@ -159,7 +160,7 @@ import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErr
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
-import { resolveTicketResponsibility } from '../lib/ticketResponsibility';
+import { resolveTicketHandoff, resolveTicketResponsibility, type TicketHandoffDirection } from '../lib/ticketResponsibility';
 import { resolveTicketListViews, ticketListViewPredicates, type TicketListViewDefinition } from '../lib/ticketListViews';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
@@ -719,6 +720,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // seat marker, so a psa tenant never reaches the capability probe or a co-managed table.
     const loadedUsers = rawUsers as Array<Record<string, unknown> & { user_id: string; seat_reader?: boolean | null }>;
     const seatTicket = await resolveTicketSeatContext(trx, tenant, user, ticket.client_id, seatAssigneeAudience, loadedUsers);
+    // Effort by organization, projected on the server to this viewer (a technician gets no MSP total unless the arrangement allows it).
+    const seatEffort = await resolveSeatEffortSummary(trx, tenant, { seatTicket, userId: user.user_id, ticketId, clientId: ticket.client_id });
 
     // Projection is the fix; this is the guarantee that a future edit to the query
     // above cannot silently re-widen what leaves this action.
@@ -1288,6 +1291,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       availableAgents: users,
       // Only a ticket of an arrangement client carries it; every other ticket's payload is unchanged.
       ...(seatTicket?.arrangement ? { seatTicket } : {}),
+      ...(seatEffort ? { seatEffort } : {}),
       userMap,
       contactMap,
       options: {
@@ -2302,7 +2306,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[], seatResponsibilityOffered?: boolean } | TicketActionError> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[], seatResponsibilityOffered?: boolean, seatHandoffDirection?: TicketHandoffDirection } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2362,9 +2366,30 @@ export const getTicketsForList = withAuth(async (
     const views = await summarizeTicketListViews(trx, tenant, user, validatedFilters, listViews, authorizationContext);
     // Responsibility column: asked only of a reader a provider offers it to (a tenant the seat shape is not released for resolves to none, with no query).
     const responsibility = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
-    if (responsibility) {
-      const byTicket = await responsibility.read(trx, tenant, enriched.tickets.flatMap((ticket) => ticket.ticket_id ? [ticket.ticket_id] : []));
-      for (const ticket of enriched.tickets) ticket.seat_responsibility = (ticket.ticket_id && byTicket.get(ticket.ticket_id)) || null;
+    // Bulk handoff: the direction this reader may hand tickets over, and the revision each row's handoff must name.
+    // Offered on the bulk actions' own terms (an internal user who may update tickets), so the list is the one place
+    // that decides the offer: the page's role-permission list is not, since a seat technician's role cannot read it.
+    // Asked only once a provider offers a direction, so a tenant the seat shape is not released for pays nothing.
+    const offeredHandoff = await resolveTicketHandoff({ tenant, subject: authorizationContext.authorizationSubject });
+    const handoff = offeredHandoff && user.user_type === 'internal' && await hasPermission(user, 'ticket', 'update', trx)
+      ? offeredHandoff
+      : null;
+    // One read serves both: the responsibility column and the handoff revisions come from the same statement.
+    const reader = responsibility ?? handoff?.provider ?? null;
+    if (reader) {
+      const states = await reader.readStates(trx, tenant, enriched.tickets.flatMap((ticket) => ticket.ticket_id ? [ticket.ticket_id] : []));
+      const handoffStates = handoff && handoff.provider !== reader
+        ? await handoff.provider.readStates(trx, tenant, enriched.tickets.flatMap((ticket) => ticket.ticket_id ? [ticket.ticket_id] : []))
+        : states;
+      for (const ticket of enriched.tickets) {
+        const id = ticket.ticket_id;
+        if (responsibility) ticket.seat_responsibility = (id && states.get(id)?.responsibility) || null;
+        const state = id ? handoffStates.get(id) : undefined;
+        if (handoff && state) {
+          ticket.seat_responsibility ??= state.responsibility;
+          ticket.seat_responsibility_revision = state.revision;
+        }
+      }
     }
     return {
       tickets: enriched.tickets,
@@ -2372,6 +2397,7 @@ export const getTicketsForList = withAuth(async (
       metadata: enriched.metadata,
       ...(views ? { views } : {}),
       ...(responsibility ? { seatResponsibilityOffered: true } : {}),
+      ...(handoff ? { seatHandoffDirection: handoff.direction } : {}),
     };
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
@@ -4136,7 +4162,8 @@ export const getConsolidatedTicketListData = withAuth(async (
           totalCount: ticketsData.totalCount,
           metadata: ticketsData.metadata,
           ...(ticketsData.views ? { views: ticketsData.views } : {}),
-          ...(ticketsData.seatResponsibilityOffered ? { seatResponsibilityOffered: true } : {})
+          ...(ticketsData.seatResponsibilityOffered ? { seatResponsibilityOffered: true } : {}),
+          ...(ticketsData.seatHandoffDirection ? { seatHandoffDirection: ticketsData.seatHandoffDirection } : {})
         };
       } catch (error) {
         const expected = ticketListActionErrorFrom(error);

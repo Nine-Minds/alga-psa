@@ -430,6 +430,16 @@
         "load": "Die Auswahlmöglichkeiten konnten nicht geladen werden. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
         "submit": "Die Anfrage ist möglicherweise nicht abgeschlossen. Versuchen Sie es erneut; sie wird nicht doppelt angewendet."
       },
+      "purchase": {
+        "checking": "Pool wird geprüft…",
+        "review": "Der Pool hat zu wenige Plätze. Prüfen Sie den Kauf, um {{count}} Plätze zuzuweisen.",
+        "waiting": "Warten auf den Abschluss des Kaufs. {{count}} Plätze werden zugewiesen, sobald der Pool sie enthält.",
+        "stalled": "Die neuen Plätze sind noch nicht erschienen. Prüfen Sie in Kürze erneut; Ihnen wird nichts doppelt berechnet.",
+        "failed": "Die Zahlung ist nicht durchgegangen. Wiederholen Sie denselben Kauf, um {{count}} Plätze zuzuweisen.",
+        "check": "Erneut prüfen",
+        "cancel": "Abbrechen",
+        "error": "Der Pool konnte nicht geprüft werden. Aktualisieren Sie und versuchen Sie es erneut; nichts wird doppelt berechnet."
+      },
       "saved": "Gespeichert.",
       "boards": {
         "title": "Board-Umfang",

@@ -26,6 +26,11 @@ import {
   permissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { isTagActionError, type TagActionError } from './tagActionErrors';
+import {
+  isTagCreationRestricted,
+  TAG_CREATION_RESTRICTED_KEY,
+  TAG_CREATION_RESTRICTED_MESSAGE,
+} from '../lib/tagCreationRestriction';
 
 /** Map tagged entity types to their permission resource equivalents */
 const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
@@ -368,6 +373,10 @@ export const createTag = withAuth(async (
       // Check if this is a new tag (not in existing tags) - only then require tag:create permission
       if (!existingTag && !await hasPermissionAsync(currentUser, 'tag', 'create', trx)) {
         await throwPermissionErrorAsync('create new tags', 'You can only select from existing tags');
+      }
+      // A caller a restriction governs (a seat technician) applies existing tags and never mints one.
+      if (!existingTag && await isTagCreationRestricted(trx, { tenant, user: currentUser })) {
+        return actionError(TAG_CREATION_RESTRICTED_MESSAGE, TAG_CREATION_RESTRICTED_KEY);
       }
 
       const tagWithTenant: Omit<ITag, 'tag_id' | 'tenant'> & {
@@ -886,7 +895,8 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 
   // Mirror createTag's gate: minting a brand-new tag definition requires
   // tag:create permission. Resolved once per call since pendingTags is small.
-  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
+  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx)
+    && !await isTagCreationRestricted(trx, { tenant, user: currentUser });
 
   const createdTags: ITag[] = [];
 
@@ -1067,7 +1077,8 @@ export const bulkApplyTagsToEntities = withAuth(async (
   }
 
   // tag:create gate (mints brand-new definitions) resolved once for the batch.
-  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
+  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx)
+    && !await isTagCreationRestricted(trx, { tenant, user: currentUser });
 
   // Definitions are shared across entities — resolve each unique text once,
   // keyed by lowercased text while preserving the first-seen casing.
@@ -1458,9 +1469,13 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
         hasPermissionAsync(currentUser, 'tag', 'delete', trx)
       ]);
 
+      // Asked only of a caller who would otherwise be offered "create": a restriction (seat technician) takes it away.
+      const mayCreate = entityUpdate && tagCreate
+        && !await isTagCreationRestricted(trx, { tenant: currentUser.tenant, user: currentUser });
+
       return {
         canAddExisting: entityUpdate,
-        canCreateNew: entityUpdate && tagCreate,
+        canCreateNew: mayCreate,
         canEditColors: entityUpdate && tagUpdate,
         canEditText: entityUpdate && tagUpdate,
         canDelete: entityUpdate,

@@ -16,6 +16,8 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
+import BulkHandoffDialog from './BulkHandoffDialog';
+import { selectBulkHandoffTickets, type BulkHandoffTicket } from '../lib/bulkHandoff';
 import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
 import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
 import {
@@ -192,6 +194,8 @@ interface TicketingDashboardProps {
   namedViews?: ITicketListViewSummary[];
   /** The reader is offered the responsibility column and filter. Absent: the list has neither. */
   seatResponsibilityOffered?: boolean;
+  /** The bulk handoff the reader is offered: MSP staff hand to client IT, a seat technician hands to the MSP. Absent: none. */
+  seatHandoffDirection?: 'client_it' | 'msp';
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -348,6 +352,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   totalCount,
   namedViews: namedViewsByServer,
   seatResponsibilityOffered: seatResponsibilityOfferedByServer = false,
+  seatHandoffDirection: seatHandoffDirectionByServer,
   currentPage,
   pageSize,
   onPageChange,
@@ -392,6 +397,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const { enabled: seatServed } = useCapability('co-managed-seat');
   const seatResponsibilityOffered = seatServed && seatResponsibilityOfferedByServer;
   const namedViews = seatServed ? namedViewsByServer : undefined;
+  const seatHandoffDirection = seatServed ? seatHandoffDirectionByServer : undefined;
   // These followed the browser locale, so a German UI printed American dates.
   const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
@@ -421,6 +427,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkHandoffOpen, setIsBulkHandoffOpen] = useState(false);
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
   const [isBulkMoving, setIsBulkMoving] = useState(false);
   const [bulkMoveErrors, setBulkMoveErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
@@ -1567,6 +1574,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [tickets, selectedTicketIds, smartSearchRows]
   );
 
+
+  // The selected rows as the handoff dialog needs them: named by number or title, with the revision each must name.
+  const selectedHandoffTickets = useMemo(
+    (): BulkHandoffTicket[] => (seatHandoffDirection ? selectBulkHandoffTickets(selectedTicketIdsArray, tickets, smartSearchRows) : []),
+    [seatHandoffDirection, selectedTicketIdsArray, tickets, smartSearchRows],
+  );
+
+  const handleBulkHandoffDone = useCallback((_handedOver: string[], failedTicketIds: string[]) => {
+    // Refresh the list (rows, responsibility column and revisions); what is left selected is what still needs attention.
+    if (failedTicketIds.length === 0) clearSelection();
+    else setSelectedTicketIds(() => new Set(failedTicketIds));
+    onFilterChange({});
+  }, [clearSelection, onFilterChange]);
 
   // Board id for every ticket currently rendered on the page.
   const onPageBoardById = useMemo(() => {
@@ -3292,6 +3312,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           onCompleted={() => onFilterChange({})}
         />
       )}
+      {seatHandoffDirection && (
+        <BulkHandoffDialog
+          id={id}
+          isOpen={isBulkHandoffOpen && hasSelection}
+          direction={seatHandoffDirection}
+          tickets={selectedHandoffTickets}
+          onClose={() => setIsBulkHandoffOpen(false)}
+          onHandedOver={handleBulkHandoffDone}
+        />
+      )}
       <BulkBundleDialog
         id={id}
         isOpen={isBundleDialogOpen}
@@ -3311,6 +3341,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
         showDelete={!workspaceReadOnly}
+        // The list offers a direction only to a reader the bulk action accepts (it checks ticket:update itself), so
+        // this does not lean on canUpdateTickets: that comes from a role-permission read a seat technician cannot make.
+        handoffDirection={workspaceReadOnly ? undefined : seatHandoffDirection}
+        onHandoff={() => setIsBulkHandoffOpen(true)}
         statusDisabled={!selectedTicketsSharedBoardId}
         statusDisabledTitle={isResolvingSelectedBoards
           ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')

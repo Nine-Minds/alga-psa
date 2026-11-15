@@ -430,6 +430,16 @@
         "load": "No se pudieron cargar las opciones. Actualice e inténtelo de nuevo.",
         "submit": "Es posible que la solicitud no haya finalizado. Inténtelo de nuevo; no se aplicará dos veces."
       },
+      "purchase": {
+        "checking": "Comprobando el grupo…",
+        "review": "El grupo tiene muy pocas plazas. Revise la compra para asignar {{count}} plazas.",
+        "waiting": "Esperando a que se complete la compra. Las {{count}} plazas se asignarán en cuanto el grupo las tenga.",
+        "stalled": "Las nuevas plazas aún no han aparecido. Vuelva a comprobarlo en breve; no se le cobrará dos veces.",
+        "failed": "El pago no se realizó. Reintente la misma compra para asignar {{count}} plazas.",
+        "check": "Comprobar de nuevo",
+        "cancel": "Cancelar",
+        "error": "No se pudo comprobar el grupo. Actualice e inténtelo de nuevo; no se cobra nada dos veces."
+      },
       "saved": "Guardado.",
       "boards": {
         "title": "Ámbito de tableros",

@@ -29,6 +29,18 @@ export interface TicketResponsibilityState {
   technicians: Array<{ user_id: string; display_name: string }>;
 }
 
+/** Which way a handoff goes: MSP staff hand to `client_it`, a seat technician hands to `msp`. */
+export type TicketHandoffDirection = 'client_it' | 'msp';
+
+export interface TicketHandToMspInput {
+  tenant: string;
+  ticketId: string;
+  actorUserId: string;
+  operationId: string;
+  expectedRevision: number;
+  note: string;
+}
+
 export interface TicketHandToClientItInput {
   tenant: string;
   ticketId: string;
@@ -70,6 +82,15 @@ export interface TicketResponsibilityProvider {
   load(trx: Knex.Transaction, tenant: string, ticketId: string): Promise<TicketResponsibilityState | null>;
   /** Hands the ticket to client IT. Throws `TicketResponsibilityError` with the provider's refusal code. */
   handToClientIt(db: Knex, input: TicketHandToClientItInput): Promise<TicketResponsibilityState>;
+  /** Hands the ticket to the MSP. Throws `TicketResponsibilityError` with the provider's refusal code. */
+  handToMsp(db: Knex, input: TicketHandToMspInput): Promise<TicketResponsibilityState>;
+  /** The handoff this reader may start, or null. Independent of `offered`: a seat technician is offered Hand to MSP but not the MSP's column and filter. */
+  handoffDirection(input: TicketResponsibilityInput): Promise<TicketHandoffDirection | null> | TicketHandoffDirection | null;
+  /**
+   * `read` with the revision the next handoff of each ticket must name, in the same statement: the list's rows carry
+   * both. A ticket absent from the map has no responsibility.
+   */
+  readStates(trx: Knex.Transaction, tenant: string, ticketIds: readonly string[]): Promise<Map<string, { responsibility: TicketResponsibility; revision: number }>>;
 }
 
 // LEVERAGE: pattern global-keyed-registry — same shape as ticketListViews and slaPauseConditions
@@ -88,6 +109,17 @@ export function registerTicketResponsibilityProvider(id: string, provider: Ticke
 export async function resolveTicketResponsibility(input: TicketResponsibilityInput): Promise<TicketResponsibilityProvider | null> {
   for (const provider of providers().values()) {
     if (await provider.offered(input)) return provider;
+  }
+  return null;
+}
+
+/** The provider that lets the reader hand tickets over, with the direction it offers them. */
+export async function resolveTicketHandoff(
+  input: TicketResponsibilityInput,
+): Promise<{ provider: TicketResponsibilityProvider; direction: TicketHandoffDirection } | null> {
+  for (const provider of providers().values()) {
+    const direction = await provider.handoffDirection(input);
+    if (direction) return { provider, direction };
   }
   return null;
 }

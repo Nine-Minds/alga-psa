@@ -430,6 +430,16 @@
         "load": "De keuzes konden niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
         "submit": "Het verzoek is mogelijk niet voltooid. Probeer het opnieuw; het wordt niet dubbel toegepast."
       },
+      "purchase": {
+        "checking": "Pool controleren…",
+        "review": "De pool heeft te weinig plaatsen. Controleer de aankoop om {{count}} plaatsen toe te wijzen.",
+        "waiting": "Wachten tot de aankoop is voltooid. {{count}} plaatsen worden toegewezen zodra de pool ze heeft.",
+        "stalled": "De nieuwe plaatsen zijn er nog niet. Controleer binnenkort opnieuw; u betaalt niet dubbel.",
+        "failed": "De betaling is niet gelukt. Probeer dezelfde aankoop opnieuw om {{count}} plaatsen toe te wijzen.",
+        "check": "Opnieuw controleren",
+        "cancel": "Annuleren",
+        "error": "De pool kon niet worden gecontroleerd. Vernieuw en probeer het opnieuw; er wordt niets dubbel in rekening gebracht."
+      },
       "saved": "Opgeslagen.",
       "boards": {
         "title": "Bordbereik",

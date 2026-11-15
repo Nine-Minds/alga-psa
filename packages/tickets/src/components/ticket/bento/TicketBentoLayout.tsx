@@ -256,6 +256,8 @@ export interface TicketBentoLayoutProps {
   // Materials / feedback / documents / assets
   hideMaterials?: boolean;
   surveySummaryCard?: React.ReactNode;
+  /** Effort by organization on a seat arrangement's ticket (S28); built for this viewer by the server, absent otherwise. */
+  seatEffortCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
   documents: any[];
   onDocumentCreated: () => Promise<void>;
@@ -981,6 +983,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       />
     ) },
     capabilities.survey && props.surveySummaryCard ? { key: 'feedback', zone: 'start', group: 'who', rank: 16, node: props.surveySummaryCard } : null,
+    props.seatEffortCard ? { key: 'seat-effort', zone: 'start', group: 'who', rank: 17, node: props.seatEffortCard } : null,
     { key: 'calls', zone: 'start', group: 'linked', rank: 46, node: (
       <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
         <CallsEmailsTile

@@ -305,7 +305,7 @@
   {
     "id": "T034",
     "description": "DB integration: a bulk handoff over a mixed selection acts on qualifying tickets and reports each failure; the responsibility filter returns the expected rows; a seat technician creating a tag is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064",
       "F062",
@@ -324,7 +324,7 @@
   {
     "id": "T036",
     "description": "DB integration: a billing run, invoice preview, unbilled-time list and approval queue for the period do not include seat technician entries; the technician lists, edits and deletes their own.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068",
       "F070"
@@ -333,7 +333,7 @@
   {
     "id": "T037",
     "description": "DB integration: the effort summary hides the MSP total from a seat technician by default, shows it when the arrangement allows, and shows both totals to MSP staff.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -407,7 +407,7 @@
   {
     "id": "T045",
     "description": "E2E with the Stripe emulator: an allocation larger than available capacity leads to a purchase review for the new total and completes with one charge.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]

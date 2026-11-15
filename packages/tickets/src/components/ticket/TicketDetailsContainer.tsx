@@ -1,5 +1,6 @@
 'use client';
 
+import { SeatEffortCard, type SeatEffortCardData } from './SeatEffortCard';
 import React, { Suspense, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -90,6 +91,8 @@ interface TicketDetailsContainerProps {
      * server's ticket-detail load resolves it behind the `co-managed-seat` capability).
      */
     seatTicket?: { viewer: 'msp' | 'client_it'; arrangement: boolean; clientTechnicians: string[] } | null;
+    /** Effort by organization, projected by the server to this viewer (S28). Present only on an arrangement client's ticket. */
+    seatEffort?: SeatEffortCardData | null;
   };
   surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
@@ -388,6 +391,7 @@ export default function TicketDetailsContainer({
       onUpdateDescription={handleUpdateDescription}
       isSubmitting={isSubmitting}
       surveySummaryCard={surveySummaryCard}
+      seatEffortCard={seatTicket && ticketData.seatEffort ? <SeatEffortCard effort={ticketData.seatEffort} /> : undefined}
       associatedAssets={associatedAssets}
       bootstrap={bootstrap}
       renderContactDetails={renderContactDetails}

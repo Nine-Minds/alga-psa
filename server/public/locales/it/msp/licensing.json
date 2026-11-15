@@ -430,6 +430,16 @@
         "load": "Impossibile caricare le opzioni. Aggiorna e riprova.",
         "submit": "La richiesta potrebbe non essere stata completata. Riprova; non verrà applicata due volte."
       },
+      "purchase": {
+        "checking": "Controllo del pool…",
+        "review": "Il pool ha troppi pochi posti. Rivedi l'acquisto per assegnare {{count}} posti.",
+        "waiting": "In attesa del completamento dell'acquisto. I {{count}} posti verranno assegnati non appena il pool li avrà.",
+        "stalled": "I nuovi posti non sono ancora comparsi. Controlla di nuovo a breve; non ti verrà addebitato due volte.",
+        "failed": "Il pagamento non è andato a buon fine. Riprova lo stesso acquisto per assegnare {{count}} posti.",
+        "check": "Controlla di nuovo",
+        "cancel": "Annulla",
+        "error": "Impossibile controllare il pool. Aggiorna e riprova; nulla viene addebitato due volte."
+      },
       "saved": "Salvato.",
       "boards": {
         "title": "Ambito delle bacheche",
