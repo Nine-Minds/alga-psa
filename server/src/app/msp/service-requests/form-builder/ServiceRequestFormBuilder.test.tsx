@@ -79,6 +79,9 @@ const canvasElement = (key: string) =>
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  // The builder remembers the author's left tab and sidebar width in localStorage, so a test
+  // that switched tabs would otherwise decide which pane the next test opens on.
+  window.localStorage.clear();
 });
 
 describe('Form Studio selection and inspector', () => {
@@ -148,6 +151,24 @@ describe('Form Studio inline rename', () => {
     expect(document.getElementById('service-request-form-builder-label')).toHaveValue(
       'Employee name'
     );
+  });
+
+  it('commits the rename when the author leaves the field', async () => {
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(canvasElement('full_name'));
+    await user.click(document.getElementById('service-request-form-canvas-label-full_name')!);
+    const input = document.getElementById('service-request-form-canvas-label-full_name-rename')!;
+    await user.clear(input);
+    await user.type(input, 'Employee name');
+    await user.click(canvasElement('needs_laptop'));
+
+    expect(
+      screen.getByText('Employee name', {
+        selector: '#service-request-form-canvas-label-full_name',
+      })
+    ).toBeInTheDocument();
   });
 
   it('throws the rename away on Escape', async () => {
