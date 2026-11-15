@@ -424,7 +424,7 @@
   {
     "id": "T047",
     "description": "Contract: no seat UI file reads the raw release flag, and with the capability off the client tab, overview rows and ticket affordances are absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090",
       "F002"

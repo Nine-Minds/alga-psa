@@ -714,7 +714,7 @@
   {
     "id": "F090",
     "description": "Every seat entry point is contributed through UI slots and gated by `useCapability('co-managed-seat')`, never by the raw flag.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]

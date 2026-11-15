@@ -98,7 +98,7 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filt
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { useCapability, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -346,8 +346,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTags = [],
   initialUsers = [],
   totalCount,
-  namedViews,
-  seatResponsibilityOffered = false,
+  namedViews: namedViewsByServer,
+  seatResponsibilityOffered: seatResponsibilityOfferedByServer = false,
   currentPage,
   pageSize,
   onPageChange,
@@ -387,6 +387,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
+  // The server offers the responsibility column, filter and seat views; the capability is the client's own kill
+  // switch over them, so a closed capability shows none of the seat list UI whatever the payload carries.
+  const { enabled: seatServed } = useCapability('co-managed-seat');
+  const seatResponsibilityOffered = seatServed && seatResponsibilityOfferedByServer;
+  const namedViews = seatServed ? namedViewsByServer : undefined;
   // These followed the browser locale, so a German UI printed American dates.
   const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls

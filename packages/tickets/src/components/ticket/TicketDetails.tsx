@@ -92,7 +92,7 @@ import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
 import type { TicketDetailLayout } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
-import TicketResponsibilityControl from './TicketResponsibilityControl';
+import SeatResponsibilitySlot from './SeatResponsibilitySlot';
 import type { TicketResponsibilityState } from '../../lib/ticketResponsibility';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
@@ -3971,9 +3971,10 @@ const handleClose = () => {
         />
     );
 
-    // Responsibility chip and Hand to client IT: rendered only when the server sent a state.
+    // Responsibility chip and Hand to client IT: the `ticket.details.responsibility` slot, which renders only
+    // while `co-managed-seat` is served on the client AND the server sent a state.
     const seatResponsibilityControl = initialSeatResponsibility && ticket.ticket_id ? (
-        <TicketResponsibilityControl
+        <SeatResponsibilitySlot
             ticketId={ticket.ticket_id}
             state={initialSeatResponsibility}
             onChange={() => {
