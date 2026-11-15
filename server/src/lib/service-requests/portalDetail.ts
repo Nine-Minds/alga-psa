@@ -9,7 +9,10 @@ import { getServiceRequestFormBehaviorProvider } from './providers/registry';
 import {
   collectElementVisibilityRules,
   computeVisibleFieldKeys,
+  parseVisibilityRules,
+  type VisibilityRule,
 } from './formVisibility';
+import { normalizeBasicFormSchema } from './formSchema';
 
 interface PublishedDefinitionRow {
   tenant: string;
@@ -51,6 +54,45 @@ export interface ServiceRequestPortalDefinitionDetail {
   executionConfig: Record<string, unknown>;
   formBehaviorProvider: string;
   formBehaviorConfig: Record<string, unknown>;
+}
+
+/**
+ * Client portal projection of a definition detail: only what the request form
+ * page renders. Execution/form-behavior config and version identifiers stay
+ * server-side.
+ */
+export interface ServiceRequestPortalFormView {
+  title: string;
+  description: string | null;
+  icon: string | null;
+  formSchema: Record<string, unknown>;
+  initialValues: Record<string, string | boolean | null>;
+  /**
+   * The complete rule list, assembled server-side: every element's own `visibleWhen`
+   * condition plus, for the advanced provider, its configured rules. The browser never
+   * sees which provider the definition uses or what else its config holds.
+   */
+  visibilityRules: VisibilityRule[];
+}
+
+export function toPortalFormView(
+  detail: ServiceRequestPortalDefinitionDetail
+): ServiceRequestPortalFormView {
+  // One normalizer decides what an element is, so the portal and the builder agree.
+  const normalized = normalizeBasicFormSchema(detail.formSchema);
+  return {
+    title: detail.title,
+    description: detail.description,
+    icon: detail.icon,
+    formSchema: detail.formSchema,
+    initialValues: detail.initialValues,
+    visibilityRules: [
+      ...collectElementVisibilityRules(normalized.fields),
+      ...(detail.formBehaviorProvider === 'advanced'
+        ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
+        : []),
+    ],
+  };
 }
 
 export async function getVisiblePublishedServiceRequestDefinitionDetail(

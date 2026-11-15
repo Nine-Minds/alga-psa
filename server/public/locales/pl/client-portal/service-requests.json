@@ -9,7 +9,6 @@
     "newRequestHeading": "Wyślij nowe zgłoszenie"
   },
   "detail": {
-    "version": "Wersja {{version}}",
     "submitted": "Zgłoszenie przesłane",
     "requestIdLabel": "ID zgłoszenia: ",
     "ticketIdLabel": "ID zgłoszenia: ",
@@ -21,8 +20,6 @@
     "optionLabel": "Opcja {{index}}",
     "submit": "Prześlij zgłoszenie",
     "requiredField": "To pole jest wymagane.",
-    "initialValuesTitle": "Wartości początkowe",
-    "noInitialValues": "Nie skonfigurowano statycznych wartości domyślnych.",
     "validation": {
       "type": "Ta odpowiedź nie ma oczekiwanej postaci.",
       "pattern": "Ta odpowiedź nie ma oczekiwanej postaci.",
@@ -61,16 +58,12 @@
     "requestIdLabel": "ID zgłoszenia:",
     "statusSection": "Status",
     "submittedAt": "Przesłano: {{date}}",
-    "executionStatus": "Status wykonania: {{status}}",
     "ticketLabel": "Zgłoszenie:",
-    "workflowLabel": "Workflow (ID: {{id}})",
     "submittedAnswersTitle": "Przesłane odpowiedzi",
     "noResponse": "Brak odpowiedzi",
     "attachmentsTitle": "Załączniki",
     "noAttachments": "Brak załączników.",
-    "fileIdLabel": "ID pliku: {{id}}",
     "fileTypeLabel": "Typ: {{mime}}",
-    "versionLabel": "Wersja {{version}}",
     "historyTitle": "Historia",
     "historyEmpty": "Nie zarejestrowano jeszcze historii.",
     "historyActor": "przez {{actor}}",
@@ -78,7 +71,8 @@
       "service_request_submission_created": "Zgłoszenie wysłane",
       "service_request_submission_execution_succeeded": "Przetwarzanie zakończone",
       "service_request_submission_execution_failed": "Przetwarzanie nie powiodło się"
-    }
+    },
+    "unnamedAttachment": "Załącznik"
   },
   "recent": {
     "title": "Twoje ostatnie zgłoszenia",

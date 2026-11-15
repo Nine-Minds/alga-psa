@@ -46,6 +46,35 @@ describe('time-source seam coverage (A1)', () => {
     for (const f of files) expect(importsOf(read(f)), f).not.toMatch(/@alga-psa\/co-managed/);
   });
 
+  // @alga-psa/co-managed already reaches scheduling (portableOperationalExport imports the time source), so any
+  // scheduling -> co-managed import, type-only included, is a package cycle. The seat (operational) mode primitives
+  // live in @alga-psa/types; `lib/timeEntryMode.ts` bridges to them and is the one place call sites import
+  // `operationalTimeEntryFields` from. No non-test file under this package may import @alga-psa/co-managed.
+  const coManagedImports = (src: string) =>
+    (importsOf(src).match(/[^\n]*from\s+['"]@alga-psa\/co-managed[^'"]*['"]|import\(\s*['"]@alga-psa\/co-managed[^'"]*['"]\s*\)/g) ?? []);
+  const sourceFiles = (d: string): string[] =>
+    fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? (e.name === 'node_modules' || e.name === 'test' || e.name === '__tests__' ? [] : sourceFiles(path.join(d, e.name)))
+        : /\.(ts|tsx)$/.test(e.name) && !/\.test\./.test(e.name) ? [path.join(d, e.name)] : []);
+
+  /** Files in `files` that import @alga-psa/co-managed in any form. */
+  const violations = (files: Record<string, string>) =>
+    Object.entries(files).flatMap(([rel, src]) => coManagedImports(src).map((line) => `${rel}: ${line.trim()}`));
+
+  it('no non-test file in scheduling imports @alga-psa/co-managed, type-only included', () => {
+    const files = Object.fromEntries(sourceFiles(pkg).map((f) => [path.relative(pkg, f).split(path.sep).join('/'), read(f)]));
+    expect(violations(files)).toEqual([]);
+  });
+
+  it('the check catches a new direct, subpath or type-only import', () => {
+    expect(violations({ 'lib/somethingNew.ts': "import { x } from '@alga-psa/co-managed';" })).not.toEqual([]);
+    expect(violations({ 'lib/timeEntryWriteCore.ts': "import { x } from '@alga-psa/co-managed/timeEntryBillingMode';" })).not.toEqual([]);
+    expect(violations({ 'lib/timeEntryMode.ts': "import type { X } from '@alga-psa/co-managed/timeEntryBillingMode';" })).not.toEqual([]);
+    expect(violations({ 'lib/timeEntryMode.ts': "export { x } from '@alga-psa/co-managed/timeEntryBillingMode';" })).not.toEqual([]);
+    expect(violations({ 'context/TimeEntryModeContext.tsx': "import type { X } from '@alga-psa/co-managed/timeEntryBillingMode';" })).not.toEqual([]);
+    expect(violations({ 'lib/ok.ts': "import type { X } from '@alga-psa/types';" })).toEqual([]);
+  });
+
   it('timeSource.ts has no runtime imports', () => {
     const src = read(path.join(pkg, 'lib/timeSource/timeSource.ts'));
     const imports = src.match(/^import\s.+$/gm) ?? [];

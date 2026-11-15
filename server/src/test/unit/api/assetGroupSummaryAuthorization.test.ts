@@ -80,7 +80,7 @@ describe('AssetService group summaries', () => {
 
   it('returns the asset while suppressing a mixed-scope group summary', async () => {
     const service = new AssetService();
-    const asset = await service.getById(ASSET, { tenant: TENANT, userId: USER.user_id, user: USER } as any);
+    const asset = await service.getById(ASSET, { tenant: TENANT, userId: USER.user_id, user: USER, db: h.trx } as any);
 
     expect(asset).toMatchObject({ asset_id: ASSET, name: 'Visible asset', group: null });
     expect(JSON.stringify(asset)).not.toContain('Restricted workspace');
@@ -91,7 +91,7 @@ describe('AssetService group summaries', () => {
     h.inScopeAssets.add(HIDDEN_MEMBER);
     const service = new AssetService();
     const apiKeyId = 'restricted-key-1';
-    await service.getById(ASSET, { tenant: TENANT, userId: USER.user_id, user: USER, apiKeyId } as any);
+    await service.getById(ASSET, { tenant: TENANT, userId: USER.user_id, user: USER, apiKeyId, db: h.trx } as any);
 
     expect(getAuthorizedAssetGroupSummary).toHaveBeenCalledWith(
       h.trx,
@@ -104,7 +104,7 @@ describe('AssetService group summaries', () => {
   it('preserves the summary when every group member is authorized', async () => {
     h.inScopeAssets.add(HIDDEN_MEMBER);
     const service = new AssetService();
-    const asset = await service.getById(ASSET, { tenant: TENANT, userId: USER.user_id, user: USER } as any);
+    const asset = await service.getById(ASSET, { tenant: TENANT, userId: USER.user_id, user: USER, db: h.trx } as any);
 
     expect(asset?.group).toEqual(h.summary);
   });

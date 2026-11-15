@@ -14,6 +14,8 @@ export type DenialExplanationKind =
   | 'closed_baseline'
   | 'client_portfolio'
   | 'create_out_of_scope'
+  | 'resolver_board_scope'
+  | 'resolver_client_scope'
   | 'read_required'
   | 'other_denial';
 
@@ -43,7 +45,7 @@ const OTHER_DENIALS: Record<string, string> = {
   billing_not_self_approver_denied: `${KEY_PREFIX}.notSelfApprover`,
   bundle_rules_unavailable: `${KEY_PREFIX}.rulesUnavailable`,
   rbac_denied: `${KEY_PREFIX}.rbacDenied`,
-  resolver_template_denied: `${KEY_PREFIX}.templateDenied`,
+  resolver_template_denied: `${KEY_PREFIX}.resolverTemplateDenied`,
 };
 
 function metadataString(reason: AuthorizationReason, key: string): string | undefined {
@@ -51,15 +53,32 @@ function metadataString(reason: AuthorizationReason, key: string): string | unde
   return typeof value === 'string' ? value : undefined;
 }
 
+function metadataStrings(reason: AuthorizationReason, key: string): string[] {
+  const value = reason.metadata?.[key];
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+/**
+ * A built-in resolver's relationship-template denial, named by the scope it failed. The resolver reports the
+ * templates the record did not match; the explanation is chosen from them, never from the rule ids.
+ */
+const RESOLVER_SCOPE_EXPLANATIONS: ReadonlyArray<{ templateKey: string; kind: DenialExplanationKind; messageKey: string }> = [
+  { templateKey: 'selected_boards', kind: 'resolver_board_scope', messageKey: `${KEY_PREFIX}.resolverBoardScope` },
+  { templateKey: 'selected_clients', kind: 'resolver_client_scope', messageKey: `${KEY_PREFIX}.resolverClientScope` },
+];
+
 export function explainDenialReason(reason: Pick<AuthorizationReason, 'code' | 'metadata'>): DenialExplanation | null {
   const full = reason as AuthorizationReason;
   const known = EXPLANATIONS[reason.code];
   const otherKey = OTHER_DENIALS[reason.code];
   if (!known && !otherKey) return null;
+  const scoped = reason.code === 'resolver_template_denied'
+    ? RESOLVER_SCOPE_EXPLANATIONS.find((entry) => metadataStrings(full, 'templateKeys').includes(entry.templateKey))
+    : undefined;
   return {
     code: reason.code,
-    kind: known?.kind ?? 'other_denial',
-    messageKey: known?.messageKey ?? otherKey,
+    kind: scoped?.kind ?? known?.kind ?? 'other_denial',
+    messageKey: scoped?.messageKey ?? known?.messageKey ?? otherKey,
     params: {
       resource: metadataString(full, 'resource'),
       action: metadataString(full, 'action'),

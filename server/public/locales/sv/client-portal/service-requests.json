@@ -9,7 +9,6 @@
     "newRequestHeading": "Skicka in en ny förfrågan"
   },
   "detail": {
-    "version": "Version {{version}}",
     "submitted": "Förfrågan har skickats in",
     "requestIdLabel": "Förfrågnings-ID: ",
     "ticketIdLabel": "Ärende-ID: ",
@@ -21,8 +20,6 @@
     "optionLabel": "Alternativ {{index}}",
     "submit": "Skicka in förfrågan",
     "requiredField": "Det här fältet är obligatoriskt.",
-    "initialValuesTitle": "Startvärden",
-    "noInitialValues": "Inga statiska standardvärden har konfigurerats.",
     "validation": {
       "type": "Det här svaret har inte förväntad form.",
       "pattern": "Det här svaret har inte förväntad form.",
@@ -61,16 +58,12 @@
     "requestIdLabel": "Förfrågnings-ID:",
     "statusSection": "Status",
     "submittedAt": "Inskickad: {{date}}",
-    "executionStatus": "Körningsstatus: {{status}}",
     "ticketLabel": "Ärende:",
-    "workflowLabel": "Arbetsflöde: {{id}}",
     "submittedAnswersTitle": "Inskickade svar",
     "noResponse": "Inget svar",
     "attachmentsTitle": "Bilagor",
     "noAttachments": "Inga bilagor har bifogats.",
-    "fileIdLabel": "Fil-ID: {{id}}",
     "fileTypeLabel": "Typ: {{mime}}",
-    "versionLabel": "Version {{version}}",
     "historyTitle": "Historik",
     "historyEmpty": "Ingen historik har registrerats än.",
     "historyActor": "av {{actor}}",
@@ -78,7 +71,8 @@
       "service_request_submission_created": "Förfrågan har skickats in",
       "service_request_submission_execution_succeeded": "Behandlingen av förfrågan har slutförts",
       "service_request_submission_execution_failed": "Behandlingen av förfrågan misslyckades"
-    }
+    },
+    "unnamedAttachment": "Bilaga"
   },
   "recent": {
     "title": "Dina senaste förfrågningar",

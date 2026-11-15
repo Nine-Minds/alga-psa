@@ -138,6 +138,7 @@
     "completing": "Completing...",
     "more": "More",
     "closeDialog": "Close Dialog",
+    "insertField": "Insert field",
     "clearSearch": "Clear search"
   },
   "upgradePrompt": {
@@ -291,7 +292,8 @@
       "textTooLong": "Tag text too long (max 50 characters)",
       "textInvalidCharacters": "Tag text contains invalid characters",
       "backgroundColorInvalid": "Invalid background color format. Must be a valid hex color code (e.g., #FF0000)",
-      "textColorInvalid": "Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)"
+      "textColorInvalid": "Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)",
+      "creationRestricted": "You can only apply tags that already exist."
     }
   },
   "fields": {
@@ -1865,6 +1867,9 @@
       },
       "newTag": {
         "placeholder": "New tag"
+      },
+      "existingTag": {
+        "placeholder": "Existing tag"
       }
     },
     "actions": {

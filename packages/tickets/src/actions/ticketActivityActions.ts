@@ -11,6 +11,7 @@ import {
   type TicketActivityRow,
   type TicketTimelineEntry,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { resolveSeatViewerOperationalOnly } from '@alga-psa/shared/lib/humanWork/seatTimeScope';
 import { authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
@@ -55,10 +56,14 @@ export const getTicketTimelineEntries = withAuth(
         trx, tenant, user, ticketId, action: 'read', conceal: 'all',
       });
 
+      // A seat technician's timeline lists operational time only; asked only when time events are requested.
+      const operationalTimeOnly = (opts?.includeTimeEntries ?? false)
+        && await resolveSeatViewerOperationalOnly(trx, tenant, user, ticket.ticket_id);
       return buildUnifiedTicketTimeline(trx, tenant, ticket.ticket_id, {
         order: opts?.order ?? 'desc',
         includeInternalNotes: true,
         includeTimeEntries: opts?.includeTimeEntries ?? false,
+        ...(operationalTimeOnly ? { operationalTimeOnly } : {}),
         includeAlerts: opts?.includeAlerts ?? false,
         // Client users are refused above, so the reader is an internal user.
         internalReaderId: user,

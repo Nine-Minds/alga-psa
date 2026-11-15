@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   sourceOptions: [] as any[], containerProps: [] as any[],
 }));
 vi.mock('next-auth/react', () => ({ useSession: mocks.session, signOut: vi.fn() }));
-vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: mocks.flag }));
+vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: mocks.flag, useServedCapabilities: () => new Set(mocks.flag().enabled ? ['co-managed'] : []) }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('../../../lib/actions/coManagedTimeActions', () => ({ getSharedEffortTotalsAction: mocks.load }));
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata: () => {}, updateActions: () => {} }) }));

@@ -1,5 +1,6 @@
 'use server'
 
+import { assertTimesheetSubmissionAvailable } from '../lib/seatTimeAccess';
 import { delegateToTimeSource } from '../lib/timeSource';
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex, tenantDb, resolveUserTimeZone } from '@alga-psa/db';
@@ -143,6 +144,8 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
     if (!await hasPermission(user, 'time_sheet', 'submit', db)) {
       throw new Error('Permission denied: Cannot submit timesheets');
     }
+    // Operational (seat technician) time is never submitted: refused by principal, not just hidden in the UI.
+    await assertTimesheetSubmissionAvailable(db, tenant, user.user_id);
 
     return await db.transaction(async (trx) => {
       // Get timesheet info for analytics

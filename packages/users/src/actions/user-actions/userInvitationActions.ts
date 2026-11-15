@@ -11,7 +11,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { findPendingInvitation } from '@alga-psa/licensing';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
-import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
+import { isCoManagedInvitationServed, seatAssignmentOfInvitation, seatInvitationAcceptance } from '../../lib/coManagedInvitationCapability';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -344,6 +344,13 @@ export async function completeUserInvitationSetup(
     const tenantFromInvitation = verificationResult.tenant;
     const invitee = verificationResult.invitee;
 
+    // A seat technician's invitation completes through the seat command, which creates the user with
+    // the seat role and activates the assignment; this flow would give it a role and count it against
+    // the MSP's licence. The capability was checked in verifyToken, with the token's own tenant.
+    if (seatAssignmentOfInvitation(verificationResult.invitation?.metadata)) {
+      return await completeSeatInvitationSetup(tenantFromInvitation, token, password, invitee.email);
+    }
+
     const result = await runWithTenant(tenantFromInvitation, async () => {
       const { knex, tenant } = await createTenantKnex();
       if (!tenant) {
@@ -476,6 +483,43 @@ export async function completeUserInvitationSetup(
   } catch (error) {
     console.error('Error completing team invitation setup:', error);
     return { success: false, error: 'Failed to complete account setup', errorCode: 'SETUP_FAILED' };
+  }
+}
+
+/** Seat-kind completion: the same password policy and token handling as above, the seat command for the account. */
+async function completeSeatInvitationSetup(tenant: string, token: string, password: string, email: string) {
+  try {
+    return await runWithTenant(tenant, async () => {
+      const { knex } = await createTenantKnex();
+      const answer = await seatInvitationAcceptance().delegate(tenant, (seat) => seat.acceptSeatInvitation(knex, { token, password }));
+      // No provider, or the seat shape no longer serves the sponsor: the same refusal verifyToken gives.
+      if (!answer.handled) {
+        return { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' as const };
+      }
+      if ('refused' in answer) {
+        const { code, message } = answer.refused;
+        const errorCode: UserInvitationErrorCode =
+          code === 'INVITATION_NOT_FOUND' || code === 'INVITATION_EXPIRED' || code === 'INVITATION_REVOKED' || code === 'INVALID_ACCEPTANCE'
+            ? 'INVALID_OR_EXPIRED_TOKEN'
+            : code === 'EMAIL_IN_USE' ? 'CREATE_USER_FAILED'
+              : code === 'ENTITLEMENT_LAPSED' ? 'CO_MANAGED_LICENSE_LAPSED'
+                : 'CO_MANAGED_NOT_ACTIVE';
+        return { success: false, error: errorCode === 'INVALID_OR_EXPIRED_TOKEN' ? 'Invalid or expired invitation token' : message, errorCode } as const;
+      }
+      const accepted = answer.accepted;
+      if (accepted.created) {
+        try {
+          const UserPreferences = await import('@alga-psa/db').then((m) => m.UserPreferences);
+          await UserPreferences.upsert(knex, { user_id: accepted.user_id, setting_name: 'has_reset_password', setting_value: true, updated_at: new Date() });
+        } catch (prefError) {
+          console.warn('Failed to set password reset preference:', prefError);
+        }
+      }
+      return { success: true, userId: accepted.user_id, username: email, message: 'Account created successfully' } as const;
+    });
+  } catch (error) {
+    console.error('Error completing seat invitation setup:', error);
+    return { success: false, error: 'Failed to complete account setup', errorCode: 'SETUP_FAILED' as const };
   }
 }
 

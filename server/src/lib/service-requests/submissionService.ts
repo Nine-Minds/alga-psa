@@ -470,8 +470,8 @@ export async function submitPortalServiceRequest(
       clientId,
       contactId,
       payload: visiblePayload,
-      config: definitionDetail.executionConfig,
       formSchema: definitionDetail.formSchema,
+      config: definitionDetail.executionConfig,
     });
   } catch (error) {
     executionResult = {

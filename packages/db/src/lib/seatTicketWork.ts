@@ -25,6 +25,38 @@ export interface SeatTicketWork {
   revision: number;
 }
 
+/** A ticket's responsibility changed outside a handoff command. */
+export interface SeatResponsibilityChange {
+  tenant: string;
+  ticketId: string;
+  arrangementId: string;
+  from: SeatTicketResponsibility;
+  to: SeatTicketResponsibility;
+  occurredAt: Date;
+}
+type SeatResponsibilityObserver = (trx: Knex.Transaction, change: SeatResponsibilityChange) => Promise<void>;
+
+// LEVERAGE: friction lifecycle-below-db — the ticket lifecycle registry lives in @alga-psa/tickets, above this layer, so writers down here reach it through a second globalThis-keyed registry that co-managed bridges; a lifecycle dispatch below the feature packages would remove the bridge
+const OBSERVER_KEY = '__algaSeatResponsibilityObservers';
+const observers = (): Map<string, SeatResponsibilityObserver> => {
+  const g = globalThis as Record<string, unknown>;
+  return (g[OBSERVER_KEY] ??= new Map<string, SeatResponsibilityObserver>()) as Map<string, SeatResponsibilityObserver>;
+};
+
+/**
+ * Responsibility changes made by writers below the co-managed package (a move out of the
+ * arrangement's scope returns the ticket to the MSP) are announced to observers in the writer's
+ * transaction. co-managed registers one that raises the ticket-lifecycle `seatResponsibility`
+ * event; with none registered, announcing costs nothing. Idempotent per id.
+ */
+export function registerSeatResponsibilityObserver(id: string, observer: SeatResponsibilityObserver): void {
+  observers().set(id, observer);
+}
+
+async function announceResponsibilityChange(trx: Knex.Transaction, change: SeatResponsibilityChange): Promise<void> {
+  for (const observer of [...observers().values()]) await observer(trx, change);
+}
+
 /** The client's live arrangement. `lock` holds it to commit, so it cannot end under a writer. */
 export async function liveSeatArrangement(sponsor: TenantDb, clientId: string | null, lock = false): Promise<SeatArrangementRow | undefined> {
   if (!clientId) return undefined;
@@ -172,9 +204,42 @@ export async function releaseSeatTicketOnMove(
   if (previous?.responsibility === 'client_it' && previous.arrangement_id !== home) {
     // Written, not left to be read as stale: a ticket that later comes back must not revive client IT's turn.
     await advanceSeatTicketWork(sponsor, key, previous.arrangement_id, 'msp', previous, true);
+    await announceResponsibilityChange(trx, { tenant, ticketId, arrangementId: previous.arrangement_id,
+      from: 'client_it', to: 'msp', occurredAt: new Date() });
   } else if (settled.assigneeCleared && arrangement) {
     // An assignee change like any other: a handoff prepared before it is stale.
     await advanceSeatTicketWork(sponsor, key, arrangement.arrangement_id, seatTicketWork(arrangement, previous).responsibility, previous, false);
   }
   return settled;
+}
+
+/**
+ * Called by the ticket creator in the transaction that inserts the ticket. A ticket a seat technician creates for
+ * their own client, on a board their arrangement shares, starts with client IT: they raised it, so the turn is
+ * theirs. Any other creator (MSP staff, a portal user, an inbound channel) writes nothing here, and the ticket
+ * starts with the MSP as it always has.
+ *
+ * Goes through `advanceSeatTicketWork`, the one writer of the work row. A tenant the `co-managed-seat` capability
+ * does not serve pays no statement (the verdict is cached per tenant); a client with no live arrangement pays one.
+ */
+export async function recordSeatTicketCreated(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticket: { ticket_id: string; client_id?: string | null; board_id?: string | null },
+  creatorUserId: string | null | undefined,
+): Promise<boolean> {
+  if (!creatorUserId || !ticket.client_id || !ticket.board_id) return false;
+  if (![tenant, ticket.ticket_id, creatorUserId].every((id) => uuid.test(id))) return false;
+  if (!await isCapabilityServed('co-managed-seat', tenant)) return false;
+  const sponsor = tenantDb(trx, tenant);
+  const arrangement = await liveSeatArrangement(sponsor, ticket.client_id, true);
+  if (!arrangement) return false;
+  const creator = await sponsor.table('co_managed_seat_assignments')
+    .where({ user_id: creatorUserId, arrangement_id: arrangement.arrangement_id, state: 'active' }).first('assignment_id');
+  if (!creator) return false;
+  const shared = await sponsor.table('co_managed_seat_board_scopes')
+    .where({ arrangement_id: arrangement.arrangement_id, board_id: ticket.board_id }).first('board_id');
+  if (!shared) return false;
+  await advanceSeatTicketWork(sponsor, { tenant, ticket_id: ticket.ticket_id }, arrangement.arrangement_id, 'client_it', undefined, true);
+  return true;
 }

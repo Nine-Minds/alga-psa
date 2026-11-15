@@ -946,6 +946,12 @@ export class TimeEntryService extends BaseService<any> {
           continue;
         }
         
+        // Operational (seat technician) time is never approved.
+        if (entry.billing_mode === 'operational') {
+          results.push({ success: false, error: 'Operational time entries are not part of approval', entry_id: entryId });
+          continue;
+        }
+
         // Check if it's in a valid status for approval
         if (!['SUBMITTED', 'CHANGES_REQUESTED'].includes(entry.approval_status)) {
           results.push({ success: false, error: `Time entry is in ${entry.approval_status} status and cannot be approved`, entry_id: entryId });

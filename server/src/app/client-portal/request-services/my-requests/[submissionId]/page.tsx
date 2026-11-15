@@ -7,8 +7,10 @@ import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { getDateFormatPreference } from '@alga-psa/clients/actions/countryActions';
 import BackNav from '@alga-psa/ui/components/BackNav';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
+import { getSubmissionStatusPresentation } from '../../submissionStatusPresentation';
 import {
   groupFormElementsBySection,
   isDisplayElement,
@@ -62,12 +64,22 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
     ? ((submission.form_schema_snapshot as any).fields as any[])
     : [];
   const payload = submission.submitted_payload ?? {};
+  // Legacy or empty-schema submissions have no snapshot fields: derive them
+  // from the payload so answers still render as label/value rows.
+  const displayFields: any[] =
+    fields.length > 0 ? fields : Object.keys(payload).map((key) => ({ key, label: key }));
   // Answers read in the shape the form was authored in: each section's questions under it.
-  const answerGroups = groupFormElementsBySection(fields).map((group) => ({
+  // Display blocks carry no answer, so they only contribute their section heading.
+  const answerGroups = groupFormElementsBySection(displayFields).map((group) => ({
     section: group.section,
     elements: group.elements.filter((element: any) => !isDisplayElement(element)),
   }));
-  const hasAnswers = answerGroups.some((group) => group.elements.length > 0);
+  const status = getSubmissionStatusPresentation(submission.execution_status, {
+    pending: t('myRequests.statuses.pending'),
+    succeeded: t('myRequests.statuses.succeeded'),
+    failed: t('myRequests.statuses.failed'),
+  });
+  const unnamedAttachmentLabel = t('submissionDetail.unnamedAttachment');
 
   return (
     <div className="space-y-4">
@@ -92,10 +104,7 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
           })}
         </p>
         <p className="text-sm">
-          {t('submissionDetail.executionStatus', { status: submission.execution_status })}
-        </p>
-        <p className="text-sm">
-          {t('submissionDetail.versionLabel', { version: submission.definition_version_number })}
+          <Badge variant={status.tone}>{status.label}</Badge>
         </p>
         {submission.created_ticket_id && (
           <p className="text-sm">
@@ -108,70 +117,56 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
             </Link>
           </p>
         )}
-        {submission.workflow_execution_id && (
-          <p className="text-sm">
-            {t('submissionDetail.workflowLabel', { id: submission.workflow_execution_id })}
-          </p>
-        )}
       </section>
 
       <section className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
         <h2 className="text-base font-semibold mb-2">{t('submissionDetail.submittedAnswersTitle')}</h2>
-        {!hasAnswers ? (
-          <pre className="text-xs bg-[rgb(var(--color-background))] border border-[rgb(var(--color-border-200))] p-2 rounded overflow-auto">
-            {JSON.stringify(payload, null, 2)}
-          </pre>
-        ) : (
-          <dl className="space-y-4">
-            {answerGroups.map((group, groupIndex) => (
-              <div key={group.section?.key ?? `group-${groupIndex}`} className="space-y-2">
-                {group.section ? (
-                  <p className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
-                    {group.section.label ?? group.section.key}
-                  </p>
-                ) : null}
-            {group.elements.map((field: any, index: number) => {
-              const key = typeof field?.key === 'string' ? field.key : `field_${index}`;
-              const label = typeof field?.label === 'string' ? field.label : key;
-              const display = getSubmissionFieldDisplay(
-                field,
-                fields,
-                payload as Record<string, unknown>,
-                submission.attachments
-              );
-              return (
-                <div key={key} className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-2">
-                  <dt className="text-xs font-semibold text-[rgb(var(--color-text-700))]">{label}</dt>
-                  <dd className="text-sm">
-                    {display.kind === 'missing' ? (
-                      <span className="text-[rgb(var(--color-text-500))]">{t('submissionDetail.noResponse')}</span>
-                    ) : display.kind === 'attachments' ? (
-                      <ul className="space-y-1">
-                        {(display.attachments ?? []).map((attachment) => (
-                          <li key={`${key}-${attachment.file_id}`}>
-                            <span className="font-medium">
-                              {attachment.file_name ?? attachment.file_id}
-                            </span>
-                            {attachment.file_name && (
-                              <span className="text-[rgb(var(--color-text-600))]">
-                                {' '}
-                                ({attachment.file_id})
+        <dl className="space-y-4">
+          {answerGroups.map((group, groupIndex) => (
+            <div key={group.section?.key ?? `group-${groupIndex}`} className="space-y-2">
+              {group.section ? (
+                <p className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
+                  {group.section.label ?? group.section.key}
+                </p>
+              ) : null}
+              {group.elements.map((field: any, index: number) => {
+                const key = typeof field?.key === 'string' ? field.key : `field_${index}`;
+                const label = typeof field?.label === 'string' ? field.label : key;
+                const display = getSubmissionFieldDisplay(
+                  field,
+                  displayFields,
+                  payload as Record<string, unknown>,
+                  submission.attachments
+                );
+                return (
+                  <div
+                    key={key}
+                    className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-2"
+                  >
+                    <dt className="text-xs font-semibold text-[rgb(var(--color-text-700))]">{label}</dt>
+                    <dd className="text-sm">
+                      {display.kind === 'missing' ? (
+                        <span className="text-[rgb(var(--color-text-500))]">{t('submissionDetail.noResponse')}</span>
+                      ) : display.kind === 'attachments' ? (
+                        <ul className="space-y-1">
+                          {(display.attachments ?? []).map((attachment) => (
+                            <li key={`${key}-${attachment.submission_attachment_id}`}>
+                              <span className="font-medium">
+                                {attachment.file_name ?? unnamedAttachmentLabel}
                               </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      display.text
-                    )}
-                  </dd>
-                </div>
-              );
-            })}
-              </div>
-            ))}
-          </dl>
-        )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        display.text
+                      )}
+                    </dd>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </dl>
       </section>
 
       <section className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
@@ -182,10 +177,7 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
           <ul className="space-y-2">
             {submission.attachments.map((attachment) => (
               <li key={attachment.submission_attachment_id} className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-2">
-                <p className="text-sm font-medium">{attachment.file_name ?? attachment.file_id}</p>
-                <p className="text-xs text-[rgb(var(--color-text-600))]">
-                  {t('submissionDetail.fileIdLabel', { id: attachment.file_id })}
-                </p>
+                <p className="text-sm font-medium">{attachment.file_name ?? unnamedAttachmentLabel}</p>
                 {attachment.mime_type && (
                   <p className="text-xs text-[rgb(var(--color-text-600))]">
                     {t('submissionDetail.fileTypeLabel', { mime: attachment.mime_type })}
@@ -206,9 +198,7 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
             {submission.audit_events.map((event) => (
               <li key={event.audit_id} className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-2">
                 <p className="text-sm font-medium">
-                  {t(`submissionDetail.historyOperations.${event.operation}`, {
-                    defaultValue: event.operation,
-                  })}
+                  {t(`submissionDetail.historyOperations.${event.operation}`)}
                 </p>
                 <p className="text-xs text-[rgb(var(--color-text-600))]">
                   {formatDateTime(event.timestamp, locale, dateFormat, unknownLabel)}

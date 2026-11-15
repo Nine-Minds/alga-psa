@@ -6,6 +6,9 @@ import {
   resolveSeatAssigneeAudience,
   restrictToSeatAudience,
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
+import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
+import { resolveSeatEffortSummary } from '@alga-psa/shared/lib/humanWork/seatEffortSummary';
+import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
   isMspPrincipalUserType,
@@ -22,7 +25,7 @@ import { projectedPeopleForCaller, projectedPeopleForSubject, projectedPersonToU
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
-import { nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { nativeThreadAudience, resolveCommentWriteAuthor, type CommentAudienceReader, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -64,6 +67,8 @@ import {
   type TenantScopedQuery,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { runGatedPreloads, gatedPreload } from '../lib/ticketPreloads';
+import { NATIVE_TICKET_CAPABILITIES, type TicketCapabilities } from '../lib/ticketDataSource';
 import { findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { checkMultiplePermissions, hasPermission } from '@alga-psa/auth/rbac';
@@ -155,11 +160,29 @@ import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErr
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveTicketHandoff, resolveTicketResponsibility, type TicketHandoffDirection } from '../lib/ticketResponsibility';
 import { resolveTicketListViews, ticketListViewPredicates, type TicketListViewDefinition } from '../lib/ticketListViews';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 import { attachViaPrincipalNames } from '@alga-psa/shared/lib/viaPrincipal/viaPrincipalNames';
+
+/** What the consolidated load returns for bundle context when the `bundles` capability is off: no bundle reads were made. */
+const EMPTY_BUNDLE_CONTEXT: {
+  bundleSettings: { mode?: string | null; reopen_on_child_reply?: boolean | null } | null;
+  bundleChildren: any[];
+  bundleMaster: any | null;
+  isBundleChild: boolean;
+  isBundleMaster: boolean;
+  filteredAggregatedChildClientComments: any[];
+} = {
+  bundleSettings: null,
+  bundleChildren: [],
+  bundleMaster: null,
+  isBundleChild: false,
+  isBundleMaster: false,
+  filteredAggregatedChildClientComments: [],
+};
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };
@@ -485,10 +508,34 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 type SafeConsolidatedUser = SafeApiUser; // Pick<IUserWithRoles, AllowlistedUserField> & { roles, avatarUrl?, clientId? }
 
 /**
+ * Whether the caller may read this specific ticket, by the same record-level authorization the ticket screen
+ * uses (the caller's authorization bundles can hide boards and clients). A ticket the caller cannot read and a
+ * ticket that does not exist answer identically, so a write action that calls this first neither acts on nor
+ * confirms the existence of a ticket outside the caller's reach.
+ */
+export const assertTicketReadable = withAuth(async (user, { tenant }, ticketId: string): Promise<true | TicketActionError> => {
+  if (user.user_type === 'client') {
+    return permissionError('Permission denied: Cannot view ticket');
+  }
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx) => {
+    const ticket = await tenantScopedTable(trx, 'tickets as t', tenant).where({ 't.ticket_id': ticketId }).first();
+    const authorizationContext = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+    const [readable] = ticket ? await authorizeTicketReads(trx, authorizationContext, [ticket]) : [];
+    return readable ? (true as const) : permissionError('Permission denied: Cannot view ticket');
+  });
+});
+
+/**
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
+ *
+ * `capabilities` names the sections the caller's screen backs; a read whose capability is off is not made
+ * (schedule entries under `scheduling`, bundle settings/master/children under `bundles`) and returns the
+ * empty shape the screen already handles. Omitted means every read, as before.
  */
-export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string): Promise<any> => {
+export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string, capabilities?: Partial<TicketCapabilities>): Promise<any> => {
+  const readCapabilities: Partial<TicketCapabilities> = capabilities ?? NATIVE_TICKET_CAPABILITIES;
   const {knex: db} = await createTenantKnex();
 
   try {
@@ -614,8 +661,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       seatAssignees
         ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
         : restrictToSeatAudience(
+          // seat_reader is read for the seat context below and never leaves the server (sanitized out).
           tenantScopedTable(trx, 'users', tenant)
-            .select(...USER_RESPONSE_FIELD_NAMES)
+            .select(...USER_RESPONSE_FIELD_NAMES, 'seat_reader')
             .where('user_type', 'internal')
             .where('is_inactive', false),
           seatAssigneeAudience
@@ -667,9 +715,17 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
     ]);
 
+    // Seat surfaces of this ticket (composer audiences, Client IT picker group, audience badges).
+    // Null, at no statement, in a tenant without seat technicians: the users just loaded carry the
+    // seat marker, so a psa tenant never reaches the capability probe or a co-managed table.
+    const loadedUsers = rawUsers as Array<Record<string, unknown> & { user_id: string; seat_reader?: boolean | null }>;
+    const seatTicket = await resolveTicketSeatContext(trx, tenant, user, ticket.client_id, seatAssigneeAudience, loadedUsers);
+    // Effort by organization, projected on the server to this viewer (a technician gets no MSP total unless the arrangement allows it).
+    const seatEffort = await resolveSeatEffortSummary(trx, tenant, { seatTicket, userId: user.user_id, ticketId, clientId: ticket.client_id });
+
     // Projection is the fix; this is the guarantee that a future edit to the query
     // above cannot silently re-widen what leaves this action.
-    const users: SafeConsolidatedUser[] = (rawUsers as Array<Record<string, unknown>>).map(
+    const users: SafeConsolidatedUser[] = keepThisClientsSeatTechnicians(loadedUsers, seatTicket).map(
       (row) => sanitizeUserForResponse(row)
     );
 
@@ -827,7 +883,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // bound by that: client-portal repliers and deactivated agents also write
     // comments, so fetch the missing authors separately for display purposes only.
     // "<human> via <principal>" needs the principal's display name (EE only; a no-op elsewhere).
-    const comments = await attachViaPrincipalNames(trx, tenant, rawComments as any[], 'created_via_principal_id');
+    const comments = await attachViaPrincipalNames(
+      trx,
+      tenant,
+      seatTicket?.arrangement ? await attachThreadAudiences(trx, tenant, rawComments as any[]) : (rawComments as any[]),
+      'created_via_principal_id',
+    );
 
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
@@ -956,49 +1017,54 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }));
 
     // Get scheduled hours for ticket
-    const scheduleEntries = await tenantLeftJoin(
-      trx,
-      tenant,
-      tenantScopedTable(trx, 'schedule_entries as se', tenant)
-        .select(
-          'se.*',
-          'sea.user_id'
-        ),
-      'schedule_entry_assignees as sea',
-      'se.entry_id',
-      'sea.entry_id'
-    )
-      .where({
-        'se.work_item_id': ticketId,
-        'se.work_item_type': 'ticket'
+    const { agentSchedules: agentSchedulesRead } = runGatedPreloads(readCapabilities as TicketCapabilities, {
+      agentSchedules: gatedPreload<IAgentSchedule[]>('scheduling', async () => {
+      const scheduleEntries = await tenantLeftJoin(
+        trx,
+        tenant,
+        tenantScopedTable(trx, 'schedule_entries as se', tenant)
+          .select(
+            'se.*',
+            'sea.user_id'
+          ),
+        'schedule_entry_assignees as sea',
+        'se.entry_id',
+        'sea.entry_id'
+      )
+        .where({
+          'se.work_item_id': ticketId,
+          'se.work_item_type': 'ticket'
+        });
+
+      // Calculate scheduled hours per agent
+      const agentSchedules: Record<string, number> = {};
+    
+      scheduleEntries.forEach((entry: any) => {
+        const userId = entry.user_id;
+        if (!userId) {
+          return; // Skip entries with no user_id
+        }
+      
+        const startTime = new Date(entry.scheduled_start);
+        const endTime = new Date(entry.scheduled_end);
+        const durationMs = endTime.getTime() - startTime.getTime();
+        const durationMinutes = Math.ceil(durationMs / (1000 * 60)); // Convert ms to minutes
+      
+        if (!agentSchedules[userId]) {
+          agentSchedules[userId] = 0;
+        }
+      
+        agentSchedules[userId] += durationMinutes;
       });
 
-    // Calculate scheduled hours per agent
-    const agentSchedules: Record<string, number> = {};
-    
-    scheduleEntries.forEach((entry: any) => {
-      const userId = entry.user_id;
-      if (!userId) {
-        return; // Skip entries with no user_id
-      }
-      
-      const startTime = new Date(entry.scheduled_start);
-      const endTime = new Date(entry.scheduled_end);
-      const durationMs = endTime.getTime() - startTime.getTime();
-      const durationMinutes = Math.ceil(durationMs / (1000 * 60)); // Convert ms to minutes
-      
-      if (!agentSchedules[userId]) {
-        agentSchedules[userId] = 0;
-      }
-      
-      agentSchedules[userId] += durationMinutes;
+      // Convert to array format
+      return Object.entries(agentSchedules).map(([userId, minutes]) => ({
+        userId,
+        minutes
+      }));
+      }, []),
     });
-
-    // Convert to array format
-    const agentSchedulesList: IAgentSchedule[] = Object.entries(agentSchedules).map(([userId, minutes]) => ({
-      userId,
-      minutes
-    }));
+    const agentSchedulesList = await agentSchedulesRead;
 
     // Process location data from ticket query
     const location = ticket.location_location_id ? {
@@ -1048,115 +1114,121 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // Bundle context (master/child + settings + children list)
     const masterTicketId = normalizedTicketData.master_ticket_id ?? null;
     const bundleRootId = masterTicketId ?? ticketId;
-    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: bundleRootId })
-      .first();
+    const { bundleContext: bundleContextRead } = runGatedPreloads(readCapabilities as TicketCapabilities, {
+      bundleContext: gatedPreload('bundles', async () => {
+      const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: bundleRootId })
+        .first();
 
-    // Children are narrowed by the ticket read SQL, not filtered afterwards.
-    const bundleChildReads = await selectTicketsReadableBy<any>(trx, tenant, authorizationContext, (scoped) => {
-      const childrenQuery = scoped.builder.select(
-        't.ticket_id',
-        't.ticket_number',
-        't.title',
-        't.client_id',
-        't.contact_name_id',
-        'comp.client_name',
-        't.status_id',
-        't.is_closed',
-        't.closed_at',
-        't.entered_at',
-        't.updated_at',
-        't.entered_by',
-        't.assigned_to',
-        't.board_id',
-        't.assigned_team_id',
-        't.billing_profile_id',
-        't.attributes'
-      );
-      tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
-      return childrenQuery
-        .where({ 't.master_ticket_id': bundleRootId })
-        .orderBy('t.updated_at', 'desc');
-    });
-
-    const rawBundleMaster = masterTicketId
-      ? await (async () => {
-        const masterQuery = tenantScopedTable(trx, 'tickets as mt', tenant)
-        .select(
-          'mt.ticket_id',
-          'mt.ticket_number',
-          'mt.title',
-          'mt.client_id',
-          'mt.contact_name_id',
+      // Children are narrowed by the ticket read SQL, not filtered afterwards.
+      const bundleChildReads = await selectTicketsReadableBy<any>(trx, tenant, authorizationContext, (scoped) => {
+        const childrenQuery = scoped.builder.select(
+          't.ticket_id',
+          't.ticket_number',
+          't.title',
+          't.client_id',
+          't.contact_name_id',
           'comp.client_name',
-          'mt.status_id',
-          'mt.entered_at',
-          'mt.updated_at',
-          'mt.entered_by',
-          'mt.assigned_to',
-          'mt.board_id',
-          'mt.assigned_team_id',
-          'mt.billing_profile_id',
-          'mt.attributes'
+          't.status_id',
+          't.is_closed',
+          't.closed_at',
+          't.entered_at',
+          't.updated_at',
+          't.entered_by',
+          't.assigned_to',
+          't.board_id',
+          't.assigned_team_id',
+          't.billing_profile_id',
+          't.attributes'
         );
-        tenantLeftJoin(trx, tenant, masterQuery, 'clients as comp', 'mt.client_id', 'comp.client_id');
-        return masterQuery
-          .where({ 'mt.ticket_id': masterTicketId })
-          .first();
-      })()
-      : null;
+        tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+        return childrenQuery
+          .where({ 't.master_ticket_id': bundleRootId })
+          .orderBy('t.updated_at', 'desc');
+      });
 
-    // `billing_profile_id` and `attributes` (the watch list) are selected only
-    // so the visibility predicate can see them; they are not part of the bundle
-    // payload and must not reach the client.
-    const withoutAuthorizationOnlyColumns = <T extends { attributes?: unknown; billing_profile_id?: unknown }>(
-      row: T
-    ): Omit<T, 'attributes' | 'billing_profile_id'> => {
-      const { attributes: _attributes, billing_profile_id: _billingProfileId, ...rest } = row;
-      return rest;
-    };
-    const bundleChildren = bundleChildReads
-      .flatMap(({ ticket, redactedFields }) => {
-        const projected = projectReadableRecord('ticket', ticket, redactedFields);
-        return projected ? [projected] : [];
-      })
-      .map(withoutAuthorizationOnlyColumns);
-    const [bundleMaster] = rawBundleMaster
-      ? (await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster]))
-          .map(withoutAuthorizationOnlyColumns)
-      : [null];
+      const rawBundleMaster = masterTicketId
+        ? await (async () => {
+          const masterQuery = tenantScopedTable(trx, 'tickets as mt', tenant)
+          .select(
+            'mt.ticket_id',
+            'mt.ticket_number',
+            'mt.title',
+            'mt.client_id',
+            'mt.contact_name_id',
+            'comp.client_name',
+            'mt.status_id',
+            'mt.entered_at',
+            'mt.updated_at',
+            'mt.entered_by',
+            'mt.assigned_to',
+            'mt.board_id',
+            'mt.assigned_team_id',
+            'mt.billing_profile_id',
+            'mt.attributes'
+          );
+          tenantLeftJoin(trx, tenant, masterQuery, 'clients as comp', 'mt.client_id', 'comp.client_id');
+          return masterQuery
+            .where({ 'mt.ticket_id': masterTicketId })
+            .first();
+        })()
+        : null;
 
-    const isBundleChild = Boolean(masterTicketId);
-    const isBundleMaster = !isBundleChild && bundleChildren.length > 0;
-    const authorizedBundleChildIds = new Set(bundleChildren.map((child) => child.ticket_id).filter(Boolean));
+      // `billing_profile_id` and `attributes` (the watch list) are selected only
+      // so the visibility predicate can see them; they are not part of the bundle
+      // payload and must not reach the client.
+      const withoutAuthorizationOnlyColumns = <T extends { attributes?: unknown; billing_profile_id?: unknown }>(
+        row: T
+      ): Omit<T, 'attributes' | 'billing_profile_id'> => {
+        const { attributes: _attributes, billing_profile_id: _billingProfileId, ...rest } = row;
+        return rest;
+      };
+      const bundleChildren = bundleChildReads
+        .flatMap(({ ticket, redactedFields }) => {
+          const projected = projectReadableRecord('ticket', ticket, redactedFields);
+          return projected ? [projected] : [];
+        })
+        .map(withoutAuthorizationOnlyColumns);
+      const [bundleMaster] = rawBundleMaster
+        ? (await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster]))
+            .map(withoutAuthorizationOnlyColumns)
+        : [null];
 
-    // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master).
-    // Only replies from children the reader may see, narrowed in SQL so the 200-row cap counts
-    // in-scope replies only. When the policy cannot compile to SQL, the already-authorized child
-    // ids bound the same query instead.
-    const filteredAggregatedChildClientComments = isBundleMaster
-      ? await (async () => {
-        const narrowed = ticketReadNarrowedQuery(trx, tenant, authorizationContext);
-        const childTickets = narrowed ?? tenantDb(trx, tenant).scoped('tickets as t');
-        const commentsQuery = childTickets.builder.select(
-          'c.*',
-          't.ticket_id as child_ticket_id',
-          't.ticket_number as child_ticket_number',
-          't.title as child_ticket_title',
-          'comp.client_name as child_client_name'
-        );
-        tenantDb(trx, tenant).tenantJoin(commentsQuery, 'comments as c', 't.ticket_id', 'c.ticket_id');
-        tenantLeftJoin(trx, tenant, commentsQuery, 'clients as comp', 't.client_id', 'comp.client_id');
-        if (!narrowed) {
-          commentsQuery.whereIn('t.ticket_id', [...authorizedBundleChildIds]);
-        }
-        return commentsQuery
-          .where('c.is_internal', false)
-          .andWhere('t.master_ticket_id', ticketId)
-          .orderBy('c.created_at', 'desc')
-          .limit(200);
-      })()
-      : [];
+      const isBundleChild = Boolean(masterTicketId);
+      const isBundleMaster = !isBundleChild && bundleChildren.length > 0;
+      const authorizedBundleChildIds = new Set(bundleChildren.map((child) => child.ticket_id).filter(Boolean));
+
+      // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master).
+      // Only replies from children the reader may see, narrowed in SQL so the 200-row cap counts
+      // in-scope replies only. When the policy cannot compile to SQL, the already-authorized child
+      // ids bound the same query instead.
+      const filteredAggregatedChildClientComments = isBundleMaster
+        ? await (async () => {
+          const narrowed = ticketReadNarrowedQuery(trx, tenant, authorizationContext);
+          const childTickets = narrowed ?? tenantDb(trx, tenant).scoped('tickets as t');
+          const commentsQuery = childTickets.builder.select(
+            'c.*',
+            't.ticket_id as child_ticket_id',
+            't.ticket_number as child_ticket_number',
+            't.title as child_ticket_title',
+            'comp.client_name as child_client_name'
+          );
+          tenantDb(trx, tenant).tenantJoin(commentsQuery, 'comments as c', 't.ticket_id', 'c.ticket_id');
+          tenantLeftJoin(trx, tenant, commentsQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+          if (!narrowed) {
+            commentsQuery.whereIn('t.ticket_id', [...authorizedBundleChildIds]);
+          }
+          return commentsQuery
+            .where('c.is_internal', false)
+            .andWhere('t.master_ticket_id', ticketId)
+            .orderBy('c.created_at', 'desc')
+            .limit(200);
+        })()
+        : [];
+        return { bundleSettings, bundleChildren, bundleMaster, isBundleChild, isBundleMaster, filteredAggregatedChildClientComments };
+      }, EMPTY_BUNDLE_CONTEXT),
+    });
+    const { bundleSettings, bundleChildren, bundleMaster, isBundleChild, isBundleMaster, filteredAggregatedChildClientComments } = await bundleContextRead;
 
     // Track ticket view analytics
     captureAnalytics('ticket_viewed', {
@@ -1180,8 +1252,14 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       view_source: 'ticket_details'
     }, user.user_id);
 
+    // Who is responsible, for a reader the seat shape is offered to and a ticket of a client in a live arrangement.
+    // Every other ticket and tenant resolves to none here without a statement.
+    const responsibilityProvider = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
+    const seatResponsibility = responsibilityProvider ? await responsibilityProvider.load(trx, tenant, ticketId) : null;
+
     // Return all data in a single consolidated object
     return {
+      ...(seatResponsibility ? { seatResponsibility } : {}),
       ticket: projectReadableRecord('ticket', {
         ...normalizedTicketData,
         tenant,
@@ -1211,6 +1289,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       board: whenTicketFieldVisible('board_name', board),
       additionalAgents: resources,
       availableAgents: users,
+      // Only a ticket of an arrangement client carries it; every other ticket's payload is unchanged.
+      ...(seatTicket?.arrangement ? { seatTicket } : {}),
+      ...(seatEffort ? { seatEffort } : {}),
       userMap,
       contactMap,
       options: {
@@ -2225,7 +2306,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[] } | TicketActionError> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[], seatResponsibilityOffered?: boolean, seatHandoffDirection?: TicketHandoffDirection } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2283,11 +2364,40 @@ export const getTicketsForList = withAuth(async (
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
     const views = await summarizeTicketListViews(trx, tenant, user, validatedFilters, listViews, authorizationContext);
+    // Responsibility column: asked only of a reader a provider offers it to (a tenant the seat shape is not released for resolves to none, with no query).
+    const responsibility = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
+    // Bulk handoff: the direction this reader may hand tickets over, and the revision each row's handoff must name.
+    // Offered on the bulk actions' own terms (an internal user who may update tickets), so the list is the one place
+    // that decides the offer: the page's role-permission list is not, since a seat technician's role cannot read it.
+    // Asked only once a provider offers a direction, so a tenant the seat shape is not released for pays nothing.
+    const offeredHandoff = await resolveTicketHandoff({ tenant, subject: authorizationContext.authorizationSubject });
+    const handoff = offeredHandoff && user.user_type === 'internal' && await hasPermission(user, 'ticket', 'update', trx)
+      ? offeredHandoff
+      : null;
+    // One read serves both: the responsibility column and the handoff revisions come from the same statement.
+    const reader = responsibility ?? handoff?.provider ?? null;
+    if (reader) {
+      const states = await reader.readStates(trx, tenant, enriched.tickets.flatMap((ticket) => ticket.ticket_id ? [ticket.ticket_id] : []));
+      const handoffStates = handoff && handoff.provider !== reader
+        ? await handoff.provider.readStates(trx, tenant, enriched.tickets.flatMap((ticket) => ticket.ticket_id ? [ticket.ticket_id] : []))
+        : states;
+      for (const ticket of enriched.tickets) {
+        const id = ticket.ticket_id;
+        if (responsibility) ticket.seat_responsibility = (id && states.get(id)?.responsibility) || null;
+        const state = id ? handoffStates.get(id) : undefined;
+        if (handoff && state) {
+          ticket.seat_responsibility ??= state.responsibility;
+          ticket.seat_responsibility_revision = state.revision;
+        }
+      }
+    }
     return {
       tickets: enriched.tickets,
       totalCount,
       metadata: enriched.metadata,
       ...(views ? { views } : {}),
+      ...(responsibility ? { seatResponsibilityOffered: true } : {}),
+      ...(handoff ? { seatHandoffDirection: handoff.direction } : {}),
     };
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
@@ -2755,6 +2865,9 @@ export async function updateTicketInTransaction(
         user,
         ticketId: id,
         action: 'update',
+        // A subject scoped to a client and boards (a co-managed seat technician) is also judged by where this
+        // write would leave the ticket, so an edit cannot move it, or give it a contact, outside that scope.
+        proposed: validatedData,
       });
     }
 
@@ -3559,7 +3672,6 @@ export async function addTicketCommentInTransaction(
     schedule,
     emailRecipients,
     audienceId,
-    audienceAuthor,
   } = input;
 
   const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
@@ -3666,6 +3778,13 @@ export async function addTicketCommentInTransaction(
 
   // Native: `{}` with zero SQL (psa tenants, internal notes, plain authors). Co-managed: fails closed.
   // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+  // The author is decided here, once, for every caller (addTicketCommentWithCache, addTicketComment,
+  // bulk close resolution, canned responses): a seat technician is refused Private and the legacy
+  // internal note. Staff with `seat_reader === false` cost no SQL; client and service principals
+  // keep the author their authorType implies.
+  const audienceAuthor = input.audienceAuthor !== undefined
+    ? input.audienceAuthor
+    : await resolveCommentWriteAuthor(trx, tenant, user);
   const threadAudience = await nativeThreadAudience(trx, tenant, {
     isInternal: effectiveIsInternal, authorType, audience: audienceId, author: audienceAuthor, ticketId,
   });
@@ -4042,7 +4161,9 @@ export const getConsolidatedTicketListData = withAuth(async (
           tickets: ticketsData.tickets,
           totalCount: ticketsData.totalCount,
           metadata: ticketsData.metadata,
-          ...(ticketsData.views ? { views: ticketsData.views } : {})
+          ...(ticketsData.views ? { views: ticketsData.views } : {}),
+          ...(ticketsData.seatResponsibilityOffered ? { seatResponsibilityOffered: true } : {}),
+          ...(ticketsData.seatHandoffDirection ? { seatHandoffDirection: ticketsData.seatHandoffDirection } : {})
         };
       } catch (error) {
         const expected = ticketListActionErrorFrom(error);

@@ -3,6 +3,7 @@
  * Handles all time sheet-related database operations for the REST API
  */
 
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
 import { resolveTimeEntryReadScope } from '@alga-psa/scheduling/lib/timeEntryAuthorizationSql';
@@ -741,6 +742,7 @@ export class TimeSheetService extends BaseService<any> {
         // Revert time entries to changes requested status (time_entries has no approved_at/approved_by)
         await tenantDb(trx, context.tenant).table('time_entries')
           .where({ time_sheet_id: id })
+          .whereRaw(commercialTimeEntrySql('time_entries'))
           .update({
             approval_status: 'CHANGES_REQUESTED',
             updated_at: new Date()

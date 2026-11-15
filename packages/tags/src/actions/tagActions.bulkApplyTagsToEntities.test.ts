@@ -13,6 +13,13 @@ vi.mock('@alga-psa/auth', () => ({
   withOptionalAuth: (fn: any) => fn,
 }));
 
+// No restriction governs these callers: the seat authority has its own tests (tagCreationRestriction.test.ts).
+vi.mock('../lib/tagCreationRestriction', () => ({
+  isTagCreationRestricted: vi.fn(async () => false),
+  TAG_CREATION_RESTRICTED_MESSAGE: 'restricted',
+  TAG_CREATION_RESTRICTED_KEY: 'restricted',
+}));
+
 vi.mock('../lib/authHelpers', () => ({
   hasPermissionAsync: vi.fn(async () => true),
   throwPermissionErrorAsync: vi.fn(),

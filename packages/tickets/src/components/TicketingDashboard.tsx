@@ -16,6 +16,8 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
+import BulkHandoffDialog from './BulkHandoffDialog';
+import { selectBulkHandoffTickets, type BulkHandoffTicket } from '../lib/bulkHandoff';
 import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
 import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
 import {
@@ -32,6 +34,9 @@ import {
   type SmartSearchRunCache,
 } from '../lib/smartSearchSelection';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { seatResponsibilityLabel } from '../lib/seatResponsibilityLabel';
+import { getSeatResponsibilityFilter, setSeatResponsibilityFilter } from '../lib/ticketSeatResponsibilityFilter';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -95,7 +100,7 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filt
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { useCapability, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -187,6 +192,10 @@ interface TicketingDashboardProps {
   totalCount: number;
   /** Named views of the list (with their counts) the server offers this caller. Absent for callers with none. */
   namedViews?: ITicketListViewSummary[];
+  /** The reader is offered the responsibility column and filter. Absent: the list has neither. */
+  seatResponsibilityOffered?: boolean;
+  /** The bulk handoff the reader is offered: MSP staff hand to client IT, a seat technician hands to the MSP. Absent: none. */
+  seatHandoffDirection?: 'client_it' | 'msp';
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -341,7 +350,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTags = [],
   initialUsers = [],
   totalCount,
-  namedViews,
+  namedViews: namedViewsByServer,
+  seatResponsibilityOffered: seatResponsibilityOfferedByServer = false,
+  seatHandoffDirection: seatHandoffDirectionByServer,
   currentPage,
   pageSize,
   onPageChange,
@@ -381,6 +392,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
+  // The server offers the responsibility column, filter and seat views; the capability is the client's own kill
+  // switch over them, so a closed capability shows none of the seat list UI whatever the payload carries.
+  const { enabled: seatServed } = useCapability('co-managed-seat');
+  const seatResponsibilityOffered = seatServed && seatResponsibilityOfferedByServer;
+  const namedViews = seatServed ? namedViewsByServer : undefined;
+  const seatHandoffDirection = seatServed ? seatHandoffDirectionByServer : undefined;
   // These followed the browser locale, so a German UI printed American dates.
   const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
@@ -410,6 +427,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkHandoffOpen, setIsBulkHandoffOpen] = useState(false);
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
   const [isBulkMoving, setIsBulkMoving] = useState(false);
   const [bulkMoveErrors, setBulkMoveErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
@@ -563,6 +581,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
   const selectedWhere = filterValues.where;
+  const selectedSeatResponsibility = seatResponsibilityOffered ? getSeatResponsibilityFilter(selectedWhere) : null;
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
   // `where` tag filters (Requester tags / Client tags) come from the descriptor table.
@@ -1556,6 +1575,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   );
 
 
+  // The selected rows as the handoff dialog needs them: named by number or title, with the revision each must name.
+  const selectedHandoffTickets = useMemo(
+    (): BulkHandoffTicket[] => (seatHandoffDirection ? selectBulkHandoffTickets(selectedTicketIdsArray, tickets, smartSearchRows) : []),
+    [seatHandoffDirection, selectedTicketIdsArray, tickets, smartSearchRows],
+  );
+
+  const handleBulkHandoffDone = useCallback((_handedOver: string[], failedTicketIds: string[]) => {
+    // Refresh the list (rows, responsibility column and revisions); what is left selected is what still needs attention.
+    if (failedTicketIds.length === 0) clearSelection();
+    else setSelectedTicketIds(() => new Set(failedTicketIds));
+    onFilterChange({});
+  }, [clearSelection, onFilterChange]);
+
   // Board id for every ticket currently rendered on the page.
   const onPageBoardById = useMemo(() => {
     const map = new Map<string, string | null>();
@@ -1795,8 +1827,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       canCreateTemplate: templatePermissions.create,
     });
 
+    // Who is responsible for a ticket of a client in a seat arrangement. Present only when the server offers it
+    // (the seat shape is released for the tenant); blank for every other ticket.
+    const responsibilityColumn: ColumnDefinition<ITicketListItem> = {
+      title: t('dashboard.responsibility.column', 'Responsible'),
+      dataIndex: 'seat_responsibility',
+      sortable: false,
+      render: (value: unknown) => value === 'client_it' || value === 'msp'
+        ? <Badge variant={value === 'client_it' ? 'info' : 'default-muted'}>{seatResponsibilityLabel(t, value)}</Badge>
+        : null,
+    };
+    const listColumns = seatResponsibilityOffered ? [...baseColumns, responsibilityColumn] : baseColumns;
+
     // Duplicate and "Create template" are the only row actions and both write.
-    return workspaceReadOnly ? [selectionColumn, ...baseColumns] : [selectionColumn, ...baseColumns, actionsColumn];
+    return workspaceReadOnly ? [selectionColumn, ...listColumns] : [selectionColumn, ...listColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1828,6 +1872,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
     setBatchDuplicateSourceId,
+    seatResponsibilityOffered,
     templatePermissions.create,
     t,
     locale,
@@ -2383,6 +2428,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       chips.push({ key: 'sla', label: `${t('fields.slaStatus', 'SLA Status')}: ${map[selectedSlaStatus] ?? selectedSlaStatus}`, onRemove: () => onFilterChange({ slaStatusFilter: undefined }) });
     }
 
+    if (selectedSeatResponsibility) {
+      chips.push({
+        key: 'responsibility',
+        label: `${t('dashboard.responsibility.filter', 'Responsibility')}: ${seatResponsibilityLabel(t, selectedSeatResponsibility)}`,
+        onRemove: () => onFilterChange({ where: setSeatResponsibilityFilter(selectedWhere, null) }),
+      });
+    }
+
     selectedCategories.forEach((categoryId) => {
       const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
       chips.push({
@@ -2756,6 +2809,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     value={selectedSlaStatus}
                     onValueChange={(value) => onFilterChange({ slaStatusFilter: value !== 'all' ? value as ITicketListFilters['slaStatusFilter'] : undefined })}
                     placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
+                  />
+                )}
+                {seatResponsibilityOffered && (
+                  <CustomSelect
+                    data-automation-id={`${id}-responsibility-filter`}
+                    options={[
+                      { value: 'all', label: t('dashboard.responsibility.all', 'All responsibility') },
+                      { value: 'client_it', label: seatResponsibilityLabel(t, 'client_it') },
+                      { value: 'msp', label: seatResponsibilityLabel(t, 'msp') },
+                    ]}
+                    value={selectedSeatResponsibility ?? 'all'}
+                    onValueChange={(value) => onFilterChange({
+                      where: setSeatResponsibilityFilter(selectedWhere, value === 'client_it' || value === 'msp' ? value : null),
+                    })}
+                    placeholder={t('dashboard.responsibility.filter', 'Responsibility')}
                   />
                 )}
               </ListFilterRow>
@@ -3244,6 +3312,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           onCompleted={() => onFilterChange({})}
         />
       )}
+      {seatHandoffDirection && (
+        <BulkHandoffDialog
+          id={id}
+          isOpen={isBulkHandoffOpen && hasSelection}
+          direction={seatHandoffDirection}
+          tickets={selectedHandoffTickets}
+          onClose={() => setIsBulkHandoffOpen(false)}
+          onHandedOver={handleBulkHandoffDone}
+        />
+      )}
       <BulkBundleDialog
         id={id}
         isOpen={isBundleDialogOpen}
@@ -3263,6 +3341,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
         showDelete={!workspaceReadOnly}
+        // The list offers a direction only to a reader the bulk action accepts (it checks ticket:update itself), so
+        // this does not lean on canUpdateTickets: that comes from a role-permission read a seat technician cannot make.
+        handoffDirection={workspaceReadOnly ? undefined : seatHandoffDirection}
+        onHandoff={() => setIsBulkHandoffOpen(true)}
         statusDisabled={!selectedTicketsSharedBoardId}
         statusDisabledTitle={isResolvingSelectedBoards
           ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')

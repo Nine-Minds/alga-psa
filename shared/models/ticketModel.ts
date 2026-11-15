@@ -9,7 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
-import { recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
+import { recordSeatTicketCreated, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
@@ -1187,6 +1187,9 @@ export class TicketModel {
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
 
+    // A ticket a seat technician raises for their own client starts with client IT. Nothing is written for any other creator.
+    await recordSeatTicketCreated(trx, tenant, { ticket_id: ticketId, client_id: dbData.client_id, board_id: dbData.board_id }, userId);
+
     // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
     // board defaults); the mirror is then rewritten from the table.
     // Skipped when the ticket was created without one (the common case).
@@ -1235,6 +1238,8 @@ export class TicketModel {
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
             client_id: cleanedInput.client_id,
+            dueDate: cleanedInput.due_date ? new Date(cleanedInput.due_date).toISOString() : null,
+            ticketOrigin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
             ...(requester.clientName ? { clientName: requester.clientName } : {}),
             ...(requester.contactName ? { contactName: requester.contactName } : {}),
             ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),

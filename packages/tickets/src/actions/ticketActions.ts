@@ -1,6 +1,6 @@
 'use server';
 
-import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
+import { assertTicketCreateAllowed, assertTicketUpdateAllowed } from '../lib/ticketCreateAuthorization';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
@@ -932,6 +932,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
                 checklist_template_id: item.checklist_template_id,
               }))
             : [],
+          // Links are always copied (no form toggle): a technician who does not want a citation removes it.
+          links: sourceTemplate.links,
           fromTemplate: {
             template_id: sourceTemplate.template_id,
             template_name: sourceTemplate.name,
@@ -1545,6 +1547,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       if (!currentTicket) {
         throw new Error('Ticket not found');
       }
+
+      // A subject scoped to a client and boards (a co-managed seat technician) may only edit a ticket they can work,
+      // and only so that it stays where they can work it.
+      await assertTicketUpdateAllowed(trx, tenant, user, currentTicket, validatedData);
 
       // Clean up the data before update
       const updateData = { ...validatedData };

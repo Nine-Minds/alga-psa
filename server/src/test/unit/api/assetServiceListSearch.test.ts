@@ -60,6 +60,21 @@ const h = vi.hoisted(() => {
     orWhereILike(col: string, pattern: string) {
       return this.where(col, 'ilike', pattern);
     }
+    orWhere(arg: any, op?: any, value?: any) {
+      return this.where(arg, op, value);
+    }
+    clone() {
+      const copy = new QB(this.table);
+      copy.predicates = [...this.predicates];
+      copy.orLegs = this.orLegs ? [...this.orLegs] : null;
+      return copy;
+    }
+    clearSelect() {
+      return this;
+    }
+    clearOrder() {
+      return this;
+    }
     whereNull(col: string) {
       const key = col.split('.').pop()!;
       return this.add((row) => row[key] === null || row[key] === undefined);

@@ -17,10 +17,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('clientPortal.requestServices.detail.title', { defaultValue: 'Service Request' }),
   };
 }
-import {
-  collectElementVisibilityRules,
-  parseVisibilityRules,
-} from '../../../../lib/service-requests/formVisibility';
 import { normalizeBasicFormSchema } from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
@@ -62,14 +58,10 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   // One normalizer decides what an element is, so the portal and the builder agree.
   const formSchema = normalizeBasicFormSchema(detail.formSchema);
   const fields = formSchema.fields;
-  // Conditions the form builder wrote live on the elements themselves, so they work on every
-  // definition. The advanced provider's own rule list is appended for definitions that use it.
-  const visibilityRules = [
-    ...collectElementVisibilityRules(fields),
-    ...(detail.formBehaviorProvider === 'advanced'
-      ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
-      : []),
-  ];
+  // Rules arrive assembled and pre-parsed from the server — element conditions plus, where
+  // it applies, the advanced provider's own list — so nothing else about form behavior
+  // reaches this page.
+  const visibilityRules = detail.visibilityRules;
   const visibilityEnabled = visibilityRules.length > 0;
   const visibilityContext = visibilityEnabled
     ? await getRequestServiceVisibilityContextAction()
@@ -81,7 +73,6 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         <h1 className="text-2xl font-semibold">{detail.title}</h1>
         <div className="mt-1 flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
           <ServiceRequestIcon iconName={detail.icon} className="h-4 w-4" />
-          <span>{t('detail.version', { version: detail.versionNumber })}</span>
         </div>
       </div>
       {detail.description && (
@@ -156,19 +147,6 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               },
             }}
           />
-        )}
-      </section>
-
-      <section className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
-        <h2 className="text-base font-semibold mb-2">{t('detail.initialValuesTitle')}</h2>
-        {Object.keys(detail.initialValues).length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-600))]">
-            {t('detail.noInitialValues')}
-          </p>
-        ) : (
-          <pre className="text-xs bg-[rgb(var(--color-background))] border border-[rgb(var(--color-border-200))] p-2 rounded overflow-auto">
-            {JSON.stringify(detail.initialValues, null, 2)}
-          </pre>
         )}
       </section>
     </div>

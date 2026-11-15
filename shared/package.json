@@ -77,6 +77,7 @@
     "./lib/sla/organizationSlaLock": "./dist/lib/sla/organizationSlaLock.js",
     "./lib/sla/slaPolicyResolver": "./dist/lib/sla/slaPolicyResolver.js",
     "./lib/sla/holidayRows": "./dist/lib/sla/holidayRows.js",
+    "./lib/sla/slaPauseConditions": "./dist/lib/sla/slaPauseConditions.js",
     "./lib/ticketStatusClock": "./dist/lib/ticketStatusClock.js",
     "./lib/ticketStatusClock.js": "./dist/lib/ticketStatusClock.js",
     "./lib/email/sanitizeEmailHtml": "./dist/lib/email/sanitizeEmailHtml.js",

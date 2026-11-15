@@ -7,6 +7,7 @@ import {
   type FieldTypeKey,
   type FieldValidationRules,
 } from '@alga-psa/ui/form-fields';
+import { formatCalendarDate } from '@alga-psa/tickets/lib/titleTokens';
 import {
   parseElementVisibilityRules,
   type ElementVisibilityRule,
@@ -311,6 +312,99 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
 
   const settings = normalizeFormSettings((schema as any).settings);
   return settings ? { fields: normalizedFields, settings } : { fields: normalizedFields };
+}
+
+/** The shape every answer-display caller can describe an element with. */
+export interface FormAnswerField {
+  key?: unknown;
+  type?: unknown;
+  options?: ReadonlyArray<{ label?: unknown; value?: unknown }> | unknown;
+}
+
+export interface FormAnswerDisplayFormat {
+  /** BCP-47 locale. Given, a date answer reads as a calendar date; omitted, it stays raw. */
+  locale?: string;
+  /** Wording for a checked / unchecked checkbox. */
+  yes?: string;
+  no?: string;
+  /** Stand-in for an element that carries no answer. */
+  empty?: string;
+}
+
+function readAnswerOptions(field: FormAnswerField | undefined) {
+  return Array.isArray(field?.options)
+    ? (field.options as Array<{ label?: unknown; value?: unknown }>)
+        .map((option) => ({
+          value: typeof option?.value === 'string' ? option.value : String(option?.value ?? ''),
+          label:
+            typeof option?.label === 'string' && option.label.trim()
+              ? option.label
+              : String(option?.value ?? ''),
+        }))
+        .filter((option) => option.value.length > 0)
+    : undefined;
+}
+
+/**
+ * Whether an element has no answer to show. The registry decides per type, so an unchecked
+ * checkbox counts as an answer and an empty multi-select array does not.
+ */
+export function isFormAnswerMissing(field: FormAnswerField | undefined, value: unknown): boolean {
+  const definition = getFieldType(field?.type);
+  if (definition) {
+    return definition.kind === 'display' || definition.isEmpty(value);
+  }
+  if (Array.isArray(value)) return value.length === 0;
+  return value === null || value === undefined || value === '';
+}
+
+/**
+ * The one place that turns a stored answer into text. The ticket subject template, the ticket
+ * description and the portal submission detail page all read it, so a new field type renders
+ * the same way in all three without touching any of them.
+ */
+export function describeFormAnswer(
+  field: FormAnswerField | undefined,
+  value: unknown,
+  format: FormAnswerDisplayFormat = {}
+): string {
+  const empty = format.empty ?? '';
+  const definition = getFieldType(field?.type);
+
+  if (definition?.kind === 'display') {
+    return empty;
+  }
+
+  // A checkbox always has an answer: an unchecked box reads "No", never blank.
+  if (definition?.key === 'checkbox') {
+    return definition.coerce(value) === true ? (format.yes ?? 'Yes') : (format.no ?? 'No');
+  }
+
+  if (isFormAnswerMissing(field, value)) {
+    return empty;
+  }
+
+  if ((definition?.key === 'date' || definition?.key === 'date-time') && format.locale) {
+    const raw = String(value).trim();
+    try {
+      return formatCalendarDate(raw, format.locale, { dateStyle: 'long' });
+    } catch {
+      return raw;
+    }
+  }
+
+  if (definition) {
+    const formatted = definition.format(value, readAnswerOptions(field));
+    if (formatted) {
+      return formatted;
+    }
+  }
+
+  // No registry entry (an older or unknown type): the raw value, as the callers always showed it.
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value).trim();
 }
 
 export interface BasicFormSchemaValidationResult {

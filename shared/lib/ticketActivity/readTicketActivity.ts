@@ -14,6 +14,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { isCommercialTimeEntry, operationalTimeEntriesOnly } from '@alga-psa/types';
 import { attachViaPrincipalNames } from '../viaPrincipal/viaPrincipalNames';
 import { admitInternalReaderAudienceSql, type InternalReaderAudienceSql, type InternalReaderIdentity } from '../commentAudience';
 
@@ -177,6 +178,8 @@ export interface BuildUnifiedTimelineOptions {
   includeInternalNotes?: boolean;
   /** Include ticket-linked time entries in the merged timeline. Default false. */
   includeTimeEntries?: boolean;
+  /** Time events are operational entries only (a seat technician's view, S28 / F069): commercial entries are not read. */
+  operationalTimeOnly?: boolean;
   /** Include ticket-linked RMM alerts in the merged timeline. Default false. */
   includeAlerts?: boolean;
   /** Sort order. Default 'desc' (newest first). */
@@ -329,12 +332,14 @@ export async function buildUnifiedTicketTimeline(
         'te.start_time',
         'te.end_time',
         'te.billable_duration',
+        'te.billing_mode',
         'te.notes',
         'te.work_date',
         knex.raw(
           "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.first_name, ''), NULLIF(u.last_name, ''))), '') AS user_display_name",
         ),
       );
+    if (opts.operationalTimeOnly) operationalTimeEntriesOnly(timeEntryQuery, 'te');
     tenantDb(knex, tenant).tenantJoin(timeEntryQuery, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
 
     const timeEntryRows = (await timeEntryQuery) as Array<Record<string, unknown>>;
@@ -346,7 +351,10 @@ export async function buildUnifiedTicketTimeline(
         user_display_name: (row.user_display_name as string | null) ?? null,
         start_time: startTime,
         end_time: normalizeNullableIso(row.end_time, 'time_entries.end_time'),
-        billable_duration: normalizeRequiredNumber(row.billable_duration, 'time_entries.billable_duration'),
+        // An operational entry is never billable (S28): the Timeline chip follows billing_mode, not the stored minutes.
+        billable_duration: isCommercialTimeEntry({ billing_mode: row.billing_mode as string | null })
+          ? normalizeRequiredNumber(row.billable_duration, 'time_entries.billable_duration')
+          : 0,
         notes: (row.notes as string | null) ?? null,
         work_date: normalizeNullableDate(row.work_date, 'time_entries.work_date'),
       };

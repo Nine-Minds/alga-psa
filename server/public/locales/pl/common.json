@@ -138,6 +138,7 @@
     "completing": "Kończenie...",
     "more": "Więcej",
     "closeDialog": "Zamknij okno dialogowe",
+    "insertField": "Wstaw pole",
     "clearSearch": "Wyczyść wyszukiwanie"
   },
   "upgradePrompt": {
@@ -237,7 +238,8 @@
       "textTooLong": "Tekst tagu jest za długi (maksymalnie 50 znaków)",
       "textInvalidCharacters": "Tekst tagu zawiera nieprawidłowe znaki",
       "backgroundColorInvalid": "Nieprawidłowy format koloru tła. Musi to być prawidłowy kod szesnastkowy koloru (np. #FF0000)",
-      "textColorInvalid": "Nieprawidłowy format koloru tekstu. Musi to być prawidłowy kod szesnastkowy koloru (np. #FFFFFF)"
+      "textColorInvalid": "Nieprawidłowy format koloru tekstu. Musi to być prawidłowy kod szesnastkowy koloru (np. #FFFFFF)",
+      "creationRestricted": "Możesz stosować tylko istniejące tagi."
     }
   },
   "fields": {
@@ -1877,6 +1879,9 @@
       },
       "newTag": {
         "placeholder": "Nowy tag"
+      },
+      "existingTag": {
+        "placeholder": "Istniejący tag"
       }
     },
     "actions": {

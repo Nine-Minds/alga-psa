@@ -111,6 +111,16 @@ export interface ITicketLatestActivityActor {
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
+  /**
+   * Who is responsible for the ticket: set only on lists whose reader is offered responsibility
+   * (`seatResponsibilityOffered`), and only for a ticket of a client in a live seat arrangement.
+   */
+  seat_responsibility?: 'client_it' | 'msp' | null;
+  /**
+   * The revision a handoff of this ticket must name (`seatHandoffDirection` lists): set with `seat_responsibility`, for a
+   * ticket of a client in a live seat arrangement. Zero until the ticket's first handoff.
+   */
+  seat_responsibility_revision?: number;
   status_id: string | null;
   priority_id: string | null;
   board_id: string | null;

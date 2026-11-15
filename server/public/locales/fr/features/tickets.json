@@ -593,6 +593,7 @@
       "requester": "Demandeur",
       "sharedIt": "Informatique partagée",
       "organizationPrivate": "Privé à l'organisation",
+      "private": "Privé",
       "placeholder": "Qui peut voir ceci ?",
       "required": "Choisissez qui peut voir ce commentaire avant de le publier."
     },
@@ -820,7 +821,12 @@
     "exportSelectedTooltip_few": "Exportation de {{count}} tickets sélectionnés vers CSV",
     "exportSelectedTooltip_many": "Exportation de {{count}} tickets sélectionnés vers CSV",
     "selectAllMatching_few": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
-    "selectAllMatching_many": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres"
+    "selectAllMatching_many": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
+    "responsibility": {
+      "column": "Responsable",
+      "all": "Toutes les responsabilités",
+      "filter": "Responsabilité"
+    }
   },
   "bulk": {
     "bundleTickets": "Regrouper les tickets",
@@ -1089,7 +1095,20 @@
     "moveConfirm_few": "Déplacer {{count}} Tickets",
     "moveConfirm_many": "Déplacer {{count}} Tickets",
     "moveSuccess_few": "{{count}} tickets déplacés",
-    "moveSuccess_many": "{{count}} tickets déplacés"
+    "moveSuccess_many": "{{count}} tickets déplacés",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "L'état actuel de ce ticket n'est pas chargé. Ouvrez sa page de la liste et réessayez.",
+      "partialFailure": "Certains tickets n'ont pas pu être transmis",
+      "failure": "Échec de la transmission des tickets sélectionnés",
+      "failedItemsHeading": "Les tickets suivants n'ont pas pu être transmis :",
+      "success_one": "{{count}} ticket transmis",
+      "success_other": "{{count}} tickets transmis",
+      "promptToClientIt_one": "L'informatique du client devient responsable de ce ticket. La note est partagée avec les techniciens du client. Un ticket qui ne peut pas être transmis reste inchangé.",
+      "promptToClientIt_other": "L'informatique du client devient responsable de chacun de ces {{count}} tickets. La note est partagée avec les techniciens du client. Un ticket qui ne peut pas être transmis reste inchangé.",
+      "promptToMsp_one": "Le MSP devient responsable de ce ticket. La note est partagée avec le MSP. Un ticket qui ne peut pas être transmis reste inchangé.",
+      "promptToMsp_other": "Le MSP devient responsable de chacun de ces {{count}} tickets. La note est partagée avec le MSP. Un ticket qui ne peut pas être transmis reste inchangé."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Ajout rapide d'un ticket",
@@ -1277,6 +1296,7 @@
     "keepEditing": "Continuer la modification",
     "statusRequiresSelection": "Sélectionnez un statut pour la nouvelle carte avant de sauvegarder.",
     "notAssigned": "Non attribué",
+    "clientItGroup": "Informatique du client",
     "additionalAgentsTooltip": "Agents supplémentaires :",
     "loading": "Chargement...",
     "tagsCannotBeManaged": "Les balises ne peuvent pas être gérées",
@@ -1919,6 +1939,23 @@
     },
     "comment": {
       "audienceRequired": "Choisissez qui peut voir ce commentaire avant de le publier."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Rédigez une note partagée pour l'IT du client avant de lui confier ce ticket.",
+      "ticketNotFound": "Ce ticket n'est plus disponible.",
+      "noArrangement": "Le client de ce ticket n'a plus d'accord de postes en cogestion.",
+      "operationConflict": "Ce transfert a été lancé avec des informations différentes. Réessayez.",
+      "changed": "Ce ticket a été transféré ou réassigné. Actualisez le ticket avant de réessayer.",
+      "alreadyResponsible": "L'IT du client est déjà responsable de ce ticket. Actualisez le ticket pour voir son état actuel.",
+      "actorNotAllowed": "Vous ne pouvez pas confier ce ticket à l'IT du client.",
+      "boardOutOfScope": "Le tableau de ce ticket n'est pas partagé avec l'IT du client ; il ne peut donc pas lui être confié.",
+      "technicianNotAvailable": "Le technicien sélectionné n'est plus disponible pour ce client. Choisissez-en un autre ou laissez le ticket non assigné.",
+      "unavailable": "La remise de tickets à l'IT du client n'est pas disponible.",
+      "invalidHandoffToMsp": "Rédigez une note partagée pour le MSP avant de lui transmettre ce ticket.",
+      "alreadyResponsibleMsp": "Le MSP est déjà responsable de ce ticket. Actualisez le ticket pour voir son état actuel.",
+      "actorNotAllowedMsp": "Vous ne pouvez pas transmettre ce ticket au MSP.",
+      "unavailableMsp": "La transmission de tickets au MSP n'est pas disponible.",
+      "unexpected": "Ce ticket n'a pas pu être transmis. Actualisez la liste pour voir où il en est, puis réessayez."
     }
   },
   "ticketSection": {
@@ -2106,6 +2143,18 @@
   "integration": {
     "loadTicketFailed": "Échec du chargement du ticket",
     "noUserSession": "Aucune session utilisateur trouvée"
+  },
+  "seatEffort": {
+    "title": "Charge de travail",
+    "clientIt": "Informatique du client",
+    "msp": "MSP",
+    "combined": "Combiné",
+    "yours": "Votre temps",
+    "columns": {
+      "date": "Date",
+      "duration": "Durée",
+      "notes": "Notes"
+    }
   },
   "bento": {
     "hero": {
@@ -2394,7 +2443,9 @@
       "builtInGroup": "Systèmes intégrés",
       "customGroup": "Systèmes personnalisés",
       "urlPreview": "Ouvre :",
-      "urlPreviewIncomplete": "Renseignez les champs ci-dessus pour prévisualiser le lien."
+      "urlPreviewIncomplete": "Renseignez les champs ci-dessus pour prévisualiser le lien.",
+      "title": "Titre",
+      "titlePlaceholder": "Facultatif, p. ex. le nom de l'article"
     },
     "errors": {
       "ticketNotFound": "Ticket introuvable",
@@ -2806,7 +2857,8 @@
       "details": "Modèle",
       "ticket": "Ticket",
       "checklist": "Liste de contrôle",
-      "customFields": "Champs personnalisés"
+      "customFields": "Champs personnalisés",
+      "links": "Liens de documentation"
     },
     "fields": {
       "name": "Nom du modèle",
@@ -2861,13 +2913,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Les modèles de tickets ne sont pas disponibles",
       "subcategoryNeedsCategory": "Une sous-catégorie nécessite une catégorie",
-      "inUseBySchedules": "Utilisée par {{count}} planification(s) récurrente(s) : {{schedules}}. Associez-les à un autre modèle ou archivez-les d'abord."
+      "inUseBySchedules": "Utilisée par {{count}} planification(s) récurrente(s) : {{schedules}}. Associez-les à un autre modèle ou archivez-les d'abord.",
+      "duplicateLink": "Ce modèle contient déjà ce lien de documentation."
     },
     "usage": {
       "schedules": "Utilisé par {{count}} planifications",
       "paused": "en pause",
       "tickets": "{{count}} tickets créés à partir de ce modèle",
       "scheduleThis": "Planifier ce modèle…"
+    },
+    "links": {
+      "help": "Copiés comme références sur chaque ticket créé à partir de ce modèle. Les modifications ultérieures du modèle ne changent pas les tickets existants.",
+      "empty": "Aucun lien de documentation.",
+      "add": "Ajouter un lien",
+      "remove": "Retirer le lien",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "dialogTitle": "Ajouter un lien de documentation",
+      "pickFromHudu": "Choisir dans Hudu",
+      "huduPickerTitle": "Choisir un article Hudu",
+      "huduSearch": "Rechercher des articles Hudu...",
+      "huduLoading": "Chargement des articles Hudu...",
+      "huduDisconnected": "Hudu n'est pas connecté. Vous pouvez tout de même ajouter un lien en saisissant ses détails.",
+      "huduError": "Impossible de joindre Hudu. Réessayez plus tard.",
+      "huduEmpty": "Aucun article Hudu trouvé.",
+      "huduSelect": "Sélectionner",
+      "huduPrev": "Précédent",
+      "huduNext": "Suivant"
     }
   },
   "enums": {
@@ -3275,5 +3347,21 @@
   "statusChange": {
     "title": "Mettre à jour le statut du ticket",
     "message": "Voulez-vous vraiment passer du statut « {{from}} » au statut « {{to}} » ?"
+  },
+  "seatResponsibility": {
+    "clientIt": "IT du client",
+    "msp": "MSP",
+    "label": "Responsable",
+    "chipTitle": "Qui est responsable de ce ticket",
+    "handToClientIt": "Confier à l'IT du client",
+    "handedToClientIt": "Confié à l'IT du client",
+    "handing": "Transfert en cours…",
+    "handPrompt": "L'IT du client devient responsable de ce ticket et vos minuteurs SLA sont suspendus jusqu'à son retour. La note est partagée avec les techniciens du client.",
+    "noteLabel": "Note partagée pour l'IT du client",
+    "technicianLabel": "Technicien (facultatif)",
+    "technicianPlaceholder": "N'importe quel technicien de ce client",
+    "technicianNone": "Laisser l'assigné inchangé",
+    "handToMsp": "Transmettre au MSP",
+    "noteLabelMsp": "Note partagée pour le MSP"
   }
 }

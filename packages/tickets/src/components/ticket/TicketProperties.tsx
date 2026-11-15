@@ -106,6 +106,8 @@ interface TicketPropertiesProps {
   allContactsForWatchListLoading?: boolean;
   onLoadAllContactsForWatchList?: () => Promise<void>;
   surveySummaryCard?: React.ReactNode;
+  /** Effort by organization on a seat arrangement's ticket (S28); built for this viewer by the server. */
+  seatEffortCard?: React.ReactNode;
   onRemoveTeamAssignment?: (mode: 'remove_all' | 'keep_all' | 'selective', keepUserIds?: string[]) => Promise<void>;
   onAssignTeam?: (teamId: string) => Promise<void>;
   timeEntriesRefreshKey?: number;
@@ -182,6 +184,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   allContactsForWatchListLoading = false,
   onLoadAllContactsForWatchList,
   surveySummaryCard,
+  seatEffortCard,
   onRemoveTeamAssignment,
   onAssignTeam,
   timeEntriesRefreshKey = 0,
@@ -990,7 +993,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             required: a technician who leaves it alone still gets a correctly
             attributed charge from the contract or the client default.
           */}
-          {client && onChangeBillingProfile && (
+          {client && onChangeBillingProfile && dataSource.capabilities.billing && (
             <BillingProfilePicker
               id={`${id}-billing-profile-picker`}
               clientId={ticket.client_id}
@@ -1371,6 +1374,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       )}
 
       {surveySummaryCard}
+
+      {seatEffortCard}
 
     </div>
       {ticket.assigned_team_id && (() => {

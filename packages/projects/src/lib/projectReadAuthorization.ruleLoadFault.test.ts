@@ -55,7 +55,7 @@ afterEach(() => {
 describe('project reads when bundle rules cannot be loaded (T006)', () => {
   it('allows the same read while rules load, so the denial below is the fault and nothing else', async () => {
     const decide = await createProjectReadDecider(conn, 't1', user);
-    await expect(decide(project)).resolves.toEqual({ allowed: true, redactedFields: [] });
+    await expect(decide(project)).resolves.toEqual({ allowed: true, redactedFields: [], governed: false });
     await expect(assertProjectReadAllowed(conn, 't1', user, 'p1')).resolves.toEqual(project);
   });
 
@@ -63,7 +63,7 @@ describe('project reads when bundle rules cannot be loaded (T006)', () => {
     state.resolveBundleRules = async () => { throw new Error('bundle lookup failed'); };
 
     const decide = await createProjectReadDecider(conn, 't1', user);
-    await expect(decide(project)).resolves.toEqual({ allowed: false, redactedFields: [] });
+    await expect(decide(project)).resolves.toEqual({ allowed: false, redactedFields: [], governed: false });
 
     const authorizeUpdate = await createProjectReadAuthorizer(conn, 't1', user, 'update');
     await expect(authorizeUpdate(project)).resolves.toBe(false);

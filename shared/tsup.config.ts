@@ -151,6 +151,7 @@ export default defineConfig({
     'lib/sla/organizationSlaLock': 'lib/sla/organizationSlaLock.ts',
     'lib/sla/slaPolicyResolver': 'lib/sla/slaPolicyResolver.ts',
     'lib/sla/holidayRows': 'lib/sla/holidayRows.ts',
+    'lib/sla/slaPauseConditions': 'lib/sla/slaPauseConditions.ts',
   },
   format: ['esm'],
   dts: false,

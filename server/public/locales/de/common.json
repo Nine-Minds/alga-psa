@@ -138,6 +138,7 @@
     "completing": "Abschließen...",
     "more": "Mehr",
     "closeDialog": "Dialog schließen",
+    "insertField": "Feld einfügen",
     "clearSearch": "Suche löschen"
   },
   "upgradePrompt": {
@@ -237,7 +238,8 @@
       "textTooLong": "Tag-Text zu lang (maximal 50 Zeichen)",
       "textInvalidCharacters": "Der Tag-Text enthält ungültige Zeichen",
       "backgroundColorInvalid": "Ungültiges Format der Hintergrundfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FF0000)",
-      "textColorInvalid": "Ungültiges Format der Textfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FFFFFF)"
+      "textColorInvalid": "Ungültiges Format der Textfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FFFFFF)",
+      "creationRestricted": "Sie können nur bereits vorhandene Tags anwenden."
     }
   },
   "time": {
@@ -1865,6 +1867,9 @@
       },
       "newTag": {
         "placeholder": "Neues Tag"
+      },
+      "existingTag": {
+        "placeholder": "Vorhandener Tag"
       }
     },
     "actions": {

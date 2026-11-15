@@ -14,10 +14,13 @@
  *     non-participating tenant is answered from that cache with zero statements in steady state.
  *
  * The provider is never constructed or called for a tenant the gate does not serve, so providers
- * do not need their own per-call participation probe.
+ * do not need their own per-call participation probe. A seam is gated on `co-managed` unless it
+ * names another capability (a seat-shape seam is gated on `co-managed-seat`).
  *
  * The registry lives on globalThis because Next bundles a module more than once.
  */
+import type { CapabilityKey } from '@alga-psa/core/capability';
+
 export type SharedWorkMiss = { handled: false };
 
 export interface SharedWorkSeam<P> {
@@ -34,7 +37,7 @@ export interface SharedWorkSeam<P> {
 
 interface Slot<P> { factory: () => P | Promise<P>; instance?: Promise<P> }
 
-export function sharedWorkSeam<P>(name: string, capability: 'co-managed' = 'co-managed'): SharedWorkSeam<P> {
+export function sharedWorkSeam<P>(name: string, capability: CapabilityKey = 'co-managed'): SharedWorkSeam<P> {
   const key = Symbol.for(`alga.sharedWorkSeam.${name}`);
   const host = globalThis as unknown as Record<symbol, Slot<P> | undefined>;
 

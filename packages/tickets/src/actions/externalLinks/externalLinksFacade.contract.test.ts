@@ -10,7 +10,7 @@ function readRepoFile(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
-const persistenceSource = readRepoFile('packages/tickets/src/actions/externalLinks/externalLinkPersistence.ts');
+const persistenceSource = readRepoFile('shared/services/tickets/externalLinkPersistence.ts');
 const actionsSource = readRepoFile('packages/tickets/src/actions/externalLinks/externalLinkActions.ts');
 const metadataSource = readRepoFile('packages/db/src/lib/tenantTableMetadata.ts');
 const shimSource = readRepoFile('server/migrations/utils/tenantDb.cjs');

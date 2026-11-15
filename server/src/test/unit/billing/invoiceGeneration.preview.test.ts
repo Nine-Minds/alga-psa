@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { commercialTimeEntryRowFilter } from '../../../../test-utils/commercialTimeEntryMock';
 import { Temporal } from '@js-temporal/polyfill';
 import {
   buildClientCadenceDueSelectionInput,
@@ -176,6 +177,12 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string, tableName
     }),
     whereNotIn: vi.fn((column: string, values: any[]) => {
       resultRows = resultRows.filter((row) => !values.includes(row[normalizeColumn(column)]));
+      return builder;
+    }),
+    whereRaw: vi.fn((sql: string) => {
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (!commercialOnly) throw new Error(`Unsupported whereRaw expression: ${sql}`);
+      resultRows = resultRows.filter(commercialOnly);
       return builder;
     }),
     distinct: vi.fn(() => builder),
