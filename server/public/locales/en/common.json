@@ -138,6 +138,7 @@
     "completing": "Completing...",
     "more": "More",
     "closeDialog": "Close Dialog",
+    "insertField": "Insert field",
     "clearSearch": "Clear search"
   },
   "upgradePrompt": {
