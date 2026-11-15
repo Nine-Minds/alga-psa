@@ -62,10 +62,15 @@ describe('ticket-only execution provider description', () => {
       { key: 'start_date', type: 'date', label: 'Start Date' },
     ],
   };
+  const ctx = (p: Record<string, unknown>, schema: Record<string, unknown> = formSchema) => ({
+    formSchema: schema,
+    payload: p,
+    format: { locale: 'en', yes: 'Yes', no: 'No' },
+  });
   const payload = { needs_laptop: true, employee_name: 'Jane Doe', department: 'fin_ops', start_date: '' };
 
   it('lists answers under their display labels, in form order', () => {
-    const blocks = JSON.parse(buildTicketDescription(payload, { descriptionPrefix: 'New hire' }, formSchema));
+    const blocks = JSON.parse(buildTicketDescription(ctx(payload), { descriptionPrefix: 'New hire' }));
     const rows = blocks[1].content.rows.map((row: any) => row.cells.map((cell: any) => cell[0].text));
 
     expect(blocks[0].content[0].text).toBe('New hire');
@@ -78,7 +83,7 @@ describe('ticket-only execution provider description', () => {
   });
 
   it('renders as a filled two-column table in notification email HTML', () => {
-    const html = convertBlockNoteToHTML(JSON.parse(buildTicketDescription(payload, {}, formSchema)));
+    const html = convertBlockNoteToHTML(JSON.parse(buildTicketDescription(ctx(payload), {})));
 
     expect(html).toContain('<table>');
     expect(html).toContain('Employee Name');
@@ -87,14 +92,14 @@ describe('ticket-only execution provider description', () => {
   });
 
   it('falls back to the field key for an answer the schema does not describe', () => {
-    const blocks = JSON.parse(buildTicketDescription({ legacy_field: 'kept' }, {}, { fields: [] }));
+    const blocks = JSON.parse(buildTicketDescription(ctx({ legacy_field: 'kept' }, { fields: [] }), {}));
 
     expect(blocks[0].content.rows[0].cells.map((cell: any) => cell[0].text)).toEqual(['legacy_field', 'kept']);
   });
 
   it('keeps only the prefix when form responses are excluded', () => {
     const blocks = JSON.parse(
-      buildTicketDescription(payload, { descriptionPrefix: 'New hire', includeFormResponsesInDescription: false }, formSchema)
+      buildTicketDescription(ctx(payload), { descriptionPrefix: 'New hire', includeFormResponsesInDescription: false })
     );
 
     expect(blocks).toHaveLength(1);
