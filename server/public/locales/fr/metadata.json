@@ -214,6 +214,9 @@
       "title": "Demandes de service",
       "detail": {
         "fallbackTitle": "Demande de service"
+      },
+      "formBuilder": {
+        "title": "Éditeur de formulaire"
       }
     },
     "surveys": {

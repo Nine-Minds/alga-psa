@@ -87,12 +87,23 @@
         "unchecked": "Desmarcado"
       },
       "types": {
-        "short-text": "texto corto",
-        "long-text": "texto largo",
-        "select": "selección",
-        "checkbox": "casilla de verificación",
-        "date": "fecha",
-        "file-upload": "carga de archivo"
+        "short-text": "Texto corto",
+        "long-text": "Texto largo",
+        "select": "Lista desplegable",
+        "checkbox": "Casilla de verificación",
+        "date": "Fecha",
+        "file-upload": "Carga de archivo",
+        "number": "Número",
+        "email": "Dirección de correo",
+        "phone": "Número de teléfono",
+        "url": "Dirección web",
+        "radio": "Elegir una opción",
+        "multi-select": "Elegir varias opciones",
+        "date-time": "Fecha y hora",
+        "section": "Sección",
+        "text": "Instrucciones",
+        "callout": "Nota destacada",
+        "divider": "Separador"
       },
       "visibility": {
         "title": "Mostrar cuando…",
@@ -123,7 +134,11 @@
         },
         "advancedJson": "Avanzado (JSON)",
         "advancedJsonHelp": "La configuración guardada completa, incluidos los valores de contexto predeterminados. Las reglas de visibilidad se cambian más fácilmente con «Mostrar cuando…» en cada campo. Los cambios sin guardar aquí se descartan si se modifica una regla allí."
-      }
+      },
+      "openBuilder": "Abrir el editor de formularios",
+      "summary": "{{questions}} preguntas · {{required}} obligatorias",
+      "requiredChip": "Obligatorio",
+      "datePlaceholder": "Elija una fecha"
     },
     "execution": {
       "title": "Ejecución",
@@ -486,6 +501,317 @@
       "visibilityInvalid": "JSON de visibilidad no válido",
       "saveAllPartial": "Algunas secciones no se pudieron guardar: {{sections}}",
       "audienceSaveFailed": "No se pudo actualizar la audiencia"
+    }
+  },
+  "designer": {
+    "palette": {
+      "searchPlaceholder": "Buscar",
+      "showPalette": "Mostrar la paleta",
+      "hidePalette": "Ocultar la paleta",
+      "dragHint": "Suelte sobre el formulario para añadirlo",
+      "noMatches": {
+        "title": "Sin resultados para «{{query}}»",
+        "tipWords": "Pruebe una palabra más corta o distinta, como «fecha», «opción» o «archivo».",
+        "tipVerb": "Busque por lo que pide la pregunta: nombre, fecha, importe, archivo.",
+        "tipBrowse": "Borre la búsqueda para ver todos los grupos.",
+        "clear": "Borrar la búsqueda"
+      },
+      "categories": {
+        "text": "Texto",
+        "choices": "Opciones",
+        "datesAndNumbers": "Fechas y números",
+        "files": "Archivos",
+        "layout": "Diseño"
+      }
+    },
+    "saveStatus": {
+      "justNow": "ahora mismo",
+      "minutesAgo": "hace {{count}} min",
+      "atTime": "a las {{time}}",
+      "notSavedYet": "Todavía sin guardar",
+      "unsaved": "Cambios sin guardar",
+      "savedAgo": "Guardado · {{ago}}",
+      "saved": "Guardado"
+    }
+  },
+  "formBuilder": {
+    "leftPane": {
+      "label": "Añadir elementos o ver el esquema",
+      "add": "Añadir",
+      "outline": "Esquema",
+      "insertionHint": "El siguiente elemento se colocará en el punto marcado."
+    },
+    "toolbar": {
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "mode": "Modo de edición",
+      "edit": "Editar",
+      "tryIt": "Probar",
+      "desktopWidth": "Ancho de escritorio",
+      "phoneWidth": "Ancho de teléfono",
+      "formSettings": "Ajustes del formulario",
+      "duplicate": "Duplicar",
+      "delete": "Eliminar"
+    },
+    "canvas": {
+      "renameHint": "Haga clic para cambiar el nombre",
+      "insertHere": "Añadir un elemento aquí",
+      "insertAtEnd": "Añadir un elemento al final",
+      "dragHandle": "Arrastre para reordenar",
+      "ruleChip": "{{count}} regla(s) de visibilidad",
+      "validationChip": "La respuesta se comprueba",
+      "datePlaceholder": "Elija una fecha"
+    },
+    "outline": {
+      "empty": "Todavía no hay nada en el formulario.",
+      "halfWidthPair": "Comparte fila",
+      "requiredChip": "Hay que responder a esto",
+      "ruleChip": "Solo se muestra a veces"
+    },
+    "gallery": {
+      "title": "Empezar con una plantilla",
+      "subtitle": "Elija un punto de partida y cambie lo que quiera."
+    },
+    "messages": {
+      "saveFailed": "No se pudo guardar el formulario.",
+      "notFound": "Esta solicitud de servicio ya no existe.",
+      "loadFailedTitle": "No se pudo abrir el editor de formularios",
+      "loading": "Abriendo el editor de formularios…"
+    },
+    "types": {
+      "short-text": {
+        "description": "Una línea de texto"
+      },
+      "long-text": {
+        "description": "Un párrafo o más"
+      },
+      "email": {
+        "description": "Se comprueba como dirección de correo"
+      },
+      "phone": {
+        "description": "Se comprueba como número de teléfono"
+      },
+      "url": {
+        "description": "Se comprueba como enlace"
+      },
+      "select": {
+        "description": "Una respuesta de una lista"
+      },
+      "radio": {
+        "description": "Una respuesta, todas a la vista"
+      },
+      "multi-select": {
+        "description": "Cualquier número de respuestas"
+      },
+      "checkbox": {
+        "description": "Una respuesta de sí o no"
+      },
+      "number": {
+        "description": "Un número, con límites"
+      },
+      "date": {
+        "description": "Un solo día"
+      },
+      "date-time": {
+        "description": "Un día y una hora"
+      },
+      "file-upload": {
+        "description": "Un adjunto"
+      },
+      "section": {
+        "description": "Agrupa las preguntas que van debajo"
+      },
+      "text": {
+        "description": "Un párrafo de ayuda"
+      },
+      "callout": {
+        "description": "Una nota que destaca"
+      },
+      "divider": {
+        "description": "Una línea entre elementos"
+      }
+    },
+    "inspector": {
+      "resize": "Cambiar el ancho del panel",
+      "nothingSelected": "Seleccione un elemento del formulario para cambiarlo.",
+      "basics": "Datos básicos",
+      "label": "Pregunta",
+      "sectionTitle": "Título de la sección",
+      "calloutTitle": "Título de la nota",
+      "helpText": "Pista debajo de la pregunta",
+      "bodyText": "Texto",
+      "calloutTone": "Aspecto",
+      "calloutTones": {
+        "info": "Conviene saberlo",
+        "warning": "Aviso importante",
+        "success": "Buena noticia"
+      },
+      "sectionCollapsible": "Esta sección se puede plegar",
+      "answerKey": "Clave de la respuesta (se usa en informes y reglas)",
+      "asking": "La pregunta",
+      "required": "Hay que responder a esto",
+      "placeholder": "Texto de ejemplo atenuado",
+      "width": "Ancho",
+      "widthFull": "Completo",
+      "widthHalf": "Mitad",
+      "choices": "Las opciones",
+      "choicesHelp": "Una fila por cada respuesta que se puede elegir.",
+      "choiceLabel": "Opción {{index}}",
+      "newChoice": "Opción {{index}}",
+      "removeChoice": "Quitar esta opción",
+      "addChoice": "Añadir una opción",
+      "checkTheAnswer": "Comprobar la respuesta",
+      "checkHelp": {
+        "default": "Deje una casilla vacía para omitir esa comprobación.",
+        "number": "Se rechazan los números fuera de este intervalo.",
+        "date": "Se rechazan las fechas fuera de este intervalo."
+      },
+      "rules": {
+        "default": {
+          "minLength": "Respuesta más corta (caracteres)",
+          "maxLength": "Respuesta más larga (caracteres)",
+          "pattern": "Debe coincidir con este patrón",
+          "min": "Número más pequeño",
+          "max": "Número más grande",
+          "minDate": "Fecha más temprana",
+          "maxDate": "Fecha más tardía",
+          "minSelected": "Mínimo de opciones que elegir",
+          "maxSelected": "Máximo de opciones que elegir"
+        }
+      },
+      "customMessage": "Qué decir cuando no se cumple",
+      "customMessagePlaceholder": "Déjelo vacío para usar el texto estándar",
+      "onlyShowWhen": "Mostrar esto solo cuando…",
+      "onlyShowWhenHelp": "Sin ninguna regla siempre se muestra.",
+      "visibilityNeedsEarlierField": "Añada una pregunta por encima en la que basar una regla.",
+      "visibilityAlways": "Siempre se muestra.",
+      "visibilityWhen": "Cuando",
+      "visibilityIs": "es",
+      "visibilityValue": "esta respuesta",
+      "visibilityOperators": {
+        "equals": "exactamente",
+        "not-equals": "cualquier cosa menos",
+        "is-true": "marcada",
+        "is-false": "sin marcar",
+        "has-value": "respondida",
+        "is-empty": "en blanco"
+      },
+      "addVisibilityRule": "Añadir una condición",
+      "formSettings": {
+        "title": "Todo el formulario",
+        "description": "Aspecto del formulario y qué ocurre tras enviarlo.",
+        "width": "Ancho del formulario",
+        "widthBoxed": "Ancho cómodo de lectura",
+        "widthFull": "Toda la página",
+        "submitLabel": "Texto del botón de envío",
+        "submitLabelPlaceholder": "Enviar la solicitud",
+        "successMessage": "Qué decir tras el envío",
+        "successMessagePlaceholder": "Gracias: hemos recibido su solicitud y le responderemos."
+      }
+    },
+    "tryIt": {
+      "banner": "Las respuestas de esta pantalla no se guardan. Las reglas y comprobaciones funcionan igual que para un cliente.",
+      "check": "Comprobar las respuestas",
+      "reset": "Empezar de nuevo",
+      "allGood": "Todas las respuestas son válidas.",
+      "required": "Esta pregunta necesita una respuesta.",
+      "invalid": "Esta respuesta no tiene el formato esperado.",
+      "validation": {
+        "type": "Esta respuesta no tiene el formato esperado.",
+        "pattern": "Esta respuesta no tiene el formato esperado.",
+        "minLength": "Use al menos {{minLength}} caracteres.",
+        "maxLength": "Use {{maxLength}} caracteres o menos.",
+        "min": "Introduzca {{min}} o más.",
+        "max": "Introduzca {{max}} o menos.",
+        "minDate": "Elija {{minDate}} o posterior.",
+        "maxDate": "Elija {{maxDate}} o anterior.",
+        "minSelected": "Elija al menos {{minSelected}}.",
+        "maxSelected": "Elija {{maxSelected}} como máximo."
+      }
+    },
+    "templates": {
+      "newEmployee": {
+        "name": "Incorporación de un empleado",
+        "description": "Quién se incorpora, cuándo y qué necesita el primer día.",
+        "callout": {
+          "label": "Avísenos con cinco días laborables",
+          "help": "Las cuentas y el equipo tardan unos días en prepararse; avísenos cuanto antes."
+        },
+        "section": {
+          "employee": "Empleado",
+          "employeeHelp": "Quién se incorpora y cuándo empieza.",
+          "hardware": "Equipo"
+        },
+        "fullName": "Nombre completo",
+        "startDate": "Fecha de inicio",
+        "department": "Departamento",
+        "departments": {
+          "engineering": "Ingeniería",
+          "sales": "Ventas",
+          "operations": "Operaciones",
+          "finance": "Finanzas",
+          "customerSuccess": "Éxito del cliente"
+        },
+        "needsLaptop": "¿Necesita un portátil?",
+        "needsLaptopHelp": "Lo prepararemos antes de la fecha de inicio.",
+        "laptopModel": "Modelo de portátil",
+        "peripherals": "Periféricos",
+        "peripheralOptions": {
+          "monitor": "Monitor externo",
+          "dock": "Base de conexión",
+          "headset": "Auriculares",
+          "keyboard": "Teclado y ratón"
+        },
+        "policy": "Política de equipos firmada (PDF)",
+        "laptops": {
+          "macbookAir": "MacBook Air 13\"",
+          "latitude": "Dell Latitude 5450",
+          "thinkpad": "Lenovo ThinkPad T14"
+        }
+      },
+      "access": {
+        "name": "Solicitud de acceso",
+        "description": "Acceso nuevo, modificado o retirado a un sistema.",
+        "callout": {
+          "label": "Se pedirá la aprobación de su responsable",
+          "help": "Los cambios de acceso requieren una aprobación antes de aplicarse."
+        },
+        "section": "Qué acceso se necesita",
+        "requestedFor": "Solicitado para",
+        "system": "Aplicación o sistema",
+        "requestType": "Tipo de solicitud",
+        "requestTypes": {
+          "new": "Acceso nuevo",
+          "change": "Modificar un acceso existente",
+          "remove": "Retirar el acceso"
+        },
+        "neededBy": "Se necesita para",
+        "justification": "Justificación de negocio"
+      },
+      "repair": {
+        "name": "Reparación de equipo",
+        "description": "Un dispositivo que hay que reparar o sustituir.",
+        "section": {
+          "device": "El dispositivo",
+          "problem": "Qué ocurre"
+        },
+        "assetTag": "Etiqueta de inventario o número de serie",
+        "deviceType": "Tipo de dispositivo",
+        "deviceTypes": {
+          "laptop": "Portátil",
+          "desktop": "Equipo de sobremesa",
+          "monitor": "Pantalla",
+          "phone": "Teléfono",
+          "other": "Otro"
+        },
+        "symptoms": "Describa el problema",
+        "stillUsable": "El dispositivo todavía se puede usar",
+        "photo": "Foto del problema"
+      },
+      "blank": {
+        "name": "Empezar en blanco",
+        "description": "Un formulario vacío que se construye pregunta a pregunta."
+      }
     }
   }
 }

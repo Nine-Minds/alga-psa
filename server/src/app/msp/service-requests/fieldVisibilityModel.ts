@@ -1,3 +1,5 @@
+import type { PredicateOperator } from '@alga-psa/predicates';
+import { getFieldElementKind, getFieldType } from '@alga-psa/ui/form-fields';
 import type { VisibilityRule, VisibilityRuleOperator } from '../../../lib/service-requests/formVisibility';
 
 export const VISIBILITY_OPERATORS: VisibilityRuleOperator[] = [
@@ -8,6 +10,55 @@ export const VISIBILITY_OPERATORS: VisibilityRuleOperator[] = [
   'has-value',
   'is-empty',
 ];
+
+/**
+ * Visibility rules keep their own six-operator dialect in storage, and the evaluator in
+ * `formVisibility.ts` keeps reading it verbatim — moving published definitions to predicate
+ * clauses would rewrite every stored rule for no behaviour change. New rule kinds (phase 3's
+ * required-when, option filters) use `PredicateClause` directly; this adapter is how the
+ * builder's predicate-shaped editor reads and writes today's dialect.
+ */
+export const VISIBILITY_OPERATOR_AS_PREDICATE: Readonly<
+  Record<VisibilityRuleOperator, PredicateOperator>
+> = {
+  equals: 'equals',
+  'not-equals': 'not_equals',
+  // "is true"/"is false" are equality against a boolean once the value is typed.
+  'is-true': 'equals',
+  'is-false': 'not_equals',
+  'has-value': 'is_not_empty',
+  'is-empty': 'is_empty',
+};
+
+/** The operators a source field's type can be compared with, in the visibility dialect. */
+export function getVisibilityOperatorsForType(type: unknown): VisibilityRuleOperator[] {
+  const definition = getFieldType(type);
+  if (!definition) return VISIBILITY_OPERATORS;
+  if (definition.key === 'checkbox') {
+    return ['is-true', 'is-false', 'equals', 'not-equals'];
+  }
+  const supported = new Set<PredicateOperator>(definition.operators);
+  return VISIBILITY_OPERATORS.filter((operator) =>
+    supported.has(VISIBILITY_OPERATOR_AS_PREDICATE[operator])
+  );
+}
+
+export interface VisibilityCandidateField {
+  key?: unknown;
+  type?: unknown;
+}
+
+/**
+ * The elements that can be read by a rule: answer-carrying inputs only. A display block can be
+ * shown or hidden, but it holds no value, so it is never a rule source.
+ */
+export function getVisibilitySourceFields<T extends VisibilityCandidateField>(
+  fields: readonly T[]
+): T[] {
+  return fields.filter(
+    (field) => typeof field?.key === 'string' && getFieldElementKind(field.type) === 'input'
+  );
+}
 
 export const VISIBILITY_CONTEXT_SOURCES = [
   'context.requesterUserId',

@@ -8,10 +8,12 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { VisibilityRule, VisibilityRuleOperator } from '../../../lib/service-requests/formVisibility';
+import { getFieldType } from '@alga-psa/ui/form-fields';
 import {
   VISIBILITY_CONTEXT_SOURCES,
   VISIBILITY_OPERATORS,
   getFieldVisibilityRules,
+  getVisibilitySourceFields,
   operatorNeedsValue,
   replaceFieldVisibilityRules,
 } from './fieldVisibilityModel';
@@ -33,7 +35,7 @@ interface FieldVisibilityEditorProps {
 
 function defaultValueFor(source: VisibilitySourceField | undefined): unknown {
   if (source?.type === 'checkbox') return true;
-  if (source?.type === 'select') return source.options?.[0]?.value ?? '';
+  if (getFieldType(source?.type)?.supportsOptions) return source?.options?.[0]?.value ?? '';
   return '';
 }
 
@@ -44,6 +46,8 @@ export function FieldVisibilityEditor({
   onSave,
 }: FieldVisibilityEditorProps) {
   const { t } = useTranslation('msp/service-requests');
+  // Only answer-carrying fields can be read by a rule; a display block holds no value.
+  const sourceFields = getVisibilitySourceFields(precedingFields);
   const [rows, setRows] = useState<VisibilityRule[]>(() => getFieldVisibilityRules(config, fieldKey));
 
   useEffect(() => {
@@ -70,11 +74,11 @@ export function FieldVisibilityEditor({
     }
   };
 
-  const findSource = (source: string) => precedingFields.find((field) => field.key === source);
+  const findSource = (source: string) => sourceFields.find((field) => field.key === source);
 
   const buildSourceOptions = (current: string): SelectOption[] => {
     const options: SelectOption[] = [
-      ...precedingFields.map((field) => ({
+      ...sourceFields.map((field) => ({
         value: field.key,
         label: field.label ? `${field.label} (${field.key})` : field.key,
       })),
@@ -96,7 +100,7 @@ export function FieldVisibilityEditor({
   }));
 
   const addRow = () => {
-    const first = precedingFields[0];
+    const first = sourceFields[0];
     const source = first ? first.key : VISIBILITY_CONTEXT_SOURCES[0];
     const operator: VisibilityRuleOperator = 'equals';
     void persist([
@@ -165,7 +169,7 @@ export function FieldVisibilityEditor({
                     placeholder={t('editor.form.visibility.selectValue')}
                     onValueChange={(value) => updateRow(index, { value: value === 'true' })}
                   />
-                ) : source?.type === 'select' && source.options ? (
+                ) : getFieldType(source?.type)?.supportsOptions && source?.options ? (
                   <CustomSelect
                     id={`${idBase}-value`}
                     label={t('editor.form.visibility.value')}
