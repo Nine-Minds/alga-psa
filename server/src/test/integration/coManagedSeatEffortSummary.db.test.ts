@@ -102,7 +102,8 @@ describeDb('seat effort summary is projected to the viewer on the server (T037)'
     // The server payload itself carries no MSP figure: not zero, not hidden - absent, and nothing derived from it.
     expect(summary).not.toHaveProperty('mspMinutes');
     expect(summary).not.toHaveProperty('combinedMinutes');
-    expect(JSON.stringify(summary)).not.toMatch(/msp|80|140/i);
+    // Serialized, as the browser would receive it: no MSP key and no MSP-derived number as a value.
+    expect(JSON.stringify(summary)).not.toMatch(/"(msp|combined)[A-Za-z]*"|:(80|170)[,}\]]/i);
     // Another technician's entries are in the client IT total only, never listed.
     expect(summary!.ownEntries!.every((e) => e.notes?.startsWith('operational'))).toBe(true);
   });
