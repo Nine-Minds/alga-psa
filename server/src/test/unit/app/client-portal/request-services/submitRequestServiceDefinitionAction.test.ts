@@ -149,6 +149,70 @@ describe('submitRequestServiceDefinitionAction', () => {
     ]);
   });
 
+  it('builds a payload from a sectioned form: display blocks carry nothing, a multi-select carries a list', async () => {
+    withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) =>
+      callback({ trx: true })
+    );
+    getVisiblePublishedServiceRequestDefinitionDetailMock.mockResolvedValue({
+      definitionId: 'definition-1',
+      versionId: 'version-1',
+      versionNumber: 2,
+      title: 'New employee setup',
+      description: null,
+      icon: null,
+      formSchema: {
+        fields: [
+          { key: 'lead_time', type: 'callout', label: 'Give us five working days' },
+          { key: 'employee', type: 'section', label: 'Employee' },
+          { key: 'full_name', type: 'short-text', label: 'Full name', required: true, layout: { width: 'half' } },
+          { key: 'start_date', type: 'date', label: 'Start date', layout: { width: 'half' } },
+          { key: 'rule', type: 'divider', label: '' },
+          { key: 'quantity', type: 'number', label: 'Quantity', validation: { min: 1, max: 50 } },
+          {
+            key: 'peripherals',
+            type: 'multi-select',
+            label: 'Peripherals',
+            options: [
+              { label: 'Dock', value: 'dock' },
+              { label: 'Headset', value: 'headset' },
+              { label: 'Monitor', value: 'monitor' },
+            ],
+          },
+        ],
+        settings: { layout: { width: 'boxed' }, submitLabel: 'Send it' },
+      },
+      initialValues: {},
+      visibleFieldKeys: ['full_name', 'start_date', 'quantity', 'peripherals'],
+      executionProvider: 'ticket-only',
+      executionConfig: { boardId: 'board-1', statusId: 'status-1', priorityId: 'priority-1' },
+      formBehaviorProvider: 'basic',
+      formBehaviorConfig: {},
+    });
+
+    const formData = new FormData();
+    formData.set('full_name', 'Maya Lindqvist');
+    formData.set('start_date', '2026-11-18');
+    formData.set('quantity', '2');
+    formData.append('peripherals', 'dock');
+    formData.append('peripherals', 'headset');
+    // A display block has no control and so posts nothing; a stray value must not become an answer.
+    formData.set('lead_time', 'ignored');
+    formData.set('rule', 'ignored');
+
+    await submitRequestServiceDefinitionAction('definition-1', formData);
+
+    expect(submitPortalServiceRequestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: {
+          full_name: 'Maya Lindqvist',
+          start_date: '2026-11-18',
+          quantity: '2',
+          peripherals: ['dock', 'headset'],
+        },
+      })
+    );
+  });
+
   it('validates against visibility recomputed from the submitted payload, not the stale load-time keys', async () => {
     withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) =>
       callback({ trx: true })

@@ -45,11 +45,7 @@ import {
   parseVisibilityRules,
 } from '../../../../lib/service-requests/formVisibility';
 import { collectFormFieldIssues } from '../../../../lib/service-requests/formValidation';
-import {
-  normalizeBasicFormSchema,
-  type BasicFormField,
-  type BasicFormSettings,
-} from '../../../../lib/service-requests/basicFormBuilder';
+import { normalizeBasicFormSchema } from '../../../../lib/service-requests/basicFormBuilder';
 import { ServiceRequestFormRenderer } from '../../../../components/service-requests/ServiceRequestFormRenderer';
 import {
   replaceServiceRequestFormSchemaAction,
@@ -184,16 +180,20 @@ export function ServiceRequestFormBuilder({
     [definitionId, t]
   );
 
+  // The timer is armed by an edit, never by an unrelated re-render: a render that does not
+  // change the draft must not push the save further away.
+  const saveRef = useRef(save);
+  saveRef.current = save;
   useEffect(() => {
     if (!isDirty) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      void save(document);
+      void saveRef.current(document);
     }, SAVE_DEBOUNCE_MS);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [document, isDirty, save]);
+  }, [document, isDirty]);
 
   // Leaving with edits in flight would lose them; the browser asks first.
   useEffect(() => {
