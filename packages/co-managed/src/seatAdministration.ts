@@ -261,6 +261,42 @@ export async function readCoManagedSeatOverviewRows(
   });
 }
 
+/** One user of the sponsor who holds a live seat: the arrangement's client names the seat technician. */
+export interface CoManagedSeatTechnicianUser {
+  userId: string;
+  assignmentId: string;
+  arrangementId: string;
+  clientId: string;
+  clientName: string | null;
+  state: 'invited' | 'active';
+}
+
+/**
+ * The sponsor's seat technicians as users: every user with a live (not `revoked`) seat assignment, with the
+ * client of the assignment's arrangement. This is the class `countLicensedInternalUsers` leaves out of the
+ * licence count, so user administration lists these users apart from MSP staff. A revoked assignment is not a
+ * seat: its user is ordinary staff here and carries no client. Two queries however many technicians there are.
+ */
+export async function readCoManagedSeatTechnicianUsers(db: Knex, input: { sponsorTenant: string }): Promise<CoManagedSeatTechnicianUser[]> {
+  if (!uuid.test(input.sponsorTenant)) return [];
+  const sponsor = tenantDb(db, input.sponsorTenant);
+  const assignments = await sponsor.table('co_managed_seat_assignments')
+    .whereNot('state', 'revoked').whereNotNull('user_id')
+    .select('assignment_id', 'arrangement_id', 'user_id', 'state');
+  if (assignments.length === 0) return [];
+  const query = sponsor.table('co_managed_seat_arrangements as a')
+    .whereIn('a.arrangement_id', [...new Set(assignments.map((row) => row.arrangement_id))]);
+  sponsor.tenantJoin(query, 'clients as c', 'c.client_id', 'a.client_id', { type: 'left' });
+  const arrangements = await query.select('a.arrangement_id', 'a.client_id', 'c.client_name');
+  return assignments.map((row): CoManagedSeatTechnicianUser => {
+    const arrangement = arrangements.find((entry) => entry.arrangement_id === row.arrangement_id);
+    return {
+      userId: row.user_id, assignmentId: row.assignment_id, arrangementId: row.arrangement_id,
+      clientId: arrangement?.client_id ?? '', clientName: arrangement?.client_name ?? null, state: row.state,
+    };
+  });
+}
+
 export interface CoManagedOverviewEntry {
   shape: 'workspace' | 'seat';
   clientId: string;

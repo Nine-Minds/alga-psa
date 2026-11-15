@@ -308,6 +308,36 @@
       "expiresPrefix": "Expire :",
       "revoke": "Révoquer",
       "revoking": "Révocation..."
+    },
+    "seatTechnicians": {
+      "title": "Techniciens de siège",
+      "description": "Personnes qui travaillent dans votre PSA via le siège cogéré d'un client. Elles ne comptent pas dans vos utilisateurs sous licence.",
+      "clientUnavailable": "Client indisponible",
+      "effectiveAccess": "Accès effectif",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "client": "Client",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "state": {
+        "active": "Actif",
+        "invited": "Invitation en attente"
+      },
+      "dialog": {
+        "title": "Accès effectif de {{name}}",
+        "help": "Choisissez un ticket pour voir si ce technicien de siège peut le lire, et pourquoi.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Sélectionner un ticket...",
+        "checking": "Vérification de l'accès...",
+        "allowed": "{{name}} peut lire ce ticket.",
+        "denied": "{{name}} ne peut pas lire ce ticket.",
+        "noReasons": "Aucun détail supplémentaire n'a été signalé.",
+        "error": "Impossible de vérifier l'accès. Réessayez.",
+        "close": "Fermer",
+        "unavailable": "L'accès effectif ne peut pas être vérifié pour ce ticket dans cette édition ou cette configuration."
+      }
     }
   },
   "userDetails": {
@@ -4553,7 +4583,7 @@
     "seatNote": "Les principaux de service ne consomment pas de licences utilisateur.",
     "blockedAccess": "L’accès API et MCP aux principaux de service est immédiatement bloqué en dessous de Pro. Les enregistrements existants restent disponibles pour le nettoyage."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Afficher sur les puces",
     "subtitle": "Étiquettes affichées à côté des contacts et des clients dans les listes de tickets, les en-têtes de ticket et les sélecteurs.",
     "loading": "Chargement…",

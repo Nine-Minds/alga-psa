@@ -698,7 +698,7 @@
   {
     "id": "F088",
     "description": "User administration lists seat technicians apart from MSP staff, labelled with their client, and the licence usage figure excludes them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "F089",
     "description": "An administrator can see, for a seat technician and a ticket, why access is or is not granted, using the authorization simulator's reasons.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]

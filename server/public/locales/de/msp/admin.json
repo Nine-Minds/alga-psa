@@ -599,7 +599,10 @@
         "clientVisibleOnly": "Das Bundle erlaubt {{action}} bei {{resource}} nur, wenn der Datensatz für den Kunden sichtbar ist.",
         "notSelfApprover": "Benutzer können ihre eigenen Datensätze nicht genehmigen.",
         "rulesUnavailable": "Die Regeln des Bundles konnten nicht geladen werden, daher wird der Zugriff verweigert.",
-        "rbacDenied": "Die Rolle des Benutzers gewährt {{action}} bei {{resource}} nicht."
+        "rbacDenied": "Die Rolle des Benutzers gewährt {{action}} bei {{resource}} nicht.",
+        "resolverTemplateDenied": "Eine integrierte Zugriffsregel beschränkt {{action}} für {{resource}} auf Datensätze, die auf diesen Benutzer nicht zutreffen.",
+        "resolverBoardScope": "Der Datensatz liegt auf einem Board außerhalb des Board-Bereichs dieses Benutzers, daher wird {{action}} für {{resource}} verweigert.",
+        "resolverClientScope": "Der Datensatz gehört zu einem anderen Kunden als dem, für den dieser Benutzer eingesetzt ist, daher wird {{action}} für {{resource}} verweigert."
       }
     },
     "createDialog": {

@@ -308,6 +308,36 @@
       "expiresPrefix": "Expira:",
       "revoke": "Revocar",
       "revoking": "Revocando..."
+    },
+    "seatTechnicians": {
+      "title": "Técnicos de puesto",
+      "description": "Personas que trabajan en su PSA a través del puesto cogestionado de un cliente. No cuentan para sus usuarios con licencia.",
+      "clientUnavailable": "Cliente no disponible",
+      "effectiveAccess": "Acceso efectivo",
+      "columns": {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "client": "Cliente",
+        "status": "Estado",
+        "actions": "Acciones"
+      },
+      "state": {
+        "active": "Activo",
+        "invited": "Invitación pendiente"
+      },
+      "dialog": {
+        "title": "Acceso efectivo de {{name}}",
+        "help": "Elija un ticket para ver si este técnico de puesto puede leerlo y por qué.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Seleccionar un ticket...",
+        "checking": "Comprobando el acceso...",
+        "allowed": "{{name}} puede leer este ticket.",
+        "denied": "{{name}} no puede leer este ticket.",
+        "noReasons": "No se informó de más detalles.",
+        "error": "No se pudo comprobar el acceso. Inténtelo de nuevo.",
+        "close": "Cerrar",
+        "unavailable": "El acceso efectivo no se puede comprobar para este ticket en esta edición o configuración."
+      }
     }
   },
   "userDetails": {
@@ -4553,7 +4583,7 @@
     "seatNote": "Los principales de servicio no consumen licencias de usuario.",
     "blockedAccess": "El acceso a API y MCP de los principales de servicio se bloquea inmediatamente por debajo de Pro. Los registros existentes siguen disponibles para su limpieza."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Mostrar en chips",
     "subtitle": "Etiquetas que se muestran junto a contactos y clientes en listas de tickets, encabezados de tickets y selectores.",
     "loading": "Cargando…",
