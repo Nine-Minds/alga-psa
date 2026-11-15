@@ -6,9 +6,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { TemplateTokenInput, insertTemplateToken, type TemplateTokenOption } from './TemplateTokenInput';
 
+// Catalog the mocked `t` reads from, keyed `${namespace}:${key}`; unknown keys fall back to defaultValue.
+const catalog = vi.hoisted(() => new Map<string, string>());
+
 vi.mock('../lib/i18n/client', () => ({
   useOptionalI18n: () => null,
-  useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }),
+  useTranslation: (namespace = 'common') => ({
+    t: (key: string, options?: { defaultValue?: string }) =>
+      catalog.get(`${namespace}:${key}`) ?? options?.defaultValue ?? key,
+  }),
 }));
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
@@ -29,7 +35,10 @@ async function openMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Insert field' }));
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  catalog.clear();
+});
 
 describe('insertTemplateToken', () => {
   it('replaces the selection', () => {
@@ -130,5 +139,18 @@ describe('TemplateTokenInput', () => {
     render(<Harness tokens={[]} error="Unknown field: {{nope}}" />);
     expect(screen.getByText('Unknown field: {{nope}}')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Insert field' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('labels the Insert button from the common catalog in the active locale', () => {
+    catalog.set('common:actions.insertField', 'Feld einfügen');
+    render(<Harness />);
+    expect(screen.getByRole('button', { name: 'Feld einfügen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Insert field' })).toBeNull();
+  });
+
+  it('prefers an explicit insertLabel over the catalog default', () => {
+    catalog.set('common:actions.insertField', 'Feld einfügen');
+    render(<TemplateTokenInput id="subject" value="" onChange={() => {}} tokens={TOKENS} insertLabel="Add placeholder" />);
+    expect(screen.getByRole('button', { name: 'Add placeholder' })).toBeTruthy();
   });
 });

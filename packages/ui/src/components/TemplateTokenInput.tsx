@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './DropdownMenu';
 import { Input } from './Input';
 import { TextArea } from './TextArea';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface TemplateTokenOption {
   /** Inserted as `{{token}}`. */
@@ -107,11 +108,12 @@ export function TemplateTokenInput({
   disabled,
   error,
   helperText,
-  insertLabel = 'Insert field',
+  insertLabel,
   noTokensHint,
   insertButtonId,
   className,
 }: TemplateTokenInputProps) {
+  const { t } = useTranslation('common');
   const elementRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const intentRef = useRef<ReturnType<typeof createCaretIntent> | null>(null);
   if (!intentRef.current) intentRef.current = createCaretIntent();
@@ -204,7 +206,7 @@ export function TemplateTokenInput({
               size="sm"
               disabled={disabled || !hasTokens}
             >
-              {insertLabel}
+              {insertLabel ?? t('actions.insertField', { defaultValue: 'Insert field' })}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
