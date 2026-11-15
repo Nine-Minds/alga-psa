@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { TemplateI18nText } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -34,10 +34,23 @@ const buttonClassName =
  */
 export const ValueLabelsEditor: React.FC<Props> = ({ domId, valueLabels, suggestions, onChange }) => {
   const { t } = useTranslation('msp/invoicing');
-  const [nextRowId, setNextRowId] = useState(() => Object.keys(valueLabels ?? {}).length);
-  const [rows, setRows] = useState<Row[]>(() =>
-    Object.entries(valueLabels ?? {}).map(([key, label], index) => ({ rowId: index, key, label }))
-  );
+  const nextRowId = useRef(0);
+  const toRows = (source: Record<string, TemplateI18nText> | undefined): Row[] =>
+    Object.entries(source ?? {}).map(([key, label]) => ({ rowId: nextRowId.current++, key, label }));
+  const [rows, setRows] = useState<Row[]>(() => toRows(valueLabels));
+
+  // The prop is the source of truth. When it changes to something other than
+  // what the local rows already express (another column selected, undo/redo, an
+  // outside edit), rebuild the rows from it. Our own commits echo back equal and
+  // leave the rows alone, so a draft row with a blank key survives typing.
+  const incoming = JSON.stringify(valueLabels ?? null);
+  useEffect(() => {
+    if (JSON.stringify(buildRecord(rows) ?? null) !== incoming) {
+      setRows(toRows(valueLabels));
+    }
+    // Only a change of the incoming value may trigger a resync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming]);
 
   const commit = (next: Row[], persist: boolean) => {
     setRows(next);
@@ -46,8 +59,7 @@ export const ValueLabelsEditor: React.FC<Props> = ({ domId, valueLabels, suggest
   const patchRow = (rowId: number, patch: Partial<Row>, persist: boolean) =>
     commit(rows.map((row) => (row.rowId === rowId ? { ...row, ...patch } : row)), persist);
   const addRows = (additions: Array<Pick<Row, 'key' | 'label'>>) => {
-    commit([...rows, ...additions.map((row, index) => ({ ...row, rowId: nextRowId + index }))], true);
-    setNextRowId(nextRowId + additions.length);
+    commit([...rows, ...additions.map((row) => ({ ...row, rowId: nextRowId.current++ }))], true);
   };
 
   const takenKeys = new Set(rows.map((row) => row.key.trim()));
