@@ -18,6 +18,42 @@
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"
     },
+    "./seatArrangement": {
+      "types": "./src/seatArrangement.ts",
+      "import": "./src/seatArrangement.ts"
+    },
+    "./seatInvitation": {
+      "types": "./src/seatInvitation.ts",
+      "import": "./src/seatInvitation.ts"
+    },
+    "./seatInvitationRegistration": {
+      "types": "./src/seatInvitationRegistration.ts",
+      "import": "./src/seatInvitationRegistration.ts"
+    },
+    "./seatRole": {
+      "types": "./src/seatRole.ts",
+      "import": "./src/seatRole.ts"
+    },
+    "./timeEntryBillingMode": {
+      "types": "./src/timeEntryBillingMode.ts",
+      "import": "./src/timeEntryBillingMode.ts"
+    },
+    "./seatAuthority": {
+      "types": "./src/seatAuthority.ts",
+      "import": "./src/seatAuthority.ts"
+    },
+    "./seatPeopleProjection": {
+      "types": "./src/seatPeopleProjection.ts",
+      "import": "./src/seatPeopleProjection.ts"
+    },
+    "./seatCapability": {
+      "types": "./src/seatCapability.ts",
+      "import": "./src/seatCapability.ts"
+    },
+    "./seatWriteAdmission": {
+      "types": "./src/seatWriteAdmission.ts",
+      "import": "./src/seatWriteAdmission.ts"
+    },
     "./permissionsCapability": {
       "types": "./src/permissionsCapability.ts",
       "import": "./src/permissionsCapability.ts"
@@ -78,10 +114,6 @@
       "types": "./src/sharedWork.ts",
       "import": "./src/sharedWork.ts"
     },
-    "./sharedWorkProjection": {
-      "types": "./src/sharedWorkProjection.ts",
-      "import": "./src/sharedWorkProjection.ts"
-    },
     "./sharedWorkRead": {
       "types": "./src/sharedWorkRead.ts",
       "import": "./src/sharedWorkRead.ts"
@@ -122,6 +154,10 @@
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
     },
+    "./recordProjection": {
+      "types": "./src/recordProjection.ts",
+      "import": "./src/recordProjection.ts"
+    },
     "./projectFieldMask": {
       "types": "./src/projectFieldMask.ts",
       "import": "./src/projectFieldMask.ts"
@@ -161,6 +197,10 @@
     "./refusalAck": {
       "types": "./src/refusalAck.ts",
       "import": "./src/refusalAck.ts"
+    },
+    "./seatTicketSla": {
+      "types": "./src/seatTicketSla.ts",
+      "import": "./src/seatTicketSla.ts"
     },
     "./ticketSlaRegistration": {
       "types": "./src/ticketSlaRegistration.ts",
@@ -268,6 +308,7 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/types": "*",
     "@alga-psa/tickets": "*",
+    "@alga-psa/predicates": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/event-schemas": "*",
     "@alga-psa/shared": "*",

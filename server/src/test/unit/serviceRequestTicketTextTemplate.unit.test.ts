@@ -152,10 +152,12 @@ describe('ticket-only subject chain', () => {
   });
 
   it('renders descriptionPrefix placeholders and keeps its line breaks', () => {
-    const description = buildTicketDescription(text({ employee_name: 'Jane' }), {
-      descriptionPrefix: 'Requested for {{employee_name}}\nSecond line',
-    });
-    expect(description.startsWith('Requested for Jane\nSecond line\n\n')).toBe(true);
-    expect(description).toContain('employee_name: Jane');
+    const blocks = JSON.parse(
+      buildTicketDescription(text({ employee_name: 'Jane' }), {
+        descriptionPrefix: 'Requested for {{employee_name}}\nSecond line',
+      })
+    );
+    expect(blocks[0].content[0].text).toBe('Requested for Jane\nSecond line');
+    expect(blocks[1].content.rows[0].cells.map((cell: any) => cell[0].text)).toEqual(['Employee Name', 'Jane']);
   });
 });

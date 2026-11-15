@@ -179,6 +179,7 @@
     "upload": {
       "fileRequired": "Scegliere un file prima di caricarlo.",
       "typeNotAllowed": "Questo tipo di file non è consentito.",
+      "contentMismatch": "Il contenuto di questo file non corrisponde al suo tipo di file, quindi non è stato caricato. Verificare di aver scelto il file corretto.",
       "sessionRequired": "Per caricare documenti è necessaria la sessione. Effettuare di nuovo l’accesso."
     }
   },

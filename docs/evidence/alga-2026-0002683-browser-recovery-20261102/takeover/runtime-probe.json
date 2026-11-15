@@ -1,0 +1,495 @@
+[
+  {
+    "capturedAt": "2026-11-02T17:35:32.573903+00:00",
+    "command": [
+      "pane-new-tab",
+      "--paneId=c8403826-ff91-488f-aa28-8447b4f96c06",
+      "--type=browser"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+      "success": true,
+      "newPaneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "scopedTo": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:32.638240+00:00",
+    "command": [
+      "pane-activate-tab",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "activeTabId": "0bc994e8-aab7-4f56-a707-f94f6742349b"
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:32.661702+00:00",
+    "command": [
+      "browser-navigate",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "--url=data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E"
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:32.683109+00:00",
+    "command": [
+      "browser-get-dom",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E",
+        "title": "Browser pipeline diagnostic",
+        "tree": {
+          "uid": "e0",
+          "tag": "body",
+          "visible": true,
+          "bounds": {
+            "x": 8,
+            "y": 8,
+            "width": 784,
+            "height": 471
+          },
+          "selector": "body",
+          "children": [
+            {
+              "uid": "e1",
+              "tag": "h1",
+              "text": "Browser pipeline diagnostic",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 86,
+                "width": 704,
+                "height": 130
+              },
+              "selector": "h1"
+            },
+            {
+              "uid": "e2",
+              "tag": "p",
+              "text": "Local diagnostic only. No Alga feature assertions.",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 253,
+                "width": 704,
+                "height": 32
+              },
+              "selector": "p"
+            },
+            {
+              "uid": "e3",
+              "tag": "label",
+              "text": "Input probe",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 316,
+                "width": 149,
+                "height": 31
+              },
+              "selector": "label"
+            },
+            {
+              "uid": "e4",
+              "tag": "input",
+              "id": "probe-input",
+              "type": "text",
+              "visible": true,
+              "bounds": {
+                "x": 197,
+                "y": 313,
+                "width": 369,
+                "height": 38
+              },
+              "selector": "#probe-input"
+            },
+            {
+              "uid": "e5",
+              "tag": "button",
+              "id": "probe-button",
+              "text": "Check input",
+              "type": "submit",
+              "visible": true,
+              "bounds": {
+                "x": 566,
+                "y": 313,
+                "width": 164,
+                "height": 38
+              },
+              "selector": "#probe-button"
+            },
+            {
+              "uid": "e6",
+              "tag": "p",
+              "id": "probe-result",
+              "text": "Waiting for trusted input",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 379,
+                "width": 704,
+                "height": 32
+              },
+              "selector": "#probe-result"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:32.707242+00:00",
+    "command": [
+      "browser-type",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "--selector=#probe-input",
+      "--text=fresh-card-pane-verified",
+      "--clear"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "typed": true,
+        "target": "#probe-input",
+        "value": "fresh-card-pane-verified"
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:32.729064+00:00",
+    "command": [
+      "browser-click",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "--selector=#probe-button"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "clicked": true,
+        "target": "#probe-button"
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:32.748968+00:00",
+    "command": [
+      "browser-get-dom",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "url": "data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EBrowser%20pipeline%20diagnostic%3C/title%3E%3C/head%3E%3Cbody%20style%3D%22background%3A%2315364a%3Bcolor%3Awhite%3Bfont%3A28px%20sans-serif%3Bpadding%3A40px%22%3E%3Ch1%3EBrowser%20pipeline%20diagnostic%3C/h1%3E%3Cp%3ELocal%20diagnostic%20only.%20No%20Alga%20feature%20assertions.%3C/p%3E%3Clabel%20for%3D%22probe-input%22%3EInput%20probe%20%3C/label%3E%3Cinput%20id%3D%22probe-input%22%20style%3D%22font%3A28px%20sans-serif%22%3E%3Cbutton%20id%3D%22probe-button%22%20style%3D%22font%3A28px%20sans-serif%22%20onclick%3D%22document.getElementById%28%27probe-result%27%29.textContent%3D%27Click%20received%3A%20%27%2Bdocument.getElementById%28%27probe-input%27%29.value%22%3ECheck%20input%3C/button%3E%3Cp%20id%3D%22probe-result%22%3EWaiting%20for%20trusted%20input%3C/p%3E%3C/body%3E%3C/html%3E",
+        "title": "Browser pipeline diagnostic",
+        "tree": {
+          "uid": "e0",
+          "tag": "body",
+          "visible": true,
+          "bounds": {
+            "x": 8,
+            "y": 8,
+            "width": 1801,
+            "height": 406
+          },
+          "selector": "body",
+          "children": [
+            {
+              "uid": "e1",
+              "tag": "h1",
+              "text": "Browser pipeline diagnostic",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 86,
+                "width": 1721,
+                "height": 65
+              },
+              "selector": "h1"
+            },
+            {
+              "uid": "e2",
+              "tag": "p",
+              "text": "Local diagnostic only. No Alga feature assertions.",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 188,
+                "width": 1721,
+                "height": 32
+              },
+              "selector": "p"
+            },
+            {
+              "uid": "e3",
+              "tag": "label",
+              "text": "Input probe",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 251,
+                "width": 149,
+                "height": 31
+              },
+              "selector": "label"
+            },
+            {
+              "uid": "e4",
+              "tag": "input",
+              "id": "probe-input",
+              "type": "text",
+              "value": "fresh-card-pane-verified",
+              "visible": true,
+              "bounds": {
+                "x": 197,
+                "y": 248,
+                "width": 369,
+                "height": 38
+              },
+              "selector": "#probe-input"
+            },
+            {
+              "uid": "e5",
+              "tag": "button",
+              "id": "probe-button",
+              "text": "Check input",
+              "type": "submit",
+              "visible": true,
+              "bounds": {
+                "x": 566,
+                "y": 248,
+                "width": 164,
+                "height": 38
+              },
+              "selector": "#probe-button"
+            },
+            {
+              "uid": "e6",
+              "tag": "p",
+              "id": "probe-result",
+              "text": "Click received: fresh-card-pane-verified",
+              "visible": true,
+              "bounds": {
+                "x": 48,
+                "y": 314,
+                "width": 1721,
+                "height": 32
+              },
+              "selector": "#probe-result"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:32.824033+00:00",
+    "command": [
+      "browser-screenshot",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "--save",
+      "--filename=alga-2683-takeover-fresh.png"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "saved": true,
+        "filePath": "/tmp/ghostty-pane-ide/screenshots/alga-2683-takeover-fresh.png"
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:33.074448+00:00",
+    "command": [
+      "browser-navigate",
+      "--paneId=c8403826-ff91-488f-aa28-8447b4f96c06",
+      "--url=http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+      "success": true,
+      "result": {
+        "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:33.100024+00:00",
+    "command": [
+      "browser-get-dom",
+      "--paneId=c8403826-ff91-488f-aa28-8447b4f96c06"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+      "success": true,
+      "result": {
+        "url": "chrome-error://chromewebdata/",
+        "title": "",
+        "tree": {
+          "uid": "e0",
+          "tag": "body",
+          "visible": true,
+          "bounds": {
+            "x": 8,
+            "y": 8,
+            "width": 2620,
+            "height": 1005
+          },
+          "selector": "body"
+        }
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:33.122771+00:00",
+    "command": [
+      "browser-get-network",
+      "--paneId=c8403826-ff91-488f-aa28-8447b4f96c06",
+      "--failedOnly"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+      "success": true,
+      "result": {
+        "events": [
+          {
+            "timestamp": 1793640730677,
+            "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin",
+            "method": "GET",
+            "id": 1,
+            "durationMs": 1,
+            "errorText": "net::ERR_CONNECTION_REFUSED",
+            "ok": false
+          },
+          {
+            "timestamp": 1793640933070,
+            "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin",
+            "method": "GET",
+            "id": 3,
+            "durationMs": 1,
+            "errorText": "net::ERR_CONNECTION_REFUSED",
+            "ok": false
+          }
+        ],
+        "total": 2,
+        "returned": 2,
+        "nextSince": 3
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:33.148798+00:00",
+    "command": [
+      "browser-navigate",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "--url=http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin"
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:33.173295+00:00",
+    "command": [
+      "browser-get-dom",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "url": "chrome-error://chromewebdata/",
+        "title": "",
+        "tree": {
+          "uid": "e0",
+          "tag": "body",
+          "visible": true,
+          "bounds": {
+            "x": 8,
+            "y": 8,
+            "width": 1801,
+            "height": 978
+          },
+          "selector": "body"
+        }
+      }
+    }
+  },
+  {
+    "capturedAt": "2026-11-02T17:35:33.196606+00:00",
+    "command": [
+      "browser-get-network",
+      "--paneId=0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "--failedOnly"
+    ],
+    "exitStatus": 0,
+    "stderr": "",
+    "result": {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "success": true,
+      "result": {
+        "events": [
+          {
+            "timestamp": 1793640933145,
+            "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin",
+            "method": "GET",
+            "id": 2,
+            "durationMs": 1,
+            "errorText": "net::ERR_CONNECTION_REFUSED",
+            "ok": false
+          }
+        ],
+        "total": 1,
+        "returned": 1,
+        "nextSince": 2
+      }
+    }
+  }
+]

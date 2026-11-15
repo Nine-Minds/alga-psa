@@ -76,6 +76,8 @@ export interface TicketBentoLayoutProps {
   priorityOptions: { value: string; label: string }[];
   boardOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
+  /** Seat technicians of the ticket's own client (MSP viewer, live arrangement): the assignee picker's Client IT group. */
+  clientItUserIds?: readonly string[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
   /** Coalesced multi-field hero save; forwarded to BentoHero. */
   onBatchSelectChange?: (
@@ -254,6 +256,8 @@ export interface TicketBentoLayoutProps {
   // Materials / feedback / documents / assets
   hideMaterials?: boolean;
   surveySummaryCard?: React.ReactNode;
+  /** Effort by organization on a seat arrangement's ticket (S28); built for this viewer by the server, absent otherwise. */
+  seatEffortCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
   documents: any[];
   onDocumentCreated: () => Promise<void>;
@@ -863,7 +867,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                 ) : null}
                 {/* Renders nothing while the client holds a single profile
                     (decision D6) — the picker itself owns that rule. */}
-                {props.onChangeBillingProfile ? (
+                {props.onChangeBillingProfile && capabilities.billing ? (
                   <BillingProfilePicker
                     id={`${id}-billing-profile-picker`}
                     clientId={props.client.client_id}
@@ -979,6 +983,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       />
     ) },
     capabilities.survey && props.surveySummaryCard ? { key: 'feedback', zone: 'start', group: 'who', rank: 16, node: props.surveySummaryCard } : null,
+    props.seatEffortCard ? { key: 'seat-effort', zone: 'start', group: 'who', rank: 17, node: props.seatEffortCard } : null,
     { key: 'calls', zone: 'start', group: 'linked', rank: 46, node: (
       <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
         <CallsEmailsTile
@@ -1062,6 +1067,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           boardOptions={props.boardOptions}
           agentOptions={props.agentOptions}
           availableAgents={props.availableAgents}
+          clientItUserIds={props.clientItUserIds}
           teams={props.teams}
           additionalAgents={props.additionalAgents}
           onAssignTeam={props.onAssignTeam}

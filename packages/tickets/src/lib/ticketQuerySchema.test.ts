@@ -21,6 +21,7 @@ const SAMPLE_VALUES: Record<string, PredicateClause['value']> = {
   category: [UUID],
   sla_state: 'breached',
   involves_user: UUID,
+  seat_responsibility: 'client_it',
 };
 
 describe('ticket query schema: computed attributes (T032)', () => {

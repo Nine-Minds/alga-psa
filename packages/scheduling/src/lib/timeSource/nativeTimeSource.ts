@@ -100,8 +100,11 @@ export const nativeTimeSource: TimeSource = Object.freeze({
       handled: true as const,
       value: await (await writeCore()).deleteTimeEntryCore(trx, ...(rest as [any, any, any?])),
     })) as TimeSource['entries']['removeCore'],
-    // Native time is always commercial. No SQL, no lock, no permission: the
-    // `time_entries.billing_mode` column may not even exist yet.
+    // As a time SOURCE, native time is commercial: this member answers for work the seam routes, and the native
+    // source never reads the column. A seat technician's entries are operational, but that is a per-principal
+    // mode decided by `lib/timeEntryMode.ts` (resolveTimeEntryMode) and written by the native write core; it does
+    // not travel through this member, and nothing that asks the seam may infer "operational" from this answer.
+    // No SQL, no lock, no permission: the `time_entries.billing_mode` column may not even exist yet.
     billingMode: async (): Promise<TimeSourceValue<string>> => ({ handled: true, value: 'commercial' }),
     lockBillingMode: async (): Promise<TimeSourceValue<string>> => ({ handled: true, value: 'commercial' }),
   }),

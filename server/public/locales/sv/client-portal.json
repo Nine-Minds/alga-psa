@@ -1169,6 +1169,10 @@
       "recordInvalid": "En av de valda synlighetsgruppsposterna är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan en synlighetsgrupp med de här uppgifterna för den här kunden.",
       "invalidData": "Ogiltiga uppgifter har angetts för synlighetsgruppen. Kontrollera gruppens uppgifter och de valda tavlorna."
+    },
+    "roles": {
+      "lastMspAdmin": "En organisation måste behålla minst en aktiv användare med rollen MSP Admin.",
+      "lastRole": "En användare måste behålla minst en roll. Tilldela en annan roll först och ta sedan bort den här."
     }
   }
 }

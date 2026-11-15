@@ -62,7 +62,14 @@ export async function searchClientsForPicker(
   db: Knex,
   tenant: string,
   user: { user_id: string; user_type?: string; clientId?: string | null },
-  params: SearchClientsForPickerParams = {}
+  params: SearchClientsForPickerParams = {},
+  options: {
+    /**
+     * ANDs the caller's row restriction (e.g. a bundle client scope) onto the picker's `clients as c` query,
+     * before the count and the page are taken, so `total` and paging come from the narrowed query.
+     */
+    narrowQuery?: (query: Knex.QueryBuilder) => void;
+  } = {}
 ): Promise<SearchClientsForPickerResult> {
   const {
     search,
@@ -82,6 +89,7 @@ export async function searchClientsForPicker(
   const { rows, total } = await withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
     let query = scopedDb.table('clients as c');
+    options.narrowQuery?.(query);
 
     if (isLookup) {
       query = query.whereIn('c.client_id', ids.slice(0, CLIENT_PICKER_MAX_LOOKUP_IDS));

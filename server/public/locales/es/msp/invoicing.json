@@ -835,6 +835,23 @@
     }
   },
   "invoicePreview": {
+    "syncFeedback": {
+      "refusedNotFound": "Factura no encontrada.",
+      "refusedPaid": "Las facturas pagadas no se sincronizan con {{provider}}.",
+      "refusedCancelled": "Las facturas anuladas o canceladas no se sincronizan con {{provider}}.",
+      "synced": "Factura sincronizada con {{provider}}.",
+      "failed": "Error en la sincronización con {{provider}}: {{reason}}",
+      "failedNoReason": "Error en la sincronización con {{provider}}. Consulte la lista de operaciones con error en la página de la integración contable.",
+      "skipped": "La factura se omitió y no se envió a {{provider}}: {{reason}}",
+      "skippedNoReason": "La factura se omitió y no se envió a {{provider}}.",
+      "pending": "La factura está en cola para sincronizarse con {{provider}}; todavía no se ha procesado.",
+      "unknown": "No se pudo determinar si la factura se sincronizó con {{provider}}.",
+      "notRun": "La sincronización con {{provider}} no se ejecutó: {{reason}}",
+      "notRunNoReason": "La sincronización con {{provider}} no se ejecutó.",
+      "error": "Error en la sincronización: {{error}}",
+      "cycleFailed": "Error en la sincronización con {{provider}}: {{reason}} La factura no se envió; sigue en cola y se reintentará en la próxima sincronización.",
+      "cycleFailedNoReason": "Error en la sincronización con {{provider}}. La factura no se envió; sigue en cola y se reintentará en la próxima sincronización."
+    },
     "sessionExpired": "La sesión expiró mientras se cargaba esta factura. Inicie sesión de nuevo y vuelva a cargar la vista previa.",
     "title": "Vista previa de factura",
     "templatePlaceholder": "Seleccionar plantilla de factura...",

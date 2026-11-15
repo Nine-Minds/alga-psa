@@ -1169,6 +1169,10 @@
       "recordInvalid": "Uno dei record del gruppo di visibilità selezionati non è più valido. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
       "invalidData": "Dati del gruppo di visibilità non validi. Verificare i dati del gruppo e le bacheche selezionate."
+    },
+    "roles": {
+      "lastMspAdmin": "Un tenant deve mantenere almeno un utente MSP Admin attivo.",
+      "lastRole": "Un utente deve mantenere almeno un ruolo. Assegnare prima un altro ruolo, quindi rimuovere questo."
     }
   }
 }

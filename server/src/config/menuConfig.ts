@@ -209,7 +209,8 @@ export const navigationSections: NavigationSection[] = [
         subItems: [
           { name: 'All Assets', translationKey: 'nav.assetsAll', icon: HardDrive, href: '/msp/assets' },
           { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' },
-          { name: 'Equipment in custody', translationKey: 'nav.assetsCustody', icon: PackageOpen, href: '/msp/assets/custody' }
+          { name: 'Equipment in custody', translationKey: 'nav.assetsCustody', icon: PackageOpen, href: '/msp/assets/custody' },
+          { name: 'Site audits', translationKey: 'nav.assetsAudits', icon: ClipboardCheck, href: '/msp/assets/audits' }
         ]
       },
       {

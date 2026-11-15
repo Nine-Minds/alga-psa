@@ -9,12 +9,16 @@ import { predicateClauseSchema } from '@alga-psa/predicates';
  * (`boardId`, `boardIds`, `excludeBoardIds`, `boardFilterState`) — "Unassigned in
  * Service Desk" is a board-scoped view. Only the transient `searchQuery` is left
  * out.
+ * `listView` is left out too: it names one of the views the server offers the caller (a seat
+ * technician's Client IT / With MSP / Unassigned / All), which is where you are in the list, like a
+ * board tab, not a filter to save. A saved view still composes with it: the view narrows whatever
+ * the saved filters return.
  *
  * Declared as a mapped type over ITicketListFilters so a filter key added there
  * fails the build here, by name, instead of being captured from the live list
  * and then rejected on save at runtime.
  */
-export const TICKET_NAMED_VIEW_EXCLUDED_FILTER_KEYS = ['searchQuery'] as const;
+export const TICKET_NAMED_VIEW_EXCLUDED_FILTER_KEYS = ['searchQuery', 'listView'] as const;
 
 type TicketNamedViewFilterKey = Exclude<
   keyof ITicketListFilters,

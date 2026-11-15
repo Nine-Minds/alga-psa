@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-11-02T17:45:56.023626+00:00",
+  "origin": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/",
+  "resolution": {
+    "ipv6": "::1",
+    "ipv4": "127.0.0.1"
+  },
+  "curlExitStatus": 7,
+  "curlStderr": "* Host feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536 was resolved.\n* IPv6: ::1\n* IPv4: 127.0.0.1\n*   Trying [::1]:3536...\n* connect to ::1 port 3536 from ::1 port 40680 failed: Connection refused\n*   Trying 127.0.0.1:3536...\n* connect to 127.0.0.1 port 3536 from 127.0.0.1 port 55576 failed: Connection refused\n* Failed to connect to feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost port 3536 after 0 ms: Could not connect to server\n* closing connection #0\n",
+  "listenerCommand": "ss -ltnp ( sport = :3536 )",
+  "listenerExitStatus": 0,
+  "listenerOutput": "State Recv-Q Send-Q Local Address:Port Peer Address:PortProcess",
+  "interpretation": "Connection refused on IPv6 and IPv4; no listener on port 3536. This is application-service unavailability, not evidence of browser resource exhaustion or screenshot failure."
+}

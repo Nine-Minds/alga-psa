@@ -1169,6 +1169,10 @@
       "recordInvalid": "Uno de los registros del grupo de visibilidad seleccionados ya no es válido. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
       "invalidData": "Datos del grupo de visibilidad no válidos. Revise los datos del grupo y los tableros seleccionados."
+    },
+    "roles": {
+      "lastMspAdmin": "Un inquilino debe conservar al menos un usuario MSP Admin activo.",
+      "lastRole": "Un usuario debe conservar al menos un rol. Asigne primero otro rol y luego quite este."
     }
   }
 }

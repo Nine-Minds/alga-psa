@@ -307,8 +307,10 @@ describe('service request ticket-only execution', () => {
     expect(createdTicket.priority_id).toBe(fixture.priorityId);
     const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
     expect(ticketDescription).toContain('Portal Service Request');
-    expect(ticketDescription).toContain('request_title: New Hire Laptop');
-    expect(ticketDescription).toContain('notes: Ship before Monday');
+    expect(ticketDescription).toContain('"text":"Request Title"');
+    expect(ticketDescription).toContain('"text":"New Hire Laptop"');
+    expect(ticketDescription).toContain('"text":"Ship before Monday"');
+    expect(ticketDescription).not.toContain('request_title');
   });
 
   it('renders the ticket subject template and description prefix by field type', async () => {
@@ -601,8 +603,8 @@ describe('service request ticket-only execution', () => {
     expect(createdTicket).toBeTruthy();
     expect(createdTicket.title).toBe('New Hire Setup: Laptop Provisioning');
     const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
-    expect(ticketDescription).toBe('Starter Template Request');
-    expect(ticketDescription).not.toContain('request_title: Laptop Provisioning');
-    expect(ticketDescription).not.toContain('notes: Ship before Monday');
+    expect(ticketDescription).toContain('"text":"Starter Template Request"');
+    expect(ticketDescription).not.toContain('Laptop Provisioning');
+    expect(ticketDescription).not.toContain('Ship before Monday');
   });
 });

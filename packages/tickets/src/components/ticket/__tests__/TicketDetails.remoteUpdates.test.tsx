@@ -32,6 +32,7 @@ let conversationProps: any;
 let ticketInfoDirtyFields: string[] = [];
 let ticketPropertiesDirtyFields: string[] = [];
 let ticketInfoLocalFieldValues: Record<string, string> = {};
+let ticketInfoSaveChanges: ((changes: Record<string, unknown>) => Promise<boolean>) | undefined;
 let liveTicketContext = {
   enabled: true,
   presence: [] as Array<{ userId: string; displayName: string; avatarUrl?: string | null; color: string }>,
@@ -293,14 +294,17 @@ vi.mock('../TicketInfo', () => ({
     liveFieldConflicts = {},
     onKeepLiveConflict,
     onTakeLiveConflict,
+    onSaveChanges,
   }: {
-    ticket: { status_id?: string; priority_id?: string };
+    ticket: { status_id?: string; priority_id?: string; assigned_to?: string | null; board_id?: string };
+    onSaveChanges?: (changes: Record<string, unknown>) => Promise<boolean>;
     onLiveDirtyFieldsChange?: (fields: string[]) => void;
     liveHighlightedFields?: string[];
     liveFieldConflicts?: Record<string, unknown>;
     onKeepLiveConflict?: (field: string) => void;
     onTakeLiveConflict?: (field: string) => void;
   }) {
+    ticketInfoSaveChanges = onSaveChanges;
     React.useEffect(() => {
       onLiveDirtyFieldsChange?.(ticketInfoDirtyFields);
       return () => onLiveDirtyFieldsChange?.([]);
@@ -315,6 +319,7 @@ vi.mock('../TicketInfo', () => ({
 
     return (
       <div>
+        <div data-testid="ticket-info-placement" data-board={ticket.board_id ?? ''} data-assigned={ticket.assigned_to ?? ''} />
         <div
           data-testid="ticket-info-status"
           data-status={displayedStatus}
@@ -869,6 +874,39 @@ describe('TicketDetails remote live updates', () => {
     });
 
     expect(routerPushMock).toHaveBeenCalledWith('/msp/tickets');
+  });
+
+  describe('a local save that moves the ticket', () => {
+    const seatTicket = { ...baseTicket, assigned_to: 'seat-tech-1' };
+
+    it('re-reads the ticket so an assignee the server cleared on the move is shown', async () => {
+      const onBatchTicketUpdate = vi.fn().mockResolvedValue(true);
+      getTicketByIdMock.mockResolvedValue({ ...seatTicket, board_id: 'board-2', status_id: 'status-2', assigned_to: null });
+      await act(async () => { renderTicketDetails({ initialTicket: seatTicket, onBatchTicketUpdate }); });
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-assigned', 'seat-tech-1');
+
+      let saved: boolean | undefined;
+      await act(async () => { saved = await ticketInfoSaveChanges!({ board_id: 'board-2', status_id: 'status-2' }); });
+
+      expect(saved).toBe(true);
+      expect(onBatchTicketUpdate).toHaveBeenCalledWith({ board_id: 'board-2', status_id: 'status-2' }, undefined);
+      expect(getTicketByIdMock).toHaveBeenCalledWith('ticket-1');
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-board', 'board-2');
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-assigned', '');
+    });
+
+    it('keeps its own merge, without a re-read, for a save that does not move the ticket', async () => {
+      const onBatchTicketUpdate = vi.fn().mockResolvedValue(true);
+      await act(async () => { renderTicketDetails({ initialTicket: seatTicket, onBatchTicketUpdate }); });
+      getTicketByIdMock.mockClear();
+
+      await act(async () => { await ticketInfoSaveChanges!({ priority_id: 'priority-2' }); });
+
+      expect(onBatchTicketUpdate).toHaveBeenCalledWith({ priority_id: 'priority-2' }, undefined);
+      expect(getTicketByIdMock).not.toHaveBeenCalled();
+      expect(screen.getByTestId('ticket-info-priority')).toHaveAttribute('data-priority', 'priority-2');
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-assigned', 'seat-tech-1');
+    });
   });
 
   describe('stored layout preference', () => {

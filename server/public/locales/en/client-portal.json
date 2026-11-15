@@ -1169,6 +1169,10 @@
       "recordInvalid": "One of the selected visibility group records is no longer valid. Please refresh and try again.",
       "duplicate": "A visibility group with these details already exists for this client.",
       "invalidData": "Invalid visibility group data provided. Please check the group details and selected boards."
+    },
+    "roles": {
+      "lastMspAdmin": "A tenant must keep at least one active MSP Admin user.",
+      "lastRole": "A user must keep at least one role. Assign another role first, then remove this one."
     }
   }
 }

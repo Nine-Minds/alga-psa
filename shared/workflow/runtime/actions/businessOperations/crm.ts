@@ -976,6 +976,7 @@ async function resolveQuoteAuthorizationSubject(
   return {
     tenant: tenantId,
     userId: actorUserId,
+    // LEVERAGE: pattern authorization-subject-resolution — workflow CRM actions hand-build a subject; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
     userType: userRow?.user_type === 'client' ? 'client' : userRow?.user_type === 'service' ? 'service' : 'internal',
     roleIds: roleRows.map((row) => row.role_id),
     teamIds: teamRows.map((row) => row.team_id),

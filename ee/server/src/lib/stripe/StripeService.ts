@@ -23,7 +23,7 @@ import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowC
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
 import { stripeApiOverride } from './stripeApiOverride';
-import { reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
+import { countLicensedInternalUsers, reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
 import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
 import {
   StripeOwnershipError,
@@ -1076,11 +1076,7 @@ export class StripeService {
   }
 
   private async countActiveInternalUsers(knex: Knex, tenantId: string): Promise<number> {
-    const row = await tenantScopedTable(knex, 'users', tenantId)
-      .where({ user_type: 'internal', is_inactive: false })
-      .count('user_id as count')
-      .first();
-    return parseInt(String(row?.count ?? '0'), 10);
+    return countLicensedInternalUsers(knex, tenantId);
   }
 
   /**
@@ -2604,16 +2600,7 @@ export class StripeService {
   }
 
   private async getActiveInternalUserCount(tenantId: string): Promise<number> {
-    const knex = await getConnection(tenantId);
-    const result = await tenantScopedTable(knex, 'users', tenantId)
-      .where({
-        user_type: 'internal',
-        is_inactive: false,
-      })
-      .count('user_id as count')
-      .first();
-
-    return parseInt((result?.count as string | undefined) || '0', 10);
+    return countLicensedInternalUsers(await getConnection(tenantId), tenantId);
   }
 
   private async getProductUpgradeContext(tenantId: string): Promise<ProductUpgradeContext> {

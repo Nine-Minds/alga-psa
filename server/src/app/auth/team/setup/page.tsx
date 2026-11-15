@@ -134,7 +134,10 @@ function TeamSetupContent() {
             router.push('/auth/msp/signin');
           } else {
             toast.success(t('teamSetup.welcome', { defaultValue: 'Welcome to the team!' }));
-            router.push('/msp/dashboard');
+            // A full page load, as the MSP sign-in form does: the new session's principal decides the landing on the
+            // server. A seat technician's /msp/dashboard redirects to its surface home, and a client-side push into
+            // the /msp layout straight after signIn kept refetching that redirect and rendered a blank page.
+            window.location.assign('/msp/dashboard');
           }
         } catch (signinError) {
           toast.success(t('teamSetup.accountReady', { defaultValue: 'Account ready. Please sign in.' }));

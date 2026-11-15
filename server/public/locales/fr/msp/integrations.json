@@ -2257,7 +2257,41 @@
         "outstandingItemsReconnect": "Pour toutes les organisations liées. Ces éléments sont conservés jusqu’à la reconnexion de Xero.",
         "refreshTokenValidUntilProvider": "Autorisation {{provider}} valide jusqu’au {{date}}. Les jetons sont renouvelés automatiquement.",
         "syncSucceeded": "Synchronisation terminée",
-        "syncStopped": "Synchronisation arrêtée"
+        "syncStopped": "Synchronisation arrêtée",
+        "erroredOpsDialogTitle": "Opérations de synchronisation {{provider}} en erreur",
+        "erroredOpsDialogDescription": "Opérations qui ont échoué ou ont été ignorées après plusieurs tentatives.",
+        "erroredOpsOpen": "Afficher les opérations en erreur",
+        "erroredOpsColItem": "Élément",
+        "erroredOpsColOperation": "Opération",
+        "erroredOpsColError": "Erreur",
+        "erroredOpsColWhen": "Date",
+        "erroredOpsColBatch": "Lot d’export",
+        "erroredOpsLoading": "Chargement des opérations en erreur…",
+        "erroredOpsEmpty": "Aucune opération en erreur.",
+        "erroredOpsLoadError": "Impossible de charger les opérations en erreur.",
+        "erroredOpsNoError": "Aucun détail d’erreur n’a été enregistré.",
+        "erroredOpsBatchLink": "Afficher le lot {{batch}}",
+        "erroredOpsClose": "Fermer",
+        "erroredOpsDeleted": {
+          "invoice": "Facture supprimée",
+          "credit_memo": "Avoir supprimé",
+          "vendor_bill": "Facture fournisseur supprimée",
+          "payment": "Paiement supprimé",
+          "credit_application": "Imputation de crédit supprimée",
+          "other": "Élément indisponible"
+        },
+        "erroredOpsItem": {
+          "payment": "Paiement de {{invoice}}",
+          "creditApplication": "Crédit imputé à {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Exporter la facture",
+          "export_credit_memo": "Exporter l’avoir",
+          "export_vendor_bill": "Exporter la facture fournisseur",
+          "apply_credit": "Imputer le crédit",
+          "record_payment": "Enregistrer le paiement",
+          "void_invoice": "Annuler la facture"
+        }
       },
       "itemImport": {
         "description": "Importez vos produits et services QuickBooks dans le catalogue de services Alga pour l’entreprise QuickBooks connectée. QuickBooks reste la source de référence pour les noms, tarifs, SKU, descriptions et coûts ; le mode de facturation, l’unité de mesure et le type de service sont définis ici, puis gérés par Alga. Cette étape est facultative : cliquez sur Suivant pour l’ignorer.",

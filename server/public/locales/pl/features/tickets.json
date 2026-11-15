@@ -595,6 +595,7 @@
       "requester": "Zgłaszający",
       "sharedIt": "Wspólny dział IT",
       "organizationPrivate": "Prywatne dla organizacji",
+      "private": "Prywatne",
       "placeholder": "Kto może to zobaczyć?",
       "required": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
     },
@@ -787,6 +788,13 @@
     "boardTabs": {
       "all": "Wszystkie zgłoszenia"
     },
+    "seatViews": {
+      "clientIt": "IT klienta",
+      "msp": "U MSP",
+      "unassigned": "Nieprzypisane",
+      "all": "Wszystkie",
+      "empty": "Brak zgłoszeń w widoku „{{view}}”."
+    },
     "boardHeader": {
       "open": "Otwarte",
       "overdue": "Po terminie",
@@ -815,7 +823,12 @@
     "exportSelectedTooltip_few": "Eksportuj {{count}} wybrane zgłoszenia do CSV",
     "exportSelectedTooltip_many": "Eksportuj {{count}} wybranych zgłoszeń do CSV",
     "selectAllMatching_few": "Zaznacz wszystkie {{count}} zgłoszenia spełniające filtry",
-    "selectAllMatching_many": "Zaznacz wszystkie {{count}} zgłoszeń spełniających filtry"
+    "selectAllMatching_many": "Zaznacz wszystkie {{count}} zgłoszeń spełniających filtry",
+    "responsibility": {
+      "column": "Odpowiedzialny",
+      "all": "Wszystkie odpowiedzialności",
+      "filter": "Odpowiedzialność"
+    }
   },
   "bulk": {
     "bundleTickets": "Połącz zgłoszenia",
@@ -1084,7 +1097,26 @@
     "moveConfirm_few": "Przenieś {{count}} zgłoszenia",
     "moveConfirm_many": "Przenieś {{count}} zgłoszeń",
     "moveSuccess_few": "Przeniesiono {{count}} zgłoszenia",
-    "moveSuccess_many": "Przeniesiono {{count}} zgłoszeń"
+    "moveSuccess_many": "Przeniesiono {{count}} zgłoszeń",
+    "handoff": {
+      "unknownTicket": "Zgłoszenie",
+      "rowNotLoaded": "Aktualny stan tego zgłoszenia nie jest wczytany. Otwórz jego stronę na liście i spróbuj ponownie.",
+      "partialFailure": "Nie udało się przekazać niektórych zgłoszeń",
+      "failure": "Nie udało się przekazać wybranych zgłoszeń",
+      "failedItemsHeading": "Nie udało się przekazać następujących zgłoszeń:",
+      "success_one": "Przekazano {{count}} zgłoszenie",
+      "success_few": "Przekazano {{count}} zgłoszenia",
+      "success_many": "Przekazano {{count}} zgłoszenia",
+      "success_other": "Przekazano {{count}} zgłoszeń",
+      "promptToClientIt_one": "IT klienta staje się odpowiedzialne za to zgłoszenie. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToClientIt_few": "IT klienta staje się odpowiedzialne za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToClientIt_many": "IT klienta staje się odpowiedzialne za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToClientIt_other": "IT klienta staje się odpowiedzialne za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_one": "MSP staje się odpowiedzialny za to zgłoszenie. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_few": "MSP staje się odpowiedzialny za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_many": "MSP staje się odpowiedzialny za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_other": "MSP staje się odpowiedzialny za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Szybkie dodanie zgłoszenia",
@@ -1272,6 +1304,7 @@
     "keepEditing": "Kontynuuj edycję",
     "statusRequiresSelection": "Wybierz status dla nowej tablicy przed zapisaniem.",
     "notAssigned": "Nie przypisano",
+    "clientItGroup": "Dział IT klienta",
     "additionalAgentsTooltip": "Dodatkowi agenci:",
     "loading": "Ładowanie...",
     "tagsCannotBeManaged": "Tagami nie można zarządzać",
@@ -1914,6 +1947,23 @@
     },
     "comment": {
       "audienceRequired": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Napisz wspólną notatkę dla IT klienta przed przekazaniem zgłoszenia.",
+      "ticketNotFound": "To zgłoszenie nie jest już dostępne.",
+      "noArrangement": "Klient tego zgłoszenia nie ma już umowy o współzarządzanych stanowiskach.",
+      "operationConflict": "To przekazanie rozpoczęto z innymi danymi. Spróbuj ponownie.",
+      "changed": "To zgłoszenie zostało przekazane lub przypisane ponownie. Odśwież zgłoszenie przed ponowną próbą.",
+      "alreadyResponsible": "IT klienta już odpowiada za to zgłoszenie. Odśwież zgłoszenie, aby zobaczyć jego aktualny stan.",
+      "actorNotAllowed": "Nie możesz przekazać tego zgłoszenia do IT klienta.",
+      "boardOutOfScope": "Tablica tego zgłoszenia nie jest udostępniona IT klienta, więc nie można go przekazać.",
+      "technicianNotAvailable": "Wybrany technik nie jest już dostępny dla tego klienta. Wybierz innego lub pozostaw zgłoszenie nieprzypisane.",
+      "unavailable": "Przekazywanie zgłoszeń do IT klienta jest niedostępne.",
+      "invalidHandoffToMsp": "Przed przekazaniem tego zgłoszenia napisz wspólną notatkę dla MSP.",
+      "alreadyResponsibleMsp": "MSP jest już odpowiedzialny za to zgłoszenie. Odśwież zgłoszenie, aby zobaczyć jego aktualny stan.",
+      "actorNotAllowedMsp": "Nie możesz przekazać tego zgłoszenia do MSP.",
+      "unavailableMsp": "Przekazywanie zgłoszeń do MSP jest niedostępne.",
+      "unexpected": "Nie udało się przekazać tego zgłoszenia. Odśwież listę, aby zobaczyć jego stan, i spróbuj ponownie."
     }
   },
   "ticketSection": {
@@ -2101,6 +2151,18 @@
   "integration": {
     "loadTicketFailed": "Nie udało się załadować zgłoszenia",
     "noUserSession": "Nie znaleziono sesji użytkownika"
+  },
+  "seatEffort": {
+    "title": "Nakład pracy",
+    "clientIt": "IT klienta",
+    "msp": "MSP",
+    "combined": "Łącznie",
+    "yours": "Twój czas",
+    "columns": {
+      "date": "Data",
+      "duration": "Czas trwania",
+      "notes": "Notatki"
+    }
   },
   "bento": {
     "hero": {
@@ -2389,7 +2451,9 @@
       "builtInGroup": "Systemy wbudowane",
       "customGroup": "Systemy niestandardowe",
       "urlPreview": "Otwiera:",
-      "urlPreviewIncomplete": "Wypełnij powyższe pola, aby wyświetlić podgląd łącza."
+      "urlPreviewIncomplete": "Wypełnij powyższe pola, aby wyświetlić podgląd łącza.",
+      "title": "Tytuł",
+      "titlePlaceholder": "Opcjonalnie, np. nazwa artykułu"
     },
     "errors": {
       "ticketNotFound": "Nie znaleziono zgłoszenia",
@@ -2801,7 +2865,8 @@
       "details": "Szablon",
       "ticket": "Zgłoszenie",
       "checklist": "Lista kontrolna",
-      "customFields": "Pola niestandardowe"
+      "customFields": "Pola niestandardowe",
+      "links": "Łącza do dokumentacji"
     },
     "fields": {
       "name": "Nazwa szablonu",
@@ -2856,13 +2921,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Szablony zgłoszeń są niedostępne",
       "subcategoryNeedsCategory": "Podkategoria wymaga kategorii",
-      "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je."
+      "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je.",
+      "duplicateLink": "Ten szablon ma już to łącze do dokumentacji."
     },
     "usage": {
       "schedules": "Używany przez {{count}} harmonogramów",
       "paused": "wstrzymany",
       "tickets": "{{count}} zgłoszeń utworzonych z tego szablonu",
       "scheduleThis": "Zaplanuj ten szablon…"
+    },
+    "links": {
+      "help": "Kopiowane jako odwołania do każdego zgłoszenia utworzonego z tego szablonu. Późniejsze zmiany szablonu nie zmieniają istniejących zgłoszeń.",
+      "empty": "Brak łączy do dokumentacji.",
+      "add": "Dodaj łącze",
+      "remove": "Usuń łącze",
+      "moveUp": "W górę",
+      "moveDown": "W dół",
+      "dialogTitle": "Dodaj łącze do dokumentacji",
+      "pickFromHudu": "Wybierz z Hudu",
+      "huduPickerTitle": "Wybierz artykuł z Hudu",
+      "huduSearch": "Szukaj artykułów w Hudu...",
+      "huduLoading": "Ładowanie artykułów z Hudu...",
+      "huduDisconnected": "Hudu nie jest połączone. Nadal możesz dodać łącze, wpisując jego dane.",
+      "huduError": "Nie można połączyć się z Hudu. Spróbuj ponownie później.",
+      "huduEmpty": "Nie znaleziono artykułów w Hudu.",
+      "huduSelect": "Wybierz",
+      "huduPrev": "Poprzednia",
+      "huduNext": "Następna"
     }
   },
   "enums": {
@@ -3282,5 +3367,21 @@
   "statusChange": {
     "title": "Zaktualizuj status zgłoszenia",
     "message": "Czy na pewno chcesz zmienić status z „{{from}}” na „{{to}}”?"
+  },
+  "seatResponsibility": {
+    "clientIt": "IT klienta",
+    "msp": "MSP",
+    "label": "Odpowiedzialny",
+    "chipTitle": "Kto odpowiada za to zgłoszenie",
+    "handToClientIt": "Przekaż do IT klienta",
+    "handedToClientIt": "Przekazano do IT klienta",
+    "handing": "Przekazywanie…",
+    "handPrompt": "IT klienta przejmuje odpowiedzialność za to zgłoszenie, a Twoje liczniki SLA są wstrzymane do jego powrotu. Notatka jest udostępniona technikom klienta.",
+    "noteLabel": "Wspólna notatka dla IT klienta",
+    "technicianLabel": "Technik (opcjonalnie)",
+    "technicianPlaceholder": "Dowolny technik tego klienta",
+    "technicianNone": "Pozostaw przypisaną osobę bez zmian",
+    "handToMsp": "Przekaż do MSP",
+    "noteLabelMsp": "Wspólna notatka dla MSP"
   }
 }

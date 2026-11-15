@@ -1,0 +1,115 @@
+{
+  "capturedAt": "2026-11-02T17:36:48.764285+00:00",
+  "checks": [
+    {
+      "command": [
+        "npm",
+        "run",
+        "typecheck",
+        "--workspace=@alga-psa/assets"
+      ],
+      "exitStatus": 0,
+      "log": "assets-typecheck.txt"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--workspace=@alga-psa/assets"
+      ],
+      "exitStatus": 0,
+      "log": "assets-build.txt"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "typecheck",
+        "--workspace=@alga-psa/inventory"
+      ],
+      "exitStatus": 0,
+      "log": "inventory-typecheck.txt"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--workspace=@alga-psa/inventory"
+      ],
+      "exitStatus": 0,
+      "log": "inventory-build.txt"
+    }
+  ],
+  "images": [
+    {
+      "file": "diagnostic-before.png",
+      "size": [
+        1920,
+        744
+      ],
+      "extrema": [
+        [
+          0,
+          255
+        ],
+        [
+          0,
+          255
+        ],
+        [
+          0,
+          255
+        ]
+      ],
+      "sha256": "a7fb8cc103d30f1eabbe6ea9c19dc0c236805681dd31272c2aea91c5531bac6e"
+    },
+    {
+      "file": "diagnostic-after.png",
+      "size": [
+        1920,
+        744
+      ],
+      "extrema": [
+        [
+          0,
+          255
+        ],
+        [
+          0,
+          255
+        ],
+        [
+          0,
+          255
+        ]
+      ],
+      "sha256": "f51ef15159637d337a4addd3f936377f873013b3b65d93a0fadab85277648f33"
+    },
+    {
+      "file": "diagnostic-fresh.png",
+      "size": [
+        1920,
+        1050
+      ],
+      "extrema": [
+        [
+          0,
+          255
+        ],
+        [
+          0,
+          255
+        ],
+        [
+          0,
+          255
+        ]
+      ],
+      "sha256": "056aac9d6faf78fc88a2e37fe7122d5409810b4d2f28901f2670ce1ed5c3d619"
+    }
+  ],
+  "beforeAfterPixelsDiffer": true,
+  "scope": "Browser diagnostic and existing product package builds/typechecks. Six application flows not run."
+}
