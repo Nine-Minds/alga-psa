@@ -192,4 +192,41 @@ describe('RequestServiceDetailPage', () => {
     expect(getRequestServiceVisibilityContextAction).not.toHaveBeenCalled();
     expect(vpnReason()).not.toBeNull();
   });
+
+  it('honours conditions stored on the elements, whatever the form-behavior provider is', async () => {
+    getRequestServiceDefinitionDetailAction.mockResolvedValue(
+      conditionalDetail({
+        formBehaviorProvider: 'basic',
+        formBehaviorConfig: {},
+        visibleFieldKeys: ['needs_vpn'],
+        formSchema: {
+          fields: [
+            { key: 'needs_vpn', type: 'checkbox', label: 'Needs VPN' },
+            {
+              key: 'vpn_reason',
+              type: 'short-text',
+              label: 'VPN Reason',
+              visibleWhen: [{ source: 'needs_vpn', operator: 'is-true' }],
+            },
+          ],
+        },
+      })
+    );
+    getRequestServiceVisibilityContextAction.mockResolvedValue({
+      requesterUserId: 'user-1',
+      clientId: 'client-1',
+      contactId: null,
+    });
+
+    render(
+      await RequestServiceDetailPage({
+        params: Promise.resolve({ definitionId: 'definition-1' }),
+      })
+    );
+
+    expect(getRequestServiceVisibilityContextAction).toHaveBeenCalled();
+    expect(vpnReason()).toBeNull();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Needs VPN' }));
+    expect(vpnReason()).not.toBeNull();
+  });
 });

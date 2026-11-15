@@ -6,6 +6,7 @@ import {
 } from './portalDetail';
 import { getServiceRequestExecutionProvider } from './providers/registry';
 import {
+  collectElementVisibilityRules,
   computeVisibleFieldKeys,
   parseVisibilityRules,
   type VisibilityContext,
@@ -196,18 +197,19 @@ export function resolveSubmissionVisibility(
   payload: Record<string, unknown>,
   context: VisibilityContext
 ): string[] {
-  if (detail.formBehaviorProvider !== 'advanced') {
-    return detail.visibleFieldKeys;
-  }
   const fields = Array.isArray((detail.formSchema as any)?.fields)
     ? ((detail.formSchema as any).fields as any[])
     : [];
-  return computeVisibleFieldKeys(
-    fields,
-    parseVisibilityRules(detail.formBehaviorConfig) ?? [],
-    { ...detail.initialValues, ...payload },
-    context
-  );
+  const rules = [
+    ...collectElementVisibilityRules(fields),
+    ...(detail.formBehaviorProvider === 'advanced'
+      ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
+      : []),
+  ];
+  if (rules.length === 0) {
+    return detail.visibleFieldKeys;
+  }
+  return computeVisibleFieldKeys(fields, rules, { ...detail.initialValues, ...payload }, context);
 }
 
 export function validateSubmissionAgainstPublishedSchema(input: {

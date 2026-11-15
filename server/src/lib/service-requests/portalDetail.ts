@@ -6,6 +6,10 @@ import { isAudienceSatisfied, loadRequesterRecord } from './definitionAudience';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
 import { resolveStaticDefaultValues } from './basicFormBuilder';
 import { getServiceRequestFormBehaviorProvider } from './providers/registry';
+import {
+  collectElementVisibilityRules,
+  computeVisibleFieldKeys,
+} from './formVisibility';
 
 interface PublishedDefinitionRow {
   tenant: string;
@@ -145,6 +149,11 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     ...dynamicInitialValues,
   } as Record<string, string | boolean | null>;
 
+  // The provider decides when it has its own rule list; otherwise the elements' own
+  // `visibleWhen` conditions decide, evaluated against the values the form opens with.
+  const snapshotFields = Array.isArray((latestVersion.form_schema_snapshot as any)?.fields)
+    ? ((latestVersion.form_schema_snapshot as any).fields as any[])
+    : [];
   const visibleFieldKeys = formBehaviorProvider.resolveVisibleFieldKeys
     ? await formBehaviorProvider.resolveVisibleFieldKeys(
         {
@@ -157,11 +166,16 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
         resolvedInitialValues,
         latestVersion.form_behavior_config ?? {}
       )
-    : Array.isArray((latestVersion.form_schema_snapshot as any)?.fields)
-      ? ((latestVersion.form_schema_snapshot as any).fields as any[])
-          .map((field) => (typeof field?.key === 'string' ? field.key : null))
-          .filter((fieldKey): fieldKey is string => !!fieldKey)
-      : [];
+    : computeVisibleFieldKeys(
+        snapshotFields,
+        collectElementVisibilityRules(snapshotFields),
+        resolvedInitialValues,
+        {
+          requesterUserId: context.requesterUserId,
+          clientId: context.clientId,
+          contactId: context.contactId ?? null,
+        }
+      );
 
   return {
     definitionId,

@@ -17,7 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('clientPortal.requestServices.detail.title', { defaultValue: 'Service Request' }),
   };
 }
-import { parseVisibilityRules } from '../../../../lib/service-requests/formVisibility';
+import {
+  collectElementVisibilityRules,
+  parseVisibilityRules,
+} from '../../../../lib/service-requests/formVisibility';
 import { normalizeBasicFormSchema } from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
@@ -59,12 +62,14 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   // One normalizer decides what an element is, so the portal and the builder agree.
   const formSchema = normalizeBasicFormSchema(detail.formSchema);
   const fields = formSchema.fields;
-  // Rules only reach the browser for the advanced provider; in CE the detail is null
-  // for such definitions, so this stays disabled and no rules are sent.
-  const visibilityRules =
-    detail.formBehaviorProvider === 'advanced'
+  // Conditions the form builder wrote live on the elements themselves, so they work on every
+  // definition. The advanced provider's own rule list is appended for definitions that use it.
+  const visibilityRules = [
+    ...collectElementVisibilityRules(fields),
+    ...(detail.formBehaviorProvider === 'advanced'
       ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
-      : [];
+      : []),
+  ];
   const visibilityEnabled = visibilityRules.length > 0;
   const visibilityContext = visibilityEnabled
     ? await getRequestServiceVisibilityContextAction()

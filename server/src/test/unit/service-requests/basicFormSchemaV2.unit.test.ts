@@ -226,3 +226,72 @@ describe('form-level settings', () => {
     expect(normalizeBasicFormSchema({ fields: [], settings: { layout: { width: 'wide' } } }).settings).toBeUndefined();
   });
 });
+
+describe('conditions stored on the element', () => {
+  const conditional = {
+    fields: [
+      { key: 'needs_laptop', type: 'checkbox', label: 'Needs a laptop?' },
+      {
+        key: 'hardware',
+        type: 'section',
+        label: 'Hardware',
+        visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }],
+      },
+      {
+        key: 'laptop_model',
+        type: 'short-text',
+        label: 'Laptop model',
+        visibleWhen: [{ source: 'needs_laptop', operator: 'nonsense' }],
+      },
+    ],
+  };
+
+  it('keeps a display block condition and drops a malformed one', () => {
+    const normalized = normalizeBasicFormSchema(conditional);
+
+    expect(normalized.fields[1].visibleWhen).toEqual([
+      { source: 'needs_laptop', operator: 'is-true' },
+    ]);
+    expect(normalized.fields[2].visibleWhen).toBeUndefined();
+    expect(validateBasicFormSchema(conditional).isValid).toBe(true);
+  });
+
+  it('refuses a condition that reads an answer below it', () => {
+    const result = validateBasicFormSchema({
+      fields: [
+        {
+          key: 'hardware',
+          type: 'section',
+          label: 'Hardware',
+          visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }],
+        },
+        { key: 'needs_laptop', type: 'checkbox', label: 'Needs a laptop?' },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toEqual([
+      'Field "hardware" has a condition on "needs_laptop", which is not an answer above it',
+    ]);
+  });
+
+  it('refuses an equals condition with no value, and allows a context source', () => {
+    const result = validateBasicFormSchema({
+      fields: [
+        {
+          key: 'internal_note',
+          type: 'text',
+          label: 'Internal note',
+          visibleWhen: [
+            { source: 'context.clientId', operator: 'equals' },
+            { source: 'context.contactId', operator: 'has-value' },
+          ],
+        },
+      ],
+    });
+
+    expect(result.errors).toEqual([
+      'Field "internal_note" has a condition on "context.clientId" with no value',
+    ]);
+  });
+});

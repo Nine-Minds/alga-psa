@@ -7,6 +7,10 @@ import {
   type FieldTypeKey,
   type FieldValidationRules,
 } from '@alga-psa/ui/form-fields';
+import {
+  parseElementVisibilityRules,
+  type ElementVisibilityRule,
+} from './formVisibility';
 
 /**
  * Schema v2, backward compatible. Pure: no database, no server-only import, so the portal form,
@@ -67,6 +71,12 @@ export interface BasicFormField {
   layout?: BasicFormElementLayout;
   /** Display-block settings; absent on inputs. */
   display?: BasicFormCalloutDisplay & BasicFormSectionDisplay;
+  /**
+   * Conditions that must all hold for this element to be shown. A display block can be hidden
+   * like any other element — hiding a `section` hides the questions it owns — but it holds no
+   * answer, so it is never a rule *source*.
+   */
+  visibleWhen?: ElementVisibilityRule[];
   /** Phase 2: where a choice field's options come from. Carried through, never written here. */
   optionSource?: Record<string, unknown>;
   /** Later phase: the record field an answer lands in. Carried through, never written here. */
@@ -281,6 +291,11 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
       }
     }
 
+    const visibleWhen = parseElementVisibilityRules((raw as any).visibleWhen);
+    if (visibleWhen.length > 0) {
+      field.visibleWhen = visibleWhen;
+    }
+
     // Phase 2 / later extension points: preserved verbatim, never interpreted here.
     const optionSource = (raw as any).optionSource;
     if (optionSource && typeof optionSource === 'object' && !Array.isArray(optionSource)) {
@@ -342,6 +357,8 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
   const normalized = normalizeBasicFormSchema(schema);
   const errors: string[] = [];
   const seenKeys = new Set<string>();
+  // A rule may only read an answer decided before it — see the evaluator's single-pass order.
+  const answerKeysSoFar = new Set<string>();
 
   normalized.fields.forEach((field, index) => {
     const fieldRef = `Field #${index + 1}`;
@@ -405,6 +422,26 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
       ) {
         errors.push(`Field "${field.key}" defaultValue must match an option value`);
       }
+    }
+
+    for (const rule of field.visibleWhen ?? []) {
+      if (
+        (rule.operator === 'equals' || rule.operator === 'not-equals') &&
+        rule.value === undefined
+      ) {
+        errors.push(`Field "${field.key}" has a condition on "${rule.source}" with no value`);
+      }
+      const isContextSource =
+        rule.source.startsWith('context.') || rule.source.startsWith('payload.');
+      if (!isContextSource && !answerKeysSoFar.has(rule.source)) {
+        errors.push(
+          `Field "${field.key}" has a condition on "${rule.source}", which is not an answer above it`
+        );
+      }
+    }
+
+    if (isInputElement(field)) {
+      answerKeysSoFar.add(field.key);
     }
   });
 

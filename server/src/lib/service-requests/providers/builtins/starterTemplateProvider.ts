@@ -126,6 +126,8 @@ const starterTemplates: ServiceRequestTemplateDefinition[] = [
             type: 'multi-select',
             label: 'Peripherals',
             required: false,
+            // Only worth asking once a laptop is on the order.
+            visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }],
             options: [
               { label: 'External monitor', value: 'External monitor' },
               { label: 'Dock', value: 'Dock' },

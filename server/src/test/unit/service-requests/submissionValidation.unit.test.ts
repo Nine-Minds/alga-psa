@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { validateSubmissionAgainstPublishedSchema } from '../../../lib/service-requests/submissionService';
+import {
+  resolveSubmissionVisibility,
+  validateSubmissionAgainstPublishedSchema,
+} from '../../../lib/service-requests/submissionService';
 
 const schema = {
   fields: [
@@ -122,5 +125,54 @@ describe('validateSubmissionAgainstPublishedSchema', () => {
         payload: { peripherals: ['dock'] },
       })
     ).toEqual([]);
+  });
+});
+
+describe('resolveSubmissionVisibility', () => {
+  const detail = {
+    formSchema: {
+      fields: [
+        { key: 'needs_laptop', type: 'checkbox', label: 'Needs a laptop?' },
+        {
+          key: 'hardware',
+          type: 'section',
+          label: 'Hardware',
+          visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }],
+        },
+        { key: 'laptop_model', type: 'short-text', label: 'Laptop model', required: true },
+      ],
+    },
+    formBehaviorProvider: 'basic',
+    formBehaviorConfig: {},
+    initialValues: {},
+    visibleFieldKeys: ['needs_laptop', 'hardware', 'laptop_model'],
+  } as const;
+  const context = { requesterUserId: 'u1', clientId: 'c1', contactId: null };
+
+  it('recomputes element conditions on the server, whatever the provider is', () => {
+    expect(resolveSubmissionVisibility(detail, { needs_laptop: false }, context)).toEqual([
+      'needs_laptop',
+    ]);
+    expect(resolveSubmissionVisibility(detail, { needs_laptop: true }, context)).toEqual([
+      'needs_laptop',
+      'hardware',
+      'laptop_model',
+    ]);
+  });
+
+  it('never enforces a required answer the requester could not see', () => {
+    const visibleFieldKeys = resolveSubmissionVisibility(detail, { needs_laptop: false }, context);
+    expect(
+      validateSubmissionAgainstPublishedSchema({
+        formSchema: detail.formSchema,
+        payload: { needs_laptop: false },
+        visibleFieldKeys,
+      })
+    ).toEqual([]);
+  });
+
+  it('falls back to the stored key list when nothing is conditional', () => {
+    const plain = { ...detail, formSchema: { fields: [{ key: 'full_name', type: 'short-text' }] } };
+    expect(resolveSubmissionVisibility(plain, {}, context)).toEqual(detail.visibleFieldKeys);
   });
 });
