@@ -165,6 +165,11 @@
           "cancelled": "Bokning avbokad: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Den här begäran kunde inte behandlas. Kontakta din tjänsteleverantör för hjälp."
+        }
+      },
       "algadeskEmptyHint": "När ärenden uppdateras visas de här."
     },
     "devices": {

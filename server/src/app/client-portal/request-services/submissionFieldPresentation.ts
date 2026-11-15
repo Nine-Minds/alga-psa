@@ -10,8 +10,8 @@ interface SubmissionFieldSnapshot {
 }
 
 interface SubmissionAttachmentSnapshot {
+  submission_attachment_id: string;
   field_key?: string | null;
-  file_id: string;
   file_name?: string | null;
 }
 
