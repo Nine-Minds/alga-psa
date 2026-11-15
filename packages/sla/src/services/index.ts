@@ -52,6 +52,9 @@ export {
   type PauseResult
 } from './slaPauseService';
 
+// Answers `reevaluateSlaPause` for packages that contribute a pause condition (registers on load)
+export { reevaluateSlaPauseState } from './slaPauseReevaluation';
+
 // SLA notification service
 export {
   sendSlaNotification,

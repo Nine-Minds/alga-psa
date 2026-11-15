@@ -35,6 +35,7 @@ import type { findTagsByEntityId } from '@alga-psa/tags/actions';
 import type { findUserById, getCurrentUser, getCurrentUserPermissions, getUserContactId, searchUsersForMentions, getUserAvatarUrlsBatchAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 import type { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
 import type { findBoardById } from '../actions/board-actions/boardActions';
+import type { handTicketToClientIt } from '../actions/ticketResponsibilityActions';
 import type {
   findCommentsByTicketId,
   deleteComment,
@@ -633,6 +634,15 @@ export interface TicketViewerMethods {
   getTicketingDisplaySettings: typeof getTicketingDisplaySettings;
 }
 
+/**
+ * Who is responsible for a ticket of a co-managed seat arrangement. Native only: a ticket that lives in
+ * another tenant has no seat responsibility, so a data source that omits this group shows no chip and
+ * no handoff action.
+ */
+export interface TicketResponsibilityMethods {
+  handTicketToClientIt: typeof handTicketToClientIt;
+}
+
 export interface TicketDataSource {
   readonly kind: TicketDataSourceKind;
   /**
@@ -665,6 +675,8 @@ export interface TicketDataSource {
   readonly avatars: TicketAvatarMethods;
   /** Viewer-scoped, see {@link TicketViewerMethods}. */
   readonly viewer: TicketViewerMethods;
+  /** Optional, native only: see {@link TicketResponsibilityMethods}. */
+  readonly responsibility?: TicketResponsibilityMethods;
 }
 
 /** One level of partial: each group may be overridden method by method. */

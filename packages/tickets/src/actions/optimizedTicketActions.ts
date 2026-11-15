@@ -159,6 +159,7 @@ import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErr
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveTicketResponsibility } from '../lib/ticketResponsibility';
 import { resolveTicketListViews, ticketListViewPredicates, type TicketListViewDefinition } from '../lib/ticketListViews';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
@@ -506,10 +507,28 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 type SafeConsolidatedUser = SafeApiUser; // Pick<IUserWithRoles, AllowlistedUserField> & { roles, avatarUrl?, clientId? }
 
 /**
+ * Whether the caller may read this specific ticket, by the same record-level authorization the ticket screen
+ * uses (the caller's authorization bundles can hide boards and clients). A ticket the caller cannot read and a
+ * ticket that does not exist answer identically, so a write action that calls this first neither acts on nor
+ * confirms the existence of a ticket outside the caller's reach.
+ */
+export const assertTicketReadable = withAuth(async (user, { tenant }, ticketId: string): Promise<true | TicketActionError> => {
+  if (user.user_type === 'client') {
+    return permissionError('Permission denied: Cannot view ticket');
+  }
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx) => {
+    const ticket = await tenantScopedTable(trx, 'tickets as t', tenant).where({ 't.ticket_id': ticketId }).first();
+    const authorizationContext = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+    const [readable] = ticket ? await authorizeTicketReads(trx, authorizationContext, [ticket]) : [];
+    return readable ? (true as const) : permissionError('Permission denied: Cannot view ticket');
+  });
+});
+
+/**
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
- */
-/**
+ *
  * `capabilities` names the sections the caller's screen backs; a read whose capability is off is not made
  * (schedule entries under `scheduling`, bundle settings/master/children under `bundles`) and returns the
  * empty shape the screen already handles. Omitted means every read, as before.
@@ -1230,8 +1249,14 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       view_source: 'ticket_details'
     }, user.user_id);
 
+    // Who is responsible, for a reader the seat shape is offered to and a ticket of a client in a live arrangement.
+    // Every other ticket and tenant resolves to none here without a statement.
+    const responsibilityProvider = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
+    const seatResponsibility = responsibilityProvider ? await responsibilityProvider.load(trx, tenant, ticketId) : null;
+
     // Return all data in a single consolidated object
     return {
+      ...(seatResponsibility ? { seatResponsibility } : {}),
       ticket: projectReadableRecord('ticket', {
         ...normalizedTicketData,
         tenant,
@@ -2277,7 +2302,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[] } | TicketActionError> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> }, views?: ITicketListViewSummary[], seatResponsibilityOffered?: boolean } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2335,11 +2360,18 @@ export const getTicketsForList = withAuth(async (
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
     const views = await summarizeTicketListViews(trx, tenant, user, validatedFilters, listViews, authorizationContext);
+    // Responsibility column: asked only of a reader a provider offers it to (a tenant the seat shape is not released for resolves to none, with no query).
+    const responsibility = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
+    if (responsibility) {
+      const byTicket = await responsibility.read(trx, tenant, enriched.tickets.flatMap((ticket) => ticket.ticket_id ? [ticket.ticket_id] : []));
+      for (const ticket of enriched.tickets) ticket.seat_responsibility = (ticket.ticket_id && byTicket.get(ticket.ticket_id)) || null;
+    }
     return {
       tickets: enriched.tickets,
       totalCount,
       metadata: enriched.metadata,
       ...(views ? { views } : {}),
+      ...(responsibility ? { seatResponsibilityOffered: true } : {}),
     };
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
@@ -4103,7 +4135,8 @@ export const getConsolidatedTicketListData = withAuth(async (
           tickets: ticketsData.tickets,
           totalCount: ticketsData.totalCount,
           metadata: ticketsData.metadata,
-          ...(ticketsData.views ? { views: ticketsData.views } : {})
+          ...(ticketsData.views ? { views: ticketsData.views } : {}),
+          ...(ticketsData.seatResponsibilityOffered ? { seatResponsibilityOffered: true } : {})
         };
       } catch (error) {
         const expected = ticketListActionErrorFrom(error);

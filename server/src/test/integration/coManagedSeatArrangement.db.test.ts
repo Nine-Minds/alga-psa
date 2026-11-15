@@ -56,7 +56,7 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
   afterAll(async () => { await db?.destroy(); });
 
   // F012
-  it('the seat tables have tenant-first keys, only the resolver-membership and seat-reader foreign keys, no triggers but the seat-reader marker pair, and tenant deletion knows them', async () => {
+  it('the seat tables have tenant-first keys, only the resolver-membership, contact and seat-reader foreign keys, no triggers but the seat-reader marker pair, and tenant deletion knows them', async () => {
     for (const table of SEAT_TABLES) {
       const { rows: keys } = await db.raw(`
         SELECT i.indexrelid::regclass::text AS name, (SELECT attname FROM pg_attribute
@@ -75,6 +75,8 @@ describeDb('co-managed seat arrangements and their board scope', { shuffle: fals
         FROM pg_constraint WHERE conrelid = ?::regclass AND contype = 'f' ORDER BY conname`, [table]);
       expect(foreignKeys, table).toEqual(table === 'co_managed_seat_assignments' ? [
         { conname: 'co_managed_seat_assignment_resolver_subject_fk', parent: 'authorization_resolver_subjects', convalidated: true },
+        // Which contact of the client a technician is (S34, migration 20261114110000).
+        { conname: 'co_managed_seat_assignments_contact_fk', parent: 'contacts', convalidated: true },
         { conname: 'co_managed_seat_assignments_seat_reader_foreign', parent: 'users', convalidated: true },
       ] : []);
     }

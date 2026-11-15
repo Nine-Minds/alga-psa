@@ -22,6 +22,14 @@
       "types": "./src/seatArrangement.ts",
       "import": "./src/seatArrangement.ts"
     },
+    "./seatInvitation": {
+      "types": "./src/seatInvitation.ts",
+      "import": "./src/seatInvitation.ts"
+    },
+    "./seatInvitationRegistration": {
+      "types": "./src/seatInvitationRegistration.ts",
+      "import": "./src/seatInvitationRegistration.ts"
+    },
     "./seatRole": {
       "types": "./src/seatRole.ts",
       "import": "./src/seatRole.ts"
@@ -190,6 +198,10 @@
       "types": "./src/refusalAck.ts",
       "import": "./src/refusalAck.ts"
     },
+    "./seatTicketSla": {
+      "types": "./src/seatTicketSla.ts",
+      "import": "./src/seatTicketSla.ts"
+    },
     "./ticketSlaRegistration": {
       "types": "./src/ticketSlaRegistration.ts",
       "import": "./src/ticketSlaRegistration.ts"
@@ -296,6 +308,7 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/types": "*",
     "@alga-psa/tickets": "*",
+    "@alga-psa/predicates": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/event-schemas": "*",
     "@alga-psa/shared": "*",

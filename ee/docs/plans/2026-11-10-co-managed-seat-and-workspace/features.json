@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "On the native ticket screen for a client with a live seat arrangement, MSP staff see who is responsible and a Hand to client IT action; both are absent for every other client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "The MSP ticket list offers a responsibility filter and column for tenants served by the capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "MSP SLA timers pause while a ticket's responsibility is with client IT and resume when it returns, through the ticket lifecycle hooks; tickets of other clients are unaffected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -666,14 +666,14 @@
   {
     "id": "F084",
     "description": "On a client with no arrangement, the Co-managed IT tab offers Seat and Workspace with one line each, the pool's available seats and any eligibility blocker; choosing Workspace continues into the existing provisioning flow unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
   },
   {
     "id": "F085",
-    "description": "The seat arrangement panel shows seats used and allocated and lets an administrator change the allocation, invite, resend and revoke technicians, edit board scope, share projects and set handoff defaults.",
+    "description": "The seat arrangement panel shows seats used and allocated and lets an administrator change the allocation, invite technicians chosen from the client's contacts (a missing contact is added through the standard quick-add contact dialog; no free-text name or email), resend and revoke invitations, edit board scope, share projects and set handoff defaults.",
     "implemented": false,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "The Co-managed IT overview lists arrangements of both shapes in one table with client, shape, state and seats used and allocated, alongside pool totals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]

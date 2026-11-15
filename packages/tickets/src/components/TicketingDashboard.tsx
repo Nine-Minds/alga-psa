@@ -32,6 +32,9 @@ import {
   type SmartSearchRunCache,
 } from '../lib/smartSearchSelection';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { seatResponsibilityLabel } from '../lib/seatResponsibilityLabel';
+import { getSeatResponsibilityFilter, setSeatResponsibilityFilter } from '../lib/ticketSeatResponsibilityFilter';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -187,6 +190,8 @@ interface TicketingDashboardProps {
   totalCount: number;
   /** Named views of the list (with their counts) the server offers this caller. Absent for callers with none. */
   namedViews?: ITicketListViewSummary[];
+  /** The reader is offered the responsibility column and filter. Absent: the list has neither. */
+  seatResponsibilityOffered?: boolean;
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -342,6 +347,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialUsers = [],
   totalCount,
   namedViews,
+  seatResponsibilityOffered = false,
   currentPage,
   pageSize,
   onPageChange,
@@ -563,6 +569,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
   const selectedWhere = filterValues.where;
+  const selectedSeatResponsibility = seatResponsibilityOffered ? getSeatResponsibilityFilter(selectedWhere) : null;
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
   // `where` tag filters (Requester tags / Client tags) come from the descriptor table.
@@ -1795,8 +1802,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       canCreateTemplate: templatePermissions.create,
     });
 
+    // Who is responsible for a ticket of a client in a seat arrangement. Present only when the server offers it
+    // (the seat shape is released for the tenant); blank for every other ticket.
+    const responsibilityColumn: ColumnDefinition<ITicketListItem> = {
+      title: t('dashboard.responsibility.column', 'Responsible'),
+      dataIndex: 'seat_responsibility',
+      sortable: false,
+      render: (value: unknown) => value === 'client_it' || value === 'msp'
+        ? <Badge variant={value === 'client_it' ? 'info' : 'default-muted'}>{seatResponsibilityLabel(t, value)}</Badge>
+        : null,
+    };
+    const listColumns = seatResponsibilityOffered ? [...baseColumns, responsibilityColumn] : baseColumns;
+
     // Duplicate and "Create template" are the only row actions and both write.
-    return workspaceReadOnly ? [selectionColumn, ...baseColumns] : [selectionColumn, ...baseColumns, actionsColumn];
+    return workspaceReadOnly ? [selectionColumn, ...listColumns] : [selectionColumn, ...listColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1828,6 +1847,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
     setBatchDuplicateSourceId,
+    seatResponsibilityOffered,
     templatePermissions.create,
     t,
     locale,
@@ -2383,6 +2403,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       chips.push({ key: 'sla', label: `${t('fields.slaStatus', 'SLA Status')}: ${map[selectedSlaStatus] ?? selectedSlaStatus}`, onRemove: () => onFilterChange({ slaStatusFilter: undefined }) });
     }
 
+    if (selectedSeatResponsibility) {
+      chips.push({
+        key: 'responsibility',
+        label: `${t('dashboard.responsibility.filter', 'Responsibility')}: ${seatResponsibilityLabel(t, selectedSeatResponsibility)}`,
+        onRemove: () => onFilterChange({ where: setSeatResponsibilityFilter(selectedWhere, null) }),
+      });
+    }
+
     selectedCategories.forEach((categoryId) => {
       const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
       chips.push({
@@ -2756,6 +2784,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     value={selectedSlaStatus}
                     onValueChange={(value) => onFilterChange({ slaStatusFilter: value !== 'all' ? value as ITicketListFilters['slaStatusFilter'] : undefined })}
                     placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
+                  />
+                )}
+                {seatResponsibilityOffered && (
+                  <CustomSelect
+                    data-automation-id={`${id}-responsibility-filter`}
+                    options={[
+                      { value: 'all', label: t('dashboard.responsibility.all', 'All responsibility') },
+                      { value: 'client_it', label: seatResponsibilityLabel(t, 'client_it') },
+                      { value: 'msp', label: seatResponsibilityLabel(t, 'msp') },
+                    ]}
+                    value={selectedSeatResponsibility ?? 'all'}
+                    onValueChange={(value) => onFilterChange({
+                      where: setSeatResponsibilityFilter(selectedWhere, value === 'client_it' || value === 'msp' ? value : null),
+                    })}
+                    placeholder={t('dashboard.responsibility.filter', 'Responsibility')}
                   />
                 )}
               </ListFilterRow>

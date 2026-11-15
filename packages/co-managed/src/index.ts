@@ -142,6 +142,7 @@ export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManag
 export * from './seatArrangement';
 // Seat shape (S29): the projects of the arrangement's client shared with it.
 export * from './seatProjectGrants';
+export * from './seatAdministration';
 // Seat shape (S8): the role a seat technician holds, seeded by the sponsor's first arrangement.
 export * from './seatRole';
 // Seat shape (S14): the people a seat technician can see.
