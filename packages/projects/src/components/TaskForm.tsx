@@ -2194,16 +2194,18 @@ export default function TaskForm({
                     onValueChange={(value) => {
                       setAssignedUser(value === '' ? null : value);
                     }}
-                    onTeamSelect={handleAssignTeam}
+                    // A screen may leave the assignee writable and freeze team assignment (a seat technician's):
+                    // the picker then offers people only, rather than freezing the assignee with the team.
+                    onTeamSelect={frozen('assigned_team_id') ? undefined : handleAssignTeam}
                     size="sm"
                     users={users.filter(u =>
                       !([...taskResources, ...tempTaskResources])
                         .some(r => r.additional_user_id === u.user_id)
                     )}
-                    teams={teams}
+                    teams={frozen('assigned_team_id') ? [] : teams}
                     getUserAvatarUrlsBatch={sharedMode ? undefined : getUserAvatarUrlsBatchAction}
                     getTeamAvatarUrlsBatch={sharedMode ? undefined : getTeamAvatarUrlsBatchAction}
-                    disabled={frozen('assigned_to') || frozen('assigned_team_id')}
+                    disabled={frozen('assigned_to')}
                   />
                   {assignedTeamId && (() => {
                     const assignedTeam = teams.find(t => t.team_id === assignedTeamId);

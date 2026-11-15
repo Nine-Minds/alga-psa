@@ -85,7 +85,10 @@ vi.mock('@alga-psa/tags/components', () => ({
 
 vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   __esModule: true,
-  default: ({ value }: { value: string }) => <div data-testid="assigned-user" data-value={value} />,
+  default: ({ value, disabled, teams, onTeamSelect }: { value: string; disabled?: boolean; teams?: unknown[]; onTeamSelect?: unknown }) => (
+    <div data-testid="assigned-user" data-value={value} data-disabled={String(Boolean(disabled))}
+      data-teams={String(teams?.length ?? 0)} data-team-select={String(typeof onTeamSelect === 'function')} />
+  ),
 }));
 
 vi.mock('@alga-psa/teams/actions', () => ({
@@ -231,10 +234,24 @@ describe('TaskForm on a restricted project surface', () => {
     expect(screen.queryByText(/^service$/i)).not.toBeInTheDocument();
   });
 
+  it('keeps the assignee writable while team assignment is frozen', async () => {
+    renderForm(SEAT_SURFACE);
+    const picker = await screen.findByTestId('assigned-user');
+    // The assignee is one of the fields a seat technician changes; it must not freeze with the team.
+    expect(picker).toHaveAttribute('data-disabled', 'false');
+    expect(picker.closest('fieldset[disabled]')).toBeNull();
+    // Team assignment stays closed: the picker offers people only.
+    expect(picker).toHaveAttribute('data-teams', '0');
+    expect(picker).toHaveAttribute('data-team-select', 'false');
+  });
+
   it('is the native form, with the catalog and the inherited service loaded, when the surface closes nothing', async () => {
     expect(projectDataSourceForSurface(nativeProjectDataSource, OPEN_PROJECT_SURFACE)).toBe(nativeProjectDataSource);
     renderForm(OPEN_PROJECT_SURFACE);
     await waitFor(() => expect(getServicesMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(getEffectiveTaskServiceMock).toHaveBeenCalled());
+    const picker = await screen.findByTestId('assigned-user');
+    expect(picker).toHaveAttribute('data-disabled', 'false');
+    expect(picker).toHaveAttribute('data-team-select', 'true');
   });
 });
